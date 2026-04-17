@@ -1,0 +1,49 @@
+# Workspace manifest for aegis.
+# Consumed by validate_workspace_index.py and CLAUDE.md imports.
+# All paths are relative to this file's directory.
+
+workspace:
+  name: aegis
+  version: 1
+
+repos:
+  aegislab:
+    path: AegisLab
+    role: backend
+    stack: [go, python]
+    # Requirement field name that carries this repo's code paths.
+    path_field: code
+  aegislab-frontend:
+    path: AegisLab-frontend
+    role: ui
+    stack: [typescript, react]
+    path_field: frontend
+  chaos-experiment:
+    path: chaos-experiment
+    role: fault-injection-lib
+    stack: [go]
+    path_field: chaos_code
+  rcabench-platform:
+    path: rcabench-platform
+    role: rca-eval-platform
+    stack: [python]
+    path_field: rcabench_code
+
+# Named cross-repo contracts. Requirements reference these by key in a
+# `contracts:` array (added incrementally in Phase 3+; skeleton only here).
+contracts:
+  openapi-backend-sdk:
+    kind: openapi
+    producer: aegislab
+    source: AegisLab/src/docs/swagger.yaml
+    consumers: [aegislab-frontend]
+    regenerate: "just swag-init && just generate-typescript-client"
+  chaos-mesh-crd:
+    kind: external-crd
+    producer: external (chaos-mesh)
+    consumers: [chaos-experiment, aegislab]
+  dataset-schema:
+    kind: file-format
+    producer: aegislab
+    consumers: [rcabench-platform]
+    notes: "Parquet/JSON schemas written by AegisLab collectors, read by rcabench-platform converters"

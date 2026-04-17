@@ -1,0 +1,16 @@
+# Claude Code local state
+.claude/
+CLAUDE.local.md
+
+# Workspace-local backup artifacts (Phase 1 dumps etc.)
+.backup/
+*.bak
+
+# Editor / OS noise
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Anything prefixed with _tmp
+_tmp*/
