@@ -20,7 +20,7 @@ kind version 0.30.0
 
 ## Cluster config used by the repo
 
-The repo ships [AegisLab/manifests/test/kind-config.yaml](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab/manifests/test/kind-config.yaml), which defines:
+The repo ships [AegisLab/manifests/test/kind-config.yaml](/home/ddq/AoyangSpace/aegis/AegisLab/manifests/test/kind-config.yaml), which defines:
 
 - 1 control-plane node
 - 2 worker nodes
@@ -45,6 +45,21 @@ Creating cluster "aegis-issue3" ...
  ✗ Preparing nodes 📦 📦 📦
 Deleted nodes: ["aegis-issue3-control-plane" "aegis-issue3-worker2" "aegis-issue3-worker"]
 ERROR: failed to create cluster: could not find a log line that matches "Reached target .*Multi-User System.*|detected cgroup v1"
+```
+
+## Rerun hygiene
+
+If a retained failed bootstrap leaves exited node containers behind, delete the stale cluster before retrying:
+
+```bash
+kind delete cluster --name aegis-issue3
+docker ps -a --filter 'name=aegis-issue3'
+```
+
+Without this cleanup, the next `kind create cluster` may fail earlier with:
+
+```text
+ERROR: failed to create cluster: node(s) already exist for a cluster with the name "aegis-issue3"
 ```
 
 ## Retained-debug rerun

@@ -42,12 +42,17 @@ This is the strongest reproducible evidence in this pass that a valid `NPM_TOKEN
 
 ## Repo config notes
 
-Observed in [AegisLab-frontend/vite.config.ts](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab-frontend/vite.config.ts):
+Observed in [AegisLab-frontend/vite.config.ts](/home/ddq/AoyangSpace/aegis/AegisLab-frontend/vite.config.ts):
 
 - dev proxy default is `http://127.0.0.1:8082`
 - `VITE_API_TARGET` can override that cleanly
 
-Observed in [AegisLab-frontend/.npmrc](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab-frontend/.npmrc):
+Note:
+- [AegisLab-frontend/README.md](/home/ddq/AoyangSpace/aegis/AegisLab-frontend/README.md) still says the dev proxy targets `http://10.10.10.220:32080`
+- the checked-in Vite config now defaults to `http://127.0.0.1:8082`
+- a contributor following the README literally will point the frontend at the wrong backend unless they inspect `vite.config.ts`
+
+Observed in [AegisLab-frontend/.npmrc](/home/ddq/AoyangSpace/aegis/AegisLab-frontend/.npmrc):
 
 ```text
 @OperationsPAI:registry=https://npm.pkg.github.com/

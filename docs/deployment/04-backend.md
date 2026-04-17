@@ -19,7 +19,7 @@ What this means:
 
 ## Repo-owned image build defaults
 
-Observed in [AegisLab/src/Dockerfile](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab/src/Dockerfile) and [AegisLab/skaffold.yaml](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab/skaffold.yaml):
+Observed in [AegisLab/src/Dockerfile](/home/ddq/AoyangSpace/aegis/AegisLab/src/Dockerfile) and [AegisLab/skaffold.yaml](/home/ddq/AoyangSpace/aegis/AegisLab/skaffold.yaml):
 
 - Dockerfile accepts `ARG GO_BUILD_TAGS`
 - `skaffold` sets `GO_BUILD_TAGS: duckdb_arrow`
@@ -27,7 +27,7 @@ Observed in [AegisLab/src/Dockerfile](/home/ddq/AoyangSpace/aegis/.workbuddy/wor
 
 ## Local config assumptions to override
 
-Observed in [AegisLab/src/config.dev.toml](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab/src/config.dev.toml):
+Observed in [AegisLab/src/config.dev.toml](/home/ddq/AoyangSpace/aegis/AegisLab/src/config.dev.toml):
 
 - `workspace = "/home/nn/workspace/AegisLab"`
 - `k8s.service.internal_url = "http://10.10.10.161:8082"`
@@ -36,6 +36,9 @@ Observed in [AegisLab/src/config.dev.toml](/home/ddq/AoyangSpace/aegis/.workbudd
 - `jfs.dataset_path = "/mnt/jfs/rcabench_dataset"`
 
 Those defaults are not portable to a fresh local checkout.
+
+Additional deployment-level assumption found in [AegisLab/scripts/start.sh](/home/ddq/AoyangSpace/aegis/AegisLab/scripts/start.sh):
+- test bootstrap forces `HTTP_PROXY` and `HTTPS_PROXY` to `http://crash:crash@172.18.0.1:7890` during `kind create cluster`
 
 ## Cluster deployment path
 

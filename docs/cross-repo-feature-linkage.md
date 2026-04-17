@@ -21,3 +21,6 @@ The shared contracts referenced by these features are:
 - `openapi-backend-sdk` for backend/frontend typed API coupling
 - `chaos-mesh-crd` for backend/chaos library coupling
 - `dataset-schema` for datapack production and downstream consumption
+
+Deployment discovery added one cross-repo constraint worth making explicit:
+- the local end-to-end path currently depends on parent-repo orchestration, but each submodule still carries internal-only defaults of its own: `AegisLab` for cluster/storage/runtime config, `AegisLab-frontend` for package auth and API docs, `chaos-experiment` for Chaos Mesh API compatibility, and `rcabench-platform` for downstream base URLs and JuiceFS-backed datasets.

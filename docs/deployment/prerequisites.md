@@ -53,6 +53,7 @@ Fresh contributors should assume the following are needed before a full deployme
 - Docker registry access for internal/private registries referenced by manifests and scripts
 - Permission to change host sysctls if `kind` fails on inotify/file-descriptor limits
 - Access to any storage backend replacing the internal JuiceFS deployment
+- A decision about whether to honor or remove the hardcoded `HTTP_PROXY` / `HTTPS_PROXY` values in [AegisLab/scripts/start.sh](/home/ddq/AoyangSpace/aegis/AegisLab/scripts/start.sh)
 
 ## [MANUAL] GitHub Packages token for frontend image builds
 

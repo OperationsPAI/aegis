@@ -4,7 +4,7 @@ The backend chart expects an observability stack, but this step was blocked by t
 
 ## Components referenced by the repo
 
-Observed in [AegisLab/helm/values.yaml](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab/helm/values.yaml):
+Observed in [AegisLab/helm/values.yaml](/home/ddq/AoyangSpace/aegis/AegisLab/helm/values.yaml):
 
 - Prometheus
 - Grafana
@@ -12,10 +12,16 @@ Observed in [AegisLab/helm/values.yaml](/home/ddq/AoyangSpace/aegis/.workbuddy/w
 - Grafana Alloy
 - optional Jaeger PVCs
 
-Observed in [AegisLab/scripts/start.sh](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab/scripts/start.sh):
+Observed in [AegisLab/scripts/start.sh](/home/ddq/AoyangSpace/aegis/AegisLab/scripts/start.sh):
 
 - `clickstack/clickstack`
 - `open-telemetry/opentelemetry-kube-stack`
+
+Observed in:
+- [AegisLab/manifests/cn_mirror/click-stack.yaml](/home/ddq/AoyangSpace/aegis/AegisLab/manifests/cn_mirror/click-stack.yaml)
+- [AegisLab/manifests/cn_mirror/otel-kube-stack.yaml](/home/ddq/AoyangSpace/aegis/AegisLab/manifests/cn_mirror/otel-kube-stack.yaml)
+
+Those values files rewrite observability images to `pair-diag-cn-guangzhou.cr.volces.com/pair/...`, so the stack is not locally reproducible without private-registry access or alternative values.
 
 ## Commands to run once the cluster exists
 

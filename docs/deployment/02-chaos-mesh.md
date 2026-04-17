@@ -4,7 +4,7 @@ This step was not executed end-to-end because [01-kind-cluster.md](./01-kind-clu
 
 ## Repo-owned install path
 
-The repo’s bootstrap script is [AegisLab/scripts/start.sh](/home/ddq/AoyangSpace/aegis/.workbuddy/worktrees/issue-3/AegisLab/scripts/start.sh) and installs Chaos Mesh like this:
+The repo’s bootstrap script is [AegisLab/scripts/start.sh](/home/ddq/AoyangSpace/aegis/AegisLab/scripts/start.sh) and installs Chaos Mesh like this:
 
 ```bash
 helm repo add chaos-mesh https://charts.chaos-mesh.org --force-update
@@ -18,6 +18,8 @@ helm install chaos-mesh chaos-mesh/chaos-mesh \
 
 kubectl apply -f AegisLab/manifests/chaos-mesh/rbac.yaml
 ```
+
+The values file used in that command is [AegisLab/manifests/cn_mirror/chaos-mesh.yaml](/home/ddq/AoyangSpace/aegis/AegisLab/manifests/cn_mirror/chaos-mesh.yaml), which rewrites Chaos Mesh images to `pair-diag-cn-guangzhou.cr.volces.com/pair/...`. A fresh local setup therefore needs registry access in addition to a working cluster.
 
 ## Version coupling to verify
 
