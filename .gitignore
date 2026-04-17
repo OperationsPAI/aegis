@@ -14,3 +14,7 @@ CLAUDE.local.md
 
 # Anything prefixed with _tmp
 _tmp*/
+
+# Workbuddy local runtime state
+.workbuddy/*
+!.workbuddy/.gitignore

@@ -1,0 +1,10 @@
+# Workbuddy environment configuration — aegis workspace (parent repo).
+# Scope: workspace-level issues only (index, docs, workspace.yaml, scripts).
+# Submodule code changes are out of scope; see .github/workbuddy/agents/dev-agent.md.
+
+environment: dev
+repo: OperationsPAI/aegis
+poll_interval: 30s
+
+notifications:
+  enabled: false
