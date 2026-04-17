@@ -29,7 +29,7 @@
 **Where**: `04-backend.md` cluster deployment path using `AegisLab/manifests/test/rcabench.yaml` and `AegisLab/skaffold.yaml`  
 **Symptom**: the checked-in test profile points images at `pair-diag-cn-guangzhou.cr.volces.com/pair/...` instead of a kind-local or public registry path  
 **Root cause / guess**: the test deployment was validated in an internal environment with pre-published images rather than from a fresh local checkout  
-**Workaround applied**: none in this pass because the cluster never became ready; blocker recorded from manifest inspection  
+**Workaround applied**: replaced the live kind resources with public/local image refs at deploy time: `quay.io/coreos/etcd:v3.6.7`, `redis:8.0-M02-alpine3.20`, `mysql:8.0.43`, `jaegertracing/all-in-one:latest`, and `aegislab-backend:local`; also patched the backend pod off the private `pair/...` path instead of editing submodule manifests
 **Suggested fix (NOT applied here)**: follow-up issue title: `Provide a truly local skaffold/kind profile for AegisLab`; scope: load locally built images into kind or switch test values to public/local image references
 
 ### Backend dev/test configs still encode internal endpoints
@@ -37,7 +37,7 @@
 **Where**: `04-backend.md` config review  
 **Symptom**: [AegisLab/src/config.dev.toml](/home/ddq/AoyangSpace/aegis/AegisLab/src/config.dev.toml) sets `k8s.service.internal_url = "http://10.10.10.161:8082"`, `loki.address = "http://10.10.10.161:3100"`, and `k8s.init_container.busybox_image = "10.10.10.240/library/busybox:1.35"`  
 **Root cause / guess**: dev defaults were copied from a team environment instead of a local-only profile  
-**Workaround applied**: none in this pass; recorded as configuration debt because cluster deployment never started  
+**Workaround applied**: used the chart-owned ConfigMap replacements for `internal_url`, replaced the busybox image with `busybox:1.35`, switched the single local backend pod to `both` mode with `/health` on port `4319`, and treated `loki.address` as non-blocking for this liveness-only pass because the local probe terminates before Loki is queried
 **Suggested fix (NOT applied here)**: follow-up issue title: `Replace internal AegisLab dev defaults with localhost-or-env-based settings`; scope: parameterize internal URLs and image registries through env vars or dedicated local config
 
 ### JuiceFS default storage depends on an internal Redis/MinIO host
@@ -45,8 +45,16 @@
 **Where**: `prerequisites.md` and `06-observability.md` storage notes  
 **Symptom**: [AegisLab/helm/values.yaml](/home/ddq/AoyangSpace/aegis/AegisLab/helm/values.yaml) uses `juicefs.metaurl = "redis://10.10.10.119:6379/1"`, and [rcabench-platform/infra/README.md](/home/ddq/AoyangSpace/aegis/rcabench-platform/infra/README.md) instructs users to mount JuiceFS from `10.10.10.119`  
 **Root cause / guess**: the default storage path assumes access to a long-lived shared internal JuiceFS deployment  
-**Workaround applied**: none in this pass; documented as a hard dependency to replace before local reproduction can work  
+**Workaround applied**: avoided JuiceFS entirely for this local backend bring-up by creating a `local-path` StorageClass alias backed by `rancher.io/local-path`, then binding the backend PVCs there instead of trying to use `redis://10.10.10.119:6379/1`
 **Suggested fix (NOT applied here)**: follow-up issue title: `Provide a local-storage fallback for JuiceFS-backed Aegis deployments`; scope: add a documented local profile using hostPath/OpenEBS/MinIO-in-cluster instead of internal Redis/MinIO
+
+### Backend local overlay still needs runtime-only fixes beyond the checked-in chart
+
+**Where**: `04-backend.md` local kind deploy path
+**Symptom**: the first local startup failed because the ServiceAccount existed in `exp` while the backend Deployment ran in `default`, the `init-etcd-data` container used an image without `sh`, and the `aegislab-backend-initial-data` ConfigMap had been created with empty strings
+**Root cause / guess**: the repo does not yet provide a single self-consistent local overlay for namespace, init-container image, and seed-data wiring
+**Workaround applied**: created `aegislab-backend-sa` in `default`, patched the ClusterRoleBinding to include that subject, replaced `init-etcd-data` with a no-op `busybox:1.35` init container, and recreated `aegislab-backend-initial-data` from `AegisLab/data/initial_data/prod/*.yaml`
+**Suggested fix (NOT applied here)**: follow-up issue title: `Add a supported local backend overlay for kind`; scope: check in one kustomize/Helm overlay that keeps namespace, init containers, seed data, and selectors aligned for a single-pod local backend
 
 ### rcabench-platform SDK defaults target internal Aegis endpoints
 
