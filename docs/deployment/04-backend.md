@@ -41,7 +41,157 @@ Observed build result:
 kind load docker-image --name aegis-local aegislab-backend:local
 ```
 
-### 2. Create the missing local-path StorageClass alias
+### 2. Render the repo-owned chart into a local baseline
+
+The checked-in chart is the only repo-owned source that creates the backend StatefulSets, Services, PVCs, ConfigMaps, and RBAC objects. For this pass, the baseline resources were rendered from that chart with local-only values overrides, then patched before the first apply.
+
+Render the baseline manifest:
+
+```bash
+mkdir -p /tmp/aegislab-backend-overlay
+
+helm template aegislab-backend ./AegisLab/helm \
+  --namespace default \
+  --set harbor.enabled=false \
+  --set buildkit.enabled=false \
+  --set alloy.enabled=false \
+  --set loki.enabled=false \
+  --set prometheus.enabled=false \
+  --set grafana.enabled=false \
+  --set rcabench-frontend.enabled=false \
+  --set initialization.enabled=false \
+  --set configmap.k8s.namespace=default \
+  --set persistence.storageType=external \
+  --set persistence.storageClassNames.external=local-path \
+  --set persistence.redis.storageClass=local-path \
+  --set persistence.mysql.storageClass=local-path \
+  --set persistence.etcd.storageClass=local-path \
+  --set persistence.jaeger.storageClass=local-path \
+  --set images.rcabench.name=aegislab-backend \
+  --set images.rcabench.tag=local \
+  --set images.rcabench.pullPolicy=IfNotPresent \
+  --set images.busybox.name=busybox \
+  --set images.busybox.tag=1.35 \
+  --set images.etcd.name=quay.io/coreos/etcd \
+  --set images.etcd.tag=v3.6.7 \
+  --set images.redis.name=redis \
+  --set images.redis.tag=8.0-M02-alpine3.20 \
+  --set images.mysql.name=mysql \
+  --set images.mysql.tag=8.0.43 \
+  --set images.jaeger.name=jaegertracing/all-in-one \
+  --set images.jaeger.tag=latest \
+  --set-file initialDataFiles.data_yaml=AegisLab/data/initial_data/prod/data.yaml \
+  --set-file initialDataFiles.otel_demo_yaml=AegisLab/data/initial_data/prod/otel-demo.yaml \
+  --set-file initialDataFiles.ts_yaml=AegisLab/data/initial_data/prod/ts.yaml \
+  > /tmp/aegislab-backend-overlay/base.yaml
+```
+
+Create the local-only Kustomize overlay that patches the producer into the single-pod `both` mode used for this issue, keeps the acceptance label selector `app=aegislab-backend`, and replaces the internal-only init path with a no-op:
+
+```bash
+cat >/tmp/aegislab-backend-overlay/kustomization.yaml <<'EOF'
+resources:
+  - base.yaml
+patches:
+  - path: producer-patch.yaml
+  - path: producer-service-patch.yaml
+  - path: consumer-scale-patch.yaml
+EOF
+
+cat >/tmp/aegislab-backend-overlay/producer-patch.yaml <<'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegislab-backend-producer
+spec:
+  selector:
+    matchLabels:
+      app: aegislab-backend
+  template:
+    metadata:
+      labels:
+        app: aegislab-backend
+    spec:
+      containers:
+        - name: exp
+          image: aegislab-backend:local
+          imagePullPolicy: IfNotPresent
+          command:
+            - /app/entrypoint.sh
+            - both
+            - "8080"
+          ports:
+            - containerPort: 8080
+            - containerPort: 4319
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4319
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4319
+          volumeMounts:
+            - name: experiment-storage
+              mountPath: /var/lib/rcabench/experiment_storage
+      initContainers:
+        - name: wait-for-dependencies
+          image: busybox:1.35
+        - name: init-etcd-data
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - echo Skipping etcd seed for local kind deploy; exit 0
+      volumes:
+        - name: experiment-storage
+          persistentVolumeClaim:
+            claimName: aegislab-backend-juicefs-experiment-storage
+EOF
+
+cat >/tmp/aegislab-backend-overlay/producer-service-patch.yaml <<'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: aegislab-backend-exp
+spec:
+  selector:
+    app: aegislab-backend
+EOF
+
+cat >/tmp/aegislab-backend-overlay/consumer-scale-patch.yaml <<'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegislab-backend-consumer
+spec:
+  replicas: 0
+EOF
+```
+
+Apply the overlay:
+
+```bash
+kubectl apply -k /tmp/aegislab-backend-overlay
+```
+
+Observed apply result:
+
+```text
+configmap/aegislab-backend-rcabench-config configured
+configmap/aegislab-backend-etcd-producer-config configured
+configmap/aegislab-backend-etcd-consumer-config configured
+configmap/aegislab-backend-initial-data configured
+service/aegislab-backend-exp configured
+deployment.apps/aegislab-backend-producer configured
+deployment.apps/aegislab-backend-consumer configured
+statefulset.apps/aegislab-backend-etcd unchanged
+statefulset.apps/aegislab-backend-jaeger unchanged
+statefulset.apps/aegislab-backend-mysql unchanged
+statefulset.apps/aegislab-backend-redis unchanged
+```
+
+### 3. Create the missing local-path StorageClass alias
 
 The issue-specific local overlay expected `storageClassName: local-path`, but this cluster only had the default `standard` class backed by the same provisioner.
 
@@ -57,9 +207,9 @@ volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
 
-### 3. Create the ServiceAccount in `default` and bind it
+### 4. Create the ServiceAccount in `default` and bind it
 
-The live backend resources were created in `default`, but the chart-created ServiceAccount and ClusterRoleBinding subject were pointing at namespace `exp`.
+This was required on the first run before the complete overlay above existed. The live backend resources were already in `default`, but the earlier chart render had created the ServiceAccount and ClusterRoleBinding subject in `exp`.
 
 ```bash
 kubectl apply -f - <<'EOF'
@@ -75,7 +225,7 @@ kubectl patch clusterrolebinding aegislab-backend-rcabench-rolebinding \
   -p='[{"op":"add","path":"/subjects/-","value":{"kind":"ServiceAccount","name":"aegislab-backend-sa","namespace":"default"}}]'
 ```
 
-### 4. Replace private image references with public/local ones
+### 5. Replace private image references with public/local ones
 
 The checked-in manifests and chart path still referenced internal `pair/...` images. These replacements were sufficient for local startup:
 
@@ -95,7 +245,7 @@ kubectl delete pod -n default \
   aegislab-backend-jaeger-0
 ```
 
-### 5. Patch the backend pod into a single-pod `both` mode local overlay
+### 6. Patch the backend pod into a single-pod `both` mode local overlay
 
 This issue-specific overlay kept the label selector required by the acceptance criteria (`app=aegislab-backend`) and made the liveness/readiness probe target `/health` on port `4319`.
 
@@ -118,7 +268,7 @@ kubectl patch deployment aegislab-backend-producer -n default --type='json' -p='
 ]'
 ```
 
-### 6. Replace the empty initial-data ConfigMap with the checked-in prod seed files
+### 7. Replace the empty initial-data ConfigMap with the checked-in prod seed files
 
 The first startup failed because the `aegislab-backend-initial-data` ConfigMap had been created with empty strings. Producer initialization requires the real seed files.
 
@@ -130,7 +280,7 @@ kubectl create configmap aegislab-backend-initial-data -n default \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-### 7. Restart and verify
+### 8. Restart and verify
 
 ```bash
 kubectl rollout restart deployment/aegislab-backend-producer -n default
