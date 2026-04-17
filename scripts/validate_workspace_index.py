@@ -13,8 +13,9 @@ then validates:
   D. every `contracts:` reference on a requirement resolves to a contract
      key declared in workspace.yaml,
   E. every requirement has a `status` value that matches the allowed set,
-  F. (warning only) requirements whose `frontend` / `code` fields are
-     empty vs. `source:` hint mismatch.
+  F. every requirement has a valid `type`, every non-feature requirement
+     has a valid `repo`, and every referenced repo key exists in workspace.yaml,
+  G. every `parent` / `decomposes_into` relationship is internally consistent.
 
 Exit codes:
   0  clean
@@ -37,6 +38,9 @@ import yaml
 ALLOWED_STATUS = {
     "draft", "planned", "implementing", "implemented", "tested",
     "blocked", "deferred", "disabled", "removed-frontend",
+}
+ALLOWED_TYPES = {
+    "feature", "capability", "api", "ui", "library", "pipeline", "contract", "service",
 }
 PATH_FIELDS = ("code", "frontend", "chaos_code", "rcabench_code")
 
@@ -69,6 +73,7 @@ def validate(workspace_root: str) -> dict:
     index = load_yaml(index_path)
 
     # Build field-name → expected path prefix (repo root) map
+    declared_repos = set((manifest.get("repos") or {}).keys())
     field_to_prefix: dict[str, str] = {}
     for repo_key, repo in (manifest.get("repos") or {}).items():
         field = repo.get("path_field")
@@ -77,16 +82,27 @@ def validate(workspace_root: str) -> dict:
             field_to_prefix[field] = pfx.rstrip("/") + "/"
 
     declared_contracts = set((manifest.get("contracts") or {}).keys())
-    req_ids = {r.get("id") for r in index.get("requirements", [])}
+    requirements = index.get("requirements", [])
+    req_ids = {r.get("id") for r in requirements}
 
     missing_paths: list[tuple[str, str, str]] = []   # (req_id, field, path)
     prefix_mismatches: list[tuple[str, str, str, str]] = []  # (req_id, field, path, expected_prefix)
     bad_depends_on: list[tuple[str, str]] = []        # (req_id, target_id)
     bad_contract_refs: list[tuple[str, str]] = []     # (req_id, contract_key)
     bad_status: list[tuple[str, str]] = []            # (req_id, status)
+    bad_type: list[tuple[str, str]] = []              # (req_id, type)
+    bad_repo: list[tuple[str, str]] = []              # (req_id, repo)
+    bad_parent_refs: list[tuple[str, str]] = []       # (req_id, parent_id)
+    bad_parent_links: list[tuple[str, str]] = []      # (req_id, parent_id)
+    bad_decompose_refs: list[tuple[str, str]] = []    # (req_id, child_id)
+    bad_feature_shape: list[tuple[str, str]] = []     # (req_id, issue)
 
-    for req in index.get("requirements", []):
+    req_map = {r.get("id"): r for r in requirements}
+
+    for req in requirements:
         rid = req.get("id", "<no id>")
+        req_type = req.get("type")
+        repo = req.get("repo")
 
         for field in PATH_FIELDS:
             expected_prefix = field_to_prefix.get(field)
@@ -109,19 +125,60 @@ def validate(workspace_root: str) -> dict:
         if status not in ALLOWED_STATUS:
             bad_status.append((rid, status or "<unset>"))
 
+        if req_type not in ALLOWED_TYPES:
+            bad_type.append((rid, req_type or "<unset>"))
+
+        if req_type == "feature":
+            if repo not in (None, "null"):
+                bad_feature_shape.append((rid, "feature requirements must omit repo or set it to null"))
+            children = req.get("decomposes_into") or []
+            if not children:
+                bad_feature_shape.append((rid, "feature requirements must declare decomposes_into"))
+            for child_id in children:
+                if child_id not in req_ids:
+                    bad_decompose_refs.append((rid, child_id))
+                    continue
+                child = req_map[child_id]
+                if child.get("parent") != rid:
+                    bad_parent_links.append((child_id, rid))
+        else:
+            if repo not in declared_repos:
+                bad_repo.append((rid, repo or "<unset>"))
+            if req.get("decomposes_into"):
+                bad_feature_shape.append((rid, "only feature requirements may declare decomposes_into"))
+
+        parent = req.get("parent")
+        if parent:
+            if parent not in req_ids:
+                bad_parent_refs.append((rid, parent))
+            else:
+                parent_req = req_map[parent]
+                if parent_req.get("type") != "feature":
+                    bad_parent_links.append((rid, parent))
+                elif rid not in (parent_req.get("decomposes_into") or []):
+                    bad_parent_links.append((rid, parent))
+
     report = {
         "workspace_root": workspace_root,
-        "requirements_total": len(index.get("requirements", [])),
+        "requirements_total": len(requirements),
         "missing_paths": missing_paths,
         "prefix_mismatches": prefix_mismatches,
         "bad_depends_on": bad_depends_on,
         "bad_contract_refs": bad_contract_refs,
         "bad_status": bad_status,
+        "bad_type": bad_type,
+        "bad_repo": bad_repo,
+        "bad_parent_refs": bad_parent_refs,
+        "bad_parent_links": bad_parent_links,
+        "bad_decompose_refs": bad_decompose_refs,
+        "bad_feature_shape": bad_feature_shape,
     }
     report["violations_total"] = sum(
         len(report[k]) for k in
         ("missing_paths", "prefix_mismatches", "bad_depends_on",
-         "bad_contract_refs", "bad_status")
+         "bad_contract_refs", "bad_status", "bad_type", "bad_repo",
+         "bad_parent_refs", "bad_parent_links", "bad_decompose_refs",
+         "bad_feature_shape")
     )
     return report
 
@@ -158,6 +215,36 @@ def print_text(report: dict) -> None:
         print(f"\n[E] bad_status ({len(report['bad_status'])}):")
         for rid, s in report["bad_status"]:
             print(f"  {rid}  status={s}  (allowed: {sorted(ALLOWED_STATUS)})")
+
+    if report["bad_type"]:
+        print(f"\n[F] bad_type ({len(report['bad_type'])}):")
+        for rid, req_type in report["bad_type"]:
+            print(f"  {rid}  type={req_type}  (allowed: {sorted(ALLOWED_TYPES)})")
+
+    if report["bad_repo"]:
+        print(f"\n[G] bad_repo ({len(report['bad_repo'])}):")
+        for rid, repo in report["bad_repo"]:
+            print(f"  {rid}  repo={repo}")
+
+    if report["bad_parent_refs"]:
+        print(f"\n[H] bad_parent_refs ({len(report['bad_parent_refs'])}):")
+        for rid, parent in report["bad_parent_refs"]:
+            print(f"  {rid}  -> unknown parent {parent}")
+
+    if report["bad_parent_links"]:
+        print(f"\n[I] bad_parent_links ({len(report['bad_parent_links'])}):")
+        for rid, parent in report["bad_parent_links"]:
+            print(f"  {rid}  parent/decomposes_into mismatch with {parent}")
+
+    if report["bad_decompose_refs"]:
+        print(f"\n[J] bad_decompose_refs ({len(report['bad_decompose_refs'])}):")
+        for rid, child in report["bad_decompose_refs"]:
+            print(f"  {rid}  -> unknown child {child}")
+
+    if report["bad_feature_shape"]:
+        print(f"\n[K] bad_feature_shape ({len(report['bad_feature_shape'])}):")
+        for rid, issue in report["bad_feature_shape"]:
+            print(f"  {rid}  {issue}")
 
 
 def main() -> int:
