@@ -6,6 +6,8 @@ effect on user-visible latency, and verify clean recovery.
 
 ## Result summary
 
+**Host-side curl against frontend** (first injection, 200 ms on `app=frontend`):
+
 | Phase | avg (s) | p50 (s) | p95 (s) | min (s) | max (s) |
 |------:|--------:|--------:|--------:|--------:|--------:|
 | Baseline (n=20) | 0.0297 | 0.0135 | 0.0761 | 0.0104 | 0.0761 |
@@ -16,6 +18,20 @@ Injection magnified a 200 ms per-packet delay to a ~2.7 s user-visible page
 latency because the Online Boutique frontend fans out synchronously to
 ~10 backing services. Recovery was clean — post-injection latency matched
 baseline within noise.
+
+**OTEL traces in ClickHouse** (second injection, 200 ms on `app=currencyservice`,
+caller-side client spans across all callers):
+
+| phase | spans | avg_ms | p50_ms | p95_ms | max_ms |
+|-------|------:|-------:|-------:|-------:|-------:|
+| 1-baseline  | 390 | 5.502 | 1.802 | 30.099 | 96.289 |
+| 2-inject    | 363 | **202.362** | **202.034** | **204.577** | 206.165 |
+| 3-recovery  | 291 | 3.039 | 1.306 | 3.609 | 83.841 |
+
+The 200 ms delay lands almost exactly on the median (≈ 200 ms offset from
+baseline). Full pipeline (collector config, schema, query) is in the
+["Full observability pipeline"](#full-observability-pipeline-otlp--otel-collector--clickhouse)
+section below.
 
 ## Stack under test
 
@@ -117,6 +133,143 @@ Follow-up for `aegisctl chaos` to work end-to-end in this setup: either
 register the `demo` namespace with the backend's benchmark registry, or
 reshape the submit endpoint so an ad-hoc kind namespace does not require a
 pre-declared benchmark. Tracking under `#10`.
+
+## Full observability pipeline: OTLP → OTEL Collector → ClickHouse
+
+The host-side curl measurement above proves the fault reached user traffic,
+but the richer evidence is the distributed-trace view of the same injection.
+For this pass a second fault was applied on `currencyservice` with the same
+200 ms delay and captured through a freshly-deployed traces pipeline.
+
+### Pipeline layout
+
+```
+demo ns (Online Boutique)  ──OTLP/gRPC:4317──▶  otel-collector  ──TCP:9000──▶  clickhouse
+  (frontend, checkout, …)                          (otel ns)                    (otel ns)
+                                                        │
+                                                        └─► debug exporter (stdout)
+```
+
+Both the collector and ClickHouse live in a new `otel` namespace. The
+collector is the `otel/opentelemetry-collector-contrib:0.112.0` image because
+it bundles the ClickHouse exporter (which auto-creates the `otel_traces`
+schema on first connect). The full manifest is checked in at
+[otel-pipeline.yaml](./otel-pipeline.yaml).
+
+### Instrumenting Online Boutique
+
+The v0.10.2 services don't honor generic OTEL env vars — they have their
+own gate. Two env vars are required per service to turn tracing on and
+point it at the in-cluster collector:
+
+```bash
+for d in $(kubectl -n demo get deploy -o name); do
+  kubectl -n demo set env $d \
+    ENABLE_TRACING=1 \
+    COLLECTOR_SERVICE_ADDR=otel-collector.otel:4317
+done
+```
+
+Without `COLLECTOR_SERVICE_ADDR`, the Go services (frontend, checkout, …)
+panic at startup (`panic: environment variable "COLLECTOR_SERVICE_ADDR"
+not set`).
+
+### Trace data during the second injection
+
+Fault: 200 ms `NetworkChaos` delay on `app=currencyservice`, duration
+`120s`, `direction=to`. Traces were classified into three phases by
+timestamp. The informative spans are the **caller-side** client spans —
+they measure round-trip time including the delay. The currencyservice's
+own server spans barely move because `direction=to` only delays inbound
+packets, and the service itself is fast once they arrive.
+
+Query (ran from `clickhouse-client` inside `clickhouse-0`):
+
+```sql
+SELECT phase,
+       count()                                AS spans,
+       round(avg(Duration/1e6),3)             AS avg_ms,
+       round(quantile(0.5)(Duration/1e6),3)   AS p50_ms,
+       round(quantile(0.95)(Duration/1e6),3)  AS p95_ms,
+       round(max(Duration/1e6),3)             AS max_ms
+FROM (
+  SELECT Duration,
+    multiIf(
+      Timestamp BETWEEN toDateTime64('2026-04-18T06:38:59', 3)
+                    AND toDateTime64('2026-04-18T06:39:44', 3), '1-baseline',
+      Timestamp BETWEEN toDateTime64('2026-04-18T06:39:50', 3)
+                    AND toDateTime64('2026-04-18T06:40:50', 3), '2-inject',
+      Timestamp BETWEEN toDateTime64('2026-04-18T06:42:06', 3)
+                    AND toDateTime64('2026-04-18T06:42:36', 3), '3-recovery',
+      '0-other'
+    ) AS phase
+  FROM otel.otel_traces
+  WHERE SpanKind='Client'
+    AND SpanName LIKE '%CurrencyService%'
+)
+WHERE phase != '0-other'
+GROUP BY phase
+ORDER BY phase;
+```
+
+Result (caller-side spans, across all services that call `currencyservice`):
+
+| phase | spans | avg_ms | p50_ms | p95_ms | max_ms |
+|-------|------:|-------:|-------:|-------:|-------:|
+| 1-baseline  | 390 | 5.502 | 1.802 | 30.099 | 96.289 |
+| 2-inject    | 363 | **202.362** | **202.034** | **204.577** | 206.165 |
+| 3-recovery  | 291 | 3.039 | 1.306 | 3.609 | 83.841 |
+
+The 200 ms delay shows up almost exactly on the median (≈ 200 ms offset) and
+clamps the distribution tightly — every in-window call sat on top of the
+fixed per-packet delay. Recovery is clean.
+
+The service-internal spans on `currencyservice` itself barely move
+(0.159 → 0.206 ms avg) — further confirmation that the delay is on the
+network path, not inside the service's own code. Full numbers in the
+commit description.
+
+### Reproducing the pipeline-level measurement
+
+```bash
+# 1. install ClickHouse + OTEL collector + schema (auto-created by exporter)
+kubectl apply -f docs/deployment/otel-pipeline.yaml
+
+# 2. instrument demo
+for d in $(kubectl -n demo get deploy -o name); do
+  kubectl -n demo set env $d \
+    ENABLE_TRACING=1 \
+    COLLECTOR_SERVICE_ADDR=otel-collector.otel:4317
+done
+
+# 3. baseline window (40-60s of steady traffic from loadgenerator)
+T0=$(date -u +%Y-%m-%dT%H:%M:%S); sleep 45; T1=$(date -u +%Y-%m-%dT%H:%M:%S)
+
+# 4. inject + capture
+kubectl apply -f - <<EOF
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata: { name: currency-delay-smoke, namespace: demo }
+spec:
+  action: delay
+  mode: all
+  selector: { namespaces: [demo], labelSelectors: { app: currencyservice } }
+  delay: { latency: 200ms, jitter: 0ms, correlation: "0" }
+  direction: to
+  duration: 120s
+EOF
+sleep 6; T2=$(date -u +%Y-%m-%dT%H:%M:%S); sleep 60; T3=$(date -u +%Y-%m-%dT%H:%M:%S)
+
+# 5. wait out duration + recovery window
+sleep 60
+kubectl delete networkchaos -n demo currency-delay-smoke
+sleep 15
+T4=$(date -u +%Y-%m-%dT%H:%M:%S); sleep 30; T5=$(date -u +%Y-%m-%dT%H:%M:%S)
+
+# 6. query (plug T0..T5 into the phase multiIf above)
+kubectl -n otel exec clickhouse-0 -- clickhouse-client --password clickhouse \
+  --queries-file /tmp/phase-query.sql
+```
 
 ## Known gaps hit in this pass
 
