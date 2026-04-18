@@ -8,6 +8,22 @@
 **Workaround attempted**: `sysctl -w fs.inotify.max_user_instances=1024` and `sysctl -w fs.inotify.max_user_watches=524288` from the unprivileged shell printed `permission denied on key ...` and left `/proc/sys/fs/inotify/max_user_instances=128` and `/proc/sys/fs/inotify/max_user_watches=65536` unchanged  
 **Workaround applied**: `docker run --rm --privileged --pid=host alpine:3.22 sh -lc "apk add --no-cache util-linux >/dev/null && nsenter -t 1 -m -u -i -n -p sysctl -w fs.inotify.max_user_instances=1024 && nsenter -t 1 -m -u -i -n -p sysctl -w fs.inotify.max_user_watches=524288"`; after that, `/proc/sys/fs/inotify/max_user_instances` was `1024`, `/proc/sys/fs/inotify/max_user_watches` was `524288`, and `kind create cluster --name aegis-local --config AegisLab/manifests/test/kind-config.yaml` succeeded
 
+### Chaos Mesh default `runtime=docker` is wrong for kind v1.34 (containerd)
+
+**Where**: `02-chaos-mesh.md` default Helm install path from issue `#7`  
+**Symptom**: NetworkChaos reconcile stuck — chaos-daemon logs `error while getting PID: expected docker:// but got container` (from `pkg/chaosdaemon/crclients/docker/client.go:59`), CR condition `AllInjected` stays `False`  
+**Root cause**: `chaosDaemon.runtime` defaults to `docker`; kind v1.34 uses `containerd://` container IDs, which the docker-runtime client rejects  
+**Workaround applied**: `helm upgrade chaos-mesh chaos-mesh/chaos-mesh --reuse-values --set chaosDaemon.runtime=containerd --set chaosDaemon.socketPath=/run/containerd/containerd.sock`; after daemon rollout, NetworkChaos applied cleanly and produced the expected latency impact (see `docs/deployment/09-smoke-run.md`)  
+**Suggested fix (NOT applied here)**: follow-up issue title: `Default Chaos Mesh install to containerd runtime for local kind deploys`; scope: add the two flags to the repo-owned chaos-mesh values file and to `02-chaos-mesh.md`
+
+### aegisctl backend rejects arbitrary namespaces (needs registered benchmark)
+
+**Where**: `aegisctl chaos network delay --namespace <custom-ns>` path from issue `#14`  
+**Symptom**: backend returns HTTP 500 with `Warning: batch[0][0]: unknown namespace "demo", using 0`; only pre-registered benchmark systems (`ts`, `hs`, `sn`, `ob`, `media`, `otel-demo`) are accepted as `pedestal.name`  
+**Root cause**: the submit endpoint resolves namespace → benchmark-system ID through a fixed registry; unknown names fall to `0` and downstream validation fails  
+**Workaround applied**: used `--dry-run` to emit the `FaultSpec` YAML, then applied an equivalent raw NetworkChaos CRD via `kubectl apply`; smoke run succeeded end-to-end (see `docs/deployment/09-smoke-run.md`)  
+**Suggested fix (NOT applied here)**: follow-up issue title: `Let aegisctl chaos submit target an ad-hoc kind namespace`; scope: either expose a backend API to register new pedestals, or relax validation so a raw-k8s mode can ship NetworkChaos directly
+
 ### Repo-owned Chaos Mesh bootstrap assumes a private CN mirror values file
 
 **Where**: `02-chaos-mesh.md` reference path from `AegisLab/scripts/start.sh`  
