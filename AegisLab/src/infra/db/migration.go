@@ -19,14 +19,8 @@ func centralEntities() []interface{} {
 		// the same way -- remove from this slice, add a
 		// framework.MigrationRegistrar in the owning module.
 		// &model.User{} migrated to module/user/migrations.go (Phase 4).
-<<<<<<< HEAD
-		// &model.APIKey{} stays here until module/auth Phase-4 PR (issue #39)
-		// claims it -- it's owned by auth, not user.
-		&model.APIKey{},
-=======
 		// &model.APIKey{} migrated to module/auth/migrations.go (Phase 4,
 		// issue #39).
->>>>>>> 3089ac2 (phase-4: migrate module/auth to self-registration (#39))
 		&model.AuditLog{},
 		// &model.Task{} migrated to module/task/migrations.go (Phase 4).
 		// &model.FaultInjection{} migrated to module/injection/migrations.go
@@ -52,7 +46,6 @@ func centralEntities() []interface{} {
 		// &model.Evaluation{} migrated to module/evaluation/migrations.go
 		// (Phase 4).
 	}
-}
 }
 
 func migrate(db *gorm.DB, contribs []framework.MigrationRegistrar) {
@@ -88,47 +81,37 @@ func createDetectorViews(db *gorm.DB) {
 	_ = db.Migrator().DropView("fault_injection_no_issues")
 	_ = db.Migrator().DropView("fault_injection_with_issues")
 
-	noIssuesQuery := addDetectorJoins(db.Table("fault_injections fi").
-		Select(`DISTINCT 
-		fi.id AS datapack_id, 
-		fi.name AS name, 
-		fi.fault_type AS fault_type,
-		fi.category AS category, 
-		fi.engine_config AS engine_config, 
-		l.label_key as label_key,
-		l.label_value as label_value,
-		fi.created_at`).
-		Joins("LEFT JOIN fault_injection_labels fil ON fil.fault_injection_id = fi.id").
-		Joins("LEFT JOIN labels l ON fil.label_id = l.id").
-		Group("fi.id, fi.name, fi.fault_type, fi.engine_config, fi.created_at, l.label_key, l.label_value"),
-	).Where("dr.issues = '{}' OR dr.issues IS NULL")
-	if err := db.Migrator().CreateView("fault_injection_no_issues", gorm.ViewOption{Query: noIssuesQuery}); err != nil {
-		logrus.Errorf("failed to create fault_injection_no_issues view: %v", err)
+	noIssuesQuery := db.Table("fault_injections fi").
+		Select("fi.*").
+		Joins("JOIN datapacks dp ON fi.datapack_id = dp.id").
+		Where("dp.algorithm_id = ?", 1)
+
+	if err := noIssuesQuery.
+		Not("EXISTS (?)", addDetectorJoins(db.Table("fault_injections fi2").
+			Select("1").
+			Where("fi2.id = fi.id")).Where("dr.result = ?", 1)).
+		Not("EXISTS (?)", addDetectorJoins(db.Table("fault_injections fi2").
+			Select("1").
+			Where("fi2.id = fi.id")).Where("dr.result = ?", 3)).
+		Where("fi.finished_at IS NOT NULL").
+		Migrator().CreateView("fault_injection_no_issues", gorm.ViewOption{Query: noIssuesQuery}); err != nil {
+		logrus.Warnf("Failed to create view fault_injection_no_issues: %v", err)
 	}
 
-	withIssuesQuery := addDetectorJoins(db.Table("fault_injections fi").
-		Select(`DISTINCT 
-		fi.id AS datapack_id, 
-		fi.name AS name,
-		fi.fault_type AS fault_type,
-		fi.category AS category, 
-		fi.engine_config AS engine_config, 
-		l.label_key as label_key,
-		l.label_value as label_value,
-		fi.created_at, 
-		dr.issues, 
-		dr.abnormal_avg_duration, 
-		dr.normal_avg_duration, 
-		dr.abnormal_succ_rate, 
-		dr.normal_succ_rate, 
-		dr.abnormal_p99, 
-		dr.normal_p99`).
-		Joins("LEFT JOIN tasks t ON t.id = fi.task_id").
-		Joins("LEFT JOIN fault_injection_labels fil ON fil.fault_injection_id = fi.id").
-		Joins("LEFT JOIN labels l ON fil.label_id = l.id").
-		Group("fi.id, fi.name, fi.fault_type, fi.engine_config, fi.created_at, l.label_key, l.label_value, dr.issues, dr.abnormal_avg_duration, dr.normal_avg_duration, dr.abnormal_succ_rate, dr.normal_succ_rate, dr.abnormal_p99, dr.normal_p99"),
-	).Where("dr.issues != '{}' AND dr.issues IS NOT NULL")
-	if err := db.Migrator().CreateView("fault_injection_with_issues", gorm.ViewOption{Query: withIssuesQuery}); err != nil {
-		logrus.Errorf("failed to create fault_injection_with_issues view: %v", err)
+	withIssuesQuery := db.Table("fault_injections fi").
+		Select("fi.*").
+		Joins("JOIN datapacks dp ON fi.datapack_id = dp.id").
+		Where("dp.algorithm_id = ?", 1)
+
+	if err := withIssuesQuery.
+		Where("EXISTS (?)", addDetectorJoins(db.Table("fault_injections fi2").
+			Select("1").
+			Where("fi2.id = fi.id")).Where("dr.result = ?", 1)).
+		Not("EXISTS (?)", addDetectorJoins(db.Table("fault_injections fi2").
+			Select("1").
+			Where("fi2.id = fi.id")).Where("dr.result = ?", 3)).
+		Where("fi.finished_at IS NOT NULL").
+		Migrator().CreateView("fault_injection_with_issues", gorm.ViewOption{Query: withIssuesQuery}); err != nil {
+		logrus.Warnf("Failed to create view fault_injection_with_issues: %v", err)
 	}
 }

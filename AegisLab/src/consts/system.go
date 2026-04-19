@@ -381,14 +381,10 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		// reference migration). The rbac aggregator re-adds these to
 		// RoleAdmin at startup via framework.RoleGrantsRegistrar.
 
-		// Injection management — moved to module/injection/permissions.go.
+		// Injection management -- moved to module/injection/permissions.go.
 		// The rbac aggregator re-adds these to RoleAdmin at startup via
 		// framework.RoleGrantsRegistrar.
 
-<<<<<<< HEAD
-		// Execution management
-		PermExecutionReadProject,
-		PermExecutionCreateProject,
 		// Execution management moved to module/execution/permissions.go.
 		// The rbac aggregator re-adds these to RoleAdmin at startup via
 		// framework.RoleGrantsRegistrar.
@@ -401,7 +397,6 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		// (Phase 4, issue #44). The rbac aggregator re-adds these
 		// RoleAdmin grants at startup via fx.Invoke.
 	},
-
 	// Regular User Role - basic role with minimal permissions
 	// Users can read team resources if they are team members
 	RoleUser: {
