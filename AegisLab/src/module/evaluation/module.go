@@ -11,8 +11,6 @@ var Module = fx.Module("evaluation",
 	fx.Provide(
 		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(RoutesSDK, fx.ResultTags(`group:"routes"`)),
-		fx.Annotate(Permissions, fx.ResultTags(`group:"permissions"`)),
-		fx.Annotate(RoleGrants, fx.ResultTags(`group:"role_grants"`)),
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
 	),
 )
