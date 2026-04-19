@@ -398,13 +398,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		PermExecutionExecuteProject,
 		PermExecutionStopProject,
 
-		// Task management
-		PermTaskReadAll,
-		PermTaskCreateAll,
-		PermTaskUpdateAll,
-		PermTaskDeleteAll,
-		PermTaskExecuteAll,
-		PermTaskStopAll,
+		// Task management moved to module/task/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
 
 		// Trace permissions moved to module/trace/permissions.go
 		// (Phase 4, issue #44). The rbac aggregator re-adds these

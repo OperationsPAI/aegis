@@ -25,7 +25,7 @@ func centralEntities() []interface{} {
 		// &model.APIKey{} stays here until module/auth Phase-4 PR (issue #39)
 		// claims it — it's owned by auth, not user.
 		&model.APIKey{},
-		&model.Task{},
+		&model.AuditLog{},
 		&model.FaultInjection{},
 		&model.Execution{},
 		&model.DetectorResult{},
