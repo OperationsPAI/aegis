@@ -10,7 +10,6 @@ func Migrations() framework.MigrationRegistrar {
 		Module: "injection",
 		Entities: []interface{}{
 			&model.FaultInjection{},
-			&model.FaultInjectionLabel{},
 		},
 	}
 }
