@@ -1,0 +1,397 @@
+package utils
+
+import (
+	"archive/tar"
+	"archive/zip"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io"
+	"io/fs"
+	"mime/multipart"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"aegis/config"
+
+	"github.com/BurntSushi/toml"
+	"github.com/stretchr/testify/assert/yaml"
+)
+
+type ExculdeRule struct {
+	Pattern string
+	IsGlob  bool
+}
+
+// AddToZip adds file to ZIP
+func AddToZip(zipWriter *zip.Writer, fileInfo fs.FileInfo, srcPath string, zipPath string) error {
+	fileHeader, err := zip.FileInfoHeader(fileInfo)
+	if err != nil {
+		return err
+	}
+
+	fileHeader.Name = zipPath
+	fileHeader.Method = zip.Deflate
+
+	writer, err := zipWriter.CreateHeader(fileHeader)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = file.Close() }()
+
+	_, err = io.Copy(writer, file)
+	return err
+}
+
+func CheckFileExists(filePath string) bool {
+	_, err := os.Stat(filePath)
+	return !os.IsNotExist(err)
+}
+
+// CopyDir copies a directory from src to dst
+func CopyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return fmt.Errorf("failed to get relative path: %v", err)
+		}
+
+		dstPath := filepath.Join(dst, relPath)
+
+		if d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return fmt.Errorf("failed to get directory info: %v", err)
+			}
+			return os.MkdirAll(dstPath, info.Mode())
+		} else {
+			return CopyFile(path, dstPath)
+		}
+	})
+}
+
+// CopyFile copies a file from src to dst
+func CopyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %v", err)
+	}
+	defer func() { _ = srcFile.Close() }()
+
+	srcInfo, err := srcFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat source file: %v", err)
+	}
+
+	dstFile, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, srcInfo.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %v", err)
+	}
+	defer func() { _ = dstFile.Close() }()
+
+	if _, err = io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to copy file content: %v", err)
+	}
+
+	return nil
+}
+
+// CopyFileFromFileHeader copies a file from a multipart.FileHeader to a destination path
+func CopyFileFromFileHeader(fileHeader *multipart.FileHeader, dst string) error {
+	srcFile, err := fileHeader.Open()
+	if err != nil {
+		return fmt.Errorf("failed to open uploaded file: %w", err)
+	}
+	defer func() { _ = srcFile.Close() }()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer func() { _ = dstFile.Close() }()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	return nil
+}
+
+// CalculateFileSHA256 calculates the SHA256 checksum of a file
+func CalculateFileSHA256(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open file: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", fmt.Errorf("failed to calculate hash: %w", err)
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func GetAllSubDirectories(root string) ([]string, error) {
+	var directories []string
+
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// This is a directory
+			path := filepath.Join(root, entry.Name())
+			absPath, err := filepath.Abs(path)
+			if err != nil {
+				return nil, err
+			}
+			directories = append(directories, absPath)
+		}
+	}
+
+	return directories, nil
+}
+
+func IsAllowedPath(path string) bool {
+	allowedRoot := config.GetString("jfs.dataset_path")
+	rel, err := filepath.Rel(allowedRoot, path)
+	return err == nil && !strings.Contains(rel, "..")
+}
+
+// LoadYAMLFile reads a YAML file and returns it as a map
+func LoadYAMLFile(filePath string) (map[string]any, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
+	}
+
+	var result map[string]any
+	if err := yaml.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML file %s: %w", filePath, err)
+	}
+
+	return result, nil
+}
+
+func MatchFile(fileName string, rule ExculdeRule) bool {
+	if rule.IsGlob {
+		match, _ := filepath.Match(rule.Pattern, fileName)
+		return match
+	}
+	return fileName == rule.Pattern
+}
+
+// ExtractZip
+func ExtractZip(zipFile, destDir string) error {
+	r, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = r.Close() }()
+
+	var topLevelDir string
+	allInSingleDir := true
+
+	for _, f := range r.File {
+		parts := strings.Split(f.Name, "/")
+		if len(parts) == 1 && !f.FileInfo().IsDir() {
+			allInSingleDir = false
+			break
+		}
+		if topLevelDir == "" {
+			topLevelDir = parts[0]
+		} else if topLevelDir != parts[0] {
+			allInSingleDir = false
+			break
+		}
+	}
+
+	for _, f := range r.File {
+		var filePath string
+
+		if allInSingleDir && topLevelDir != "" {
+			relativePath := strings.TrimPrefix(f.Name, topLevelDir+"/")
+			if relativePath == "" {
+				continue
+			}
+			filePath = filepath.Join(destDir, relativePath)
+		} else {
+			filePath = filepath.Join(destDir, f.Name)
+		}
+
+		if !strings.HasPrefix(filePath, filepath.Clean(destDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", filePath)
+		}
+
+		if f.FileInfo().IsDir() {
+			err := os.MkdirAll(filePath, os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+			return err
+		}
+
+		outFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			_ = outFile.Close()
+			return err
+		}
+
+		_, err = io.Copy(outFile, rc)
+		_ = outFile.Close()
+		_ = rc.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ExtractTarGz
+func ExtractTarGz(tarGzFile, destDir string) error {
+	file, err := os.Open(tarGzFile)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = file.Close() }()
+
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = gzr.Close() }()
+
+	tr := tar.NewReader(gzr)
+
+	var topLevelDir string
+	allInSingleDir := true
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		parts := strings.Split(header.Name, "/")
+		if len(parts) == 1 && header.Typeflag == tar.TypeReg {
+			allInSingleDir = false
+			break
+		}
+		if topLevelDir == "" {
+			topLevelDir = parts[0]
+		} else if topLevelDir != parts[0] {
+			allInSingleDir = false
+			break
+		}
+	}
+
+	_ = file.Close()
+	file, err = os.Open(tarGzFile)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = file.Close() }()
+
+	gzr, err = gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = gzr.Close() }()
+
+	tr = tar.NewReader(gzr)
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		var filePath string
+
+		if allInSingleDir && topLevelDir != "" {
+			relativePath := strings.TrimPrefix(header.Name, topLevelDir+"/")
+			if relativePath == "" {
+				continue
+			}
+
+			filePath = filepath.Join(destDir, relativePath)
+		} else {
+			filePath = filepath.Join(destDir, header.Name)
+		}
+
+		if !strings.HasPrefix(filePath, filepath.Clean(destDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", filePath)
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(filePath, 0755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			dir := filepath.Dir(filePath)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return err
+			}
+
+			outFile, err := os.Create(filePath)
+			if err != nil {
+				return err
+			}
+
+			if _, err := io.Copy(outFile, tr); err != nil {
+				_ = outFile.Close()
+				return err
+			}
+
+			_ = outFile.Close()
+		}
+	}
+
+	return nil
+}
+
+func ReadTomlFile(tomlPath string) (map[string]any, error) {
+	data, err := os.ReadFile(tomlPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %v", tomlPath, err)
+	}
+
+	var config map[string]any
+	if err := toml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse file %s: %v", tomlPath, err)
+	}
+
+	return config, nil
+}

@@ -1,0 +1,42 @@
+replicaCount: 1
+
+image:
+  repository: docker.io/opspai/rcabench-frontend
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# API backend target URL
+apiTarget: http://rcabench-exp:8080
+
+service:
+  # type: ClusterIP or NodePort
+  type: ClusterIP
+  port: 80
+  # nodePort: 30080  # Only used when type is NodePort (range: 30000-32767)
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: rcabench.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 512Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

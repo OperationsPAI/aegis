@@ -1,0 +1,117 @@
+name: aegislab-dev
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    network_mode: host
+    restart: always
+
+  redis:
+    image: redis:8.0-M02-alpine3.20
+    container_name: redis
+    network_mode: host
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  mysql:
+    image: mysql:8.0.43
+    container_name: mysql
+    environment:
+      MYSQL_DATABASE: rcabench
+      MYSQL_ROOT_PASSWORD: yourpassword
+    command: >
+      --default-authentication-plugin=caching_sha2_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    network_mode: host
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pyourpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.6.7
+    container_name: etcd
+    restart: always
+    environment:
+      - ETCD_NAME=etcd0
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://127.0.0.1:2380
+      - ETCD_INITIAL_CLUSTER=etcd0=http://127.0.0.1:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  loki:
+    image: grafana/loki:3.5.10
+    container_name: loki
+    network_mode: host
+    restart: always
+    volumes:
+      - ./manifests/dev/loki-config.yaml:/etc/loki/local-config.yaml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    container_name: prometheus
+    network_mode: host
+    restart: always
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - ./manifests/dev/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.3.0
+    container_name: grafana
+    network_mode: host
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./manifests/dev/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
+  buildkitd:
+    image: moby/buildkit:buildx-stable-1
+    container_name: buildkitd
+    privileged: true
+    environment:
+      - BUILDKIT_DEBUG=1
+    command: |
+      --addr tcp://0.0.0.0:1234
+      --allow-insecure-entitlement security.insecure
+      --allow-insecure-entitlement network.host
+    volumes:
+      - buildkit_cache:/var/lib/buildkit
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+    network_mode: host
+    restart: always
+
+volumes:
+  buildkit_cache:
+  prometheus_data:
+  grafana_data:

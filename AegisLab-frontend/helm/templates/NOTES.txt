@@ -1,0 +1,13 @@
+RCABench Frontend has been deployed!
+
+API Target: {{ .Values.apiTarget }}
+
+{{- if .Values.ingress.enabled }}
+Access the application at:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+Get the application URL by running:
+  kubectl port-forward svc/{{ include "rcabench-frontend.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+{{- end }}

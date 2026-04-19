@@ -1,0 +1,26 @@
+global:
+  storageClassName: standard
+  keepPVC: false
+
+hyperdx:
+  image:
+    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/hyperdx
+  otelExporterEndpoint: http://opentelemetry-kube-stack-deployment-collector:4318
+  service:
+    type: NodePort
+
+clickhouse:
+  image: pair-diag-cn-guangzhou.cr.volces.com/pair/clickhouse-server:25.7-alpine
+  config:
+    users:
+      appUserPassword: hyperdx
+      otelUserPassword: otelcollectorpass
+      otelUserName: otelcollector
+  service:
+    type: NodePort
+
+mongodb:
+  enabled: false
+
+otel:
+  enabled: false

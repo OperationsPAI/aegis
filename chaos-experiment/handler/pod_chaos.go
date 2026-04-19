@@ -1,0 +1,136 @@
+package handler
+
+import (
+	"context"
+	"strconv"
+
+	controllers "github.com/OperationsPAI/chaos-experiment/controllers"
+	chaosmeshv1alpha1 "github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
+	"k8s.io/utils/pointer"
+	cli "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+type PodFailureSpec struct {
+	Duration int `range:"1-60" description:"Time Unit Minute"`
+	System   int `range:"0-0" dynamic:"true" description:"String"`
+	AppIdx   int `range:"0-0" dynamic:"true" description:"App Index"`
+}
+
+func (s *PodFailureSpec) Create(cli cli.Client, opts ...Option) (string, error) {
+	conf := Conf{}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
+	annotations := make(map[string]string)
+	if conf.Annotations != nil {
+		annotations = conf.Annotations
+	}
+
+	ctx := context.Background()
+	if conf.Context != nil {
+		ctx = conf.Context
+	}
+
+	labels := make(map[string]string)
+	if conf.Labels != nil {
+		labels = conf.Labels
+	}
+
+	ns := conf.Namespace
+	system := conf.System
+
+	appName, err := getAppLabelByIndex(ctx, system, ns, s.AppIdx)
+	if err != nil {
+		return "", err
+	}
+	duration := pointer.String(strconv.Itoa(s.Duration) + "m")
+	action := chaosmeshv1alpha1.PodFailureAction
+
+	return controllers.CreatePodChaos(cli, ctx, ns, appName, action, duration, annotations, labels)
+}
+
+// Update PodKillSpec to use flattened app index
+type PodKillSpec struct {
+	Duration int `range:"1-60" description:"Time Unit Minute"`
+	System   int `range:"0-0" dynamic:"true" description:"String"`
+	AppIdx   int `range:"0-0" dynamic:"true" description:"App Index"`
+}
+
+func (s *PodKillSpec) Create(cli cli.Client, opts ...Option) (string, error) {
+	conf := Conf{}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
+	annotations := make(map[string]string)
+	if conf.Annotations != nil {
+		annotations = conf.Annotations
+	}
+
+	ctx := context.Background()
+	if conf.Context != nil {
+		ctx = conf.Context
+	}
+
+	labels := make(map[string]string)
+	if conf.Labels != nil {
+		labels = conf.Labels
+	}
+
+	ns := conf.Namespace
+	system := conf.System
+
+	appName, err := getAppLabelByIndex(ctx, system, ns, s.AppIdx)
+	if err != nil {
+		return "", err
+	}
+	duration := pointer.String(strconv.Itoa(s.Duration) + "m")
+	action := chaosmeshv1alpha1.PodKillAction
+
+	return controllers.CreatePodChaos(cli, ctx, ns, appName, action, duration, annotations, labels)
+}
+
+type ContainerKillSpec struct {
+	Duration     int `range:"1-60" description:"Time Unit Minute"`
+	System       int `range:"0-0" dynamic:"true" description:"String"`
+	ContainerIdx int `range:"0-0" dynamic:"true" description:"Container Index"`
+}
+
+func (s *ContainerKillSpec) Create(cli cli.Client, opts ...Option) (string, error) {
+	conf := Conf{}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
+	annotations := make(map[string]string)
+	if conf.Annotations != nil {
+		annotations = conf.Annotations
+	}
+
+	ctx := context.Background()
+	if conf.Context != nil {
+		ctx = conf.Context
+	}
+
+	labels := make(map[string]string)
+	if conf.Labels != nil {
+		labels = conf.Labels
+	}
+
+	ns := conf.Namespace
+	system := conf.System
+
+	containerInfo, err := getContainerInfoByIndex(ctx, system, ns, s.ContainerIdx)
+	if err != nil {
+		return "", err
+	}
+	appName := containerInfo.AppLabel
+	containerName := containerInfo.ContainerName
+
+	duration := pointer.String(strconv.Itoa(s.Duration) + "m")
+	action := chaosmeshv1alpha1.ContainerKillAction
+
+	// Use the updated CreatePodChaosWithContainer function
+	return controllers.CreatePodChaosWithContainer(cli, ctx, ns, appName, action, duration, annotations, labels, []string{containerName})
+}

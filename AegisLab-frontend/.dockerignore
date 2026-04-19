@@ -1,0 +1,15 @@
+# Ignore node modules and build output
+node_modules
+dist
+.git
+.gitignore
+.env*.local
+.vscode
+.idea
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+coverage

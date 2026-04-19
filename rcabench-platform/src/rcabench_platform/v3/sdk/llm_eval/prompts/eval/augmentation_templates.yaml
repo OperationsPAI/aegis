@@ -1,0 +1,11 @@
+# NOTE: template should include keys {question}
+
+default: |
+  {question}
+
+RCABench: |
+  The following API endpoints are experiencing possible SLO violations and need investigation:
+  {reports}
+
+  Please investigate the root cause of these SLO violations.
+  The telemetry data is stored in: `{directory_path}`

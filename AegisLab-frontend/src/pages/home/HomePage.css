@@ -1,0 +1,41 @@
+.home-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.welcome-section {
+  margin-bottom: 24px;
+}
+
+.welcome-section h2 {
+  margin-bottom: 8px;
+}
+
+.quick-actions-card {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-50) 0%,
+    var(--color-bg-container) 100%
+  );
+}
+
+.project-list-item {
+  padding: 12px 0;
+  transition: background-color 0.2s;
+  border-radius: 8px;
+}
+
+.project-list-item:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.getting-started-item {
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--color-bg-layout);
+  margin-bottom: 8px;
+}
+
+.getting-started-item:last-child {
+  margin-bottom: 0;
+}

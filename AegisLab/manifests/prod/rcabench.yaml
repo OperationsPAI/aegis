@@ -1,0 +1,69 @@
+global:
+  imageRegistry: pair-diag-cn-guangzhou.cr.volces.com
+
+images:
+  rcabench:
+    name: pair/rcabench
+    tag: "1.0.0"
+  jaeger:
+    name: pair/jaeger
+  redis:
+    name: pair/redis
+  mysql:
+    name: pair/mysql
+  etcd:
+    name: pair/etcd
+  busybox:
+    name: pair/busybox
+  buildkit:
+    name: pair/buildkit
+  alloy:
+    name: pair/alloy
+  loki:
+    name: pair/loki
+  prometheus:
+    name: pair/prometheus
+  grafana:
+    name: pair/grafana
+  init_data:
+    name: pair/init-data
+
+buildkit:
+  enabled: false
+
+rcabench-frontend:
+  image:
+    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/rcabench-frontend
+    tag: "0.1.2"
+
+harbor:
+  enabled: false
+
+initialization:
+  initDrainTemplate:
+    image:
+      name: pair/init-drain-template
+
+  initHelmCharts:
+    image:
+      name: pair/init-helm-charts
+
+configmap:
+  system:
+    env_mode: "prod"
+  k8s:
+    init_container:
+      busybox_image: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox:1.35
+
+persistence:
+  storageType: volcengine
+
+  jaeger:
+    storageClass: rcabench
+  redis:
+    storageClass: rcabench
+  mysql:
+    storageClass: rcabench
+  etcd:
+    storageClass: rcabench
+  

@@ -1,0 +1,146 @@
+[project]
+name = "rcabench-platform"
+version = "0.4.20"
+description = "An experiment framework for Root Cause Analysis"
+readme = "README.md"
+authors = [ #
+    { name = "Nugine", email = "xuyangwang@link.cuhk.edu.cn" },
+    { name = "Lincyaw", email = "814750204@qq.com" },
+    { name = "rainystevn1", email = "rainystevn1@gmail.com" },
+    { name = "YifanYang6", email = "yifanyang6@link.cuhk.edu.cn" },
+]
+requires-python = ">=3.10"
+dependencies = [ #
+    # CLI, logging, config (minimal base for all features)
+    "loguru>=0.7.3",
+    "tqdm>=4.67.1",
+    "typer>=0.16.0",
+    "python-dotenv>=1.1.1",
+    "pydantic>=2.12.4",
+    # Compatibility
+    "backports-strenum>=1.3.1 ; python_full_version < '3.11'",
+]
+
+[project.scripts]
+rca = "rcabench_platform.v3.cli.main:main"
+label = "rcabench_platform.v3.tools.label.app:run_streamlit"
+
+[project.optional-dependencies]
+sdk = [
+    # Data processing (algorithms, datasets, graphs, samplers, evaluation/ranking)
+    "polars>=1.31.0",
+    "numpy>=2.2.6",
+    "pandas>=2.3.1",
+    "duckdb>=1.3.2",
+    "networkx>=3.4.2",
+    # Computation (algorithms)
+    "scipy>=1.15.0",
+]
+internal = [
+    # Platform server API client
+    "rcabench>=1.1.51",
+    # Infrastructure clients
+    "clickhouse-connect>=0.8.18",
+    "kubernetes>=33.1.0",
+    "neo4j>=5.28.1",
+    "minio>=7.2.15",
+    # Cloud storage
+    "huggingface-hub>=0.33.4",
+    # Log template extraction
+    "drain3>=0.9.11",
+]
+analysis = [
+    # Visualization
+    "altair>=5.5.0",
+    "graphviz>=0.20.3",
+    "kaleido>=1.0.0",
+    "matplotlib>=3.10.3",
+    "plotly>=6.2.0",
+    "vega-datasets>=0.9.0",
+    "vegafusion>=2.0.2",
+    # Statistical analysis
+    "statsmodels>=0.14.5",
+    # Interactive dashboards
+    "streamlit>=1.49.0",
+    "pyvis>=0.3.2",
+    # Other
+    "python-dateutil>=2.9.0.post0",
+    "sqlalchemy>=2.0.43",
+]
+llm-eval = [
+    # Database
+    "sqlmodel>=0.0.22",
+    # LLM client (judge + evaluation semantic matching)
+    "openai>=1.40.0",
+    # Config loading
+    "pyyaml>=6.0.0",
+    # Logging & CLI
+    "colorlog>=6.9.0",
+    "jinja2>=3.1.0",
+    "questionary>=2.1.0",
+    "rich>=13.7.0",
+    # HTTP & data
+    "requests>=2.32.4",
+    "openpyxl>=3.1.0",
+    # PostgreSQL support
+    "psycopg2-binary>=2.9.0",
+    # Type stubs
+    "types-pyyaml>=6.0.12",
+    "fastapi>=0.135.2",
+    "uvicorn>=0.38.0",
+]
+all = ["rcabench-platform[sdk,internal,analysis,llm-eval]"]
+
+[dependency-groups]
+dev = [ #
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.7",
+    "marimo[recommended]>=0.14.10",
+    "plotly>=6.2.0",
+    "pyright>=1.1.403",
+    "ruff>=0.12.3",
+    "pre-commit>=4.5.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.7.12,<0.8.0"]
+build-backend = "uv_build"
+
+
+[tool.ruff]
+cache-dir = ".cache/ruff"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",  # https://docs.astral.sh/ruff/rules/#error-e
+    "F",  # https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "I",  # https://docs.astral.sh/ruff/rules/#isort-i
+    "UP", # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+]
+ignore = ["F401"]
+
+[tool.pyright]
+exclude = [ #
+    ".git",
+    "**/__pycache__",
+    ".cache",
+    ".idea",
+    ".vscode",
+    ".venv",
+    ".devbox",
+    "db/",
+    "data/",
+    "temp/",
+    "logs/",
+    "vendor/",
+    "output/",
+    "notebooks/",
+]
+
+# [tool.uv]
+# index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+
+[tool.marimo.runtime]
+output_max_bytes = 50_000_000

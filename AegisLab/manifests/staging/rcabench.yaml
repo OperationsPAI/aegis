@@ -1,0 +1,57 @@
+global:
+  imageRegistry: 10.10.10.240
+
+images:
+  rcabench:
+    name: library/rcabench
+  jaeger:
+    name: library/jaeger
+  redis:
+    name: library/redis
+  mysql:
+    name: library/mysql
+  etcd:
+    name: library/etcd
+  busybox:
+    name: library/busybox
+  buildkit:
+    name: library/buildkit
+  alloy:
+    name: library/alloy
+  loki:
+    name: library/loki
+  prometheus:
+    name: library/prometheus
+  grafana:
+    name: library/grafana
+
+buildkit:
+  enabled: false
+
+rcabench-frontend:
+  image:
+    repository: 10.10.10.240/library/rcabench-frontend
+
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 32180
+
+harbor:
+  enabled: true
+
+initialization:
+  initDrainTemplate:
+    enabled: false
+
+  initHelmCharts:
+    enabled: true
+    image:
+      name: library/init-helm-charts
+
+configmap:
+  system:
+    env_mode: "staging"
+  k8s:
+    init_container:
+      busybox_image: 10.10.10.240/library/busybox:1.35

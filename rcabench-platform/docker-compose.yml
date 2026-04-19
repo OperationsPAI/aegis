@@ -1,0 +1,15 @@
+services:
+  # https://neo4j.com/docs/operations-manual/current/docker/docker-compose-standalone/#docker-compose-basic-authentication
+  neo4j:
+    image: neo4j:latest
+    volumes:
+      - ./db/neo4j/logs:/logs
+      - ./db/neo4j/config:/config
+      - ./db/neo4j/data:/data
+      - ./db/neo4j/plugins:/plugins
+    environment:
+      - NEO4J_AUTH=neo4j/your_password
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    restart: always

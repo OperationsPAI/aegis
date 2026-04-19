@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-rcabench-config
+data:
+  config.prod.toml: |
+    name = "{{ .Values.configmap.name }}"
+    version = "{{ .Values.configmap.version }}"
+    port = {{ .Values.microservices.apiGateway.httpPort }}
+    workspace = "{{ .Values.configmap.workspace }}"
+
+    [system]
+    timezone = "{{ .Values.configmap.system.timezone }}"
+
+    [initialization]
+    data_path = "{{ .Values.configmap.initialization.data_path }}"
+
+    [database.mysql]
+    host = "{{ .Release.Name }}-mysql"
+    port = "{{ .Values.configmap.database.mysql.port }}"
+    user = "{{ .Values.configmap.database.mysql.user }}"
+    password = "{{ .Values.configmap.database.mysql.password }}"
+    db = "{{ .Values.configmap.database.mysql.db }}"
+
+    [jaeger]
+    endpoint = "{{ .Release.Name }}-jaeger:4318"
+
+    [redis]
+    host = "{{ .Release.Name }}-redis:6379"
+
+    [etcd]
+    endpoints = ["http://{{ .Release.Name }}-etcd-headless:2379"]
+    username = "{{ .Values.configmap.etcd.username }}"
+    password = "{{ .Values.configmap.etcd.password }}"
+
+    [k8s]
+    namespace = "{{ .Values.configmap.k8s.namespace }}"
+    [k8s.service]
+    internal_url = "http://{{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.httpPort }}"
+    [k8s.init_container]
+    {{- range $key, $value := .Values.configmap.k8s.init_container }}
+    {{ $key }} = {{ $value | quote }}
+    {{- end }}
+    [k8s.job.service_account]
+    name = "{{ .Release.Name }}-sa"
+    {{- range $key, $value := .Values.configmap.k8s.job.volume_mount }}
+    [k8s.job.volume_mount.{{ $key }}]
+    name = {{ $value.name | quote }}
+    {{- if $value.mount_path }}
+    mount_path = {{ $value.mount_path | quote }}
+    {{- end }}
+    {{- if $value.host_path }}
+    host_path = {{ $value.host_path | quote }}
+    type = {{ $value.type | quote }}
+    {{- end }}
+    {{- if $value.source_type }}
+    source_type = {{ $value.source_type | quote }}
+    {{- end }}
+    {{- if $value.sub_path }}
+    sub_path = {{ $value.sub_path | quote }}
+    {{- end }}
+    {{- if $value.secret_name }}
+    secret_name = {{ $value.secret_name | quote }}
+    {{- end }}
+    {{- if $value.claim_name }}
+    claim_name = {{ $value.claim_name | quote }}
+    {{- end }}
+    {{- end }}
+
+    [jfs]
+    container_path = "{{ .Values.configmap.jfs.container_path }}"
+    dataset_path = "{{ .Values.configmap.jfs.dataset_path }}"
+    experiment_storage_path = "{{ .Values.configmap.jfs.experiment_storage_path }}"
+
+    {{- if .Values.buildkit.enabled }}
+    [buildkit]
+    address = "{{ .Release.Name }}-buildkit:1234"
+    {{- end }}
+
+    [clients.iam]
+    target = "{{ .Release.Name }}-iam-service:{{ .Values.microservices.iamService.grpcPort }}"
+
+    [clients.orchestrator]
+    target = "{{ .Release.Name }}-orchestrator-service:{{ .Values.microservices.orchestratorService.grpcPort }}"
+
+    [clients.resource]
+    target = "{{ .Release.Name }}-resource-service:{{ .Values.microservices.resourceService.grpcPort }}"
+
+    [clients.runtime]
+    target = "{{ .Release.Name }}-runtime-worker-service:{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
+
+    [clients.system]
+    target = "{{ .Release.Name }}-system-service:{{ .Values.microservices.systemService.grpcPort }}"
+
+    [iam.grpc]
+    addr = ":{{ .Values.microservices.iamService.grpcPort }}"
+
+    [orchestrator.grpc]
+    addr = ":{{ .Values.microservices.orchestratorService.grpcPort }}"
+
+    [resource.grpc]
+    addr = ":{{ .Values.microservices.resourceService.grpcPort }}"
+
+    [runtime_worker.grpc]
+    addr = ":{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
+
+    [system.grpc]
+    addr = ":{{ .Values.microservices.systemService.grpcPort }}"
+
+    {{- if .Values.loki.enabled }}
+    [loki]
+    address = "http://{{ .Release.Name }}-loki:3100"
+    timeout = "{{ .Values.configmap.loki.timeout }}"
+    max_entries = {{ .Values.configmap.loki.max_entries }}
+    {{- end }}
+
+    [otlp_receiver]
+    port = {{ .Values.configmap.otlp.port }}
+    max_request_size = {{ .Values.configmap.otlp.max_request_size }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-etcd-producer-config
+data:
+  etcd.yaml: |
+{{ include "helm.etcd.mergedConfig" (dict "root" . "configType" "producer") | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-etcd-consumer-config
+data:
+  etcd.yaml: |
+{{ include "helm.etcd.mergedConfig" (dict "root" . "configType" "consumer") | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-initial-data
+data:
+  data.yaml: |
+{{- if .Values.initialDataFiles.data_yaml }}
+{{ .Values.initialDataFiles.data_yaml | indent 4 }}
+{{- else }}
+{{ .Files.Get "files/initial_data/data.yaml" | indent 4 }}
+{{- end }}
+  otel-demo.yaml: |
+{{- if .Values.initialDataFiles.otel_demo_yaml }}
+{{ .Values.initialDataFiles.otel_demo_yaml | indent 4 }}
+{{- else }}
+{{ .Files.Get "files/initial_data/otel-demo.yaml" | indent 4 }}
+{{- end }}
+  ts.yaml: |
+{{- if .Values.initialDataFiles.ts_yaml }}
+{{ .Values.initialDataFiles.ts_yaml | indent 4 }}
+{{- else }}
+{{ .Files.Get "files/initial_data/ts.yaml" | indent 4 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-system-helm-configs
+data:
+  system_helm_configs.json: |
+{{ include "helm.systemHelmConfigs" . | indent 4 }}

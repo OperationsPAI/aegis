@@ -1,0 +1,11 @@
+/.cache
+/.venv
+/.vscode
+/data
+/dist
+/logs
+/temp
+/vendor
+/db
+/.devbox
+/output

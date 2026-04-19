@@ -1,0 +1,523 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api-gateway
+spec:
+  replicas: {{ .Values.microservices.apiGateway.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-api-gateway
+  template:
+    metadata:
+      annotations:
+        rollout-timestamp: {{ now | quote }}
+      labels:
+        app: {{ .Release.Name }}-api-gateway
+    spec:
+      serviceAccountName: {{ .Release.Name }}-sa
+      initContainers:
+        - name: init-etcd-producer-config
+          image: pair-diag-cn-guangzhou.cr.volces.com/pair/etcdctl:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              INIT_KEY="/initialized_producer"
+              CONFIG_PREFIX="/rcabench/config/producer"
+              CONFIG_YAML_PATH="/initial-config/etcd.yaml"
+              FORCE_INIT="{{ .Values.initialConfig.force }}"
+
+              INIT_VALUE=$(etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 get "$INIT_KEY" --print-value-only 2>/dev/null || echo "")
+              if [ "$INIT_VALUE" = "true" ] && [ "$FORCE_INIT" != "true" ]; then
+                echo "producer config already initialized"
+                exit 0
+              fi
+
+              if [ -f "$CONFIG_YAML_PATH" ]; then
+                while IFS=': ' read -r key_name value || [ -n "$key_name" ]; do
+                  [ -z "$key_name" ] && continue
+                  echo "$key_name" | grep -q '^#' && continue
+                  key_name=$(echo "$key_name" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+                  value=$(echo "$value" | sed "s/^[[:space:]]*//; s/[[:space:]]*$//; s/^[\"']//; s/[\"']$//")
+                  [ -n "$key_name" ] || continue
+                  etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$CONFIG_PREFIX/$key_name" "$value" || true
+                done < "$CONFIG_YAML_PATH"
+                etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$INIT_KEY" "true" || true
+              fi
+          volumeMounts:
+            - name: etcd-initial-config
+              mountPath: /initial-config
+              readOnly: true
+      containers:
+        - name: api-gateway
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          args:
+            - api-gateway
+            - --conf
+            - /etc/rcabench/config.prod.toml
+            - --port
+            - {{ .Values.microservices.apiGateway.httpPort | quote }}
+          ports:
+            - containerPort: {{ .Values.microservices.apiGateway.httpPort }}
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /system/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /system/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          env:
+            - name: GOPRIVATE
+              value: "github.com/OperationsPAI/chaos-experiment"
+            - name: ENV
+              value: "prod"
+            - name: GIN_MODE
+              value: "release"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rcabench/config.prod.toml
+              subPath: config.prod.toml
+            - name: initial-data
+              mountPath: "{{ .Values.configmap.initialization.data_path }}"
+              readOnly: true
+            - name: containers-data
+              mountPath: "{{ .Values.configmap.jfs.container_path }}"
+            - name: dataset
+              mountPath: "{{ .Values.configmap.jfs.dataset_path }}"
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-rcabench-config
+        - name: initial-data
+          configMap:
+            name: {{ .Release.Name }}-initial-data
+        - name: etcd-initial-config
+          configMap:
+            name: {{ .Release.Name }}-etcd-producer-config
+        - name: containers-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-containers-data
+        - name: dataset
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-juicefs-dataset
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-iam-service
+spec:
+  replicas: {{ .Values.microservices.iamService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-iam-service
+  template:
+    metadata:
+      annotations:
+        rollout-timestamp: {{ now | quote }}
+      labels:
+        app: {{ .Release.Name }}-iam-service
+    spec:
+      serviceAccountName: {{ .Release.Name }}-sa
+      containers:
+        - name: iam-service
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          args:
+            - iam-service
+            - --conf
+            - /etc/rcabench/config.prod.toml
+          ports:
+            - containerPort: {{ .Values.microservices.iamService.grpcPort }}
+              name: grpc
+          readinessProbe:
+            grpc:
+              port: {{ .Values.microservices.iamService.grpcPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: {{ .Values.microservices.iamService.grpcPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rcabench/config.prod.toml
+              subPath: config.prod.toml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-rcabench-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-orchestrator-service
+spec:
+  replicas: {{ .Values.microservices.orchestratorService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-orchestrator-service
+  template:
+    metadata:
+      annotations:
+        rollout-timestamp: {{ now | quote }}
+      labels:
+        app: {{ .Release.Name }}-orchestrator-service
+    spec:
+      serviceAccountName: {{ .Release.Name }}-sa
+      containers:
+        - name: orchestrator-service
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          args:
+            - orchestrator-service
+            - --conf
+            - /etc/rcabench/config.prod.toml
+          ports:
+            - containerPort: {{ .Values.microservices.orchestratorService.grpcPort }}
+              name: grpc
+          readinessProbe:
+            grpc:
+              port: {{ .Values.microservices.orchestratorService.grpcPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: {{ .Values.microservices.orchestratorService.grpcPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rcabench/config.prod.toml
+              subPath: config.prod.toml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-rcabench-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-resource-service
+spec:
+  replicas: {{ .Values.microservices.resourceService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-resource-service
+  template:
+    metadata:
+      annotations:
+        rollout-timestamp: {{ now | quote }}
+      labels:
+        app: {{ .Release.Name }}-resource-service
+    spec:
+      serviceAccountName: {{ .Release.Name }}-sa
+      containers:
+        - name: resource-service
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          args:
+            - resource-service
+            - --conf
+            - /etc/rcabench/config.prod.toml
+          ports:
+            - containerPort: {{ .Values.microservices.resourceService.grpcPort }}
+              name: grpc
+          readinessProbe:
+            grpc:
+              port: {{ .Values.microservices.resourceService.grpcPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: {{ .Values.microservices.resourceService.grpcPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rcabench/config.prod.toml
+              subPath: config.prod.toml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-rcabench-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-runtime-worker-service
+spec:
+  replicas: {{ .Values.microservices.runtimeWorkerService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-runtime-worker-service
+  template:
+    metadata:
+      annotations:
+        rollout-timestamp: {{ now | quote }}
+      labels:
+        app: {{ .Release.Name }}-runtime-worker-service
+    spec:
+      serviceAccountName: {{ .Release.Name }}-sa
+      initContainers:
+        - name: init-etcd-consumer-config
+          image: pair-diag-cn-guangzhou.cr.volces.com/pair/etcdctl:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              INIT_KEY="/initialized_consumer"
+              CONFIG_PREFIX="/rcabench/config/consumer"
+              CONFIG_YAML_PATH="/initial-config/etcd.yaml"
+              FORCE_INIT="{{ .Values.initialConfig.force }}"
+
+              INIT_VALUE=$(etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 get "$INIT_KEY" --print-value-only 2>/dev/null || echo "")
+              if [ "$INIT_VALUE" = "true" ] && [ "$FORCE_INIT" != "true" ]; then
+                echo "consumer config already initialized"
+                exit 0
+              fi
+
+              if [ -f "$CONFIG_YAML_PATH" ]; then
+                while IFS=': ' read -r key_name value || [ -n "$key_name" ]; do
+                  [ -z "$key_name" ] && continue
+                  echo "$key_name" | grep -q '^#' && continue
+                  key_name=$(echo "$key_name" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+                  value=$(echo "$value" | sed "s/^[[:space:]]*//; s/[[:space:]]*$//; s/^[\"']//; s/[\"']$//")
+                  [ -n "$key_name" ] || continue
+                  etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$CONFIG_PREFIX/$key_name" "$value" || true
+                done < "$CONFIG_YAML_PATH"
+                etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$INIT_KEY" "true" || true
+              fi
+          volumeMounts:
+            - name: etcd-initial-config
+              mountPath: /initial-config
+              readOnly: true
+      containers:
+        - name: runtime-worker-service
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          args:
+            - runtime-worker-service
+            - --conf
+            - /etc/rcabench/config.prod.toml
+          ports:
+            - containerPort: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
+              name: grpc
+            - containerPort: {{ .Values.configmap.otlp.port }}
+              name: otlp
+          readinessProbe:
+            grpc:
+              port: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          env:
+            - name: GOPRIVATE
+              value: "github.com/OperationsPAI/chaos-experiment"
+            - name: ENV
+              value: "prod"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rcabench/config.prod.toml
+              subPath: config.prod.toml
+            - name: initial-data
+              mountPath: "{{ .Values.configmap.initialization.data_path }}"
+            {{- if .Values.harbor.enabled }}
+            - name: docker-config-volume
+              mountPath: /root/.docker/config.json
+              subPath: config.json
+            - name: harbor-cert
+              mountPath: /usr/local/share/ca-certificates/harbor.lab.pj.crt
+              subPath: harbor.lab.pj.crt
+            {{- end }}
+            - name: containers-data
+              mountPath: "{{ .Values.configmap.jfs.container_path }}"
+            - name: dataset
+              mountPath: "{{ .Values.configmap.jfs.dataset_path }}"
+            - name: experiment-storage
+              mountPath: "{{ .Values.configmap.jfs.experiment_storage_path }}"
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-rcabench-config
+        - name: initial-data
+          configMap:
+            name: {{ .Release.Name }}-initial-data
+        - name: etcd-initial-config
+          configMap:
+            name: {{ .Release.Name }}-etcd-consumer-config
+        {{- if .Values.harbor.enabled }}
+        - name: docker-config-volume
+          secret:
+            secretName: docker-config
+            items:
+              - key: config.json
+                path: config.json
+        - name: harbor-cert
+          secret:
+            secretName: harbor-cert
+            items:
+              - key: harbor.lab.pj.crt
+                path: harbor.lab.pj.crt
+        {{- end }}
+        - name: containers-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-containers-data
+        - name: dataset
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-juicefs-dataset
+        - name: experiment-storage
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-juicefs-experiment-storage
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-system-service
+spec:
+  replicas: {{ .Values.microservices.systemService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-system-service
+  template:
+    metadata:
+      annotations:
+        rollout-timestamp: {{ now | quote }}
+      labels:
+        app: {{ .Release.Name }}-system-service
+    spec:
+      serviceAccountName: {{ .Release.Name }}-sa
+      containers:
+        - name: system-service
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          args:
+            - system-service
+            - --conf
+            - /etc/rcabench/config.prod.toml
+          ports:
+            - containerPort: {{ .Values.microservices.systemService.grpcPort }}
+              name: grpc
+          readinessProbe:
+            grpc:
+              port: {{ .Values.microservices.systemService.grpcPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: {{ .Values.microservices.systemService.grpcPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rcabench/config.prod.toml
+              subPath: config.prod.toml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-rcabench-config
+{{- if .Values.buildkit.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-buildkit-config
+data:
+  buildkitd.toml: |
+    debug = true
+    trace = false
+    insecure-entitlements = ["security.insecure"]
+
+    [grpc]
+    address = ["tcp://0.0.0.0:1234"]
+
+    {{- if .Values.harbor.enabled }}
+    [registry."10.10.10.240"]
+    http = false
+    ca = ["/usr/local/share/ca-certificates/harbor.lab.pj.crt"]
+    {{- else }}
+    [registry."pair-diag-cn-guangzhou.cr.volces.com/pair"]
+    http = false
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-buildkit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-buildkit
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-buildkit
+    spec:
+      serviceAccountName: {{ .Release.Name }}-sa
+      containers:
+        - name: buildkit
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.buildkit "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.buildkit.pullPolicy }}"
+          args:
+            - --config
+            - /etc/buildkit/buildkitd.toml
+          ports:
+            - containerPort: 1234
+            - containerPort: 5678
+          {{- with .Values.buildkit.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rcabench/config.prod.toml
+              subPath: config.prod.toml
+            - name: containers-data
+              mountPath: "{{ .Values.configmap.jfs.container_path }}"
+            - name: buildkit-socket
+              mountPath: /run/buildkit
+            - name: buildkit-config
+              mountPath: /etc/buildkit/buildkitd.toml
+              subPath: buildkitd.toml
+            {{- if .Values.harbor.enabled }}
+            - name: harbor-cert
+              mountPath: /usr/local/share/ca-certificates/harbor.lab.pj.crt
+              subPath: harbor.lab.pj.crt
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-rcabench-config
+        - name: containers-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-containers-data
+        - name: buildkit-socket
+          emptyDir: {}
+        - name: buildkit-config
+          configMap:
+            name: {{ .Release.Name }}-buildkit-config
+        {{- if .Values.harbor.enabled }}
+        - name: harbor-cert
+          secret:
+            secretName: harbor-cert
+            items:
+              - key: harbor.lab.pj.crt
+                path: harbor.lab.pj.crt
+        {{- end }}
+{{- end }}

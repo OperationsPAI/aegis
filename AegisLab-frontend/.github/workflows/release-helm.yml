@@ -1,0 +1,17 @@
+name: Realease Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'helm/**'
+      - '.github/workflows/release-helm.yml'
+
+jobs:
+  call-helm-release:
+    uses: OperationsPAI/shared-workflows/.github/workflows/release-helm.yml@main
+    with: 
+      repo-name: AegisLab-frontend
+      repo-url: https://operationspai.github.io/AegisLab-frontend/
+    secrets: inherit

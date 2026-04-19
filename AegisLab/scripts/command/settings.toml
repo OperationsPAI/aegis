@@ -1,0 +1,89 @@
+# settings.toml
+
+[default]
+default_port = 30080
+generator_image = "docker.io/opspai/openapi-generator-cli:1.0.0"
+k8s_namespace = "exp"
+release_name = "rcabench"
+python_sdk_dir = "sdk/python"
+time_format = "%Y%m%d_%H%M%S"
+
+[default.openapi]
+generator_volume_root = "/local"
+
+[default.apifox]
+api_base_url = "https://api.apifox.com/v1"
+api_version = "2024-03-28"
+locale = "zh-CN"
+
+[default.sdk.python]
+git_host = "github.com"
+git_user_id = "OperationsPAI"
+git_repo_id = "AegisLab"
+
+[default.sdk.typescript.portal]
+npm_name = "@OperationsPAI/portal"
+npm_description = "TypeScript Portal SDK for RCABench API"
+
+[default.sdk.typescript.admin]
+npm_name = "@OperationsPAI/admin"
+npm_description = "TypeScript Admin SDK for RCABench API"
+
+[default.command_urls]
+cert_manager_manifest_url = "https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml"
+mysql_apt_config_deb_url = "https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb"
+
+[default.command_urls.helm_repo_urls]
+chaos_mesh = "https://charts.chaos-mesh.org"
+cilium = "https://helm.cilium.io/"
+open_telemetry = "https://open-telemetry.github.io/opentelemetry-helm-charts"
+clickstack = "https://hyperdxio.github.io/helm-charts"
+
+[default.database.mysql]
+host = "localhost"
+port = "3306"
+user = "root"
+password = "yourpassword"
+db = "rcabench"
+
+[default.redis]
+host = "localhost"
+port = "6379"
+
+[default.etcd]
+host = "localhost"
+port = "2379"
+prefix = "/rcabench/config"
+username = ""
+password = ""
+
+[staging]
+default_repo = "10.10.10.240/library"
+
+[staging.database.mysql]
+host = "10.10.10.220"
+port = "32206"
+
+[staging.redis]
+host = "10.10.10.220"
+port = "32279"
+
+[staging.etcd]
+host = "10.10.10.220"
+port = "31379"
+
+[prod.database.mysql]
+host = "localhost"
+port = "13306"
+
+[prod.redis]
+host = "localhost"
+port = "16379"
+
+[prod.etcd]
+host = "localhost"
+port = "12379"
+
+[test.etcd]
+host = "localhost"
+port = "22379"

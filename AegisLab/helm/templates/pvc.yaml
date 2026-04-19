@@ -1,0 +1,100 @@
+{{- if .Values.persistence.containers.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-containers-data
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - {{ .Values.persistence.containers.accessMode }}
+  storageClassName: {{ index .Values.persistence.storageClassNames .Values.persistence.storageType | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.containers.size }}
+{{- end }}
+
+{{- if .Values.persistence.observability.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-observability-data
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - {{ .Values.persistence.observability.accessMode }}
+  storageClassName: {{ index .Values.persistence.storageClassNames .Values.persistence.storageType | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.observability.size }}
+{{- end }}
+
+{{- if .Values.persistence.juicefs.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-juicefs-dataset
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    {{- if eq .Values.persistence.storageType "juicefs" }}
+    - ReadWriteMany
+    {{- else if eq .Values.persistence.storageType "external" }}
+    - {{ .Values.persistence.juicefs.external.accessMode }}
+    {{- else if eq .Values.persistence.storageType "volcengine" }}
+    - {{ .Values.persistence.juicefs.volcengine.accessMode }}
+    {{- else }}
+    - ReadWriteMany
+    {{- end }}
+  {{- if eq .Values.persistence.storageType "juicefs" }}
+  {{- if .Values.persistence.juicefs.useStaticPV }}
+  volumeName: {{ .Release.Name }}-juicefs-dataset-pv
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ index .Values.persistence.storageClassNames "juicefs" | quote }}
+  {{- end }}
+  {{- else }}
+  storageClassName: {{ index .Values.persistence.storageClassNames .Values.persistence.storageType | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.juicefs.size }}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-juicefs-experiment-storage
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    {{- if eq .Values.persistence.storageType "juicefs" }}
+    - ReadWriteMany
+    {{- else if eq .Values.persistence.storageType "external" }}
+    - {{ .Values.persistence.juicefs.external.accessMode }}
+    {{- else if eq .Values.persistence.storageType "volcengine" }}
+    - {{ .Values.persistence.juicefs.volcengine.accessMode }}
+    {{- else }}
+    - ReadWriteMany
+    {{- end }}
+  {{- if eq .Values.persistence.storageType "juicefs" }}
+  {{- if .Values.persistence.juicefs.useStaticPV }}
+  volumeName: {{ .Release.Name }}-juicefs-experiment-storage-pv
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ index .Values.persistence.storageClassNames "juicefs" | quote }}
+  {{- end }}
+  {{- else }}
+  storageClassName: {{ index .Values.persistence.storageClassNames .Values.persistence.storageType | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.juicefs.size }}
+{{- end }}
+

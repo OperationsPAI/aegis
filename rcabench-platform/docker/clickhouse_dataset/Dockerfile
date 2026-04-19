@@ -1,0 +1,20 @@
+ARG BASE_IMAGE=10.10.10.240/library/rcabench-platform:latest
+FROM ${BASE_IMAGE}
+
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+WORKDIR /app
+
+COPY entrypoint.sh /entrypoint.sh
+
+ARG ABNORMAL_START_VAR
+ARG ABNORMAL_END_VAR
+ARG NORMAL_START_VAR
+ARG NORMAL_END_VAR
+ENV ABNORMAL_START=${ABNORMAL_START_VAR}
+ENV ABNORMAL_END=${ABNORMAL_END_VAR}
+ENV NORMAL_START=${NORMAL_START_VAR}
+ENV NORMAL_END=${NORMAL_END_VAR}
+
+ENTRYPOINT ["/entrypoint.sh"]

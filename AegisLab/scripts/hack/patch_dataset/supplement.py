@@ -1,0 +1,529 @@
+#!/usr/bin/env -S uv run -s
+import mysql.connector
+from mysql.connector import Error
+from rcabench.openapi.api_client import ApiClient, Configuration
+from rcabench.openapi import (
+    DatasetApi,
+    AlgorithmApi,
+    DtoExecutionPayload,
+    DtoAlgorithmItem,
+    DtoSubmitDatasetBuildingReq,
+    DtoSubmitExecutionReq,
+)
+from rcabench.openapi.models.dto_dataset_build_payload import DtoDatasetBuildPayload
+import time
+import typer
+import os
+import json
+from datetime import datetime
+from typing import Dict, Any, Optional
+
+app = typer.Typer()
+
+
+def connect_mysql(host: str, user: str, password: str, dbname: str, port: int):
+    return mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        database=dbname,
+        port=port,
+    )
+
+
+@app.command()
+def dataset(
+    base_url: str = typer.Option(
+        "http://10.10.10.220:32080", help="Base URL of RCABench service"
+    ),
+    db_host: str = typer.Option("10.10.10.220", help="MySQL database host"),
+    db_user: str = typer.Option("root", help="MySQL username"),
+    db_password: str = typer.Option("yourpassword", help="MySQL password"),
+    db_name: str = typer.Option("rcabench", help="MySQL database name"),
+    db_port: int = typer.Option(32206, help="MySQL port"),
+    sleep_time: int = typer.Option(
+        30, help="Wait time after each submission (seconds)"
+    ),
+):
+    configuration: Configuration = Configuration(host=base_url)
+
+    with ApiClient(configuration=configuration) as client:
+        api = DatasetApi(api_client=client)
+        try:
+            with connect_mysql(
+                db_host, db_user, db_password, db_name, db_port
+            ) as connection:
+                print("✅ Successfully connected to MySQL")
+
+                with connection.cursor(dictionary=True) as cursor:
+                    # Get version information
+                    cursor.execute("SELECT VERSION() as version")
+                    version_info: Optional[Dict[str, Any]] = cursor.fetchone()  # type: ignore
+                    assert version_info, "Failed to get MySQL version information"
+                    print(f"📋 MySQL version: {version_info['version']}")
+
+                    # Execute main query
+                    query = """
+                    SELECT id, injection_name
+                    FROM fault_injections
+                    WHERE status = 3
+                    ORDER BY id DESC
+                    """
+
+                    cursor.execute(query)
+                    rows = cursor.fetchall()
+
+                print(f"📋 Query result: found {len(rows)} records")
+
+                for index, row in enumerate(rows, 1):
+                    injection_id = row["id"]  # type: ignore
+                    injection_name = str(row["injection_name"])  # type: ignore
+
+                    print(
+                        f"Processing {index}/{len(rows)}: ID={injection_id}, Name={injection_name}"
+                    )
+
+                    try:
+                        namespace = injection_name.split("-")[0]
+                        print(f"  Extracted namespace: {namespace}")
+
+                        resp = api.api_v1_datasets_post(
+                            body=DtoSubmitDatasetBuildingReq(
+                                project_name="pair_diagnosis",
+                                payloads=[
+                                    DtoDatasetBuildPayload(
+                                        benchmark="clickhouse",
+                                        name=injection_name,
+                                        pre_duration=4,
+                                        env_vars={
+                                            "NAMESPACE": namespace,
+                                        },
+                                    ),
+                                ],
+                            ),
+                        )
+
+                        print(f"  🔄 Dataset submission successful: {resp}")
+
+                    except Exception as submit_error:
+                        print(f"  ❌ Dataset submission failed: {submit_error}")
+                        continue
+
+                    print(f"  ⏳ Waiting {sleep_time} seconds...")
+                    time.sleep(sleep_time)
+
+        except Error as e:
+            print(f"❌ MySQL error: {e}")
+            raise typer.Exit(1)
+
+        except Exception as e:
+            print(f"❌ Other error: {e}")
+            raise typer.Exit(1)
+
+
+@app.command()
+def detector(
+    base_url: str = typer.Option(
+        "http://10.10.10.220:32080", help="Base URL of RCABench service"
+    ),
+    db_host: str = typer.Option("10.10.10.220", help="MySQL database host"),
+    db_user: str = typer.Option("root", help="MySQL username"),
+    db_password: str = typer.Option("yourpassword", help="MySQL password"),
+    db_name: str = typer.Option("rcabench", help="MySQL database name"),
+    db_port: int = typer.Option(32206, help="MySQL port"),
+    sleep_time: int = typer.Option(
+        10, help="Wait time after each submission (seconds)"
+    ),
+    detector_image: str = typer.Option("detector", help="Detector image name"),
+    # detector_tag: str = typer.Option("latest", help="Detector image tag"),
+):
+    configuration: Configuration = Configuration(host=base_url)
+
+    with ApiClient(configuration=configuration) as client:
+        api = AlgorithmApi(api_client=client)
+
+        try:
+            with connect_mysql(
+                db_host, db_user, db_password, db_name, db_port
+            ) as connection:
+                print("✅ Successfully connected to MySQL")
+
+                with connection.cursor(dictionary=True) as cursor:
+                    # Get version information
+                    cursor.execute("SELECT VERSION() as version")
+                    version_info: Optional[Dict[str, Any]] = cursor.fetchone()  # type: ignore
+                    assert version_info, "Failed to get MySQL version information"
+                    print(f"📋 MySQL version: {version_info['version']}")
+
+                    query = """
+                    SELECT id, injection_name 
+                    FROM fault_injections
+                    WHERE id NOT IN (
+                        SELECT DISTINCT fis.id
+                        FROM fault_injections fis 
+                        JOIN execution_results er ON fis.id = er.datapack_id
+                        JOIN detectors d ON er.id = d.execution_id
+                    ) AND status = 4
+                    ORDER BY id DESC
+                    """
+
+                    cursor.execute(query)
+                    rows = cursor.fetchall()
+
+                print(f"📋 Query result: found {len(rows)} records")
+
+                for index, row in enumerate(rows, 1):
+                    injection_id = row["id"]  # type: ignore
+                    injection_name = str(row["injection_name"])  # type: ignore
+
+                    print(
+                        f"Processing {index}/{len(rows)}: ID={injection_id}, Name={injection_name}"
+                    )
+
+                    try:
+                        resp = api.api_v1_algorithms_post(
+                            body=DtoSubmitExecutionReq(
+                                project_name="pair_diagnosis",
+                                payloads=[
+                                    DtoExecutionPayload(
+                                        algorithm=DtoAlgorithmItem(name=detector_image),
+                                        dataset=injection_name,
+                                    )
+                                ],
+                            ),
+                        )
+                        print(f"  🔄 Detector submission successful: {resp}")
+
+                    except Exception as submit_error:
+                        print(f"  ❌ Detector submission failed: {submit_error}")
+                        continue
+
+                    print(f"  ⏳ Waiting {sleep_time} seconds...")
+                    time.sleep(sleep_time)
+
+        except Error as e:
+            print(f"❌ MySQL error: {e}")
+            raise typer.Exit(1)
+
+        except Exception as e:
+            print(f"❌ Other error: {e}")
+            raise typer.Exit(1)
+
+
+@app.command()
+def detector_single(
+    injection_name: str,
+    base_url: str = typer.Option(
+        "http://10.10.10.220:32080", help="Base URL of RCABench service"
+    ),
+    detector_image: str = typer.Option("detector", help="Detector image name"),
+):
+    configuration: Configuration = Configuration(host=base_url)
+
+    with ApiClient(configuration=configuration) as client:
+        api = AlgorithmApi(api_client=client)
+        resp = api.api_v1_algorithms_post(
+            body=DtoSubmitExecutionReq(
+                project_name="pair_diagnosis",
+                payloads=[
+                    DtoExecutionPayload(
+                        algorithm=DtoAlgorithmItem(name=detector_image),
+                        dataset=injection_name,
+                    )
+                ],
+            ),
+        )
+
+
+@app.command()
+def align_db(
+    db_host: str = typer.Option("10.10.10.220", help="MySQL database host"),
+    db_user: str = typer.Option("root", help="MySQL username"),
+    db_password: str = typer.Option("yourpassword", help="MySQL password"),
+    db_name: str = typer.Option("rcabench", help="MySQL database name"),
+    db_port: int = typer.Option(32206, help="MySQL port"),
+):
+    path = "/mnt/jfs/rcabench_dataset"
+
+    # Get local directory list
+    local_datasets = []
+    if os.path.exists(path):
+        local_datasets = [
+            entry
+            for entry in os.listdir(path)
+            if os.path.isdir(os.path.join(path, entry))
+        ]
+        print(f"📁 Found {len(local_datasets)} local dataset directories")
+    else:
+        print(f"⚠️ Path does not exist: {path}")
+        return
+
+    with connect_mysql(db_host, db_user, db_password, db_name, db_port) as connection:
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT VERSION() as version")
+            version_info: Optional[Dict[str, Any]] = cursor.fetchone()
+            assert version_info, "Failed to get MySQL version information"
+            print(f"📋 MySQL version: {version_info['version']}")
+
+            query = """
+            SELECT id, name 
+            FROM fault_injections
+            ORDER BY id DESC
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+            print(f"📋 Database query result: found {len(rows)} records")
+
+            # Check if database records exist locally, delete if not found
+            deleted_count = 0
+            database_datasets = []
+            for row in rows:
+                injection_id = row["id"]
+                injection_name = str(row["name"])
+                database_datasets.append(injection_name)
+
+                if injection_name not in local_datasets:
+                    try:
+                        # Delete dependent table data (in foreign key dependency order)
+                        # Based on new entity.go structure
+
+                        # 1. Delete detector_results table
+                        cursor.execute(
+                            """DELETE dr FROM detector_results dr 
+JOIN executions e ON dr.execution_id = e.id 
+WHERE e.datapack_id = %s
+                        """,
+                            (injection_id,),
+                        )
+
+                        # 2. Delete granularity_results table
+                        cursor.execute(
+                            """DELETE gr FROM granularity_results gr
+JOIN executions e ON gr.execution_id = e.id 
+WHERE e.datapack_id = %s
+                        """,
+                            (injection_id,),
+                        )
+
+                        # 3. Delete executions table
+                        cursor.execute(
+                            """
+DELETE FROM executions WHERE datapack_id = %s
+                        """,
+                            (injection_id,),
+                        )
+
+                        # 4. Delete dataset_version_injections table
+                        cursor.execute(
+                            """
+DELETE FROM dataset_version_injections WHERE injection_id = %s
+                        """,
+                            (injection_id,),
+                        )
+
+                        # 5. Finally delete main table fault_injections
+                        cursor.execute(
+                            """
+DELETE FROM fault_injections WHERE id = %s
+                        """,
+                            (injection_id,),
+                        )
+
+                        # Commit transaction
+                        connection.commit()
+                        print(
+                            f"🗑️ Deleted database record: ID={injection_id}, Name={injection_name}"
+                        )
+                        deleted_count += 1
+                    except Exception as e:
+                        # Rollback transaction
+                        connection.rollback()
+                        print(f"❌ Failed to delete record ID={injection_id}: {e}")
+
+            print(f"✅ Total deleted {deleted_count} database records")
+
+            # Check if local datasets exist in database, add from injection.json if not found
+            added_count = 0
+            skipped_count = 0
+
+            # Helper functions for data conversion
+            def safe_get(data: Dict[str, Any], key: str, default: Any = None) -> Any:
+                value = data.get(key, default)
+                if value is None:
+                    return default
+                return value
+
+            def parse_timestamp(timestamp_str: Any) -> Any:
+                if timestamp_str is None:
+                    return None
+                try:
+                    if isinstance(timestamp_str, str):
+                        return datetime.fromisoformat(
+                            timestamp_str.replace("Z", "+00:00")
+                        )
+                    return timestamp_str
+                except Exception:
+                    return None
+
+            # Cache for benchmark name -> container_version_id mapping
+            benchmark_cache: Dict[str, int] = {}
+
+            def get_benchmark_id(benchmark_name: str) -> Optional[int]:
+                """Look up container_version_id by benchmark name"""
+                if benchmark_name in benchmark_cache:
+                    return benchmark_cache[benchmark_name]
+
+                # ContainerTypeBenchmark = 1
+                cursor.execute(
+                    """
+                    SELECT cv.id FROM container_versions cv
+                    JOIN containers c ON cv.container_id = c.id
+                    WHERE c.name = %s AND c.type = 1 AND cv.status >= 0
+                    ORDER BY cv.id DESC LIMIT 1
+                    """,
+                    (benchmark_name,),
+                )
+                result = cursor.fetchone()
+                if result:
+                    benchmark_cache[benchmark_name] = result["id"]
+                    return result["id"]
+                return None
+
+            # Get default pedestal_id (first available pedestal)
+            # ContainerTypePedestal = 2
+            cursor.execute(
+                """
+                SELECT cv.id FROM container_versions cv
+                JOIN containers c ON cv.container_id = c.id
+                WHERE c.type = 2 AND cv.status >= 0
+                ORDER BY cv.id ASC LIMIT 1
+                """
+            )
+            pedestal_result = cursor.fetchone()
+            default_pedestal_id = pedestal_result["id"] if pedestal_result else None
+
+            if default_pedestal_id is None:
+                print(
+                    "⚠️ Warning: No pedestal found in database, cannot add new records"
+                )
+
+            for local_dataset in local_datasets:
+                if local_dataset not in database_datasets:
+                    injection_json_path = os.path.join(
+                        path, local_dataset, "injection.json"
+                    )
+                    if os.path.exists(injection_json_path):
+                        try:
+                            with open(injection_json_path, "r", encoding="utf-8") as f:
+                                injection_data = json.load(f)
+
+                            # Get benchmark_id from benchmark name
+                            benchmark_name = safe_get(injection_data, "benchmark")
+                            benchmark_id = (
+                                get_benchmark_id(benchmark_name)
+                                if benchmark_name
+                                else None
+                            )
+
+                            if benchmark_id is None:
+                                print(
+                                    f"⚠️ Skipping {local_dataset}: benchmark '{benchmark_name}' not found in database"
+                                )
+                                skipped_count += 1
+                                continue
+
+                            if default_pedestal_id is None:
+                                print(
+                                    f"⚠️ Skipping {local_dataset}: no pedestal available"
+                                )
+                                skipped_count += 1
+                                continue
+
+                            task_id = safe_get(injection_data, "task_id")
+                            if task_id is None:
+                                print(
+                                    f"⚠️ Skipping {local_dataset}: no task_id in injection.json"
+                                )
+                                skipped_count += 1
+                                continue
+
+                            # First, ensure task exists in tasks table
+                            cursor.execute(
+                                "SELECT id FROM tasks WHERE id = %s", (task_id,)
+                            )
+                            if cursor.fetchone() is None:
+                                # Create a placeholder task
+                                cursor.execute(
+                                    """
+                                    INSERT INTO tasks (id, type, immediate, execute_time, state, status, created_at, updated_at)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                    """,
+                                    (
+                                        task_id,
+                                        1,  # type: injection task
+                                        True,
+                                        0,
+                                        3,  # state: completed
+                                        1,  # status: enabled
+                                        parse_timestamp(
+                                            safe_get(injection_data, "created_at")
+                                        )
+                                        or datetime.now(),
+                                        parse_timestamp(
+                                            safe_get(injection_data, "updated_at")
+                                        )
+                                        or datetime.now(),
+                                    ),
+                                )
+
+                            # Build insert statement
+                            insert_query = """
+                            INSERT INTO fault_injections (
+                                name, fault_type, display_config, engine_config, 
+                                pre_duration, start_time, end_time, state, status,
+                                description, benchmark_id, pedestal_id, task_id,
+                                created_at, updated_at
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """
+
+                            values = (
+                                safe_get(injection_data, "name")
+                                or safe_get(injection_data, "injection_name"),
+                                safe_get(injection_data, "fault_type"),
+                                safe_get(injection_data, "display_config"),
+                                safe_get(injection_data, "engine_config"),
+                                safe_get(injection_data, "pre_duration"),
+                                parse_timestamp(safe_get(injection_data, "start_time")),
+                                parse_timestamp(safe_get(injection_data, "end_time")),
+                                safe_get(
+                                    injection_data, "state", 4
+                                ),  # state (default 4 = completed)
+                                1,  # status (1 = enabled)
+                                safe_get(injection_data, "description"),
+                                benchmark_id,
+                                default_pedestal_id,
+                                task_id,
+                                parse_timestamp(safe_get(injection_data, "created_at")),
+                                parse_timestamp(safe_get(injection_data, "updated_at")),
+                            )
+
+                            cursor.execute(insert_query, values)
+                            connection.commit()
+                            print(f"➕ Added database record: Name={local_dataset}")
+                            added_count += 1
+
+                        except Exception as e:
+                            print(f"❌ Failed to add record {local_dataset}: {e}")
+                            connection.rollback()
+                    else:
+                        print(f"⚠️ Missing injection.json file: {injection_json_path}")
+
+            connection.commit()
+            print(
+                f"✅ Total added {added_count} database records, skipped {skipped_count}"
+            )
+
+
+if __name__ == "__main__":
+    app()

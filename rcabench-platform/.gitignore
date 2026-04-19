@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.devbox
+
+# IDE files
+.vscode/
+.idea/
+
+# Project directories
+/.cache
+/data
+/db
+/logs
+/output
+/target
+/temp
+
+__marimo__/
+.env

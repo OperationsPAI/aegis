@@ -1,0 +1,166 @@
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-fixed);
+  height: 56px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-theme='dark'] .app-header {
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-header-menu-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.app-header-menu-btn:hover {
+  background: var(--color-secondary-100);
+}
+
+[data-theme='dark'] .app-header-menu-btn:hover {
+  background: var(--color-secondary-700);
+}
+
+.app-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.app-header-logo:hover {
+  background: var(--color-secondary-100);
+}
+
+[data-theme='dark'] .app-header-logo:hover {
+  background: var(--color-secondary-700);
+}
+
+.app-header-logo-icon {
+  color: var(--color-primary-500);
+  display: flex;
+  align-items: center;
+}
+
+.app-header-logo-text {
+  font-family: var(--font-family-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.app-header-breadcrumb {
+  margin-left: 8px;
+  padding-left: 16px;
+  border-left: 1px solid var(--color-border);
+}
+
+.app-header-breadcrumb .ant-breadcrumb-link {
+  color: var(--color-text-secondary);
+}
+
+.app-header-breadcrumb .ant-breadcrumb-link:hover {
+  color: var(--color-primary-500);
+}
+
+.app-header-breadcrumb .ant-breadcrumb-link a {
+  color: var(--color-text-secondary);
+}
+
+.app-header-breadcrumb .ant-breadcrumb-link a:hover {
+  color: var(--color-primary-500);
+}
+
+.app-header-user {
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.app-header-user:hover {
+  background: var(--color-secondary-100);
+}
+
+[data-theme='dark'] .app-header-user:hover {
+  background: var(--color-secondary-700);
+}
+
+.app-header-username {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* Main sidebar drawer */
+.app-sidebar-drawer .ant-drawer-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-sidebar-drawer .ant-drawer-body {
+  padding: 0;
+}
+
+.app-drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-drawer-logo {
+  color: var(--color-primary-500);
+  display: flex;
+  align-items: center;
+}
+
+.app-drawer-title span {
+  font-family: var(--font-family-display);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-header-logo-text {
+    display: none;
+  }
+
+  .app-header-username {
+    display: none;
+  }
+
+  .app-header-breadcrumb {
+    margin-left: 4px;
+    padding-left: 8px;
+  }
+}
