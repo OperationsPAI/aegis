@@ -30,6 +30,10 @@ func centralEntities() []interface{} {
 		&model.Execution{},
 		&model.DetectorResult{},
 		&model.GranularityResult{},
+		// &model.Task{} migrated to module/task/migrations.go (Phase 4).
+		&model.DatasetLabel{},
+		&model.ProjectLabel{},
+		&model.DatasetVersionInjection{},
 		&model.FaultInjectionLabel{},
 		&model.ExecutionInjectionLabel{},
 		&model.UserDataset{},

@@ -12,7 +12,7 @@ import (
 func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
-		Name:     "task.portal",
+		Name:     "task",
 		Register: func(v2 *gin.RouterGroup) {
 			tasks := v2.Group("/tasks", middleware.JWTAuth())
 			{
