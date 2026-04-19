@@ -367,17 +367,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		PermUserUpdateAll,
 		PermUserDeleteAll,
 		PermUserAssignAll,
-		PermRoleReadAll,
-		PermRoleCreateAll,
-		PermRoleUpdateAll,
-		PermRoleDeleteAll,
-		PermRoleGrantAll,
-		PermRoleRevokeAll,
-		PermPermissionReadAll,
-		PermPermissionCreateAll,
-		PermPermissionUpdateAll,
-		PermPermissionDeleteAll,
-		PermPermissionManageAll,
+		// RBAC management moved to module/rbac/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
 
 		// Team management
 		PermTeamReadAll,

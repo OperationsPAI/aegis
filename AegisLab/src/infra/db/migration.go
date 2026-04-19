@@ -27,9 +27,6 @@ func centralEntities() []interface{} {
 		// framework.MigrationRegistrar in the owning module.
 		&model.User{},
 		&model.APIKey{},
-		&model.Role{},
-		&model.Permission{},
-		&model.Resource{},
 		&model.AuditLog{},
 		&model.Task{},
 		&model.FaultInjection{},
@@ -49,7 +46,6 @@ func centralEntities() []interface{} {
 		&model.UserDataset{},
 		&model.UserProject{},
 		&model.UserRole{},
-		&model.RolePermission{},
 		&model.UserPermission{},
 		&model.UserTeam{},
 		&model.DynamicConfig{},
