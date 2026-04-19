@@ -3,7 +3,6 @@ package router
 import (
 	"aegis/framework"
 	"aegis/middleware"
-	auth "aegis/module/auth"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -37,9 +36,27 @@ func testRegistrars() []framework.RouteRegistrar {
 
 func TestRouterSeparatesRouteGroups(t *testing.T) {
 	registrars := append(testRegistrars(),
-		auth.RoutesPublic(nil),
-		auth.RoutesSDK(nil),
-		auth.RoutesPortal(nil),
+		framework.RouteRegistrar{
+			Audience: framework.AudiencePublic,
+			Name:     "auth.public",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.POST("/auth/login", func(c *gin.Context) {})
+			},
+		},
+		framework.RouteRegistrar{
+			Audience: framework.AudienceSDK,
+			Name:     "auth.sdk",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.POST("/auth/api-key/token", func(c *gin.Context) {})
+			},
+		},
+		framework.RouteRegistrar{
+			Audience: framework.AudiencePortal,
+			Name:     "auth.portal",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.GET("/api-keys", func(c *gin.Context) {})
+			},
+		},
 		framework.RouteRegistrar{
 			Audience: framework.AudiencePortal,
 			Name:     "test.execution",
