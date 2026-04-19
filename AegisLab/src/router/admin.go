@@ -1,32 +1,12 @@
 package router
 
 import (
-	"aegis/consts"
 	"aegis/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 func SetupAdminV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
-	systems := v2.Group("/systems", middleware.JWTAuth())
-	{
-		systemRead := systems.Group("", middleware.RequireSystemRead)
-		{
-			systemRead.GET("", handlers.ChaosSystem.ListSystems)
-			systemRead.GET("/:id", handlers.ChaosSystem.GetSystem)
-			systemRead.GET("/:id/metadata", handlers.ChaosSystem.ListMetadata)
-		}
-
-		systemConfigure := systems.Group("", middleware.RequireSystemConfigure)
-		{
-			systemConfigure.POST("", handlers.ChaosSystem.CreateSystem)
-			systemConfigure.PUT("/:id", handlers.ChaosSystem.UpdateSystem)
-			systemConfigure.POST("/:id/metadata", handlers.ChaosSystem.UpsertMetadata)
-		}
-
-		systems.DELETE("/:id", middleware.RequirePermission(consts.PermSystemManage), handlers.ChaosSystem.DeleteSystem)
-	}
-
 	system := v2.Group("/system", middleware.JWTAuth(), middleware.RequireSystemRead)
 	{
 		system.GET("/metrics", handlers.SystemMetric.GetSystemMetrics)

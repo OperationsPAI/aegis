@@ -351,10 +351,6 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	RoleSuperAdmin: {}, // Super admin has unrestricted access to all resources
 
 	RoleAdmin: {
-		// System management
-		PermSystemRead,
-		PermSystemConfigure,
-		PermSystemManage,
 		PermAuditRead,
 		PermAuditAudit,
 		PermConfigurationRead,
