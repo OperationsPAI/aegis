@@ -12,13 +12,6 @@ func SetupSDKV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		auth.POST("/api-key/token", handlers.Auth.ExchangeAPIKeyToken)
 	}
 
-	sdkEval := v2.Group("/sdk/evaluations", middleware.JWTAuth(), middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:evaluations:*", "sdk:evaluations:read"))
-	{
-		sdkEval.GET("", handlers.SDK.ListEvaluations)
-		sdkEval.GET("/experiments", handlers.SDK.ListExperiments)
-		sdkEval.GET("/:id", handlers.SDK.GetEvaluation)
-	}
-
 	sdkData := v2.Group("/sdk/datasets", middleware.JWTAuth(), middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:datasets:*", "sdk:datasets:read"))
 	{
 		sdkData.GET("", handlers.SDK.ListDatasetSamples)
