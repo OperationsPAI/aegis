@@ -7,6 +7,12 @@ var Module = fx.Module("rbac",
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
+	fx.Provide(
+		fx.Annotate(RoutesAdmin, fx.ResultTags(`group:"routes"`)),
+		fx.Annotate(Permissions, fx.ResultTags(`group:"permissions"`)),
+		fx.Annotate(RoleGrants, fx.ResultTags(`group:"role_grants"`)),
+		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
+	),
 	// Aggregate module-contributed permission rules and role grants
 	// (framework fx-groups "permissions" and "role_grants") into
 	// consts.SystemRolePermissions so the existing bootstrap readers

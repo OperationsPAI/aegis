@@ -15,7 +15,6 @@ import (
 	pedestal "aegis/module/pedestal"
 	project "aegis/module/project"
 	ratelimiter "aegis/module/ratelimiter"
-	rbac "aegis/module/rbac"
 	sdk "aegis/module/sdk"
 	system "aegis/module/system"
 	systemmetric "aegis/module/systemmetric"
@@ -38,7 +37,6 @@ type Handlers struct {
 	Group        *group.Handler
 	Metric       *metric.Handler
 	User         *user.Handler
-	RBAC         *rbac.Handler
 	SDK          *sdk.Handler
 	System       *system.Handler
 	Notification *notification.Handler
@@ -63,7 +61,6 @@ func NewHandlers(
 	group *group.Handler,
 	metric *metric.Handler,
 	user *user.Handler,
-	rbac *rbac.Handler,
 	sdk *sdk.Handler,
 	system *system.Handler,
 	notification *notification.Handler,
@@ -87,7 +84,6 @@ func NewHandlers(
 		Group:        group,
 		Metric:       metric,
 		User:         user,
-		RBAC:         rbac,
 		SDK:          sdk,
 		System:       system,
 		Notification: notification,

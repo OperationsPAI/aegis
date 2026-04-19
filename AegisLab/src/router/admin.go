@@ -51,58 +51,6 @@ func SetupAdminV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		users.DELETE("/:user_id", middleware.RequireUserDelete, handlers.User.DeleteUser)
 	}
 
-	roles := v2.Group("/roles", middleware.JWTAuth())
-	{
-		permissions := roles.Group("/:role_id/permissions")
-		{
-			permissions.POST("/assign", middleware.RequireRoleGrant, handlers.RBAC.AssignRolePermissions)
-			permissions.POST("/remove", middleware.RequireRoleRevoke, handlers.RBAC.RemoveRolePermissions)
-		}
-
-		users := roles.Group("/:role_id/users")
-		{
-			users.GET("", middleware.RequireRoleRead, handlers.RBAC.ListUsersFromRole)
-		}
-
-		roleRead := roles.Group("", middleware.RequireRoleRead)
-		{
-			roleRead.GET("/:role_id", handlers.RBAC.GetRole)
-			roleRead.GET("", handlers.RBAC.ListRoles)
-		}
-
-		roles.POST("", middleware.RequireRoleCreate, handlers.RBAC.CreateRole)
-		roles.PATCH("/:role_id", middleware.RequireRoleUpdate, handlers.RBAC.UpdateRole)
-		roles.DELETE("/:role_id", middleware.RequireRoleDelete, handlers.RBAC.DeleteRole)
-	}
-
-	permissions := v2.Group("/permissions", middleware.JWTAuth())
-	{
-		roles := permissions.Group("/:permission_id/roles")
-		{
-			roles.GET("", middleware.RequirePermissionRead, handlers.RBAC.ListRolesFromPermission)
-		}
-
-		permRead := permissions.Group("", middleware.RequirePermissionRead)
-		{
-			permRead.GET("", handlers.RBAC.ListPermissions)
-			permRead.GET("/:permission_id", handlers.RBAC.GetPermission)
-		}
-	}
-
-	resources := v2.Group("/resources", middleware.JWTAuth())
-	{
-		resourceRead := resources.Group("", middleware.RequirePermissionRead)
-		{
-			permissions := resourceRead.Group("/:resource_id/permissions")
-			{
-				permissions.GET("", handlers.RBAC.ListResourcePermissions)
-			}
-
-			resourceRead.GET("/:resource_id", handlers.RBAC.GetResource)
-			resourceRead.GET("", handlers.RBAC.ListResources)
-		}
-	}
-
 	systems := v2.Group("/systems", middleware.JWTAuth())
 	{
 		systemRead := systems.Group("", middleware.RequireSystemRead)
