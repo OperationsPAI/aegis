@@ -36,26 +36,6 @@ services:
       orchestrator-service:
         condition: service_started
 
-  system-service:
-    image: golang:1.24-bookworm
-    working_dir: /workspace/src
-    command: ["go", "run", "./cmd/system-service", "-conf", "/workspace/src/config.dev.toml"]
-    volumes:
-      - ./:/workspace
-    environment:
-      GOPROXY: https://proxy.golang.org,direct
-    ports:
-      - "9095:9095"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
-      etcd:
-        condition: service_started
-      runtime-worker-service:
-        condition: service_started
-
   api-gateway:
     image: golang:1.24-bookworm
     working_dir: /workspace/src
@@ -68,6 +48,4 @@ services:
       - "8082:8082"
     depends_on:
       orchestrator-service:
-        condition: service_started
-      system-service:
         condition: service_started

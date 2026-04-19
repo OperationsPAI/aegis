@@ -66,17 +66,11 @@ target = "localhost:9092"
 [clients.runtime]
 target = "localhost:9094"
 
-[clients.system]
-target = "localhost:9095"
-
 [orchestrator.grpc]
 addr = ":9092"
 
 [runtime_worker.grpc]
 addr = ":9094"
-
-[system.grpc]
-addr = ":9095"
 
 [loki]
 address = "http://10.10.10.161:3100"
