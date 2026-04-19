@@ -2,6 +2,7 @@ package router
 
 import (
 	auth "aegis/module/auth"
+	container "aegis/module/container"
 	dataset "aegis/module/dataset"
 	evaluation "aegis/module/evaluation"
 	execution "aegis/module/execution"
@@ -22,6 +23,7 @@ type Handlers struct {
 	Task        *task.Handler
 	Injection   *injection.Handler
 	Execution   *execution.Handler
+	Container   *container.Handler
 	Dataset     *dataset.Handler
 	Evaluation  *evaluation.Handler
 	Group       *group.Handler
@@ -38,6 +40,7 @@ func NewHandlers(
 	task *task.Handler,
 	injection *injection.Handler,
 	execution *execution.Handler,
+	container *container.Handler,
 	dataset *dataset.Handler,
 	evaluation *evaluation.Handler,
 	group *group.Handler,
@@ -53,6 +56,7 @@ func NewHandlers(
 		Task:        task,
 		Injection:   injection,
 		Execution:   execution,
+		Container:   container,
 		Dataset:     dataset,
 		Evaluation:  evaluation,
 		Group:       group,
