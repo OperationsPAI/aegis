@@ -396,9 +396,17 @@ requirements:
   - path: AegisLab/src/handlers/v2/injections.go
     description: CRUD handlers for injections including batch delete, get, list, create
   - path: AegisLab/src/service/consumer/fault_injection.go
-    description: executeFaultInjection task handler with batch manager for parallel injections
+    description: executeFaultInjection branches guided vs. legacy via InjectGuidedConfigs payload key
+  - path: AegisLab/src/service/producer/injection.go
+    description: Producer routes GuidedConfig batches through ResolveSpecs three-way dispatch
+  - path: AegisLab/src/dto/injection.go
+    description: SubmitInjectionReq.ResolveSpecs probes chaos_type field → GuidedConfig | Node DSL | FriendlyFaultSpec
+  - path: AegisLab/src/cmd/aegisctl/cmd/inject_guided.go
+    description: aegisctl inject guided subcommand — interactive stepper over GuidedConfig
   - path: AegisLab/src/database/entity.go
     description: FaultInjection entity with chaos type, category, groundtruths, engine config, benchmark/pedestal FKs
+  - path: AegisLab/src/repository/container.go
+    description: CheckContainerExistsWithDifferentType — container lookup used by pedestal/benchmark mapping
   frontend: &id001
   - path: AegisLab-frontend/src/pages/injections/InjectionWizard.tsx
     description: Current multi-step fault injection authoring flow
@@ -418,6 +426,14 @@ requirements:
   tests: []
   docs:
   - path: AegisLab/CLAUDE.md
+  - path: AegisLab/docs/inject-pipeline-design.md
+    description: Current guided-first wire format (GuidedConfig primary, Node DSL + FriendlyFaultSpec back-compat)
+  - path: aegis/docs/troubleshooting/e2e-cluster-bootstrap.md
+    description: Fresh-cluster replay runbook with every known pitfall (SQL fix, TOML keys, OTEL collector, dedup, etc.)
+  - path: aegis/docs/troubleshooting/datapack-schema.md
+    description: 12 parquet + 3 JSON datapack contract
+  - path: aegis/docs/troubleshooting/app-label-key.md
+    description: Per-system pod-selector key design
   acceptance:
     status: pending
     date: ''
@@ -430,7 +446,10 @@ requirements:
   notes: 'FaultInjection = Datapack is a key architectural fact. Source can be ''injection'' (auto-generated) or ''manual'' (uploaded). FIXED (2026-04-13): GetInjectionLogs now queries Loki for real historical logs.
 
 
-    Workspace/detail-view era frontend paths were replaced with current route-based pages and API clients during the index rebuild.'
+    Workspace/detail-view era frontend paths were replaced with current route-based pages and API clients during the index rebuild.
+
+
+    2026-04-19 guided migration (aegis#36–#40, uncommitted → now being committed): GuidedConfig is the canonical wire format end-to-end; /translate and GET /metadata return 410; aegisctl inject guided is the AI-friendly stepper. Per-system AppLabelKey removes the "relabel pods after every helm install" workaround. Full E2E replay verified 2026-04-19: 12 non-empty parquets + env/injection/k8s.json produced by BuildDatapack.'
   type: capability
   repo: aegislab
   chaos_code:
@@ -439,9 +458,13 @@ requirements:
   - path: chaos-experiment/handler/network_chaos.go
     description: Network fault generation helpers
   - path: chaos-experiment/chaos/network_chaos.go
-    description: Network chaos CRD builders
+    description: Network chaos CRD builders (now reads systemconfig.GetCurrentAppLabelKey for pod selector)
   - path: chaos-experiment/controllers/network_chao.go
     description: Network chaos controller helpers
+  - path: chaos-experiment/pkg/guidedcli/build.go
+    description: BuildInjection — canonical GuidedConfig → handler.InjectionConf producer (no Node round-trip)
+  - path: chaos-experiment/internal/systemconfig/systemconfig.go
+    description: Per-system AppLabelKey (otel-demo → app.kubernetes.io/name, others → app)
   rcabench_code: []
   contracts:
   - openapi-backend-sdk
