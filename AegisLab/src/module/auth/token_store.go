@@ -10,6 +10,10 @@ import (
 	redis "aegis/infra/redis"
 )
 
+// tokenBlacklistPrefix keys every revoked token by its JWT ID (claims.ID).
+// Blacklist additions set an EX TTL equal to the token's remaining lifetime,
+// and lookups use EXISTS against this exact key — never SCAN MATCH —
+// so the per-request auth cost stays O(1) regardless of blacklist size.
 const tokenBlacklistPrefix = "blacklist:token:%s"
 const apiKeyNoncePrefix = "api_key:nonce:%s:%s"
 
