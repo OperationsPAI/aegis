@@ -16,7 +16,7 @@ type Reader interface {
 	ListProjects(context.Context, *TeamProjectListReq, int) (*dto.ListResp[TeamProjectItem], error)
 }
 
-func AsReader(service *Service) *Service {
+func AsReader(service *Service) Reader {
 	return service
 }
 

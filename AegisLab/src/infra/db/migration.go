@@ -38,6 +38,7 @@ func centralEntities() []interface{} {
 		&model.UserDataset{},
 		&model.UserRole{},
 		&model.UserPermission{},
+		&model.UserTeam{},
 		&model.DynamicConfig{},
 		&model.ConfigHistory{},
 		&model.Evaluation{},

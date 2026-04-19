@@ -10,7 +10,6 @@ func Migrations() framework.MigrationRegistrar {
 		Module: "team",
 		Entities: []interface{}{
 			&model.Team{},
-			&model.UserTeam{},
 		},
 	}
 }
