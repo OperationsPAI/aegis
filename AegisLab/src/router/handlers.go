@@ -8,20 +8,18 @@ import (
 	injection "aegis/module/injection"
 	label "aegis/module/label"
 	project "aegis/module/project"
-	ratelimiter "aegis/module/ratelimiter"
 	task "aegis/module/task"
 )
 
 type Handlers struct {
-	Auth        *auth.Handler
-	Project     *project.Handler
-	Task        *task.Handler
-	Injection   *injection.Handler
-	Execution   *execution.Handler
-	Container   *container.Handler
-	Evaluation  *evaluation.Handler
-	RateLimiter *ratelimiter.Handler
-	Label       *label.Handler
+	Auth       *auth.Handler
+	Project    *project.Handler
+	Task       *task.Handler
+	Injection  *injection.Handler
+	Execution  *execution.Handler
+	Container  *container.Handler
+	Evaluation *evaluation.Handler
+	Label      *label.Handler
 }
 
 func NewHandlers(
@@ -32,18 +30,16 @@ func NewHandlers(
 	execution *execution.Handler,
 	container *container.Handler,
 	evaluation *evaluation.Handler,
-	rateLimiter *ratelimiter.Handler,
 	label *label.Handler,
 ) *Handlers {
 	return &Handlers{
-		Auth:        auth,
-		Project:     project,
-		Task:        task,
-		Injection:   injection,
-		Execution:   execution,
-		Container:   container,
-		Evaluation:  evaluation,
-		RateLimiter: rateLimiter,
-		Label:       label,
+		Auth:       auth,
+		Project:    project,
+		Task:       task,
+		Injection:  injection,
+		Execution:  execution,
+		Container:  container,
+		Evaluation: evaluation,
+		Label:      label,
 	}
 }
