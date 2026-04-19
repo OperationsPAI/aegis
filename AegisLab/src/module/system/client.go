@@ -11,7 +11,3 @@ type Reader interface {
 	ListSystemMetadata(systemName, metadataType string) ([]model.SystemMetadata, error)
 	ListSystemMetadataServiceNames(systemName, metadataType string) ([]string, error)
 }
-
-func AsReader(repo *Repository) Reader {
-	return repo
-}

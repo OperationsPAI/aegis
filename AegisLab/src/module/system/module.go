@@ -5,9 +5,12 @@ import "go.uber.org/fx"
 var Module = fx.Module("system",
 	fx.Provide(
 		NewRepository,
+		fx.Annotate(
+			func(repo *Repository) *Repository { return repo },
+			fx.As(new(Reader)),
+		),
 		newRuntimeQuerySource,
 		NewService,
-		AsReader,
 		AsHandlerService,
 		NewHandler,
 	),
