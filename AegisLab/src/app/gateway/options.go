@@ -25,7 +25,6 @@ func Options(confPath, port string) fx.Option {
 		app.BuildInfraOptions(),
 		chaos.Module,
 		k8s.Module,
-		app.ExecutionInjectionOwnerModules(),
 		app.ProducerHTTPOptions(port),
 		grpcruntimeintake.Module,
 	)
