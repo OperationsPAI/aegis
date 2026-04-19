@@ -26,15 +26,17 @@ func centralEntities() []interface{} {
 		// &model.Task{} migrated to module/task/migrations.go (Phase 4).
 		// &model.FaultInjection{} migrated to module/injection/migrations.go
 		// (Phase 4).
-		&model.Execution{},
-		&model.DetectorResult{},
-		&model.GranularityResult{},
+		// &model.Execution{} migrated to module/execution/migrations.go
+		// (Phase 4).
+		// &model.DetectorResult{} and &model.GranularityResult{} migrated to
+		// module/execution/migrations.go (Phase 4).
 		&model.DatasetLabel{},
 		&model.ProjectLabel{},
 		&model.DatasetVersionInjection{},
 		// &model.FaultInjectionLabel{} migrated to
 		// module/injection/migrations.go (Phase 4).
-		&model.ExecutionInjectionLabel{},
+		// &model.ExecutionInjectionLabel{} migrated to
+		// module/execution/migrations.go (Phase 4).
 		&model.UserDataset{},
 		&model.ConfigLabel{},
 		&model.UserRole{},

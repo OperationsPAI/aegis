@@ -25,18 +25,5 @@ func SetupSDKV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 	}
 
 	projects := v2.Group("/projects", middleware.JWTAuth())
-	{
-		executions := projects.Group("/:project_id/executions")
-		{
-			executionRead := executions.Group("", middleware.RequireProjectRead)
-			{
-				executionRead.GET("", handlers.Execution.ListProjectExecutions)
-			}
-
-			executionExecute := executions.Group("", middleware.RequireProjectExecutionExecute)
-			{
-				executionExecute.POST("/execute", handlers.Execution.SubmitAlgorithmExecution)
-			}
-		}
-	}
+	{}
 }

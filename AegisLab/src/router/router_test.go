@@ -41,7 +41,10 @@ func TestRouterSeparatesRouteGroups(t *testing.T) {
 	requiredPrefixes := []string{
 		"/api/v2/auth",
 		"/api/v2/projects",
-		"/api/v2/executions",
+<<<<<<< HEAD
+=======
+		"/api/v2/sdk",
+>>>>>>> bf2217f (phase-4: migrate module/execution to self-registration (#49))
 		"/api/v2/system/audit",
 		"/api/v2/system/configs",
 		"/api/v2/system/monitor",

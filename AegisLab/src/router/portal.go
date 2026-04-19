@@ -54,12 +54,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		evaluations.DELETE("/:id", handlers.Evaluation.DeleteEvaluation)
 	}
 
-	executions := v2.Group("/executions", middleware.JWTAuth())
-	{
-		executions.GET("/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:read"), handlers.Execution.ListAvailableExecutionLabels)
-		executions.POST("/batch-delete", handlers.Execution.BatchDeleteExecutions)
-	}
-
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 	{
 		accessKeys.GET("", handlers.Auth.ListAPIKeys)
