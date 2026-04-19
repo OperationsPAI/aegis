@@ -29,8 +29,6 @@ func SetupAdminV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 
 	system := v2.Group("/system", middleware.JWTAuth(), middleware.RequireSystemRead)
 	{
-		system.GET("/metrics", handlers.SystemMetric.GetSystemMetrics)
-		system.GET("/metrics/history", handlers.SystemMetric.GetSystemMetricsHistory)
 		audit := system.Group("/audit", middleware.RequireAuditRead)
 		{
 			audit.GET("", handlers.System.ListAuditLogs)

@@ -17,7 +17,6 @@ import (
 	ratelimiter "aegis/module/ratelimiter"
 	sdk "aegis/module/sdk"
 	system "aegis/module/system"
-	systemmetric "aegis/module/systemmetric"
 	task "aegis/module/task"
 	team "aegis/module/team"
 	trace "aegis/module/trace"
@@ -43,7 +42,6 @@ type Handlers struct {
 	ChaosSystem  *chaossystem.Handler
 	Team         *team.Handler
 	Label        *label.Handler
-	SystemMetric *systemmetric.Handler
 }
 
 func NewHandlers(
@@ -66,7 +64,6 @@ func NewHandlers(
 	chaosSystem *chaossystem.Handler,
 	team *team.Handler,
 	label *label.Handler,
-	systemMetric *systemmetric.Handler,
 ) *Handlers {
 	return &Handlers{
 		Auth:         auth,
@@ -88,6 +85,5 @@ func NewHandlers(
 		ChaosSystem:  chaosSystem,
 		Team:         team,
 		Label:        label,
-		SystemMetric: systemMetric,
 	}
 }
