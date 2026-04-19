@@ -7,4 +7,7 @@ var Module = fx.Module("metric",
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
+	fx.Provide(
+		fx.Annotate(RoutesSDK, fx.ResultTags(`group:"routes"`)),
+	),
 )

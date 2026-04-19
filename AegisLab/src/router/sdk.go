@@ -90,10 +90,4 @@ func SetupSDKV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		injections.PATCH("/:id/labels", handlers.Injection.ManageInjectionCustomLabels)
 	}
 
-	metrics := v2.Group("/metrics", middleware.JWTAuth())
-	{
-		metrics.GET("/algorithms", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:metrics:*", "sdk:metrics:read"), handlers.Metric.GetAlgorithmMetrics)
-		metrics.GET("/executions", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:metrics:*", "sdk:metrics:read"), handlers.Metric.GetExecutionMetrics)
-		metrics.GET("/injections", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:metrics:*", "sdk:metrics:read"), handlers.Metric.GetInjectionMetrics)
-	}
 }
