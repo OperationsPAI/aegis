@@ -25,8 +25,8 @@ func centralEntities() []interface{} {
 		// reference migration). Future Phase 4 PRs drop their entities
 		// the same way — remove from this slice, add a
 		// framework.MigrationRegistrar in the owning module.
-		&model.User{},
-		&model.APIKey{},
+		// &model.User{} and &model.APIKey{} migrated to
+		// module/user/migrations.go (Phase 4).
 		&model.AuditLog{},
 		&model.Task{},
 		&model.FaultInjection{},
