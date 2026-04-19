@@ -1,171 +1,443 @@
-# AegisLab Code Topology — Recovered Index
+# AegisLab Code Topology — v2 (Post-Refactor)
 
-Source-of-truth: code under `/home/ddq/AoyangSpace/aegis/AegisLab/src/` as of 2026-04-19 (commit 76c1b9e).
-Docs were ignored — every claim below cites `file.go:line`.
+Source-of-truth: code under `/home/ddq/AoyangSpace/aegis/AegisLab/src/` as of 2026-04-19
+(AegisLab submodule commit `42282d0c` — *refactor aegislab (#71)*).
+Docs were deliberately ignored — every claim cites `file.go:line`.
 
-## Documents
+> **Important**: This replaces the earlier v1 recovery. The refactor renamed, split, and
+> reorganized almost every layer (flat monolith → fx-based DI with 6 microservices +
+> 3 legacy modes). If a claim in older docs (including CLAUDE.md) conflicts with what's
+> here, trust this recovery.
 
-- **`README.md`** (this file) — system overview, module graph, per-package summary.
-- **[`flows.md`](flows.md)** — end-to-end call paths for the ~7 critical flows (inject→collect, HTTP lifecycle, task queue, rate-limiter GC, OTLP logs, config hot-reload, SSE/WS).
-- **[`reference.md`](reference.md)** — entity catalog, FK graph, Redis key catalog, K8s label/annotation schema, DTO↔entity map.
-- **[`orphans.md`](orphans.md)** — dead code, stale routes, inversion bugs, magic numbers, security red flags.
-- **[`slices/`](slices/)** — raw per-layer map reports (1000+ lines of detail per slice), produced by the parallel recovery pass. Authoritative for specific file:line citations.
+## 📁 Documents
 
-## 1. Scope of the workspace
+- **`README.md`** (this file) — overview, module map, 6-service dependency graph.
+- **[`flows.md`](flows.md)** — 7 critical call paths (inject→collect, HTTP lifecycle,
+  task queue, rate-limiter GC, OTLP log tail, config hot-reload, SSE/WS streams).
+- **[`reference.md`](reference.md)** — entities, Redis key catalog, K8s labels, task
+  types, RBAC matrix, DTO↔entity map.
+- **[`orphans.md`](orphans.md)** — dead code, stale whitelists, security red flags,
+  correctness bugs, partial-migration signs.
+- **[`slices/`](slices/)** — raw per-layer reports from the 7-agent map-reduce.
+  These are authoritative for any file:line citation you need to re-verify.
 
-`workspace.yaml` declares four repos:
+## 1. The repos
+
+`workspace.yaml` declares 4 submodules:
 
 | Repo | Role | Stack | Relationship |
 |---|---|---|---|
-| `AegisLab/` | Backend — the subject of this topology. Single Go module `aegis`, 253 `.go` files, ~45k LoC. | Go + Python SDK | owns OpenAPI, writes datapack artifacts |
-| `AegisLab-frontend/` | UI | TS/React (Vite + axios) | consumes `/api/v2/*` and SSE/WS endpoints |
-| `chaos-experiment/` | Fault-injection library (OperationsPAI fork; `go.mod:63` `replace` to local path) | Go | AegisLab imports `handler`, `client`, `pkg/guidedcli` |
-| `rcabench-platform/` | RCA eval platform | Python | reads the datapack dir written by AegisLab (`injection.json`, `env.json`, `{normal,abnormal}_{traces,metrics}.parquet`) |
+| `AegisLab/` | Backend — subject of this topology. Single Go module `aegis`, **443 `.go` files / ~71k LoC**. | Go + Python SDK | owns OpenAPI; writes datapack artifacts |
+| `AegisLab-frontend/` | Web UI | TS/React + Vite + axios | calls `/api/v2/*` (flat, not audience-prefixed) + SSE/WS literals |
+| `chaos-experiment/` | Fault-injection library (OperationsPAI fork; `go.mod:63` replace → local path) | Go | AegisLab imports only `handler`, `client`, `pkg/guidedcli` |
+| `rcabench-platform/` | RCA eval platform | Python | reads datapack dir files (`trace/log/metrics/metrics_sli.parquet`, `injection.json`) AegisLab writes |
 
-> The stale CLAUDE.md reference to `LGU-SE-Internal/chaos-experiment` is **not** reflected in code — only the OperationsPAI fork is imported. See `slices/06-clients-seams.md` §4a.
+## 2. 9 run modes (what the `rcabench` binary can be)
 
-## 2. Backend binary: three modes
+`main.go` uses cobra+viper to dispatch; each mode ultimately calls `fx.New(<appOptions>).Run()`.
+All 6 microservices also ship as their own `cmd/<name>-service/main.go` binaries (thin `flag.Parse` →
+same `fx.New`).
 
-The binary is `rcabench` (`main.go:73-79`). Startup differs per mode:
+| Mode | Options fn | Role |
+|---|---|---|
+| `producer` (legacy) | `app.ProducerOptions` (`app/producer.go:19`) | Monolith HTTP: all domain modules + HTTP lifecycle |
+| `consumer` (legacy) | `app.ConsumerOptions` (`app/consumer.go:5`) | Monolith async workers: runtime-worker-stack + Exec/Inj owners |
+| `both` (legacy; `make local-debug`) | `app.BothOptions` (`app/both.go:5`) | Producer HTTP + runtime-worker-stack, single process |
+| `api-gateway` | `gateway.Options` (`app/gateway/options.go:36`) | HTTP edge + 20 `fx.Decorate` calls routing each HandlerService to a gRPC client |
+| `iam-service` | `iam.Options` (`app/iam/options.go:17`) | modules: auth, rbac, team, user (+ middleware.Service + iam gRPC server) |
+| `orchestrator-service` | `orchestrator.Options` (`app/orchestrator/options.go:16`) | modules: execution, injection, task, trace, group, metric, notification (+ orchestrator gRPC server) — **pure sink, no outbound deps** |
+| `resource-service` | `resource.Options` (`app/resource/options.go:18`) | modules: project, container, dataset, evaluation, label, chaossystem (+ resource gRPC server) |
+| `runtime-worker-service` | `runtimeapp.Options` (`app/runtime/options.go:11`) | runtime-worker-stack + `consumer.RemoteOwnerOptions()` forces orchestrator RPC for state writes |
+| `system-service` | `system.Options` (`app/system/options.go:15`) | modules: system, systemmetric (+ system gRPC server + runtimeclient) |
 
-| Mode | `main.go` lines | Producer HTTP | Consumer loop | K8s controller | OTLP log receiver | Rate-limit GC |
-|---|---|---|---|---|---|---|
-| `producer` | 97-115 | ✓ | — | **skipped** | — | — |
-| `consumer` | 118-155 | — | ✓ (`ConsumeTasks` blocks; `StartScheduler` goroutine) | ✓ | ✓ | ✓ (`runRateLimiterStartupGC`) |
-| `both` (default dev) | 158-203 | ✓ | ✓ | ✓ | ✓ | ✓ |
+See `slices/01-app-wiring.md` §3 for the full fx-composition table per mode.
 
-Implication: a pure-producer deployment cannot observe CRD/Job lifecycle events — the workflow chain depends on running at least one consumer.
+## 3. Service dependency graph (gRPC)
 
-## 3. Layered architecture (single repo)
+Derived from `RequireConfiguredTargets` declarations + `fx.Decorate` client injections.
+All inter-service traffic is plain TCP gRPC (no TLS). Clients are typed wrappers in
+`internalclient/<svc>client/` that return `Enabled()==false` when the target address is
+unset — at which point `remoteAware*` wrappers fall back to local `HandlerService` impls.
 
+```mermaid
+flowchart TD
+    FE[Frontend<br/>AegisLab-frontend]
+    CLI[aegisctl CLI]
+    SDK[External SDK / service tokens]
+    K8S[Chaos Mesh CRDs<br/>+ Jobs / Pods]
+
+    FE & CLI & SDK -->|HTTPS /api/v2/*| GW
+
+    subgraph EDGE[Edge]
+        GW[api-gateway<br/>:HTTP<br/>20 fx.Decorate wrappers]
+    end
+
+    subgraph IAM[iam-service · :9091]
+        IAMsvc[auth · rbac · user · team<br/>+ middleware.Service]
+    end
+
+    subgraph RES[resource-service · :9093]
+        RESsvc[project · container · dataset<br/>evaluation · label · chaossystem]
+    end
+
+    subgraph ORCH[orchestrator-service · :9092]
+        ORCHsvc[execution · injection · task<br/>trace · group · notification · metric<br/>+ taskQueueController]
+    end
+
+    subgraph SYS[system-service · :9095]
+        SYSsvc[system · systemmetric]
+    end
+
+    subgraph RT[runtime-worker-service · :9094]
+        RTsvc[interface/worker + controller + receiver<br/>service/consumer/* executors<br/>+ runtime gRPC]
+    end
+
+    GW -->|iamclient| IAMsvc
+    GW -->|orchestratorclient| ORCHsvc
+    GW -->|resourceclient| RESsvc
+    GW -->|systemclient| SYSsvc
+
+    IAMsvc -->|resourceclient<br/>team project lookup| RESsvc
+    RESsvc -->|orchestratorclient<br/>eval exec queries<br/>project statistics| ORCHsvc
+
+    SYSsvc -->|runtimeclient<br/>only 2 of 6 RPCs| RTsvc
+
+    RTsvc -->|orchestratorclient<br/>owner_adapter state writes| ORCHsvc
+    RTsvc <-->|Chaos Mesh CRDs<br/>+ K8s Jobs| K8S
+
+    classDef leaf fill:#1e3a8a,stroke:#3b82f6,color:#fff
+    classDef edge fill:#7c2d12,stroke:#ea580c,color:#fff
+    class ORCHsvc leaf
+    class GW edge
 ```
-                                 ┌──────────────────────────────┐
-                                 │ cmd/aegisctl/   (CLI client) │
-                                 └──────────────┬───────────────┘
-                                                │ HTTP REST / SSE / WS
-                                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  router/ (gin) ── middleware/ (JWTAuth, RequireX perms, audit, CORS, …) │
-│        │                                                                 │
-│        ▼                                                                 │
-│  handlers/v2/*   +  handlers/system/*                                    │
-│        │                                                                 │
-│        ▼                                                                 │
-│  service/producer/*   (sync business logic; 30 files)                    │
-│        │        ├── service/common/*   (SubmitTask, label helpers,      │
-│        │        │                        config-listener, metadata)     │
-│        │        └── service/analyzer/* (evaluation persistence)         │
-│        ▼                                                                 │
-│  repository/*   (25 files; GORM)                                         │
-│        │                                                                 │
-│        ▼                                                                 │
-│  database/*   (entities, GORM bootstrap, detector views, sdk tables)     │
-└───────────────────────────┬─────────────────────────────────────────────┘
-                            │
-            ┌───────────────┴────────────────┐
-            ▼                                 ▼
-      ┌─────────────┐            ┌────────────────────────────┐
-      │ MySQL       │            │ Redis                       │
-      │ (GORM)      │            │  - queues task:{delayed,    │
-      └─────────────┘            │    ready,dead,index}        │
-                                 │  - trace/group/notif streams│
-                                 │  - monitor:ns:* locks       │
-                                 │  - token_bucket:*           │
-                                 │  - joblogs:<task> pub/sub   │
-                                 └────────────┬────────────────┘
-                                              │
-┌─────────────────────────────────────────────┴───────────────────────────┐
-│  service/consumer/* (async workers)                                      │
-│    task.go            — ConsumeTasks BRPOP, StartScheduler (1s tick)    │
-│    distribute_tasks.go — switch task.Type → 6 executors                 │
-│    fault_injection.go, build_datapack.go, algo_execution.go,            │
-│    collect_result.go, build_container.go, restart_pedestal.go           │
-│    k8s_handler.go     — implements k8s.Callback (CRD + Job events)      │
-│    monitor.go         — namespace lock manager                          │
-│    rate_limiter.go    — token-bucket semaphores (SET-based)             │
-│    config_handlers.go — etcd dynamic-config handlers                    │
-│    trace.go           — infer Trace state from Task tree, group SSE     │
-│                                                                          │
-│  service/logreceiver/  — OTLP /v1/logs HTTP → Redis PubSub joblogs:*    │
-│                                                                          │
-│  client/k8s/*          — controller-runtime informers for               │
-│                          Chaos Mesh CRDs (7 kinds) + Job/Pod            │
-└──────────────────────────────────────────────────────────────────────────┘
 
-External clients (all in client/):
-   etcd (config state)  |  harbor (image tags)  |  helm (pedestal install)
-   loki (historical logs)|  jaeger→OTLP (traces)|  redis (everything)
-```
+- `api-gateway` → `{iam, orchestrator, resource, system}` (all 4)
+- `iam-service` → `resource-service` (team project lookups)
+- `resource-service` → `orchestrator-service` (execution queries + project statistics)
+- `runtime-worker-service` → `orchestrator-service` (state writes via `owner_adapter.go`)
+- `system-service` → `runtime-worker-service` (runtime status — only 2 of 6 RPCs actually wrapped)
+- `orchestrator-service` → ∅ (leaf; consumed by gateway/resource/runtime/system)
 
-## 4. Inbound edges: who calls whom
+Port assignments: iam=9091, orch=9092, resource=9093, runtime=9094, system=9095.
+Config keys follow `clients.<name>.target` with legacy fallback `<name>.grpc.target`;
+`runtime-worker` also uses `runtime_worker.grpc.target` (naming drift — see `orphans.md §E9`).
 
-| Target layer | Called from |
+## 4. The module convention
+
+Every domain lives under `module/<name>/`. A "clean" module has:
+
+| File | Role |
 |---|---|
-| `router/` | `main.go` only |
-| `handlers/` | `router/v2.go`, `router/system.go` |
-| `middleware/` | `router/*`, and internal: `handlers/v2/*` for `GetCurrentUserID` helpers |
-| `service/producer/` | `handlers/v2/*` (all 24 domain handlers), `handlers/system/*`, `middleware/permission.go` (perm/team/project/public helpers), `middleware/audit.go` (`LogUserAction`/`LogFailedAction`) |
-| `service/analyzer/` | `handlers/v2/evaluations.go` only |
-| `service/common/` | `service/producer/*` (label + task helpers), `service/consumer/*` (task submission + config handlers), `service/initialization/*` |
-| `service/consumer/` | `main.go` (`NewHandler`, `StartScheduler`, `ConsumeTasks`); NOT called from producer or handlers |
-| `service/logreceiver/` | `main.go` only |
-| `repository/` | `service/producer/*` (primary), `service/common/*` (task submit, metadata, label), `service/consumer/*` (task lifecycle), and 3 handler layer-leaks: `handlers/v2/tasks.go:208`, `handlers/v2/pedestal_helm.go` (whole file), `handlers/system/health.go` |
-| `database.DB` | `repository/*`, `service/consumer/trace.go`, `service/producer/metrics.go` (raw GORM), `handlers/v2/pedestal_helm.go`, `handlers/system/health.go` |
-| `client/k8s/` | `main.go`, `service/consumer/*`, `handlers/system/health.go` |
-| `client/helm.go` | `service/consumer/restart_pedestal.go`, `service/producer/container.go` (chart upload) |
-| `client/etcd_client.go` | `service/common/{config_listener,config_registry}.go`, `service/producer/dynamic_config.go` |
-| `client/harbor_client.go` | `service/producer/container.go` (tag lookup) |
-| `client/loki.go` | `service/producer/{task,injection}.go` (historical log backfill) |
-| `client/redis_client.go` | pervasive; every service subdir |
-| `client/jaeger.go` (OTLP HTTP exporter despite the name) | `main.go:106,134,176` (InitTraceProvider) |
-| `client/debug/` | `handlers/debug.go` only |
-| `tracing/` | `service/consumer/*`, `client/k8s/job.go`, `client/helm.go` (only 3 callers in production code) |
-| `utils/` | universal; every layer |
-| `consts/` | universal |
-| `dto/` | `handlers/*`, `service/*` |
+| `module.go` | `var Module = fx.Module("<name>", fx.Provide(...))` — wires all below |
+| `api_types.go` | module-local DTOs (replaces the old top-level `dto/`) |
+| `handler.go` | gin HTTP handlers (with `@Router`/`@Security` Swagger annotations) |
+| `handler_service.go` | the `HandlerService` interface + `AsHandlerService(*Service)` adapter |
+| `service.go` | local business-logic implementation |
+| `repository.go` | GORM DAO |
+| domain files | `*_store.go`, `resolve.go`, `submit.go`, `file_store.go`, `core.go`, etc. |
 
-## 5. Key invariants recovered from code
+The `HandlerService` interface is the gateway decoration seam: in gateway mode, `fx.Decorate`
+wraps the local impl with `remoteAwareXService{ HandlerService: local, grpc: remoteClient }`,
+so either path presents the same interface to `handler.go` (see §5). Modules that **break**
+this convention (`pedestal`, `sdk`, `ratelimiter`) can only run locally — they are never
+decorated.
 
-1. **`common.SubmitTask`** (`service/common/task.go:51`) is the single canonical async enqueue. No other path writes to Redis queues. All 5 producer enqueue functions and the consumer CRD/Job callbacks funnel through it.
-2. **Workflow chain is driven by Kubernetes lifecycle callbacks**, not an in-process workflow engine. See `flows.md §1`.
-3. **Soft-delete is NOT `gorm.DeletedAt`.** Every entity uses `consts.StatusType` (`-1=deleted, 0=disabled, 1=enabled`), typically backed by a virtual `Active*` column plus a unique index over non-deleted rows (`slices/05-data.md §1`).
-4. **Rate-limit buckets are Redis SETs of taskIDs**, not counters. Capacity is `len(SMEMBERS) ≤ cap`. GC reclaims tokens whose task row is missing or in terminal state.
-5. **Two inject-spec pipelines coexist**: legacy `Friendly→chaos.Node` (`utils/fault_translate.go` + `service/producer/spec_convert.go`) and new `pkg/guidedcli.GuidedConfig` (`service/producer/injection.go:1246`, `service/consumer/fault_injection.go:156`). The branch-point is `parseBatchGuidedSpecs` vs `parseBatchInjectionSpecs` in `service/producer/injection.go:806` → `ProduceRestartPedestalTasks`. The HTTP entrypoint is a single endpoint `POST /api/v2/projects/:pid/injections/inject`; the shape of each spec entry determines dispatch.
-6. **`/api/v2/injections/metadata` and `/api/v2/injections/translate` are registered routes but return HTTP 410** (`handlers/v2/injections.go:130, 677`). The memory note was correct in spirit — agent 1 saw the router registration, agent 2 confirmed the handler bodies are 410.
-7. **SSE/WS replay + tail**: all three SSE endpoints (`/groups/{id}/stream`, `/traces/{id}/stream`, `/notifications/stream`) and the WS `/tasks/{id}/logs/ws` read from the corresponding Redis streams (`group:%s:log`, `trace:%s:log`, `notifications:global`) or pub/sub channel (`joblogs:<task>`). All replay history then live-tail.
-8. **OTLP log pipeline is pub/sub, not a stream** — `joblogs:<taskID>` uses `RedisPublish/Subscribe`, so a log emitted while no WS viewer is connected is dropped (`service/logreceiver/receiver.go:246`).
+There are **22 `module/` packages** wired into `ProducerHTTPModules()` at
+`app/http_modules.go:40-60`:
 
-## 6. Per-package role map (one-screen reference)
+```
+auth  chaossystem  container  dataset  evaluation  execution  group  injection
+label  metric  notification  pedestal  project  ratelimiter  rbac  sdk
+system  systemmetric  task  team  trace  user
+```
 
-| Package | Files | Role | Key outbound |
-|---|---|---|---|
-| `aegis` (main) | 1 | Cobra entry, mode dispatch | config, database, router, service/consumer, service/initialization, service/logreceiver, producer.GCRateLimiters, chaosCli.InitWithConfig |
-| `aegis/config` | 2 | viper load + runtime-mutable chaos system singleton | consts; callers: main, middleware-free global state, service/initialization/systems |
-| `aegis/consts` | 7 | enums, Redis key patterns, label keys, EventTypes, permission rules, validation whitelists | none; universally imported |
-| `aegis/client` | 6 + debug/ | external deps (Redis, etcd, Harbor, Helm, Loki, OTLP exporter, debug registry) | respective SDKs |
-| `aegis/client/k8s` | 5 | controller-runtime informer for Chaos Mesh CRDs + Jobs; `CreateJob` | chaosCli.GetCRDMapping |
-| `aegis/database` | 6 | entities, `InitDB`, `createDetectorViews`, SDK table read-through | gorm/mysql, chaos.Groundtruth type |
-| `aegis/repository` | 25 | GORM DAO layer; Redis queue I/O for tasks | gorm, clause, redis v9 |
-| `aegis/dto` | 35 | request/response/validation + `UnifiedTask` + stream event types | chaos types, guidedcli types, consts |
-| `aegis/router` | 3 | gin routing: `/system/*`, `/api/v2/*`, `/docs/*` | middleware, handlers |
-| `aegis/middleware` | 5 | JWT, permission/role gates, audit post-flight, in-mem rate-limit, group-id tagger | producer perm helpers, consts |
-| `aegis/handlers/v2` | 24 files + `pedestalhelm/` subpkg | REST handlers, SSE/WS | producer, analyzer, tasks.go leaks to repository |
-| `aegis/handlers/system` | 4 | `/system/audit`, `/system/configs`, `/system/health`, `/system/monitor/*` | producer (ListConfigs, InspectLock, ListQueuedTasks…), database directly (health) |
-| `aegis/service/producer` | 30 | sync business logic | repository, common, client, dto, config, chaos types, guidedcli.BuildInjection |
-| `aegis/service/common` | 10 | SubmitTask, label dedup, parameter template render, config etcd watcher, DBMetadataStore | repository, client, dto, consts |
-| `aegis/service/analyzer` | 1 | evaluation batch compute + persist | repository, common, database.DB |
-| `aegis/service/consumer` | 14 (1 dead) | task queue loop + scheduler + executors + K8s callback impl + monitor + rate-limiter + trace state inference | common.SubmitTask, repository, client/k8s, client/helm, chaos.BatchCreate, guidedcli.BuildInjection, tracing.WithSpan |
-| `aegis/service/logreceiver` | 2 | OTLP /v1/logs → Redis pub/sub `joblogs:<taskID>` | client.RedisPublish |
-| `aegis/service/initialization` | 6 | per-mode bootstrap: seed DB, register chaos systems, register config handlers, warm monitor namespaces | database, common, producer, consumer.RegisterConsumerHandlers, chaos.RegisterSystem |
-| `aegis/tracing` | 1 | OTel function-decorator helpers (not middleware) | go.opentelemetry.io/otel |
-| `aegis/utils` | 17 | path guards, JWT issuance, SHA-256 password, image-ref parse, zip extract, generic helpers | distribution/reference, golang-jwt/v5, oklog/ulid |
-| `aegis/cmd/aegisctl` | 40+ | Cobra CLI (`auth/context/project/container/dataset/inject/execute/task/trace/eval/wait/status/pedestal/cluster/rate-limiter`); out-of-band `cluster preflight` connects directly to k8s/MySQL/Redis/etcd/ClickHouse | aegisctl/client (hand-rolled), guidedcli (inject guided only) |
+(Plus `docs` which is declared but never routed.)
 
-## 7. How to use this index
+## 5. Gateway Decorator pattern
 
-- For a **specific file's fan-out** → read the matching slice in `slices/` (table-of-calls is the primary artifact).
-- For a **critical flow** → start from `flows.md`.
-- For a **data shape** (entity / DTO / Redis key / label) → `reference.md`.
-- Before assuming something works as the old docs say → check `orphans.md`. ~25 code-vs-docs drifts are documented there; they're the recovery's main "stale doc" finding.
+In gateway mode, `app/gateway/options.go:57-177` wraps 20 HandlerServices:
 
-Generated by a 6-agent map-reduce recovery pass on 2026-04-19. Agent prompts are preserved in the conversation transcript if re-running is needed.
+```
+fx.Decorate(func(local injection.HandlerService, remote *orchestratorclient.Client) injection.HandlerService {
+    return remoteAwareInjectionService{ HandlerService: local, orchestrator: remote }
+})
+```
+
+Each wrapper in `app/gateway/*_services.go` either forwards to the gRPC client (when
+`remote.Enabled()`), or returns `missingRemoteDependency(name)`. The full table is in
+`slices/01-app-wiring.md` §5.
+
+Notable: the gateway also decorates `middleware.Service` (built by `middleware.NewService`
+inside `router.Module`) with `remoteAwareMiddlewareService`, forcing token verification + permission
+checks to go through `iamclient.Client.VerifyToken`/`CheckPermission`. So the gateway can be a
+pure auth proxy to `iam-service`.
+
+## 6. Layered view of a single run
+
+Every process — whether monolith `both` or one of the 6 microservices — composes the
+same layers via fx. The per-mode `app.*Options()` picks which subset of modules gets
+wired, but the layering is uniform.
+
+```mermaid
+flowchart TB
+    subgraph LAUNCH[Entry]
+        MAIN["main.go / cmd/&lt;svc&gt;/main.go<br/>flag.Parse → fx.New(app.X).Run()"]
+    end
+
+    subgraph APP[app/ · fx composition]
+        direction LR
+        A1["BaseOptions<br/>config + logger"]
+        A2["ObserveOptions<br/>loki + tracing"]
+        A3["DataOptions<br/>db + redis"]
+        A4["CoordOptions<br/>etcd"]
+        A5["BuildInfraOptions<br/>harbor + helm + buildkit"]
+        A6["RuntimeWorkerStack<br/>chaos + k8s + runtime +<br/>worker + controller + receiver"]
+        A7["gateway.Options<br/>20 fx.Decorate"]
+    end
+
+    subgraph INFRA[infra/ · 13 gateway packages]
+        direction LR
+        IR[redis]
+        IDB[db]
+        IE[etcd]
+        IK[k8s]
+        IH[helm]
+        IL[loki]
+        IHA[harbor]
+        IB[buildkit]
+        IC[chaos]
+        IT[tracing]
+        IRT[runtime]
+        ICF[config]
+        ILG[logger]
+    end
+
+    subgraph MOD[module/ · 22 domains]
+        direction LR
+        M_IAM["auth / rbac / user / team"]
+        M_RES["project / container / dataset<br/>evaluation / label / chaossystem"]
+        M_ORCH["injection / execution / task<br/>trace / group / notification / metric"]
+        M_SYS["system / systemmetric"]
+        M_LOC["pedestal / ratelimiter / sdk<br/>⚠ break convention, gateway-local only"]
+    end
+
+    subgraph IFACE[interface/ · runtime surfaces]
+        direction LR
+        I_HTTP["http/<br/>gin server"]
+        I_GRPC["grpc/{iam,orch,res,rt,sys}/<br/>5 gRPC servers"]
+        I_WKR["worker/<br/>StartScheduler+ConsumeTasks"]
+        I_CTR["controller/<br/>k8s.Controller.Initialize"]
+        I_RCV["receiver/<br/>OTLP /v1/logs"]
+    end
+
+    subgraph IC[internalclient/ · gRPC stubs]
+        direction LR
+        IC1["iamclient"] & IC2["orchestratorclient"]
+        IC3["resourceclient"] & IC4["runtimeclient"] & IC5["systemclient"]
+    end
+
+    subgraph LEG["service/* · legacy (still running inside fx lifecycle hooks)"]
+        direction LR
+        L1["common/<br/>SubmitTaskWithDB"]
+        L2["consumer/<br/>dispatchTask + k8sHandler<br/>+ 6 executors"]
+        L3["initialization/<br/>seed DB + handlers"]
+        L4["logreceiver/"]
+    end
+
+    subgraph EXT[External]
+        direction LR
+        EDB[(MySQL)] 
+        ERE[(Redis)]
+        EET[(etcd)]
+        EK8[Kubernetes<br/>+ Chaos Mesh]
+        ELK[Loki]
+        EHA[Harbor]
+        EHE[Helm repos]
+        EBK[BuildKit]
+    end
+
+    MAIN --> APP
+    APP --> INFRA
+    APP --> MOD
+    APP --> IFACE
+    APP --> IC
+    MOD --> LEG
+    IFACE --> LEG
+    INFRA --> EXT
+    IC -.gRPC.-> I_GRPC
+```
+
+**Reading this diagram**:
+
+- `app/` is pure wiring — each mode composes a different subset of the lower layers.
+- `module/` domains are the business-logic units. The gateway re-wires their HandlerServices to
+  `internalclient/` stubs via `fx.Decorate`, so each module's handler still sees the same
+  interface regardless of monolith-vs-split deployment.
+- `interface/` packages own the runtime lifecycle hooks (HTTP server, gRPC servers, K8s
+  informer goroutines, OTLP receiver). All replace the old `main.go` `go ...` boot calls.
+- `service/` (legacy) is **not gone** — it's the async engine (`service/consumer/`) plus the
+  canonical task submission (`service/common.SubmitTaskWithDB`) plus seeding. These are invoked
+  from `interface/worker`'s fx OnStart hook, not from `main.go`.
+
+## 7. Inbound-edge map (who calls whom)
+
+| Target package | Called from |
+|---|---|
+| `app/*` | `main.go`, `cmd/*/main.go` (via fx) |
+| `router/` | `interface/http/module.go` (consumes `router.Module`'s `NewHandlers`) |
+| `middleware/` | `router/*.go` for every authed group; `handlers/` helpers |
+| `interface/http/` | wired into `ProducerHTTPOptions` only |
+| `interface/grpc/<svc>/` | wired per microservice in `app/<svc>/options.go` |
+| `interface/worker/`, `/controller/`, `/receiver/` | wired into `RuntimeWorkerStackOptions` |
+| `module/<name>/handler` | route registration in `router/{public,sdk,portal,admin}.go` |
+| `module/<name>/service` | own handler; also called from sibling modules (e.g. `injection.Service` pulled by `consumer/k8s_handler` and `evaluation`) |
+| `module/<name>/repository` | own service + rarely `initialization/` seeding |
+| `service/common/task.SubmitTaskWithDB` | `module/injection/service.go:341,430`, `module/execution/service.go:124`, `service/consumer/k8s_handler.go:327,630,706`, `restart_pedestal.go` (via `ProduceFaultInjectionTasksWithDB`), retry/reschedule paths |
+| `service/consumer/*` | `interface/worker/module.go`, `interface/controller/module.go`, runtime-stack constructors in `app/runtime_stack.go` |
+| `infra/redis` | ubiquitous (every module, consumer, worker/controller/receiver) |
+| `infra/k8s` | `service/consumer/*`, `interface/{controller,worker,grpc/runtime}`, `module/system`, `app/*` wiring |
+| `infra/{etcd, helm, loki, buildkit, harbor}` | mostly consumer + runtime-stack + specific modules (system, task, container) |
+| `internalclient/iamclient` | gateway (auth/user/rbac/team Decorators), `middleware.Service` |
+| `internalclient/orchestratorclient` | gateway (7 decorates), `service/consumer/owner_adapter`, `resource-service`'s project/evaluation delegators |
+| `internalclient/resourceclient` | gateway (7 decorates), iam-service (team project reader) |
+| `internalclient/runtimeclient` | system-service only |
+| `internalclient/systemclient` | gateway (system/systemmetric decorates) |
+
+## 8. Fault-injection workflow at a glance
+
+The core flow: one HTTP request causes multiple Redis enqueues + K8s CRDs/Jobs, each
+callback submitting the next task until the trace reaches a terminal state. Full narrative
+with file:line in `flows.md §1`.
+
+```mermaid
+sequenceDiagram
+    participant User as HTTP client
+    participant Handler as module/injection/handler.go
+    participant Svc as injection.Service
+    participant Common as service/common/task.go<br/>SubmitTaskWithDB
+    participant Redis as Redis queues<br/>(task:delayed/ready)
+    participant Worker as service/consumer<br/>ConsumeTasks
+    participant Exec as executors<br/>(restart/inject/build/algo/collect)
+    participant K8s as K8s + Chaos Mesh
+    participant Ctrl as k8sHandler (callbacks)
+
+    User->>Handler: POST /api/v2/projects/:pid/injections/inject
+    Handler->>Svc: SubmitFaultInjection(req)
+    Svc->>Svc: ResolveSpecs (legacy chaos.Node OR guidedcli)
+    Svc->>Redis: SetHashField injection:algorithms (per group)
+    Svc->>Common: SubmitTaskWithDB(TaskTypeRestartPedestal)
+    Common->>Redis: UpsertTrace+Task (MySQL) + ZADD task:delayed
+    Redis-->>Worker: scheduler LPUSH → BRPOP task:ready
+    Worker->>Exec: dispatchTask(RestartPedestal)
+    Exec->>K8s: helm install pedestal chart
+    Exec->>Common: ProduceFaultInjectionTasksWithDB(TaskTypeFaultInjection)
+    Common->>Redis: ZADD task:delayed
+    Redis-->>Worker: BRPOP
+    Worker->>Exec: dispatchTask(FaultInjection)
+    Exec->>K8s: chaos.BatchCreate (Chaos Mesh CRDs w/ task_carrier, labels)
+
+    Note over K8s,Ctrl: Chaos Mesh runs fault injection
+    K8s-->>Ctrl: CRD Run→Stop, AllInjected → HandleCRDSucceeded
+    Ctrl->>Common: SubmitTaskWithDB(TaskTypeBuildDatapack)
+    Common-->>Worker: via Redis queue
+    Worker->>Exec: executeBuildDatapackWithDeps
+    Exec->>K8s: k8sGateway.CreateJob (benchmark container)
+
+    K8s-->>Ctrl: Job Succeeded → HandleJobSucceeded (BuildDatapack branch)
+    Ctrl->>Common: SubmitTaskWithDB(TaskTypeRunAlgorithm, detector)
+    Common-->>Worker: via Redis queue
+    Worker->>Exec: executeAlgorithm (with token_bucket:algo_execution)
+    Exec->>K8s: k8sGateway.CreateJob (algorithm container)
+
+    K8s-->>Ctrl: Job Succeeded → HandleJobSucceeded (RunAlgorithm branch)
+    Ctrl->>Common: SubmitTaskWithDB(TaskTypeCollectResult)
+    Common-->>Worker: via Redis queue
+    Worker->>Exec: executeCollectResult
+    Exec->>Exec: if detector + hasIssues:<br/>fan-out RunAlgorithm per algo<br/>from injection:algorithms hash
+
+    Note over Exec,User: Every state transition XADDs to trace:<traceID>:log<br/>SSE handler tails stream for UI
+```
+
+**Takeaways for the reader**:
+
+- There is no "workflow engine" — the chain is **K8s lifecycle callbacks + one queue**.
+- `k8s_handler.go` (`service/consumer/k8s_handler.go`) is where the workflow order is
+  hard-coded. Changing the pipeline means editing this file.
+- `service/common.SubmitTaskWithDB` is the only enqueue path for every task.
+- The `owner_adapter` seam lets runtime-worker either update state locally or call
+  orchestrator-service via gRPC. Both paths still ship.
+
+## 9. Key invariants recovered from code
+
+1. **`common.SubmitTaskWithDB` (`service/common/task.go:56`) is still the only enqueue path.**
+   All producers, all CRD/Job callbacks, all retry paths funnel through it.
+2. **Workflow chain is driven by K8s lifecycle callbacks** (no separate workflow engine).
+   `service/consumer/k8s_handler.go` maps CRD-success → `BuildDatapack`, Job-success-for-BuildDatapack
+   → `RunAlgorithm(detector)`, Job-success-for-Algorithm → `CollectResult`. See `flows.md §1`.
+3. **Soft-delete still uses `consts.StatusType` + MySQL generated virtual columns**,
+   not `gorm.DeletedAt`. Unchanged by the refactor.
+4. **Rate-limit buckets are Redis SETs of taskIDs** (Lua-scripted SADD/SCARD/SREM), not counters.
+   Caps 2/3/5 (restart/build/algo) but now read from dynamic config with those defaults.
+5. **Two inject-spec pipelines coexist**: legacy `chaos.Node` and `pkg/guidedcli.GuidedConfig`.
+   Branch in `module/injection/service.go`'s `parseBatchGuidedSpecs` vs `parseBatchInjectionSpecs`.
+   HTTP entrypoint is one endpoint; the shape of each spec entry selects.
+6. **`/api/v2/injections/metadata` + `/api/v2/injections/translate` return HTTP 410**.
+   Routes survived as `module/injection/handler.go:286, 335` stubs. Swagger annotations still
+   advertise them (doc drift).
+7. **All SSE/WS endpoints replay from Redis then tail**:
+   - `/traces/:id/stream` → XStream `trace:<id>:log` (`consts.StreamTraceLogKey`)
+   - `/groups/:id/stream` → XStream `group:<id>:log` (`consts.StreamGroupLogKey`)
+   - `/notifications/stream` → XStream `notifications:global`
+   - `/tasks/:id/logs/ws` → Pub/Sub channel `joblogs:<taskID>`  + Loki historical backfill
+8. **OTLP log receiver is pub/sub**, not a stream. Emitted logs are dropped if no WS viewer
+   is connected (`service/logreceiver/receiver.go`).
+9. **Gateway is a heavy HTTP shell.** Despite routing to microservices, it still wires
+   `DataOptions + CoordinationOptions + BuildInfraOptions + chaos.Module + k8s.Module + ProducerHTTPOptions`.
+   Running gateway still spins up MySQL, etcd, BuildKit, Helm, Harbor, and k8s clients.
+10. **JWT secret is hard-coded in `utils/jwt.go:16`** and also used as the AES-GCM key for
+    API-key ciphertexts (`utils/access_key_crypto.go:81` derives via `sha256(JWTSecret)`).
+    Leaking one leaks both. See `orphans.md §A`.
+
+## 10. Per-package 30-second summary
+
+| Package | Role | Key outbound |
+|---|---|---|
+| `aegis` (`main.go`) | cobra+viper dispatch to 9 modes | `app/*` |
+| `app/` | fx composition per mode; gateway Decorators; legacy init bridge | `infra/*`, `module/*`, `interface/*`, `internalclient/*` |
+| `cmd/aegisctl/` | CLI client (unchanged; still talks REST/SSE/WS) | `client/`, `cluster/` subdirs |
+| `cmd/<svc>/` | 6 thin service binaries — `flag.Parse` → `fx.New(app.<X>Options)` | `app/<svc>` |
+| `config/` (top-level) | viper globals; atomic `detectorName`; chaos-system singleton | `consts`, `chaos-experiment/handler` |
+| `consts/` | 7 files: enums, Redis key patterns, K8s labels, EventTypes, RBAC matrix, validation whitelists, PermXxx rule constants | none; universally imported |
+| `dto/` | 14 files of shared DTO plumbing: `GenericResponse`, `SearchReq[F]`, `UnifiedTask`, stream event types. **Not deprecated** — 146 consumers | `consts` |
+| `model/` | `entity.go` (39 entities), `entity_helper.go`, `view.go`. Replaces old `database/` | `consts`, `chaos-experiment/handler` |
+| `middleware/` | JWT/service-token/API-key auth; permission gates; API-key scope matcher; audit (**declared but not wired**); ratelimit (**declared but not mounted**); `deps.go` glue | `module/auth` via `TokenVerifier`; `dbBackedMiddlewareService` runs perm queries |
+| `router/` | audience-split route registration (public/sdk/portal/admin); `NewHandlers` aggregator | `module/*` handlers |
+| `interface/http/` | gin server lifecycle | `router`, `middleware` |
+| `interface/grpc/<svc>/` | 5 gRPC servers (iam=61 RPCs, orch=28, res=25, rt=6, sys=12) | respective `module/*` HandlerServices |
+| `interface/worker/` | fx OnStart: `StartScheduler`+`ConsumeTasks`; builds `RuntimeDeps` | `service/consumer` |
+| `interface/controller/` | fx OnStart: `k8s.Controller.Initialize(ctx, cancel, consumer.NewHandler(...))` | `infra/k8s`, `service/consumer` |
+| `interface/receiver/` | fx OnStart/OnStop: OTLP `/v1/logs` HTTP server | `service/logreceiver`, `infra/redis` |
+| `internalclient/<svc>client/` | gRPC client stub; `Enabled()` returns false if target not configured | `proto/<svc>/v1` |
+| `proto/<svc>/v1/` | proto defs + generated pb.go | — |
+| `module/<22 domains>/` | domain logic; each emits a `HandlerService` interface | `model`, `infra/*`, sibling modules, `service/common` |
+| `service/common/` | `SubmitTaskWithDB`, config-update listener/registry, dynamic-config validation, chaos `MetadataStore` | `model`, `infra/*`, `chaos-experiment` |
+| `service/consumer/` | dispatchTask + 6 executors + k8sHandler + monitor + rate-limiter + owner-adapter | `infra/{k8s,redis,helm,buildkit}`, `module/{container,label,injection,execution}`, `orchestratorclient` |
+| `service/initialization/` | `InitializeProducer/Consumer` seed + handler registration. Invoked from fx lifecycle hooks | `module/*` for seeding, `chaos-experiment` |
+| `service/logreceiver/` | OTLP-HTTP log receiver; publishes to Redis Pub/Sub | `infra/redis`, `dto.LogEntry` |
+| `infra/` (13 pkgs) | gateway constructors for every external dep + chaos/config/runtime/tracing helpers | third-party SDKs |
+| `utils/` | JWT, AES-GCM (API-key crypto), password hashing (SHA-256 + salt!), file utils, chaos-spec fault translator, generics | `golang-jwt/v5`, `distribution/reference`, `oklog/ulid` |
+| `tracing/` | OTel function-decorator helpers (`WithSpan`, `WithSpanNamed`, `WithSpanReturnValue[T]`, `SetSpanAttribute`). NOT the provider — that's `infra/tracing`. | `go.opentelemetry.io/otel` |
+| `httpx/` | `ParsePositiveID`, `HandleServiceError` (maps `consts.Err*` to HTTP), request-id propagation for HTTP + gRPC | `consts`, `utils.NewErrorProcessor` |
+| `searchx/` | Generic `QueryBuilder[F ~string]`. Replaces old `repository/query_builder.go` — now parameterised by whitelist-field type | `gorm.io/gorm`, `dto.SearchReq[F]` |
+
+## 11. How to use this index
+
+- **Specific file's fan-out** → the matching slice in `slices/`. Each agent produced dedicated
+  per-file tables with exhaustive edges.
+- **A feature's end-to-end path** → `flows.md`. 7 flows are written as narrative with file:line.
+- **A data shape** (entity / DTO / Redis key / K8s label / EventType / permission rule) →
+  `reference.md`.
+- **Suspicious/dead/insecure/inverted** → `orphans.md`. ~30 items with remediation hints.
+
+Generated by a 7-agent map-reduce recovery pass on 2026-04-19, re-run after the refactor at
+submodule commit `42282d0c`.
