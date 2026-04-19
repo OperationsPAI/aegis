@@ -3,6 +3,7 @@ package auth
 import (
 	"database/sql/driver"
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -15,6 +16,17 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
+// TestMain provisions a deterministic JWT secret so the package's tests can
+// run without relying on a real deployment configuration. The secret MUST
+// differ from utils.LegacyJWTSecretDefault or InitJWTSecret will reject it.
+func TestMain(m *testing.M) {
+	_ = os.Setenv(utils.JWTSecretEnvVar, "test-jwt-secret-please-ignore-not-for-prod")
+	if err := utils.InitJWTSecret(); err != nil {
+		panic(err)
+	}
+	os.Exit(m.Run())
+}
 
 type passwordHashMatcher struct {
 	plain string
