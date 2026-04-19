@@ -385,13 +385,13 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		// The rbac aggregator re-adds these to RoleAdmin at startup via
 		// framework.RoleGrantsRegistrar.
 
+<<<<<<< HEAD
 		// Execution management
 		PermExecutionReadProject,
 		PermExecutionCreateProject,
-		PermExecutionUpdateProject,
-		PermExecutionDeleteProject,
-		PermExecutionExecuteProject,
-		PermExecutionStopProject,
+		// Execution management moved to module/execution/permissions.go.
+		// The rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
 
 		// Task management moved to module/task/permissions.go. The rbac
 		// aggregator re-adds these to RoleAdmin at startup via
