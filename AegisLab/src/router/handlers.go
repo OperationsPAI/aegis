@@ -1,7 +1,6 @@
 package router
 
 import (
-	"aegis/framework"
 	auth "aegis/module/auth"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
@@ -17,6 +16,7 @@ import (
 	sdk "aegis/module/sdk"
 	system "aegis/module/system"
 	task "aegis/module/task"
+	team "aegis/module/team"
 )
 
 type Handlers struct {
@@ -34,7 +34,7 @@ type Handlers struct {
 	System      *system.Handler
 	Pedestal    *pedestal.Handler
 	RateLimiter *ratelimiter.Handler
-	Team        framework.TeamRoutesHandler
+	Team        *team.Handler
 	Label       *label.Handler
 }
 
@@ -53,7 +53,7 @@ func NewHandlers(
 	system *system.Handler,
 	pedestal *pedestal.Handler,
 	rateLimiter *ratelimiter.Handler,
-	team framework.TeamRoutesHandler,
+	team *team.Handler,
 	label *label.Handler,
 ) *Handlers {
 	return &Handlers{

@@ -1,8 +1,6 @@
 package team
 
 import (
-	"aegis/framework"
-
 	"go.uber.org/fx"
 )
 
@@ -13,7 +11,6 @@ var Module = fx.Module("team",
 	fx.Provide(fx.Annotate(AsReader, fx.As(new(Reader)))),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
-	fx.Provide(fx.Annotate(AsRoutesHandler, fx.As(new(framework.TeamRoutesHandler)))),
 	fx.Provide(
 		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(Permissions, fx.ResultTags(`group:"permissions"`)),

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"aegis/dto"
-	"aegis/framework"
 )
 
 // HandlerService captures the team operations consumed by the HTTP handler.
@@ -24,9 +23,3 @@ type HandlerService interface {
 func AsHandlerService(service *Service) HandlerService {
 	return service
 }
-
-func AsRoutesHandler(handler *Handler) *Handler {
-	return handler
-}
-
-var _ framework.TeamRoutesHandler = (*Handler)(nil)
