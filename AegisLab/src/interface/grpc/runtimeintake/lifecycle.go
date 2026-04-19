@@ -1,4 +1,4 @@
-package grpcorchestrator
+package grpcruntimeintake
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"aegis/config"
 	"aegis/httpx"
-	orchestratorv1 "aegis/proto/orchestrator/v1"
+	runtimev1 "aegis/proto/runtime/v1"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
@@ -17,32 +17,37 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const defaultOrchestratorGRPCAddr = ":9092"
+const defaultIntakeGRPCAddr = ":9096"
 
 type Lifecycle struct {
-	server    *grpc.Server
-	addr      string
-	listener  net.Listener
+	server   *grpc.Server
+	addr     string
+	listener net.Listener
+
+	// StartFunc / StopFunc are test hooks.
 	StartFunc func(context.Context) error
 	StopFunc  func()
 }
 
-func newLifecycle(orchestratorServer *orchestratorServer) (*Lifecycle, error) {
+func newLifecycle(intake *intakeServer) (*Lifecycle, error) {
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(httpx.UnaryServerRequestIDInterceptor()))
-	orchestratorv1.RegisterOrchestratorServiceServer(grpcServer, orchestratorServer)
+	runtimev1.RegisterRuntimeIntakeServiceServer(grpcServer, intake)
 
 	healthServer := health.NewServer()
-	healthServer.SetServingStatus(orchestratorv1.OrchestratorService_ServiceDesc.ServiceName, grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus(runtimev1.RuntimeIntakeService_FullName, grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 
-	if config.GetBool("orchestrator.grpc.reflection") {
+	if config.GetBool("api_gateway.intake.grpc.reflection") {
 		reflection.Register(grpcServer)
 	}
 
-	addr := config.GetString("orchestrator.grpc.addr")
+	addr := config.GetString("api_gateway.intake.grpc.addr")
 	if addr == "" {
-		addr = defaultOrchestratorGRPCAddr
+		addr = config.GetString("runtime_intake.grpc.addr")
+	}
+	if addr == "" {
+		addr = defaultIntakeGRPCAddr
 	}
 
 	return &Lifecycle{
@@ -58,14 +63,14 @@ func (r *Lifecycle) start(ctx context.Context) error {
 
 	listener, err := net.Listen("tcp", r.addr)
 	if err != nil {
-		return fmt.Errorf("listen orchestrator grpc on %s: %w", r.addr, err)
+		return fmt.Errorf("listen runtime intake grpc on %s: %w", r.addr, err)
 	}
 	r.listener = listener
 
 	go func() {
-		logrus.Infof("Starting orchestrator gRPC server on %s", r.addr)
+		logrus.Infof("Starting runtime intake gRPC server on %s", r.addr)
 		if err := r.server.Serve(listener); err != nil {
-			logrus.Errorf("orchestrator gRPC server error: %v", err)
+			logrus.Errorf("runtime intake gRPC server error: %v", err)
 		}
 	}()
 	return nil

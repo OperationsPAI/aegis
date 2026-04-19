@@ -1,20 +1,23 @@
 name: aegislab-microservices
 services:
-  orchestrator-service:
+  api-gateway:
     image: golang:1.24-bookworm
     working_dir: /workspace/src
-    command: ["go", "run", "./cmd/orchestrator-service", "-conf", "/workspace/src/config.dev.toml"]
+    command: ["go", "run", "./cmd/api-gateway", "-conf", "/workspace/src/config.dev.toml", "-port", "8082"]
     volumes:
       - ./:/workspace
     environment:
       GOPROXY: https://proxy.golang.org,direct
     ports:
-      - "9092:9092"
+      - "8082:8082"
+      - "9096:9096"   # runtime-intake gRPC
     depends_on:
       redis:
         condition: service_healthy
       mysql:
         condition: service_healthy
+      etcd:
+        condition: service_started
 
   runtime-worker-service:
     image: golang:1.24-bookworm
@@ -33,19 +36,5 @@ services:
         condition: service_healthy
       etcd:
         condition: service_started
-      orchestrator-service:
-        condition: service_started
-
-  api-gateway:
-    image: golang:1.24-bookworm
-    working_dir: /workspace/src
-    command: ["go", "run", "./cmd/api-gateway", "-conf", "/workspace/src/config.dev.toml", "-port", "8082"]
-    volumes:
-      - ./:/workspace
-    environment:
-      GOPROXY: https://proxy.golang.org,direct
-    ports:
-      - "8082:8082"
-    depends_on:
-      orchestrator-service:
+      api-gateway:
         condition: service_started

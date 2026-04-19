@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"aegis/dto"
-	"aegis/internalclient/orchestratorclient"
+	"aegis/internalclient/runtimeclient"
 	execution "aegis/module/execution"
 	injection "aegis/module/injection"
 
@@ -26,146 +26,132 @@ type InjectionOwner interface {
 	UpdateInjectionTimestamps(context.Context, *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error)
 }
 
-type executionOwnerAdapter struct {
-	orchestrator  *orchestratorclient.Client
-	local         *execution.Service
-	requireRemote bool
+// localExecutionOwner delegates directly to the in-process execution.Service.
+type localExecutionOwner struct {
+	svc *execution.Service
 }
 
-type executionOwnerParams struct {
-	fx.In
-
-	Orchestrator *orchestratorclient.Client
-	Local        *execution.Service `optional:"true"`
-}
-
-type injectionOwnerParams struct {
-	fx.In
-
-	Orchestrator *orchestratorclient.Client
-	Local        *injection.Service `optional:"true"`
-}
-
-func NewExecutionOwner(params executionOwnerParams) ExecutionOwner {
-	return executionOwnerAdapter{
-		orchestrator:  params.Orchestrator,
-		local:         params.Local,
-		requireRemote: false,
-	}
-}
-
-func NewInjectionOwner(params injectionOwnerParams) InjectionOwner {
-	return injectionOwnerAdapter{
-		orchestrator:  params.Orchestrator,
-		local:         params.Local,
-		requireRemote: false,
-	}
-}
-
-func newRemoteExecutionOwner(params executionOwnerParams) ExecutionOwner {
-	return executionOwnerAdapter{
-		orchestrator:  params.Orchestrator,
-		local:         params.Local,
-		requireRemote: true,
-	}
-}
-
-func newRemoteInjectionOwner(params injectionOwnerParams) InjectionOwner {
-	return injectionOwnerAdapter{
-		orchestrator:  params.Orchestrator,
-		local:         params.Local,
-		requireRemote: true,
-	}
-}
-
-func (a executionOwnerAdapter) CreateExecution(ctx context.Context, req *execution.RuntimeCreateExecutionReq) (int, error) {
-	if a.orchestrator != nil && a.orchestrator.Enabled() {
-		return a.orchestrator.CreateExecution(ctx, req)
-	}
-	if a.requireRemote {
-		return 0, fmt.Errorf("orchestrator-service owner is not configured")
-	}
-	if a.local == nil {
+func (a localExecutionOwner) CreateExecution(ctx context.Context, req *execution.RuntimeCreateExecutionReq) (int, error) {
+	if a.svc == nil {
 		return 0, fmt.Errorf("missing execution owner service")
 	}
-	return a.local.CreateExecutionRecord(ctx, req)
+	return a.svc.CreateExecutionRecord(ctx, req)
 }
 
-func (a executionOwnerAdapter) GetExecution(ctx context.Context, executionID int) (*execution.ExecutionDetailResp, error) {
-	if a.orchestrator != nil && a.orchestrator.Enabled() {
-		return a.orchestrator.GetExecution(ctx, executionID)
-	}
-	if a.requireRemote {
-		return nil, fmt.Errorf("orchestrator-service owner is not configured")
-	}
-	if a.local == nil {
+func (a localExecutionOwner) GetExecution(ctx context.Context, executionID int) (*execution.ExecutionDetailResp, error) {
+	if a.svc == nil {
 		return nil, fmt.Errorf("missing execution owner service")
 	}
-	return a.local.GetExecution(ctx, executionID)
+	return a.svc.GetExecution(ctx, executionID)
 }
 
-func (a executionOwnerAdapter) UpdateExecutionState(ctx context.Context, req *execution.RuntimeUpdateExecutionStateReq) error {
-	if a.orchestrator != nil && a.orchestrator.Enabled() {
-		return a.orchestrator.UpdateExecutionState(ctx, req)
-	}
-	if a.requireRemote {
-		return fmt.Errorf("orchestrator-service owner is not configured")
-	}
-	if a.local == nil {
+func (a localExecutionOwner) UpdateExecutionState(ctx context.Context, req *execution.RuntimeUpdateExecutionStateReq) error {
+	if a.svc == nil {
 		return fmt.Errorf("missing execution owner service")
 	}
-	return a.local.UpdateExecutionState(ctx, req)
+	return a.svc.UpdateExecutionState(ctx, req)
 }
 
-type injectionOwnerAdapter struct {
-	orchestrator  *orchestratorclient.Client
-	local         *injection.Service
-	requireRemote bool
+// localInjectionOwner delegates directly to the in-process injection.Service.
+type localInjectionOwner struct {
+	svc *injection.Service
 }
 
-func (a injectionOwnerAdapter) CreateInjection(ctx context.Context, req *injection.RuntimeCreateInjectionReq) (*dto.InjectionItem, error) {
-	if a.orchestrator != nil && a.orchestrator.Enabled() {
-		return a.orchestrator.CreateInjection(ctx, req)
-	}
-	if a.requireRemote {
-		return nil, fmt.Errorf("orchestrator-service owner is not configured")
-	}
-	if a.local == nil {
+func (a localInjectionOwner) CreateInjection(ctx context.Context, req *injection.RuntimeCreateInjectionReq) (*dto.InjectionItem, error) {
+	if a.svc == nil {
 		return nil, fmt.Errorf("missing injection owner service")
 	}
-	return a.local.CreateInjectionRecord(ctx, req)
+	return a.svc.CreateInjectionRecord(ctx, req)
 }
 
-func (a injectionOwnerAdapter) UpdateInjectionState(ctx context.Context, req *injection.RuntimeUpdateInjectionStateReq) error {
-	if a.orchestrator != nil && a.orchestrator.Enabled() {
-		return a.orchestrator.UpdateInjectionState(ctx, req)
-	}
-	if a.requireRemote {
-		return fmt.Errorf("orchestrator-service owner is not configured")
-	}
-	if a.local == nil {
+func (a localInjectionOwner) UpdateInjectionState(ctx context.Context, req *injection.RuntimeUpdateInjectionStateReq) error {
+	if a.svc == nil {
 		return fmt.Errorf("missing injection owner service")
 	}
-	return a.local.UpdateInjectionState(ctx, req)
+	return a.svc.UpdateInjectionState(ctx, req)
 }
 
-func (a injectionOwnerAdapter) UpdateInjectionTimestamps(ctx context.Context, req *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error) {
-	if a.orchestrator != nil && a.orchestrator.Enabled() {
-		return a.orchestrator.UpdateInjectionTimestamps(ctx, req)
-	}
-	if a.requireRemote {
-		return nil, fmt.Errorf("orchestrator-service owner is not configured")
-	}
-	if a.local == nil {
+func (a localInjectionOwner) UpdateInjectionTimestamps(ctx context.Context, req *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error) {
+	if a.svc == nil {
 		return nil, fmt.Errorf("missing injection owner service")
 	}
-	return a.local.UpdateInjectionTimestamps(ctx, req)
+	return a.svc.UpdateInjectionTimestamps(ctx, req)
 }
 
-// RemoteOwnerOptions forces the dedicated runtime-worker-service path to use orchestrator RPC only.
+// remoteExecutionOwner proxies to the api-gateway via the runtime intake
+// gRPC (runtime-worker → api-gateway direction).
+type remoteExecutionOwner struct {
+	client *runtimeclient.Client
+}
+
+func (a remoteExecutionOwner) CreateExecution(ctx context.Context, req *execution.RuntimeCreateExecutionReq) (int, error) {
+	if a.client == nil || !a.client.IntakeEnabled() {
+		return 0, fmt.Errorf("runtime intake client is not configured")
+	}
+	return a.client.CreateExecution(ctx, req)
+}
+
+func (a remoteExecutionOwner) GetExecution(ctx context.Context, executionID int) (*execution.ExecutionDetailResp, error) {
+	if a.client == nil || !a.client.IntakeEnabled() {
+		return nil, fmt.Errorf("runtime intake client is not configured")
+	}
+	return a.client.GetExecution(ctx, executionID)
+}
+
+func (a remoteExecutionOwner) UpdateExecutionState(ctx context.Context, req *execution.RuntimeUpdateExecutionStateReq) error {
+	if a.client == nil || !a.client.IntakeEnabled() {
+		return fmt.Errorf("runtime intake client is not configured")
+	}
+	return a.client.UpdateExecutionState(ctx, req)
+}
+
+type remoteInjectionOwner struct {
+	client *runtimeclient.Client
+}
+
+func (a remoteInjectionOwner) CreateInjection(ctx context.Context, req *injection.RuntimeCreateInjectionReq) (*dto.InjectionItem, error) {
+	if a.client == nil || !a.client.IntakeEnabled() {
+		return nil, fmt.Errorf("runtime intake client is not configured")
+	}
+	return a.client.CreateInjection(ctx, req)
+}
+
+func (a remoteInjectionOwner) UpdateInjectionState(ctx context.Context, req *injection.RuntimeUpdateInjectionStateReq) error {
+	if a.client == nil || !a.client.IntakeEnabled() {
+		return fmt.Errorf("runtime intake client is not configured")
+	}
+	return a.client.UpdateInjectionState(ctx, req)
+}
+
+func (a remoteInjectionOwner) UpdateInjectionTimestamps(ctx context.Context, req *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error) {
+	if a.client == nil || !a.client.IntakeEnabled() {
+		return nil, fmt.Errorf("runtime intake client is not configured")
+	}
+	return a.client.UpdateInjectionTimestamps(ctx, req)
+}
+
+// NewExecutionOwner is used by in-process runtimes (both / consumer / gateway-collocated)
+// that wire execution.Service directly.
+func NewExecutionOwner(svc *execution.Service) ExecutionOwner {
+	return localExecutionOwner{svc: svc}
+}
+
+// NewInjectionOwner is used by in-process runtimes (both / consumer / gateway-collocated)
+// that wire injection.Service directly.
+func NewInjectionOwner(svc *injection.Service) InjectionOwner {
+	return localInjectionOwner{svc: svc}
+}
+
+// RemoteOwnerOptions forces the dedicated runtime-worker-service path to use
+// the preserved runtime-intake gRPC seam (runtime-worker → api-gateway) for
+// execution and injection state writes.
 func RemoteOwnerOptions() fx.Option {
 	return fx.Options(
-		fx.Decorate(newRemoteExecutionOwner),
-		fx.Decorate(newRemoteInjectionOwner),
+		fx.Decorate(func(_ ExecutionOwner, client *runtimeclient.Client) ExecutionOwner {
+			return remoteExecutionOwner{client: client}
+		}),
+		fx.Decorate(func(_ InjectionOwner, client *runtimeclient.Client) InjectionOwner {
+			return remoteInjectionOwner{client: client}
+		}),
 	)
 }

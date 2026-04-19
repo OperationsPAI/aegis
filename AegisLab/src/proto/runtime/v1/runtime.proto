@@ -6,6 +6,8 @@ option go_package = "aegis/proto/runtime/v1;runtimev1";
 
 import "google/protobuf/struct.proto";
 
+// RuntimeService is served by runtime-worker, consumed by api-gateway.
+// It exposes queue + lock + dependency status for ops tooling.
 service RuntimeService {
   rpc Ping(PingRequest) returns (PingResponse);
   rpc GetRuntimeStatus(RuntimeStatusRequest) returns (RuntimeStatusResponse);
@@ -13,6 +15,23 @@ service RuntimeService {
   rpc GetLimiterStatus(LimiterStatusRequest) returns (LimiterStatusResponse);
   rpc GetNamespaceLocks(PingRequest) returns (StructResponse);
   rpc GetQueuedTasks(PingRequest) returns (StructResponse);
+}
+
+// RuntimeIntakeService is served by api-gateway, consumed by runtime-worker.
+// It is the preserved seam for worker-produced execution / injection state
+// writes after the phase-2 gRPC collapse.
+//
+// All methods tunnel JSON-over-Struct (see intake_grpc.go) to avoid
+// regenerating proto for each DTO change; see pkg/runtimeclient (client
+// side) and interface/grpc/runtime/intake.go (server side) for the
+// JSON envelope contract.
+service RuntimeIntakeService {
+  rpc CreateExecution(StructResponse) returns (StructResponse);
+  rpc GetExecution(StructResponse) returns (StructResponse);
+  rpc UpdateExecutionState(StructResponse) returns (StructResponse);
+  rpc CreateInjection(StructResponse) returns (StructResponse);
+  rpc UpdateInjectionState(StructResponse) returns (StructResponse);
+  rpc UpdateInjectionTimestamps(StructResponse) returns (StructResponse);
 }
 
 message PingRequest {}

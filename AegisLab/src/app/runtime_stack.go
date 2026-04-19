@@ -8,18 +8,29 @@ import (
 	grpcruntime "aegis/interface/grpc/runtime"
 	receiver "aegis/interface/receiver"
 	worker "aegis/interface/worker"
-	"aegis/internalclient/orchestratorclient"
+	"aegis/internalclient/runtimeclient"
 	"aegis/service/consumer"
 
 	"go.uber.org/fx"
 )
 
+// RuntimeWorkerStackOptions provides the task / controller / grpc plumbing
+// shared by the runtime-worker-service binary and by the collocated
+// consumer / both modes.
+//
+// In collocated modes (consumer / both) the runtimeclient has no targets
+// configured, so ExecutionOwner / InjectionOwner resolve to the local
+// execution.Service / injection.Service wired by ExecutionInjectionOwnerModules.
+//
+// In the dedicated runtime-worker-service binary, consumer.RemoteOwnerOptions
+// decorates the owners to route through the runtime-intake gRPC client
+// (runtime-worker → api-gateway); see app/runtime/options.go.
 func RuntimeWorkerStackOptions() fx.Option {
 	return fx.Options(
 		runtimeinfra.Module,
 		chaos.Module,
 		k8s.Module,
-		orchestratorclient.Module,
+		runtimeclient.Module,
 		fx.Provide(
 			consumer.NewMonitor,
 			fx.Annotate(consumer.NewRestartPedestalRateLimiter, fx.ResultTags(`name:"restart_limiter"`)),

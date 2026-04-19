@@ -10,7 +10,6 @@ import (
 
 	"aegis/app"
 	gateway "aegis/app/gateway"
-	orchestrator "aegis/app/orchestrator"
 	runtimeapp "aegis/app/runtime"
 	buildkit "aegis/infra/buildkit"
 	etcd "aegis/infra/etcd"
@@ -189,7 +188,6 @@ func TestDedicatedServiceOptionsValidate(t *testing.T) {
 	}{
 		{name: "gateway", option: gateway.Options("..", "0")},
 		{name: "runtime", option: runtimeapp.Options("..")},
-		{name: "orchestrator", option: orchestrator.Options("..")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := fx.ValidateApp(tc.option); err != nil {
@@ -203,7 +201,9 @@ func TestAPIGatewayStandaloneHTTPIntegrationSmoke(t *testing.T) {
 	replacements, cleanup := newDedicatedServiceReplacements(t)
 	defer cleanup()
 
-	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
+	// api-gateway owns the intake gRPC server; bind it to a free loopback
+	// port so the smoke test doesn't clash with anything.
+	setConfigValue(t, "api_gateway.intake.grpc.addr", reserveLoopbackAddr(t))
 
 	addr := reserveLoopbackAddr(t)
 	appInstance := fx.New(
@@ -235,7 +235,9 @@ func TestRuntimeWorkerStandaloneGRPCIntegrationSmoke(t *testing.T) {
 	replacements, cleanup := newDedicatedServiceReplacements(t)
 	defer cleanup()
 
-	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
+	// runtime-worker dials api-gateway's intake gRPC; smoke test doesn't
+	// exercise the intake traffic so any reachable address is fine.
+	setConfigValue(t, "clients.runtime_intake.target", reserveLoopbackAddr(t))
 	addr := reserveLoopbackAddr(t)
 	setConfigValue(t, "runtime_worker.grpc.addr", addr)
 

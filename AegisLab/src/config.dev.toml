@@ -60,17 +60,19 @@ experiment_storage_path = "/mnt/jfs/experiment_storage"
 [buildkit]
 address = "localhost:1234"
 
-[clients.orchestrator]
-target = "localhost:9092"
-
 [clients.runtime]
+# api-gateway -> runtime-worker, query-only (queue/lock status).
 target = "localhost:9094"
 
-[orchestrator.grpc]
-addr = ":9092"
+[clients.runtime_intake]
+# runtime-worker -> api-gateway, execution/injection state writes.
+target = "localhost:9096"
 
 [runtime_worker.grpc]
 addr = ":9094"
+
+[api_gateway.intake.grpc]
+addr = ":9096"
 
 [loki]
 address = "http://10.10.10.161:3100"

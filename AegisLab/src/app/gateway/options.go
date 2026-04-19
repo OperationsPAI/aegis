@@ -4,20 +4,18 @@ import (
 	"aegis/app"
 	chaos "aegis/infra/chaos"
 	k8s "aegis/infra/k8s"
-	"aegis/internalclient/orchestratorclient"
-	container "aegis/module/container"
-	execution "aegis/module/execution"
-	group "aegis/module/group"
-	injection "aegis/module/injection"
-	metric "aegis/module/metric"
-	notification "aegis/module/notification"
-	task "aegis/module/task"
-	trace "aegis/module/trace"
+	grpcruntimeintake "aegis/interface/grpc/runtimeintake"
 
 	"go.uber.org/fx"
 )
 
 // Options builds the dedicated api-gateway runtime.
+//
+// Post phase-2, api-gateway is the single API binary: it owns every
+// module and wires them via plain local provides (no fx.Decorate
+// remote-shim layer). The only gRPC surface it exposes is the
+// RuntimeIntakeService, which runtime-worker uses to write execution
+// and injection state back into the shared DB.
 func Options(confPath, port string) fx.Option {
 	return fx.Options(
 		app.BaseOptions(confPath),
@@ -27,54 +25,8 @@ func Options(confPath, port string) fx.Option {
 		app.BuildInfraOptions(),
 		chaos.Module,
 		k8s.Module,
+		app.ExecutionInjectionOwnerModules(),
 		app.ProducerHTTPOptions(port),
-		app.RequireConfiguredTargets(
-			"api-gateway",
-			app.RequiredConfigTarget{Name: "orchestrator-service", PrimaryKey: "clients.orchestrator.target", LegacyKey: "orchestrator.grpc.target"},
-		),
-		orchestratorclient.Module,
-		fx.Decorate(func(local execution.HandlerService, remote *orchestratorclient.Client) execution.HandlerService {
-			return remoteAwareExecutionService{
-				HandlerService: local,
-				orchestrator:   remote,
-			}
-		}),
-		fx.Decorate(func(local injection.HandlerService, remote *orchestratorclient.Client) injection.HandlerService {
-			return remoteAwareInjectionService{
-				HandlerService: local,
-				orchestrator:   remote,
-			}
-		}),
-		fx.Decorate(func(local task.HandlerService, remote *orchestratorclient.Client) task.HandlerService {
-			return remoteAwareTaskService{
-				HandlerService: local,
-				orchestrator:   remote,
-			}
-		}),
-		fx.Decorate(func(local trace.HandlerService, remote *orchestratorclient.Client) trace.HandlerService {
-			return remoteAwareTraceService{
-				HandlerService: local,
-				orchestrator:   remote,
-			}
-		}),
-		fx.Decorate(func(local group.HandlerService, remote *orchestratorclient.Client) group.HandlerService {
-			return remoteAwareGroupService{
-				HandlerService: local,
-				orchestrator:   remote,
-			}
-		}),
-		fx.Decorate(func(local notification.HandlerService, remote *orchestratorclient.Client) notification.HandlerService {
-			return remoteAwareNotificationService{
-				HandlerService: local,
-				orchestrator:   remote,
-			}
-		}),
-		fx.Decorate(func(local metric.HandlerService, orchestrator *orchestratorclient.Client, containerSvc container.HandlerService) metric.HandlerService {
-			return remoteAwareMetricService{
-				HandlerService: local,
-				orchestrator:   orchestrator,
-				containerSvc:   containerSvc,
-			}
-		}),
+		grpcruntimeintake.Module,
 	)
 }
