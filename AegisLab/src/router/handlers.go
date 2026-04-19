@@ -2,7 +2,6 @@ package router
 
 import (
 	auth "aegis/module/auth"
-	chaossystem "aegis/module/chaossystem"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
 	evaluation "aegis/module/evaluation"
@@ -36,7 +35,6 @@ type Handlers struct {
 	System       *system.Handler
 	Pedestal     *pedestal.Handler
 	RateLimiter  *ratelimiter.Handler
-	ChaosSystem  *chaossystem.Handler
 	Team         *team.Handler
 	Label        *label.Handler
 	SystemMetric *systemmetric.Handler
@@ -57,7 +55,6 @@ func NewHandlers(
 	system *system.Handler,
 	pedestal *pedestal.Handler,
 	rateLimiter *ratelimiter.Handler,
-	chaosSystem *chaossystem.Handler,
 	team *team.Handler,
 	label *label.Handler,
 	systemMetric *systemmetric.Handler,
@@ -77,7 +74,6 @@ func NewHandlers(
 		System:       system,
 		Pedestal:     pedestal,
 		RateLimiter:  rateLimiter,
-		ChaosSystem:  chaosSystem,
 		Team:         team,
 		Label:        label,
 		SystemMetric: systemMetric,

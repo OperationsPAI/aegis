@@ -42,8 +42,6 @@ func centralEntities() []interface{} {
 		&model.DynamicConfig{},
 		&model.ConfigHistory{},
 		&model.Evaluation{},
-		&model.System{},
-		&model.SystemMetadata{},
 	}
 }
 
