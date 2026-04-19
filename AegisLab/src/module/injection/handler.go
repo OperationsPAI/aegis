@@ -265,27 +265,6 @@ func (h *Handler) GetInjection(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
-// GetInjectionMetadata
-//
-//	@Summary		Get Injection Metadata
-//	@Description	Get injection-related metadata including configuration, field mappings, and system resources
-//	@Tags			Injections
-//	@ID				get_injection_metadata
-//	@Produce		json
-//	@Security		BearerAuth
-//	@Param			system	query		chaos.SystemType							true	"System for config and resources metadata"
-//	@Success		200		{object}	dto.GenericResponse[InjectionMetadataResp]	"Successfully returned metadata"
-//	@Failure		400		{object}	dto.GenericResponse[any]					"Invalid system"
-//	@Failure		401		{object}	dto.GenericResponse[any]					"Authentication required"
-//	@Failure		403		{object}	dto.GenericResponse[any]					"Permission denied"
-//	@Failure		404		{object}	dto.GenericResponse[any]					"Resource not found"
-//	@Failure		500		{object}	dto.GenericResponse[any]					"Internal server error"
-//	@Router			/api/v2/injections/metadata [get]
-//	@x-api-type		{"portal":"true","sdk":"true"}
-func (h *Handler) GetInjectionMetadata(c *gin.Context) {
-	c.JSON(http.StatusGone, gin.H{"error": "endpoint removed; migrate to /inject with GuidedConfig"})
-}
-
 // GetSystemMapping returns a mapping of system type names to integer indices.
 //
 //	@Summary		Get system type mapping
@@ -314,25 +293,6 @@ func (h *Handler) GetSystemMapping(c *gin.Context) {
 		Systems:       systemMap,
 		SystemDetails: details,
 	})
-}
-
-// TranslateFaultSpecs translates human-readable fault specs into chaos.Node trees.
-//
-//	@Summary		Translate fault specs to Nodes
-//	@Description	Converts human-readable fault specifications (type names, durations, etc.) into the integer-indexed Node AST used by the injection engine
-//	@Tags			Injections
-//	@ID				translate_fault_specs
-//	@Accept			json
-//	@Produce		json
-//	@Security		BearerAuth
-//	@Param			body	body		TranslateFaultSpecsReq							true	"Fault specs to translate"
-//	@Success		200		{object}	dto.GenericResponse[TranslateFaultSpecsResp]	"Translation successful"
-//	@Failure		400		{object}	dto.GenericResponse[any]						"Invalid request"
-//	@Failure		401		{object}	dto.GenericResponse[any]						"Authentication required"
-//	@Failure		500		{object}	dto.GenericResponse[any]						"Internal server error"
-//	@Router			/api/v2/injections/translate [post]
-func (h *Handler) TranslateFaultSpecs(c *gin.Context) {
-	c.JSON(http.StatusGone, gin.H{"error": "endpoint removed; migrate to /inject with GuidedConfig"})
 }
 
 // ManageInjectionCustomLabels manages injection custom labels (key-value pairs)
