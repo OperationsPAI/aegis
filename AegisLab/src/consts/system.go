@@ -435,10 +435,6 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		PermTaskDeleteAll,
 		PermTaskExecuteAll,
 		PermTaskStopAll,
-
-		// Trace management
-		PermTraceReadAll,
-		PermTraceMonitorAll,
 	},
 
 	// Regular User Role - basic role with minimal permissions

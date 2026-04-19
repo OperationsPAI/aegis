@@ -19,7 +19,6 @@ import (
 	systemmetric "aegis/module/systemmetric"
 	task "aegis/module/task"
 	team "aegis/module/team"
-	trace "aegis/module/trace"
 )
 
 type Handlers struct {
@@ -31,7 +30,6 @@ type Handlers struct {
 	Container    *container.Handler
 	Dataset      *dataset.Handler
 	Evaluation   *evaluation.Handler
-	Trace        *trace.Handler
 	Group        *group.Handler
 	Metric       *metric.Handler
 	SDK          *sdk.Handler
@@ -53,7 +51,6 @@ func NewHandlers(
 	container *container.Handler,
 	dataset *dataset.Handler,
 	evaluation *evaluation.Handler,
-	trace *trace.Handler,
 	group *group.Handler,
 	metric *metric.Handler,
 	sdk *sdk.Handler,
@@ -74,7 +71,6 @@ func NewHandlers(
 		Container:    container,
 		Dataset:      dataset,
 		Evaluation:   evaluation,
-		Trace:        trace,
 		Group:        group,
 		Metric:       metric,
 		SDK:          sdk,
