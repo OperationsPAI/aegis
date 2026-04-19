@@ -73,6 +73,13 @@ func TestRouterSeparatesRouteGroups(t *testing.T) {
 				projects.GET("/:project_id", func(c *gin.Context) {})
 			},
 		},
+		framework.RouteRegistrar{
+			Audience: framework.AudienceSDK,
+			Name:     "test.sdk",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.GET("/sdk/datasets", func(c *gin.Context) {})
+			},
+		},
 	)
 	engine := NewForTest(&Handlers{}, nil, registrars...)
 	routes := engine.Routes()
