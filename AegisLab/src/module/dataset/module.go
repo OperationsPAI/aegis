@@ -1,21 +1,15 @@
 package dataset
 
-import (
-	"aegis/framework"
-
-	"go.uber.org/fx"
-)
+import "go.uber.org/fx"
 
 var Module = fx.Module("dataset",
 	fx.Provide(NewRepository),
 	fx.Provide(fx.Annotate(AsReader, fx.As(new(Reader)))),
+	fx.Provide(fx.Annotate(AsWriter, fx.As(new(Writer)))),
 	fx.Provide(NewDatapackFileStore),
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
-	fx.Provide(
-		NewHandler,
-		fx.Annotate(NewHandler, fx.As(new(framework.DatasetHandler))),
-	),
+	fx.Provide(NewHandler),
 	fx.Provide(
 		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(RoutesSDK, fx.ResultTags(`group:"routes"`)),
