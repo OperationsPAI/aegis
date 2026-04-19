@@ -21,6 +21,14 @@ func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
 }
 
+func (s *Service) GetByID(_ context.Context, userID int) (*model.User, error) {
+	return s.repo.getUserByID(userID)
+}
+
+func (s *Service) GetByUsername(_ context.Context, username string) (*model.User, error) {
+	return s.repo.getUserByUsername(username)
+}
+
 func (s *Service) CreateUser(_ context.Context, req *CreateUserReq) (*UserResp, error) {
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)

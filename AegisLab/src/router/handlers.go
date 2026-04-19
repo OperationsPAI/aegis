@@ -21,7 +21,6 @@ import (
 	task "aegis/module/task"
 	team "aegis/module/team"
 	trace "aegis/module/trace"
-	user "aegis/module/user"
 )
 
 type Handlers struct {
@@ -36,7 +35,6 @@ type Handlers struct {
 	Trace        *trace.Handler
 	Group        *group.Handler
 	Metric       *metric.Handler
-	User         *user.Handler
 	SDK          *sdk.Handler
 	System       *system.Handler
 	Notification *notification.Handler
@@ -60,7 +58,6 @@ func NewHandlers(
 	trace *trace.Handler,
 	group *group.Handler,
 	metric *metric.Handler,
-	user *user.Handler,
 	sdk *sdk.Handler,
 	system *system.Handler,
 	notification *notification.Handler,
@@ -83,7 +80,6 @@ func NewHandlers(
 		Trace:        trace,
 		Group:        group,
 		Metric:       metric,
-		User:         user,
 		SDK:          sdk,
 		System:       system,
 		Notification: notification,

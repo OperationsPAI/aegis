@@ -16,6 +16,22 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
+func (r *Repository) getUserByID(userID int) (*model.User, error) {
+	var user model.User
+	if err := r.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to find user with id %d: %w", userID, err)
+	}
+	return &user, nil
+}
+
+func (r *Repository) getUserByUsername(username string) (*model.User, error) {
+	var user model.User
+	if err := r.db.Where("username = ?", username).First(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to find user with username %s: %w", username, err)
+	}
+	return &user, nil
+}
+
 func (r *Repository) createUserIfUnique(user *model.User) error {
 	var existingByUsername model.User
 	if err := r.db.Where("username = ?", user.Username).First(&existingByUsername).Error; err == nil {

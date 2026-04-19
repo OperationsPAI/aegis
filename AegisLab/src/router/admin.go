@@ -8,49 +8,6 @@ import (
 )
 
 func SetupAdminV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
-	users := v2.Group("/users", middleware.JWTAuth())
-	{
-		roles := users.Group("/:user_id/roles")
-		{
-			roles.POST("/:role_id", middleware.RequireUserAssign, handlers.User.AssignRole)
-			roles.DELETE("/:role_id", middleware.RequireUserAssign, handlers.User.RemoveRole)
-		}
-
-		projects := users.Group("/:user_id/projects")
-		{
-			projects.POST("/:project_id/roles/:role_id", middleware.RequireUserAssign, handlers.User.AssignProject)
-			projects.DELETE("/:project_id", middleware.RequireUserAssign, handlers.User.RemoveProject)
-		}
-
-		permissions := users.Group("/:user_id/permissions")
-		{
-			permissions.POST("/assign", middleware.RequireUserAssign, handlers.User.AssignPermissions)
-			permissions.POST("/remove", middleware.RequireUserAssign, handlers.User.RemovePermissions)
-		}
-
-		containers := users.Group("/:user_id/containers")
-		{
-			containers.POST("/:container_id/roles/:role_id", middleware.RequireUserAssign, handlers.User.AssignContainer)
-			containers.DELETE("/:container_id", middleware.RequireUserAssign, handlers.User.RemoveContainer)
-		}
-
-		datasets := users.Group("/:user_id/datasets")
-		{
-			datasets.POST("/:dataset_id/roles/:role_id", middleware.RequireUserAssign, handlers.User.AssignDataset)
-			datasets.DELETE("/:dataset_id", middleware.RequireUserAssign, handlers.User.RemoveDataset)
-		}
-
-		userRead := users.Group("", middleware.RequireUserRead)
-		{
-			userRead.GET("", handlers.User.ListUsers)
-			userRead.GET("/:user_id/detail", middleware.RequireAdminOrUserOwnership, handlers.User.GetUserDetail)
-		}
-
-		users.POST("", middleware.RequireUserCreate, handlers.User.CreateUser)
-		users.PATCH("/:user_id", middleware.RequireUserUpdate, handlers.User.UpdateUser)
-		users.DELETE("/:user_id", middleware.RequireUserDelete, handlers.User.DeleteUser)
-	}
-
 	systems := v2.Group("/systems", middleware.JWTAuth())
 	{
 		systemRead := systems.Group("", middleware.RequireSystemRead)

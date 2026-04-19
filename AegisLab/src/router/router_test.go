@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"aegis/framework"
+	user "aegis/module/user"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +20,6 @@ func TestRouterSeparatesRouteGroups(t *testing.T) {
 		"/api/v2/auth",
 		"/api/v2/projects",
 		"/api/v2/executions",
-		"/api/v2/users",
 		"/api/v2/sdk",
 		"/api/v2/system/audit",
 		"/api/v2/system/configs",
@@ -30,6 +32,19 @@ func TestRouterSeparatesRouteGroups(t *testing.T) {
 		if !hasRoutePrefix(routes, prefix) {
 			t.Fatalf("expected route prefix %q to be registered", prefix)
 		}
+	}
+}
+
+func TestRouterRegistersModuleContributedRoutes(t *testing.T) {
+	engine := New(Params{
+		Handlers: &Handlers{},
+		Registrars: []framework.RouteRegistrar{
+			user.RoutesAdmin(&user.Handler{}),
+		},
+	})
+
+	if !hasRoutePrefix(engine.Routes(), "/api/v2/users") {
+		t.Fatalf("expected user route prefix to be registered from module contribution")
 	}
 }
 
