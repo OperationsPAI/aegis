@@ -373,17 +373,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 
 		// Container management moved to module/container/permissions.go.
 
-		// Dataset management
-		PermDatasetReadAll,
-		PermDatasetCreateAll,
-		PermDatasetUpdateAll,
-		PermDatasetDeleteAll,
-		PermDatasetManageAll,
-		PermDatasetVersionReadAll,
-		PermDatasetVersionCreateAll,
-		PermDatasetVersionUpdateAll,
-		PermDatasetVersionDeleteAll,
-		PermDatasetVersionDownloadAll,
+		// Dataset management moved to module/dataset/permissions.go. The
+		// rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
 
 		// Label management — moved to module/label/permissions.go (Phase 3
 		// reference migration). The rbac aggregator re-adds these to
@@ -424,8 +416,8 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	RoleUser: {
 		// Container permissions moved to module/container/permissions.go.
 
-		// Dataset permissions
-		PermDatasetCreateOwn,
+		// Dataset permissions moved to module/dataset/permissions.go.
+		// The rbac aggregator re-adds these to RoleUser at startup.
 
 		// Label permissions — moved to module/label/permissions.go
 		// (Phase 3 reference migration). The rbac aggregator re-adds
@@ -437,34 +429,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	RoleContainerDeveloper: {},
 	RoleContainerViewer:    {},
 
-	// Dataset Roles
-	RoleDatasetAdmin: {
-		PermDatasetReadAll,
-		PermDatasetCreateAll,
-		PermDatasetUpdateAll,
-		PermDatasetDeleteAll,
-		PermDatasetManageAll,
-		PermDatasetVersionReadAll,
-		PermDatasetVersionCreateAll,
-		PermDatasetVersionUpdateAll,
-		PermDatasetVersionDeleteAll,
-		PermDatasetVersionManageAll,
-		PermDatasetVersionDownloadAll,
-	},
-	RoleDatasetDeveloper: {
-		PermDatasetReadTeam,
-		PermDatasetCreateTeam,
-		PermDatasetUpdateTeam,
-		PermDatasetVersionReadTeam,
-		PermDatasetVersionCreateTeam,
-		PermDatasetVersionUpdateTeam,
-		PermDatasetVersionDownloadTeam,
-	},
-	RoleDatasetViewer: {
-		PermDatasetReadAll,
-		PermDatasetVersionReadAll,
-		PermDatasetVersionDownloadAll,
-	},
+	// Dataset roles moved to module/dataset/permissions.go. The rbac
+	// aggregator re-adds these grants at startup via
+	// framework.RoleGrantsRegistrar.
 
 	// Team Roles moved to module/team/permissions.go. The rbac
 	// aggregator re-adds these at startup via framework.RoleGrantsRegistrar.

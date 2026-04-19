@@ -14,8 +14,9 @@ import (
 // during a transition PR is harmless.
 func centralEntities() []interface{} {
 	return []interface{}{
-		&model.Dataset{},
-		&model.DatasetVersion{},
+		// &model.Dataset{}, &model.DatasetVersion{}, &model.DatasetLabel{},
+		// &model.DatasetVersionInjection{}, and &model.UserDataset{}
+		// migrated to module/dataset/migrations.go (Phase 4).
 		// &model.Label{} migrated to module/label/migrations.go (Phase 3
 		// reference migration). Future Phase 4 PRs drop their entities
 		// the same way — remove from this slice, add a
@@ -29,11 +30,10 @@ func centralEntities() []interface{} {
 		&model.Execution{},
 		&model.DetectorResult{},
 		&model.GranularityResult{},
-		&model.DatasetLabel{},
-		&model.DatasetVersionInjection{},
 		&model.FaultInjectionLabel{},
 		&model.ExecutionInjectionLabel{},
 		&model.UserDataset{},
+		&model.ConfigLabel{},
 		&model.UserRole{},
 		&model.UserPermission{},
 		&model.UserTeam{},

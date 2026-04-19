@@ -7,32 +7,39 @@ import (
 )
 
 func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
-	datasets := v2.Group("/datasets", middleware.JWTAuth())
+	containers := v2.Group("/containers", middleware.JWTAuth())
 	{
-		datasetRead := datasets.Group("", middleware.RequireDatasetRead)
+		containerRead := containers.Group("", middleware.RequireContainerRead)
 		{
-			datasetRead.GET("", handlers.Dataset.ListDatasets)
-			datasetRead.GET("/:dataset_id", handlers.Dataset.GetDataset)
-			datasetRead.POST("/search", handlers.Dataset.SearchDataset)
+			containerRead.GET("", handlers.Container.ListContainers)
+			containerRead.GET("/:container_id", handlers.Container.GetContainer)
 		}
 
-		datasets.POST("", middleware.RequireDatasetCreate, handlers.Dataset.CreateDataset)
-		datasets.PATCH("/:dataset_id", middleware.RequireDatasetUpdate, handlers.Dataset.UpdateDataset)
-		datasets.PATCH("/:dataset_id/labels", middleware.RequireDatasetUpdate, handlers.Dataset.ManageDatasetCustomLabels)
-		datasets.DELETE("/:dataset_id", middleware.RequireDatasetDelete, handlers.Dataset.DeleteDataset)
+		containers.POST("", middleware.RequireContainerCreate, handlers.Container.CreateContainer)
+		containers.PATCH("/:container_id", middleware.RequireContainerUpdate, handlers.Container.UpdateContainer)
+		containers.PATCH("/:container_id/labels", middleware.RequireContainerUpdate, handlers.Container.ManageContainerCustomLabels)
+		containers.DELETE("/:container_id", middleware.RequireContainerDelete, handlers.Container.DeleteContainer)
+		containers.POST("/build", middleware.RequireContainerExecute, handlers.Container.SubmitContainerBuilding)
 
-		datasetVersions := datasets.Group("/:dataset_id/versions")
+		containerVersions := containers.Group("/:container_id/versions")
 		{
-			datasetVersionRead := datasetVersions.Group("", middleware.RequireDatasetVersionRead)
+			containerVersionRead := containerVersions.Group("", middleware.RequireContainerVersionRead)
 			{
-				datasetVersionRead.GET("", handlers.Dataset.ListDatasetVersions)
-				datasetVersionRead.GET("/:version_id", handlers.Dataset.GetDatasetVersion)
+				containerVersionRead.GET("", handlers.Container.ListContainerVersions)
+				containerVersionRead.GET("/:version_id", handlers.Container.GetContainerVersion)
 			}
 
-			datasetVersions.POST("", middleware.RequireDatasetVersionCreate, handlers.Dataset.CreateDatasetVersion)
-			datasetVersions.PATCH("/:version_id", middleware.RequireDatasetVersionUpdate, handlers.Dataset.UpdateDatasetVersion)
-			datasetVersions.DELETE("/:version_id", middleware.RequireDatasetVersionDelete, handlers.Dataset.DeleteDatasetVersion)
+			containerVersions.POST("", middleware.RequireContainerVersionCreate, handlers.Container.CreateContainerVersion)
+			containerVersions.PATCH("/:version_id", middleware.RequireContainerVersionUpdate, handlers.Container.UpdateContainerVersion)
+			containerVersions.DELETE("/:version_id", middleware.RequireContainerVersionDelete, handlers.Container.DeleteContainerVersion)
+			containerVersions.POST("/:version_id/helm-chart", middleware.RequireContainerVersionUpload, handlers.Container.UploadHelmChart)
+			containerVersions.POST("/:version_id/helm-values", middleware.RequireContainerVersionUpload, handlers.Container.UploadHelmValueFile)
 		}
+	}
+
+	flatContainerVersions := v2.Group("/container-versions", middleware.JWTAuth())
+	{
+		flatContainerVersions.PATCH("/:id/image", middleware.RequireContainerVersionUpdate, handlers.Container.SetContainerVersionImage)
 	}
 
 	projects := v2.Group("/projects", middleware.JWTAuth())
@@ -85,8 +92,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 			rateLimiterAdmin.POST("/gc", handlers.RateLimiter.GCRateLimiters)
 		}
 	}
-
-
 
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 	{

@@ -3,7 +3,6 @@ package router
 import (
 	auth "aegis/module/auth"
 	container "aegis/module/container"
-	dataset "aegis/module/dataset"
 	evaluation "aegis/module/evaluation"
 	execution "aegis/module/execution"
 	injection "aegis/module/injection"
@@ -20,7 +19,6 @@ type Handlers struct {
 	Injection   *injection.Handler
 	Execution   *execution.Handler
 	Container   *container.Handler
-	Dataset     *dataset.Handler
 	Evaluation  *evaluation.Handler
 	RateLimiter *ratelimiter.Handler
 	Label       *label.Handler
@@ -33,7 +31,6 @@ func NewHandlers(
 	injection *injection.Handler,
 	execution *execution.Handler,
 	container *container.Handler,
-	dataset *dataset.Handler,
 	evaluation *evaluation.Handler,
 	rateLimiter *ratelimiter.Handler,
 	label *label.Handler,
@@ -45,7 +42,6 @@ func NewHandlers(
 		Injection:   injection,
 		Execution:   execution,
 		Container:   container,
-		Dataset:     dataset,
 		Evaluation:  evaluation,
 		RateLimiter: rateLimiter,
 		Label:       label,
