@@ -10,7 +10,7 @@ import (
 )
 
 func TestRouterSeparatesRouteGroups(t *testing.T) {
-	engine := New(&Handlers{}, nil)
+	engine := NewForTest(&Handlers{}, nil)
 	routes := engine.Routes()
 
 	requiredPrefixes := []string{
@@ -43,7 +43,7 @@ func hasRoutePrefix(routes []gin.RouteInfo, prefix string) bool {
 }
 
 func TestSwaggerDocEndpointServesRegisteredSpec(t *testing.T) {
-	engine := New(&Handlers{}, nil)
+	engine := NewForTest(&Handlers{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/docs/doc.json", nil)
 	w := httptest.NewRecorder()
