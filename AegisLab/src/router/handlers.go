@@ -12,7 +12,6 @@ import (
 	metric "aegis/module/metric"
 	project "aegis/module/project"
 	ratelimiter "aegis/module/ratelimiter"
-	sdk "aegis/module/sdk"
 	task "aegis/module/task"
 )
 
@@ -27,7 +26,6 @@ type Handlers struct {
 	Evaluation  *evaluation.Handler
 	Group       *group.Handler
 	Metric      *metric.Handler
-	SDK         *sdk.Handler
 	RateLimiter *ratelimiter.Handler
 	Label       *label.Handler
 }
@@ -43,7 +41,6 @@ func NewHandlers(
 	evaluation *evaluation.Handler,
 	group *group.Handler,
 	metric *metric.Handler,
-	sdk *sdk.Handler,
 	rateLimiter *ratelimiter.Handler,
 	label *label.Handler,
 ) *Handlers {
@@ -58,7 +55,6 @@ func NewHandlers(
 		Evaluation:  evaluation,
 		Group:       group,
 		Metric:      metric,
-		SDK:         sdk,
 		RateLimiter: rateLimiter,
 		Label:       label,
 	}
