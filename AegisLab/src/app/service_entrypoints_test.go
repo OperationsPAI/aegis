@@ -10,11 +10,7 @@ import (
 
 	"aegis/app"
 	gateway "aegis/app/gateway"
-	iam "aegis/app/iam"
-	orchestrator "aegis/app/orchestrator"
-	resource "aegis/app/resource"
 	runtimeapp "aegis/app/runtime"
-	system "aegis/app/system"
 	buildkit "aegis/infra/buildkit"
 	etcd "aegis/infra/etcd"
 	harbor "aegis/infra/harbor"
@@ -26,9 +22,7 @@ import (
 	httpapi "aegis/interface/http"
 	receiverapi "aegis/interface/receiver"
 	workerapi "aegis/interface/worker"
-	resourcev1 "aegis/proto/resource/v1"
 	runtimev1 "aegis/proto/runtime/v1"
-	systemv1 "aegis/proto/system/v1"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	goredis "github.com/redis/go-redis/v9"
@@ -187,66 +181,6 @@ func waitForRuntimePing(t *testing.T, addr string) {
 	}
 }
 
-func waitForResourcePing(t *testing.T, addr string) {
-	t.Helper()
-
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		t.Fatalf("create resource grpc client: %v", err)
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	client := resourcev1.NewResourceServiceClient(conn)
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		resp, err := client.Ping(context.Background(), &resourcev1.PingRequest{})
-		if err == nil && resp.GetService() != "" {
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	resp, err := client.Ping(context.Background(), &resourcev1.PingRequest{})
-	if err != nil {
-		t.Fatalf("resource grpc request failed: %v", err)
-	}
-	if resp.GetService() == "" {
-		t.Fatalf("resource ping missing service name: %+v", resp)
-	}
-}
-
-func waitForSystemPing(t *testing.T, addr string) {
-	t.Helper()
-
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		t.Fatalf("create system grpc client: %v", err)
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	client := systemv1.NewSystemServiceClient(conn)
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		resp, err := client.Ping(context.Background(), &systemv1.PingRequest{})
-		if err == nil && resp.GetService() != "" {
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	resp, err := client.Ping(context.Background(), &systemv1.PingRequest{})
-	if err != nil {
-		t.Fatalf("system grpc request failed: %v", err)
-	}
-	if resp.GetService() == "" {
-		t.Fatalf("system ping missing service name: %+v", resp)
-	}
-}
-
 func TestDedicatedServiceOptionsValidate(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
@@ -254,10 +188,6 @@ func TestDedicatedServiceOptionsValidate(t *testing.T) {
 	}{
 		{name: "gateway", option: gateway.Options("..", "0")},
 		{name: "runtime", option: runtimeapp.Options("..")},
-		{name: "resource", option: resource.Options("..")},
-		{name: "system", option: system.Options("..")},
-		{name: "iam", option: iam.Options("..")},
-		{name: "orchestrator", option: orchestrator.Options("..")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := fx.ValidateApp(tc.option); err != nil {
@@ -271,10 +201,9 @@ func TestAPIGatewayStandaloneHTTPIntegrationSmoke(t *testing.T) {
 	replacements, cleanup := newDedicatedServiceReplacements(t)
 	defer cleanup()
 
-	setConfigValue(t, "clients.iam.target", reserveLoopbackAddr(t))
-	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
-	setConfigValue(t, "clients.resource.target", reserveLoopbackAddr(t))
-	setConfigValue(t, "clients.system.target", reserveLoopbackAddr(t))
+	// api-gateway owns the intake gRPC server; bind it to a free loopback
+	// port so the smoke test doesn't clash with anything.
+	setConfigValue(t, "api_gateway.intake.grpc.addr", reserveLoopbackAddr(t))
 
 	addr := reserveLoopbackAddr(t)
 	appInstance := fx.New(
@@ -306,7 +235,9 @@ func TestRuntimeWorkerStandaloneGRPCIntegrationSmoke(t *testing.T) {
 	replacements, cleanup := newDedicatedServiceReplacements(t)
 	defer cleanup()
 
-	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
+	// runtime-worker dials api-gateway's intake gRPC; smoke test doesn't
+	// exercise the intake traffic so any reachable address is fine.
+	setConfigValue(t, "clients.runtime_intake.target", reserveLoopbackAddr(t))
 	addr := reserveLoopbackAddr(t)
 	setConfigValue(t, "runtime_worker.grpc.addr", addr)
 
@@ -331,60 +262,3 @@ func TestRuntimeWorkerStandaloneGRPCIntegrationSmoke(t *testing.T) {
 	waitForRuntimePing(t, addr)
 }
 
-func TestResourceServiceStandaloneGRPCIntegrationSmoke(t *testing.T) {
-	replacements, cleanup := newDedicatedServiceReplacements(t)
-	defer cleanup()
-
-	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
-	addr := reserveLoopbackAddr(t)
-	setConfigValue(t, "resource.grpc.addr", addr)
-
-	appInstance := fx.New(
-		resource.Options(".."),
-		replacements,
-	)
-
-	startCtx, startCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer startCancel()
-	if err := appInstance.Start(startCtx); err != nil {
-		t.Fatalf("resource app start failed: %v", err)
-	}
-	defer func() {
-		stopCtx, stopCancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer stopCancel()
-		if err := appInstance.Stop(stopCtx); err != nil {
-			t.Fatalf("resource app stop failed: %v", err)
-		}
-	}()
-
-	waitForResourcePing(t, addr)
-}
-
-func TestSystemServiceStandaloneGRPCIntegrationSmoke(t *testing.T) {
-	replacements, cleanup := newDedicatedServiceReplacements(t)
-	defer cleanup()
-
-	setConfigValue(t, "clients.runtime.target", reserveLoopbackAddr(t))
-	addr := reserveLoopbackAddr(t)
-	setConfigValue(t, "system.grpc.addr", addr)
-
-	appInstance := fx.New(
-		system.Options(".."),
-		replacements,
-	)
-
-	startCtx, startCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer startCancel()
-	if err := appInstance.Start(startCtx); err != nil {
-		t.Fatalf("system app start failed: %v", err)
-	}
-	defer func() {
-		stopCtx, stopCancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer stopCancel()
-		if err := appInstance.Stop(stopCtx); err != nil {
-			t.Fatalf("system app stop failed: %v", err)
-		}
-	}()
-
-	waitForSystemPing(t, addr)
-}

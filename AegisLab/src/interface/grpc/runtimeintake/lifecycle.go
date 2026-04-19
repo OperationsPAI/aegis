@@ -1,4 +1,4 @@
-package grpciam
+package grpcruntimeintake
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"aegis/config"
 	"aegis/httpx"
-	iamv1 "aegis/proto/iam/v1"
+	runtimev1 "aegis/proto/runtime/v1"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
@@ -17,32 +17,37 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const defaultIAMGRPCAddr = ":9091"
+const defaultIntakeGRPCAddr = ":9096"
 
 type Lifecycle struct {
-	server    *grpc.Server
-	addr      string
-	listener  net.Listener
+	server   *grpc.Server
+	addr     string
+	listener net.Listener
+
+	// StartFunc / StopFunc are test hooks.
 	StartFunc func(context.Context) error
 	StopFunc  func()
 }
 
-func newLifecycle(iamServer *iamServer) (*Lifecycle, error) {
+func newLifecycle(intake *intakeServer) (*Lifecycle, error) {
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(httpx.UnaryServerRequestIDInterceptor()))
-	iamv1.RegisterIAMServiceServer(grpcServer, iamServer)
+	runtimev1.RegisterRuntimeIntakeServiceServer(grpcServer, intake)
 
 	healthServer := health.NewServer()
-	healthServer.SetServingStatus(iamv1.IAMService_ServiceDesc.ServiceName, grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus(runtimev1.RuntimeIntakeService_FullName, grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 
-	if config.GetBool("iam.grpc.reflection") {
+	if config.GetBool("api_gateway.intake.grpc.reflection") {
 		reflection.Register(grpcServer)
 	}
 
-	addr := config.GetString("iam.grpc.addr")
+	addr := config.GetString("api_gateway.intake.grpc.addr")
 	if addr == "" {
-		addr = defaultIAMGRPCAddr
+		addr = config.GetString("runtime_intake.grpc.addr")
+	}
+	if addr == "" {
+		addr = defaultIntakeGRPCAddr
 	}
 
 	return &Lifecycle{
@@ -58,14 +63,14 @@ func (r *Lifecycle) start(ctx context.Context) error {
 
 	listener, err := net.Listen("tcp", r.addr)
 	if err != nil {
-		return fmt.Errorf("listen iam grpc on %s: %w", r.addr, err)
+		return fmt.Errorf("listen runtime intake grpc on %s: %w", r.addr, err)
 	}
 	r.listener = listener
 
 	go func() {
-		logrus.Infof("Starting IAM gRPC server on %s", r.addr)
+		logrus.Infof("Starting runtime intake gRPC server on %s", r.addr)
 		if err := r.server.Serve(listener); err != nil {
-			logrus.Errorf("iam gRPC server error: %v", err)
+			logrus.Errorf("runtime intake gRPC server error: %v", err)
 		}
 	}()
 	return nil

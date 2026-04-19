@@ -200,21 +200,11 @@ microservices:
       type: ClusterIP
       nodePort: 32082
     httpPort: 8082
-  iamService:
-    replicaCount: 1
-    grpcPort: 9091
-  orchestratorService:
-    replicaCount: 1
-    grpcPort: 9092
-  resourceService:
-    replicaCount: 1
-    grpcPort: 9093
+    # Port for the runtime-intake gRPC server (runtime-worker -> api-gateway).
+    intakeGrpcPort: 9096
   runtimeWorkerService:
     replicaCount: 1
     grpcPort: 9094
-  systemService:
-    replicaCount: 1
-    grpcPort: 9095
 
 persistence:
   # Global storage type setting - applies to containers, logs, and juicefs sections
