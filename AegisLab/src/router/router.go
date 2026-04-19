@@ -31,8 +31,6 @@ func New(handlers *Handlers, middlewareService middleware.Service) *gin.Engine {
 		middleware.TracerMiddleware(),
 	)
 
-	middleware.StartCleanupRoutine()
-
 	v2 := router.Group("/api/v2")
 	SetupPublicV2Routes(v2, handlers)
 	SetupSDKV2Routes(v2, handlers)
