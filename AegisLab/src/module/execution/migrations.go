@@ -6,8 +6,11 @@ import (
 )
 
 // Migrations is the execution module's MigrationRegistrar. It owns the
-// execution result tables themselves; the execution/label join table is
-// still owned by the label side during Phase 4 coexistence.
+// execution result tables and the execution/label join table.
+//
+// Per AegisLab/CONTRIBUTING.md, join tables migrate with the parent
+// entity's module; `ExecutionInjectionLabel` belongs here alongside the
+// `Execution` root entity.
 func Migrations() framework.MigrationRegistrar {
 	return framework.MigrationRegistrar{
 		Module: "execution",
@@ -15,6 +18,7 @@ func Migrations() framework.MigrationRegistrar {
 			&model.Execution{},
 			&model.DetectorResult{},
 			&model.GranularityResult{},
+			&model.ExecutionInjectionLabel{},
 		},
 	}
 }
