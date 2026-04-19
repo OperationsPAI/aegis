@@ -424,16 +424,7 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	// Regular User Role - basic role with minimal permissions
 	// Users can read team resources if they are team members
 	RoleUser: {
-<<<<<<< HEAD
-		// Container permissions
-		PermContainerCreateOwn,
-=======
-		// Project permissions
-		PermProjectCreateOwn,
-		PermProjectReadOwn,
-
 		// Container permissions moved to module/container/permissions.go.
->>>>>>> e51c6bb (phase-4: migrate module/container to self-registration (#35))
 
 		// Dataset permissions
 		PermDatasetCreateOwn,
