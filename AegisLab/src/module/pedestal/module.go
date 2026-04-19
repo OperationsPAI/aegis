@@ -6,7 +6,7 @@ var Module = fx.Module("pedestal",
 	fx.Provide(NewRepository),
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
-	fx.Provide(fx.Annotate(AsReader, fx.As(new(Reader)))),
+	fx.Provide(AsReader),
 	fx.Provide(NewHandler),
 	fx.Provide(
 		fx.Annotate(Routes, fx.ResultTags(`group:"routes"`)),
