@@ -76,17 +76,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 	projects := v2.Group("/projects", middleware.JWTAuth())
 	{
 		projects.POST("/:project_id/injections/search", middleware.RequireProjectRead, handlers.Injection.SearchProjectInjections)
-
-		projectRead := projects.Group("", middleware.RequireProjectRead)
-		{
-			projectRead.GET("/:project_id", handlers.Project.GetProjectDetail)
-			projectRead.GET("", handlers.Project.ListProjects)
-		}
-
-		projects.POST("", middleware.RequireProjectCreate, handlers.Project.CreateProject)
-		projects.PATCH("/:project_id", middleware.RequireProjectUpdate, handlers.Project.UpdateProject)
-		projects.PATCH("/:project_id/labels", middleware.RequireProjectUpdate, handlers.Project.ManageProjectCustomLabels)
-		projects.DELETE("/:project_id", middleware.RequireProjectDelete, handlers.Project.DeleteProject)
 	}
 
 	teams := v2.Group("/teams", middleware.JWTAuth())

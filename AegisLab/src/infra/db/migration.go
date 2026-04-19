@@ -16,7 +16,6 @@ func centralEntities() []interface{} {
 	return []interface{}{
 		&model.Dataset{},
 		&model.DatasetVersion{},
-		&model.Project{},
 		// &model.Label{} migrated to module/label/migrations.go (Phase 3
 		// reference migration). Future Phase 4 PRs drop their entities
 		// the same way — remove from this slice, add a
@@ -32,13 +31,11 @@ func centralEntities() []interface{} {
 		&model.DetectorResult{},
 		&model.GranularityResult{},
 		&model.DatasetLabel{},
-		&model.ProjectLabel{},
 		&model.DatasetVersionInjection{},
 		&model.FaultInjectionLabel{},
 		&model.ExecutionInjectionLabel{},
 		&model.ConfigLabel{},
 		&model.UserDataset{},
-		&model.UserProject{},
 		&model.UserRole{},
 		&model.UserPermission{},
 		&model.UserTeam{},
