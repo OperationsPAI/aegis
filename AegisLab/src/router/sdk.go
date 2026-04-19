@@ -26,26 +26,6 @@ func SetupSDKV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 
 	projects := v2.Group("/projects", middleware.JWTAuth())
 	{
-		injections := projects.Group("/:project_id/injections")
-		{
-			injectionRead := injections.Group("", middleware.RequireProjectRead)
-			{
-				analysis := injectionRead.Group("/analysis")
-				{
-					analysis.GET("/no-issues", handlers.Injection.ListProjectFaultInjectionNoIssues)
-					analysis.GET("/with-issues", handlers.Injection.ListProjectFaultInjectionWithIssues)
-				}
-
-				injectionRead.GET("", handlers.Injection.ListProjectInjections)
-			}
-
-			injectionExecute := injections.Group("", middleware.RequireProjectInjectionExecute)
-			{
-				injectionExecute.POST("/inject", handlers.Injection.SubmitProjectFaultInjection)
-				injectionExecute.POST("/build", handlers.Injection.SubmitProjectDatapackBuilding)
-			}
-		}
-
 		executions := projects.Group("/:project_id/executions")
 		{
 			executionRead := executions.Group("", middleware.RequireProjectRead)

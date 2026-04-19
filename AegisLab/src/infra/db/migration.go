@@ -14,35 +14,37 @@ import (
 // during a transition PR is harmless.
 func centralEntities() []interface{} {
 	return []interface{}{
-		// &model.Dataset{}, &model.DatasetVersion{}, &model.DatasetLabel{},
-		// &model.DatasetVersionInjection{}, and &model.UserDataset{}
-		// migrated to module/dataset/migrations.go (Phase 4).
 		// &model.Label{} migrated to module/label/migrations.go (Phase 3
 		// reference migration). Future Phase 4 PRs drop their entities
-		// the same way — remove from this slice, add a
+		// the same way -- remove from this slice, add a
 		// framework.MigrationRegistrar in the owning module.
 		// &model.User{} migrated to module/user/migrations.go (Phase 4).
 		// &model.APIKey{} stays here until module/auth Phase-4 PR (issue #39)
-		// claims it — it's owned by auth, not user.
+		// claims it -- it's owned by auth, not user.
 		&model.APIKey{},
 		&model.AuditLog{},
-		&model.FaultInjection{},
+		// &model.Task{} migrated to module/task/migrations.go (Phase 4).
+		// &model.FaultInjection{} migrated to module/injection/migrations.go
+		// (Phase 4).
 		&model.Execution{},
 		&model.DetectorResult{},
 		&model.GranularityResult{},
-		// &model.Task{} migrated to module/task/migrations.go (Phase 4).
 		&model.DatasetLabel{},
 		&model.ProjectLabel{},
 		&model.DatasetVersionInjection{},
-		&model.FaultInjectionLabel{},
+		// &model.FaultInjectionLabel{} migrated to
+		// module/injection/migrations.go (Phase 4).
 		&model.ExecutionInjectionLabel{},
 		&model.UserDataset{},
 		&model.ConfigLabel{},
 		&model.UserRole{},
 		&model.UserPermission{},
 		&model.UserTeam{},
+		&model.DynamicConfig{},
+		&model.ConfigHistory{},
 		&model.Evaluation{},
 	}
+}
 }
 
 func migrate(db *gorm.DB, contribs []framework.MigrationRegistrar) {
