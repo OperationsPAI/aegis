@@ -376,12 +376,6 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		PermTeamDeleteAll,
 		PermTeamManageAll,
 
-		// Project management
-		PermProjectReadAll,
-		PermProjectUpdateAll,
-		PermProjectDeleteAll,
-		PermProjectManageAll,
-
 		// Container management
 		PermContainerReadAll,
 		PermContainerCreateAll,
@@ -444,10 +438,6 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	// Regular User Role - basic role with minimal permissions
 	// Users can read team resources if they are team members
 	RoleUser: {
-		// Project permissions
-		PermProjectCreateOwn,
-		PermProjectReadOwn,
-
 		// Container permissions
 		PermContainerCreateOwn,
 
@@ -532,36 +522,5 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	},
 	RoleTeamViewer: {
 		PermTeamReadTeam,
-	},
-
-	// Project Roles
-	RoleProjectAdmin: {
-		PermProjectReadOwn,
-		PermProjectUpdateOwn,
-		PermProjectDeleteOwn,
-		PermProjectManageOwn,
-		// Injection permissions
-		PermInjectionReadProject,
-		PermInjectionExecuteProject,
-		// Execution permissions
-		PermExecutionReadProject,
-		PermExecutionExecuteProject,
-	},
-	RoleProjectAlgoDeveloper: {
-		PermProjectReadOwn,
-		// Execution permissions
-		PermExecutionReadProject,
-		PermExecutionExecuteProject,
-	},
-	RoleProjectDataDeveloper: {
-		PermProjectReadOwn,
-		// Injection permissions
-		PermInjectionReadProject,
-		PermInjectionExecuteProject,
-	},
-	RoleProjectViewer: {
-		PermProjectReadOwn,
-		PermInjectionReadProject,
-		PermExecutionReadProject,
 	},
 }
