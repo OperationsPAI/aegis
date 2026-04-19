@@ -86,11 +86,7 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		}
 	}
 
-	groups := v2.Group("/groups", middleware.JWTAuth(), middleware.RequireTraceRead)
-	{
-		groups.GET("/:group_id/stats", handlers.Group.GetGroupStats)
-		groups.GET("/:group_id/stream", handlers.Group.GetGroupStream)
-	}
+
 
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 	{

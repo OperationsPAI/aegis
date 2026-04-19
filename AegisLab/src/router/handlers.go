@@ -6,7 +6,6 @@ import (
 	dataset "aegis/module/dataset"
 	evaluation "aegis/module/evaluation"
 	execution "aegis/module/execution"
-	group "aegis/module/group"
 	injection "aegis/module/injection"
 	label "aegis/module/label"
 	metric "aegis/module/metric"
@@ -24,7 +23,6 @@ type Handlers struct {
 	Container   *container.Handler
 	Dataset     *dataset.Handler
 	Evaluation  *evaluation.Handler
-	Group       *group.Handler
 	Metric      *metric.Handler
 	RateLimiter *ratelimiter.Handler
 	Label       *label.Handler
@@ -39,7 +37,6 @@ func NewHandlers(
 	container *container.Handler,
 	dataset *dataset.Handler,
 	evaluation *evaluation.Handler,
-	group *group.Handler,
 	metric *metric.Handler,
 	rateLimiter *ratelimiter.Handler,
 	label *label.Handler,
@@ -53,7 +50,6 @@ func NewHandlers(
 		Container:   container,
 		Dataset:     dataset,
 		Evaluation:  evaluation,
-		Group:       group,
 		Metric:      metric,
 		RateLimiter: rateLimiter,
 		Label:       label,

@@ -7,4 +7,7 @@ var Module = fx.Module("group",
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
+	fx.Provide(
+		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
+	),
 )

@@ -38,6 +38,7 @@ require (
 	github.com/stretchr/testify v1.11.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
+	github.com/swaggo/swag v1.16.4
 	github.com/tonistiigi/fsutil v0.0.0-20241121093142-31cf1f437184
 	go.etcd.io/etcd/client/v3 v3.6.7
 	go.opentelemetry.io/otel v1.37.0
@@ -52,6 +53,7 @@ require (
 	google.golang.org/protobuf v1.36.8
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.7
+	gorm.io/driver/sqlite v1.5.0
 	gorm.io/gorm v1.25.12
 	gorm.io/plugin/opentelemetry v0.1.13
 	helm.sh/helm/v3 v3.17.3
@@ -195,6 +197,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -243,7 +246,6 @@ require (
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/swaggo/swag v1.16.4 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/tonistiigi/go-csvvalue v0.0.0-20240710180619-ddb21b71c0b4 // indirect
