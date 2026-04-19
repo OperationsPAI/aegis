@@ -11,7 +11,6 @@ import (
 	injection "aegis/module/injection"
 	label "aegis/module/label"
 	metric "aegis/module/metric"
-	notification "aegis/module/notification"
 	pedestal "aegis/module/pedestal"
 	project "aegis/module/project"
 	ratelimiter "aegis/module/ratelimiter"
@@ -37,7 +36,6 @@ type Handlers struct {
 	Metric       *metric.Handler
 	SDK          *sdk.Handler
 	System       *system.Handler
-	Notification *notification.Handler
 	Pedestal     *pedestal.Handler
 	RateLimiter  *ratelimiter.Handler
 	ChaosSystem  *chaossystem.Handler
@@ -60,7 +58,6 @@ func NewHandlers(
 	metric *metric.Handler,
 	sdk *sdk.Handler,
 	system *system.Handler,
-	notification *notification.Handler,
 	pedestal *pedestal.Handler,
 	rateLimiter *ratelimiter.Handler,
 	chaosSystem *chaossystem.Handler,
@@ -82,7 +79,6 @@ func NewHandlers(
 		Metric:       metric,
 		SDK:          sdk,
 		System:       system,
-		Notification: notification,
 		Pedestal:     pedestal,
 		RateLimiter:  rateLimiter,
 		ChaosSystem:  chaosSystem,
