@@ -42,7 +42,6 @@ func TestRouterSeparatesRouteGroups(t *testing.T) {
 		"/api/v2/auth",
 		"/api/v2/projects",
 		"/api/v2/executions",
-		"/api/v2/sdk",
 		"/api/v2/system/audit",
 		"/api/v2/system/configs",
 		"/api/v2/system/monitor",
@@ -62,6 +61,13 @@ func TestRouterRegistersModuleContributedRoutes(t *testing.T) {
 		Handlers: &Handlers{},
 		Registrars: []framework.RouteRegistrar{
 			{
+				Audience: framework.AudienceSDK,
+				Name:     "test.sdk",
+				Register: func(v2 *gin.RouterGroup) {
+					v2.GET("/sdk/evaluations", func(c *gin.Context) {})
+				},
+			},
+			{
 				Audience: framework.AudienceAdmin,
 				Name:     "test.user",
 				Register: func(v2 *gin.RouterGroup) {
@@ -73,6 +79,9 @@ func TestRouterRegistersModuleContributedRoutes(t *testing.T) {
 
 	if !hasRoutePrefix(engine.Routes(), "/api/v2/users") {
 		t.Fatalf("expected user route prefix to be registered from module contribution")
+	}
+	if !hasRoutePrefix(engine.Routes(), "/api/v2/sdk") {
+		t.Fatalf("expected sdk route prefix to be registered from module contribution")
 	}
 }
 
