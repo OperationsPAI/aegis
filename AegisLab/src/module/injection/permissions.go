@@ -33,17 +33,6 @@ func RoleGrants() framework.RoleGrantsRegistrar {
 				consts.PermInjectionCloneProject,
 				consts.PermInjectionDownloadProject,
 			},
-			consts.RoleProjectAdmin: {
-				consts.PermInjectionReadProject,
-				consts.PermInjectionExecuteProject,
-			},
-			consts.RoleProjectDataDeveloper: {
-				consts.PermInjectionReadProject,
-				consts.PermInjectionExecuteProject,
-			},
-			consts.RoleProjectViewer: {
-				consts.PermInjectionReadProject,
-			},
 		},
 	}
 }
