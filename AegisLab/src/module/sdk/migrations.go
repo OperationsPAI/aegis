@@ -6,8 +6,7 @@ import "aegis/framework"
 //
 // Its read-only GORM models map to external SDK-managed tables (`data` and
 // `evaluation_data`), and model comments explicitly forbid adding them to
-// AutoMigrate. module.go intentionally does not wire this helper into the
-// `group:"migrations"` fx-group because the module contributes nothing there.
+// AutoMigrate.
 func Migrations() framework.MigrationRegistrar {
 	return framework.MigrationRegistrar{
 		Module:   "sdk",
