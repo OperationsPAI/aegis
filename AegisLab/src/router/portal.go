@@ -42,8 +42,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		flatContainerVersions.PATCH("/:id/image", middleware.RequireContainerVersionUpdate, handlers.Container.SetContainerVersionImage)
 	}
 
-	projects := v2.Group("/projects", middleware.JWTAuth())
-	{}
 
 	// /api/v2/labels routes moved to module/label/routes.go (Phase 3
 	// reference migration). The label module self-registers via

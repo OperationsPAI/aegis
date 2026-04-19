@@ -12,6 +12,4 @@ func SetupSDKV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		sdkData.GET("", handlers.SDK.ListDatasetSamples)
 	}
 
-	projects := v2.Group("/projects", middleware.JWTAuth())
-	{}
 }
