@@ -1,15 +1,9 @@
 package router
 
-import (
-	"aegis/middleware"
+import "github.com/gin-gonic/gin"
 
-	"github.com/gin-gonic/gin"
-)
-
+// SDK routes are now contributed by module registrars. The central router
+// keeps this hook as a no-op compatibility shim while Phase 4 migrations land.
 func SetupSDKV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
-	sdkData := v2.Group("/sdk/datasets", middleware.JWTAuth(), middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:datasets:*", "sdk:datasets:read"))
-	{
-		sdkData.GET("", handlers.SDK.ListDatasetSamples)
-	}
-
+	_, _ = v2, handlers
 }
