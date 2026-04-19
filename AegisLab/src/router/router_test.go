@@ -35,36 +35,45 @@ func testRegistrars() []framework.RouteRegistrar {
 }
 
 func TestRouterSeparatesRouteGroups(t *testing.T) {
-<<<<<<< HEAD
-	engine := NewForTest(&Handlers{}, nil, testRegistrars()...)
-=======
-	engine := New(Params{
-		Handlers: &Handlers{},
-		Registrars: []framework.RouteRegistrar{
-			{
-				Audience: framework.AudiencePortal,
-				Name:     "test.execution",
-				Register: func(v2 *gin.RouterGroup) {
-					executions := v2.Group("/executions")
-					executions.GET("/labels", func(c *gin.Context) {})
-				},
+	registrars := append(testRegistrars(),
+		framework.RouteRegistrar{
+			Audience: framework.AudiencePublic,
+			Name:     "auth.public",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.POST("/auth/login", func(c *gin.Context) {})
 			},
 		},
-	})
->>>>>>> 8a9a9f6 (phase-4: fix execution self-registration follow-ups for #49)
+		framework.RouteRegistrar{
+			Audience: framework.AudienceSDK,
+			Name:     "auth.sdk",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.POST("/auth/api-key/token", func(c *gin.Context) {})
+			},
+		},
+		framework.RouteRegistrar{
+			Audience: framework.AudiencePortal,
+			Name:     "auth.portal",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.GET("/api-keys", func(c *gin.Context) {})
+			},
+		},
+		framework.RouteRegistrar{
+			Audience: framework.AudiencePortal,
+			Name:     "test.execution",
+			Register: func(v2 *gin.RouterGroup) {
+				executions := v2.Group("/executions")
+				executions.GET("/labels", func(c *gin.Context) {})
+			},
+		},
+	)
+	engine := NewForTest(&Handlers{}, nil, registrars...)
 	routes := engine.Routes()
 
 	requiredPrefixes := []string{
 		"/api/v2/auth",
 		"/api/v2/projects",
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 		"/api/v2/executions",
->>>>>>> 8a9a9f6 (phase-4: fix execution self-registration follow-ups for #49)
 		"/api/v2/sdk",
->>>>>>> bf2217f (phase-4: migrate module/execution to self-registration (#49))
 		"/api/v2/system/audit",
 		"/api/v2/system/configs",
 		"/api/v2/system/monitor",
