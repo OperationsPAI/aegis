@@ -1,11 +1,28 @@
 package utils
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// legacyTestHash reconstructs the pre-rotation "<saltHex>:<hashHex>" format
+// so tests can exercise the SHA-256 verification fallback without relying on
+// the old HashPassword implementation (which has been replaced by bcrypt).
+func legacyTestHash(t *testing.T, saltHex, password string) string {
+	t.Helper()
+	salt, err := hex.DecodeString(saltHex)
+	require.NoError(t, err)
+
+	h := sha256.New()
+	h.Write(salt)
+	h.Write([]byte(password))
+	return saltHex + ":" + hex.EncodeToString(h.Sum(nil))
+}
 
 func TestHashPassword(t *testing.T) {
 	tests := []struct {
@@ -50,7 +67,8 @@ func TestHashPassword(t *testing.T) {
 			} else {
 				assert.NoError(t, err, tt.description)
 				assert.NotEmpty(t, hash)
-				assert.Contains(t, hash, ":", "Hash should contain salt separator")
+				assert.True(t, strings.HasPrefix(hash, bcryptHashPrefix),
+					"new hashes must carry the bcrypt envelope prefix")
 
 				// Verify we can verify the password
 				isValid := VerifyPassword(tt.password, hash)
@@ -58,6 +76,30 @@ func TestHashPassword(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestVerifyPassword_LegacySHA256Backcompat constructs a legacy salted
+// SHA-256 hash directly (bypassing HashPassword, which now emits bcrypt) and
+// confirms VerifyPassword still authenticates it and that NeedsRehash flags
+// it for opportunistic migration.
+func TestVerifyPassword_LegacySHA256Backcompat(t *testing.T) {
+	// Canonical legacy record for password "legacy-pass-1", deterministic
+	// salt so the test is reproducible.
+	saltHex := "0011223344556677889900112233445566778899001122334455667788990011"
+	// Compute expected SHA-256 of salt||password inline so this test is not
+	// tied to any helper we might later delete.
+	hashedLegacy := legacyTestHash(t, saltHex, "legacy-pass-1")
+
+	assert.True(t, VerifyPassword("legacy-pass-1", hashedLegacy),
+		"legacy SHA-256 hashes must still verify after the bcrypt rotation")
+	assert.False(t, VerifyPassword("wrong-pass", hashedLegacy))
+	assert.True(t, NeedsRehash(hashedLegacy),
+		"legacy records must be flagged for opportunistic bcrypt migration")
+
+	// Bcrypt records never need rehashing.
+	hash, err := HashPassword("fresh-pass-1")
+	assert.NoError(t, err)
+	assert.False(t, NeedsRehash(hash))
 }
 
 func TestVerifyPassword(t *testing.T) {
