@@ -77,35 +77,19 @@ data:
     address = "{{ .Release.Name }}-buildkit:1234"
     {{- end }}
 
-    [clients.iam]
-    target = "{{ .Release.Name }}-iam-service:{{ .Values.microservices.iamService.grpcPort }}"
-
-    [clients.orchestrator]
-    target = "{{ .Release.Name }}-orchestrator-service:{{ .Values.microservices.orchestratorService.grpcPort }}"
-
-    [clients.resource]
-    target = "{{ .Release.Name }}-resource-service:{{ .Values.microservices.resourceService.grpcPort }}"
-
     [clients.runtime]
+    # api-gateway -> runtime-worker, query-only (queue/lock status).
     target = "{{ .Release.Name }}-runtime-worker-service:{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
 
-    [clients.system]
-    target = "{{ .Release.Name }}-system-service:{{ .Values.microservices.systemService.grpcPort }}"
-
-    [iam.grpc]
-    addr = ":{{ .Values.microservices.iamService.grpcPort }}"
-
-    [orchestrator.grpc]
-    addr = ":{{ .Values.microservices.orchestratorService.grpcPort }}"
-
-    [resource.grpc]
-    addr = ":{{ .Values.microservices.resourceService.grpcPort }}"
+    [clients.runtime_intake]
+    # runtime-worker -> api-gateway, execution/injection state writes.
+    target = "{{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}"
 
     [runtime_worker.grpc]
     addr = ":{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
 
-    [system.grpc]
-    addr = ":{{ .Values.microservices.systemService.grpcPort }}"
+    [api_gateway.intake.grpc]
+    addr = ":{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}"
 
     {{- if .Values.loki.enabled }}
     [loki]

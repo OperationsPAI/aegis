@@ -1,20 +1,26 @@
 # Microservice Kubernetes Skeleton
 
-这目录承接当前六服务拆分后的第一版 Kubernetes skeleton。
+Post phase-2 collapse, AegisLab ships as two binaries:
 
-当前文件：
+- `api-gateway` — single API process (HTTP + runtime-intake gRPC)
+- `runtime-worker-service` — task/controller/receiver loop
+
+Current file:
 
 - `aegislab-microservices.yaml`
 
-用途：
+Purpose:
 
-- 给 `api-gateway / iam-service / resource-service / orchestrator-service / runtime-worker-service / system-service` 提供第一版 Deployment/Service 骨架
-- 明确端口、启动命令、probe 约定、配置挂载方式
+- Deployment/Service skeletons for `api-gateway` and `runtime-worker-service`
+- Explicit ports, start commands, probe conventions, config mounts
 
-注意：
+Ports:
 
-- 这是一份 skeleton，不是最终生产部署方案
-- 当前仍假设：
-  - MySQL / Redis / Etcd / Jaeger / BuildKit 等基础依赖已由其他清单或平台层提供
-  - `ConfigMap/aegislab-config` 已准备好并包含 `config.toml`
-- 这份清单优先编码“边界和启动方式”，而不是覆盖全部生产级资源策略
+- api-gateway: 8082 (HTTP), 9096 (runtime-intake gRPC, worker -> gateway)
+- runtime-worker-service: 9094 (query gRPC, gateway -> worker)
+
+Notes:
+
+- This is a skeleton, not a production deployment.
+- Assumes MySQL / Redis / Etcd / Jaeger / BuildKit are provided separately.
+- `ConfigMap/aegislab-config` must already contain `config.toml`.

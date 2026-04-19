@@ -180,48 +180,9 @@ spec:
       {{- if eq .Values.configmap.system.env_mode "staging" }}
       nodePort: {{ .Values.microservices.apiGateway.service.nodePort }}
       {{- end }}
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-iam-service
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-iam-service
-  ports:
-    - name: grpc
-      port: {{ .Values.microservices.iamService.grpcPort }}
-      targetPort: {{ .Values.microservices.iamService.grpcPort }}
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-orchestrator-service
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-orchestrator-service
-  ports:
-    - name: grpc
-      port: {{ .Values.microservices.orchestratorService.grpcPort }}
-      targetPort: {{ .Values.microservices.orchestratorService.grpcPort }}
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-resource-service
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-resource-service
-  ports:
-    - name: grpc
-      port: {{ .Values.microservices.resourceService.grpcPort }}
-      targetPort: {{ .Values.microservices.resourceService.grpcPort }}
+    - name: intake-grpc
+      port: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+      targetPort: intake-grpc
 
 ---
 apiVersion: v1
@@ -239,20 +200,6 @@ spec:
     - name: otlp
       port: {{ .Values.configmap.otlp.port }}
       targetPort: {{ .Values.configmap.otlp.port }}
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-system-service
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-system-service
-  ports:
-    - name: grpc
-      port: {{ .Values.microservices.systemService.grpcPort }}
-      targetPort: {{ .Values.microservices.systemService.grpcPort }}
 
 ---
 apiVersion: v1
