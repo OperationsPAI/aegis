@@ -7,7 +7,6 @@ var Module = fx.Module("sdk",
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
-	fx.Provide(AsRoutesHandler),
 	fx.Provide(
 		fx.Annotate(RoutesSDK, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(Permissions, fx.ResultTags(`group:"permissions"`)),

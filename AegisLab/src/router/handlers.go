@@ -1,7 +1,6 @@
 package router
 
 import (
-	"aegis/framework"
 	auth "aegis/module/auth"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
@@ -27,7 +26,6 @@ type Handlers struct {
 	Evaluation  *evaluation.Handler
 	Group       *group.Handler
 	Metric      *metric.Handler
-	SDK         framework.SDKRoutesHandler
 	RateLimiter *ratelimiter.Handler
 	Label       *label.Handler
 }
@@ -43,7 +41,6 @@ func NewHandlers(
 	evaluation *evaluation.Handler,
 	group *group.Handler,
 	metric *metric.Handler,
-	sdk framework.SDKRoutesHandler,
 	rateLimiter *ratelimiter.Handler,
 	label *label.Handler,
 ) *Handlers {
@@ -58,7 +55,6 @@ func NewHandlers(
 		Evaluation:  evaluation,
 		Group:       group,
 		Metric:      metric,
-		SDK:         sdk,
 		RateLimiter: rateLimiter,
 		Label:       label,
 	}
