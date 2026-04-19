@@ -435,6 +435,10 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		PermTaskDeleteAll,
 		PermTaskExecuteAll,
 		PermTaskStopAll,
+
+		// Trace permissions moved to module/trace/permissions.go
+		// (Phase 4, issue #44). The rbac aggregator re-adds these
+		// RoleAdmin grants at startup via fx.Invoke.
 	},
 
 	// Regular User Role - basic role with minimal permissions
