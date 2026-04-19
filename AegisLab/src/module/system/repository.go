@@ -161,3 +161,50 @@ func (r *Repository) listConfigHistoriesByConfigID(configID int) ([]model.Config
 	}
 	return histories, nil
 }
+
+func (r *Repository) GetSystemByID(id int) (*model.System, error) {
+	var system model.System
+	if err := r.db.Where("id = ? AND status != ?", id, consts.CommonDeleted).First(&system).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("system with id %d: %w", id, consts.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to find system with id %d: %w", id, err)
+	}
+	return &system, nil
+}
+
+func (r *Repository) GetSystemMetadata(systemName, metadataType, serviceName string) (*model.SystemMetadata, error) {
+	var meta model.SystemMetadata
+	if err := r.db.Where("system_name = ? AND metadata_type = ? AND service_name = ?", systemName, metadataType, serviceName).
+		First(&meta).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get system metadata: %w", err)
+	}
+	return &meta, nil
+}
+
+func (r *Repository) ListSystemMetadata(systemName, metadataType string) ([]model.SystemMetadata, error) {
+	var metas []model.SystemMetadata
+	query := r.db.Where("system_name = ?", systemName)
+	if metadataType != "" {
+		query = query.Where("metadata_type = ?", metadataType)
+	}
+	if err := query.Find(&metas).Error; err != nil {
+		return nil, fmt.Errorf("failed to list system metadata: %w", err)
+	}
+	return metas, nil
+}
+
+func (r *Repository) ListSystemMetadataServiceNames(systemName, metadataType string) ([]string, error) {
+	var names []string
+	query := r.db.Model(&model.SystemMetadata{}).Where("system_name = ?", systemName)
+	if metadataType != "" {
+		query = query.Where("metadata_type = ?", metadataType)
+	}
+	if err := query.Distinct("service_name").Pluck("service_name", &names).Error; err != nil {
+		return nil, fmt.Errorf("failed to list service names: %w", err)
+	}
+	return names, nil
+}

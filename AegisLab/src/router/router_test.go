@@ -1,18 +1,41 @@
 package router
 
 import (
+	"aegis/framework"
+	"aegis/middleware"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"aegis/framework"
-
 	"github.com/gin-gonic/gin"
 )
 
+func testRegistrars() []framework.RouteRegistrar {
+	return []framework.RouteRegistrar{
+		{
+			Audience: framework.AudiencePortal,
+			Name:     "label.portal",
+			Register: func(v2 *gin.RouterGroup) {
+				v2.Group("/labels", middleware.JWTAuth())
+			},
+		},
+		{
+			Audience: framework.AudienceAdmin,
+			Name:     "system.admin",
+			Register: func(v2 *gin.RouterGroup) {
+				system := v2.Group("/system", middleware.JWTAuth(), middleware.RequireSystemRead)
+				system.Group("/audit", middleware.RequireAuditRead).GET("", func(c *gin.Context) {})
+				system.Group("/configs").GET("", func(c *gin.Context) {})
+				system.Group("/monitor").GET("/info", func(c *gin.Context) {})
+				system.GET("/health", func(c *gin.Context) {})
+			},
+		},
+	}
+}
+
 func TestRouterSeparatesRouteGroups(t *testing.T) {
-	engine := NewForTest(&Handlers{}, nil)
+	engine := NewForTest(&Handlers{}, nil, testRegistrars()...)
 	routes := engine.Routes()
 
 	requiredPrefixes := []string{
@@ -63,7 +86,7 @@ func hasRoutePrefix(routes []gin.RouteInfo, prefix string) bool {
 }
 
 func TestSwaggerDocEndpointServesRegisteredSpec(t *testing.T) {
-	engine := NewForTest(&Handlers{}, nil)
+	engine := NewForTest(&Handlers{}, nil, testRegistrars()...)
 
 	req := httptest.NewRequest(http.MethodGet, "/docs/doc.json", nil)
 	w := httptest.NewRecorder()
