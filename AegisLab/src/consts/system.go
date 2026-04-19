@@ -351,11 +351,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	RoleSuperAdmin: {}, // Super admin has unrestricted access to all resources
 
 	RoleAdmin: {
-		PermAuditRead,
-		PermAuditAudit,
-		PermConfigurationRead,
-		PermConfigurationUpdate,
-		PermConfigurationConfigure,
+		// System management moved to module/system/permissions.go. The
+		// rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
 
 		// User and permission management
 		// User management moved to module/user/permissions.go. The rbac
