@@ -21,6 +21,10 @@ func centralEntities() []interface{} {
 		&model.Dataset{},
 		&model.DatasetVersion{},
 		&model.Project{},
+		// &model.Label{} migrated to module/label/migrations.go (Phase 3
+		// reference migration). Future Phase 4 PRs drop their entities
+		// the same way — remove from this slice, add a
+		// framework.MigrationRegistrar in the owning module.
 		&model.User{},
 		&model.APIKey{},
 		&model.Role{},
