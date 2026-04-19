@@ -7,9 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RoutesPortal contributes the project module's portal HTTP routes to
-// the framework route registry. SDK routes under /projects/:project_id/*
-// are owned by injection/execution and stay with those modules.
+// RoutesPortal contributes the project module's portal HTTP routes under
+// /projects/* to the framework route registry. Project-scoped SDK endpoints
+// under /projects/:project_id/* (injection/execution/task/trace operations)
+// are owned by those modules and will migrate in their own Phase-4 PRs.
 func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
