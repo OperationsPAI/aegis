@@ -96,6 +96,21 @@ func (s *Service) Login(ctx context.Context, req *LoginReq) (*LoginResp, error) 
 			return fmt.Errorf("%w: invalid username or password", consts.ErrAuthenticationFailed)
 		}
 
+		// Opportunistically migrate legacy SHA-256 records to bcrypt on a
+		// successful login. Failure here is non-fatal — we don't want to
+		// prevent the user from logging in if the rehash write fails; the
+		// next successful login will try again.
+		if utils.NeedsRehash(user.Password) {
+			if newHash, rehashErr := utils.HashPassword(req.Password); rehashErr == nil {
+				user.Password = newHash
+				if err := userRepo.Update(user); err != nil {
+					logrus.Warnf("failed to rehash legacy password for user %d: %v", user.ID, err)
+				}
+			} else {
+				logrus.Warnf("failed to compute bcrypt hash during login migration for user %d: %v", user.ID, rehashErr)
+			}
+		}
+
 		token, expiresAt, err = s.generateTokenWithRoles(roleRepo, user)
 		if err != nil {
 			return err

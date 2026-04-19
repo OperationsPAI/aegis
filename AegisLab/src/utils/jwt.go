@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,12 +13,58 @@ import (
 
 // JWT configuration
 const (
-	// Should be loaded from environment variables in production
-	JWTSecret              = "your-secret-key-change-this-in-production"
+	// JWTSecretEnvVar is the environment variable from which the JWT signing
+	// secret is loaded. It MUST be set to a non-empty, non-default value before
+	// any JWT operation is performed; see InitJWTSecret / ValidateJWTSecret.
+	JWTSecretEnvVar = "AEGIS_JWT_SECRET"
+
+	// LegacyJWTSecretDefault is the hardcoded default that previously shipped
+	// in the source tree. It is retained only so that configuration validation
+	// can detect and reject deployments that still rely on it.
+	LegacyJWTSecretDefault = "your-secret-key-change-this-in-production"
+
 	TokenExpiration        = 24 * time.Hour
 	RefreshTokenExpiration = 7 * 24 * time.Hour
 	ServiceTokenExpiration = 24 * time.Hour // Service token for K8s jobs
 )
+
+// JWTSecret is populated at process start from AEGIS_JWT_SECRET. It is kept
+// as a package-level variable (rather than const) so it can be initialized
+// from the environment and referenced by the rest of the utils package
+// (jwt.go, access_key_crypto.go). Callers MUST invoke InitJWTSecret during
+// startup; otherwise ValidateJWTSecret will fail fast.
+var JWTSecret string
+
+// InitJWTSecret loads the JWT secret from the AEGIS_JWT_SECRET environment
+// variable. It returns an error if the variable is unset, empty, or still
+// holds the legacy hardcoded default. On success, JWTSecret is populated.
+//
+// This function is idempotent; repeated calls will overwrite JWTSecret with
+// the current environment value.
+func InitJWTSecret() error {
+	secret := os.Getenv(JWTSecretEnvVar)
+	if secret == "" {
+		return fmt.Errorf("%s environment variable is not set", JWTSecretEnvVar)
+	}
+	if secret == LegacyJWTSecretDefault {
+		return fmt.Errorf("%s is set to the legacy hardcoded default; refusing to start", JWTSecretEnvVar)
+	}
+	JWTSecret = secret
+	return nil
+}
+
+// ValidateJWTSecret confirms JWTSecret has been populated with a non-default
+// value. It should be called after InitJWTSecret and before any JWT
+// signing/verification. Fail-fast on misconfiguration.
+func ValidateJWTSecret() error {
+	if JWTSecret == "" {
+		return fmt.Errorf("JWT secret is not initialized; set %s and call InitJWTSecret at startup", JWTSecretEnvVar)
+	}
+	if JWTSecret == LegacyJWTSecretDefault {
+		return fmt.Errorf("JWT secret equals the legacy hardcoded default; set %s to a unique value", JWTSecretEnvVar)
+	}
+	return nil
+}
 
 // Claims represents JWT claims structure
 type Claims struct {

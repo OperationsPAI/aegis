@@ -7,15 +7,28 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	// Salt length in bytes
+	// Salt length in bytes, used for legacy SHA-256 hashes only.
 	SaltLength = 32
 	// Minimum password length
 	MinPasswordLength = 8
 	// Maximum password length
 	MaxPasswordLength = 128
+
+	// BcryptCost is the work factor for new bcrypt hashes. 12 balances the
+	// OWASP 2024 guidance (10–14) against our synchronous login path; drop
+	// to 10 locally if CI starts timing out on hashing.
+	BcryptCost = 12
+
+	// bcryptHashPrefix marks a password record as bcrypt-encoded. Storage
+	// format: "bcrypt$" + bcrypt.GenerateFromPassword(...) output (≤60 bytes
+	// of ASCII). The User.Password column is size:255 (see model/entity.go)
+	// so a 67-byte prefixed hash fits with plenty of headroom.
+	bcryptHashPrefix = "bcrypt$"
 )
 
 // PasswordStrength represents password strength levels
@@ -28,7 +41,12 @@ const (
 	VeryStrongPassword
 )
 
-// HashPassword creates a salted hash of the password
+// HashPassword creates a bcrypt hash of the password, prefixed with
+// "bcrypt$" so VerifyPassword can distinguish it from legacy salted-SHA-256
+// records. Returns an error if the password fails basic length validation.
+//
+// New records (registration, change-password, API-key secret hashing) all
+// go through this path and therefore land in the bcrypt regime.
 func HashPassword(password string) (string, error) {
 	if len(password) < MinPasswordLength {
 		return "", fmt.Errorf("password must be at least %d characters long", MinPasswordLength)
@@ -38,28 +56,50 @@ func HashPassword(password string) (string, error) {
 		return "", fmt.Errorf("password must be no more than %d characters long", MaxPasswordLength)
 	}
 
-	// Generate random salt
-	salt := make([]byte, SaltLength)
-	if _, err := rand.Read(salt); err != nil {
-		return "", fmt.Errorf("failed to generate salt: %v", err)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), BcryptCost)
+	if err != nil {
+		return "", fmt.Errorf("failed to bcrypt password: %w", err)
 	}
-
-	// Create hash with salt
-	hash := sha256.New()
-	hash.Write(salt)
-	hash.Write([]byte(password))
-	hashedPassword := hash.Sum(nil)
-
-	// Combine salt and hash
-	saltHex := hex.EncodeToString(salt)
-	hashHex := hex.EncodeToString(hashedPassword)
-
-	return saltHex + ":" + hashHex, nil
+	return bcryptHashPrefix + string(hashed), nil
 }
 
-// VerifyPassword verifies a password against its hash
+// VerifyPassword checks the supplied plaintext password against a stored
+// hash. Records with the "bcrypt$" prefix are verified via bcrypt; anything
+// else is treated as a legacy salted-SHA-256 record and verified with the
+// pre-rotation code. The caller is responsible for opportunistically
+// re-hashing successful legacy verifications (see NeedsRehash /
+// RehashPassword) to migrate the database forward.
 func VerifyPassword(password, hashedPassword string) bool {
-	// Split salt and hash
+	if strings.HasPrefix(hashedPassword, bcryptHashPrefix) {
+		err := bcrypt.CompareHashAndPassword(
+			[]byte(hashedPassword[len(bcryptHashPrefix):]),
+			[]byte(password),
+		)
+		return err == nil
+	}
+	return verifyLegacySHA256(password, hashedPassword)
+}
+
+// NeedsRehash reports whether a stored hash is in the legacy SHA-256 format
+// and should be transparently upgraded to bcrypt on the next successful
+// VerifyPassword. Returns false for bcrypt records and for anything that
+// fails to parse at all (the caller should then surface an auth failure).
+func NeedsRehash(hashedPassword string) bool {
+	if hashedPassword == "" {
+		return false
+	}
+	if strings.HasPrefix(hashedPassword, bcryptHashPrefix) {
+		return false
+	}
+	// Legacy format is "<saltHex>:<hashHex>"; anything else is malformed.
+	parts := strings.Split(hashedPassword, ":")
+	return len(parts) == 2
+}
+
+// verifyLegacySHA256 reproduces the pre-rotation salted-SHA-256 verification
+// path. Kept so existing user records continue to authenticate until they
+// are opportunistically migrated to bcrypt.
+func verifyLegacySHA256(password, hashedPassword string) bool {
 	parts := strings.Split(hashedPassword, ":")
 	if len(parts) != 2 {
 		return false
@@ -68,20 +108,16 @@ func VerifyPassword(password, hashedPassword string) bool {
 	saltHex := parts[0]
 	expectedHashHex := parts[1]
 
-	// Decode salt
 	salt, err := hex.DecodeString(saltHex)
 	if err != nil {
 		return false
 	}
 
-	// Create hash with the same salt
 	hash := sha256.New()
 	hash.Write(salt)
 	hash.Write([]byte(password))
-	actualHash := hash.Sum(nil)
-	actualHashHex := hex.EncodeToString(actualHash)
+	actualHashHex := hex.EncodeToString(hash.Sum(nil))
 
-	// Compare hashes using constant time comparison
 	return constantTimeCompare(expectedHashHex, actualHashHex)
 }
 
