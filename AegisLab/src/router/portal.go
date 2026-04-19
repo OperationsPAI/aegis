@@ -43,9 +43,7 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 	}
 
 	projects := v2.Group("/projects", middleware.JWTAuth())
-	{
-		projects.POST("/:project_id/injections/search", middleware.RequireProjectRead, handlers.Injection.SearchProjectInjections)
-	}
+	{}
 
 	// /api/v2/labels routes moved to module/label/routes.go (Phase 3
 	// reference migration). The label module self-registers via
@@ -61,16 +59,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		executions.GET("/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:read"), handlers.Execution.ListAvailableExecutionLabels)
 		executions.POST("/batch-delete", handlers.Execution.BatchDeleteExecutions)
 	}
-
-	injections := v2.Group("/injections", middleware.JWTAuth())
-	{
-		injections.PATCH("/labels/batch", handlers.Injection.BatchManageInjectionLabels)
-		injections.POST("/batch-delete", handlers.Injection.BatchDeleteInjections)
-		injections.POST("/upload", handlers.Injection.UploadDatapack)
-		injections.PUT("/:id/groundtruth", handlers.Injection.UpdateGroundtruth)
-	}
-
-
 
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 	{

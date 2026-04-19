@@ -381,14 +381,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		// reference migration). The rbac aggregator re-adds these to
 		// RoleAdmin at startup via framework.RoleGrantsRegistrar.
 
-		// Injection management
-		PermInjectionReadProject,
-		PermInjectionCreateProject,
-		PermInjectionUpdateProject,
-		PermInjectionDeleteProject,
-		PermInjectionExecuteProject,
-		PermInjectionCloneProject,
-		PermInjectionDownloadProject,
+		// Injection management — moved to module/injection/permissions.go.
+		// The rbac aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
 
 		// Execution management
 		PermExecutionReadProject,
