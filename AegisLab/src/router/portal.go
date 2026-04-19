@@ -78,30 +78,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		projects.POST("/:project_id/injections/search", middleware.RequireProjectRead, handlers.Injection.SearchProjectInjections)
 	}
 
-	teams := v2.Group("/teams", middleware.JWTAuth())
-	{
-		teams.POST("", middleware.RequireTeamCreate, handlers.Team.CreateTeam)
-		teams.GET("", middleware.RequireTeamRead, handlers.Team.ListTeams)
-
-		teamAdmin := teams.Group("/:team_id", middleware.RequireTeamAdminAccess)
-		{
-			teamAdmin.PATCH("", handlers.Team.UpdateTeam)
-			teamAdmin.DELETE("", handlers.Team.DeleteTeam)
-
-			teamManagement := teamAdmin.Group("/members")
-			teamManagement.POST("", handlers.Team.AddTeamMember)
-			teamManagement.DELETE("/:user_id", handlers.Team.RemoveTeamMember)
-			teamManagement.PATCH("/:user_id/role", handlers.Team.UpdateTeamMemberRole)
-		}
-
-		teamMember := teams.Group("", middleware.RequireTeamMemberAccess)
-		{
-			teamMember.GET("/:team_id", handlers.Team.GetTeamDetail)
-			teamMember.GET("/:team_id/members", handlers.Team.ListTeamMembers)
-			teamMember.GET("/:team_id/projects", handlers.Team.ListTeamProjects)
-		}
-	}
-
 	// /api/v2/labels routes moved to module/label/routes.go (Phase 3
 	// reference migration). The label module self-registers via
 	// framework.RouteRegistrar; see AegisLab/CONTRIBUTING.md.

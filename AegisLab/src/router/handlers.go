@@ -1,6 +1,7 @@
 package router
 
 import (
+	"aegis/framework"
 	auth "aegis/module/auth"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
@@ -16,26 +17,25 @@ import (
 	sdk "aegis/module/sdk"
 	system "aegis/module/system"
 	task "aegis/module/task"
-	team "aegis/module/team"
 )
 
 type Handlers struct {
-	Auth         *auth.Handler
-	Project      *project.Handler
-	Task         *task.Handler
-	Injection    *injection.Handler
-	Execution    *execution.Handler
-	Container    *container.Handler
-	Dataset      *dataset.Handler
-	Evaluation   *evaluation.Handler
-	Group        *group.Handler
-	Metric       *metric.Handler
-	SDK          *sdk.Handler
-	System       *system.Handler
-	Pedestal     *pedestal.Handler
-	RateLimiter  *ratelimiter.Handler
-	Team         *team.Handler
-	Label        *label.Handler
+	Auth        *auth.Handler
+	Project     *project.Handler
+	Task        *task.Handler
+	Injection   *injection.Handler
+	Execution   *execution.Handler
+	Container   *container.Handler
+	Dataset     *dataset.Handler
+	Evaluation  *evaluation.Handler
+	Group       *group.Handler
+	Metric      *metric.Handler
+	SDK         *sdk.Handler
+	System      *system.Handler
+	Pedestal    *pedestal.Handler
+	RateLimiter *ratelimiter.Handler
+	Team        framework.TeamRoutesHandler
+	Label       *label.Handler
 }
 
 func NewHandlers(
@@ -53,25 +53,25 @@ func NewHandlers(
 	system *system.Handler,
 	pedestal *pedestal.Handler,
 	rateLimiter *ratelimiter.Handler,
-	team *team.Handler,
+	team framework.TeamRoutesHandler,
 	label *label.Handler,
 ) *Handlers {
 	return &Handlers{
-		Auth:         auth,
-		Project:      project,
-		Task:         task,
-		Injection:    injection,
-		Execution:    execution,
-		Container:    container,
-		Dataset:      dataset,
-		Evaluation:   evaluation,
-		Group:        group,
-		Metric:       metric,
-		SDK:          sdk,
-		System:       system,
-		Pedestal:     pedestal,
-		RateLimiter:  rateLimiter,
-		Team:         team,
-		Label:        label,
+		Auth:        auth,
+		Project:     project,
+		Task:        task,
+		Injection:   injection,
+		Execution:   execution,
+		Container:   container,
+		Dataset:     dataset,
+		Evaluation:  evaluation,
+		Group:       group,
+		Metric:      metric,
+		SDK:         sdk,
+		System:      system,
+		Pedestal:    pedestal,
+		RateLimiter: rateLimiter,
+		Team:        team,
+		Label:       label,
 	}
 }
