@@ -13,6 +13,6 @@ type Reader interface {
 	GetHelmConfigByContainerVersionID(context.Context, int) (*model.HelmConfig, error)
 }
 
-func AsReader(service *Service) Reader {
-	return service.repo
+func AsReader(repo *Repository) *Repository {
+	return repo
 }
