@@ -136,11 +136,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		injections.PUT("/:id/groundtruth", handlers.Injection.UpdateGroundtruth)
 	}
 
-	notifications := v2.Group("/notifications", middleware.JWTAuth())
-	{
-		notifications.GET("/stream", handlers.Notification.GetStream)
-	}
-
 	tasks := v2.Group("/tasks", middleware.JWTAuth())
 	{
 		taskRead := tasks.Group("", middleware.RequireTaskRead)
