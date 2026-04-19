@@ -39,17 +39,12 @@ func (s *orchestratorMetricClientStub) GetExecutionMetrics(_ context.Context, re
 	return &metric.ExecutionMetrics{}, nil
 }
 
-type resourceMetricClientStub struct {
+type containerListerStub struct {
 	responses []*dto.ListResp[container.ContainerResp]
-	enabled   bool
 	calls     int
 }
 
-func (s *resourceMetricClientStub) Enabled() bool {
-	return s.enabled
-}
-
-func (s *resourceMetricClientStub) ListContainers(_ context.Context, _ *container.ListContainerReq) (*dto.ListResp[container.ContainerResp], error) {
+func (s *containerListerStub) ListContainers(_ context.Context, _ *container.ListContainerReq) (*dto.ListResp[container.ContainerResp], error) {
 	idx := s.calls
 	s.calls++
 	if idx >= len(s.responses) {
@@ -77,8 +72,7 @@ func TestRemoteAwareMetricServiceGetAlgorithmMetricsBuildsFromRemoteSources(t *t
 			3: {TotalCount: 5, SuccessCount: 5, FailedCount: 0, SuccessRate: 100, AvgDuration: 8},
 		},
 	}
-	resource := &resourceMetricClientStub{
-		enabled: true,
+	containers := &containerListerStub{
 		responses: []*dto.ListResp[container.ContainerResp]{
 			{
 				Items: []container.ContainerResp{
@@ -98,7 +92,7 @@ func TestRemoteAwareMetricServiceGetAlgorithmMetricsBuildsFromRemoteSources(t *t
 
 	service := remoteAwareMetricService{
 		orchestrator: orchestrator,
-		resource:     resource,
+		containerSvc: containers,
 	}
 
 	resp, err := service.GetAlgorithmMetrics(context.Background(), &metric.GetMetricsReq{

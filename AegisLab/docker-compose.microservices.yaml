@@ -16,22 +16,6 @@ services:
       mysql:
         condition: service_healthy
 
-  resource-service:
-    image: golang:1.24-bookworm
-    working_dir: /workspace/src
-    command: ["go", "run", "./cmd/resource-service", "-conf", "/workspace/src/config.dev.toml"]
-    volumes:
-      - ./:/workspace
-    environment:
-      GOPROXY: https://proxy.golang.org,direct
-    ports:
-      - "9093:9093"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      orchestrator-service:
-        condition: service_started
-
   runtime-worker-service:
     image: golang:1.24-bookworm
     working_dir: /workspace/src
@@ -84,8 +68,6 @@ services:
       - "8082:8082"
     depends_on:
       orchestrator-service:
-        condition: service_started
-      resource-service:
         condition: service_started
       system-service:
         condition: service_started

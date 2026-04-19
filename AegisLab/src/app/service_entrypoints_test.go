@@ -11,7 +11,6 @@ import (
 	"aegis/app"
 	gateway "aegis/app/gateway"
 	orchestrator "aegis/app/orchestrator"
-	resource "aegis/app/resource"
 	runtimeapp "aegis/app/runtime"
 	system "aegis/app/system"
 	buildkit "aegis/infra/buildkit"
@@ -25,7 +24,6 @@ import (
 	httpapi "aegis/interface/http"
 	receiverapi "aegis/interface/receiver"
 	workerapi "aegis/interface/worker"
-	resourcev1 "aegis/proto/resource/v1"
 	runtimev1 "aegis/proto/runtime/v1"
 	systemv1 "aegis/proto/system/v1"
 
@@ -186,36 +184,6 @@ func waitForRuntimePing(t *testing.T, addr string) {
 	}
 }
 
-func waitForResourcePing(t *testing.T, addr string) {
-	t.Helper()
-
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		t.Fatalf("create resource grpc client: %v", err)
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	client := resourcev1.NewResourceServiceClient(conn)
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		resp, err := client.Ping(context.Background(), &resourcev1.PingRequest{})
-		if err == nil && resp.GetService() != "" {
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	resp, err := client.Ping(context.Background(), &resourcev1.PingRequest{})
-	if err != nil {
-		t.Fatalf("resource grpc request failed: %v", err)
-	}
-	if resp.GetService() == "" {
-		t.Fatalf("resource ping missing service name: %+v", resp)
-	}
-}
-
 func waitForSystemPing(t *testing.T, addr string) {
 	t.Helper()
 
@@ -253,7 +221,6 @@ func TestDedicatedServiceOptionsValidate(t *testing.T) {
 	}{
 		{name: "gateway", option: gateway.Options("..", "0")},
 		{name: "runtime", option: runtimeapp.Options("..")},
-		{name: "resource", option: resource.Options("..")},
 		{name: "system", option: system.Options("..")},
 		{name: "orchestrator", option: orchestrator.Options("..")},
 	} {
@@ -270,7 +237,6 @@ func TestAPIGatewayStandaloneHTTPIntegrationSmoke(t *testing.T) {
 	defer cleanup()
 
 	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
-	setConfigValue(t, "clients.resource.target", reserveLoopbackAddr(t))
 	setConfigValue(t, "clients.system.target", reserveLoopbackAddr(t))
 
 	addr := reserveLoopbackAddr(t)
@@ -326,35 +292,6 @@ func TestRuntimeWorkerStandaloneGRPCIntegrationSmoke(t *testing.T) {
 	}()
 
 	waitForRuntimePing(t, addr)
-}
-
-func TestResourceServiceStandaloneGRPCIntegrationSmoke(t *testing.T) {
-	replacements, cleanup := newDedicatedServiceReplacements(t)
-	defer cleanup()
-
-	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
-	addr := reserveLoopbackAddr(t)
-	setConfigValue(t, "resource.grpc.addr", addr)
-
-	appInstance := fx.New(
-		resource.Options(".."),
-		replacements,
-	)
-
-	startCtx, startCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer startCancel()
-	if err := appInstance.Start(startCtx); err != nil {
-		t.Fatalf("resource app start failed: %v", err)
-	}
-	defer func() {
-		stopCtx, stopCancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer stopCancel()
-		if err := appInstance.Stop(stopCtx); err != nil {
-			t.Fatalf("resource app stop failed: %v", err)
-		}
-	}()
-
-	waitForResourcePing(t, addr)
 }
 
 func TestSystemServiceStandaloneGRPCIntegrationSmoke(t *testing.T) {

@@ -25,7 +25,7 @@ func newProjectService(t *testing.T) (*Service, sqlmock.Sqlmock, func()) {
 	require.NoError(t, err)
 
 	repo := NewRepository(db)
-	stats := newProjectStatisticsSource(projectStatisticsSourceParams{Repository: repo})
+	stats := newProjectStatisticsSource(repo)
 	return NewService(repo, stats), mock, func() {
 		_ = sqlDB.Close()
 	}

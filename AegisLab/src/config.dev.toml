@@ -63,9 +63,6 @@ address = "localhost:1234"
 [clients.orchestrator]
 target = "localhost:9092"
 
-[clients.resource]
-target = "localhost:9093"
-
 [clients.runtime]
 target = "localhost:9094"
 
@@ -74,9 +71,6 @@ target = "localhost:9095"
 
 [orchestrator.grpc]
 addr = ":9092"
-
-[resource.grpc]
-addr = ":9093"
 
 [runtime_worker.grpc]
 addr = ":9094"

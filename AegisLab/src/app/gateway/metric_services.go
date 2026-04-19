@@ -16,15 +16,14 @@ type metricOrchestratorClient interface {
 	GetExecutionMetrics(context.Context, *metric.GetMetricsReq) (*metric.ExecutionMetrics, error)
 }
 
-type metricResourceClient interface {
-	Enabled() bool
+type metricContainerLister interface {
 	ListContainers(context.Context, *container.ListContainerReq) (*dto.ListResp[container.ContainerResp], error)
 }
 
 type remoteAwareMetricService struct {
 	metric.HandlerService
 	orchestrator metricOrchestratorClient
-	resource     metricResourceClient
+	containerSvc metricContainerLister
 }
 
 func (s remoteAwareMetricService) GetInjectionMetrics(ctx context.Context, req *metric.GetMetricsReq) (*metric.InjectionMetrics, error) {
@@ -45,8 +44,8 @@ func (s remoteAwareMetricService) GetAlgorithmMetrics(ctx context.Context, req *
 	if s.orchestrator == nil || !s.orchestrator.Enabled() {
 		return nil, missingRemoteDependency("orchestrator-service")
 	}
-	if s.resource == nil || !s.resource.Enabled() {
-		return nil, missingRemoteDependency("resource-service")
+	if s.containerSvc == nil {
+		return nil, missingRemoteDependency("container-service")
 	}
 
 	algorithms, err := s.listAlgorithmContainers(ctx, req)
@@ -87,7 +86,7 @@ func (s remoteAwareMetricService) listAlgorithmContainers(ctx context.Context, r
 	items := make([]container.ContainerResp, 0)
 
 	for {
-		resp, err := s.resource.ListContainers(ctx, &container.ListContainerReq{
+		resp, err := s.containerSvc.ListContainers(ctx, &container.ListContainerReq{
 			PaginationReq: dto.PaginationReq{
 				Page: page,
 				Size: consts.PageSizeXLarge,
