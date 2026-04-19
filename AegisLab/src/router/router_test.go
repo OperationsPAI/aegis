@@ -65,6 +65,14 @@ func TestRouterSeparatesRouteGroups(t *testing.T) {
 				executions.GET("/labels", func(c *gin.Context) {})
 			},
 		},
+		framework.RouteRegistrar{
+			Audience: framework.AudiencePortal,
+			Name:     "test.project",
+			Register: func(v2 *gin.RouterGroup) {
+				projects := v2.Group("/projects")
+				projects.GET("/:project_id", func(c *gin.Context) {})
+			},
+		},
 	)
 	engine := NewForTest(&Handlers{}, nil, registrars...)
 	routes := engine.Routes()
