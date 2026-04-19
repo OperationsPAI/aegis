@@ -1,14 +1,19 @@
 package db
 
 import (
+	"aegis/framework"
 	"aegis/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-func migrate(db *gorm.DB) {
-	if err := db.AutoMigrate(
+// centralEntities is the Phase 3 coexistence list. Phase 4 PRs remove
+// entities from this slice as their owning module contributes a
+// `framework.MigrationRegistrar`. AutoMigrate is idempotent so overlap
+// during a transition PR is harmless.
+func centralEntities() []interface{} {
+	return []interface{}{
 		&model.Container{},
 		&model.ContainerVersion{},
 		&model.HelmConfig{},
@@ -16,7 +21,6 @@ func migrate(db *gorm.DB) {
 		&model.Dataset{},
 		&model.DatasetVersion{},
 		&model.Project{},
-		&model.Label{},
 		&model.User{},
 		&model.APIKey{},
 		&model.Role{},
@@ -49,7 +53,13 @@ func migrate(db *gorm.DB) {
 		&model.Evaluation{},
 		&model.System{},
 		&model.SystemMetadata{},
-	); err != nil {
+	}
+}
+
+func migrate(db *gorm.DB, contribs []framework.MigrationRegistrar) {
+	entities := centralEntities()
+	entities = append(entities, framework.FlattenMigrations(contribs)...)
+	if err := db.AutoMigrate(entities...); err != nil {
 		logrus.Fatalf("Failed to migrate database: %v", err)
 	}
 

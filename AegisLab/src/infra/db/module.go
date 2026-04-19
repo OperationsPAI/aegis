@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"aegis/framework"
+
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 	"gorm.io/driver/mysql"
@@ -18,11 +20,21 @@ var Module = fx.Module("db",
 	fx.Provide(NewGormDB),
 )
 
-func NewGormDB(lc fx.Lifecycle) *gorm.DB {
-	db := connectWithRetry(NewDatabaseConfig("mysql"))
-	migrate(db)
+// Params collects both the fx lifecycle and every module-provided
+// `framework.MigrationRegistrar`. Contributed entities are AutoMigrated
+// alongside the central list in migration.go::centralEntities.
+type Params struct {
+	fx.In
 
-	lc.Append(fx.Hook{
+	LC           fx.Lifecycle
+	Contribs     []framework.MigrationRegistrar `group:"migrations"`
+}
+
+func NewGormDB(p Params) *gorm.DB {
+	db := connectWithRetry(NewDatabaseConfig("mysql"))
+	migrate(db, p.Contribs)
+
+	p.LC.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
 			sqlDB, err := db.DB()
 			if err != nil {
