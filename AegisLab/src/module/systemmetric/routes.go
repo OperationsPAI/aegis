@@ -7,6 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RoutesAdmin contributes the real-time system metric endpoints to the
+// admin audience. These routes were introduced directly in the module as
+// part of the Phase 4 migration, so there is no remaining centralized
+// router block to delete for this module.
 func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudienceAdmin,
