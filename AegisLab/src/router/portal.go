@@ -113,19 +113,9 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		}
 	}
 
-	labels := v2.Group("/labels", middleware.JWTAuth())
-	{
-		labelRead := labels.Group("", middleware.RequireLabelRead)
-		{
-			labelRead.GET("/:label_id", handlers.Label.GetLabelDetail)
-			labelRead.GET("", handlers.Label.ListLabels)
-		}
-
-		labels.POST("", middleware.RequireLabelCreate, handlers.Label.CreateLabel)
-		labels.PATCH("/:label_id", middleware.RequireLabelUpdate, handlers.Label.UpdateLabel)
-		labels.DELETE("/:label_id", middleware.RequireLabelDelete, handlers.Label.DeleteLabel)
-		labels.POST("/batch-delete", middleware.RequireLabelDelete, handlers.Label.BatchDeleteLabels)
-	}
+	// /api/v2/labels routes moved to module/label/routes.go (Phase 3
+	// reference migration). The label module self-registers via
+	// framework.RouteRegistrar; see AegisLab/CONTRIBUTING.md.
 
 	evaluations := v2.Group("/evaluations", middleware.JWTAuth())
 	{

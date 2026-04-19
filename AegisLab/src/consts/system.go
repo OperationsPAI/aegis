@@ -417,11 +417,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		PermDatasetVersionDeleteAll,
 		PermDatasetVersionDownloadAll,
 
-		// Label management
-		PermLabelReadAll,
-		PermLabelCreateAll,
-		PermLabelUpdateAll,
-		PermLabelDeleteAll,
+		// Label management — moved to module/label/permissions.go (Phase 3
+		// reference migration). The rbac aggregator re-adds these to
+		// RoleAdmin at startup via framework.RoleGrantsRegistrar.
 
 		// Injection management
 		PermInjectionReadProject,
@@ -466,9 +464,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		// Dataset permissions
 		PermDatasetCreateOwn,
 
-		// Label permissions
-		PermLabelCreateOwn,
-		PermLabelReadAll,
+		// Label permissions — moved to module/label/permissions.go
+		// (Phase 3 reference migration). The rbac aggregator re-adds
+		// these to RoleUser at startup.
 	},
 
 	// Container Roles

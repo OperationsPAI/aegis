@@ -22,4 +22,7 @@ type RuntimeDeps struct {
 	FaultBatchManager    *FaultBatchManager
 	ExecutionOwner       ExecutionOwner
 	InjectionOwner       InjectionOwner
+	// TaskRegistry is the framework-aggregated dispatch table; nil in
+	// tests that don't exercise dispatchTask. See service/consumer.Module.
+	TaskRegistry *TaskRegistry
 }
