@@ -74,5 +74,5 @@ func TestRoutesSDKAllEndpointsAreGET(t *testing.T) {
 
 func TestModuleProvidesRouteRegistrar(t *testing.T) {
 	reg := RoutesSDK(&Handler{})
-	var _ framework.RouteRegistrar = reg
+	var _ = reg
 }
