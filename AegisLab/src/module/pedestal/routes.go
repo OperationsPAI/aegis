@@ -1,0 +1,28 @@
+package pedestal
+
+import (
+	"aegis/framework"
+	"aegis/middleware"
+
+	"github.com/gin-gonic/gin"
+)
+
+// Routes contributes the pedestal module's portal endpoints that were
+// previously registered centrally in router/portal.go.
+func Routes(handler *Handler) framework.RouteRegistrar {
+	return framework.RouteRegistrar{
+		Audience: framework.AudiencePortal,
+		Name:     "pedestal",
+		Register: func(v2 *gin.RouterGroup) {
+			pedestal := v2.Group("/pedestal", middleware.JWTAuth())
+			{
+				helm := pedestal.Group("/helm")
+				{
+					helm.GET("/:container_version_id", handler.GetPedestalHelmConfig)
+					helm.POST("/:container_version_id/verify", handler.VerifyPedestalHelmConfig)
+					helm.PUT("/:container_version_id", middleware.RequireContainerVersionUpload, handler.UpsertPedestalHelmConfig)
+				}
+			}
+		},
+	}
+}

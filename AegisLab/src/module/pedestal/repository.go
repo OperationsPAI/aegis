@@ -1,6 +1,7 @@
 package pedestal
 
 import (
+	"context"
 	"fmt"
 
 	"aegis/model"
@@ -18,9 +19,9 @@ func NewRepository(db *gorm.DB) *Repository {
 
 // GetHelmConfigByContainerVersionID returns the helm_configs row bound to the
 // given container version. Returns gorm.ErrRecordNotFound if absent.
-func (r *Repository) GetHelmConfigByContainerVersionID(versionID int) (*model.HelmConfig, error) {
+func (r *Repository) GetHelmConfigByContainerVersionID(ctx context.Context, versionID int) (*model.HelmConfig, error) {
 	var cfg model.HelmConfig
-	if err := r.db.Where("container_version_id = ?", versionID).First(&cfg).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("container_version_id = ?", versionID).First(&cfg).Error; err != nil {
 		return nil, err
 	}
 	return &cfg, nil
@@ -28,8 +29,8 @@ func (r *Repository) GetHelmConfigByContainerVersionID(versionID int) (*model.He
 
 // UpsertHelmConfig creates a new row if versionID has none, else updates
 // the existing row in place. Returns the (fresh) row.
-func (r *Repository) UpsertHelmConfig(versionID int, fields *model.HelmConfig) (*model.HelmConfig, error) {
-	existing, err := r.GetHelmConfigByContainerVersionID(versionID)
+func (r *Repository) UpsertHelmConfig(ctx context.Context, versionID int, fields *model.HelmConfig) (*model.HelmConfig, error) {
+	existing, err := r.GetHelmConfigByContainerVersionID(ctx, versionID)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("query existing helm config: %w", err)
 	}
@@ -40,13 +41,13 @@ func (r *Repository) UpsertHelmConfig(versionID int, fields *model.HelmConfig) (
 		existing.RepoName = fields.RepoName
 		existing.ValueFile = fields.ValueFile
 		existing.LocalPath = fields.LocalPath
-		if err := r.db.Save(existing).Error; err != nil {
+		if err := r.db.WithContext(ctx).Save(existing).Error; err != nil {
 			return nil, fmt.Errorf("update helm config: %w", err)
 		}
 		return existing, nil
 	}
 	fields.ContainerVersionID = versionID
-	if err := r.db.Create(fields).Error; err != nil {
+	if err := r.db.WithContext(ctx).Create(fields).Error; err != nil {
 		return nil, fmt.Errorf("create helm config: %w", err)
 	}
 	return fields, nil

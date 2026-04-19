@@ -14,12 +14,11 @@ import (
 )
 
 type Handler struct {
-	repo   *Repository
-	runner Runner
+	service HandlerService
 }
 
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo, runner: RealRunner{}}
+func NewHandler(service HandlerService) *Handler {
+	return &Handler{service: service}
 }
 
 // GetPedestalHelmConfig returns the helm_configs row for a given container_version_id.
@@ -47,7 +46,7 @@ func (h *Handler) GetPedestalHelmConfig(c *gin.Context) {
 		return
 	}
 
-	cfg, err := h.repo.GetHelmConfigByContainerVersionID(versionID)
+	cfg, err := h.service.GetHelmConfig(c.Request.Context(), versionID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			dto.ErrorResponse(c, http.StatusNotFound, "Helm config not found for container_version_id")
@@ -90,7 +89,7 @@ func (h *Handler) UpsertPedestalHelmConfig(c *gin.Context) {
 		return
 	}
 
-	fresh, err := h.repo.UpsertHelmConfig(versionID, &model.HelmConfig{
+	fresh, err := h.service.UpsertHelmConfig(c.Request.Context(), versionID, &model.HelmConfig{
 		ChartName: req.ChartName,
 		Version:   req.Version,
 		RepoURL:   req.RepoURL,
@@ -128,7 +127,7 @@ func (h *Handler) VerifyPedestalHelmConfig(c *gin.Context) {
 		return
 	}
 
-	cfg, err := h.repo.GetHelmConfigByContainerVersionID(versionID)
+	result, err := h.service.VerifyHelmConfig(c.Request.Context(), versionID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			dto.ErrorResponse(c, http.StatusNotFound, "Helm config not found for container_version_id")
@@ -137,14 +136,6 @@ func (h *Handler) VerifyPedestalHelmConfig(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to load helm config: "+err.Error())
 		return
 	}
-
-	result := Run(h.runner, Config{
-		ChartName: cfg.ChartName,
-		Version:   cfg.Version,
-		RepoURL:   cfg.RepoURL,
-		RepoName:  cfg.RepoName,
-		ValueFile: cfg.ValueFile,
-	}, VerifyValueFile)
 
 	resp := PedestalHelmVerifyResp{OK: result.OK, Checks: make([]PedestalHelmVerifyCheck, len(result.Checks))}
 	for i, chk := range result.Checks {

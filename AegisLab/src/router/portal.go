@@ -114,16 +114,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		tasks.POST("/:task_id/expedite", middleware.RequireTaskExecute, handlers.Task.ExpediteTask)
 	}
 
-	pedestal := v2.Group("/pedestal", middleware.JWTAuth())
-	{
-		helm := pedestal.Group("/helm")
-		{
-			helm.GET("/:container_version_id", handlers.Pedestal.GetPedestalHelmConfig)
-			helm.POST("/:container_version_id/verify", handlers.Pedestal.VerifyPedestalHelmConfig)
-			helm.PUT("/:container_version_id", middleware.RequireContainerVersionUpload, handlers.Pedestal.UpsertPedestalHelmConfig)
-		}
-	}
-
 	rateLimiters := v2.Group("/rate-limiters", middleware.JWTAuth())
 	{
 		rateLimiters.GET("", handlers.RateLimiter.ListRateLimiters)
