@@ -7,6 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RoutesPortal contributes the portal-only evaluation endpoint.
+// The route shape is preserved exactly from the central router wiring:
+// DELETE /api/v2/evaluations/:id
 func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
@@ -20,6 +23,9 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	}
 }
 
+// RoutesSDK contributes the SDK-consumable evaluation endpoints.
+// These handlers were already exposed on /api/v2/evaluations/* (not
+// /api/v2/sdk/*), so the self-registered route tree keeps that contract.
 func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudienceSDK,
