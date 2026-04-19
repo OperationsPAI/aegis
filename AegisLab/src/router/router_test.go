@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"aegis/framework"
-	user "aegis/module/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,7 +38,13 @@ func TestRouterRegistersModuleContributedRoutes(t *testing.T) {
 	engine := New(Params{
 		Handlers: &Handlers{},
 		Registrars: []framework.RouteRegistrar{
-			user.RoutesAdmin(&user.Handler{}),
+			{
+				Audience: framework.AudienceAdmin,
+				Name:     "test.user",
+				Register: func(v2 *gin.RouterGroup) {
+					v2.GET("/users", func(c *gin.Context) {})
+				},
+			},
 		},
 	})
 
