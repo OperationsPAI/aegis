@@ -180,13 +180,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		groups.GET("/:group_id/stream", handlers.Group.GetGroupStream)
 	}
 
-	traces := v2.Group("/traces", middleware.JWTAuth(), middleware.RequireTraceRead)
-	{
-		traces.GET("", handlers.Trace.ListTraces)
-		traces.GET("/:trace_id", handlers.Trace.GetTrace)
-		traces.GET("/:trace_id/stream", handlers.Trace.GetTraceStream)
-	}
-
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 	{
 		accessKeys.GET("", handlers.Auth.ListAPIKeys)
