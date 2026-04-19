@@ -8,4 +8,9 @@ var Module = fx.Module("evaluation",
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
+	fx.Provide(
+		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
+		fx.Annotate(RoutesSDK, fx.ResultTags(`group:"routes"`)),
+		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
+	),
 )

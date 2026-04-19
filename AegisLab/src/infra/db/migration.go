@@ -44,7 +44,8 @@ func centralEntities() []interface{} {
 		&model.UserTeam{},
 		&model.DynamicConfig{},
 		&model.ConfigHistory{},
-		&model.Evaluation{},
+		// &model.Evaluation{} migrated to module/evaluation/migrations.go
+		// (Phase 4).
 	}
 }
 }

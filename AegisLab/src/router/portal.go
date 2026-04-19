@@ -49,11 +49,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 	// reference migration). The label module self-registers via
 	// framework.RouteRegistrar; see AegisLab/CONTRIBUTING.md.
 
-	evaluations := v2.Group("/evaluations", middleware.JWTAuth())
-	{
-		evaluations.DELETE("/:id", handlers.Evaluation.DeleteEvaluation)
-	}
-
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 	{
 		accessKeys.GET("", handlers.Auth.ListAPIKeys)
