@@ -38,6 +38,7 @@ type Params struct {
 	BatchManager   *consumer.FaultBatchManager
 	ExecutionOwner consumer.ExecutionOwner
 	InjectionOwner consumer.InjectionOwner
+	TaskRegistry   *consumer.TaskRegistry
 }
 
 type Lifecycle struct {
@@ -86,6 +87,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		FaultBatchManager:    params.BatchManager,
 		ExecutionOwner:       params.ExecutionOwner,
 		InjectionOwner:       params.InjectionOwner,
+		TaskRegistry:         params.TaskRegistry,
 	})
 	return nil
 }

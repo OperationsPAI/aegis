@@ -12,6 +12,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// dispatchTask looks up the TaskExecutor for task.Type in the framework-
+// aggregated registry (deps.TaskRegistry) and delegates to it. The
+// pre-Phase-3 switch statement is gone; Phase 4 modules that own a
+// TaskType contribute their executor via fx-group `task_executors`.
+//
+// The 6 original executors still live in this package and are contributed
+// by consumer.BuiltinTaskExecutors (see module.go). The CronJob sentinel
+// is also registered there — see task_executors.go for rationale.
 func dispatchTask(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDeps) error {
 	defer func() {
 		if r := recover(); r != nil {
@@ -30,27 +38,14 @@ func dispatchTask(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDeps) 
 		Payload:   task,
 	})
 
-	var err error
-	switch task.Type {
-	case consts.TaskTypeBuildContainer:
-		err = executeBuildContainer(ctx, task, deps)
-	case consts.TaskTypeRestartPedestal:
-		err = executeRestartPedestal(ctx, task, deps)
-	case consts.TaskTypeFaultInjection:
-		err = executeFaultInjection(ctx, task, deps)
-	case consts.TaskTypeBuildDatapack:
-		err = executeBuildDatapackWithDeps(ctx, task, deps)
-	case consts.TaskTypeRunAlgorithm:
-		err = executeAlgorithm(ctx, task, deps)
-	case consts.TaskTypeCollectResult:
-		err = executeCollectResult(ctx, task, deps)
-	default:
-		err = fmt.Errorf("unknown task type: %d", task.Type)
+	if deps.TaskRegistry == nil {
+		return fmt.Errorf("task-dispatch: RuntimeDeps.TaskRegistry is nil — consumer.Module not wired")
 	}
 
-	if err != nil {
-		return err
+	executor, ok := deps.TaskRegistry.Lookup(task.Type)
+	if !ok {
+		return fmt.Errorf("unknown task type: %d", task.Type)
 	}
 
-	return nil
+	return executor(ctx, task, deps)
 }

@@ -31,6 +31,7 @@ func RuntimeWorkerStackOptions() fx.Option {
 		chaos.Module,
 		k8s.Module,
 		runtimeclient.Module,
+		consumer.Module,
 		fx.Provide(
 			consumer.NewMonitor,
 			fx.Annotate(consumer.NewRestartPedestalRateLimiter, fx.ResultTags(`name:"restart_limiter"`)),
