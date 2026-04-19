@@ -3,6 +3,7 @@ package router
 import (
 	"aegis/framework"
 	"aegis/middleware"
+	auth "aegis/module/auth"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -35,36 +36,27 @@ func testRegistrars() []framework.RouteRegistrar {
 }
 
 func TestRouterSeparatesRouteGroups(t *testing.T) {
-<<<<<<< HEAD
-	engine := NewForTest(&Handlers{}, nil, testRegistrars()...)
-=======
-	engine := New(Params{
-		Handlers: &Handlers{},
-		Registrars: []framework.RouteRegistrar{
-			{
-				Audience: framework.AudiencePortal,
-				Name:     "test.execution",
-				Register: func(v2 *gin.RouterGroup) {
-					executions := v2.Group("/executions")
-					executions.GET("/labels", func(c *gin.Context) {})
-				},
+	registrars := append(testRegistrars(),
+		auth.RoutesPublic(nil),
+		auth.RoutesSDK(nil),
+		auth.RoutesPortal(nil),
+		framework.RouteRegistrar{
+			Audience: framework.AudiencePortal,
+			Name:     "test.execution",
+			Register: func(v2 *gin.RouterGroup) {
+				executions := v2.Group("/executions")
+				executions.GET("/labels", func(c *gin.Context) {})
 			},
 		},
-	})
->>>>>>> 8a9a9f6 (phase-4: fix execution self-registration follow-ups for #49)
+	)
+	engine := NewForTest(&Handlers{}, nil, registrars...)
 	routes := engine.Routes()
 
 	requiredPrefixes := []string{
 		"/api/v2/auth",
 		"/api/v2/projects",
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 		"/api/v2/executions",
->>>>>>> 8a9a9f6 (phase-4: fix execution self-registration follow-ups for #49)
 		"/api/v2/sdk",
->>>>>>> bf2217f (phase-4: migrate module/execution to self-registration (#49))
 		"/api/v2/system/audit",
 		"/api/v2/system/configs",
 		"/api/v2/system/monitor",

@@ -19,9 +19,14 @@ func centralEntities() []interface{} {
 		// the same way -- remove from this slice, add a
 		// framework.MigrationRegistrar in the owning module.
 		// &model.User{} migrated to module/user/migrations.go (Phase 4).
+<<<<<<< HEAD
 		// &model.APIKey{} stays here until module/auth Phase-4 PR (issue #39)
 		// claims it -- it's owned by auth, not user.
 		&model.APIKey{},
+=======
+		// &model.APIKey{} migrated to module/auth/migrations.go (Phase 4,
+		// issue #39).
+>>>>>>> 3089ac2 (phase-4: migrate module/auth to self-registration (#39))
 		&model.AuditLog{},
 		// &model.Task{} migrated to module/task/migrations.go (Phase 4).
 		// &model.FaultInjection{} migrated to module/injection/migrations.go
