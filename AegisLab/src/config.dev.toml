@@ -60,9 +60,6 @@ experiment_storage_path = "/mnt/jfs/experiment_storage"
 [buildkit]
 address = "localhost:1234"
 
-[clients.iam]
-target = "localhost:9091"
-
 [clients.orchestrator]
 target = "localhost:9092"
 
@@ -74,9 +71,6 @@ target = "localhost:9094"
 
 [clients.system]
 target = "localhost:9095"
-
-[iam.grpc]
-addr = ":9091"
 
 [orchestrator.grpc]
 addr = ":9092"

@@ -4,12 +4,9 @@ import (
 	"aegis/app"
 	chaos "aegis/infra/chaos"
 	k8s "aegis/infra/k8s"
-	"aegis/internalclient/iamclient"
 	"aegis/internalclient/orchestratorclient"
 	"aegis/internalclient/resourceclient"
 	"aegis/internalclient/systemclient"
-	"aegis/middleware"
-	auth "aegis/module/auth"
 	chaossystem "aegis/module/chaossystem"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
@@ -21,13 +18,10 @@ import (
 	metric "aegis/module/metric"
 	notification "aegis/module/notification"
 	project "aegis/module/project"
-	rbac "aegis/module/rbac"
 	system "aegis/module/system"
 	systemmetric "aegis/module/systemmetric"
 	task "aegis/module/task"
-	team "aegis/module/team"
 	trace "aegis/module/trace"
-	user "aegis/module/user"
 
 	"go.uber.org/fx"
 )
@@ -45,45 +39,13 @@ func Options(confPath, port string) fx.Option {
 		app.ProducerHTTPOptions(port),
 		app.RequireConfiguredTargets(
 			"api-gateway",
-			app.RequiredConfigTarget{Name: "iam-service", PrimaryKey: "clients.iam.target", LegacyKey: "iam.grpc.target"},
 			app.RequiredConfigTarget{Name: "orchestrator-service", PrimaryKey: "clients.orchestrator.target", LegacyKey: "orchestrator.grpc.target"},
 			app.RequiredConfigTarget{Name: "resource-service", PrimaryKey: "clients.resource.target", LegacyKey: "resource.grpc.target"},
 			app.RequiredConfigTarget{Name: "system-service", PrimaryKey: "clients.system.target", LegacyKey: "system.grpc.target"},
 		),
-		iamclient.Module,
 		orchestratorclient.Module,
 		resourceclient.Module,
 		systemclient.Module,
-		fx.Decorate(func(local auth.HandlerService, remote *iamclient.Client) auth.HandlerService {
-			return remoteAwareAuthService{
-				HandlerService: local,
-				iam:            remote,
-			}
-		}),
-		fx.Decorate(func(local middleware.Service, remote *iamclient.Client) middleware.Service {
-			return remoteAwareMiddlewareService{
-				base: local,
-				iam:  remote,
-			}
-		}),
-		fx.Decorate(func(local user.HandlerService, remote *iamclient.Client) user.HandlerService {
-			return remoteAwareUserService{
-				HandlerService: local,
-				iam:            remote,
-			}
-		}),
-		fx.Decorate(func(local rbac.HandlerService, remote *iamclient.Client) rbac.HandlerService {
-			return remoteAwareRBACService{
-				HandlerService: local,
-				iam:            remote,
-			}
-		}),
-		fx.Decorate(func(local team.HandlerService, remote *iamclient.Client) team.HandlerService {
-			return remoteAwareTeamService{
-				HandlerService: local,
-				iam:            remote,
-			}
-		}),
 		fx.Decorate(func(local execution.HandlerService, remote *orchestratorclient.Client) execution.HandlerService {
 			return remoteAwareExecutionService{
 				HandlerService: local,

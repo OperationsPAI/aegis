@@ -1,21 +1,5 @@
 name: aegislab-microservices
 services:
-  iam-service:
-    image: golang:1.24-bookworm
-    working_dir: /workspace/src
-    command: ["go", "run", "./cmd/iam-service", "-conf", "/workspace/src/config.dev.toml"]
-    volumes:
-      - ./:/workspace
-    environment:
-      GOPROXY: https://proxy.golang.org,direct
-    ports:
-      - "9091:9091"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
-
   orchestrator-service:
     image: golang:1.24-bookworm
     working_dir: /workspace/src
@@ -99,8 +83,6 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      iam-service:
-        condition: service_started
       orchestrator-service:
         condition: service_started
       resource-service:

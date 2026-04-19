@@ -22,7 +22,6 @@ import (
 
 	"aegis/app"
 	gateway "aegis/app/gateway"
-	iam "aegis/app/iam"
 	orchestrator "aegis/app/orchestrator"
 	resource "aegis/app/resource"
 	runtimeapp "aegis/app/runtime"
@@ -51,7 +50,7 @@ func main() {
 		Use:   "rcabench",
 		Short: "RCA Bench is a benchmarking tool",
 		Run: func(cmd *cobra.Command, args []string) {
-			logrus.Println("Please specify a mode: producer, consumer, both, api-gateway, iam-service, orchestrator-service, resource-service, runtime-worker-service, or system-service")
+			logrus.Println("Please specify a mode: producer, consumer, both, api-gateway, orchestrator-service, resource-service, runtime-worker-service, or system-service")
 		},
 	}
 
@@ -77,9 +76,6 @@ func main() {
 	apiGatewayCmd := newModeCommand("api-gateway", "Run as the API gateway", func() {
 		fx.New(gateway.Options(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
-	iamServiceCmd := newModeCommand("iam-service", "Run as the IAM service", func() {
-		fx.New(iam.Options(viper.GetString("conf"))).Run()
-	})
 	orchestratorServiceCmd := newModeCommand("orchestrator-service", "Run as the orchestrator service", func() {
 		fx.New(orchestrator.Options(viper.GetString("conf"))).Run()
 	})
@@ -98,7 +94,6 @@ func main() {
 		consumerCmd,
 		bothCmd,
 		apiGatewayCmd,
-		iamServiceCmd,
 		orchestratorServiceCmd,
 		resourceServiceCmd,
 		runtimeWorkerServiceCmd,

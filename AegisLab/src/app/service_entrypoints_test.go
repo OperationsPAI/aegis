@@ -10,7 +10,6 @@ import (
 
 	"aegis/app"
 	gateway "aegis/app/gateway"
-	iam "aegis/app/iam"
 	orchestrator "aegis/app/orchestrator"
 	resource "aegis/app/resource"
 	runtimeapp "aegis/app/runtime"
@@ -256,7 +255,6 @@ func TestDedicatedServiceOptionsValidate(t *testing.T) {
 		{name: "runtime", option: runtimeapp.Options("..")},
 		{name: "resource", option: resource.Options("..")},
 		{name: "system", option: system.Options("..")},
-		{name: "iam", option: iam.Options("..")},
 		{name: "orchestrator", option: orchestrator.Options("..")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -271,7 +269,6 @@ func TestAPIGatewayStandaloneHTTPIntegrationSmoke(t *testing.T) {
 	replacements, cleanup := newDedicatedServiceReplacements(t)
 	defer cleanup()
 
-	setConfigValue(t, "clients.iam.target", reserveLoopbackAddr(t))
 	setConfigValue(t, "clients.orchestrator.target", reserveLoopbackAddr(t))
 	setConfigValue(t, "clients.resource.target", reserveLoopbackAddr(t))
 	setConfigValue(t, "clients.system.target", reserveLoopbackAddr(t))
