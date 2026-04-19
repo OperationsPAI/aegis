@@ -69,8 +69,8 @@ func New(params Params) *gin.Engine {
 	return router
 }
 
-// NewForTest constructs a gin.Engine directly without fx, preserving the
-// pre-Phase-3 signature so existing router_test.go cases keep working.
+// NewForTest constructs a gin.Engine directly without fx and allows tests
+// to inject optional self-registered routes via framework.RouteRegistrar.
 func NewForTest(handlers *Handlers, middlewareService middleware.Service, registrars ...framework.RouteRegistrar) *gin.Engine {
 	return New(Params{
 		Handlers:   handlers,
