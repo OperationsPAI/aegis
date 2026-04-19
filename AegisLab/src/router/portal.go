@@ -7,44 +7,6 @@ import (
 )
 
 func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
-	containers := v2.Group("/containers", middleware.JWTAuth())
-	{
-		containerRead := containers.Group("", middleware.RequireContainerRead)
-		{
-			containerRead.GET("", handlers.Container.ListContainers)
-			containerRead.GET("/:container_id", handlers.Container.GetContainer)
-		}
-
-		containers.POST("", middleware.RequireContainerCreate, handlers.Container.CreateContainer)
-		containers.PATCH("/:container_id", middleware.RequireContainerUpdate, handlers.Container.UpdateContainer)
-		containers.PATCH("/:container_id/labels", middleware.RequireContainerUpdate, handlers.Container.ManageContainerCustomLabels)
-		containers.DELETE("/:container_id", middleware.RequireContainerDelete, handlers.Container.DeleteContainer)
-		containers.POST("/build", middleware.RequireContainerExecute, handlers.Container.SubmitContainerBuilding)
-
-		containerVersions := containers.Group("/:container_id/versions")
-		{
-			containerVersionRead := containerVersions.Group("", middleware.RequireContainerVersionRead)
-			{
-				containerVersionRead.GET("", handlers.Container.ListContainerVersions)
-				containerVersionRead.GET("/:version_id", handlers.Container.GetContainerVersion)
-			}
-
-			containerVersions.POST("", middleware.RequireContainerVersionCreate, handlers.Container.CreateContainerVersion)
-			containerVersions.PATCH("/:version_id", middleware.RequireContainerVersionUpdate, handlers.Container.UpdateContainerVersion)
-			containerVersions.DELETE("/:version_id", middleware.RequireContainerVersionDelete, handlers.Container.DeleteContainerVersion)
-			containerVersions.POST("/:version_id/helm-chart", middleware.RequireContainerVersionUpload, handlers.Container.UploadHelmChart)
-			containerVersions.POST("/:version_id/helm-values", middleware.RequireContainerVersionUpload, handlers.Container.UploadHelmValueFile)
-		}
-	}
-
-	// Flat container-versions group — operations keyed by version id alone
-	// (no parent container id in the URL). Used by `aegisctl container version
-	// set-image` to rewrite image reference columns.
-	flatContainerVersions := v2.Group("/container-versions", middleware.JWTAuth())
-	{
-		flatContainerVersions.PATCH("/:id/image", middleware.RequireContainerVersionUpdate, handlers.Container.SetContainerVersionImage)
-	}
-
 	datasets := v2.Group("/datasets", middleware.JWTAuth())
 	{
 		datasetRead := datasets.Group("", middleware.RequireDatasetRead)

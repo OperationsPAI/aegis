@@ -373,18 +373,7 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		// aggregator re-adds these to RoleAdmin at startup via
 		// framework.RoleGrantsRegistrar.
 
-		// Container management
-		PermContainerReadAll,
-		PermContainerCreateAll,
-		PermContainerUpdateAll,
-		PermContainerDeleteAll,
-		PermContainerManageAll,
-		PermContainerExecuteAll,
-		PermContainerVersionReadAll,
-		PermContainerVersionCreateAll,
-		PermContainerVersionUpdateAll,
-		PermContainerVersionDeleteAll,
-		PermContainerVersionUploadAll,
+		// Container management moved to module/container/permissions.go.
 
 		// Dataset management
 		PermDatasetReadAll,
@@ -435,8 +424,7 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	// Regular User Role - basic role with minimal permissions
 	// Users can read team resources if they are team members
 	RoleUser: {
-		// Container permissions
-		PermContainerCreateOwn,
+		// Container permissions moved to module/container/permissions.go.
 
 		// Dataset permissions
 		PermDatasetCreateOwn,
@@ -447,34 +435,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 	},
 
 	// Container Roles
-	RoleContainerAdmin: {
-		PermContainerReadAll,
-		PermContainerCreateAll,
-		PermContainerUpdateAll,
-		PermContainerDeleteAll,
-		PermContainerManageAll,
-		PermContainerExecuteAll,
-		PermContainerVersionReadAll,
-		PermContainerVersionCreateAll,
-		PermContainerVersionUpdateAll,
-		PermContainerVersionDeleteAll,
-		PermContainerVersionManageAll,
-		PermContainerVersionUploadAll,
-	},
-	RoleContainerDeveloper: {
-		PermContainerReadTeam,
-		PermContainerCreateTeam,
-		PermContainerUpdateTeam,
-		PermContainerExecuteTeam,
-		PermContainerVersionReadTeam,
-		PermContainerVersionCreateTeam,
-		PermContainerVersionUpdateTeam,
-		PermContainerVersionUploadTeam,
-	},
-	RoleContainerViewer: {
-		PermContainerReadAll,
-		PermContainerVersionReadAll,
-	},
+	RoleContainerAdmin:     {},
+	RoleContainerDeveloper: {},
+	RoleContainerViewer:    {},
 
 	// Dataset Roles
 	RoleDatasetAdmin: {
