@@ -39,7 +39,6 @@ const (
 	DeadLetterKey      = "task:dead"             // Sorted set for failed tasks
 	TaskIndexKey       = "task:index"            // Hash mapping task IDs to their queue
 	ConcurrencyLockKey = "task:concurrency_lock" // Counter for concurrency control
-	LastBatchInfoKey   = "last_batch_info"       // Key for batch processing information
 	MaxConcurrency     = 20                      // Maximum concurrent tasks
 )
 

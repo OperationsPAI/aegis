@@ -474,10 +474,6 @@ func (s *Service) GetInjection(_ context.Context, id int) (*InjectionDetailResp,
 	return NewInjectionDetailResp(injection), nil
 }
 
-func (s *Service) GetMetadata(_ context.Context) (*InjectionMetadataResp, error) {
-	return nil, nil
-}
-
 func (s *Service) ManageLabels(_ context.Context, req *ManageInjectionLabelReq, id int) (*InjectionResp, error) {
 	var managedInjection *model.FaultInjection
 	err := s.repo.db.Transaction(func(tx *gorm.DB) error {

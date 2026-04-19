@@ -624,17 +624,6 @@ func NewInjectionDetailResp(injection *model.FaultInjection) *InjectionDetailRes
 	return resp
 }
 
-// InjectionMetadataResp represents the metadata response for injections
-type InjectionMetadataResp struct {
-	Config                 *chaos.Node                           `json:"config"`
-	FaultTypeMap           map[chaos.ChaosType]string            `json:"fault_type_map"`
-	FaultResourceMap       map[string]chaos.ChaosResourceMapping `json:"fault_resource_map"`
-	SystemResource         chaos.SystemResource                  `json:"ns_resources"`
-	SystemMap              map[string]int                        `json:"system_map"`
-	FaultTypeReverseMap    map[string]int                        `json:"fault_type_reverse_map"`
-	FaultFieldDescriptions map[string][]utils.FieldDescription   `json:"fault_field_descriptions"`
-}
-
 // SystemDetail represents a named system with its index.
 type SystemDetail struct {
 	Name  string `json:"name"`
@@ -645,26 +634,6 @@ type SystemDetail struct {
 type SystemMappingResp struct {
 	Systems       map[string]int `json:"systems"`
 	SystemDetails []SystemDetail `json:"system_details"`
-}
-
-// FaultSpecInput represents a human-readable fault specification for translation.
-type FaultSpecInput struct {
-	Type      string         `json:"type"`
-	Namespace string         `json:"namespace"`
-	Target    string         `json:"target"`
-	Duration  string         `json:"duration"`
-	Extra     map[string]any `json:"extra,omitempty"`
-}
-
-// TranslateFaultSpecsReq is the request body for the translate endpoint.
-type TranslateFaultSpecsReq struct {
-	Specs [][]FaultSpecInput `json:"specs" binding:"required"`
-}
-
-// TranslateFaultSpecsResp is the response for the translate endpoint.
-type TranslateFaultSpecsResp struct {
-	Nodes    [][]chaos.Node `json:"nodes"`
-	Warnings []string       `json:"warnings"`
 }
 
 type SubmitInjectionItem struct {
