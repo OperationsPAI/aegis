@@ -14,10 +14,6 @@ import (
 // during a transition PR is harmless.
 func centralEntities() []interface{} {
 	return []interface{}{
-		&model.Container{},
-		&model.ContainerVersion{},
-		&model.HelmConfig{},
-		&model.ParameterConfig{},
 		&model.Dataset{},
 		&model.DatasetVersion{},
 		&model.Project{},
@@ -25,24 +21,22 @@ func centralEntities() []interface{} {
 		// reference migration). Future Phase 4 PRs drop their entities
 		// the same way — remove from this slice, add a
 		// framework.MigrationRegistrar in the owning module.
-		// &model.User{} and &model.APIKey{} migrated to
-		// module/user/migrations.go (Phase 4).
+		// &model.User{} migrated to module/user/migrations.go (Phase 4).
+		// &model.APIKey{} stays here until module/auth Phase-4 PR (issue #39)
+		// claims it — it's owned by auth, not user.
+		&model.APIKey{},
 		&model.AuditLog{},
 		&model.Task{},
 		&model.FaultInjection{},
 		&model.Execution{},
 		&model.DetectorResult{},
 		&model.GranularityResult{},
-		&model.ContainerLabel{},
 		&model.DatasetLabel{},
 		&model.ProjectLabel{},
-		&model.ContainerVersionEnvVar{},
-		&model.HelmConfigValue{},
 		&model.DatasetVersionInjection{},
 		&model.FaultInjectionLabel{},
 		&model.ExecutionInjectionLabel{},
 		&model.ConfigLabel{},
-		&model.UserContainer{},
 		&model.UserDataset{},
 		&model.UserProject{},
 		&model.UserRole{},
