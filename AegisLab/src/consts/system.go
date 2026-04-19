@@ -365,12 +365,13 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		// aggregator re-adds these to RoleAdmin at startup via
 		// framework.RoleGrantsRegistrar.
 
-		// Team management
-		PermTeamReadAll,
-		PermTeamCreateAll,
-		PermTeamUpdateAll,
-		PermTeamDeleteAll,
-		PermTeamManageAll,
+		// Team management moved to module/team/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
+
+		// Project management moved to module/project/permissions.go. The rbac
+		// aggregator re-adds these to RoleAdmin at startup via
+		// framework.RoleGrantsRegistrar.
 
 		// Container management
 		PermContainerReadAll,
@@ -504,19 +505,9 @@ var SystemRolePermissions = map[RoleName][]PermissionRule{
 		PermDatasetVersionDownloadAll,
 	},
 
-	// Team Roles
-	RoleTeamAdmin: {
-		PermTeamReadAll,
-		PermTeamCreateAll,
-		PermTeamUpdateAll,
-		PermTeamDeleteAll,
-		PermTeamManageAll,
-	},
-	RoleTeamMember: {
-		PermTeamReadTeam,
-		PermTeamUpdateTeam,
-	},
-	RoleTeamViewer: {
-		PermTeamReadTeam,
-	},
+	// Team Roles moved to module/team/permissions.go. The rbac
+	// aggregator re-adds these at startup via framework.RoleGrantsRegistrar.
+
+	// Project Roles moved to module/project/permissions.go. The rbac
+	// aggregator re-adds these at startup via framework.RoleGrantsRegistrar.
 }
