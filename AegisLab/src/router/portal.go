@@ -70,19 +70,6 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		injections.PUT("/:id/groundtruth", handlers.Injection.UpdateGroundtruth)
 	}
 
-	tasks := v2.Group("/tasks", middleware.JWTAuth())
-	{
-		taskRead := tasks.Group("", middleware.RequireTaskRead)
-		{
-			taskRead.GET("", handlers.Task.ListTasks)
-			taskRead.GET("/:task_id", handlers.Task.GetTask)
-			taskRead.GET("/:task_id/logs/ws", handlers.Task.GetTaskLogsWS)
-		}
-
-		tasks.POST("/batch-delete", middleware.RequireTaskDelete, handlers.Task.BatchDelete)
-		tasks.POST("/:task_id/expedite", middleware.RequireTaskExecute, handlers.Task.ExpediteTask)
-	}
-
 
 
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
