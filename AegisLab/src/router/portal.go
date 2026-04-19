@@ -83,15 +83,7 @@ func SetupPortalV2Routes(v2 *gin.RouterGroup, handlers *Handlers) {
 		tasks.POST("/:task_id/expedite", middleware.RequireTaskExecute, handlers.Task.ExpediteTask)
 	}
 
-	rateLimiters := v2.Group("/rate-limiters", middleware.JWTAuth())
-	{
-		rateLimiters.GET("", handlers.RateLimiter.ListRateLimiters)
-		rateLimiterAdmin := rateLimiters.Group("", middleware.RequireSystemAdmin())
-		{
-			rateLimiterAdmin.DELETE("/:bucket", handlers.RateLimiter.ResetRateLimiter)
-			rateLimiterAdmin.POST("/gc", handlers.RateLimiter.GCRateLimiters)
-		}
-	}
+
 
 	accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 	{
