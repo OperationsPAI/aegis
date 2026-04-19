@@ -16,7 +16,6 @@ import (
 	sdk "aegis/module/sdk"
 	system "aegis/module/system"
 	task "aegis/module/task"
-	team "aegis/module/team"
 )
 
 type Handlers struct {
@@ -34,7 +33,6 @@ type Handlers struct {
 	System      *system.Handler
 	Pedestal    *pedestal.Handler
 	RateLimiter *ratelimiter.Handler
-	Team        *team.Handler
 	Label       *label.Handler
 }
 
@@ -53,7 +51,6 @@ func NewHandlers(
 	system *system.Handler,
 	pedestal *pedestal.Handler,
 	rateLimiter *ratelimiter.Handler,
-	team *team.Handler,
 	label *label.Handler,
 ) *Handlers {
 	return &Handlers{
@@ -71,7 +68,6 @@ func NewHandlers(
 		System:      system,
 		Pedestal:    pedestal,
 		RateLimiter: rateLimiter,
-		Team:        team,
 		Label:       label,
 	}
 }
