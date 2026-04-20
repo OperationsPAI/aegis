@@ -131,8 +131,16 @@ func runCLI(t *testing.T, args ...string) cliRunResult {
 		}
 	}
 
-	stdoutR, stdoutW, _ := os.Pipe()
-	stderrR, stderrW, _ := os.Pipe()
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("stdout pipe: %v", err)
+	}
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		_ = stdoutR.Close()
+		_ = stdoutW.Close()
+		t.Fatalf("stderr pipe: %v", err)
+	}
 	os.Stdout = stdoutW
 	os.Stderr = stderrW
 
@@ -140,8 +148,16 @@ func runCLI(t *testing.T, args ...string) cliRunResult {
 
 	_ = stdoutW.Close()
 	_ = stderrW.Close()
-	stdoutBytes, _ := io.ReadAll(stdoutR)
-	stderrBytes, _ := io.ReadAll(stderrR)
+	stdoutBytes, err := io.ReadAll(stdoutR)
+	if err != nil {
+		t.Fatalf("read stdout: %v", err)
+	}
+	stderrBytes, err := io.ReadAll(stderrR)
+	if err != nil {
+		t.Fatalf("read stderr: %v", err)
+	}
+	_ = stdoutR.Close()
+	_ = stderrR.Close()
 
 	os.Stdout = oldStdout
 	os.Stderr = oldStderr

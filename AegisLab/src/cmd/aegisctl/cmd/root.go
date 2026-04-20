@@ -150,7 +150,7 @@ NAMING CONVENTION:
 			flagRequestTimeout = 30
 		}
 
-		if !flagNonInteractive {
+		if !cmd.Flags().Lookup("non-interactive").Changed {
 			if v := os.Getenv("AEGIS_NON_INTERACTIVE"); v != "" {
 				if b, err := strconv.ParseBool(v); err == nil {
 					flagNonInteractive = b

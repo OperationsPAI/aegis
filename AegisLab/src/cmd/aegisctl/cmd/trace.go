@@ -177,7 +177,7 @@ var traceGetCmd = &cobra.Command{
 var traceWatchCmd = &cobra.Command{
 	Use:   "watch <trace-id>",
 	Short: "Watch trace events via SSE stream",
-	Args:  exactArgs(1, "trace get <trace-id>"),
+	Args:  exactArgs(1, "trace watch <trace-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		traceID := args[0]
 		ssePath := fmt.Sprintf("/api/v2/traces/%s/stream", traceID)
