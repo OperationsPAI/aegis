@@ -69,12 +69,12 @@ var (
 
 	// --apply envelope flags: mirror `inject submit` spec YAML so a finished
 	// guided session can be shipped to /inject with a single invocation.
-	guidedApplyPedestalName    string
-	guidedApplyPedestalTag     string
-	guidedApplyBenchmarkName   string
-	guidedApplyBenchmarkTag    string
-	guidedApplyInterval        int
-	guidedApplyPreDuration     int
+	guidedApplyPedestalName  string
+	guidedApplyPedestalTag   string
+	guidedApplyBenchmarkName string
+	guidedApplyBenchmarkTag  string
+	guidedApplyInterval      int
+	guidedApplyPreDuration   int
 )
 
 // injectGuidedCmd is the AegisLab-aware wrapper around the chaos-experiment
@@ -289,14 +289,12 @@ func init() {
 
 // submitGuidedApply wraps a finalized GuidedConfig in the SubmitInjectionReq
 // envelope expected by POST /api/v2/projects/{id}/injections/inject and
-// forwards it. The backend (dto.SubmitInjectionReq.ResolveSpecs, three-way
-// dispatch) detects the top-level "chaos_type" key and routes the entry
-// through pkg/guidedcli without touching the legacy chaos.Node DSL.
+// forwards it through the guided-only backend path.
 func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	// Validate required envelope flags up front so the user gets a clear
 	// message instead of a 400 from the backend.
-	if guidedApplyPedestalName == "" || guidedApplyBenchmarkName == "" {
-		return fmt.Errorf("--apply requires --pedestal-name and --benchmark-name")
+	if guidedApplyPedestalName == "" || guidedApplyPedestalTag == "" || guidedApplyBenchmarkName == "" || guidedApplyBenchmarkTag == "" {
+		return fmt.Errorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
 	}
 	if guidedApplyInterval <= 0 || guidedApplyPreDuration <= 0 {
 		return fmt.Errorf("--apply requires --interval and --pre-duration (positive minutes)")
@@ -310,13 +308,6 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 		return err
 	}
 
-	// Marshal the guided config as the single spec element. The handler
-	// auto-detects chaos_type and unmarshals back into guidedcli.GuidedConfig.
-	rawCfg, err := json.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("marshal guided config: %w", err)
-	}
-
 	envelope := map[string]any{
 		"pedestal": map[string]any{
 			"name":    guidedApplyPedestalName,
@@ -328,7 +319,7 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 		},
 		"interval":     guidedApplyInterval,
 		"pre_duration": guidedApplyPreDuration,
-		"specs":        [][]json.RawMessage{{json.RawMessage(rawCfg)}},
+		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
 	}
 
 	c := newClient()

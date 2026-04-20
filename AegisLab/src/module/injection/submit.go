@@ -1,16 +1,13 @@
 package injection
 
 import (
-	"aegis/consts"
 	"aegis/dto"
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 )
@@ -18,81 +15,8 @@ import (
 type injectionProcessItem struct {
 	index         int
 	faultDuration int
-	nodes         []chaos.Node // legacy Node-DSL batch
-	// guidedConfigs is populated when the submission came through the guided
-	// CLI path. Mutually exclusive with nodes: exactly one is set per item.
 	guidedConfigs []guidedcli.GuidedConfig
 	executeTime   time.Time
-}
-
-func parseBatchInjectionSpecs(pedestal string, batchIndex int, specs []chaos.Node) (*injectionProcessItem, string, error) {
-	if len(specs) == 0 {
-		return nil, "", fmt.Errorf("empty fault injection batch at index %d", batchIndex)
-	}
-
-	maxDuration := 0
-	nodes := make([]chaos.Node, 0, len(specs))
-	for idx, spec := range specs {
-		childNode, exists := spec.Children[strconv.Itoa(spec.Value)]
-		if !exists {
-			return nil, "", fmt.Errorf("failed to find key %d in the children at index %d", spec.Value, idx)
-		}
-		if len(childNode.Children) < 3 {
-			return nil, "", fmt.Errorf("no child nodes found for fault spec at index %d", idx)
-		}
-
-		faultDuration := childNode.Children[consts.DurationNodeKey].Value
-		if faultDuration > maxDuration {
-			maxDuration = faultDuration
-		}
-
-		systemIdx := childNode.Children[consts.SystemNodeKey].Value
-		system := chaos.GetAllSystemTypes()[systemIdx]
-		if pedestal != system.String() {
-			return nil, "", fmt.Errorf("mismatched system type %s for pedestal %s at index %d", system.String(), pedestal, idx)
-		}
-
-		nodes = append(nodes, spec)
-	}
-
-	uniqueServices := make(map[string]int, len(nodes))
-	var duplicateServiceWarnings []string
-	ctx := context.Background()
-	for idx, node := range nodes {
-		conf, err := chaos.NodeToStruct[chaos.InjectionConf](ctx, &node)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to convert node to InjectionConf at index %d: %w", idx, err)
-		}
-
-		groundtruth, err := conf.GetGroundtruth(ctx)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to get groundtruth from InjectionConf at index %d: %w", idx, err)
-		}
-
-		for _, service := range groundtruth.Service {
-			if service == "" {
-				continue
-			}
-			if oldIdx, exists := uniqueServices[service]; exists {
-				duplicateServiceWarnings = append(duplicateServiceWarnings, fmt.Sprintf("service '%s' at positions %d and %d", service, oldIdx, idx))
-				continue
-			}
-			uniqueServices[service] = idx
-		}
-	}
-
-	nodes = sortNodes(nodes)
-
-	var warning string
-	if len(duplicateServiceWarnings) > 0 {
-		warning = fmt.Sprintf("Batch %d contains duplicate service injections: %s", batchIndex, strings.Join(duplicateServiceWarnings, "; "))
-	}
-
-	return &injectionProcessItem{
-		index:         batchIndex,
-		faultDuration: maxDuration,
-		nodes:         nodes,
-	}, warning, nil
 }
 
 func flattenYAMLToParameters(data map[string]any, prefix string) []dto.ParameterSpec {
@@ -123,17 +47,11 @@ func flattenYAMLToParameters(data map[string]any, prefix string) []dto.Parameter
 func (s *Service) removeDuplicated(items []injectionProcessItem) ([]injectionProcessItem, []int, []int, error) {
 	engineConfigStrs := make([]string, len(items))
 	for i, item := range items {
-		var payload any
-		switch {
-		case len(item.guidedConfigs) > 0:
-			payload = item.guidedConfigs
-		case len(item.nodes) > 0:
-			payload = item.nodes
-		default:
+		if len(item.guidedConfigs) == 0 {
 			continue
 		}
 
-		b, err := json.Marshal(payload)
+		b, err := json.Marshal(item.guidedConfigs)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to marshal engine config at batch index %d: %w", i, err)
 		}
@@ -189,31 +107,6 @@ func (s *Service) removeDuplicated(items []injectionProcessItem) ([]injectionPro
 	}
 
 	return out, duplicatedInRequest, alreadyExisted, nil
-}
-
-func sortNodes(nodes []chaos.Node) []chaos.Node {
-	if len(nodes) <= 1 {
-		return nodes
-	}
-
-	sortedNodes := make([]chaos.Node, len(nodes))
-	copy(sortedNodes, nodes)
-	for i := 0; i < len(sortedNodes)-1; i++ {
-		for j := i + 1; j < len(sortedNodes); j++ {
-			if sortedNodes[i].Value > sortedNodes[j].Value {
-				sortedNodes[i], sortedNodes[j] = sortedNodes[j], sortedNodes[i]
-				continue
-			}
-			if sortedNodes[i].Value == sortedNodes[j].Value {
-				iJSON, _ := json.Marshal(sortedNodes[i])
-				jJSON, _ := json.Marshal(sortedNodes[j])
-				if string(iJSON) > string(jJSON) {
-					sortedNodes[i], sortedNodes[j] = sortedNodes[j], sortedNodes[i]
-				}
-			}
-		}
-	}
-	return sortedNodes
 }
 
 // parseBatchGuidedSpecs parses a single batch of GuidedConfig specs for

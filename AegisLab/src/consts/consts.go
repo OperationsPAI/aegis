@@ -323,7 +323,6 @@ const (
 
 	InjectBenchmark     = "benchmark_version"
 	InjectPreDuration   = "pre_duration"
-	InjectNodes         = "nodes"
 	InjectGuidedConfigs = "guided_configs"
 	InjectNamespace     = "namespace"
 	InjectPedestal      = "pedestal"

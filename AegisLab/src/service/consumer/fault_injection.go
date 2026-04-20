@@ -23,11 +23,8 @@ import (
 
 // injectionPayload contains all necessary data for executing a fault injection batch
 type injectionPayload struct {
-	benchmark   dto.ContainerVersionItem
-	preDuration int
-	nodes       []chaos.Node
-	// guidedConfigs is populated when the inject task came from the guided-cli
-	// path. Mutually exclusive with nodes.
+	benchmark     dto.ContainerVersionItem
+	preDuration   int
 	guidedConfigs []guidedcli.GuidedConfig
 	namespace     string
 	pedestal      string
@@ -85,18 +82,8 @@ func (bm *FaultBatchManager) setBatchInjections(batchID string, injectionNames [
 	bm.batchInjections[batchID] = injectionNames
 }
 
-// executeFaultInjection handles the injection of a fault batch with support for parallel fault injection
-//
-// The function processes multiple fault nodes simultaneously:
-//   - Parses all fault nodes in the batch
-//   - Converts each node to InjectionConf
-//   - Generates display configs and groundtruth for each fault
-//   - Stores the entire batch as a single database record with array-based configs
-//   - Uses Chaos Mesh BatchCreate to inject all faults in parallel
-//
-// Storage format:
-//   - engine_config: JSON array of all chaos.Node objects
-//   - display_config: JSON array of display maps for each fault
+// executeFaultInjection handles the guided fault-injection batch path:
+// GuidedConfig -> guidedcli.BuildInjection -> handler.InjectionConf -> BatchCreate.
 func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDeps) error {
 	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
 		batchManager := deps.FaultBatchManager
@@ -136,55 +123,27 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			}
 		}()
 
-		// Process all faults in the batch. Guided and legacy paths converge on
-		// []InjectionConf; only the upstream conversion differs.
-		batchLen := len(payload.nodes)
-		if len(payload.guidedConfigs) > 0 {
-			batchLen = len(payload.guidedConfigs)
-		}
+		batchLen := len(payload.guidedConfigs)
 		injectionConfs := make([]chaos.InjectionConf, 0, batchLen)
 		displayMaps := make([]map[string]any, 0, batchLen)
 		groundtruths := make([]model.Groundtruth, 0, batchLen)
 
-		if len(payload.guidedConfigs) > 0 {
-			for i, cfg := range payload.guidedConfigs {
-				conf, _, err := guidedcli.BuildInjection(ctx, cfg)
-				if err != nil {
-					return handleExecutionError(span, logEntry, fmt.Sprintf("failed to build guided injection %d", i), err)
-				}
-				displayMap, err := conf.GetDisplayConfig(ctx)
-				if err != nil {
-					return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get display config for guided config %d", i), err)
-				}
-				chaosGroundtruth, err := conf.GetGroundtruth(ctx)
-				if err != nil {
-					return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get groundtruth for guided config %d", i), err)
-				}
-				injectionConfs = append(injectionConfs, conf)
-				displayMaps = append(displayMaps, displayMap)
-				groundtruths = append(groundtruths, *model.NewDBGroundtruth(&chaosGroundtruth))
+		for i, cfg := range payload.guidedConfigs {
+			conf, _, err := guidedcli.BuildInjection(childCtx, cfg)
+			if err != nil {
+				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to build guided injection %d", i), err)
 			}
-		} else {
-			for i, node := range payload.nodes {
-				injectionConf, err := chaos.NodeToStruct[chaos.InjectionConf](ctx, &node)
-				if err != nil {
-					return handleExecutionError(span, logEntry, fmt.Sprintf("failed to convert node %d to injection conf", i), err)
-				}
-
-				displayMap, err := injectionConf.GetDisplayConfig(ctx)
-				if err != nil {
-					return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get display config for node %d", i), err)
-				}
-
-				chaosGroundtruth, err := injectionConf.GetGroundtruth(ctx)
-				if err != nil {
-					return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get groundtruth for node %d", i), err)
-				}
-
-				injectionConfs = append(injectionConfs, *injectionConf)
-				displayMaps = append(displayMaps, displayMap)
-				groundtruths = append(groundtruths, *model.NewDBGroundtruth(&chaosGroundtruth))
+			displayMap, err := conf.GetDisplayConfig(childCtx)
+			if err != nil {
+				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get display config for guided config %d", i), err)
 			}
+			chaosGroundtruth, err := conf.GetGroundtruth(childCtx)
+			if err != nil {
+				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get groundtruth for guided config %d", i), err)
+			}
+			injectionConfs = append(injectionConfs, conf)
+			displayMaps = append(displayMaps, displayMap)
+			groundtruths = append(groundtruths, *model.NewDBGroundtruth(&chaosGroundtruth))
 		}
 
 		// Marshal display config as array
@@ -193,14 +152,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			return handleExecutionError(span, logEntry, "failed to marshal injection specs to display config", err)
 		}
 
-		// Marshal engine config as array — guided path stores GuidedConfigs
-		// (human-auditable); legacy stores Nodes.
-		var engineData []byte
-		if len(payload.guidedConfigs) > 0 {
-			engineData, err = json.Marshal(payload.guidedConfigs)
-		} else {
-			engineData, err = json.Marshal(payload.nodes)
-		}
+		engineData, err := json.Marshal(payload.guidedConfigs)
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to marshal injection specs to engine config", err)
 		}
@@ -217,7 +169,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		annotations[consts.CRDAnnotationBenchmark] = string(itemJson)
 
 		batchID := fmt.Sprintf("batch-%s", utils.GenerateULID(nil))
-		isHybrid := len(payload.nodes) > 1 || len(payload.guidedConfigs) > 1
+		isHybrid := len(payload.guidedConfigs) > 1
 		crdLabels := utils.MergeSimpleMaps(
 			task.GetLabels(),
 			map[string]string{
@@ -242,15 +194,10 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			batchManager.setBatchInjections(batchID, names)
 		} else {
 			name = names[0]
-			switch {
-			case len(payload.guidedConfigs) > 0:
-				if ft, ok := chaos.ChaosNameMap[payload.guidedConfigs[0].ChaosType]; ok {
-					faultType = ft
-				} else {
-					faultType = consts.Hybrid
-				}
-			case len(payload.nodes) > 0:
-				faultType = chaos.ChaosType(payload.nodes[0].Value)
+			if ft, ok := chaos.ChaosNameMap[payload.guidedConfigs[0].ChaosType]; ok {
+				faultType = ft
+			} else {
+				faultType = consts.Hybrid
 			}
 		}
 
@@ -262,7 +209,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			Name:              name,
 			FaultType:         faultType,
 			Category:          chaos.SystemType(payload.pedestal),
-			Description:       fmt.Sprintf("Fault batch for task %s (%d faults)", task.TaskID, len(payload.nodes)),
+			Description:       fmt.Sprintf("Fault batch for task %s (%d faults)", task.TaskID, len(payload.guidedConfigs)),
 			DisplayConfig:     string(displayData),
 			EngineConfig:      string(engineData),
 			Groundtruths:      groundtruths,
@@ -281,14 +228,8 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 	})
 }
 
-// parseInjectionPayload extracts and validates the injection payload from the task payload
-//
-// The payload now supports multiple fault nodes for parallel injection:
-//   - Validates that at least one fault node is provided
-//   - Parses the nodes array (not a single node)
-//   - Ensures all required fields are present and valid
-//
-// Returns injectionPayload containing all parsed data for fault injection execution
+// parseInjectionPayload extracts and validates the guided-config payload from
+// the task payload used by the fault-injection consumer.
 func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 	message := "invalid or missing '%s' in task payload"
 
@@ -303,28 +244,12 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 	}
 	preDuration := int(preDurationFloat)
 
-	// Guided vs legacy: if the producer stashed guided_configs, use those and
-	// skip the chaos.Node parse. Otherwise fall back to legacy nodes.
-	var (
-		nodes         []chaos.Node
-		guidedConfigs []guidedcli.GuidedConfig
-	)
-	if rawGuided, ok := payload[consts.InjectGuidedConfigs]; ok && rawGuided != nil {
-		guidedConfigs, err = utils.ConvertToType[[]guidedcli.GuidedConfig](rawGuided)
-		if err != nil {
-			return nil, fmt.Errorf(message, consts.InjectGuidedConfigs)
-		}
-		if len(guidedConfigs) == 0 {
-			return nil, fmt.Errorf("at least one guided config is required in %s", consts.InjectGuidedConfigs)
-		}
-	} else {
-		nodes, err = utils.ConvertToType[[]chaos.Node](payload[consts.InjectNodes])
-		if err != nil {
-			return nil, fmt.Errorf(message, consts.InjectNodes)
-		}
-		if len(nodes) == 0 {
-			return nil, fmt.Errorf("at least one fault node is required in %s", consts.InjectNodes)
-		}
+	guidedConfigs, err := utils.ConvertToType[[]guidedcli.GuidedConfig](payload[consts.InjectGuidedConfigs])
+	if err != nil {
+		return nil, fmt.Errorf(message, consts.InjectGuidedConfigs)
+	}
+	if len(guidedConfigs) == 0 {
+		return nil, fmt.Errorf("at least one guided config is required in %s", consts.InjectGuidedConfigs)
 	}
 
 	namespace, ok := payload[consts.InjectNamespace].(string)
@@ -359,7 +284,6 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 	return &injectionPayload{
 		benchmark:     benchmark,
 		preDuration:   preDuration,
-		nodes:         nodes,
 		guidedConfigs: guidedConfigs,
 		namespace:     namespace,
 		pedestal:      pedestalStr,

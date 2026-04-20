@@ -208,8 +208,9 @@ EXIT CODES (--wait mode):
 
 		c := newClient()
 
-		// Submit the FaultSpec YAML as-is. The backend auto-detects the
-		// FriendlyFaultSpec shape and converts it internally.
+		// This legacy submit path still forwards the YAML payload as-is.
+		// The backend now accepts guided configs only, so callers should
+		// prefer `aegisctl inject guided`.
 		path := fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid)
 
 		// Preserve existing non-wait behavior: print raw response data.
@@ -685,8 +686,8 @@ var injectDescribeCmd = &cobra.Command{
 		}
 
 		var meta struct {
-			FaultTypeReverseMap    map[string]int                       `json:"fault_type_reverse_map"`
-			FaultFieldDescriptions map[string][]fieldDescriptionCLI     `json:"fault_field_descriptions"`
+			FaultTypeReverseMap    map[string]int                   `json:"fault_type_reverse_map"`
+			FaultFieldDescriptions map[string][]fieldDescriptionCLI `json:"fault_field_descriptions"`
 		}
 		if err := json.Unmarshal(resp.Data, &meta); err != nil {
 			return fmt.Errorf("failed to parse metadata: %w", err)
