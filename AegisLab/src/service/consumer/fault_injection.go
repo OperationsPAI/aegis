@@ -129,15 +129,15 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		groundtruths := make([]model.Groundtruth, 0, batchLen)
 
 		for i, cfg := range payload.guidedConfigs {
-			conf, _, err := guidedcli.BuildInjection(ctx, cfg)
+			conf, _, err := guidedcli.BuildInjection(childCtx, cfg)
 			if err != nil {
 				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to build guided injection %d", i), err)
 			}
-			displayMap, err := conf.GetDisplayConfig(ctx)
+			displayMap, err := conf.GetDisplayConfig(childCtx)
 			if err != nil {
 				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get display config for guided config %d", i), err)
 			}
-			chaosGroundtruth, err := conf.GetGroundtruth(ctx)
+			chaosGroundtruth, err := conf.GetGroundtruth(childCtx)
 			if err != nil {
 				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get groundtruth for guided config %d", i), err)
 			}

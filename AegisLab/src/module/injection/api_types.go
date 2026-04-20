@@ -428,6 +428,9 @@ func (req *SubmitInjectionReq) Validate() error {
 			if strings.TrimSpace(spec.ChaosType) == "" {
 				return fmt.Errorf("specs[%d][%d].chaos_type is required", i, j)
 			}
+			if spec.Duration == nil || *spec.Duration <= 0 {
+				return fmt.Errorf("specs[%d][%d].duration must be greater than 0", i, j)
+			}
 		}
 	}
 

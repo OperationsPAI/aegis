@@ -79,6 +79,23 @@ func TestSubmitInjectionReqValidateRejectsEmptyBatch(t *testing.T) {
 	require.ErrorContains(t, err, "must contain at least one guided config")
 }
 
+func TestSubmitInjectionReqValidateRejectsMissingDuration(t *testing.T) {
+	req := validSubmitInjectionReq()
+	req.Specs[0][0].Duration = nil
+
+	err := req.Validate()
+	require.ErrorContains(t, err, "duration must be greater than 0")
+}
+
+func TestSubmitInjectionReqValidateRejectsNonPositiveDuration(t *testing.T) {
+	req := validSubmitInjectionReq()
+	zero := 0
+	req.Specs[0][0].Duration = &zero
+
+	err := req.Validate()
+	require.ErrorContains(t, err, "duration must be greater than 0")
+}
+
 func TestParseBatchGuidedSpecs(t *testing.T) {
 	cfg := sampleGuidedConfig()
 

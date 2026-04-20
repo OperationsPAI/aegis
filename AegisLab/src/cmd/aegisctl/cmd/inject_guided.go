@@ -293,8 +293,8 @@ func init() {
 func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	// Validate required envelope flags up front so the user gets a clear
 	// message instead of a 400 from the backend.
-	if guidedApplyPedestalName == "" || guidedApplyBenchmarkName == "" {
-		return fmt.Errorf("--apply requires --pedestal-name and --benchmark-name")
+	if guidedApplyPedestalName == "" || guidedApplyPedestalTag == "" || guidedApplyBenchmarkName == "" || guidedApplyBenchmarkTag == "" {
+		return fmt.Errorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
 	}
 	if guidedApplyInterval <= 0 || guidedApplyPreDuration <= 0 {
 		return fmt.Errorf("--apply requires --interval and --pre-duration (positive minutes)")
