@@ -217,8 +217,6 @@ func (es *ExecutionState) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type FaultType chaos.ChaosType
-
 type GrantType int
 
 const (

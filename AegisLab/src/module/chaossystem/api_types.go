@@ -2,6 +2,8 @@ package chaossystem
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"aegis/dto"
@@ -14,6 +16,7 @@ type CreateChaosSystemReq struct {
 	DisplayName    string `json:"display_name" binding:"required"`
 	NsPattern      string `json:"ns_pattern" binding:"required"`
 	ExtractPattern string `json:"extract_pattern" binding:"required"`
+	AppLabelKey    string `json:"app_label_key"`
 	Count          int    `json:"count" binding:"required,min=1"`
 	Description    string `json:"description"`
 }
@@ -23,6 +26,7 @@ type UpdateChaosSystemReq struct {
 	DisplayName    *string `json:"display_name"`
 	NsPattern      *string `json:"ns_pattern"`
 	ExtractPattern *string `json:"extract_pattern"`
+	AppLabelKey    *string `json:"app_label_key"`
 	Count          *int    `json:"count" binding:"omitempty,min=1"`
 	Description    *string `json:"description"`
 }
@@ -34,6 +38,7 @@ type ChaosSystemResp struct {
 	DisplayName    string    `json:"display_name"`
 	NsPattern      string    `json:"ns_pattern"`
 	ExtractPattern string    `json:"extract_pattern"`
+	AppLabelKey    string    `json:"app_label_key"`
 	Count          int       `json:"count"`
 	Description    string    `json:"description"`
 	IsBuiltin      bool      `json:"is_builtin"`
@@ -54,6 +59,7 @@ func NewChaosSystemResp(s *model.System) *ChaosSystemResp {
 		DisplayName:    s.DisplayName,
 		NsPattern:      s.NsPattern,
 		ExtractPattern: s.ExtractPattern,
+		AppLabelKey:    s.AppLabelKey,
 		Count:          s.Count,
 		Description:    s.Description,
 		IsBuiltin:      s.IsBuiltin,
@@ -69,9 +75,42 @@ type UpsertSystemMetadataReq struct {
 	Data         json.RawMessage `json:"data" binding:"required"`
 }
 
+// TopologyServiceReq is the high-level service topology payload used when a
+// benchmark system is onboarded over HTTP without pre-baked code metadata.
+type TopologyServiceReq struct {
+	Name      string   `json:"name" binding:"required"`
+	Namespace string   `json:"namespace,omitempty"`
+	Pods      []string `json:"pods,omitempty"`
+	DependsOn []string `json:"depends_on,omitempty"`
+}
+
 // BulkUpsertSystemMetadataReq represents a bulk metadata upsert request.
 type BulkUpsertSystemMetadataReq struct {
-	Items []UpsertSystemMetadataReq `json:"items" binding:"required,dive"`
+	Items    []UpsertSystemMetadataReq `json:"items,omitempty"`
+	Services []TopologyServiceReq      `json:"services,omitempty"`
+}
+
+func (req *BulkUpsertSystemMetadataReq) Validate() error {
+	if len(req.Items) == 0 && len(req.Services) == 0 {
+		return fmt.Errorf("either items or services must be provided")
+	}
+	for i, item := range req.Items {
+		if strings.TrimSpace(item.MetadataType) == "" {
+			return fmt.Errorf("items[%d].metadata_type is required", i)
+		}
+		if strings.TrimSpace(item.ServiceName) == "" {
+			return fmt.Errorf("items[%d].service_name is required", i)
+		}
+		if len(item.Data) == 0 {
+			return fmt.Errorf("items[%d].data is required", i)
+		}
+	}
+	for i, svc := range req.Services {
+		if strings.TrimSpace(svc.Name) == "" {
+			return fmt.Errorf("services[%d].name is required", i)
+		}
+	}
+	return nil
 }
 
 // SystemMetadataResp represents system metadata in API responses.

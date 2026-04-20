@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"aegis/model"
@@ -17,22 +18,97 @@ type DBMetadataStore struct {
 	cache sync.Map // key: "system:type:service" -> cached data
 }
 
+type ServiceTopologyData struct {
+	Name      string   `json:"name"`
+	Namespace string   `json:"namespace,omitempty"`
+	Pods      []string `json:"pods,omitempty"`
+	DependsOn []string `json:"depends_on,omitempty"`
+}
+
+const (
+	metadataTypeServiceEndpoints      = "service_endpoints"
+	metadataTypeDatabaseOperations    = "database_operations"
+	metadataTypeJavaClassMethods      = "java_class_methods"
+	metadataTypeGRPCOperations        = "grpc_operations"
+	metadataTypeNetworkDependencies   = "network_dependencies"
+	metadataTypeRuntimeMutatorTargets = "runtime_mutator_targets"
+	metadataTypeServiceTopology       = "service_topology"
+)
+
+var metadataTypeAliases = map[string]string{
+	metadataTypeServiceEndpoints:      metadataTypeServiceEndpoints,
+	"service_endpoint":                metadataTypeServiceEndpoints,
+	metadataTypeDatabaseOperations:    metadataTypeDatabaseOperations,
+	"database_operation":              metadataTypeDatabaseOperations,
+	metadataTypeJavaClassMethods:      metadataTypeJavaClassMethods,
+	"java_class_method":               metadataTypeJavaClassMethods,
+	metadataTypeGRPCOperations:        metadataTypeGRPCOperations,
+	"grpc_operation":                  metadataTypeGRPCOperations,
+	metadataTypeNetworkDependencies:   metadataTypeNetworkDependencies,
+	"network_dependency":              metadataTypeNetworkDependencies,
+	metadataTypeRuntimeMutatorTargets: metadataTypeRuntimeMutatorTargets,
+	"runtime_mutator_target":          metadataTypeRuntimeMutatorTargets,
+	metadataTypeServiceTopology:       metadataTypeServiceTopology,
+	"topology":                        metadataTypeServiceTopology,
+}
+
+var (
+	globalMetadataStoreMu sync.RWMutex
+	globalMetadataStore   *DBMetadataStore
+)
+
 // NewDBMetadataStore creates a new DBMetadataStore instance.
 func NewDBMetadataStore(db *gorm.DB) *DBMetadataStore {
-	return &DBMetadataStore{db: db}
+	store := &DBMetadataStore{db: db}
+	globalMetadataStoreMu.Lock()
+	globalMetadataStore = store
+	globalMetadataStoreMu.Unlock()
+	return store
+}
+
+func InvalidateGlobalMetadataStoreCache() {
+	globalMetadataStoreMu.RLock()
+	store := globalMetadataStore
+	globalMetadataStoreMu.RUnlock()
+	if store != nil {
+		store.InvalidateCache()
+	}
 }
 
 func (s *DBMetadataStore) cacheKey(system, metaType, service string) string {
-	return system + ":" + metaType + ":" + service
+	return system + ":" + normalizeMetadataType(metaType) + ":" + service
+}
+
+func normalizeMetadataType(metaType string) string {
+	key := strings.ToLower(strings.TrimSpace(metaType))
+	if normalized, ok := metadataTypeAliases[key]; ok {
+		return normalized
+	}
+	return key
+}
+
+func NormalizeMetadataTypeForWrite(metaType string) string {
+	return normalizeMetadataType(metaType)
+}
+
+func metadataTypeCandidates(metaType string) []string {
+	normalized := normalizeMetadataType(metaType)
+	candidates := []string{normalized}
+	for alias, canonical := range metadataTypeAliases {
+		if canonical == normalized && alias != normalized {
+			candidates = append(candidates, alias)
+		}
+	}
+	return candidates
 }
 
 func (s *DBMetadataStore) GetServiceEndpoints(system, serviceName string) ([]chaos.ServiceEndpointData, error) {
-	key := s.cacheKey(system, "service_endpoint", serviceName)
+	key := s.cacheKey(system, metadataTypeServiceEndpoints, serviceName)
 	if cached, ok := s.cache.Load(key); ok {
 		return cached.([]chaos.ServiceEndpointData), nil
 	}
 
-	meta, err := s.getSystemMetadata(system, "service_endpoint", serviceName)
+	meta, err := s.getSystemMetadata(system, metadataTypeServiceEndpoints, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get service endpoints: %w", err)
 	}
@@ -55,9 +131,15 @@ func (s *DBMetadataStore) GetAllServiceNames(system string) ([]string, error) {
 		return cached.([]string), nil
 	}
 
-	names, err := s.listServiceNames(system, "service_endpoint")
+	names, err := s.listServiceNames(system, metadataTypeServiceEndpoints)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get service names: %w", err)
+	}
+	if len(names) == 0 {
+		names, err = s.listServiceNames(system, metadataTypeServiceTopology)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get service names from topology: %w", err)
+		}
 	}
 
 	s.cache.Store(key, names)
@@ -65,12 +147,12 @@ func (s *DBMetadataStore) GetAllServiceNames(system string) ([]string, error) {
 }
 
 func (s *DBMetadataStore) GetJavaClassMethods(system, serviceName string) ([]chaos.JavaClassMethodData, error) {
-	key := s.cacheKey(system, "java_class_method", serviceName)
+	key := s.cacheKey(system, metadataTypeJavaClassMethods, serviceName)
 	if cached, ok := s.cache.Load(key); ok {
 		return cached.([]chaos.JavaClassMethodData), nil
 	}
 
-	meta, err := s.getSystemMetadata(system, "java_class_method", serviceName)
+	meta, err := s.getSystemMetadata(system, metadataTypeJavaClassMethods, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get java class methods: %w", err)
 	}
@@ -88,12 +170,12 @@ func (s *DBMetadataStore) GetJavaClassMethods(system, serviceName string) ([]cha
 }
 
 func (s *DBMetadataStore) GetDatabaseOperations(system, serviceName string) ([]chaos.DatabaseOperationData, error) {
-	key := s.cacheKey(system, "database_operation", serviceName)
+	key := s.cacheKey(system, metadataTypeDatabaseOperations, serviceName)
 	if cached, ok := s.cache.Load(key); ok {
 		return cached.([]chaos.DatabaseOperationData), nil
 	}
 
-	meta, err := s.getSystemMetadata(system, "database_operation", serviceName)
+	meta, err := s.getSystemMetadata(system, metadataTypeDatabaseOperations, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database operations: %w", err)
 	}
@@ -111,12 +193,12 @@ func (s *DBMetadataStore) GetDatabaseOperations(system, serviceName string) ([]c
 }
 
 func (s *DBMetadataStore) GetGRPCOperations(system, serviceName string) ([]chaos.GRPCOperationData, error) {
-	key := s.cacheKey(system, "grpc_operation", serviceName)
+	key := s.cacheKey(system, metadataTypeGRPCOperations, serviceName)
 	if cached, ok := s.cache.Load(key); ok {
 		return cached.([]chaos.GRPCOperationData), nil
 	}
 
-	meta, err := s.getSystemMetadata(system, "grpc_operation", serviceName)
+	meta, err := s.getSystemMetadata(system, metadataTypeGRPCOperations, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get gRPC operations: %w", err)
 	}
@@ -134,12 +216,12 @@ func (s *DBMetadataStore) GetGRPCOperations(system, serviceName string) ([]chaos
 }
 
 func (s *DBMetadataStore) GetNetworkPairs(system string) ([]chaos.NetworkPairData, error) {
-	key := s.cacheKey(system, "network_dependency", "_all")
+	key := s.cacheKey(system, metadataTypeNetworkDependencies, "_all")
 	if cached, ok := s.cache.Load(key); ok {
 		return cached.([]chaos.NetworkPairData), nil
 	}
 
-	metas, err := s.listSystemMetadata(system, "network_dependency")
+	metas, err := s.listSystemMetadata(system, metadataTypeNetworkDependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get network pairs: %w", err)
 	}
@@ -153,15 +235,54 @@ func (s *DBMetadataStore) GetNetworkPairs(system string) ([]chaos.NetworkPairDat
 		result = append(result, pairs...)
 	}
 
+	if len(result) == 0 {
+		topologyMetas, err := s.listSystemMetadata(system, metadataTypeServiceTopology)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get topology metadata: %w", err)
+		}
+		for _, meta := range topologyMetas {
+			var topology ServiceTopologyData
+			if err := json.Unmarshal([]byte(meta.Data), &topology); err != nil {
+				return nil, fmt.Errorf("failed to parse service topology data: %w", err)
+			}
+			source := topology.Name
+			if source == "" {
+				source = meta.ServiceName
+			}
+			for _, target := range topology.DependsOn {
+				if source == "" || target == "" {
+					continue
+				}
+				result = append(result, chaos.NetworkPairData{Source: source, Target: target})
+			}
+		}
+	}
+
 	s.cache.Store(key, result)
 	return result, nil
 }
 
-// GetRuntimeMutatorTargets returns runtime mutator targets for the given system.
-// Not yet backed by persisted metadata; returns empty so chaos-experiment's
-// routing layer falls back to bundled defaults.
 func (s *DBMetadataStore) GetRuntimeMutatorTargets(system string) ([]chaos.RuntimeMutatorTargetData, error) {
-	return nil, nil
+	key := s.cacheKey(system, metadataTypeRuntimeMutatorTargets, "_all")
+	if cached, ok := s.cache.Load(key); ok {
+		return cached.([]chaos.RuntimeMutatorTargetData), nil
+	}
+
+	metas, err := s.listSystemMetadata(system, metadataTypeRuntimeMutatorTargets)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get runtime mutator targets: %w", err)
+	}
+	result := make([]chaos.RuntimeMutatorTargetData, 0)
+	for _, meta := range metas {
+		var targets []chaos.RuntimeMutatorTargetData
+		if err := json.Unmarshal([]byte(meta.Data), &targets); err != nil {
+			return nil, fmt.Errorf("failed to parse runtime mutator target data: %w", err)
+		}
+		result = append(result, targets...)
+	}
+
+	s.cache.Store(key, result)
+	return result, nil
 }
 
 // InvalidateCache clears the entire cache. Call after metadata updates.
@@ -174,7 +295,8 @@ func (s *DBMetadataStore) InvalidateCache() {
 
 func (s *DBMetadataStore) getSystemMetadata(systemName, metadataType, serviceName string) (*model.SystemMetadata, error) {
 	var meta model.SystemMetadata
-	if err := s.db.Where("system_name = ? AND metadata_type = ? AND service_name = ?", systemName, metadataType, serviceName).
+	if err := s.db.Where("system_name = ? AND metadata_type IN ? AND service_name = ?", systemName, metadataTypeCandidates(metadataType), serviceName).
+		Order("updated_at DESC").
 		First(&meta).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -188,7 +310,7 @@ func (s *DBMetadataStore) listSystemMetadata(systemName, metadataType string) ([
 	var metas []model.SystemMetadata
 	query := s.db.Where("system_name = ?", systemName)
 	if metadataType != "" {
-		query = query.Where("metadata_type = ?", metadataType)
+		query = query.Where("metadata_type IN ?", metadataTypeCandidates(metadataType))
 	}
 	if err := query.Find(&metas).Error; err != nil {
 		return nil, fmt.Errorf("failed to list system metadata: %w", err)
@@ -200,7 +322,7 @@ func (s *DBMetadataStore) listServiceNames(systemName, metadataType string) ([]s
 	var names []string
 	query := s.db.Model(&model.SystemMetadata{}).Where("system_name = ?", systemName)
 	if metadataType != "" {
-		query = query.Where("metadata_type = ?", metadataType)
+		query = query.Where("metadata_type IN ?", metadataTypeCandidates(metadataType))
 	}
 	if err := query.Distinct("service_name").Pluck("service_name", &names).Error; err != nil {
 		return nil, fmt.Errorf("failed to list service names: %w", err)

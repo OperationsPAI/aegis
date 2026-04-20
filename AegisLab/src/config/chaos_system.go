@@ -31,14 +31,14 @@ const (
 )
 
 type ChaosSystemConfig struct {
-	System         chaos.SystemType
+	System         string
 	Count          int    `mapstructure:"count"`
 	NsPattern      string `mapstructure:"ns_pattern"`
 	ExtractPattern string `mapstructure:"extract_pattern"`
 }
 
 type chaosSystemConfigManager struct {
-	configs map[chaos.SystemType]ChaosSystemConfig
+	configs map[string]ChaosSystemConfig
 	mu      sync.RWMutex
 }
 
@@ -51,7 +51,7 @@ var (
 func GetChaosSystemConfigManager() *chaosSystemConfigManager {
 	managerOnce.Do(func() {
 		managerInstance = &chaosSystemConfigManager{
-			configs: make(map[chaos.SystemType]ChaosSystemConfig),
+			configs: make(map[string]ChaosSystemConfig),
 		}
 		if err := managerInstance.load(); err != nil {
 			logrus.Fatalf("failed to load chaos system config: %v", err)
@@ -65,17 +65,17 @@ func (m *chaosSystemConfigManager) Get(system chaos.SystemType) (ChaosSystemConf
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	cfg, exists := m.configs[system]
+	cfg, exists := m.configs[system.String()]
 	return cfg, exists
 }
 
 // GetAll returns all system configurations
-func (m *chaosSystemConfigManager) GetAll() map[chaos.SystemType]ChaosSystemConfig {
+func (m *chaosSystemConfigManager) GetAll() map[string]ChaosSystemConfig {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	// Return a copy to prevent external modification
-	result := make(map[chaos.SystemType]ChaosSystemConfig, len(m.configs))
+	result := make(map[string]ChaosSystemConfig, len(m.configs))
 	maps.Copy(result, m.configs)
 	return result
 }
@@ -95,7 +95,7 @@ func (m *chaosSystemConfigManager) load() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	systemConfigMap := make(map[chaos.SystemType]ChaosSystemConfig)
+	systemConfigMap := make(map[string]ChaosSystemConfig)
 
 	// Try to load from System table first (new approach)
 	if loaded := m.loadFromSystemTable(systemConfigMap); loaded {
@@ -116,8 +116,8 @@ func (m *chaosSystemConfigManager) load() error {
 			return fmt.Errorf("invalid system type: %s", sys)
 		}
 
-		sysCfg.System = system
-		systemConfigMap[system] = sysCfg
+		sysCfg.System = system.String()
+		systemConfigMap[system.String()] = sysCfg
 	}
 
 	m.configs = systemConfigMap
@@ -126,7 +126,7 @@ func (m *chaosSystemConfigManager) load() error {
 
 // loadFromSystemTable attempts to load configs from the System database table.
 // Returns true if any systems were loaded, false otherwise (fallback to DynamicConfig).
-func (m *chaosSystemConfigManager) loadFromSystemTable(out map[chaos.SystemType]ChaosSystemConfig) bool {
+func (m *chaosSystemConfigManager) loadFromSystemTable(out map[string]ChaosSystemConfig) bool {
 	// Import database lazily to avoid circular dependency at init time
 	db := getDBForChaosConfig()
 	if db == nil {
@@ -154,9 +154,8 @@ func (m *chaosSystemConfigManager) loadFromSystemTable(out map[chaos.SystemType]
 	}
 
 	for _, row := range rows {
-		system := chaos.SystemType(row.Name)
-		out[system] = ChaosSystemConfig{
-			System:         system,
+		out[row.Name] = ChaosSystemConfig{
+			System:         row.Name,
 			Count:          row.Count,
 			NsPattern:      row.NsPattern,
 			ExtractPattern: row.ExtractPattern,

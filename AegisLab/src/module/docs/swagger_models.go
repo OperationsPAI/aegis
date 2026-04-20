@@ -3,10 +3,12 @@ package docs
 import (
 	group "aegis/module/group"
 
+	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/gin-gonic/gin"
 )
 
 type GroupStreamEvent = group.GroupStreamEvent
+type ChaosType = chaos.ChaosType
 
 // SwaggerModelsDoc is a documentation-only endpoint that ensures all DTO models are included in Swagger.
 // This endpoint should NEVER be registered in the actual router.
@@ -28,7 +30,7 @@ type GroupStreamEvent = group.GroupStreamEvent
 //	@Success		200	{object}	consts.DatapackStateString	"Datapack state string constants"
 //	@Success		200	{object}	consts.ExecutionState		"Execution state constants"
 //	@Success		200	{object}	consts.ExecutionStateString	"Execution state string constants"
-//	@Success		200	{object}	consts.FaultType			"Fault type constants"
+//	@Success		200	{object}	docs.ChaosType				"Fault type constants"
 //	@Success		200	{object}	consts.LabelCategory		"Label category constants"
 //	@Success		200	{object}	consts.PageSize				"Page size constants"
 //	@Success		200	{object}	consts.ResourceType			"Resource type constants"

@@ -30,10 +30,10 @@ type injectionPayload struct {
 	// path. Mutually exclusive with nodes.
 	guidedConfigs []guidedcli.GuidedConfig
 	namespace     string
-	pedestal      chaos.SystemType
+	pedestal      string
 	pedestalID    int
 	labels        []dto.LabelItem
-	system        chaos.SystemType
+	system        string
 }
 
 type FaultBatchManager struct {
@@ -228,7 +228,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		)
 
 		// Batch create all fault injections in parallel
-		names, err := chaos.BatchCreate(childCtx, injectionConfs, payload.system, payload.namespace, annotations, crdLabels)
+		names, err := chaos.BatchCreate(childCtx, injectionConfs, chaos.SystemType(payload.system), payload.namespace, annotations, crdLabels)
 		if err != nil {
 			toReleased = true
 			return handleExecutionError(span, logEntry, "failed to inject faults", err)
@@ -261,7 +261,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		_, err = deps.InjectionOwner.CreateInjection(childCtx, &injection.RuntimeCreateInjectionReq{
 			Name:              name,
 			FaultType:         faultType,
-			Category:          payload.pedestal,
+			Category:          chaos.SystemType(payload.pedestal),
 			Description:       fmt.Sprintf("Fault batch for task %s (%d faults)", task.TaskID, len(payload.nodes)),
 			DisplayConfig:     string(displayData),
 			EngineConfig:      string(engineData),
@@ -336,8 +336,7 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 	if !ok || pedestalStr == "" {
 		return nil, fmt.Errorf(message, consts.InjectPedestal)
 	}
-	pedestal := chaos.SystemType(pedestalStr)
-	if !pedestal.IsValid() {
+	if !chaos.IsSystemRegistered(pedestalStr) {
 		return nil, fmt.Errorf("invalid pedestal type: %s", pedestalStr)
 	}
 
@@ -352,8 +351,8 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 		return nil, fmt.Errorf(message, consts.InjectLabels)
 	}
 
-	system, err := utils.ConvertToType[chaos.SystemType](payload[consts.InjectSystem])
-	if err != nil {
+	system, ok := payload[consts.InjectSystem].(string)
+	if !ok || system == "" {
 		return nil, fmt.Errorf(message, consts.InjectSystem)
 	}
 
@@ -363,7 +362,7 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 		nodes:         nodes,
 		guidedConfigs: guidedConfigs,
 		namespace:     namespace,
-		pedestal:      pedestal,
+		pedestal:      pedestalStr,
 		pedestalID:    pedestalID,
 		labels:        labels,
 		system:        system,

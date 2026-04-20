@@ -279,7 +279,16 @@ func (h *Handler) GetInjection(c *gin.Context) {
 //	@Router			/api/v2/injections/systems [get]
 func (h *Handler) GetSystemMapping(c *gin.Context) {
 	allSystems := chaos.GetAllSystemTypes()
-	systemMap := utils.BuildSystemIndexMap(allSystems)
+	names := make([]string, 0, len(allSystems))
+	for _, system := range allSystems {
+		names = append(names, system.String())
+	}
+	sort.Strings(names)
+
+	systemMap := make(map[string]int, len(names))
+	for idx, name := range names {
+		systemMap[name] = idx
+	}
 
 	details := make([]SystemDetail, 0, len(systemMap))
 	for name, idx := range systemMap {

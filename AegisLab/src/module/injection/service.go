@@ -307,7 +307,7 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 			consts.InjectBenchmark:   benchmarkVersionItem,
 			consts.InjectPreDuration: req.PreDuration,
 			consts.InjectLabels:      req.Labels,
-			consts.InjectSystem:      chaos.SystemType(pedestalItem.ContainerName),
+			consts.InjectSystem:      pedestalItem.ContainerName,
 		}
 		// Exactly one of nodes / guidedConfigs is populated on item.
 		if len(item.guidedConfigs) > 0 {

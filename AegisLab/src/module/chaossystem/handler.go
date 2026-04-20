@@ -195,6 +195,10 @@ func (h *Handler) UpsertMetadata(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
 		return
 	}
+	if err := req.Validate(); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
 	if httpx.HandleServiceError(c, h.service.UpsertMetadata(c.Request.Context(), id, &req)) {
 		return
 	}

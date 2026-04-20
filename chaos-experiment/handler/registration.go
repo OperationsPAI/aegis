@@ -36,6 +36,7 @@ type SystemConfig struct {
 	Name        string
 	NsPattern   string
 	DisplayName string
+	AppLabelKey string
 }
 
 // RegisterSystem registers a new system type with the given configuration.
@@ -44,6 +45,7 @@ func RegisterSystem(cfg SystemConfig) error {
 		Name:        systemconfig.SystemType(cfg.Name),
 		NsPattern:   cfg.NsPattern,
 		DisplayName: cfg.DisplayName,
+		AppLabelKey: cfg.AppLabelKey,
 	})
 }
 
