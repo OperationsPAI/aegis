@@ -130,6 +130,7 @@ Notes:
 - Build the CLI: `just build-aegisctl`
 - Run staging-profile cluster deploy: `just run`
 - Run the regression smoke path: `just test-regression`
+- Run a named repo-tracked case directly: `./aegisctl regression run otel-demo-guided --output json`
 - Bootstrap the broader cluster demo stack: `bash scripts/start.sh test`
 
 `just run` and `scripts/start.sh test` are different flows:
