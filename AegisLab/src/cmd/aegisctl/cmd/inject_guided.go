@@ -306,31 +306,71 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	if err := requireAPIContext(true); err != nil {
 		return err
 	}
-
-	pid, err := resolveProjectIDByName()
+	resp, err := submitGuidedApplyWithOptions(flagProject, cfg, guidedApplyOptions{
+		PedestalName:  guidedApplyPedestalName,
+		PedestalTag:   guidedApplyPedestalTag,
+		BenchmarkName: guidedApplyBenchmarkName,
+		BenchmarkTag:  guidedApplyBenchmarkTag,
+		Interval:      guidedApplyInterval,
+		PreDuration:   guidedApplyPreDuration,
+	})
 	if err != nil {
-		return err
-	}
-
-	envelope := map[string]any{
-		"pedestal": map[string]any{
-			"name":    guidedApplyPedestalName,
-			"version": guidedApplyPedestalTag,
-		},
-		"benchmark": map[string]any{
-			"name":    guidedApplyBenchmarkName,
-			"version": guidedApplyBenchmarkTag,
-		},
-		"interval":     guidedApplyInterval,
-		"pre_duration": guidedApplyPreDuration,
-		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
-	}
-
-	c := newClient()
-	var resp client.APIResponse[any]
-	if err := c.Post(fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid), envelope, &resp); err != nil {
 		return err
 	}
 	output.PrintJSON(resp.Data)
 	return nil
+}
+
+type guidedApplyOptions struct {
+	PedestalName  string
+	PedestalTag   string
+	BenchmarkName string
+	BenchmarkTag  string
+	Interval      int
+	PreDuration   int
+}
+
+func submitGuidedApplyWithOptions(projectName string, cfg guidedcli.GuidedConfig, opts guidedApplyOptions) (*client.APIResponse[injectSubmitResponse], error) {
+	if opts.PedestalName == "" || opts.PedestalTag == "" || opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
+		return nil, fmt.Errorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
+	}
+	if opts.Interval <= 0 || opts.PreDuration <= 0 {
+		return nil, fmt.Errorf("--apply requires --interval and --pre-duration (positive minutes)")
+	}
+	if opts.Interval <= opts.PreDuration {
+		return nil, fmt.Errorf("--interval must be greater than --pre-duration")
+	}
+
+	pid, err := resolveProjectIDForApply(projectName)
+	if err != nil {
+		return nil, err
+	}
+
+	envelope := map[string]any{
+		"pedestal": map[string]any{
+			"name":    opts.PedestalName,
+			"version": opts.PedestalTag,
+		},
+		"benchmark": map[string]any{
+			"name":    opts.BenchmarkName,
+			"version": opts.BenchmarkTag,
+		},
+		"interval":     opts.Interval,
+		"pre_duration": opts.PreDuration,
+		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
+	}
+
+	c := newClient()
+	var resp client.APIResponse[injectSubmitResponse]
+	if err := c.Post(fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid), envelope, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func resolveProjectIDForApply(projectName string) (int, error) {
+	if projectName == "" {
+		return resolveProjectIDByName()
+	}
+	return newResolver().ProjectID(projectName)
 }
