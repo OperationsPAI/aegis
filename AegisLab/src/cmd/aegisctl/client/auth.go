@@ -11,7 +11,10 @@ import (
 	"time"
 )
 
-const apiKeyTokenPath = "/api/v2/auth/api-key/token"
+const (
+	apiKeyTokenPath   = "/api/v2/auth/api-key/token"
+	passwordLoginPath = "/api/v2/auth/login"
+)
 
 // APIKeyTokenDebug contains the fully materialized signed request data for
 // POST /api/v2/auth/api-key/token.
@@ -44,6 +47,21 @@ type apiKeyTokenResponseData struct {
 	KeyID     string    `json:"key_id"`
 }
 
+// passwordLoginRequest matches auth.LoginReq.
+type passwordLoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// passwordLoginResponseData matches auth.LoginResp.
+type passwordLoginResponseData struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+	User      struct {
+		Username string `json:"username"`
+	} `json:"user"`
+}
+
 // tokenRefreshRequest matches dto.TokenRefreshReq.
 type tokenRefreshRequest struct {
 	Token string `json:"token"`
@@ -61,6 +79,40 @@ type LoginResult struct {
 	ExpiresAt time.Time
 	AuthType  string
 	KeyID     string
+	Username  string
+}
+
+// LoginWithPassword exchanges a username/password pair for a bearer token.
+func LoginWithPassword(server, username, password string) (*LoginResult, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return nil, fmt.Errorf("username is required")
+	}
+	if password == "" {
+		return nil, fmt.Errorf("password is required")
+	}
+
+	c := NewClient(server, "", 30*time.Second)
+
+	var resp APIResponse[passwordLoginResponseData]
+	if err := c.Post(passwordLoginPath, passwordLoginRequest{
+		Username: username,
+		Password: password,
+	}, &resp); err != nil {
+		return nil, fmt.Errorf("login failed: %w", err)
+	}
+
+	loggedInUsername := resp.Data.User.Username
+	if strings.TrimSpace(loggedInUsername) == "" {
+		loggedInUsername = username
+	}
+
+	return &LoginResult{
+		Token:     resp.Data.Token,
+		ExpiresAt: resp.Data.ExpiresAt,
+		AuthType:  "password",
+		Username:  loggedInUsername,
+	}, nil
 }
 
 // LoginWithAPIKey exchanges a Key ID / Key Secret signature for a bearer token.

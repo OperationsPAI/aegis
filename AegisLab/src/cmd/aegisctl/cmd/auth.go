@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -23,11 +24,28 @@ var authCmd = &cobra.Command{
 var authLoginServer string
 var authLoginKeyID string
 var authLoginKeySecret string
+var authLoginUsername string
+var authLoginPasswordFile string
+var authLoginPasswordStdin bool
 var authLoginContext string
+
+var (
+	apiKeyLoginFunc   = client.LoginWithAPIKey
+	passwordLoginFunc = client.LoginWithPassword
+)
+
+type authLoginJSONResult struct {
+	Context   string `json:"context"`
+	Server    string `json:"server"`
+	AuthType  string `json:"auth_type"`
+	KeyID     string `json:"key_id,omitempty"`
+	Username  string `json:"username,omitempty"`
+	ExpiresAt string `json:"expires_at"`
+}
 
 var authLoginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Exchange Key ID / Key Secret for a bearer token",
+	Short: "Exchange API credentials for a bearer token",
 	Args:  requireNoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		server := authLoginServer
@@ -38,63 +56,172 @@ var authLoginCmd = &cobra.Command{
 			return usageErrorf("--server is required for login")
 		}
 
-		keyID := authLoginKeyID
-		if keyID == "" {
-			keyID = os.Getenv("AEGIS_KEY_ID")
-		}
-		if keyID == "" {
-			return usageErrorf("--key-id is required")
-		}
-
-		keySecret := authLoginKeySecret
-		if keySecret == "" {
-			keySecret = os.Getenv("AEGIS_KEY_SECRET")
-		}
-		if keySecret == "" {
-			return usageErrorf("--key-secret is required")
-		}
-
-		output.PrintInfo(fmt.Sprintf("Exchanging API key token with %s using %s...", server, keyID))
-
-		result, err := client.LoginWithAPIKey(server, keyID, keySecret)
+		mode, username, keyID, keySecret, password, err := resolveAuthLoginInputs(cmd)
 		if err != nil {
 			return err
 		}
 
-		// Determine context name.
-		ctxName := authLoginContext
-		if ctxName == "" {
-			ctxName = "default"
+		var result *client.LoginResult
+		switch mode {
+		case "password":
+			output.PrintInfo(fmt.Sprintf("Logging in to %s as %s...", server, username))
+			result, err = passwordLoginFunc(server, username, password)
+			if err != nil {
+				return err
+			}
+		case "api_key":
+			output.PrintInfo(fmt.Sprintf("Exchanging API key token with %s using %s...", server, keyID))
+			result, err = apiKeyLoginFunc(server, keyID, keySecret)
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unsupported login mode %q", mode)
 		}
 
-		// Save to config.
-		cfg.Contexts[ctxName] = config.Context{
-			Server:      server,
-			Token:       result.Token,
-			AuthType:    result.AuthType,
-			KeyID:       result.KeyID,
-			TokenExpiry: result.ExpiresAt,
-		}
-		cfg.CurrentContext = ctxName
-
-		if err := config.SaveConfig(cfg); err != nil {
-			return missingEnvErrorf("save config: %v", err)
+		ctxName := resolveAuthLoginContextName()
+		if err := saveLoginContext(ctxName, server, result); err != nil {
+			return err
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(map[string]any{
-				"context":    ctxName,
-				"server":     server,
-				"auth_type":  result.AuthType,
-				"key_id":     result.KeyID,
-				"expires_at": result.ExpiresAt.Format(time.RFC3339),
+			output.PrintJSON(authLoginJSONResult{
+				Context:   ctxName,
+				Server:    server,
+				AuthType:  result.AuthType,
+				KeyID:     result.KeyID,
+				Username:  result.Username,
+				ExpiresAt: result.ExpiresAt.Format(time.RFC3339),
 			})
 		} else {
-			output.PrintInfo(fmt.Sprintf("Token issued for key id %s (context: %s)", result.KeyID, ctxName))
+			switch mode {
+			case "password":
+				output.PrintInfo(fmt.Sprintf("Token issued for user %s (context: %s)", result.Username, ctxName))
+			case "api_key":
+				output.PrintInfo(fmt.Sprintf("Token issued for key id %s (context: %s)", result.KeyID, ctxName))
+			}
 			output.PrintInfo(fmt.Sprintf("Token expires at %s", result.ExpiresAt.Format(time.RFC3339)))
 		}
 		return nil
 	},
+}
+
+func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecret, password string, err error) {
+	username = strings.TrimSpace(authLoginUsername)
+	if username == "" {
+		username = strings.TrimSpace(os.Getenv("AEGIS_USERNAME"))
+	}
+
+	keyID = strings.TrimSpace(authLoginKeyID)
+	if keyID == "" {
+		keyID = strings.TrimSpace(os.Getenv("AEGIS_KEY_ID"))
+	}
+
+	if username != "" && keyID != "" {
+		return "", "", "", "", "", fmt.Errorf("choose either username/password login or api-key login, not both")
+	}
+
+	if username != "" {
+		password, err = resolvePasswordInput(cmd)
+		if err != nil {
+			return "", "", "", "", "", err
+		}
+		return "password", username, "", "", password, nil
+	}
+
+	if keyID == "" {
+		return "", "", "", "", "", fmt.Errorf("either --username or --key-id is required")
+	}
+
+	keySecret = authLoginKeySecret
+	if keySecret == "" {
+		keySecret = os.Getenv("AEGIS_KEY_SECRET")
+	}
+	if keySecret == "" {
+		return "", "", "", "", "", fmt.Errorf("--key-secret is required")
+	}
+
+	return "api_key", "", keyID, keySecret, "", nil
+}
+
+func resolvePasswordInput(cmd *cobra.Command) (string, error) {
+	filePath := strings.TrimSpace(authLoginPasswordFile)
+	if filePath == "" {
+		filePath = strings.TrimSpace(os.Getenv("AEGIS_PASSWORD_FILE"))
+	}
+	envPassword := os.Getenv("AEGIS_PASSWORD")
+
+	sources := 0
+	if authLoginPasswordStdin {
+		sources++
+	}
+	if filePath != "" {
+		sources++
+	}
+	if envPassword != "" {
+		sources++
+	}
+	if sources > 1 {
+		return "", fmt.Errorf("choose only one password source: --password-stdin, --password-file, AEGIS_PASSWORD, or AEGIS_PASSWORD_FILE")
+	}
+
+	switch {
+	case authLoginPasswordStdin:
+		return readPassword(cmd.InOrStdin())
+	case filePath != "":
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return "", fmt.Errorf("read password file: %w", err)
+		}
+		return sanitizePassword(string(data))
+	case envPassword != "":
+		return sanitizePassword(envPassword)
+	default:
+		return "", fmt.Errorf("password is required via --password-stdin, --password-file, AEGIS_PASSWORD, or AEGIS_PASSWORD_FILE")
+	}
+}
+
+func readPassword(r io.Reader) (string, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return "", fmt.Errorf("read password from stdin: %w", err)
+	}
+	return sanitizePassword(string(data))
+}
+
+func sanitizePassword(raw string) (string, error) {
+	password := strings.TrimRight(raw, "\r\n")
+	if password == "" {
+		return "", fmt.Errorf("password cannot be empty")
+	}
+	return password, nil
+}
+
+func resolveAuthLoginContextName() string {
+	ctxName := strings.TrimSpace(authLoginContext)
+	if ctxName == "" {
+		ctxName = "default"
+	}
+	return ctxName
+}
+
+func saveLoginContext(ctxName, server string, result *client.LoginResult) error {
+	if cfg.Contexts == nil {
+		cfg.Contexts = make(map[string]config.Context)
+	}
+	ctx := cfg.Contexts[ctxName]
+	ctx.Server = server
+	ctx.Token = result.Token
+	ctx.AuthType = result.AuthType
+	ctx.KeyID = result.KeyID
+	ctx.TokenExpiry = result.ExpiresAt
+	cfg.Contexts[ctxName] = ctx
+	cfg.CurrentContext = ctxName
+
+	if err := config.SaveConfig(cfg); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
+	return nil
 }
 
 // --- auth status ---
@@ -375,6 +502,9 @@ func init() {
 	authLoginCmd.Flags().StringVar(&authLoginServer, "server", "", "Server URL")
 	authLoginCmd.Flags().StringVar(&authLoginKeyID, "key-id", "", "Key ID (env: AEGIS_KEY_ID)")
 	authLoginCmd.Flags().StringVar(&authLoginKeySecret, "key-secret", "", "Key secret (env: AEGIS_KEY_SECRET)")
+	authLoginCmd.Flags().StringVar(&authLoginUsername, "username", "", "Username (env: AEGIS_USERNAME)")
+	authLoginCmd.Flags().BoolVar(&authLoginPasswordStdin, "password-stdin", false, "Read password from stdin")
+	authLoginCmd.Flags().StringVar(&authLoginPasswordFile, "password-file", "", "Read password from file (env: AEGIS_PASSWORD_FILE)")
 	authLoginCmd.Flags().StringVar(&authLoginContext, "context", "", "Context name to save credentials under (default: \"default\")")
 	authSignDebugCmd.Flags().StringVar(&authSignDebugKeyID, "key-id", "", "Key ID (env: AEGIS_KEY_ID)")
 	authSignDebugCmd.Flags().StringVar(&authSignDebugKeySecret, "key-secret", "", "Key secret (env: AEGIS_KEY_SECRET)")

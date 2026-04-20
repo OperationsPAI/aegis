@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -72,6 +73,70 @@ func TestPrepareAPIKeyTokenDebug(t *testing.T) {
 	}
 	if debugInfo.Headers()["X-Signature"] != debugInfo.Signature {
 		t.Fatal("signature header mismatch")
+	}
+}
+
+func TestLoginWithPassword(t *testing.T) {
+	expiresAt := time.Date(2026, 4, 20, 15, 4, 5, 0, time.UTC)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != passwordLoginPath {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+
+		var req passwordLoginRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if req.Username != "bootstrap" {
+			t.Fatalf("unexpected username: %q", req.Username)
+		}
+		if req.Password != "super-secret" {
+			t.Fatalf("unexpected password: %q", req.Password)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":0,"message":"ok","data":{"token":"jwt-token","expires_at":"` + expiresAt.Format(time.RFC3339) + `","user":{"username":"bootstrap"}}}`))
+	}))
+	defer server.Close()
+
+	result, err := LoginWithPassword(server.URL, " bootstrap ", "super-secret")
+	if err != nil {
+		t.Fatalf("LoginWithPassword returned error: %v", err)
+	}
+	if result.Token != "jwt-token" {
+		t.Fatalf("unexpected token: %q", result.Token)
+	}
+	if result.AuthType != "password" {
+		t.Fatalf("unexpected auth type: %q", result.AuthType)
+	}
+	if result.Username != "bootstrap" {
+		t.Fatalf("unexpected username: %q", result.Username)
+	}
+	if !result.ExpiresAt.Equal(expiresAt) {
+		t.Fatalf("unexpected expiry: %s", result.ExpiresAt)
+	}
+}
+
+func TestLoginWithPasswordInvalidCredentials(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"code":401,"message":"invalid username or password"}`))
+	}))
+	defer server.Close()
+
+	_, err := LoginWithPassword(server.URL, "bootstrap", "super-secret")
+	if err == nil {
+		t.Fatal("expected login error")
+	}
+	if got := err.Error(); got != "login failed: API error 401: invalid username or password" {
+		t.Fatalf("unexpected error: %q", got)
+	}
+	if got := err.Error(); got == "super-secret" {
+		t.Fatal("password leaked into error output")
 	}
 }
 
