@@ -128,7 +128,7 @@ func TestRegressionRunCommandLoadsAndExecutesNamedCase(t *testing.T) {
 				"datapack.build.started",
 				"algorithm.run.started",
 				"algorithm.run.succeed",
-				"datapack.result.collection",
+				"datapack.no_anomaly",
 			} {
 				_, _ = fmt.Fprintf(w, "event: update\ndata: {\"event_name\":%q,\"payload\":\"ok\"}\n\n", evt)
 				flusher.Flush()
@@ -179,13 +179,13 @@ submit:
 validation:
   timeout_seconds: 5
   min_events: 6
-  expected_final_event: datapack.result.collection
+  expected_final_event: datapack.no_anomaly
   required_events:
     - restart.pedestal.started
     - fault.injection.started
     - datapack.build.started
     - algorithm.run.started
-    - datapack.result.collection
+    - datapack.no_anomaly
   required_task_chain:
     - RestartPedestal
     - FaultInjection
@@ -229,7 +229,7 @@ validation:
 	if summary.TraceID != traceID {
 		t.Fatalf("expected trace id %q, got %q", traceID, summary.TraceID)
 	}
-	if summary.FinalEvent != "datapack.result.collection" {
-		t.Fatalf("expected final event datapack.result.collection, got %q", summary.FinalEvent)
+	if summary.FinalEvent != "datapack.no_anomaly" {
+		t.Fatalf("expected final event datapack.no_anomaly, got %q", summary.FinalEvent)
 	}
 }

@@ -35,10 +35,13 @@ submit:
 validation:
   timeout_seconds: 3000
   min_events: 6
-  expected_final_event: datapack.result.collection
+  expected_final_event: datapack.no_anomaly
   required_events:
     - restart.pedestal.started
     - fault.injection.started
+    - datapack.build.started
+    - algorithm.run.started
+    - datapack.no_anomaly
   required_task_chain:
     - RestartPedestal
     - FaultInjection
