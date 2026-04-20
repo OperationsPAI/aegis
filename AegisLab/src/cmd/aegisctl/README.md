@@ -47,6 +47,7 @@ aegisctl dataset list
 | `wait` | Block until a resource reaches terminal state |
 | `regression` | Run curated regression validations |
 | `status` | View system status |
+| `regression` | Run repo-tracked regression cases |
 | `completion` | Generate shell completions |
 
 ## Canonical regression case
@@ -74,6 +75,7 @@ aegisctl regression run otel-demo-guided --ensure-env --wait --output json
 
 ## Related docs
 
+- [`../../../regression/README.md`](../../../regression/README.md) - repo-tracked regression case format and canonical cases
 - [`../../../README.md`](../../../README.md) - backend runtime modes and quick start
 - [`../../../CONTRIBUTING.md`](../../../CONTRIBUTING.md) - module/plugin boundary rules
 - [`../../../../docs/deployment/README.md`](../../../../docs/deployment/README.md) - deploy and smoke-test map

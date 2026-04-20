@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
+import yaml
 from rcabench.openapi import ApiClient
 from rcabench.openapi.api.evaluations_api import EvaluationsApi
 from rcabench.openapi.api.injections_api import InjectionsApi
@@ -31,6 +33,31 @@ def injections_api(setup_environment: ApiClient) -> InjectionsApi:
 def traces_api(setup_environment: ApiClient) -> TracesApi:
     """Fixture to provide TracesApi instance for testing."""
     return TracesApi(setup_environment)
+
+
+def load_repo_tracked_case(case: dict[str, Any]) -> dict[str, Any]:
+    regression_case = case.get("regression_case")
+    if not regression_case:
+        return case
+
+    repo_root = Path(__file__).resolve().parents[3]
+    case_path = repo_root / "regression" / f"{regression_case}.yaml"
+    if not case_path.exists():
+        pytest.fail(f"Regression case file not found: {case_path}")
+
+    with case_path.open(encoding="utf-8") as f:
+        loaded = yaml.safe_load(f)
+
+    validation = loaded.get("validation", {})
+    return {
+        "name": loaded.get("name", regression_case),
+        "description": loaded.get("description", ""),
+        "input": loaded.get("submit", {}),
+        "expected": {
+            "timeout": validation.get("timeout_seconds", 300),
+            "min_events": validation.get("min_events", 1),
+        },
+    }
 
 
 class TestWorkflow:
@@ -65,6 +92,8 @@ class TestWorkflow:
                     }
                 }
         """
+        case = load_repo_tracked_case(case)
+
         console.print(f"\nRunning test case: {case.get('name', 'unnamed')}]")
         console.print(f"Description: {case.get('description', 'N/A')}")
 

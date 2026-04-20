@@ -1,404 +1,348 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"aegis/cmd/aegisctl/client"
-	"aegis/cmd/aegisctl/cluster"
 	"aegis/cmd/aegisctl/output"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
-const (
-	regressionExitAuthFailure    = 2
-	regressionExitMissingEnv     = 3
-	regressionExitFailure        = 4
-	defaultRegressionWaitSecs    = 600
-	defaultRegressionPollSecs    = 5
-	defaultRegressionProject     = "pair_diagnosis"
-	regressionOutcomePass        = "pass"
-	regressionOutcomeFail        = "fail"
-	regressionOutcomeSubmitted   = "submitted"
-	regressionErrCategoryAuth    = "auth_failure"
-	regressionErrCategoryEnv     = "missing_environment"
-	regressionErrCategoryFailure = "regression_failure"
-)
-
-var (
-	regressionWaitEnabled  bool
-	regressionEnsureEnv    bool
-	regressionWaitTimeout  int
-	regressionPollInterval int
-)
-
-type regressionTaskState struct {
-	TaskID string `json:"task_id"`
-	Type   string `json:"type"`
-	State  string `json:"state"`
+type regressionCase struct {
+	Name        string               `yaml:"name"`
+	Description string               `yaml:"description,omitempty"`
+	ProjectName string               `yaml:"project_name"`
+	Submit      map[string]any       `yaml:"submit"`
+	Validation  regressionValidation `yaml:"validation"`
 }
 
-type regressionTraceTask struct {
-	ID    string `json:"id"`
-	Type  string `json:"type"`
-	State string `json:"state"`
-}
-
-type regressionEnvCheck struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
-	Detail string `json:"detail"`
-	Fix    string `json:"fix,omitempty"`
+type regressionValidation struct {
+	TimeoutSeconds     int      `yaml:"timeout_seconds,omitempty"`
+	MinEvents          int      `yaml:"min_events,omitempty"`
+	ExpectedFinalEvent string   `yaml:"expected_final_event"`
+	RequiredEvents     []string `yaml:"required_events,omitempty"`
+	RequiredTaskChain  []string `yaml:"required_task_chain"`
 }
 
 type regressionSummary struct {
-	CaseName      string                `json:"case_name"`
-	TraceID       string                `json:"trace_id,omitempty"`
-	TraceState    string                `json:"trace_state,omitempty"`
-	FinalEvent    string                `json:"final_event,omitempty"`
-	TaskStates    []regressionTaskState `json:"task_states,omitempty"`
-	Outcome       string                `json:"outcome"`
-	Waited        bool                  `json:"waited"`
-	EnsuredEnv    bool                  `json:"ensured_env"`
-	ErrorCategory string                `json:"error_category,omitempty"`
-	Message       string                `json:"message,omitempty"`
-	EnvChecks     []regressionEnvCheck  `json:"env_checks,omitempty"`
+	CaseName           string   `json:"case_name"`
+	CaseFile           string   `json:"case_file"`
+	ProjectName        string   `json:"project_name"`
+	TraceID            string   `json:"trace_id"`
+	FinalEvent         string   `json:"final_event"`
+	EventCount         int      `json:"event_count"`
+	ObservedEvents     []string `json:"observed_events"`
+	ObservedTaskChain  []string `json:"observed_task_chain"`
+	ExpectedFinalEvent string   `json:"expected_final_event"`
+	RequiredEvents     []string `json:"required_events"`
+	RequiredTaskChain  []string `json:"required_task_chain"`
+	Status             string   `json:"status"`
 }
 
-type regressionTraceDetail struct {
-	ID        string                `json:"id"`
-	State     string                `json:"state"`
-	LastEvent string                `json:"last_event"`
-	Tasks     []regressionTraceTask `json:"tasks"`
-}
-
-type regressionCaseDefinition struct {
-	Name           string
-	Description    string
-	DefaultProject string
-	GuidedConfig   guidedcli.GuidedConfig
-	ApplyOptions   guidedApplyOptions
-}
-
-var regressionCases = map[string]regressionCaseDefinition{
-	"otel-demo-guided": {
-		Name:           "otel-demo-guided",
-		Description:    "Canonical otel-demo guided network delay validation path",
-		DefaultProject: defaultRegressionProject,
-		GuidedConfig: guidedcli.GuidedConfig{
-			System:        "otel-demo0",
-			App:           "cart",
-			ChaosType:     "NetworkDelay",
-			TargetService: "valkey-cart",
-			Direction:     "to",
-			Duration:      intPtr(2),
-			Latency:       intPtr(731),
-			Correlation:   intPtr(100),
-			Jitter:        intPtr(1),
-		},
-		ApplyOptions: guidedApplyOptions{
-			PedestalName:  "otel-demo",
-			PedestalTag:   "1.0.0",
-			BenchmarkName: "otel-demo-bench",
-			BenchmarkTag:  "1.0.0",
-			Interval:      4,
-			PreDuration:   1,
-		},
-	},
-}
+var (
+	regressionCasesDir string
+	regressionCaseFile string
+)
 
 var regressionCmd = &cobra.Command{
 	Use:   "regression",
-	Short: "Run curated application-level regression validations",
-	Long: `Run curated application-level regression validations through the same
-` + "`aegisctl`" + ` client and backend protocol paths used by normal operators.
+	Short: "Run repo-tracked regression cases",
+	Long: `Run repo-tracked regression cases for aegisctl.
 
-The first shipped case is ` + "`otel-demo-guided`" + `, which submits the
-canonical guided otel-demo network-delay validation flow.
-
-EXIT CODES:
-  0 — submit succeeded (or waited and passed)
-  1 — command misuse or unexpected CLI/runtime error
-  2 — authentication/authorization failure
-  3 — missing local environment or dependency (for example --ensure-env preflight failed)
-  4 — regression execution failed after submission`,
+Regression cases live as YAML files under the repo's regression directory.
+Each case carries both the submit payload and the validation contract so the
+canonical smoke path is additive, reviewable, and versioned in git.`,
 }
 
 var regressionRunCmd = &cobra.Command{
 	Use:   "run <case-name>",
-	Short: "Run a curated regression case",
-	Args:  cobra.ExactArgs(1),
+	Short: "Load and execute a named repo-tracked regression case",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if regressionCaseFile != "" {
+			if len(args) > 0 {
+				return fmt.Errorf("do not pass <case-name> when --file is set")
+			}
+			return nil
+		}
+		if len(args) != 1 {
+			return fmt.Errorf("requires exactly one <case-name> argument unless --file is set")
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		summary, exitCode, err := runRegressionCase(cmd.Context(), args[0], regressionRunOptions{
-			Wait:         regressionWaitEnabled,
-			EnsureEnv:    regressionEnsureEnv,
-			WaitTimeout:  time.Duration(regressionWaitTimeout) * time.Second,
-			PollInterval: time.Duration(regressionPollInterval) * time.Second,
-		})
-		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(summary)
+		var (
+			rc       regressionCase
+			casePath string
+			err      error
+		)
+		if regressionCaseFile != "" {
+			rc, casePath, err = loadRegressionCaseFile(regressionCaseFile)
 		} else {
-			printRegressionSummary(summary)
+			rc, casePath, err = loadRegressionCaseByName(regressionCasesDir, args[0])
 		}
 		if err != nil {
-			if exitCode == 0 || exitCode == 1 {
-				return err
-			}
-			os.Exit(exitCode)
+			return err
 		}
-		if exitCode != 0 {
-			os.Exit(exitCode)
+
+		summary, err := runRegressionCase(cmd.Context(), casePath, rc)
+		if err != nil {
+			return err
 		}
+
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(summary)
+			return nil
+		}
+
+		output.PrintTable(
+			[]string{"CASE", "TRACE", "FINAL EVENT", "EVENTS", "STATUS"},
+			[][]string{{summary.CaseName, summary.TraceID, summary.FinalEvent, fmt.Sprintf("%d", summary.EventCount), summary.Status}},
+		)
 		return nil
 	},
 }
 
-type regressionRunOptions struct {
-	Wait         bool
-	EnsureEnv    bool
-	WaitTimeout  time.Duration
-	PollInterval time.Duration
-}
-
-func init() {
-	regressionRunCmd.Flags().BoolVar(&regressionEnsureEnv, "ensure-env", false, "Run dependency preflight checks before submitting the case")
-	regressionRunCmd.Flags().BoolVar(&regressionWaitEnabled, "wait", false, "Block until the submitted trace reaches a terminal state")
-	regressionRunCmd.Flags().IntVar(&regressionWaitTimeout, "timeout", defaultRegressionWaitSecs, "Maximum time to wait when --wait is set, in seconds")
-	regressionRunCmd.Flags().IntVar(&regressionPollInterval, "interval", defaultRegressionPollSecs, "Trace poll interval in seconds when --wait is set")
-	regressionCmd.AddCommand(regressionRunCmd)
-}
-
-func intPtr(v int) *int {
-	return &v
-}
-
-func printRegressionSummary(summary regressionSummary) {
-	rows := [][]string{
-		{"case", summary.CaseName},
-		{"outcome", summary.Outcome},
-		{"trace_id", nonEmpty(summary.TraceID, "-")},
-		{"trace_state", nonEmpty(summary.TraceState, "-")},
-		{"final_event", nonEmpty(summary.FinalEvent, "-")},
+func loadRegressionCaseByName(casesDir, name string) (regressionCase, string, error) {
+	if name == "" {
+		return regressionCase{}, "", fmt.Errorf("regression case name is required")
 	}
-	if summary.ErrorCategory != "" {
-		rows = append(rows, []string{"error_category", summary.ErrorCategory})
+	if name == "." || name == ".." || filepath.Base(name) != name {
+		return regressionCase{}, "", fmt.Errorf("invalid regression case name %q", name)
 	}
-	if summary.Message != "" {
-		rows = append(rows, []string{"message", summary.Message})
-	}
-	output.PrintTable([]string{"FIELD", "VALUE"}, rows)
-	if len(summary.TaskStates) == 0 {
-		return
-	}
-	fmt.Fprintln(os.Stdout)
-	taskRows := make([][]string, 0, len(summary.TaskStates))
-	for _, task := range summary.TaskStates {
-		taskRows = append(taskRows, []string{task.TaskID, task.Type, task.State})
-	}
-	output.PrintTable([]string{"TASK-ID", "TYPE", "STATE"}, taskRows)
-}
-
-func runRegressionCase(ctx context.Context, caseName string, opts regressionRunOptions) (regressionSummary, int, error) {
-	summary := regressionSummary{
-		CaseName:   caseName,
-		Waited:     opts.Wait,
-		EnsuredEnv: opts.EnsureEnv,
-		Outcome:    regressionOutcomeSubmitted,
-	}
-
-	def, ok := regressionCases[caseName]
-	if !ok {
-		return summary, 1, fmt.Errorf("unsupported regression case %q (available: %s)", caseName, strings.Join(sortedRegressionCases(), ", "))
-	}
-
-	if opts.PollInterval <= 0 {
-		opts.PollInterval = defaultRegressionPollSecs * time.Second
-	}
-	if opts.WaitTimeout <= 0 {
-		opts.WaitTimeout = defaultRegressionWaitSecs * time.Second
-	}
-
-	if opts.EnsureEnv {
-		allOK, checks, rendered, err := runRegressionPreflight(ctx)
-		summary.EnvChecks = checks
-		if err != nil {
-			return summarizeRegressionError(summary, err)
-		}
-		if rendered != "" && output.OutputFormat(flagOutput) != output.FormatJSON && !output.Quiet {
-			output.PrintInfo("Running regression preflight checks:")
-			fmt.Fprint(os.Stderr, rendered)
-		}
-		if !allOK {
-			summary.Outcome = regressionOutcomeFail
-			summary.ErrorCategory = regressionErrCategoryEnv
-			summary.Message = "environment preflight failed"
-			return summary, regressionExitMissingEnv, nil
+	for _, ext := range []string{".yaml", ".yml"} {
+		path := filepath.Join(casesDir, name+ext)
+		if _, err := os.Stat(path); err == nil {
+			return loadRegressionCaseFile(path)
 		}
 	}
+	return regressionCase{}, "", fmt.Errorf("regression case %q not found in %s", name, casesDir)
+}
 
-	projectName := flagProject
-	if projectName == "" {
-		projectName = def.DefaultProject
-	}
-	resp, err := submitGuidedApplyWithOptions(projectName, def.GuidedConfig, def.ApplyOptions)
+func loadRegressionCaseFile(path string) (regressionCase, string, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return summarizeRegressionError(summary, err)
-	}
-	if len(resp.Data.Items) == 0 || resp.Data.Items[0].TraceID == "" {
-		return summary, 1, fmt.Errorf("server accepted regression submission but returned no trace_id")
-	}
-	summary.TraceID = resp.Data.Items[0].TraceID
-	summary.Message = "regression case submitted"
-
-	if !opts.Wait {
-		if detail, err := fetchRegressionTraceDetail(newClient(), summary.TraceID); err == nil {
-			populateRegressionSummaryFromTrace(&summary, detail)
-		}
-		return summary, 0, nil
+		return regressionCase{}, "", fmt.Errorf("read regression case %q: %w", path, err)
 	}
 
-	detail, err := waitForRegressionTrace(ctx, summary.TraceID, opts.WaitTimeout, opts.PollInterval)
+	var rc regressionCase
+	if err := yaml.Unmarshal(data, &rc); err != nil {
+		return regressionCase{}, "", fmt.Errorf("parse regression case %q: %w", path, err)
+	}
+	if err := validateRegressionCase(rc, path); err != nil {
+		return regressionCase{}, "", err
+	}
+	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return summarizeRegressionError(summary, err)
+		return rc, path, nil
 	}
-	populateRegressionSummaryFromTrace(&summary, detail)
-	if isPassingRegressionTrace(detail) {
-		summary.Outcome = regressionOutcomePass
-		summary.Message = "regression case passed"
-		return summary, 0, nil
-	}
-
-	summary.Outcome = regressionOutcomeFail
-	summary.ErrorCategory = regressionErrCategoryFailure
-	summary.Message = "regression trace reached a failing terminal state"
-	return summary, regressionExitFailure, nil
+	return rc, absPath, nil
 }
 
-func runRegressionPreflight(ctx context.Context) (bool, []regressionEnvCheck, string, error) {
-	cfg, err := cluster.LoadConfig("")
-	if err != nil {
-		return false, nil, "", fmt.Errorf("load cluster preflight config: %w", err)
+func validateRegressionCase(rc regressionCase, path string) error {
+	if strings.TrimSpace(rc.Name) == "" {
+		return fmt.Errorf("validate regression case %q: name is required", path)
 	}
-	env := cluster.NewLiveEnv(cfg)
-	reg := cluster.NewRegistry(cluster.DefaultChecks())
-	runner := &cluster.Runner{Registry: reg}
-	var buf bytes.Buffer
-	allOK, results := runner.Run(ctx, env, cluster.RunOptions{PerCheckTimeout: 10 * time.Second}, &buf)
-	checks := make([]regressionEnvCheck, 0, len(results))
-	for _, res := range results {
-		checks = append(checks, regressionEnvCheck{
-			ID:     res.ID,
-			Status: string(res.Status),
-			Detail: res.Detail,
-			Fix:    res.Fix,
-		})
+	if strings.TrimSpace(rc.ProjectName) == "" {
+		return fmt.Errorf("validate regression case %q: project_name is required", path)
 	}
-	return allOK, checks, buf.String(), nil
+	if len(rc.Submit) == 0 {
+		return fmt.Errorf("validate regression case %q: submit payload is required", path)
+	}
+	if strings.TrimSpace(rc.Validation.ExpectedFinalEvent) == "" {
+		return fmt.Errorf("validate regression case %q: validation.expected_final_event is required", path)
+	}
+	if len(rc.Validation.RequiredTaskChain) == 0 {
+		return fmt.Errorf("validate regression case %q: validation.required_task_chain must include at least one task type", path)
+	}
+	if rc.Validation.TimeoutSeconds < 0 {
+		return fmt.Errorf("validate regression case %q: validation.timeout_seconds must be >= 0", path)
+	}
+	if rc.Validation.MinEvents < 0 {
+		return fmt.Errorf("validate regression case %q: validation.min_events must be >= 0", path)
+	}
+	return nil
 }
 
-func waitForRegressionTrace(ctx context.Context, traceID string, timeout, interval time.Duration) (*regressionTraceDetail, error) {
-	if ctx == nil {
-		ctx = context.Background()
+func runRegressionCase(parentCtx context.Context, casePath string, rc regressionCase) (regressionSummary, error) {
+	projectName := rc.ProjectName
+	if flagProject != "" {
+		projectName = flagProject
 	}
-	waitCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+
+	pid, err := newResolver().ProjectID(projectName)
+	if err != nil {
+		return regressionSummary{}, err
+	}
 
 	c := newClient()
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		state, _, err := pollState(c, "trace", traceID)
-		if err != nil {
-			return nil, err
-		}
-		if isTerminal("trace", state) {
-			return fetchRegressionTraceDetail(c, traceID)
-		}
+	path := fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid)
+	var submitResp client.APIResponse[injectSubmitResponse]
+	if err := c.Post(path, rc.Submit, &submitResp); err != nil {
+		return regressionSummary{}, fmt.Errorf("submit regression case %q: %w", rc.Name, err)
+	}
+	if len(submitResp.Data.Items) == 0 || strings.TrimSpace(submitResp.Data.Items[0].TraceID) == "" {
+		return regressionSummary{}, fmt.Errorf("submit regression case %q: server response missing trace_id", rc.Name)
+	}
+	traceID := submitResp.Data.Items[0].TraceID
 
+	observedEvents, err := collectRegressionEvents(parentCtx, traceID, rc.Validation.TimeoutSeconds)
+	if err != nil {
+		return regressionSummary{}, fmt.Errorf("run regression case %q: %w", rc.Name, err)
+	}
+
+	traceData, err := fetchTraceData(c, traceID)
+	if err != nil {
+		return regressionSummary{}, fmt.Errorf("fetch trace %s for regression case %q: %w", traceID, rc.Name, err)
+	}
+	observedTaskChain := extractTaskChain(traceData)
+	finalEvent := ""
+	if len(observedEvents) > 0 {
+		finalEvent = observedEvents[len(observedEvents)-1]
+	}
+	if err := validateRegressionOutcome(rc.Validation, observedEvents, observedTaskChain); err != nil {
+		return regressionSummary{}, fmt.Errorf("validate regression case %q: %w", rc.Name, err)
+	}
+
+	return regressionSummary{
+		CaseName:           rc.Name,
+		CaseFile:           casePath,
+		ProjectName:        projectName,
+		TraceID:            traceID,
+		FinalEvent:         finalEvent,
+		EventCount:         len(observedEvents),
+		ObservedEvents:     observedEvents,
+		ObservedTaskChain:  observedTaskChain,
+		ExpectedFinalEvent: rc.Validation.ExpectedFinalEvent,
+		RequiredEvents:     rc.Validation.RequiredEvents,
+		RequiredTaskChain:  rc.Validation.RequiredTaskChain,
+		Status:             "passed",
+	}, nil
+}
+
+func collectRegressionEvents(parentCtx context.Context, traceID string, timeoutSeconds int) ([]string, error) {
+	if parentCtx == nil {
+		parentCtx = context.Background()
+	}
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 600
+	}
+	ctx, cancel := context.WithTimeout(parentCtx, time.Duration(timeoutSeconds)*time.Second)
+	defer cancel()
+
+	reader := client.NewSSEReader(flagServer, fmt.Sprintf("/api/v2/traces/%s/stream", traceID), flagToken)
+	events, errs := reader.Stream(ctx)
+
+	var observed []string
+	for {
 		select {
-		case <-waitCtx.Done():
-			if errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
-				return nil, fmt.Errorf("timed out waiting for trace %s after %s", traceID, timeout)
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timed out waiting for trace %s terminal event after %ds", traceID, timeoutSeconds)
+		case err, ok := <-errs:
+			if !ok {
+				errs = nil
+				continue
 			}
-			return nil, waitCtx.Err()
-		case <-ticker.C:
+			if err != nil {
+				return nil, fmt.Errorf("trace %s stream error: %w", traceID, err)
+			}
+		case evt, ok := <-events:
+			if !ok {
+				return nil, fmt.Errorf("trace %s stream closed before terminal event", traceID)
+			}
+			parsed := parseTraceSSEEvent(evt)
+			if parsed.SSEEvent == "end" {
+				return observed, nil
+			}
+			if parsed.EventName != "" {
+				observed = append(observed, parsed.EventName)
+			}
 		}
 	}
 }
 
-func fetchRegressionTraceDetail(c *client.Client, traceID string) (*regressionTraceDetail, error) {
-	var resp client.APIResponse[regressionTraceDetail]
+func fetchTraceData(c *client.Client, traceID string) (map[string]any, error) {
+	var resp client.APIResponse[map[string]any]
 	if err := c.Get(fmt.Sprintf("/api/v2/traces/%s", traceID), &resp); err != nil {
 		return nil, err
 	}
-	return &resp.Data, nil
+	return resp.Data, nil
 }
 
-func populateRegressionSummaryFromTrace(summary *regressionSummary, detail *regressionTraceDetail) {
-	if summary == nil || detail == nil {
-		return
+func extractTaskChain(traceData map[string]any) []string {
+	tasksRaw, ok := traceData["tasks"]
+	if !ok || tasksRaw == nil {
+		return nil
 	}
-	summary.TraceID = nonEmpty(summary.TraceID, detail.ID)
-	summary.TraceState = detail.State
-	summary.FinalEvent = detail.LastEvent
-	summary.TaskStates = make([]regressionTaskState, 0, len(detail.Tasks))
-	for _, task := range detail.Tasks {
-		summary.TaskStates = append(summary.TaskStates, regressionTaskState{
-			TaskID: task.ID,
-			Type:   task.Type,
-			State:  task.State,
-		})
+	payload, err := json.Marshal(tasksRaw)
+	if err != nil {
+		return nil
 	}
+	var tasks []map[string]any
+	if err := json.Unmarshal(payload, &tasks); err != nil {
+		return nil
+	}
+	chain := make([]string, 0, len(tasks))
+	for _, task := range tasks {
+		typ := strings.TrimSpace(stringField(task, "type"))
+		if typ == "" {
+			continue
+		}
+		chain = append(chain, typ)
+	}
+	return chain
 }
 
-func isPassingRegressionTrace(detail *regressionTraceDetail) bool {
-	if detail == nil || detail.State != "Completed" || len(detail.Tasks) == 0 {
-		return false
+func validateRegressionOutcome(v regressionValidation, observedEvents, observedTaskChain []string) error {
+	if v.MinEvents > 0 && len(observedEvents) < v.MinEvents {
+		return fmt.Errorf("expected at least %d events, got %d", v.MinEvents, len(observedEvents))
 	}
-	for _, task := range detail.Tasks {
-		if task.State != "Completed" {
-			return false
+	if len(observedEvents) == 0 {
+		return fmt.Errorf("observed no trace events")
+	}
+	finalEvent := observedEvents[len(observedEvents)-1]
+	if finalEvent != v.ExpectedFinalEvent {
+		return fmt.Errorf("expected final event %q, got %q", v.ExpectedFinalEvent, finalEvent)
+	}
+	if err := requireOrderedSubsequence("required events", observedEvents, v.RequiredEvents); err != nil {
+		return err
+	}
+	if err := requireOrderedSubsequence("required task chain", observedTaskChain, v.RequiredTaskChain); err != nil {
+		return err
+	}
+	return nil
+}
+
+func requireOrderedSubsequence(label string, observed, required []string) error {
+	if len(required) == 0 {
+		return nil
+	}
+	if len(observed) == 0 {
+		return fmt.Errorf("%s: observed sequence is empty", label)
+	}
+	idx := 0
+	for _, item := range observed {
+		if item == required[idx] {
+			idx++
+			if idx == len(required) {
+				return nil
+			}
 		}
 	}
-	return true
+	missing := required[idx:]
+	return fmt.Errorf("%s: missing ordered subsequence %q in observed sequence %q", label, strings.Join(missing, " -> "), strings.Join(observed, " -> "))
 }
 
-func summarizeRegressionError(summary regressionSummary, err error) (regressionSummary, int, error) {
-	var apiErr *client.APIError
-	switch {
-	case errors.As(err, &apiErr) && (apiErr.StatusCode == 401 || apiErr.StatusCode == 403):
-		summary.Outcome = regressionOutcomeFail
-		summary.ErrorCategory = regressionErrCategoryAuth
-		summary.Message = apiErr.Error()
-		return summary, regressionExitAuthFailure, nil
-	case errors.As(err, &apiErr):
-		summary.Outcome = regressionOutcomeFail
-		summary.ErrorCategory = regressionErrCategoryFailure
-		summary.Message = apiErr.Error()
-		return summary, regressionExitFailure, nil
-	case strings.Contains(strings.ToLower(err.Error()), "timed out waiting for trace"):
-		summary.Outcome = regressionOutcomeFail
-		summary.ErrorCategory = regressionErrCategoryFailure
-		summary.Message = err.Error()
-		return summary, regressionExitFailure, nil
-	default:
-		return summary, 1, err
-	}
-}
+func init() {
+	regressionRunCmd.Flags().StringVar(&regressionCasesDir, "cases-dir", "regression", "Directory containing repo-tracked regression case YAML files")
+	regressionRunCmd.Flags().StringVar(&regressionCaseFile, "file", "", "Path to a regression case YAML file")
 
-func sortedRegressionCases() []string {
-	out := make([]string, 0, len(regressionCases))
-	for name := range regressionCases {
-		out = append(out, name)
-	}
-	sort.Strings(out)
-	return out
+	regressionCmd.AddCommand(regressionRunCmd)
 }

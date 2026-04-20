@@ -1,0 +1,43 @@
+name: otel-demo-guided
+description: Canonical otel-demo smoke case used by local/e2e validation.
+project_name: pair_diagnosis
+submit:
+  pedestal:
+    name: otel-demo
+    version: "1.0.0"
+  benchmark:
+    name: clickhouse
+    version: "1.0.0"
+  interval: 2
+  pre_duration: 1
+  algorithms:
+    - name: random
+      version: "1.0.0"
+  labels:
+    - key: env
+      value: prod
+    - key: batch
+      value: bootstrap
+  specs:
+    - - system: otel-demo
+        system_type: otel-demo
+        namespace: otel-demo
+        app: frontend
+        chaos_type: PodKill
+        duration: 1
+validation:
+  timeout_seconds: 3000
+  min_events: 6
+  expected_final_event: datapack.result.collection
+  required_events:
+    - restart.pedestal.started
+    - fault.injection.started
+    - datapack.build.started
+    - algorithm.run.started
+    - datapack.result.collection
+  required_task_chain:
+    - RestartPedestal
+    - FaultInjection
+    - BuildDatapack
+    - RunAlgorithm
+    - CollectResult

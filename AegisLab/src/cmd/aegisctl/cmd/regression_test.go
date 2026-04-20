@@ -1,151 +1,235 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"sync/atomic"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
-func TestRunRegressionCaseWaitSuccess(t *testing.T) {
-	restore := snapshotRegressionGlobals()
-	defer restore()
+func TestLoadRegressionCaseByName(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sample.yaml")
+	if err := os.WriteFile(path, []byte(`name: sample
+project_name: pair_diagnosis
+submit:
+  specs:
+    - - chaos_type: PodKill
+        duration: 1
+validation:
+  expected_final_event: datapack.result.collection
+  required_task_chain:
+    - RestartPedestal
+`), 0o644); err != nil {
+		t.Fatalf("write case: %v", err)
+	}
 
-	var traceGets int32
+	rc, gotPath, err := loadRegressionCaseByName(dir, "sample")
+	if err != nil {
+		t.Fatalf("loadRegressionCaseByName: %v", err)
+	}
+	if rc.Name != "sample" {
+		t.Fatalf("expected case name sample, got %q", rc.Name)
+	}
+	if filepath.Base(gotPath) != "sample.yaml" {
+		t.Fatalf("expected resolved file path, got %q", gotPath)
+	}
+}
+
+func TestLoadRegressionCaseParseFailure(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "broken.yaml")
+	if err := os.WriteFile(path, []byte("name: broken\nsubmit: [\n"), 0o644); err != nil {
+		t.Fatalf("write case: %v", err)
+	}
+
+	_, _, err := loadRegressionCaseFile(path)
+	if err == nil {
+		t.Fatal("expected parse error")
+	}
+	if !strings.Contains(err.Error(), "parse regression case") {
+		t.Fatalf("expected clear parse error, got %v", err)
+	}
+}
+
+func TestLoadRegressionCaseValidationFailure(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "invalid.yaml")
+	if err := os.WriteFile(path, []byte(`name: invalid
+project_name: pair_diagnosis
+submit:
+  specs: []
+validation:
+  required_task_chain: []
+`), 0o644); err != nil {
+		t.Fatalf("write case: %v", err)
+	}
+
+	_, _, err := loadRegressionCaseFile(path)
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	if !strings.Contains(err.Error(), "validation.expected_final_event") {
+		t.Fatalf("expected clear validation error, got %v", err)
+	}
+}
+
+func TestRegressionRunCommandLoadsAndExecutesNamedCase(t *testing.T) {
+	oldServer := flagServer
+	oldToken := flagToken
+	oldProject := flagProject
+	oldOutput := flagOutput
+	oldCasesDir := regressionCasesDir
+	oldCaseFile := regressionCaseFile
+	defer func() {
+		flagServer = oldServer
+		flagToken = oldToken
+		flagProject = oldProject
+		flagOutput = oldOutput
+		regressionCasesDir = oldCasesDir
+		regressionCaseFile = oldCaseFile
+	}()
+
+	traceID := "trace-123"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/projects":
-			require.Equal(t, "1", r.URL.Query().Get("page"))
-			require.Equal(t, "100", r.URL.Query().Get("size"))
+		case r.URL.Path == "/api/v2/projects" && r.URL.RawQuery == "page=1&size=100":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
 				"data": map[string]any{
-					"items":      []map[string]any{{"id": 42, "name": "pair_diagnosis"}},
+					"items":      []map[string]any{{"id": 7, "name": "pair_diagnosis"}},
 					"pagination": map[string]any{"page": 1, "size": 100, "total": 1, "total_pages": 1},
 				},
 			})
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v2/projects/42/injections/inject":
-			var body map[string]any
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			require.Equal(t, float64(4), body["interval"])
-			require.Equal(t, float64(1), body["pre_duration"])
-			specs := body["specs"].([]any)
-			firstBatch := specs[0].([]any)
-			firstSpec := firstBatch[0].(map[string]any)
-			require.Equal(t, "NetworkDelay", firstSpec["chaos_type"])
-			require.Equal(t, "cart", firstSpec["app"])
+		case r.URL.Path == "/api/v2/projects/7/injections/inject":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
 				"data": map[string]any{
 					"group_id": "group-1",
-					"items": []map[string]any{{
-						"index":    0,
-						"trace_id": "trace-123",
-						"task_id":  "task-root",
-					}},
+					"items":    []map[string]any{{"index": 0, "trace_id": traceID, "task_id": "task-1"}},
 				},
 			})
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/traces/trace-123":
-			call := atomic.AddInt32(&traceGets, 1)
-			if call == 1 {
-				_ = json.NewEncoder(w).Encode(map[string]any{
-					"code":    200,
-					"message": "success",
-					"data": map[string]any{
-						"id":         "trace-123",
-						"state":      "Running",
-						"last_event": "fault.injection.started",
-						"tasks":      []any{},
-					},
-				})
-				return
+		case r.URL.Path == "/api/v2/traces/"+traceID+"/stream":
+			w.Header().Set("Content-Type", "text/event-stream")
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				t.Fatalf("response writer is not a flusher")
 			}
+			for _, evt := range []string{
+				"restart.pedestal.started",
+				"fault.injection.started",
+				"datapack.build.started",
+				"algorithm.run.started",
+				"algorithm.run.succeed",
+				"datapack.result.collection",
+			} {
+				_, _ = fmt.Fprintf(w, "event: update\ndata: {\"event_name\":%q,\"payload\":\"ok\"}\n\n", evt)
+				flusher.Flush()
+			}
+			_, _ = fmt.Fprint(w, "event: end\ndata: done\n\n")
+			flusher.Flush()
+		case r.URL.Path == "/api/v2/traces/"+traceID:
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
 				"data": map[string]any{
-					"id":         "trace-123",
-					"state":      "Completed",
-					"last_event": "datapack.no_anomaly",
+					"trace_id": traceID,
 					"tasks": []map[string]any{
-						{"id": "t1", "type": "RestartPedestal", "state": "Completed"},
-						{"id": "t2", "type": "FaultInjection", "state": "Completed"},
-						{"id": "t3", "type": "BuildDatapack", "state": "Completed"},
+						{"type": "RestartPedestal"},
+						{"type": "FaultInjection"},
+						{"type": "BuildDatapack"},
+						{"type": "RunAlgorithm"},
+						{"type": "CollectResult"},
 					},
 				},
 			})
 		default:
-			http.NotFound(w, r)
+			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 	defer ts.Close()
 
+	casesDir := t.TempDir()
+	casePath := filepath.Join(casesDir, "smoke.yaml")
+	if err := os.WriteFile(casePath, []byte(`name: smoke
+project_name: pair_diagnosis
+submit:
+  pedestal:
+    name: otel-demo
+    version: "1.0.0"
+  benchmark:
+    name: clickhouse
+    version: "1.0.0"
+  interval: 2
+  pre_duration: 1
+  specs:
+    - - system: otel-demo
+        system_type: otel-demo
+        namespace: otel-demo
+        app: frontend
+        chaos_type: PodKill
+        duration: 1
+validation:
+  timeout_seconds: 5
+  min_events: 6
+  expected_final_event: datapack.result.collection
+  required_events:
+    - restart.pedestal.started
+    - fault.injection.started
+    - datapack.build.started
+    - algorithm.run.started
+    - datapack.result.collection
+  required_task_chain:
+    - RestartPedestal
+    - FaultInjection
+    - BuildDatapack
+    - RunAlgorithm
+    - CollectResult
+`), 0o644); err != nil {
+		t.Fatalf("write case: %v", err)
+	}
+
 	flagServer = ts.URL
-	flagToken = "token"
+	flagToken = ""
 	flagProject = ""
 	flagOutput = "json"
-	flagRequestTimeout = 1
+	regressionCasesDir = casesDir
+	regressionCaseFile = ""
 
-	summary, exitCode, err := runRegressionCase(context.Background(), "otel-demo-guided", regressionRunOptions{
-		Wait:         true,
-		WaitTimeout:  2 * time.Second,
-		PollInterval: 10 * time.Millisecond,
-	})
-	require.NoError(t, err)
-	require.Equal(t, 0, exitCode)
-	require.Equal(t, regressionOutcomePass, summary.Outcome)
-	require.Equal(t, "trace-123", summary.TraceID)
-	require.Equal(t, "Completed", summary.TraceState)
-	require.Equal(t, "datapack.no_anomaly", summary.FinalEvent)
-	require.Len(t, summary.TaskStates, 3)
-	require.Equal(t, "pair_diagnosis", regressionCases["otel-demo-guided"].DefaultProject)
-}
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
-func TestRunRegressionCaseAuthFailure(t *testing.T) {
-	restore := snapshotRegressionGlobals()
-	defer restore()
+	err := regressionRunCmd.RunE(regressionRunCmd, []string{"smoke"})
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"code":    401,
-			"message": "unauthorized",
-		})
-	}))
-	defer ts.Close()
+	w.Close()
+	os.Stdout = oldStdout
+	out, readErr := io.ReadAll(r)
+	if readErr != nil {
+		t.Fatalf("read command output: %v", readErr)
+	}
+	if err != nil {
+		t.Fatalf("regressionRunCmd.RunE: %v", err)
+	}
 
-	flagServer = ts.URL
-	flagToken = "bad-token"
-	flagProject = ""
-	flagOutput = "json"
-	flagRequestTimeout = 1
-
-	summary, exitCode, err := runRegressionCase(context.Background(), "otel-demo-guided", regressionRunOptions{})
-	require.NoError(t, err)
-	require.Equal(t, regressionExitAuthFailure, exitCode)
-	require.Equal(t, regressionOutcomeFail, summary.Outcome)
-	require.Equal(t, regressionErrCategoryAuth, summary.ErrorCategory)
-	require.Contains(t, summary.Message, "401")
-}
-
-func snapshotRegressionGlobals() func() {
-	oldServer := flagServer
-	oldToken := flagToken
-	oldProject := flagProject
-	oldOutput := flagOutput
-	oldTimeout := flagRequestTimeout
-	return func() {
-		flagServer = oldServer
-		flagToken = oldToken
-		flagProject = oldProject
-		flagOutput = oldOutput
-		flagRequestTimeout = oldTimeout
+	var summary regressionSummary
+	if err := json.Unmarshal(out, &summary); err != nil {
+		t.Fatalf("expected JSON summary, got %q (%v)", string(out), err)
+	}
+	if summary.CaseName != "smoke" {
+		t.Fatalf("expected case name smoke, got %q", summary.CaseName)
+	}
+	if summary.TraceID != traceID {
+		t.Fatalf("expected trace id %q, got %q", traceID, summary.TraceID)
+	}
+	if summary.FinalEvent != "datapack.result.collection" {
+		t.Fatalf("expected final event datapack.result.collection, got %q", summary.FinalEvent)
 	}
 }

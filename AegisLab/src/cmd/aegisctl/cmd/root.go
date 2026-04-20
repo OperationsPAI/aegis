@@ -193,6 +193,7 @@ func init() {
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(pedestalCmd)
+	rootCmd.AddCommand(regressionCmd)
 }
 
 // Execute runs the root command and returns the process exit code.
