@@ -180,6 +180,8 @@ func (f *fakeEtcd) Put(_ context.Context, key, value string) error {
 	return nil
 }
 
+func (f *fakeEtcd) Close() error { return nil }
+
 func TestCheckRcabenchSA_Missing(t *testing.T) {
 	env := &fakeEnv{
 		cfg: Config{K8sNamespace: "exp", ServiceAccount: "rcabench-sa"},

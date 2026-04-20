@@ -479,3 +479,12 @@ func (e *liveEtcd) Put(ctx context.Context, key, value string) error {
 	_, err = client.Put(ctx, key, value)
 	return err
 }
+
+func (e *liveEtcd) Close() error {
+	if e.client == nil {
+		return nil
+	}
+	err := e.client.Close()
+	e.client = nil
+	return err
+}

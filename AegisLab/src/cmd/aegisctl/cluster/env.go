@@ -67,4 +67,5 @@ type RedisProbe interface {
 type EtcdProbe interface {
 	Get(ctx context.Context, key string) (value string, exists bool, err error)
 	Put(ctx context.Context, key, value string) error
+	Close() error
 }
