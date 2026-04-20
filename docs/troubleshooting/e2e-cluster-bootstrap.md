@@ -1,9 +1,12 @@
 # Fresh-Cluster E2E Bootstrap Runbook
 
 Stand up a kind cluster and drive `aegisctl inject guided` through to a
-populated datapack. Derived from the 2026-04-18 debugging session. Work
-through sections in order; each step that is a workaround (not a permanent
-fix) is tagged **[WORKAROUND]**.
+populated datapack. Derived from the 2026-04-18 debugging session. This is a
+debugging runbook, not the primary contract reference; use
+`AegisLab/docs/aegisctl-cli-spec.md` for the supported validation flow, then
+come back here when the environment needs repair. Work through sections in
+order; each step that is a workaround (not a permanent fix) is tagged
+**[WORKAROUND]**.
 
 Short-form pitfalls memory:
 `~/.claude/projects/-home-ddq-AoyangSpace-aegis/memory/aegislab_e2e_pitfalls.md`.

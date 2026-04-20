@@ -151,9 +151,26 @@ var pedestalHelmVerifyCmd = &cobra.Command{
 		if pedestalHelmVersionID <= 0 {
 			return fmt.Errorf("--container-version-id is required and must be > 0")
 		}
+		path := fmt.Sprintf("/api/v2/pedestal/helm/%d/verify", pedestalHelmVersionID)
+		if flagDryRun {
+			plan := map[string]any{
+				"dry_run":              true,
+				"operation":            "pedestal_helm_verify",
+				"container_version_id": pedestalHelmVersionID,
+				"method":               "POST",
+				"path":                 path,
+			}
+			if output.OutputFormat(flagOutput) == output.FormatJSON {
+				output.PrintJSON(plan)
+			} else {
+				output.PrintInfo(fmt.Sprintf("Dry run: POST %s", path))
+			}
+			return nil
+		}
+
 		c := newClient()
 		var resp client.APIResponse[pedestalHelmVerifyResp]
-		if err := c.Post(fmt.Sprintf("/api/v2/pedestal/helm/%d/verify", pedestalHelmVersionID), nil, &resp); err != nil {
+		if err := c.Post(path, nil, &resp); err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {

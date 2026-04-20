@@ -4,6 +4,8 @@ Cross-repo runbooks for problems that span AegisLab + chaos-experiment +
 rcabench-platform. Kept at the repo-root `aegis/docs/` level because the
 fixes touch multiple submodules.
 
+Start with [`../../AegisLab/docs/aegisctl-cli-spec.md`](../../AegisLab/docs/aegisctl-cli-spec.md) for the supported CLI-first validation path. Use the troubleshooting pages below when that contract fails in a real cluster or dev environment.
+
 | File | Purpose |
 |------|---------|
 | [`e2e-cluster-bootstrap.md`](./e2e-cluster-bootstrap.md) | Fresh-cluster runbook: from kind up to a populated datapack, with every known pitfall inline |
