@@ -57,7 +57,7 @@ QUICK START:
   aegisctl task list --state Running
   aegisctl task logs <task-id> --follow
 
-  # 6. Wait for completion (blocks until terminal state, exit code 0=ok, 2=fail, 3=timeout)
+  # 6. Wait for completion (blocks until terminal state, exit code 0=ok, 5=fail, 6=timeout)
   aegisctl wait <trace-id> --timeout 600
 
   # 7. View results
