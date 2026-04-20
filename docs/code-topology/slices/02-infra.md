@@ -1,5 +1,7 @@
 # infra/ gateway slice
 
+> Historical note: parts of this document were written before the phase-2 gRPC collapse. Cross-check process-level claims against `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` first.
+
 Paths (all absolute under `/home/ddq/AoyangSpace/aegis/AegisLab/src/`):
 - `infra/{buildkit,chaos,config,db,etcd,harbor,helm,k8s,logger,loki,redis,runtime,tracing}/`
 

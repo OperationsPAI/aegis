@@ -26,7 +26,7 @@ func newProjectService(t *testing.T) (*Service, sqlmock.Sqlmock, func()) {
 
 	repo := NewRepository(db)
 	stats := newProjectStatisticsSource(repo)
-	return NewService(repo, stats), mock, func() {
+	return NewService(repo, stats, nil), mock, func() {
 		_ = sqlDB.Close()
 	}
 }
@@ -187,7 +187,7 @@ func TestProjectServiceDeleteProjectSuccess(t *testing.T) {
 }
 
 func TestProjectServiceManageLabelsNilRequest(t *testing.T) {
-	service := NewService(nil, nil)
+	service := NewService(nil, nil, nil)
 
 	_, err := service.ManageProjectLabels(t.Context(), nil, 1)
 

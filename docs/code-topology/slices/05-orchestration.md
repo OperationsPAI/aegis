@@ -1,5 +1,7 @@
 # 05 — Orchestration slice
 
+> Historical note: parts of this document were written before the phase-2 gRPC collapse. Cross-check process-level claims against `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` first.
+
 Paths are relative to `/home/ddq/AoyangSpace/aegis/AegisLab/src`. All citations are file:line.
 
 ---

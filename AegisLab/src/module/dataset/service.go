@@ -18,10 +18,11 @@ import (
 type Service struct {
 	repo      *Repository
 	datapacks *DatapackFileStore
+	labels    label.Writer
 }
 
-func NewService(repo *Repository, datapacks *DatapackFileStore) *Service {
-	return &Service{repo: repo, datapacks: datapacks}
+func NewService(repo *Repository, datapacks *DatapackFileStore, labels label.Writer) *Service {
+	return &Service{repo: repo, datapacks: datapacks, labels: labels}
 }
 
 func (s *Service) CreateDataset(_ context.Context, req *CreateDatasetReq, userID int) (*DatasetResp, error) {
@@ -189,7 +190,7 @@ func (s *Service) ManageDatasetLabels(_ context.Context, req *ManageDatasetLabel
 		}
 
 		if len(req.AddLabels) > 0 {
-			labels, err := label.NewRepository(tx).CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.DatasetCategory)
+			labels, err := s.labels.CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.DatasetCategory)
 			if err != nil {
 				return fmt.Errorf("failed to create or update labels: %w", err)
 			}

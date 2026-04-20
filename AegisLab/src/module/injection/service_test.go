@@ -8,6 +8,9 @@ import (
 	"aegis/consts"
 	"aegis/dto"
 	redis "aegis/infra/redis"
+	container "aegis/module/container"
+	dataset "aegis/module/dataset"
+	label "aegis/module/label"
 	"aegis/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -32,14 +35,18 @@ func newInjectionService(t *testing.T) (*Service, sqlmock.Sqlmock, func()) {
 	}), &gorm.Config{})
 	require.NoError(t, err)
 
-	return NewService(NewRepository(db), nil, nil, redis.NewGateway(nil)), mock, func() {
+	containerRepo := container.NewRepository(db)
+	datasetRepo := dataset.NewRepository(db)
+	labelRepo := label.NewRepository(db)
+
+	return NewService(NewRepository(db), nil, nil, containerRepo, datasetRepo, labelRepo, redis.NewGateway(nil)), mock, func() {
 		cleanupRedis()
 		_ = sqlDB.Close()
 	}
 }
 
 func TestServiceSearchNilRequest(t *testing.T) {
-	service := NewService(nil, nil, nil, nil)
+	service := NewService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := service.Search(t.Context(), nil, nil)
 
@@ -48,7 +55,7 @@ func TestServiceSearchNilRequest(t *testing.T) {
 }
 
 func TestServiceListNoIssuesEmptyLabelsSucceeds(t *testing.T) {
-	service := NewService(nil, nil, nil, nil)
+	service := NewService(nil, nil, nil, nil, nil, nil, nil)
 
 	resp, err := service.ListNoIssues(t.Context(), &ListInjectionNoIssuesReq{}, nil)
 

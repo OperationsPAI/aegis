@@ -17,14 +17,18 @@ import (
 )
 
 type Service struct {
-	repo  *Repository
-	query executionQuerySource
+	repo       *Repository
+	query      executionQuerySource
+	containers container.Reader
+	datasets   dataset.Reader
 }
 
-func NewService(repo *Repository, query executionQuerySource) *Service {
+func NewService(repo *Repository, query executionQuerySource, containers container.Reader, datasets dataset.Reader) *Service {
 	return &Service{
-		repo:  repo,
-		query: query,
+		repo:       repo,
+		query:      query,
+		containers: containers,
+		datasets:   datasets,
 	}
 }
 
@@ -38,7 +42,7 @@ func (s *Service) ListDatapackEvaluationResults(ctx context.Context, req *BatchE
 		algorithms = append(algorithms, &req.Specs[i].Algorithm)
 	}
 
-	algorithmVersionResults, err := container.NewRepository(s.repo.db).ResolveContainerVersions(algorithms, consts.ContainerTypeAlgorithm, userID)
+	algorithmVersionResults, err := s.containers.ResolveContainerVersions(algorithms, consts.ContainerTypeAlgorithm, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map container refs to versions: %w", err)
 	}
@@ -121,12 +125,12 @@ func (s *Service) ListDatasetEvaluationResults(ctx context.Context, req *BatchEv
 		datasets = append(datasets, &req.Specs[i].Dataset)
 	}
 
-	algorithmVersionResults, err := container.NewRepository(s.repo.db).ResolveContainerVersions(algorithms, consts.ContainerTypeAlgorithm, userID)
+	algorithmVersionResults, err := s.containers.ResolveContainerVersions(algorithms, consts.ContainerTypeAlgorithm, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map container refs to versions: %w", err)
 	}
 
-	datasetVersionResults, err := dataset.NewRepository(s.repo.db).ResolveDatasetVersions(datasets, userID)
+	datasetVersionResults, err := s.datasets.ResolveDatasetVersions(datasets, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map dataset refs to versions: %w", err)
 	}

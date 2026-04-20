@@ -20,11 +20,12 @@ type Service struct {
 	repo      *Repository
 	build     *BuildGateway
 	helmFiles *HelmFileStore
+	labels    label.Writer
 	redis     *redis.Gateway
 }
 
-func NewService(repo *Repository, build *BuildGateway, helmFiles *HelmFileStore, redis *redis.Gateway) *Service {
-	return &Service{repo: repo, build: build, helmFiles: helmFiles, redis: redis}
+func NewService(repo *Repository, build *BuildGateway, helmFiles *HelmFileStore, labels label.Writer, redis *redis.Gateway) *Service {
+	return &Service{repo: repo, build: build, helmFiles: helmFiles, labels: labels, redis: redis}
 }
 
 func (s *Service) CreateContainer(_ context.Context, req *CreateContainerReq, userID int) (*ContainerResp, error) {
@@ -169,7 +170,7 @@ func (s *Service) ManageContainerLabels(_ context.Context, req *ManageContainerL
 		}
 
 		if len(req.AddLabels) > 0 {
-			labels, err := label.NewRepository(tx).CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.ContainerCategory)
+			labels, err := s.labels.CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.ContainerCategory)
 			if err != nil {
 				return fmt.Errorf("failed to create or update labels: %w", err)
 			}

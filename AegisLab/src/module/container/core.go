@@ -5,7 +5,7 @@ import (
 )
 
 func (r *Repository) CreateContainerCore(container *model.Container, userID int) (*model.Container, error) {
-	service := NewService(r, NewBuildGateway(), NewHelmFileStore(), nil)
+	service := NewService(r, NewBuildGateway(), NewHelmFileStore(), nil, nil)
 	return service.createContainerCore(r, container, userID)
 }
 

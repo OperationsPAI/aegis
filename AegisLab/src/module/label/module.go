@@ -4,6 +4,7 @@ import "go.uber.org/fx"
 
 var Module = fx.Module("label",
 	fx.Provide(NewRepository),
+	fx.Provide(AsWriter),
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),

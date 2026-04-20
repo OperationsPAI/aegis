@@ -21,12 +21,21 @@ import (
 )
 
 type Service struct {
-	repo  *Repository
-	redis *redis.Gateway
+	repo       *Repository
+	redis      *redis.Gateway
+	containers container.Reader
+	injections injection.Reader
+	labels     label.Writer
 }
 
-func NewService(repo *Repository, redis *redis.Gateway) *Service {
-	return &Service{repo: repo, redis: redis}
+func NewService(repo *Repository, redis *redis.Gateway, containers container.Reader, injections injection.Reader, labels label.Writer) *Service {
+	return &Service{
+		repo:       repo,
+		redis:      redis,
+		containers: containers,
+		injections: injections,
+		labels:     labels,
+	}
 }
 
 func (s *Service) ListProjectExecutions(_ context.Context, req *ListExecutionReq, projectID int) (*dto.ListResp[ExecutionResp], error) {
@@ -71,7 +80,7 @@ func (s *Service) SubmitAlgorithmExecution(ctx context.Context, req *SubmitExecu
 		refs = append(refs, &req.Specs[i].Algorithm.ContainerRef)
 	}
 
-	algorithmVersionResults, err := container.NewRepository(db).ResolveContainerVersions(refs, consts.ContainerTypeAlgorithm, userID)
+	algorithmVersionResults, err := s.containers.ResolveContainerVersions(refs, consts.ContainerTypeAlgorithm, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map container refs to versions: %w", err)
 	}
@@ -81,7 +90,7 @@ func (s *Service) SubmitAlgorithmExecution(ctx context.Context, req *SubmitExecu
 
 	var allExecutionItems []SubmitExecutionItem
 	for idx, spec := range req.Specs {
-		datapacks, datasetID, err := injection.NewRepository(s.repo.db).ResolveDatapacks(spec.Datapack, spec.Dataset, userID, consts.TaskTypeRunAlgorithm)
+		datapacks, datasetID, err := s.injections.ResolveDatapacks(spec.Datapack, spec.Dataset, userID, consts.TaskTypeRunAlgorithm)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract datapacks: %w", err)
 		}
@@ -97,7 +106,7 @@ func (s *Service) SubmitAlgorithmExecution(ctx context.Context, req *SubmitExecu
 			}
 
 			algorithmItem := dto.NewContainerVersionItem(&algorithmVersion)
-			envVars, err := container.NewRepository(db).ListContainerVersionEnvVars(spec.Algorithm.EnvVars, &algorithmVersion)
+			envVars, err := s.containers.ListContainerVersionEnvVars(spec.Algorithm.EnvVars, &algorithmVersion)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list algorithm env vars: %w", err)
 			}
@@ -242,7 +251,7 @@ func (s *Service) ManageLabels(_ context.Context, req *ManageExecutionLabelReq, 
 		}
 
 		if len(req.AddLabels) > 0 {
-			labels, err := label.NewRepository(tx).CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.ExecutionCategory)
+			labels, err := s.labels.CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.ExecutionCategory)
 			if err != nil {
 				return fmt.Errorf("failed to create or update labels: %w", err)
 			}
@@ -403,7 +412,7 @@ func (s *Service) CreateExecutionRecord(_ context.Context, req *RuntimeCreateExe
 		}
 
 		if len(req.Labels) > 0 {
-			labels, err := label.NewRepository(tx).CreateOrUpdateLabelsFromItems(tx, req.Labels, consts.ExecutionCategory)
+			labels, err := s.labels.CreateOrUpdateLabelsFromItems(tx, req.Labels, consts.ExecutionCategory)
 			if err != nil {
 				return fmt.Errorf("failed to create or update labels: %w", err)
 			}

@@ -229,6 +229,7 @@ func TestAPIGatewayStandaloneHTTPIntegrationSmoke(t *testing.T) {
 	baseURL := fmt.Sprintf("http://%s", addr)
 	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/docs/doc.json", http.StatusOK)
 	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/api/v2/system/configs/abc", http.StatusUnauthorized)
+	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/api/v2/widgets/ping", http.StatusUnauthorized)
 }
 
 func TestRuntimeWorkerStandaloneGRPCIntegrationSmoke(t *testing.T) {
@@ -261,4 +262,3 @@ func TestRuntimeWorkerStandaloneGRPCIntegrationSmoke(t *testing.T) {
 
 	waitForRuntimePing(t, addr)
 }
-

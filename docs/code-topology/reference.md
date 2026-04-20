@@ -1,5 +1,7 @@
 # AegisLab Data-Shape Reference (v2)
 
+> Historical note: parts of this document were written before the phase-2 gRPC collapse. Cross-check process-level claims against `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` first.
+
 Quick-lookup tables. Cross-ref `slices/05-orchestration.md` and `slices/07-data-crosscut-seams.md`
 for exhaustive field lists.
 

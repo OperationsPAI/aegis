@@ -20,9 +20,9 @@ type Writer interface {
 	UpdateInjectionTimestamps(context.Context, *RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error)
 }
 
-func AsReader(repo *Repository) Reader { return repo }
+func AsReader(service *Service) Reader { return service }
 
 func AsWriter(service *Service) Writer { return service }
 
-var _ Reader = (*Repository)(nil)
+var _ Reader = (*Service)(nil)
 var _ Writer = (*Service)(nil)

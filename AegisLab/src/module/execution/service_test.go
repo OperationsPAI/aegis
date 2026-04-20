@@ -8,6 +8,10 @@ import (
 	"aegis/consts"
 	"aegis/dto"
 	redis "aegis/infra/redis"
+	container "aegis/module/container"
+	dataset "aegis/module/dataset"
+	injection "aegis/module/injection"
+	label "aegis/module/label"
 	"aegis/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -32,7 +36,12 @@ func newExecutionService(t *testing.T) (*Service, sqlmock.Sqlmock, func()) {
 	}), &gorm.Config{})
 	require.NoError(t, err)
 
-	return NewService(NewRepository(db), redis.NewGateway(nil)), mock, func() {
+	containerRepo := container.NewRepository(db)
+	datasetRepo := dataset.NewRepository(db)
+	labelRepo := label.NewRepository(db)
+	injectionService := injection.NewService(injection.NewRepository(db), nil, nil, containerRepo, datasetRepo, labelRepo, nil)
+
+	return NewService(NewRepository(db), redis.NewGateway(nil), containerRepo, injectionService, labelRepo), mock, func() {
 		cleanupRedis()
 		_ = sqlDB.Close()
 	}
@@ -59,7 +68,7 @@ func TestServiceListAvailableLabelsSuccess(t *testing.T) {
 }
 
 func TestServiceBatchDeleteEmptyRequestSucceeds(t *testing.T) {
-	service := NewService(nil, nil)
+	service := NewService(nil, nil, nil, nil, nil)
 
 	err := service.BatchDelete(t.Context(), &BatchDeleteExecutionReq{})
 

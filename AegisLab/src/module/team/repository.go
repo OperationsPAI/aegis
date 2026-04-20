@@ -2,9 +2,7 @@ package team
 
 import (
 	"aegis/consts"
-	"aegis/dto"
 	"aegis/model"
-	project "aegis/module/project"
 	"errors"
 	"fmt"
 
@@ -105,7 +103,7 @@ func (r *Repository) updateMutableTeam(teamID int, patch func(*model.Team)) (*mo
 	return team, nil
 }
 
-func (r *Repository) listTeamProjectViews(teamID, limit, offset int, isPublic *bool, status *consts.StatusType) ([]model.Project, map[int]*dto.ProjectStatistics, int64, error) {
+func (r *Repository) listTeamProjectViews(teamID, limit, offset int, isPublic *bool, status *consts.StatusType) ([]model.Project, int64, error) {
 	var (
 		projects []model.Project
 		total    int64
@@ -120,22 +118,13 @@ func (r *Repository) listTeamProjectViews(teamID, limit, offset int, isPublic *b
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return nil, nil, 0, fmt.Errorf("failed to count projects for team %d: %w", teamID, err)
+		return nil, 0, fmt.Errorf("failed to count projects for team %d: %w", teamID, err)
 	}
 	if err := query.Limit(limit).Offset(offset).Find(&projects).Error; err != nil {
-		return nil, nil, 0, fmt.Errorf("failed to list projects for team %d: %w", teamID, err)
+		return nil, 0, fmt.Errorf("failed to list projects for team %d: %w", teamID, err)
 	}
 
-	projectIDs := make([]int, 0, len(projects))
-	for _, project := range projects {
-		projectIDs = append(projectIDs, project.ID)
-	}
-
-	statsMap, err := project.NewRepository(r.db).ListProjectStatistics(projectIDs)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-	return projects, statsMap, total, nil
+	return projects, total, nil
 }
 
 func (r *Repository) addMember(teamID int, username string, roleID int) error {

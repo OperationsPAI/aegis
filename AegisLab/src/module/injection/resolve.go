@@ -4,7 +4,6 @@ import (
 	"aegis/consts"
 	"aegis/dto"
 	"aegis/model"
-	dataset "aegis/module/dataset"
 	"fmt"
 )
 
@@ -21,7 +20,7 @@ var taskTypeDatapackStates = map[consts.TaskType][]consts.DatapackState{
 	},
 }
 
-func (r *Repository) ResolveDatapacks(datapackName *string, datasetRef *dto.DatasetRef, userID int, taskType consts.TaskType) ([]model.FaultInjection, *int, error) {
+func (s *Service) ResolveDatapacks(datapackName *string, datasetRef *dto.DatasetRef, userID int, taskType consts.TaskType) ([]model.FaultInjection, *int, error) {
 	states, exists := taskTypeDatapackStates[taskType]
 	if !exists {
 		return nil, nil, fmt.Errorf("unsupported task type: %s", consts.GetTaskTypeName(taskType))
@@ -44,7 +43,7 @@ func (r *Repository) ResolveDatapacks(datapackName *string, datasetRef *dto.Data
 	}
 
 	if datapackName != nil {
-		datapack, err := r.findInjectionByName(*datapackName, true)
+		datapack, err := s.repo.findInjectionByName(*datapackName, true)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get datapack: %w", err)
 		}
@@ -55,7 +54,7 @@ func (r *Repository) ResolveDatapacks(datapackName *string, datasetRef *dto.Data
 	}
 
 	if datasetRef != nil {
-		datasetVersionResults, err := dataset.NewRepository(r.db).ResolveDatasetVersions([]*dto.DatasetRef{datasetRef}, userID)
+		datasetVersionResults, err := s.datasets.ResolveDatasetVersions([]*dto.DatasetRef{datasetRef}, userID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get dataset versions: %w", err)
 		}
@@ -65,7 +64,7 @@ func (r *Repository) ResolveDatapacks(datapackName *string, datasetRef *dto.Data
 			return nil, nil, fmt.Errorf("dataset version not found for %v", datasetRef)
 		}
 
-		datapacks, err := dataset.NewRepository(r.db).ListInjectionsByDatasetVersionID(version.ID, true)
+		datapacks, err := s.datasets.ListInjectionsByDatasetVersionID(version.ID, true)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get dataset datapacks: %s", err.Error())
 		}

@@ -16,12 +16,14 @@ type projectReader interface {
 }
 
 type projectReaderAdapter struct {
-	repo *Repository
+	repo  *Repository
+	stats project.Reader
 }
 
-func newProjectReader(repo *Repository) projectReader {
+func newProjectReader(repo *Repository, stats project.Reader) projectReader {
 	return projectReaderAdapter{
-		repo: repo,
+		repo:  repo,
+		stats: stats,
 	}
 }
 
@@ -35,14 +37,24 @@ func (r projectReaderAdapter) CountProjects(_ context.Context, teamID int) (int,
 	return int(projectCount), nil
 }
 
-func (r projectReaderAdapter) ListProjects(_ context.Context, req *TeamProjectListReq, teamID int) (*dto.ListResp[TeamProjectItem], error) {
+func (r projectReaderAdapter) ListProjects(ctx context.Context, req *TeamProjectListReq, teamID int) (*dto.ListResp[TeamProjectItem], error) {
 	if req == nil {
 		req = &TeamProjectListReq{}
 	}
 	limit, offset := req.ToGormParams()
-	projects, statsMap, total, err := r.repo.listTeamProjectViews(teamID, limit, offset, req.IsPublic, req.Status)
+	projects, total, err := r.repo.listTeamProjectViews(teamID, limit, offset, req.IsPublic, req.Status)
 	if err != nil {
 		return nil, err
+	}
+
+	projectIDs := make([]int, 0, len(projects))
+	for _, projectItem := range projects {
+		projectIDs = append(projectIDs, projectItem.ID)
+	}
+
+	statsMap, err := r.stats.ListProjectStatistics(ctx, projectIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list project statistics: %w", err)
 	}
 
 	items := make([]TeamProjectItem, 0, len(projects))

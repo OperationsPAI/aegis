@@ -1,5 +1,7 @@
 # Slice 07 — Data layer, routing, cross-cutting, cross-repo seams
 
+> Historical note: parts of this document were written before the phase-2 gRPC collapse. Cross-check process-level claims against `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` first.
+
 Scope: `model/`, `router/`, `middleware/`, `dto/`, `consts/`, `utils/`, `tracing/`, `httpx/`, `searchx/`; frontend `/api/v2/*` grep; rcabench-platform datapack files; chaos-experiment import surface.
 
 ---

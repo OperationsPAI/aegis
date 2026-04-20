@@ -16,12 +16,14 @@ import (
 type Service struct {
 	repository *Repository
 	stats      projectStatisticsSource
+	labels     label.Writer
 }
 
-func NewService(repository *Repository, stats projectStatisticsSource) *Service {
+func NewService(repository *Repository, stats projectStatisticsSource, labels label.Writer) *Service {
 	return &Service{
 		repository: repository,
 		stats:      stats,
+		labels:     labels,
 	}
 }
 
@@ -178,7 +180,7 @@ func (s *Service) ManageProjectLabels(ctx context.Context, req *ManageProjectLab
 		repo := NewRepository(tx)
 		addLabelIDs := make([]int, 0, len(req.AddLabels))
 		if len(req.AddLabels) > 0 {
-			labels, err := label.NewRepository(tx).CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.ProjectCategory)
+			labels, err := s.labels.CreateOrUpdateLabelsFromItems(tx, req.AddLabels, consts.ProjectCategory)
 			if err != nil {
 				return fmt.Errorf("failed to create or update labels: %w", err)
 			}

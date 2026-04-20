@@ -274,6 +274,7 @@ func TestProducerOptionsHTTPIntegrationSmoke(t *testing.T) {
 	baseURL := fmt.Sprintf("http://%s", addr)
 	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/docs/doc.json", http.StatusOK)
 	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/api/v2/system/configs/abc", http.StatusUnauthorized)
+	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/api/v2/widgets/ping", http.StatusUnauthorized)
 }
 
 func TestConsumerOptionsLifecycleIntegrationSmoke(t *testing.T) {
@@ -316,6 +317,7 @@ func TestBothOptionsHTTPAndLifecycleIntegrationSmoke(t *testing.T) {
 	baseURL := fmt.Sprintf("http://%s", addr)
 	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/docs/doc.json", http.StatusOK)
 	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/api/v2/system/configs/abc", http.StatusUnauthorized)
+	waitForHTTPStatus(t, client, http.MethodGet, baseURL+"/api/v2/widgets/ping", http.StatusUnauthorized)
 	requireLifecycleCallCount(t, "producer start", &spies.producerStarts, 1)
 	requireLifecycleCallCount(t, "worker start", &spies.workerStarts, 1)
 	requireLifecycleCallCount(t, "controller start", &spies.controllerStarts, 1)

@@ -1,5 +1,7 @@
 # AegisLab Code-Topology — Orphans, Bugs, Risks (v2)
 
+> Historical note: parts of this document were written before the phase-2 gRPC collapse. Cross-check process-level claims against `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` first.
+
 Findings from the 7-agent recovery pass on the refactored codebase (AegisLab submodule
 `42282d0c`). Each item cites `file.go:line` so it can be re-checked against live code.
 Divided by severity / kind so the list is actionable.
