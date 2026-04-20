@@ -2,15 +2,12 @@ package config
 
 import (
 	"fmt"
-	"maps"
 	"regexp"
-	"sync"
 
 	"aegis/consts"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -31,84 +28,55 @@ type ChaosSystemConfig struct {
 	Status         consts.StatusType `mapstructure:"status"`
 }
 
-type chaosSystemConfigManager struct {
-	configs map[string]ChaosSystemConfig
-	mu      sync.RWMutex
-}
+// chaosSystemConfigManager is now a stateless façade over Viper — every call
+// decodes the current `injection.system.*` subtree on demand. Keeping the
+// manager type lets existing call sites (`config.GetChaosSystemConfigManager().Get(...)`)
+// continue to compile without change.
+//
+// Previously this held an in-memory cache that only refreshed when the etcd
+// watcher fired `Reload`. That produced two bugs:
+//  1. Producer processes — which don't register the consumer watch handler
+//     — saw a frozen snapshot from startup.
+//  2. Consumer had a narrow race between a Viper update and the Reload call.
+//
+// Reading Viper on demand removes both hazards. The decode is cheap (a map
+// lookup + mapstructure on a handful of string keys).
+type chaosSystemConfigManager struct{}
 
-var (
-	managerInstance *chaosSystemConfigManager
-	managerOnce     sync.Once
-)
-
-// GetChaosSystemConfigManager returns the singleton instance of SystemConfigManager
+// GetChaosSystemConfigManager returns the singleton façade. The old cached
+// implementation is gone; this is kept so existing callers compile.
 func GetChaosSystemConfigManager() *chaosSystemConfigManager {
-	managerOnce.Do(func() {
-		managerInstance = &chaosSystemConfigManager{
-			configs: make(map[string]ChaosSystemConfig),
-		}
-		if err := managerInstance.load(); err != nil {
-			logrus.Fatalf("failed to load chaos system config: %v", err)
-		}
-	})
-	return managerInstance
+	return &chaosSystemConfigManager{}
 }
 
-// Get returns the configuration for a specific system
+// Get returns the configuration for a specific system, reading fresh from
+// Viper on every call.
 func (m *chaosSystemConfigManager) Get(system chaos.SystemType) (ChaosSystemConfig, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	cfg, exists := m.configs[system.String()]
-	return cfg, exists
+	all := readChaosSystemConfigs()
+	cfg, ok := all[system.String()]
+	return cfg, ok
 }
 
-// GetAll returns all system configurations
+// GetAll returns a fresh snapshot of every configured system.
 func (m *chaosSystemConfigManager) GetAll() map[string]ChaosSystemConfig {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	// Return a copy to prevent external modification
-	result := make(map[string]ChaosSystemConfig, len(m.configs))
-	maps.Copy(result, m.configs)
-	return result
+	return readChaosSystemConfigs()
 }
 
-// Reload reloads system configurations from Viper (which mirrors etcd) and
-// then invokes the optional callback. The callback is executed while the
-// manager is unlocked so callers can re-read via GetAll without deadlocking.
-func (m *chaosSystemConfigManager) Reload(callback func() error) error {
-	if err := m.load(); err != nil {
-		return err
-	}
-	if callback == nil {
-		return nil
-	}
-	if err := callback(); err != nil {
-		return fmt.Errorf("callback execution failed: %w", err)
-	}
-	return nil
-}
-
-func (m *chaosSystemConfigManager) load() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	systemConfigMap := make(map[string]ChaosSystemConfig)
-
-	cfg := GetMap(ConfigKeyChaosSystem)
-	for sys, c := range cfg {
-		var sysCfg ChaosSystemConfig
-		if err := mapstructure.Decode(c, &sysCfg); err != nil {
-			return fmt.Errorf("failed to decode config for system %s: %w", sys, err)
+// readChaosSystemConfigs decodes the `injection.system.*` subtree from Viper
+// into the strongly-typed aggregate shape. Invalid entries (decode errors)
+// are dropped so a single malformed key can't blow up the whole read.
+func readChaosSystemConfigs() map[string]ChaosSystemConfig {
+	raw := GetMap(ConfigKeyChaosSystem)
+	out := make(map[string]ChaosSystemConfig, len(raw))
+	for name, entry := range raw {
+		var cfg ChaosSystemConfig
+		if err := mapstructure.Decode(entry, &cfg); err != nil {
+			continue
 		}
-
-		sysCfg.System = sys
-		systemConfigMap[sys] = sysCfg
+		cfg.System = name
+		out[name] = cfg
 	}
-
-	m.configs = systemConfigMap
-	return nil
+	return out
 }
 
 // ExtractNsPrefixAndNumber extracts the number from a namespace string
@@ -143,9 +111,7 @@ func (s *ChaosSystemConfig) IsEnabled() bool {
 
 // GetAllNamespaces generates a list of all namespaces based on the system count map
 func GetAllNamespaces() ([]string, error) {
-	manager := GetChaosSystemConfigManager()
-
-	systemConfigMap := manager.GetAll()
+	systemConfigMap := GetChaosSystemConfigManager().GetAll()
 	namespaces := make([]string, 0)
 	for _, cfg := range systemConfigMap {
 		if !cfg.IsEnabled() {

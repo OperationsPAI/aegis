@@ -1,8 +1,6 @@
 package initialization
 
 import (
-	"fmt"
-
 	"aegis/config"
 	"aegis/service/common"
 
@@ -14,14 +12,10 @@ import (
 // InitializeSystems primes the chaos-experiment runtime registry from etcd
 // (via Viper, which has already been populated by the config listener).
 // etcd is the single source of truth for injection.system.* — there is no
-// systems table to read here anymore.
+// systems table to read here anymore, and the config manager reads Viper
+// on demand so no explicit reload is needed.
 func InitializeSystems(db *gorm.DB) error {
-	if err := config.GetChaosSystemConfigManager().Reload(nil); err != nil {
-		return fmt.Errorf("failed to reload chaos system config: %w", err)
-	}
-
-	manager := config.GetChaosSystemConfigManager()
-	systems := manager.GetAll()
+	systems := config.GetChaosSystemConfigManager().GetAll()
 
 	enabled := make(map[string]struct{}, len(systems))
 	for name, cfg := range systems {

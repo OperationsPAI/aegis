@@ -148,19 +148,15 @@ func (h *chaosSystemCategoryHandler) Handle(ctx context.Context, key, oldValue, 
 }
 
 // reconcile is the single entry point for every injection.system.* change.
-// It refreshes the config manager from Viper, syncs the chaos-experiment
-// registry for the affected system, and triggers a namespace refresh when
-// count/ns_pattern changes require it.
+// The config manager now reads Viper on demand so no explicit reload is
+// needed — we sync the chaos-experiment registry for the affected system
+// and trigger a namespace refresh when count/ns_pattern changes require it.
 func (h *chaosSystemHandler) reconcile(ctx context.Context, key, oldValue, newValue string) error {
 	return common.PublishWrapper(ctx, h.publisher, func() error {
 		system, field := parseInjectionSystemKey(key)
 		if system == "" {
 			logrus.Warnf("ignoring non-system config change: %s", key)
 			return nil
-		}
-
-		if err := config.GetChaosSystemConfigManager().Reload(nil); err != nil {
-			return fmt.Errorf("failed to reload chaos system config: %w", err)
 		}
 
 		if err := h.syncRegistry(system); err != nil {

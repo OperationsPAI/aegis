@@ -27,7 +27,11 @@ func newMetadataService(t *testing.T) (*Service, *gorm.DB, *common.DBMetadataSto
 	}
 
 	store := common.NewDBMetadataStore(db)
-	return NewService(NewRepository(db), nil), db, store
+	// NewService enforces a non-nil etcd gateway; this test only exercises
+	// metadata upsert / list (no etcd writes), so build the struct directly
+	// rather than spinning up a fake gateway.
+	svc := &Service{repo: NewRepository(db)}
+	return svc, db, store
 }
 
 // TestUpsertTopologyMetadataInvalidatesCache pins the behaviour that pushing

@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"aegis/config"
 	"aegis/consts"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -67,7 +66,8 @@ func withFakeSyncer(t *testing.T, fs *fakeSyncer) {
 }
 
 // seedViperSystem pushes a full set of injection.system.<name>.* keys into
-// Viper so the ChaosSystemConfigManager can reload a deterministic snapshot.
+// Viper. The ChaosSystemConfigManager reads Viper on demand so no explicit
+// reload is required after seeding.
 func seedViperSystem(t *testing.T, name, nsPattern, appLabelKey, displayName string, count int, status consts.StatusType) {
 	t.Helper()
 
@@ -79,10 +79,6 @@ func seedViperSystem(t *testing.T, name, nsPattern, appLabelKey, displayName str
 	viper.Set("injection.system."+name+".app_label_key", appLabelKey)
 	viper.Set("injection.system."+name+".is_builtin", false)
 	viper.Set("injection.system."+name+".status", int(status))
-
-	if err := config.GetChaosSystemConfigManager().Reload(nil); err != nil {
-		t.Fatalf("reload chaos system config: %v", err)
-	}
 }
 
 func TestChaosSystemCategoryHandlerReportsGlobalScope(t *testing.T) {

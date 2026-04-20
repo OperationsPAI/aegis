@@ -69,6 +69,12 @@ type Service struct {
 }
 
 func NewService(repo *Repository, etcdGw *etcd.Gateway) *Service {
+	// The etcd gateway is the write path for every CRUD mutation. Failing
+	// loud here keeps a nil-passing caller from deferring the crash to the
+	// first `s.etcd.Put(...)` deep inside a request handler.
+	if etcdGw == nil {
+		panic("chaossystem.NewService: etcd gateway is required")
+	}
 	return &Service{repo: repo, etcd: etcdGw}
 }
 
@@ -215,8 +221,8 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 
 	common.InvalidateGlobalMetadataStoreCache()
 
-	// Reload the in-memory manager so the response reflects the write.
-	_ = config.GetChaosSystemConfigManager().Reload(nil)
+	// The config manager reads Viper on demand; the consumer watch handler
+	// will keep Viper in sync when the etcd event round-trips back.
 	view, err := s.lookupByName(name)
 	if err != nil {
 		return nil, err
@@ -303,7 +309,6 @@ func (s *Service) UpdateSystem(ctx context.Context, id int, req *UpdateChaosSyst
 		}
 	}
 
-	_ = config.GetChaosSystemConfigManager().Reload(nil)
 	updated, err := s.lookupByID(id)
 	if err != nil {
 		return nil, err
@@ -336,7 +341,6 @@ func (s *Service) DeleteSystem(ctx context.Context, id int) error {
 			logrus.WithError(err).Warnf("Failed to unregister system %s", view.Cfg.System)
 		}
 	}
-	_ = config.GetChaosSystemConfigManager().Reload(nil)
 	common.InvalidateGlobalMetadataStoreCache()
 	return nil
 }
@@ -481,14 +485,24 @@ func (s *Service) applyChange(ctx context.Context, system string, field systemFi
 }
 
 // publishKey pushes value to etcd with a short retry. Global-scope only —
-// injection.system.* keys are shared across producer + consumer.
+// injection.system.* keys are shared across producer + consumer. Retries
+// honor ctx cancellation so a caller that gives up isn't held hostage by
+// the backoff loop.
 func (s *Service) publishKey(ctx context.Context, key, value string) error {
 	etcdKey := consts.ConfigEtcdGlobalPrefix + key
 	const maxRetries = 3
 	var lastErr error
 	for attempt := 0; attempt < maxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+			backoff := time.Duration(attempt) * 500 * time.Millisecond
+			select {
+			case <-time.After(backoff):
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 		ctxPut, cancel := context.WithTimeout(ctx, 5*time.Second)
 		err := s.etcd.Put(ctxPut, etcdKey, value, 0)

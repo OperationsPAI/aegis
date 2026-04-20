@@ -216,10 +216,9 @@ func migrateOneSystem(ctx context.Context, db *gorm.DB, etcdGw *etcd.Gateway, ro
 	if appLabel == "" {
 		appLabel = "app"
 	}
-	status := row.Status
-	if status == 0 {
-		status = consts.CommonEnabled
-	}
+	// `systems.status` is NOT NULL (consts.StatusType with 0=disabled,
+	// 1=enabled, -1=deleted). Use the value as-is — we must never silently
+	// flip a disabled legacy row to enabled during migration.
 
 	seeds := []struct {
 		field     string
@@ -232,7 +231,7 @@ func migrateOneSystem(ctx context.Context, db *gorm.DB, etcdGw *etcd.Gateway, ro
 		{"display_name", row.DisplayName, consts.ConfigValueTypeString},
 		{"app_label_key", appLabel, consts.ConfigValueTypeString},
 		{"is_builtin", strconv.FormatBool(row.IsBuiltin), consts.ConfigValueTypeBool},
-		{"status", strconv.Itoa(int(status)), consts.ConfigValueTypeInt},
+		{"status", strconv.Itoa(int(row.Status)), consts.ConfigValueTypeInt},
 	}
 
 	for _, seed := range seeds {
