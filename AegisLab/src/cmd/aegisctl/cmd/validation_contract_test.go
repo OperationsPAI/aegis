@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"aegis/cmd/aegisctl/config"
+	"aegis/cmd/aegisctl/output"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 )
@@ -23,6 +24,7 @@ func resetCLIStateForTest() {
 	flagOutput = ""
 	flagRequestTimeout = 0
 	flagQuiet = false
+	output.Quiet = false
 	flagDryRun = false
 	cfg = nil
 }
@@ -32,22 +34,69 @@ func captureStdIO(t *testing.T, fn func() error) (stdout string, stderr string, 
 
 	oldStdout := os.Stdout
 	oldStderr := os.Stderr
-	stdoutR, stdoutW, _ := os.Pipe()
-	stderrR, stderrW, _ := os.Pipe()
-	os.Stdout = stdoutW
-	os.Stderr = stderrW
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("stdout pipe: %v", err)
+	}
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		_ = stdoutR.Close()
+		_ = stdoutW.Close()
+		t.Fatalf("stderr pipe: %v", err)
+	}
 	defer func() {
 		os.Stdout = oldStdout
 		os.Stderr = oldStderr
 	}()
 
+	os.Stdout = stdoutW
+	os.Stderr = stderrW
+
+	stdoutCh := make(chan []byte, 1)
+	stderrCh := make(chan []byte, 1)
+	readErrCh := make(chan error, 2)
+	go func() {
+		b, readErr := io.ReadAll(stdoutR)
+		if readErr != nil {
+			readErrCh <- readErr
+			return
+		}
+		stdoutCh <- b
+	}()
+	go func() {
+		b, readErr := io.ReadAll(stderrR)
+		if readErr != nil {
+			readErrCh <- readErr
+			return
+		}
+		stderrCh <- b
+	}()
+
 	err = fn()
+	if closeErr := stdoutW.Close(); closeErr != nil {
+		t.Fatalf("close stdout writer: %v", closeErr)
+	}
+	if closeErr := stderrW.Close(); closeErr != nil {
+		t.Fatalf("close stderr writer: %v", closeErr)
+	}
 
-	_ = stdoutW.Close()
-	_ = stderrW.Close()
-
-	stdoutBytes, _ := io.ReadAll(stdoutR)
-	stderrBytes, _ := io.ReadAll(stderrR)
+	var stdoutBytes, stderrBytes []byte
+	for i := 0; i < 2; i++ {
+		select {
+		case readErr := <-readErrCh:
+			t.Fatalf("read captured output: %v", readErr)
+		case stdoutBytes = <-stdoutCh:
+			stdoutCh = nil
+		case stderrBytes = <-stderrCh:
+			stderrCh = nil
+		}
+	}
+	if closeErr := stdoutR.Close(); closeErr != nil {
+		t.Fatalf("close stdout reader: %v", closeErr)
+	}
+	if closeErr := stderrR.Close(); closeErr != nil {
+		t.Fatalf("close stderr reader: %v", closeErr)
+	}
 	return string(stdoutBytes), string(stderrBytes), err
 }
 
@@ -349,6 +398,20 @@ labels:
 
 func TestSubmitGuidedApplyDryRunJSON(t *testing.T) {
 	resetCLIStateForTest()
+	oldPedestalName := guidedApplyPedestalName
+	oldPedestalTag := guidedApplyPedestalTag
+	oldBenchmarkName := guidedApplyBenchmarkName
+	oldBenchmarkTag := guidedApplyBenchmarkTag
+	oldInterval := guidedApplyInterval
+	oldPreDuration := guidedApplyPreDuration
+	t.Cleanup(func() {
+		guidedApplyPedestalName = oldPedestalName
+		guidedApplyPedestalTag = oldPedestalTag
+		guidedApplyBenchmarkName = oldBenchmarkName
+		guidedApplyBenchmarkTag = oldBenchmarkTag
+		guidedApplyInterval = oldInterval
+		guidedApplyPreDuration = oldPreDuration
+	})
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
