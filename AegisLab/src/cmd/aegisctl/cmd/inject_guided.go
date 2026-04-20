@@ -86,6 +86,7 @@ var (
 var injectGuidedCmd = &cobra.Command{
 	Use:   "guided",
 	Short: "Step through a guided fault-injection session (AI-friendly, enum-driven)",
+	Args:  requireNoArgs,
 	Long: `Step through a guided fault-injection session backed by chaos-experiment's
 pkg/guidedcli. Each invocation returns a GuidedResponse describing the next
 field to fill, with its allowed values, until the config is ready to apply.
@@ -294,13 +295,16 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	// Validate required envelope flags up front so the user gets a clear
 	// message instead of a 400 from the backend.
 	if guidedApplyPedestalName == "" || guidedApplyPedestalTag == "" || guidedApplyBenchmarkName == "" || guidedApplyBenchmarkTag == "" {
-		return fmt.Errorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
+		return usageErrorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
 	}
 	if guidedApplyInterval <= 0 || guidedApplyPreDuration <= 0 {
-		return fmt.Errorf("--apply requires --interval and --pre-duration (positive minutes)")
+		return usageErrorf("--apply requires --interval and --pre-duration (positive minutes)")
 	}
 	if guidedApplyInterval <= guidedApplyPreDuration {
-		return fmt.Errorf("--interval must be greater than --pre-duration")
+		return usageErrorf("--interval must be greater than --pre-duration")
+	}
+	if err := requireAPIContext(true); err != nil {
+		return err
 	}
 
 	pid, err := resolveProjectIDByName()

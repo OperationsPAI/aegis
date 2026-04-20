@@ -2,6 +2,9 @@
 
 Command-line client for the AegisLab (RCABench) platform. Designed for both human operators and AI agents to drive the RCA workflow from the terminal.
 
+For the automation-facing CLI contract used by CI and agent workflows, see
+`docs/aegisctl-cli-contract.md`.
+
 ## Build
 
 ```bash

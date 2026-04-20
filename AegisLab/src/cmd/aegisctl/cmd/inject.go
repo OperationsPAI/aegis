@@ -71,7 +71,7 @@ type ParameterSpec struct {
 
 func requireProjectName() (string, error) {
 	if flagProject == "" {
-		return "", fmt.Errorf("--project is required")
+		return "", usageErrorf("--project is required")
 	}
 	return flagProject, nil
 }

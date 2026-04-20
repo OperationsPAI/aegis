@@ -19,6 +19,7 @@ var (
 	flagOutput         string
 	flagRequestTimeout int
 	flagQuiet          bool
+	flagNonInteractive bool
 	flagDryRun         bool
 
 	// Resolved at PersistentPreRun time.
@@ -27,8 +28,10 @@ var (
 
 // rootCmd is the top-level aegisctl command.
 var rootCmd = &cobra.Command{
-	Use:   "aegisctl",
-	Short: "CLI client for the AegisLab platform",
+	Use:           "aegisctl",
+	Short:         "CLI client for the AegisLab platform",
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	Long: `aegisctl is a command-line interface for managing the AegisLab (RCABench)
 fault-injection and root-cause-analysis benchmarking platform.
 
@@ -54,7 +57,7 @@ QUICK START:
   aegisctl task list --state Running
   aegisctl task logs <task-id> --follow
 
-  # 6. Wait for completion (blocks until terminal state, exit code 0=ok, 2=fail, 3=timeout)
+  # 6. Wait for completion (blocks until terminal state, exit code 0=ok, 5=fail, 6=timeout)
   aegisctl wait <trace-id> --timeout 600
 
   # 7. View results
@@ -66,6 +69,8 @@ OUTPUT:
   All commands support --output json (or -o json) for machine-parseable output.
   Table output goes to stdout; informational messages go to stderr.
   Use --quiet (-q) to suppress informational messages.
+  Use --non-interactive to lock automation-facing commands into fail-fast,
+  prompt-free behavior suitable for CI and agent execution.
 
 ENVIRONMENT VARIABLES:
   AEGIS_SERVER      - Server URL (overridden by --server flag)
@@ -75,6 +80,7 @@ ENVIRONMENT VARIABLES:
   AEGIS_PROJECT     - Default project name (overridden by --project flag)
   AEGIS_OUTPUT      - Output format: table|json (overridden by --output flag)
   AEGIS_TIMEOUT     - Request timeout in seconds (overridden by --request-timeout flag)
+  AEGIS_NON_INTERACTIVE - Set true/1 to disable prompts and require explicit input
 
 NAMING CONVENTION:
   Most commands accept human-readable names instead of numeric IDs.
@@ -144,6 +150,14 @@ NAMING CONVENTION:
 			flagRequestTimeout = 30
 		}
 
+		if !cmd.Flags().Lookup("non-interactive").Changed {
+			if v := os.Getenv("AEGIS_NON_INTERACTIVE"); v != "" {
+				if b, err := strconv.ParseBool(v); err == nil {
+					flagNonInteractive = b
+				}
+			}
+		}
+
 		// Forward quiet flag into the output package.
 		output.Quiet = flagQuiet
 
@@ -158,6 +172,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table|json (env: AEGIS_OUTPUT)")
 	rootCmd.PersistentFlags().IntVar(&flagRequestTimeout, "request-timeout", 0, "Request timeout in seconds (env: AEGIS_TIMEOUT)")
 	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
+	rootCmd.PersistentFlags().BoolVar(&flagNonInteractive, "non-interactive", false, "Disable prompts and require explicit input (env: AEGIS_NON_INTERACTIVE)")
 	rootCmd.PersistentFlags().BoolVar(&flagDryRun, "dry-run", false, "Show what would be done without executing")
 
 	// Register subcommands.
@@ -179,9 +194,7 @@ func init() {
 	rootCmd.AddCommand(pedestalCmd)
 }
 
-// Execute runs the root command.
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+// Execute runs the root command and returns the process exit code.
+func Execute() int {
+	return executeArgs(os.Args[1:])
 }

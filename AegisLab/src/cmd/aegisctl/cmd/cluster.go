@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"aegis/cmd/aegisctl/cluster"
@@ -28,6 +29,7 @@ cluster and its backing services (Kubernetes, MySQL, ClickHouse, Redis, etcd).`,
 var clusterPreflightCmd = &cobra.Command{
 	Use:   "preflight",
 	Short: "Verify that every dependency required by AegisLab is reachable and configured",
+	Args:  requireNoArgs,
 	Long: `Runs a catalog of checks against the cluster and the services referenced
 by config.dev.toml. The command prints one row per check with status
 [OK] / [FAIL] / [WARN] and a suggested fix on failure.
@@ -36,14 +38,22 @@ Use --check <id> to run a single check, or --fix to apply idempotent
 remediation for the subset of checks that support it (currently:
 k8s.rcabench-sa and redis.token-bucket-leaks).
 
-Exit code is 0 when every executed check is OK, 1 otherwise.`,
+Exit code is 0 when every executed check is OK and 4 when a dependency
+or environment prerequisite is missing or failing.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := cluster.LoadConfig(clusterPreflightConfig)
 		if err != nil {
-			return fmt.Errorf("load config: %w", err)
+			return missingEnvErrorf("load config: %v", err)
 		}
 		env := cluster.NewLiveEnv(cfg)
 		reg := cluster.NewRegistry(cluster.DefaultChecks())
+		if clusterPreflightCheck != "" {
+			if _, ok := reg.Get(clusterPreflightCheck); !ok {
+				ids := reg.IDs()
+				sort.Strings(ids)
+				return usageErrorf("unknown --check %q (available: %s)", clusterPreflightCheck, strings.Join(ids, ", "))
+			}
+		}
 		runner := &cluster.Runner{Registry: reg}
 		opts := cluster.RunOptions{
 			OnlyID:          clusterPreflightCheck,
@@ -54,7 +64,7 @@ Exit code is 0 when every executed check is OK, 1 otherwise.`,
 		defer cancel()
 		allOK, _ := runner.Run(ctx, env, opts, os.Stdout)
 		if !allOK {
-			os.Exit(1)
+			return silentExit(ExitCodeMissingEnv)
 		}
 		return nil
 	},
