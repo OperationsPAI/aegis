@@ -50,6 +50,9 @@ var traceListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List traces with optional filters",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
 		c := newClient()
 
 		// Resolve project name to ID if given.
@@ -115,8 +118,11 @@ var traceListCmd = &cobra.Command{
 var traceGetCmd = &cobra.Command{
 	Use:   "get <trace-id>",
 	Short: "Show detailed trace information",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1, "trace get <trace-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
 		c := newClient()
 
 		path := fmt.Sprintf("/api/v2/traces/%s", args[0])
@@ -171,7 +177,7 @@ var traceGetCmd = &cobra.Command{
 var traceWatchCmd = &cobra.Command{
 	Use:   "watch <trace-id>",
 	Short: "Watch trace events via SSE stream",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1, "trace get <trace-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		traceID := args[0]
 		ssePath := fmt.Sprintf("/api/v2/traces/%s/stream", traceID)

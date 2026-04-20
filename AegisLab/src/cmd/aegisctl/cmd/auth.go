@@ -28,13 +28,14 @@ var authLoginContext string
 var authLoginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Exchange Key ID / Key Secret for a bearer token",
+	Args:  requireNoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		server := authLoginServer
 		if server == "" {
 			server = flagServer
 		}
 		if server == "" {
-			return fmt.Errorf("--server is required for login")
+			return usageErrorf("--server is required for login")
 		}
 
 		keyID := authLoginKeyID
@@ -42,7 +43,7 @@ var authLoginCmd = &cobra.Command{
 			keyID = os.Getenv("AEGIS_KEY_ID")
 		}
 		if keyID == "" {
-			return fmt.Errorf("--key-id is required")
+			return usageErrorf("--key-id is required")
 		}
 
 		keySecret := authLoginKeySecret
@@ -50,7 +51,7 @@ var authLoginCmd = &cobra.Command{
 			keySecret = os.Getenv("AEGIS_KEY_SECRET")
 		}
 		if keySecret == "" {
-			return fmt.Errorf("--key-secret is required")
+			return usageErrorf("--key-secret is required")
 		}
 
 		output.PrintInfo(fmt.Sprintf("Exchanging API key token with %s using %s...", server, keyID))
@@ -77,7 +78,7 @@ var authLoginCmd = &cobra.Command{
 		cfg.CurrentContext = ctxName
 
 		if err := config.SaveConfig(cfg); err != nil {
-			return fmt.Errorf("save config: %w", err)
+			return missingEnvErrorf("save config: %v", err)
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -234,7 +235,7 @@ var authSignDebugCmd = &cobra.Command{
 			keyID = os.Getenv("AEGIS_KEY_ID")
 		}
 		if keyID == "" {
-			return fmt.Errorf("--key-id is required")
+			return usageErrorf("--key-id is required")
 		}
 
 		keySecret := authSignDebugKeySecret
@@ -242,7 +243,7 @@ var authSignDebugCmd = &cobra.Command{
 			keySecret = os.Getenv("AEGIS_KEY_SECRET")
 		}
 		if keySecret == "" {
-			return fmt.Errorf("--key-secret is required")
+			return usageErrorf("--key-secret is required")
 		}
 
 		signTime := time.Now().UTC()
@@ -362,7 +363,7 @@ var authTokenCmd = &cobra.Command{
 		cfg.CurrentContext = ctxName
 
 		if err := config.SaveConfig(cfg); err != nil {
-			return fmt.Errorf("save config: %w", err)
+			return missingEnvErrorf("save config: %v", err)
 		}
 
 		output.PrintInfo(fmt.Sprintf("Token set for context %q", ctxName))
@@ -460,7 +461,7 @@ func saveAPIKeyContext(server string, executeResp map[string]any) error {
 	cfg.Contexts[ctxName] = ctx
 	cfg.CurrentContext = ctxName
 	if err := config.SaveConfig(cfg); err != nil {
-		return fmt.Errorf("save config: %w", err)
+		return missingEnvErrorf("save config: %v", err)
 	}
 
 	output.PrintInfo(fmt.Sprintf("Saved token to context %q", ctxName))

@@ -2,8 +2,9 @@ package main
 
 import (
 	"aegis/cmd/aegisctl/cmd"
+	"os"
 )
 
 func main() {
-	cmd.Execute()
+	os.Exit(cmd.Execute())
 }

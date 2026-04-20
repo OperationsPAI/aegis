@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"aegis/cmd/aegisctl/client"
@@ -16,6 +15,11 @@ var (
 	waitInterval int
 )
 
+var (
+	waitDetectResourceType = detectResourceType
+	waitPollState          = pollState
+)
+
 var waitCmd = &cobra.Command{
 	Use:   "wait <trace-id|task-id>",
 	Short: "Block until a trace or task reaches a terminal state",
@@ -26,8 +30,8 @@ Polls the API at regular intervals and prints status updates to stderr.
 
 EXIT CODES:
   0 — Completed successfully
-  2 — Failed, Error, or Cancelled
-  3 — Timeout (exceeded --timeout)
+  5 — Failed, Error, or Cancelled
+  6 — Timeout (exceeded --timeout)
 
 EXAMPLES:
   # Wait for a trace to complete (default timeout: 600s)
@@ -39,13 +43,16 @@ EXAMPLES:
   # Use in scripts to chain operations
   aegisctl inject submit --spec inject.yaml --project my_project -o json | \
     jq -r '.trace_id' | xargs aegisctl wait`,
-	Args: cobra.ExactArgs(1),
+	Args: exactArgs(1, "wait <trace-id|task-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
 		id := args[0]
 		c := newClient()
 
 		// Determine resource type: try trace first, then task.
-		resourceType, err := detectResourceType(c, id)
+		resourceType, err := waitDetectResourceType(c, id)
 		if err != nil {
 			return err
 		}
@@ -55,7 +62,7 @@ EXAMPLES:
 		start := time.Now()
 
 		for {
-			state, data, err := pollState(c, resourceType, id)
+			state, data, err := waitPollState(c, resourceType, id)
 			if err != nil {
 				return fmt.Errorf("poll %s %s: %w", resourceType, id, err)
 			}
@@ -79,16 +86,15 @@ EXAMPLES:
 				case "Completed":
 					return nil
 				case "Failed", "Error":
-					os.Exit(2)
+					return workflowFailureErrorf("%s %s reached terminal state %s", resourceType, id, state)
 				case "Cancelled":
-					os.Exit(2)
+					return workflowFailureErrorf("%s %s reached terminal state %s", resourceType, id, state)
 				}
 				return nil
 			}
 
 			if time.Now().After(deadline) {
-				output.PrintError(fmt.Sprintf("timeout after %ds waiting for %s %s (last state: %s)", waitTimeout, resourceType, id, state))
-				os.Exit(3)
+				return timeoutErrorf("timeout after %ds waiting for %s %s (last state: %s)", waitTimeout, resourceType, id, state)
 			}
 
 			time.Sleep(interval)
