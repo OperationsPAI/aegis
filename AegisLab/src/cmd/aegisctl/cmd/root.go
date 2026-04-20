@@ -48,8 +48,12 @@ QUICK START:
   aegisctl container list --type algorithm
   aegisctl dataset list
 
-  # 4. Submit a fault injection (requires a YAML spec file)
-  aegisctl inject submit --spec injection.yaml --project pair_diagnosis
+  # 4. Submit a fault injection via the guided flow
+  aegisctl inject guided --reset-config --no-save-config
+  aegisctl inject guided --apply --project pair_diagnosis \
+    --pedestal-name ts --pedestal-tag 1.0.0 \
+    --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 \
+    --interval 10 --pre-duration 5
 
   # 5. Monitor progress
   aegisctl trace list --project pair_diagnosis

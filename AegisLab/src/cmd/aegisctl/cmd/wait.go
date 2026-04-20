@@ -40,9 +40,13 @@ EXAMPLES:
   # Wait with custom timeout and poll interval
   aegisctl wait <trace-id> --timeout 1200 --interval 10
 
-  # Use in scripts to chain operations
-  aegisctl inject submit --spec inject.yaml --project my_project -o json | \
-    jq -r '.trace_id' | xargs aegisctl wait`,
+  # Use in scripts to chain operations (guided --apply prints trace_id in its
+  # JSON response)
+  aegisctl inject guided --apply --project my_project \
+    --pedestal-name ts --pedestal-tag 1.0.0 \
+    --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 \
+    --interval 10 --pre-duration 5 | \
+    jq -r '.items[0].trace_id' | xargs aegisctl wait`,
 	Args: exactArgs(1, "wait <trace-id|task-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireAPIContext(true); err != nil {
