@@ -247,7 +247,7 @@ var ServiceEndpoints = map[string][]ServiceEndpoint{
 			RequestMethod:  "",
 			ResponseStatus: "",
 			Route:          "",
-			ServerAddress:  "redis",
+			ServerAddress:  "valkey-cart",
 			ServerPort:     "6379",
 			SpanName:       "DB Access",
 		},
@@ -534,7 +534,7 @@ var AllServices = []string{
 	"product-catalog",
 	"quote",
 	"recommendation",
-	"redis",
+	"valkey-cart",
 	"shipping",
 }
 

@@ -30,7 +30,7 @@ var DatabaseOperations = map[string][]DatabaseOperation{
 			DBTable:       "",
 			Operation:     "",
 			DBSystem:      "redis",
-			ServerAddress: "redis",
+			ServerAddress: "valkey-cart",
 			ServerPort:    "6379",
 			SpanName:      "HGET",
 		},

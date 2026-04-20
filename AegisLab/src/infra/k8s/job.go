@@ -180,7 +180,7 @@ func createJob(ctx context.Context, jobConfig *JobConfig) error {
 								Command:         jobConfig.Command,
 								Env:             jobConfig.EnvVars,
 								VolumeMounts:    volumeMounts,
-								ImagePullPolicy: corev1.PullAlways,
+								ImagePullPolicy: getImagePullPolicy(jobConfig.Image),
 							},
 						},
 						Volumes: volumes,
@@ -199,6 +199,14 @@ func createJob(ctx context.Context, jobConfig *JobConfig) error {
 
 		return nil
 	})
+}
+
+func getImagePullPolicy(image string) corev1.PullPolicy {
+	if strings.HasSuffix(image, ":latest") || !strings.Contains(image, ":") {
+		return corev1.PullAlways
+	}
+
+	return corev1.PullIfNotPresent
 }
 
 // GetVolumeMountConfigMap retrieves volume mount configurations from the application config.

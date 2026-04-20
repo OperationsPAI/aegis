@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import requests
 
 from rcabench_platform.v3.cli.main import app, logger, timeit
 from rcabench_platform.v3.internal.clients.clickhouse import (
@@ -231,26 +232,44 @@ def query_trace_id_ts(save_path: Path, namespace: str, start_time: str, end_time
 @timeit()
 def query_injection(base_url: str, name: str):
     # NOTE: We intentionally bypass the generated `rcabench` OpenAPI client here.
-    # The backend returns `engine_config` as a structured dict (e.g.
-    # {"system": ..., "chaos_type": ..., "target_service": ..., ...}), but the
-    # installed rcabench 1.1.51 SDK's `InjectionDetailResp` pydantic model types
-    # `engine_config` as `list`, so validation explodes and this function
-    # silently returned None — preventing `injection.json` from being written
-    # and failing downstream datapack validation.
-    #
-    # The proper fix is to regenerate the OpenAPI client (just swag-init +
-    # just generate-python-sdk + publish), which is too invasive for this
-    # hotfix. Using raw requests + RCABENCH_TOKEN is the scoped workaround.
-    import requests
-
+    # The backend returns `engine_config` as a structured dict, but the shipped
+    # Python SDK still types it as a list, so pydantic validation can fail and
+    # suppress `injection.json` generation. Querying the REST endpoints directly
+    # keeps datapack generation working until the client is regenerated.
     token = os.environ.get("RCABENCH_TOKEN", "")
-    url = f"{base_url.rstrip('/')}/api/v2/injections/search"
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
     try:
-        resp = requests.post(url, json={"name_pattern": name}, headers=headers, timeout=30)
+        base = base_url.rstrip("/")
+        injection_id = os.environ.get("INJECTION_ID", "").strip()
+        if injection_id:
+            resp = requests.get(f"{base}/api/v2/injections/{injection_id}", headers=headers, timeout=30)
+            resp.raise_for_status()
+            payload = resp.json()
+            data = payload.get("data")
+            if data:
+                return data
+
+        project_id = os.environ.get("RCABENCH_PROJECT_ID", "").strip()
+        if project_id:
+            resp = requests.post(
+                f"{base}/api/v2/projects/{project_id}/injections/search",
+                json={"name_pattern": name},
+                headers=headers,
+                timeout=30,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+            data = payload.get("data") or {}
+            items = data.get("items") or []
+            for item in items:
+                if item.get("name") == name and item.get("id") is not None:
+                    return item
+
+        # Legacy fallback for older backends that still expose the unscoped route.
+        resp = requests.post(f"{base}/api/v2/injections/search", json={"name_pattern": name}, headers=headers, timeout=30)
         resp.raise_for_status()
         payload = resp.json()
         data = payload.get("data") or {}

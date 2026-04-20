@@ -324,6 +324,14 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// Snapshot the monitor context while holding the write lock. Calling helper
+	// methods like m.currentContext()/m.listNamespaces() from inside this locked
+	// section would try to re-acquire m.mu via an RLock and self-deadlock.
+	ctx := m.ctx
+	if ctx == nil {
+		ctx = context.TODO()
+	}
+
 	result := &NamespaceRefreshResult{
 		Added:     make([]string, 0),
 		Recovered: make([]string, 0),
@@ -332,16 +340,19 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	}
 
 	// Get latest namespaces from configuration
+	logrus.Info("Refreshing namespaces from config")
 	latestNamespaces, err := config.GetAllNamespaces()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest namespaces: %w", err)
 	}
+	logrus.Infof("Loaded %d namespaces from config", len(latestNamespaces))
 
 	// Get existing namespaces from Redis
-	existingNamespaces, err := m.listNamespaces()
+	existingNamespaces, err := m.namespaces.list(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing namespaces: %w", err)
 	}
+	logrus.Infof("Loaded %d namespaces from Redis", len(existingNamespaces))
 
 	latestSet := utils.MakeSet(latestNamespaces)
 	existingSet := utils.MakeSet(existingNamespaces)
@@ -350,7 +361,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	for ns := range latestSet {
 		if _, exists := existingSet[ns]; !exists {
 			// Brand new namespace, add it
-			if err := m.addNamespace(ns, time.Now()); err != nil {
+			if err := m.namespaces.seed(ctx, ns, time.Now()); err != nil {
 				logrus.Errorf("Failed to add namespace %s: %v", ns, err)
 			} else {
 				result.Added = append(result.Added, ns)
@@ -358,7 +369,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 			}
 		} else {
 			// Existing namespace, check if it needs recovery
-			currentStatus, err := m.getNamespaceStatus(ns)
+			currentStatus, err := m.status.get(ctx, ns)
 			if err != nil {
 				logrus.Errorf("Failed to get status for namespace %s: %v", ns, err)
 				continue
@@ -366,7 +377,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 
 			if currentStatus != consts.CommonEnabled {
 				// Namespace was disabled/deleted but is back in config, recover it
-				if err := m.setNamespaceStatus(ns, consts.CommonEnabled); err != nil {
+				if err := m.status.set(ctx, ns, consts.CommonEnabled); err != nil {
 					logrus.Errorf("Failed to recover namespace %s: %v", ns, err)
 				} else {
 					result.Recovered = append(result.Recovered, ns)
@@ -381,7 +392,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	for ns := range existingSet {
 		if _, exists := latestSet[ns]; !exists {
 			// Namespace removed from config
-			currentStatus, err := m.getNamespaceStatus(ns)
+			currentStatus, err := m.status.get(ctx, ns)
 			if err != nil {
 				logrus.Errorf("Failed to get status for namespace %s: %v", ns, err)
 				continue
@@ -398,7 +409,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 			}
 
 			// Check if namespace has active lock
-			isLocked, err := m.isNamespaceLocked(ns)
+			isLocked, err := m.locks.isActive(ctx, ns, time.Now())
 			if err != nil {
 				logrus.Errorf("Failed to check lock status for %s: %v", ns, err)
 				continue
@@ -406,7 +417,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 
 			if isLocked {
 				// Has active lock, mark as disabled
-				if err := m.setNamespaceStatus(ns, consts.CommonDisabled); err != nil {
+				if err := m.status.set(ctx, ns, consts.CommonDisabled); err != nil {
 					logrus.Errorf("Failed to set namespace %s status to disabled: %v", ns, err)
 				} else {
 					result.Disabled = append(result.Disabled, ns)
@@ -414,7 +425,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 				}
 			} else {
 				// No active lock, mark as deleted
-				if err := m.setNamespaceStatus(ns, consts.CommonDeleted); err != nil {
+				if err := m.status.set(ctx, ns, consts.CommonDeleted); err != nil {
 					logrus.Errorf("Failed to set namespace %s status to deleted: %v", ns, err)
 				} else {
 					result.Deleted = append(result.Deleted, ns)
@@ -424,6 +435,8 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 		}
 	}
 
+	logrus.Infof("Namespace refresh result: added=%d recovered=%d disabled=%d deleted=%d",
+		len(result.Added), len(result.Recovered), len(result.Disabled), len(result.Deleted))
 	return result, nil
 }
 

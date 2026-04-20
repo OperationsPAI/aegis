@@ -53,6 +53,27 @@ func TestGetVolumeMountConfigs(t *testing.T) {
 	pp.Println(volumes)            //nolint:errcheck
 }
 
+func TestGetImagePullPolicy(t *testing.T) {
+	tests := []struct {
+		name  string
+		image string
+		want  corev1.PullPolicy
+	}{
+		{name: "latest tag pulls always", image: "repo/image:latest", want: corev1.PullAlways},
+		{name: "version tag uses cache", image: "repo/image:v1.2.3", want: corev1.PullIfNotPresent},
+		{name: "digest only uses cache", image: "repo/image@sha256:deadbeef", want: corev1.PullIfNotPresent},
+		{name: "missing tag pulls always", image: "repo/image", want: corev1.PullAlways},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := getImagePullPolicy(tc.image); got != tc.want {
+				t.Fatalf("getImagePullPolicy(%q) = %q, want %q", tc.image, got, tc.want)
+			}
+		})
+	}
+}
+
 func requireIntegrationConfig(t *testing.T) integrationConfig {
 	t.Helper()
 

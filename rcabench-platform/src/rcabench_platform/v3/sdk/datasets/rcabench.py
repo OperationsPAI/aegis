@@ -1,4 +1,5 @@
 import json
+import os
 import math
 import random
 import re
@@ -345,7 +346,8 @@ def valid(path: Path, force_refresh: bool = False) -> tuple[Path, bool]:
     # Check if normal trace root span duration exceeds 3 seconds (environment stability check)
     # Duration is in nanoseconds, so 3 seconds = 3e9 nanoseconds
     normal_traces = path_obj / "normal_traces.parquet"
-    if normal_traces.exists():
+    skip_stability_check = os.getenv("RCABENCH_SKIP_STABILITY_VALIDATION") == "1"
+    if normal_traces.exists() and not skip_stability_check:
         try:
             normal_df = pl.scan_parquet(normal_traces)
             root_spans_df = normal_df.filter(pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == ""))

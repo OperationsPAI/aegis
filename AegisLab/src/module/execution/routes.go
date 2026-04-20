@@ -48,7 +48,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 				executions.PATCH("/:id/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:write"), handler.ManageExecutionCustomLabels)
 			}
 
-			runtime := v2.Group("/executions", middleware.RequireServiceTokenAuth())
+			runtime := v2.Group("/executions", middleware.JWTAuth(), middleware.RequireServiceTokenAuth())
 			{
 				runtime.POST("/:execution_id/detector_results", handler.UploadDetectorResults)
 				runtime.POST("/:execution_id/granularity_results", handler.UploadGranularityResults)

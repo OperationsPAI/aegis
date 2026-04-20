@@ -171,6 +171,7 @@ func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *da
 	jobEnvVars := []corev1.EnvVar{
 		{Name: "TIMEZONE", Value: tz},
 		{Name: "TIMESTAMP", Value: timestamp},
+		{Name: "INJECTION_ID", Value: strconv.Itoa(payload.datapack.ID)},
 		{Name: "NORMAL_START", Value: strconv.FormatInt(payload.datapack.StartTime.Add(-time.Duration(payload.datapack.PreDuration)*time.Minute).Unix(), 10)},
 		{Name: "NORMAL_END", Value: strconv.FormatInt(payload.datapack.StartTime.Unix(), 10)},
 		{Name: "ABNORMAL_START", Value: strconv.FormatInt(payload.datapack.StartTime.Unix(), 10)},
@@ -180,6 +181,7 @@ func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *da
 		{Name: "OUTPUT_PATH", Value: filepath.Join(datapackPathPrefix, payload.datapack.Name)},
 		{Name: "RCABENCH_BASE_URL", Value: config.GetString("k8s.service.internal_url")},
 		{Name: "RCABENCH_TOKEN", Value: serviceToken},
+		{Name: "RCABENCH_SKIP_STABILITY_VALIDATION", Value: "1"},
 		{Name: "DB_HOST", Value: dbConfig.Host},
 		{Name: "DB_PORT", Value: fmt.Sprint(dbConfig.Port)},
 		{Name: "DB_USER", Value: dbConfig.User},

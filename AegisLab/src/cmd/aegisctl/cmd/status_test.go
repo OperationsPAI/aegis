@@ -56,7 +56,7 @@ func unhealthyResponse() map[string]any {
 func TestStatusHealthy(t *testing.T) {
 	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/system/health":
+		case "/api/v2/system/health":
 			json.NewEncoder(w).Encode(healthyResponse())
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
@@ -94,7 +94,7 @@ func TestStatusHealthy(t *testing.T) {
 func TestStatusUnhealthy(t *testing.T) {
 	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/system/health":
+		case "/api/v2/system/health":
 			json.NewEncoder(w).Encode(unhealthyResponse())
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
@@ -159,7 +159,7 @@ func TestStatusServerUnreachable(t *testing.T) {
 func TestStatusJSON(t *testing.T) {
 	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/system/health":
+		case "/api/v2/system/health":
 			json.NewEncoder(w).Encode(healthyResponse())
 		case "/api/v2/auth/profile":
 			json.NewEncoder(w).Encode(map[string]any{

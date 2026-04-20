@@ -91,7 +91,7 @@ var statusCmd = &cobra.Command{
 
 			// Health
 			var healthResp client.APIResponse[healthCheckResp]
-			if err := c.Get("/system/health", &healthResp); err == nil {
+			if err := c.Get("/api/v2/system/health", &healthResp); err == nil {
 				result["health"] = healthResp.Data
 			} else {
 				result["health"] = map[string]any{"status": "unreachable", "error": err.Error()}
@@ -143,7 +143,7 @@ var statusCmd = &cobra.Command{
 		// --- Infrastructure Health ---
 		fmt.Println("Infrastructure Health:")
 		var healthResp client.APIResponse[healthCheckResp]
-		if err := c.Get("/system/health", &healthResp); err != nil {
+		if err := c.Get("/api/v2/system/health", &healthResp); err != nil {
 			fmt.Printf("  \033[31m\u2717\033[0m Could not reach health endpoint: %v\n", err)
 		} else {
 			names := make([]string, 0, len(healthResp.Data.Services))
