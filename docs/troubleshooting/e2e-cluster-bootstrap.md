@@ -317,6 +317,12 @@ See `aegislab_e2e_pitfalls.md` memory for the terse list. Items flagged
 cluster-configuration that this runbook walks you through.
 
 Track as real aegisctl gaps (not workarounds):
-- `aegisctl cluster preflight` — would validate all of §2 automatically
+- `aegisctl cluster preflight` — check-only validation for the dependency and
+  readiness side of §2
+- `aegisctl cluster prepare local-e2e --dry-run` — preview the Aegis-specific
+  namespace/service-account/PVC/etcd work that local e2e needs
+- `aegisctl cluster prepare local-e2e --apply` — apply that Aegis-specific prep
+  contract without wrapping generic `kind`, `helm`, or ad-hoc `kubectl apply`
+  cluster lifecycle steps
 - `aegisctl pedestal helm set --chart-tgz <path>` — would eliminate §3.1
 - `aegisctl container version set-image` — would eliminate §2.4 patching

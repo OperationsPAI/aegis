@@ -45,9 +45,9 @@ aegisctl dataset list
 | `dataset` | List, get, manage datasets |
 | `eval` | List, get evaluation results |
 | `wait` | Block until a resource reaches terminal state |
-| `regression` | Run curated regression validations |
 | `status` | View system status |
 | `regression` | Run repo-tracked regression cases |
+| `cluster` | Check or apply Aegis-specific cluster readiness steps |
 | `completion` | Generate shell completions |
 
 ## Canonical regression case
@@ -80,3 +80,27 @@ aegisctl regression run otel-demo-guided --ensure-env --wait --output json
 - [`../../../CONTRIBUTING.md`](../../../CONTRIBUTING.md) - module/plugin boundary rules
 - [`../../../../docs/deployment/README.md`](../../../../docs/deployment/README.md) - deploy and smoke-test map
 - [`../../../../docs/troubleshooting/README.md`](../../../../docs/troubleshooting/README.md) - cross-repo troubleshooting runbooks
+
+## Cluster readiness commands
+
+`aegisctl cluster` separates verification from repair:
+
+- `aegisctl cluster preflight` checks reachability and configuration only. It
+  reports missing prerequisites and has a small set of targeted remediations.
+- `aegisctl cluster prepare local-e2e` previews or applies the Aegis-specific
+  local/e2e preparation contract (namespace, service account, experiment PVC,
+  required etcd keys). It does not wrap generic `kind`, `helm`, or broad
+  `kubectl apply` lifecycle workflows.
+
+Examples:
+
+```bash
+# Preview intended local/e2e prep actions
+aegisctl cluster prepare local-e2e --dry-run
+
+# Apply the Aegis-specific prep contract
+aegisctl cluster prepare local-e2e --apply
+
+# Consume a stable machine-readable summary
+aegisctl cluster prepare local-e2e --output json
+```

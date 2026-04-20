@@ -14,6 +14,7 @@ type fakeEnv struct {
 	ch  *fakeCH
 	sql *fakeMySQL
 	rds *fakeRedis
+	etd *fakeEtcd
 }
 
 func (f *fakeEnv) Config() Config              { return f.cfg }
@@ -22,6 +23,7 @@ func (f *fakeEnv) Net() NetProbe               { return f.net }
 func (f *fakeEnv) ClickHouse() ClickHouseProbe { return f.ch }
 func (f *fakeEnv) MySQL() MySQLProbe           { return f.sql }
 func (f *fakeEnv) Redis() RedisProbe           { return f.rds }
+func (f *fakeEnv) Etcd() EtcdProbe             { return f.etd }
 
 type fakeK8s struct {
 	namespaces      map[string]bool
@@ -40,6 +42,13 @@ func (f *fakeK8s) NamespaceExists(_ context.Context, n string) (bool, error) {
 		return false, f.err
 	}
 	return f.namespaces[n], nil
+}
+func (f *fakeK8s) CreateNamespace(_ context.Context, n string) error {
+	if f.namespaces == nil {
+		f.namespaces = map[string]bool{}
+	}
+	f.namespaces[n] = true
+	return nil
 }
 func (f *fakeK8s) ServiceAccountExists(_ context.Context, ns, n string) (bool, error) {
 	if f.err != nil {
@@ -66,6 +75,19 @@ func (f *fakeK8s) CreateServiceAccount(_ context.Context, ns, n string) error {
 	}
 	f.serviceAccounts[ns+"/"+n] = true
 	f.saCreated = append(f.saCreated, ns+"/"+n)
+	return nil
+}
+func (f *fakeK8s) CreatePVC(_ context.Context, ns, n string, _ PVCSpec) error {
+	if f.pvcs == nil {
+		f.pvcs = map[string]struct {
+			exists bool
+			bound  bool
+		}{}
+	}
+	f.pvcs[ns+"/"+n] = struct {
+		exists bool
+		bound  bool
+	}{exists: true, bound: false}
 	return nil
 }
 
@@ -132,6 +154,33 @@ func (f *fakeRedis) SRem(_ context.Context, key string, members ...string) (int6
 	f.sets[key] = keep
 	return int64(len(members)), nil
 }
+
+type fakeEtcd struct {
+	values map[string]string
+	puts   map[string]int
+}
+
+func (f *fakeEtcd) Get(_ context.Context, key string) (string, bool, error) {
+	if f.values == nil {
+		return "", false, nil
+	}
+	value, ok := f.values[key]
+	return value, ok, nil
+}
+
+func (f *fakeEtcd) Put(_ context.Context, key, value string) error {
+	if f.values == nil {
+		f.values = map[string]string{}
+	}
+	if f.puts == nil {
+		f.puts = map[string]int{}
+	}
+	f.values[key] = value
+	f.puts[key]++
+	return nil
+}
+
+func (f *fakeEtcd) Close() error { return nil }
 
 func TestCheckRcabenchSA_Missing(t *testing.T) {
 	env := &fakeEnv{
