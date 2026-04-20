@@ -45,8 +45,14 @@ def load_repo_tracked_case(case: dict[str, Any]) -> dict[str, Any]:
     if not case_path.exists():
         pytest.fail(f"Regression case file not found: {case_path}")
 
-    with case_path.open(encoding="utf-8") as f:
-        loaded = yaml.safe_load(f)
+    try:
+        with case_path.open(encoding="utf-8") as f:
+            loaded = yaml.safe_load(f)
+    except yaml.YAMLError as exc:
+        pytest.fail(f"Failed to parse regression case YAML {case_path}: {exc}")
+
+    if not isinstance(loaded, dict):
+        pytest.fail(f"Regression case file must contain a YAML mapping: {case_path}")
 
     validation = loaded.get("validation", {})
     return {

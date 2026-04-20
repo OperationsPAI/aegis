@@ -75,7 +75,7 @@ aegisctl regression run otel-demo-guided --ensure-env --wait --output json
 
 ## Related docs
 
-- [`../../../regression/README.md`](../../../regression/README.md) - repo-tracked regression case format and canonical cases
+- [`../../../../regression/README.md`](../../../../regression/README.md) - repo-tracked regression case format and canonical cases
 - [`../../../README.md`](../../../README.md) - backend runtime modes and quick start
 - [`../../../CONTRIBUTING.md`](../../../CONTRIBUTING.md) - module/plugin boundary rules
 - [`../../../../docs/deployment/README.md`](../../../../docs/deployment/README.md) - deploy and smoke-test map
