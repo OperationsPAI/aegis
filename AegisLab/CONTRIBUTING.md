@@ -153,5 +153,5 @@ If you touched HTTP behavior, also run the startup smoke test:
 
 ```bash
 docker compose up redis mysql -d
-ENV_MODE=dev go run -tags duckdb_arrow ./main.go both --port 8082
+ENV_MODE=dev go run -tags duckdb_arrow . both -conf ./config.dev.toml -port 8082
 ```

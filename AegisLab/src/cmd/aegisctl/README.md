@@ -1,6 +1,6 @@
 # aegisctl
 
-Command-line client for the AegisLab (RCABench) platform. Designed for both human operators and AI agents to drive the full RCA experiment lifecycle from the terminal.
+Command-line client for the AegisLab (RCABench) platform. Designed for both human operators and AI agents to drive the RCA workflow from the terminal.
 
 ## Build
 
@@ -10,7 +10,7 @@ just build-aegisctl
 cd src && go build -o /tmp/aegisctl ./cmd/aegisctl
 ```
 
-Note: aegisctl does NOT require `-tags duckdb_arrow`.
+Note: `aegisctl` does not require `-tags duckdb_arrow`.
 
 ## Quick Start
 
@@ -55,6 +55,9 @@ aegisctl dataset list
 | `AEGIS_OUTPUT` | Output format: `table` or `json` (overridden by `-o`) |
 | `AEGIS_TIMEOUT` | Request timeout in seconds (overridden by `--request-timeout`) |
 
-## Full Specification
+## Related docs
 
-See [docs/aegisctl-cli-spec.md](../../../docs/aegisctl-cli-spec.md) for the complete design specification.
+- [`../../../README.md`](../../../README.md) - backend runtime modes and quick start
+- [`../../../CONTRIBUTING.md`](../../../CONTRIBUTING.md) - module/plugin boundary rules
+- [`../../../../docs/deployment/README.md`](../../../../docs/deployment/README.md) - deploy and smoke-test map
+- [`../../../../docs/troubleshooting/README.md`](../../../../docs/troubleshooting/README.md) - cross-repo troubleshooting runbooks

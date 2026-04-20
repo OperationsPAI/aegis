@@ -1,48 +1,45 @@
-# Aegis Local Deployment Discovery Runbook
+# Deployment And Smoke-Test Runbooks
 
-This directory records a real discovery pass for standing up the Aegis stack on a local `kind` cluster from a fresh parent-repo checkout.
+Source of truth is the repo state under `AegisLab/` as of 2026-04-20.
 
-Status of this attempt:
-- Host tooling inspection: completed
-- Submodule initialization: completed
-- `kind` install: completed
-- `kind` cluster bootstrap: attempted, failed on this host before Kubernetes became ready
-- Backend host build: completed
-- Frontend host install/build: completed
-- Frontend container build: attempted, failed without valid `NPM_TOKEN`
-- Chaos Mesh, workload, observability, backend-in-cluster, smoke test: blocked by cluster bootstrap failure
+This directory mixes two kinds of documents:
 
-Attempted up to:
-- [01-kind-cluster.md](./01-kind-cluster.md)
+- current operator runbooks
+- archived capture logs from one-off local-cluster experiments
 
-Stopped because:
-- `kind create cluster` failed on this host with `Failed to create control group inotify object: Too many open files`, so no working local Kubernetes API server was available for the remaining steps.
+## Current supported workflows
 
-Order of operations:
-1. Read [prerequisites.md](./prerequisites.md).
-2. Create the cluster with [01-kind-cluster.md](./01-kind-cluster.md).
-3. Install Chaos Mesh with [02-chaos-mesh.md](./02-chaos-mesh.md).
-4. Deploy the benchmark workload with [03-microservices.md](./03-microservices.md).
-5. Deploy the backend with [04-backend.md](./04-backend.md).
-6. Deploy the frontend with [05-frontend.md](./05-frontend.md).
-7. Verify the observability stack with [06-observability.md](./06-observability.md).
-8. Run the end-to-end smoke test in [07-smoke-test.md](./07-smoke-test.md).
-9. Review all blockers in [known-gaps.md](./known-gaps.md).
+- Local infra only:
+  `cd AegisLab && docker compose up -d redis mysql etcd jaeger buildkitd loki prometheus grafana`
+- Local backend, collocated mode:
+  `cd AegisLab/src && go run . both -conf ./config.dev.toml -port 8082`
+- Current split-process backend:
+  `cd AegisLab/src && go run ./cmd/api-gateway -conf ./config.dev.toml -port 8082`
+  plus
+  `cd AegisLab/src && go run ./cmd/runtime-worker-service -conf ./config.dev.toml`
+- Containerized split-process variant:
+  `cd AegisLab && docker compose -f docker-compose.yaml -f docker-compose.microservices.yaml up api-gateway runtime-worker-service`
+- Staging-profile cluster deploy:
+  `cd AegisLab && just run`
+- Repo-native regression smoke:
+  `cd AegisLab && just test-regression`
 
-What worked in this workspace:
-- `git submodule update --init --recursive`
-- local Go build in `AegisLab/src`
-- local `pnpm install` and `pnpm build` in `AegisLab-frontend`
-- Docker pulls from public `docker.io` during frontend image build
+## Document map
 
-What still does not work:
-- Local `kind` bootstrap on this machine
-- Any Kubernetes-based deployment or verification
-- Frontend Docker build without a valid `NPM_TOKEN` secret
-- Any path that depends on internal `10.10.10.*` addresses or the team JuiceFS deployment
-- Any chart or manifest path that expects private registries such as `pair-diag-cn-guangzhou.cr.volces.com` or `10.10.10.240`
+- [`prerequisites.md`](./prerequisites.md) - host prerequisites and environment assumptions
+- [`01-kind-cluster.md`](./01-kind-cluster.md) - kind bootstrap notes
+- [`02-chaos-mesh.md`](./02-chaos-mesh.md) - Chaos Mesh install path
+- [`03-microservices.md`](./03-microservices.md) - demo workload install notes
+- [`04-backend.md`](./04-backend.md) - backend-in-cluster notes and overlays
+- [`05-frontend.md`](./05-frontend.md) - frontend deployment notes
+- [`06-observability.md`](./06-observability.md) - observability stacks present in the repo
+- [`07-smoke-test.md`](./07-smoke-test.md) - archived manual smoke checklist; prefer `just test-regression` for the current repo-supported smoke path
+- [`08-aegisctl-chaos.md`](./08-aegisctl-chaos.md) - CLI-driven chaos run notes
+- [`09-smoke-run.md`](./09-smoke-run.md) - archived one-off latency experiment, not the canonical operator smoke path
+- [`known-gaps.md`](./known-gaps.md) - environment-specific blockers and caveats
 
-Top blockers by impact:
-- Host-level `kind` failure before the cluster is ready
-- Private package auth for `@OperationsPAI/client`
-- Internal-only registry and storage defaults in the backend and benchmark configs
+## Important distinctions
+
+- The backend no longer exposes the older six-service split. The dedicated split-process topology is only `api-gateway` + `runtime-worker-service`.
+- `just run` and `scripts/start.sh test` are not the same thing. `just run` deploys the repo's staging profile with `skaffold`; `scripts/start.sh test` bootstraps cluster dependencies and demo components.
+- The repo contains both chart-managed observability config and bootstrap-script observability config. Read [`06-observability.md`](./06-observability.md) before assuming they are the same stack.

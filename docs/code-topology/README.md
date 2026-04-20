@@ -9,12 +9,22 @@ The old 6-service split is no longer the primary architecture. Use this file plu
 
 ## Documents
 
+Current, revalidated topology docs:
+
 - `README.md` - current overview, process model, plugin points, validation hooks.
 - `slices/01-app-wiring.md` - concrete `fx.Option` graphs for every supported mode.
 - `slices/06-grpc-interfaces.md` - the only remaining internal gRPC seam.
-- `flows.md`, `reference.md`, `orphans.md`, and the other `slices/` files - useful deep dives,
-  but some sections were written before the service collapse and should be cross-checked
-  against the two files above.
+
+Archival deep dives kept for provenance, not as the current topology source of truth:
+
+- `flows.md`
+- `reference.md`
+- `orphans.md`
+- `slices/02-infra.md`
+- `slices/03-modules-iam.md`
+- `slices/04-modules-resource.md`
+- `slices/05-orchestration.md`
+- `slices/07-data-crosscut-seams.md`
 
 ## 1. Runtime shapes
 
@@ -162,8 +172,8 @@ calling the local services directly.
 
 The codebase is closer to the target architecture, but a few coexistence mechanisms remain:
 
-- `router.New(...)` still calls the older centralized `Setup*V2Routes(...)` helpers before
-  applying self-registered route fragments.
+- `router.New(...)` still invokes the older centralized `Setup*V2Routes(...)` helpers, but the
+  current helpers are compatibility no-op shims; module registrars do the real route mounting.
 - `infra/db/migration.go` still has a `centralEntities()` slice alongside module-contributed
   migrations.
 - `infra/db/migration.go` still seeds builtin systems centrally.

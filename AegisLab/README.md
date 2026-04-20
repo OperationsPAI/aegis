@@ -1,630 +1,185 @@
-# RCABench: A Comprehensive Root Cause Analysis Benchmarking Platform
+# AegisLab (RCABench)
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.23+-blue.svg)](https://golang.org/)
-[![Python Version](https://img.shields.io/badge/Python-3.10+-green.svg)](https://python.org/)
+AegisLab is the backend and SDK workspace for RCABench, a root-cause-analysis benchmarking platform for microservice systems. It manages chaos systems, projects, datasets, injections, executions, evaluations, and the async runtime that drives build / inject / collect workflows.
 
-RCABench is a comprehensive benchmarking platform designed for evaluating root cause analysis (RCA) algorithms in microservices environments. It provides automated fault injection, algorithm execution, and evaluation capabilities for distributed systems research.
+## Current architecture
 
-## 🎯 Overview
+Source of truth: code under `src/` as of 2026-04-20.
 
-RCABench enables researchers and practitioners to:
+The backend is no longer organized around six dedicated business services. The current runtime surface is:
 
-- **Inject faults** into microservices using chaos engineering principles
-- **Execute RCA algorithms** on collected observability data
-- **Evaluate and compare** different root cause analysis approaches
-- **Benchmark performance** across various microservice architectures
-- **Manage datasets** of fault scenarios and observability traces
+- one root backend binary in `src/main.go`
+- five supported modes: `producer`, `consumer`, `both`, `api-gateway`, `runtime-worker-service`
+- two standalone backend binaries under `src/cmd/`: `api-gateway` and `runtime-worker-service`
+- one remaining internal gRPC seam: `proto/runtime/v1`
 
-## 🏗️ Architecture
+| Mode | What starts | Typical use |
+| --- | --- | --- |
+| `producer` | HTTP/OpenAPI stack only | API, router, handler, Swagger work |
+| `consumer` | runtime worker stack only | queue, controller, receiver, runtime-only debugging |
+| `both` | HTTP + runtime worker in one process set | fastest local end-to-end debugging |
+| `api-gateway` | dedicated HTTP process + `RuntimeIntakeService` gRPC | split-process API boundary validation |
+| `runtime-worker-service` | dedicated runtime worker + `RuntimeService` gRPC | split-process worker validation |
 
-The current backend architecture is a single repository with a single `go.mod`, but it supports both:
+The dedicated split-process deployment is therefore `api-gateway <-> runtime-worker-service`, not the older IAM/resource/orchestrator/system split.
 
-- **local monolith-style development modes** for speed
-- **split-service runtime modes** for service-boundary validation
+## Runtime model
 
-The main service boundaries are:
+- `api-gateway` owns the full HTTP surface under `/api/v2` and serves the runtime-intake gRPC endpoint that worker processes use to write execution and injection state back into the API-owned graph.
+- `runtime-worker-service` owns the async worker stack: Redis consumption, controller / receiver / worker interfaces, K8s / Helm / BuildKit / Chaos runtime actions, and runtime status gRPC.
+- `producer`, `consumer`, and `both` remain supported as collocated developer modes.
+- Module HTTP wiring is generated from `src/module/*` by `scripts/generate_http_modules.py`; the generated registry lives in `src/app/http_modules_gen.go`.
+- Module self-registration uses five plugin points: `routes`, `permissions`, `role_grants`, `migrations`, and `task_executors`.
 
-- **`api-gateway`**: external HTTP/OpenAPI entrypoint
-- **`iam-service`**: auth, user, RBAC, team, api-key
-- **`resource-service`**: project, label, container, dataset, evaluation metadata/query
-- **`orchestrator-service`**: submit, task, trace, retry, dead-letter, workflow control-plane
-- **`runtime-worker-service`**: Redis async consumption, K8s/BuildKit/Helm/Chaos runtime execution
-- **`system-service`**: config, audit, monitor, health, metrics
+## Repository layout
 
-Key implementation rules:
+| Path | Purpose |
+| --- | --- |
+| `src/` | Go backend, runtime worker, router, modules, infra |
+| `src/cmd/aegisctl/` | operator CLI |
+| `sdk/python/` | Python SDK |
+| `helm/` | Helm chart for the backend stack |
+| `manifests/` | Kubernetes manifests and environment-specific overlays |
+| `scripts/` | bootstrap, publish, regression, and command tooling |
+| `docs/` | AegisLab-local design notes |
+| `../docs/` | repo-root architecture, deployment, and troubleshooting docs |
 
-- External APIs are HTTP/OpenAPI.
-- Internal synchronous calls are gRPC via `src/internalclient/*`.
-- Long-running execution stays asynchronous on Redis; it is not converted into synchronous execution RPC.
-- Module-owned DB access lives in `src/module/*/repository.go`.
-- Infra connectivity and low-level operations live in `src/infra/*`.
+## Quick start
 
-## 🧩 Runtime Modes And Injection Rules
+### 1. Start local infrastructure
 
-The backend now has two categories of startup modes:
-
-- **local integrated modes**: `producer`, `consumer`, `both`
-- **dedicated service modes**: `api-gateway`, `iam-service`, `resource-service`, `orchestrator-service`, `runtime-worker-service`, `system-service`
-
-### What `both` Actually Means
-
-`both` is **not** the six-service topology.
-
-It starts:
-
-- the local HTTP stack
-- the local worker/consumer stack
-
-It is the fastest option for local end-to-end debugging such as:
-
-- submit -> queue -> worker -> state update
-- task/trace/log flow
-- API + async worker integration
-
-### Injection Matrix
-
-| Mode / Service | What Starts | Local Owner Implementations Injected | Internal Clients Required | Best For |
-| --- | --- | --- | --- | --- |
-| `producer` | HTTP server only | Yes, local HTTP-facing modules | No | API, handler/service, Swagger, frontend integration |
-| `consumer` | worker/controller/receiver side only | Yes, local runtime-side owners | Optional depending on config | queue/runtime/worker-only debugging |
-| `both` | HTTP + worker/controller/receiver | Yes, local owners for integrated debugging | Optional depending on config | full local async loop |
-| `api-gateway` | external HTTP gateway | No cross-owner local fallback as main path; service-specific remote wiring is expected | Yes | gateway boundary and remote-first debugging |
-| `iam-service` | IAM gRPC service | Yes, IAM-local owners only | Only if a specific cross-service read path needs it | auth/user/rbac/team/api-key |
-| `resource-service` | Resource gRPC service | Yes, resource-local owners only | Yes for orchestrator-backed queries like some statistics/evaluation views | project/container/dataset/label/evaluation |
-| `orchestrator-service` | Orchestrator gRPC service | Yes, orchestrator-local owners only | Optional runtime/resource dependencies as needed | submit/task/trace/workflow |
-| `runtime-worker-service` | runtime worker + runtime gRPC | Yes, runtime-side execution infrastructure only | Yes, especially orchestrator target | Redis consumer, K8s/build/helm runtime |
-| `system-service` | system gRPC service | Yes, system-local owners only | Yes, especially runtime target | config/audit/monitor/metrics |
-
-### Rule Of Thumb
-
-- Use **`producer`** for normal API development.
-- Use **`both`** when you need the local async loop.
-- Use the **six dedicated services** when you need to verify service boundaries, internal gRPC, or remote-first behavior.
-
-## 📋 Prerequisites
-
-### Software Requirements
-
-- **Docker** (>= 20.10)
-- **Kubernetes** (>= 1.25) or **kind/minikube** for local development
-- **kubectl** (compatible with your cluster version)
-- **Go** (>= 1.23) for development
-- **Python** (>= 3.10) for SDK usage
-
-### Hardware Requirements
-
-- **CPU**: 4+ cores recommended
-- **Memory**: 8GB+ RAM
-- **Storage**: 20GB+ available disk space
-- **Network**: Stable internet connection for image pulls
-
-## 🚀 Quick Start
-
-### Option 1: Local Dependencies
+From `AegisLab/`:
 
 ```bash
-# Clone the repository
-git clone https://github.com/OperationsPAI/AegisLab.git
-cd AegisLab
-
-# Start core dependencies
 docker compose up -d redis mysql etcd jaeger buildkitd loki prometheus grafana
 ```
 
-### Option 2: Fast Local API Debugging
+This starts infra only. It does not start the backend application.
+
+### 2. Start the backend
+
+Fast local API debugging:
 
 ```bash
-cd src && go run . producer -conf ./config.dev.toml -port 8082
-
-# HTTP:    http://localhost:8082
-# Health:  http://localhost:8082/system/health
-# Docs:    http://localhost:8082/docs/doc.json
+cd src
+go run . producer -conf ./config.dev.toml -port 8082
 ```
 
-### Option 3: Fast Local End-To-End Debugging
+Fast local end-to-end debugging:
 
 ```bash
-cd src && go run . both -conf ./config.dev.toml -port 8082
+cd src
+go run . both -conf ./config.dev.toml -port 8082
 ```
 
-Use this mode when you need:
-
-- HTTP + worker in one local process set
-- submit -> queue -> consumer -> query loop
-- task / trace / logs integration
-
-### Option 4: Split-Service Debugging
+Split-process debugging with the current dedicated topology:
 
 ```bash
 # terminal 1
-cd src && go run ./cmd/iam-service -conf ./config.dev.toml
+cd src
+go run ./cmd/api-gateway -conf ./config.dev.toml -port 8082
 
 # terminal 2
-cd src && go run ./cmd/orchestrator-service -conf ./config.dev.toml
-
-# terminal 3
-cd src && go run ./cmd/resource-service -conf ./config.dev.toml
-
-# terminal 4
-cd src && go run ./cmd/runtime-worker-service -conf ./config.dev.toml
-
-# terminal 5
-cd src && go run ./cmd/system-service -conf ./config.dev.toml
-
-# terminal 6
-cd src && go run ./cmd/api-gateway -conf ./config.dev.toml -port 8082
+cd src
+go run ./cmd/runtime-worker-service -conf ./config.dev.toml
 ```
 
-### Option 5: Kubernetes Deployment
+Docker Compose variant for the same split-process topology:
 
 ```bash
-# Check prerequisites
-just check-prerequisites
-
-# Deploy to Kubernetes cluster
-just run
+docker compose -f docker-compose.yaml -f docker-compose.microservices.yaml up \
+  api-gateway runtime-worker-service
 ```
 
-If you use `scripts/start.sh` directly, the external install URLs can now be overridden with env vars such as:
+Useful local endpoints when HTTP is running:
 
-- `CERT_MANAGER_MANIFEST_URL`
-- `CHAOS_MESH_REPO_URL`
-- `CLICKSTACK_REPO_URL`
-- `OPEN_TELEMETRY_REPO_URL`
-- `OTEL_DEMO_REPO_URL`
-- `JUICEFS_REPO_URL`
-- `TEST_HTTP_PROXY`
-- `TEST_HTTPS_PROXY`
-- `TEST_NO_PROXY`
+- API root: `http://localhost:8082/api/v2`
+- Swagger UI: `http://localhost:8082/docs/index.html`
+- health endpoint: `http://localhost:8082/system/health`
 
-## 📖 Documentation
+## Configuration
 
-- **[Report Index](docs/report-index.md)**: Consolidated backend refactor, runtime, governance, SDK/auth, and validation notes
-- **[Refactor TODO](docs/todo.md)**: Source-of-truth task list and final acceptance checklist
-- **[API Key Auth TODO](docs/api-key-auth-execution-todo.md)**: Key ID / Key Secret auth execution checklist and signing contract
-- **[Package Rename TODO](docs/package-rename-todo.md)**: Go package naming cleanup record for `interface/module/infra/app`
-- **[Frontend Redesign](docs/frontend-redesign.md)**: Frontend redesign plan and IA notes
-- **[Frontend UI Guidelines](docs/frontend-ui-guidelines.md)**: Frontend visual/system guidelines
+The working sample config is `src/config.dev.toml`. Edit that file in place, or pass another config directory / file path with `-conf`.
 
-## 🔧 Configuration
-
-### Environment Configuration
-
-Copy and modify the configuration file:
-
-```bash
-cp src/config.dev.toml src/config.toml
-```
-
-Key configuration sections:
+Current runtime-topology keys that matter most:
 
 ```toml
-[database]
-mysql_host = "localhost"
-mysql_port = "3306"
-mysql_user = "root"
-mysql_password = "yourpassword"
-mysql_db = "rcabench"
-
-[redis]
-host = "localhost:6379"
-
-[k8s]
-namespace = "default"
-
-[clients.iam]
-target = "127.0.0.1:9091"
-
-[clients.resource]
-target = "127.0.0.1:9093"
-
-[clients.orchestrator]
-target = "127.0.0.1:9092"
-
 [clients.runtime]
-target = "127.0.0.1:9094"
+# api-gateway -> runtime-worker query channel
+target = "localhost:9094"
 
-[clients.system]
-target = "127.0.0.1:9095"
-
-[iam.grpc]
-addr = ":9091"
-
-[resource.grpc]
-addr = ":9093"
-
-[orchestrator.grpc]
-addr = ":9092"
+[clients.runtime_intake]
+# runtime-worker -> api-gateway write-back channel
+target = "localhost:9096"
 
 [runtime_worker.grpc]
 addr = ":9094"
 
-[system.grpc]
-addr = ":9095"
-
-[injection]
-benchmark = ["workload-name"]
-target_label_key = "app"
+[api_gateway.intake.grpc]
+addr = ":9096"
 ```
 
-Important config rules:
+Notes:
 
-- `producer` and `both` can use local owner implementations for fast debugging.
-- dedicated services should use the appropriate `clients.*.target` values when a remote dependency is required.
-- `api-gateway` validates `clients.iam.target`, `clients.resource.target`, `clients.orchestrator.target`, and `clients.system.target`.
-- `runtime-worker-service` validates `clients.orchestrator.target`.
-- `system-service` validates `clients.runtime.target`.
-- `resource-service` validates `clients.orchestrator.target` for remote-backed query paths.
+- `runtime-worker-service` requires `clients.runtime_intake.target` or the legacy fallback `runtime_intake.grpc.target`.
+- `clients.runtime.target` is optional unless something needs the query side of `RuntimeService`.
+- The root config loader validates core fields such as `name`, `version`, `port`, `workspace`, `database.mysql.*`, `redis.host`, `jaeger.endpoint`, and selected `k8s.*` settings.
 
-### Storage Configuration
+## Common workflows
 
-For production deployment, configure persistent volumes:
+- Build the CLI: `just build-aegisctl`
+- Run staging-profile cluster deploy: `just run`
+- Run the regression smoke path: `just test-regression`
+- Bootstrap the broader cluster demo stack: `bash scripts/start.sh test`
+
+`just run` and `scripts/start.sh test` are different flows:
+
+- `just run` uses `skaffold` with the repo's staging profile.
+- `scripts/start.sh test` bootstraps cluster dependencies such as Chaos Mesh, cert-manager, ClickStack, OTel Kube Stack, and demo workloads.
+
+## Validation commands
+
+These are the fastest repo-native checks for the current backend topology:
 
 ```bash
-# Create persistent volumes (adjust paths as needed)
-kubectl apply -f scripts/k8s/pv.yaml
-```
-
-## 💻 Usage Examples
-
-### Using the Python SDK
-
-```python
-from rcabench import RCABenchSDK
-
-# Initialize the SDK
-sdk = RCABenchSDK("http://localhost:8082")
-
-# List available algorithms
-algorithms = sdk.algorithm.list()
-print(f"Available algorithms: {algorithms}")
-
-# Submit a fault injection
-injection_request = [{
-    "duration": 300,  # 5 minutes
-    "faultType": 5,   # CPU stress
-    "injectNamespace": "default",
-    "injectPod": "my-service",
-    "spec": {"CPULoad": 80, "CPUWorker": 2},
-    "benchmark": "my-workload"
-}]
-response = sdk.injection.execute(injection_request)
-
-# Execute an RCA algorithm
-algorithm_request = [{
-    "benchmark": "my-workload",
-    "algorithm": "rca-algorithm-name",
-    "dataset": "fault-scenario-dataset"
-}]
-result = sdk.algorithm.execute(algorithm_request)
-```
-
-### Using the REST API
-
-```bash
-# Get algorithm list
-curl -X GET http://localhost:8082/api/v1/algorithms
-
-# Submit fault injection
-curl -X POST http://localhost:8082/api/v1/injection \
-  -H "Content-Type: application/json" \
-  -d '[{
-    "duration": 300,
-    "faultType": 5,
-    "injectNamespace": "default",
-    "injectPod": "my-service",
-    "spec": {"CPULoad": 80}
-  }]'
-```
-
-## 🧪 Supported Fault Types
-
-RCABench supports various chaos engineering patterns:
-
-- **Network Chaos**: Latency, packet loss, bandwidth limitation
-- **Pod Chaos**: Pod failure, pod kill
-- **Stress Chaos**: CPU stress, memory stress
-- **Time Chaos**: Clock skew
-- **DNS Chaos**: DNS resolution failures
-- **HTTP Chaos**: HTTP request/response manipulation
-- **JVM Chaos**: JVM-specific faults (GC pressure, etc.)
-
-## 🎯 Evaluation Metrics
-
-The platform provides comprehensive evaluation metrics:
-
-- **Accuracy**: Precision, recall, F1-score for root cause identification
-- **Latency**: Time to detection and diagnosis
-- **Scalability**: Performance across different system sizes
-- **Robustness**: Performance under various fault scenarios
-
-## 🔍 Monitoring and Observability
-
-RCABench integrates with:
-
-- **Jaeger**: Distributed tracing
-- **Prometheus**: Metrics collection
-- **Grafana**: Visualization dashboards
-- **ClickHouse**: Analytics and data warehouse
-
-Access monitoring:
-
-- Jaeger UI: http://localhost:16686
-- API Metrics: http://localhost:8082/metrics
-
-## 🛠️ Development
-
-### Recommended Debug Flow
-
-Choose the mode first:
-
-- **API-only debugging** -> `producer`
-- **local async loop debugging** -> `both`
-- **service-boundary / gRPC debugging** -> six dedicated services
-
-### Where To Put Breakpoints
-
-#### HTTP issues
-
-Start here:
-
-- `src/router/*`
-- `src/module/*/handler.go`
-- `src/module/*/service.go`
-- `src/module/*/repository.go`
-
-If the problem only appears in split-service mode, then also check:
-
-- `src/app/gateway/*`
-- `src/internalclient/*`
-
-#### gRPC / service-boundary issues
-
-Start here:
-
-- `src/internalclient/*`
-- `src/interface/grpc/*`
-- `src/app/{gateway,iam,resource,orchestrator,runtime,system}/*`
-
-#### async runtime issues
-
-Start here:
-
-- `src/service/consumer/*`
-- `src/interface/worker/*`
-- `src/interface/controller/*`
-- `src/infra/k8s/*`
-- `src/infra/buildkit/*`
-- `src/infra/helm/*`
-- `src/infra/chaos/*`
-
-### Module-Oriented Debug Map
-
-#### Auth / User / RBAC / Team
-
-Check:
-
-- `src/module/auth/*`
-- `src/module/user/*`
-- `src/module/rbac/*`
-- `src/module/team/*`
-
-Split-service path:
-
-- `src/app/gateway/{auth,user,rbac,team}_services.go`
-- `src/internalclient/iamclient/*`
-- `src/interface/grpc/iam/*`
-
-#### Project / Label / Container / Dataset
-
-Check:
-
-- `src/module/project/*`
-- `src/module/label/*`
-- `src/module/container/*`
-- `src/module/dataset/*`
-
-Split-service path:
-
-- `src/app/gateway/resource_services.go`
-- `src/internalclient/resourceclient/*`
-- `src/interface/grpc/resource/*`
-
-#### Injection / Execution / Task / Trace / Group / Notification
-
-Check:
-
-- `src/module/injection/*`
-- `src/module/execution/*`
-- `src/module/task/*`
-- `src/module/trace/*`
-- `src/module/group/*`
-- `src/module/notification/*`
-
-Split-service path:
-
-- `src/app/gateway/orchestrator_services.go`
-- `src/internalclient/orchestratorclient/*`
-- `src/interface/grpc/orchestrator/*`
-- `src/service/consumer/*`
-
-#### System / Metrics / Monitor / Config / Audit
-
-Check:
-
-- `src/module/system/*`
-- `src/module/systemmetric/*`
-
-Split-service path:
-
-- `src/app/gateway/system_services.go`
-- `src/internalclient/systemclient/*`
-- `src/internalclient/runtimeclient/*`
-- `src/interface/grpc/system/*`
-- `src/interface/grpc/runtime/*`
-
-#### Runtime / K8s / Build / Helm / Chaos
-
-Check:
-
-- `src/service/consumer/*`
-- `src/interface/worker/*`
-- `src/interface/controller/*`
-- `src/infra/k8s/*`
-- `src/infra/buildkit/*`
-- `src/infra/helm/*`
-- `src/infra/chaos/*`
-- `src/infra/redis/*`
-
-### Building from Source
-
-```bash
-# Build the main application
 cd src
-go build -o rcabench main.go
-
-# Regenerate OpenAPI / Swagger artifacts
-cd ..
-just swagger-init 1.2.3
-
-# Generate SDK packages
-just generate-portal 1.2.3
-just generate-admin 1.2.3
-just generate-python-sdk 1.2.3
-
-# Run tests
-cd src
-go test ./...
+go test ./app -count=1
+go test ./module -run TestModulePackagesAvoidForeignRepositoryConstructors -count=1
+go test ./service/consumer -count=1
+go test ./router ./interface/http -count=1
 ```
 
-### Python SDK Development
+Phase-6 topology-specific checks:
 
-```bash
-cd sdk/python
+- `src/app/http_modules_generated_test.go`
+- `src/module/widget/registration_test.go`
+- `src/module/boundary_test.go`
+- `src/service/consumer/task_executors_test.go`
 
-# Install in development mode
-pip install -e .
+## Documentation map
 
-# Run tests
-python -m pytest tests/
-```
+Current docs to read first:
 
-## 📦 Available Just Recipes
+- [`../docs/code-topology/README.md`](../docs/code-topology/README.md) - current backend topology overview
+- [`../docs/code-topology/slices/01-app-wiring.md`](../docs/code-topology/slices/01-app-wiring.md) - `fx` graphs and startup modes
+- [`../docs/code-topology/slices/06-grpc-interfaces.md`](../docs/code-topology/slices/06-grpc-interfaces.md) - remaining runtime gRPC seam
+- [`../docs/deployment/README.md`](../docs/deployment/README.md) - deployment and smoke-test entrypoint map
+- [`../docs/troubleshooting/README.md`](../docs/troubleshooting/README.md) - cross-repo troubleshooting runbooks
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) - module self-registration and cross-module boundary rules
+- [`src/cmd/aegisctl/README.md`](src/cmd/aegisctl/README.md) - CLI usage
+- [`docs/inject-pipeline-design.md`](docs/inject-pipeline-design.md) - guided injection request pipeline
 
-```bash
-just --list                  # Show all available commands
-just run                     # Deploy to the configured Kubernetes target
-just local-deploy            # Boot local infra dependencies with Docker Compose
-just local-debug             # Start local producer+consumer debug process
-just swagger-init 1.2.3      # Regenerate OpenAPI / Swagger artifacts
-just generate-portal 1.2.3   # Generate portal TypeScript SDK
-just generate-admin 1.2.3    # Generate admin TypeScript SDK
-just generate-python-sdk 1.2.3  # Generate Python SDK
-just release-portal 1.2.3    # Generate release-ready portal TypeScript SDK
-just release-admin 1.2.3     # Generate release-ready admin TypeScript SDK
-just release-python-sdk 1.2.3  # Generate release-ready Python SDK
-just test-regression         # Run the Python SDK regression workflow
-```
+Notes on older docs:
 
-## 🐛 Troubleshooting
+- The repo-root `docs/code-topology/` directory contains some archival deep dives that predate the phase-2 collapse and phase-6 wiring cleanup.
+- Treat `../docs/code-topology/README.md`, `slices/01-app-wiring.md`, and `slices/06-grpc-interfaces.md` as the authoritative topology docs.
 
-### Common Issues
+## Troubleshooting shortcuts
 
-1. **Database Connection Failed**
+- Current cross-repo troubleshooting index: [`../docs/troubleshooting/README.md`](../docs/troubleshooting/README.md)
+- Local / cluster bootstrap runbook: [`../docs/troubleshooting/e2e-cluster-bootstrap.md`](../docs/troubleshooting/e2e-cluster-bootstrap.md)
+- Latest repair log: [`../docs/troubleshooting/e2e-repair-record-2026-04-20.md`](../docs/troubleshooting/e2e-repair-record-2026-04-20.md)
 
-   ```bash
-   # Check database status
-   kubectl get pods | grep mysql
+## License
 
-   # Re-run the local debug stack after fixing config/env
-   just local-debug
-   ```
-
-2. **Pod Scheduling Issues**
-
-   ```bash
-   # Check node resources
-   kubectl describe nodes
-
-   # Check pod status
-   kubectl describe pod <pod-name>
-   ```
-
-3. **Permission Errors**
-   ```bash
-   # Check RBAC permissions
-   kubectl auth can-i create pods --namespace=default
-   ```
-
-4. **A Request Works In `producer` But Fails In Split-Service Mode**
-
-   Check in this order:
-
-   - are the dedicated services actually running?
-   - are the required `clients.*.target` values configured?
-   - is the request going through `src/internalclient/*` as expected?
-   - is the destination gRPC service registered and listening?
-
-5. **Submit Works But Task State Does Not Move**
-
-   Check in this order:
-
-   - Redis queue health
-   - `src/service/consumer/*`
-   - runtime infra (`src/infra/k8s/*`, `src/infra/buildkit/*`, `src/infra/helm/*`)
-   - orchestrator owner write-back path
-
-### Quick Validation Commands
-
-```bash
-cd src && go test ./...
-cd src && go test ./app -run 'TestProducerOptionsValidate|TestProducerOptionsStartStopSmoke|TestProducerOptionsHTTPIntegrationSmoke'
-cd src && go test ./app -run 'TestConsumerOptions|TestBothOptions'
-cd src && go test ./router ./docs ./interface/http
-```
-
-Real-cluster K8s validation:
-
-```bash
-cd src && RUN_K8S_INTEGRATION=1 go test ./infra/k8s -run TestK8sGatewayJobLifecycleIntegration
-```
-
-### Getting Help
-
-- Review the consolidated notes in `docs/report-index.md`
-- Run `just --list` to inspect the supported local workflows
-- Verify configuration in `src/config.dev.toml`
-
-## 📊 Performance Considerations
-
-For optimal performance:
-
-- **Resource Allocation**: Ensure adequate CPU/memory for workloads
-- **Storage**: Use SSD storage for databases
-- **Network**: Stable network connectivity for distributed components
-- **Scaling**: Horizontal scaling supported via Kubernetes deployments
-
-## 🔒 Security Notes
-
-- Default credentials should be changed in production
-- API endpoints should be secured with proper authentication
-- Network policies recommended for production deployments
-- Regular security updates for container images
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [contributing guidelines](docs/contributing.md) for details on:
-
-- Code style and standards
-- Pull request process
-- Issue reporting
-- Documentation improvements
-
-## 📬 Contact
-
-For questions, issues, or contributions, please use the project's issue tracker or discussion forums.
+This project is licensed under Apache 2.0. See [`LICENSE`](LICENSE).

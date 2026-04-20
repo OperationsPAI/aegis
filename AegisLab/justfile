@@ -77,7 +77,7 @@ setup-dev-env: check-prerequisites
         printf "{{green}}✅ 'uv' installed!{{reset}}\n"
     fi
     printf "{{gray}}Applying Kubernetes manifests for local development...{{reset}}\n"
-    kubectl apply -f manifests/local-dev/exp-dev-setup.yaml
+    kubectl apply -f manifests/dev/exp-dev-setup.yaml
     printf "{{gray}}Installing Git hooks with Lefthook...{{reset}}\n"
     if [ -f "lefthook.yml" ]; then
         devbox run install-hooks
@@ -92,7 +92,7 @@ setup-test-env: check-prerequisites
     #!/usr/bin/env bash
     set -euo pipefail
     printf "{{blue}}🧪 Setting up test environment...{{reset}}\n"
-    bash {{root}}/manifests/test/start.sh
+    cd {{root}} && bash scripts/start.sh test
     printf "{{green}}✅ Test environment setup completed!{{reset}}\n"
 
 # =============================================================================
@@ -177,8 +177,9 @@ test-regression:
 # 🐛 Start local debugging environment
 local-debug:
     #!/usr/bin/env bash
+    set -euo pipefail
     printf "{{blue}}⌛️ Starting local application...{{reset}}\n"
-    cd {{src_dir}} && go run -tags=duckdb_arrow main.go both --port 8082
+    cd {{src_dir}} && go run -tags=duckdb_arrow . both -conf ./config.dev.toml -port 8082
 
 # 📦 Update latest version of dependencies
 update-dependencies:

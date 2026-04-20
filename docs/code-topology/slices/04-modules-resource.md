@@ -1,6 +1,6 @@
 # Topology slice: resource/asset modules
 
-> Historical note: parts of this document were written before the phase-2 gRPC collapse. Cross-check process-level claims against `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` first.
+> Archival note: this file was not fully revalidated after the phase-2 gRPC collapse and phase-6 module-wiring cleanup. Treat `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` as the current topology source of truth.
 
 Scope: 8 modules under `src/module/` — container, dataset, evaluation, chaossystem, label, metric, pedestal, sdk.
 Root: `/home/ddq/AoyangSpace/aegis/AegisLab/src`.

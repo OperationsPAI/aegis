@@ -1,5 +1,7 @@
 # 09. End-to-end Fault Injection Smoke Run
 
+> Historical note: this page is an archived one-off Online Boutique latency experiment, not the canonical current AegisLab smoke path.
+
 This pass exercised the stack end-to-end on the local kind cluster `aegis-local`:
 deploy a microservice demo, inject a network fault via Chaos Mesh, measure the
 effect on user-visible latency, and verify clean recovery.

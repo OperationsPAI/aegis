@@ -1,5 +1,7 @@
 # 07. Smoke Test
 
+> Historical note: this page records a blocked manual cluster smoke pass. The current repo-supported regression path is `cd AegisLab && just test-regression`.
+
 This smoke test could not be executed in this pass because the local cluster never became healthy.
 
 ## Intended end-to-end path

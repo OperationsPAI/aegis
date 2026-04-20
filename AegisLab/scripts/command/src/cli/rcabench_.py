@@ -51,7 +51,7 @@ def rcabench_local_deploy(
         "\n[bold yellow]You can start the application manually later: [/bold yellow]"
     )
     console.print(
-        f"[gray]cd {PROJECT_ROOT / 'src'} && go run . both --port 8082 [/gray]"
+        f"[gray]cd {PROJECT_ROOT / 'src'} && go run . both -conf ./config.dev.toml -port 8082 [/gray]"
     )
 
 

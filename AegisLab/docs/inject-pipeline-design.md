@@ -1,106 +1,94 @@
-# Fault Injection Pipeline — Design (2026-04-18)
+# Fault Injection Pipeline - Design (2026-04-20)
 
-**Supersedes** the retired `chaoscli.Spec` end-to-end design (same file,
-same date). The `chaoscli` package was deleted; `pkg/guidedcli` is now the
-canonical data model.
+This document tracks the current guided fault-injection submit path in the post-phase-6 codebase.
+
+It supersedes the retired `chaoscli.Spec` end-to-end design. The `chaoscli` package is gone; `pkg/guidedcli` from `github.com/OperationsPAI/chaos-experiment` is the canonical guided config model.
 
 ## Wire format
 
-`POST /api/v2/projects/{id}/injections/inject` body is `dto.SubmitInjectionReq`:
+`POST /api/v2/projects/{id}/injections/inject` accepts `SubmitInjectionReq` from `src/module/injection/api_types.go`.
+
+Important fields:
 
 - `pedestal`, `benchmark`, `interval`, `pre_duration`, `algorithms`
-- `Specs [][]json.RawMessage` — outer = batches, inner = homogeneous specs
+- `Specs [][]json.RawMessage` - outer slice is batches, inner slice is homogeneous spec payloads
 
-Each raw-message element is one of three shapes:
+Each raw-message element is interpreted as one of three shapes:
 
 | Shape | Identified by | Status |
-|---|---|---|
-| **Guided** | `chaos_type` field present | preferred (new) |
-| **Node DSL** | chaos-experiment Node tree (int-indexed children) | legacy |
-| **FriendlyFaultSpec** | `type` + `target` + `params` strings | legacy |
+| --- | --- | --- |
+| guided config | top-level `chaos_type` field | preferred |
+| Node DSL | legacy chaos-experiment node tree | legacy |
+| `FriendlyFaultSpec` | top-level `type` field | legacy |
 
-See `src/dto/injection.go` (`SubmitInjectionReq`, `ResolveSpecs`).
+`SubmitInjectionReq.ResolveSpecs(...)` performs this dispatch in `src/module/injection/api_types.go`.
 
-## Flow
+## End-to-end flow
 
+```text
+HTTP POST /api/v2/projects/{id}/injections/inject
+    |
+    v
+module/injection.Handler.SubmitProjectFaultInjection
+    |
+    v
+SubmitInjectionReq.ResolveSpecs
+    |                         |
+    | guided                  | legacy (Node DSL or FriendlyFaultSpec)
+    v                         v
+ResolvedGuidedConfigs        ResolvedSpecs
+    |                         |
+    +-----------+-------------+
+                v
+        RestartPedestal task
+                |
+                v
+        FaultInjection subtask
+                |
+      parseInjectionPayload(...)
+    |                         |
+    | guided_configs          | node payload
+    v                         v
+guidedcli.BuildInjection     chaos.NodeToStruct[handler.InjectionConf]
+    |                         |
+    +-----------+-------------+
+                v
+        handler.BatchCreate
+                |
+                v
+        Chaos Mesh CRDs
 ```
-HTTP POST /injections/inject
-    │
-    ▼
-SubmitInjectionReq.ResolveSpecs            (three-way dispatch by chaos_type probe)
-    │                         │
-    │ guided                  │ legacy (Node | Friendly)
-    ▼                         ▼
-ResolvedGuidedConfigs         resolved Node trees
-    │                         │
-    └──────────┬──────────────┘
-               ▼
-       RestartPedestal task (Redis task:delayed)
-               │
-               ▼
-       FaultInjection subtask
-               │
-    ┌──────────┴─────────────┐
-    │ guided_configs in      │ node payload
-    │ payload                │
-    ▼                        ▼
-guidedcli.BuildInjection    chaos.NodeToStruct[handler.InjectionConf]
-    │                        │
-    └──────────┬─────────────┘
-               ▼
-       handler.BatchCreate
-               │
-               ▼
-       Chaos Mesh CRD (PodChaos / NetworkChaos / …)
-```
 
-## File map
+## Current file map
 
-- `pkg/guidedcli/` (chaos-experiment, public) — `GuidedConfig`, `Resolve`,
-  `BuildInjection(ctx, cfg) (handler.InjectionConf, handler.SystemType, error)`
-- `src/dto/injection.go` — `SubmitInjectionReq`, `ResolveSpecs` (three-way),
-  `ResolvedGuidedConfigs [][]guidedcli.GuidedConfig`
-- `src/consts/` — `InjectGuidedConfigs = "guided_configs"` payload key
-- `src/service/consumer/fault_injection.go` — `parseInjectionPayload`
-  branches guided vs. legacy; guided path calls
-  `guidedcli.BuildInjection`, legacy calls `chaos.NodeToStruct`
-- `src/cmd/aegisctl/cmd/inject.go` — `aegisctl inject guided` subcommand
-  (mirrors `cmd/chaos-exp/main.go` loop; wraps `GuidedConfig` in
-  `SubmitInjectionReq` on `--apply`)
-- `src/handlers/v2/injections.go` — `POST /translate` and
-  `GET /injections/metadata` return **410 Gone** (routes kept)
+- `src/module/injection/api_types.go` - `SubmitInjectionReq`, `FriendlyFaultSpec`, `ResolveSpecs`, guided/legacy dispatch
+- `src/module/injection/spec_convert.go` - legacy friendly-spec conversion helpers
+- `src/module/injection/handler.go` - HTTP submit handlers and the current `GET /api/v2/injections/systems` system-mapping endpoint
+- `src/module/injection/routes.go` - SDK and portal route registration
+- `src/service/consumer/fault_injection.go` - payload parsing and runtime injection execution
+- `src/cmd/aegisctl/cmd/inject_guided.go` - `aegisctl inject guided`
+- `src/cmd/aegisctl/cmd/inject.go` - CLI submit path that wraps guided configs into `SubmitInjectionReq`
+- `src/consts/task.go` and `src/dto/task.go` - task payload keys and task envelope fields
 
-## Landmines
+## Behavior notes
 
-1. **`chaos_type` probe is the dispatch key.** If a new spec shape adds a
-   field named `chaos_type` unintentionally, it will be routed to the
-   guided branch. Keep that field name guided-only.
-2. **Batches must be homogeneous.** `ResolveSpecs` does not support mixing
-   guided + legacy within one inner `[]json.RawMessage`.
-3. **Legacy still compiles and runs.** `dto.FaultSpec`,
-   `dto.FriendlyFaultSpec`, `producer.FriendlySpecToNode`,
-   `parseBatchInjectionSpecs` are kept alive for frontend back-compat.
-   Do not extend them — new work goes on the guided path.
-4. **No Node round-trip on the guided path.** There is no
-   `InjectionConfToNode`; `BuildInjection` builds `handler.InjectionConf`
-   directly from live cluster state. idx drift between submit and
-   consume time is therefore a non-issue — the consumer always resolves
-   against its current view.
-5. **`/translate` + `GET /metadata` return 410.** Routes exist but refuse
-   to serve; frontend migration is deferred but the endpoints signal
-   deprecation loudly.
+1. `chaos_type` is the guided-dispatch key. Do not reuse that field name for unrelated payload shapes.
+2. Each inner batch must stay homogeneous. Guided and legacy payloads cannot be mixed inside the same request batch.
+3. Legacy Node DSL and `FriendlyFaultSpec` still compile and still run for compatibility, but new work should use the guided path.
+4. The guided path does not round-trip through the legacy node tree. `guidedcli.BuildInjection(...)` resolves directly to live injection config at consumer time.
+5. The current route surface does not expose the older `/translate` helper. Treat it as retired.
 
-## Migration status (2026-04-18)
+## Migration status
 
-- [x] PR 1 (chaos-experiment): `pkg/guidedcli` exported, `pkg/chaoscli`
-      deleted, `cmd/chaos-exp/main.go` restored, `BuildInjection` added
-- [x] PR 2 (AegisLab): `aegisctl inject guided`, three-way
-      `ResolveSpecs`, consumer branch, 410 on deprecated endpoints
-- [ ] Frontend migration off `/translate` and `GET /metadata`
-- [ ] Delete `FriendlyFaultSpec` / `FriendlySpecToNode` /
-      `parseBatchInjectionSpecs` (after frontend cuts over)
+- [x] guided config path exported from `chaos-experiment/pkg/guidedcli`
+- [x] `aegisctl inject guided` submits guided configs through the same backend API
+- [x] backend submit path supports guided + legacy compatibility dispatch
+- [x] consumer path builds live injection configs from guided input
+- [ ] frontend migration can continue reducing dependence on legacy payload helpers
+- [ ] legacy `FriendlyFaultSpec` helpers can be deleted once callers are gone
 
-## Related
+## Related docs
 
-- Troubleshooting runbook: `aegis/docs/troubleshooting/e2e-cluster-bootstrap.md`
-- OperationsPAI/aegis#23 (original refactor), #36–#40 (this migration)
+- [`../../docs/troubleshooting/e2e-cluster-bootstrap.md`](../../docs/troubleshooting/e2e-cluster-bootstrap.md)
+- [`../../docs/troubleshooting/e2e-repair-record-2026-04-20.md`](../../docs/troubleshooting/e2e-repair-record-2026-04-20.md)
+- `OperationsPAI/aegis#23`, `#28`, `#36`-`#40`

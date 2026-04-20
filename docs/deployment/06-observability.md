@@ -1,6 +1,6 @@
 # 06. Observability
 
-The backend chart expects an observability stack, but this step was blocked by the missing cluster.
+Two observability flows coexist in this repo: the Helm chart wires an in-cluster Alloy/Loki/Prometheus/Grafana/Jaeger stack, while `AegisLab/scripts/start.sh` bootstraps a separate demo stack based on ClickStack + OTel Kube Stack. Do not treat them as one deployment path.
 
 ## Components referenced by the repo
 
