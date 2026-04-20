@@ -9,6 +9,10 @@ This directory mixes two kinds of documents:
 
 ## Current supported workflows
 
+Kubernetes-native install steps and Aegis-specific validation steps are separate:
+bring the environment up with Docker / kind / Helm / `kubectl`, then validate
+AegisLab behavior with `aegisctl` once the environment exists.
+
 - Local infra only:
   `cd AegisLab && docker compose up -d redis mysql etcd jaeger buildkitd loki prometheus grafana`
 - Local backend, collocated mode:
@@ -21,6 +25,8 @@ This directory mixes two kinds of documents:
   `cd AegisLab && docker compose -f docker-compose.yaml -f docker-compose.microservices.yaml up api-gateway runtime-worker-service`
 - Staging-profile cluster deploy:
   `cd AegisLab && just run`
+- CLI-first validation contract (auth -> readiness -> prepare -> submit/wait):
+  `cd AegisLab && less docs/aegisctl-cli-spec.md`
 - Repo-native regression smoke:
   `cd AegisLab && just test-regression`
 
@@ -34,11 +40,14 @@ This directory mixes two kinds of documents:
 - [`05-frontend.md`](./05-frontend.md) - frontend deployment notes
 - [`06-observability.md`](./06-observability.md) - observability stacks present in the repo
 - [`07-smoke-test.md`](./07-smoke-test.md) - archived manual smoke checklist; prefer `just test-regression` for the current repo-supported smoke path
-- [`08-aegisctl-chaos.md`](./08-aegisctl-chaos.md) - CLI-driven chaos run notes
+- [`08-aegisctl-chaos.md`](./08-aegisctl-chaos.md) - archived CLI-driven chaos smoke notes; use `AegisLab/docs/aegisctl-cli-spec.md` for the supported validation contract
 - [`09-smoke-run.md`](./09-smoke-run.md) - archived one-off latency experiment, not the canonical operator smoke path
 - [`known-gaps.md`](./known-gaps.md) - environment-specific blockers and caveats
 
 ## Important distinctions
+
+- Cluster install / repair runbooks explain how to make the environment exist.
+- `AegisLab/docs/aegisctl-cli-spec.md` explains the supported CLI-first validation path once that environment exists.
 
 - The backend no longer exposes the older six-service split. The dedicated split-process topology is only `api-gateway` + `runtime-worker-service`.
 - `just run` and `scripts/start.sh test` are not the same thing. `just run` deploys the repo's staging profile with `skaffold`; `scripts/start.sh test` bootstraps cluster dependencies and demo components.

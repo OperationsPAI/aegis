@@ -93,9 +93,22 @@ var executeSubmitCmd = &cobra.Command{
 			return err
 		}
 
-		c := newClient()
 		path := fmt.Sprintf("/api/v2/projects/%d/executions/execute", pid)
+		if flagDryRun {
+			plan := map[string]any{
+				"dry_run":    true,
+				"operation":  "execute_submit",
+				"project":    flagProject,
+				"project_id": pid,
+				"method":     "POST",
+				"path":       path,
+				"spec":       spec,
+			}
+			output.PrintJSON(plan)
+			return nil
+		}
 
+		c := newClient()
 		var resp client.APIResponse[any]
 		if err := c.Post(path, spec, &resp); err != nil {
 			return err

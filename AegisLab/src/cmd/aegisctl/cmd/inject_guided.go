@@ -306,14 +306,44 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	if err := requireAPIContext(true); err != nil {
 		return err
 	}
-	resp, err := submitGuidedApplyWithOptions(flagProject, cfg, guidedApplyOptions{
+	opts := guidedApplyOptions{
 		PedestalName:  guidedApplyPedestalName,
 		PedestalTag:   guidedApplyPedestalTag,
 		BenchmarkName: guidedApplyBenchmarkName,
 		BenchmarkTag:  guidedApplyBenchmarkTag,
 		Interval:      guidedApplyInterval,
 		PreDuration:   guidedApplyPreDuration,
-	})
+	}
+	pid, err := resolveProjectIDForApply(flagProject)
+	if err != nil {
+		return err
+	}
+	envelope := map[string]any{
+		"pedestal": map[string]any{
+			"name":    opts.PedestalName,
+			"version": opts.PedestalTag,
+		},
+		"benchmark": map[string]any{
+			"name":    opts.BenchmarkName,
+			"version": opts.BenchmarkTag,
+		},
+		"interval":     opts.Interval,
+		"pre_duration": opts.PreDuration,
+		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
+	}
+	if flagDryRun {
+		output.PrintJSON(map[string]any{
+			"dry_run":    true,
+			"operation":  "inject_guided_apply",
+			"project":    flagProject,
+			"project_id": pid,
+			"method":     "POST",
+			"path":       fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid),
+			"spec":       envelope,
+		})
+		return nil
+	}
+	resp, err := submitGuidedApplyWithOptions(flagProject, cfg, opts)
 	if err != nil {
 		return err
 	}
