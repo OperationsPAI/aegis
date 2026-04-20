@@ -142,19 +142,8 @@ Contract:
 - with `--apply --dry-run`, the command prints the resolved request body instead
   of submitting it
 
-If a YAML spec already exists and the workflow needs the legacy submit path:
-
-```bash
-./bin/aegisctl inject submit --spec ./injection.yaml --project pair_diagnosis
-./bin/aegisctl inject submit --spec ./injection.yaml --project pair_diagnosis --wait
-```
-
-`inject submit --wait` exit codes are part of the contract:
-
-- `0`: succeeded
-- `2`: pipeline failed
-- `3`: timeout exceeded
-- `1`: other CLI / API / parsing error
+Guided `--apply` is the only supported submission path. The backend accepts
+guided configs exclusively; there is no YAML-spec `inject submit` command.
 
 ### 5. Wait for completion and inspect outputs
 
@@ -217,7 +206,6 @@ These are the command surfaces this document treats as stable for validation:
 - `aegisctl cluster preflight`
 - `aegisctl pedestal helm verify`
 - `aegisctl inject guided`
-- `aegisctl inject submit --wait`
 - `aegisctl wait`
 - `aegisctl execute submit`
 
