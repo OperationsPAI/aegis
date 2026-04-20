@@ -77,6 +77,9 @@ ENVIRONMENT VARIABLES:
   AEGIS_TOKEN       - Auth token (overridden by --token flag)
   AEGIS_KEY_ID      - API key ID for 'aegisctl auth login'
   AEGIS_KEY_SECRET  - API key secret for 'aegisctl auth login'
+  AEGIS_USERNAME    - Username for password login
+  AEGIS_PASSWORD    - Password for 'aegisctl auth login'
+  AEGIS_PASSWORD_FILE - File containing the password for 'aegisctl auth login'
   AEGIS_PROJECT     - Default project name (overridden by --project flag)
   AEGIS_OUTPUT      - Output format: table|json (overridden by --output flag)
   AEGIS_TIMEOUT     - Request timeout in seconds (overridden by --request-timeout flag)

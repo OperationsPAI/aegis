@@ -19,7 +19,7 @@ Note: `aegisctl` does not require `-tags duckdb_arrow`.
 
 ```bash
 # Login
-aegisctl auth login --server http://HOST:8082 --username admin --password admin123
+printf %s\n "$AEGIS_PASSWORD" | aegisctl auth login --server http://HOST:8082 --username admin --password-stdin
 
 # Set default project
 aegisctl context set --name default --default-project pair_diagnosis
@@ -69,6 +69,9 @@ aegisctl regression run otel-demo-guided --ensure-env --wait --output json
 |----------|-------------|
 | `AEGIS_SERVER` | Server URL (overridden by `--server`) |
 | `AEGIS_TOKEN` | Auth token (overridden by `--token`) |
+| `AEGIS_USERNAME` | Username for `aegisctl auth login` |
+| `AEGIS_PASSWORD` | Password for `aegisctl auth login` |
+| `AEGIS_PASSWORD_FILE` | File containing the password for `aegisctl auth login` |
 | `AEGIS_PROJECT` | Default project name (overridden by `--project`) |
 | `AEGIS_OUTPUT` | Output format: `table` or `json` (overridden by `-o`) |
 | `AEGIS_TIMEOUT` | Request timeout in seconds (overridden by `--request-timeout`) |
