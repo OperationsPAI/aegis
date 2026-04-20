@@ -662,21 +662,9 @@ type GranularityResult struct {
 // System Registration Entities
 // =====================================================================
 
-// System represents a registered chaos system (e.g., train-ticket, sock-shop)
-type System struct {
-	ID             int               `gorm:"primaryKey;autoIncrement"`
-	Name           string            `gorm:"not null;size:64;uniqueIndex"`
-	DisplayName    string            `gorm:"not null;size:128"`
-	NsPattern      string            `gorm:"not null;size:256"`
-	ExtractPattern string            `gorm:"not null;size:256"`
-	AppLabelKey    string            `gorm:"not null;size:128;default:'app'"`
-	Count          int               `gorm:"not null;default:1"`
-	Description    string            `gorm:"type:text"`
-	IsBuiltin      bool              `gorm:"not null;default:false"`
-	Status         consts.StatusType `gorm:"not null;default:1;index"`
-	CreatedAt      time.Time         `gorm:"autoCreateTime"`
-	UpdatedAt      time.Time         `gorm:"autoUpdateTime"`
-}
+// The `System` aggregate was retired in issue #75; the per-system runtime
+// parameters (count / ns_pattern / status / …) now live in etcd (seeded via
+// dynamic_configs). SystemMetadata stays in MySQL.
 
 // SystemMetadata stores per-system metadata (service endpoints, java methods, etc.)
 type SystemMetadata struct {

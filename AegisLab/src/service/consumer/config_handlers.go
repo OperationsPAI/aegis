@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"aegis/config"
@@ -10,6 +11,7 @@ import (
 	k8s "aegis/infra/k8s"
 	"aegis/service/common"
 
+	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,7 +26,10 @@ func RegisterConsumerHandlers(
 	algoLimiter *TokenBucketRateLimiter,
 ) {
 	scope := consts.ConfigScopeConsumer
-	common.RegisterHandler(newChaosSystemCountHandler(monitor, controller, publisher))
+	h := newChaosSystemHandler(monitor, controller, publisher)
+	for _, category := range chaosSystemCategories() {
+		common.RegisterHandler(h.forCategory(category))
+	}
 	common.RegisterHandler(newRateLimitingConfigHandler(
 		publisher,
 		restartLimiter,
@@ -57,29 +62,176 @@ func UpdateK8sController(controller *k8s.Controller, toAdd, toRemove []string) e
 }
 
 // =====================================================================
-// ChaosSystemCountHandler - handles injection.system.count configuration
+// ChaosSystemHandler - drives chaos-experiment registry from etcd events
+// covering every injection.system.* sub-category.
 // =====================================================================
 
-type chaosSystemCountHandler struct {
+// chaosSystemCategories enumerates the dynamic_config categories we bind to.
+// Creating / deleting / toggling a system in etcd fires events under one of
+// these categories; the handler fans them in and reconciles the registry.
+func chaosSystemCategories() []string {
+	return []string{
+		"injection.system.count",
+		"injection.system.ns_pattern",
+		"injection.system.extract_pattern",
+		"injection.system.display_name",
+		"injection.system.app_label_key",
+		"injection.system.is_builtin",
+		"injection.system.status",
+	}
+}
+
+// registrySyncer is the subset of chaos-experiment we call into from the
+// watch handler. Kept as a package variable so tests can swap in a fake.
+var registrySyncer chaosRegistrySyncer = defaultChaosRegistrySyncer{}
+
+type chaosRegistrySyncer interface {
+	IsRegistered(name string) bool
+	Register(cfg chaos.SystemConfig) error
+	Unregister(name string) error
+}
+
+type defaultChaosRegistrySyncer struct{}
+
+func (defaultChaosRegistrySyncer) IsRegistered(name string) bool {
+	return chaos.IsSystemRegistered(name)
+}
+
+func (defaultChaosRegistrySyncer) Register(cfg chaos.SystemConfig) error {
+	return chaos.RegisterSystem(cfg)
+}
+
+func (defaultChaosRegistrySyncer) Unregister(name string) error {
+	return chaos.UnregisterSystem(name)
+}
+
+type chaosSystemHandler struct {
 	monitor    NamespaceMonitor
 	controller *k8s.Controller
 	publisher  common.ConfigPublisher
 }
 
-func newChaosSystemCountHandler(m NamespaceMonitor, c *k8s.Controller, publisher common.ConfigPublisher) *chaosSystemCountHandler {
-	return &chaosSystemCountHandler{monitor: m, controller: c, publisher: publisher}
+func newChaosSystemHandler(m NamespaceMonitor, c *k8s.Controller, publisher common.ConfigPublisher) *chaosSystemHandler {
+	return &chaosSystemHandler{monitor: m, controller: c, publisher: publisher}
 }
 
-func (h *chaosSystemCountHandler) Category() string          { return "injection.system.count" }
-func (h *chaosSystemCountHandler) Scope() consts.ConfigScope { return consts.ConfigScopeConsumer }
+// forCategory returns a thin adapter that exposes a single category to the
+// common ConfigHandler interface while delegating the actual work back to
+// the shared reconcile method.
+func (h *chaosSystemHandler) forCategory(category string) common.ConfigHandler {
+	return &chaosSystemCategoryHandler{parent: h, category: category}
+}
 
-func (h *chaosSystemCountHandler) Handle(ctx context.Context, key, oldValue, newValue string) error {
+type chaosSystemCategoryHandler struct {
+	parent   *chaosSystemHandler
+	category string
+}
+
+func (h *chaosSystemCategoryHandler) Category() string          { return h.category }
+func (h *chaosSystemCategoryHandler) Scope() consts.ConfigScope { return consts.ConfigScopeConsumer }
+
+func (h *chaosSystemCategoryHandler) Handle(ctx context.Context, key, oldValue, newValue string) error {
+	return h.parent.reconcile(ctx, key, oldValue, newValue)
+}
+
+// reconcile is the single entry point for every injection.system.* change.
+// It refreshes the config manager from Viper, syncs the chaos-experiment
+// registry for the affected system, and triggers a namespace refresh when
+// count/ns_pattern changes require it.
+func (h *chaosSystemHandler) reconcile(ctx context.Context, key, oldValue, newValue string) error {
 	return common.PublishWrapper(ctx, h.publisher, func() error {
-		return config.GetChaosSystemConfigManager().Reload(h.onUpdate)
+		system, field := parseInjectionSystemKey(key)
+		if system == "" {
+			logrus.Warnf("ignoring non-system config change: %s", key)
+			return nil
+		}
+
+		if err := config.GetChaosSystemConfigManager().Reload(nil); err != nil {
+			return fmt.Errorf("failed to reload chaos system config: %w", err)
+		}
+
+		if err := h.syncRegistry(system); err != nil {
+			return fmt.Errorf("failed to sync chaos-experiment registry for %s: %w", system, err)
+		}
+
+		// Only namespace-shaping fields require a monitor refresh.
+		if field == "count" || field == "ns_pattern" || field == "status" {
+			return h.refreshNamespaces()
+		}
+		return nil
 	})
 }
 
-func (h *chaosSystemCountHandler) onUpdate() error {
+// syncRegistry reconciles the chaos-experiment registry for a single system
+// against the current Viper/etcd state. New systems are registered, disabled
+// systems are unregistered, and changes to NsPattern / AppLabelKey /
+// DisplayName trigger a re-registration.
+func (h *chaosSystemHandler) syncRegistry(name string) error {
+	cfg, exists := config.GetChaosSystemConfigManager().Get(chaos.SystemType(name))
+	if !exists {
+		if registrySyncer.IsRegistered(name) {
+			if err := registrySyncer.Unregister(name); err != nil {
+				return fmt.Errorf("unregister %s after etcd delete: %w", name, err)
+			}
+			logrus.Infof("Unregistered system %s (no etcd state)", name)
+		}
+		return nil
+	}
+
+	if !cfg.IsEnabled() {
+		if registrySyncer.IsRegistered(name) {
+			if err := registrySyncer.Unregister(name); err != nil {
+				return fmt.Errorf("unregister %s on disable: %w", name, err)
+			}
+			logrus.Infof("Unregistered system %s (status=disabled)", name)
+		}
+		return nil
+	}
+
+	// Always re-register so NsPattern / AppLabelKey / DisplayName edits take
+	// effect. RegisterSystem is cheap and idempotent after an unregister.
+	if registrySyncer.IsRegistered(name) {
+		if err := registrySyncer.Unregister(name); err != nil {
+			return fmt.Errorf("unregister %s before re-register: %w", name, err)
+		}
+	}
+	appLabelKey := cfg.AppLabelKey
+	if appLabelKey == "" {
+		appLabelKey = "app"
+	}
+	if err := registrySyncer.Register(chaos.SystemConfig{
+		Name:        name,
+		NsPattern:   cfg.NsPattern,
+		DisplayName: cfg.DisplayName,
+		AppLabelKey: appLabelKey,
+	}); err != nil {
+		return fmt.Errorf("register %s: %w", name, err)
+	}
+	logrus.Infof("Registered system %s (ns_pattern=%q, app_label=%q)",
+		name, cfg.NsPattern, appLabelKey)
+	return nil
+}
+
+// parseInjectionSystemKey splits `injection.system.<name>.<field>` into
+// its system / field parts. Returns empty strings for non-system keys so the
+// caller can ignore them safely.
+func parseInjectionSystemKey(key string) (system, field string) {
+	const prefix = "injection.system."
+	if !strings.HasPrefix(key, prefix) {
+		return "", ""
+	}
+	rest := key[len(prefix):]
+	// The system name is everything up to the last dot; the remainder is the
+	// field name. System names today are single tokens (ts, otel-demo, …) so
+	// a simple last-dot split is sufficient.
+	idx := strings.LastIndex(rest, ".")
+	if idx < 0 {
+		return "", ""
+	}
+	return rest[:idx], rest[idx+1:]
+}
+
+func (h *chaosSystemHandler) refreshNamespaces() error {
 	logrus.Info("Chaos system configuration updated, refreshing namespaces...")
 
 	if h.monitor == nil {

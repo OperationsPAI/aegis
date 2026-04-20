@@ -35,8 +35,8 @@ func TestMigrationsRegistrarEntities(t *testing.T) {
 	if m.Module != "system" {
 		t.Fatalf("expected module 'system', got %q", m.Module)
 	}
-	if len(m.Entities) != 6 {
-		t.Fatalf("expected 6 migration entities, got %d", len(m.Entities))
+	if len(m.Entities) != 5 {
+		t.Fatalf("expected 5 migration entities, got %d", len(m.Entities))
 	}
 }
 

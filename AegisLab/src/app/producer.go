@@ -50,7 +50,7 @@ func (i *ProducerInitializer) start(ctx context.Context) error {
 	if i.StartFunc != nil {
 		return i.StartFunc(ctx)
 	}
-	if err := initialization.InitializeProducer(i.db, i.redis, commonservice.NewConfigUpdateListener(ctx, i.db, i.etcd)); err != nil {
+	if err := initialization.InitializeProducer(i.db, i.redis, i.etcd, commonservice.NewConfigUpdateListener(ctx, i.db, i.etcd)); err != nil {
 		return err
 	}
 	utils.InitValidator()

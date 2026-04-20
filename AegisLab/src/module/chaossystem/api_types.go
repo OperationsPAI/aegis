@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/config"
 	"aegis/dto"
 	"aegis/model"
 )
@@ -51,20 +52,51 @@ type ListChaosSystemReq struct {
 	dto.PaginationReq
 }
 
-// NewChaosSystemResp creates a ChaosSystemResp from a system model.
-func NewChaosSystemResp(s *model.System) *ChaosSystemResp {
+// NewChaosSystemResp builds the HTTP response payload from the Viper-backed
+// aggregate view. ID / CreatedAt / UpdatedAt come from the anchor
+// `injection.system.<name>.count` DynamicConfig row, which is guaranteed to
+// exist for any system that has ever been seeded (count is the first field
+// created for each system).
+func NewChaosSystemResp(view *systemView) *ChaosSystemResp {
+	if view == nil {
+		return nil
+	}
 	return &ChaosSystemResp{
-		ID:             s.ID,
-		Name:           s.Name,
-		DisplayName:    s.DisplayName,
-		NsPattern:      s.NsPattern,
-		ExtractPattern: s.ExtractPattern,
-		AppLabelKey:    s.AppLabelKey,
-		Count:          s.Count,
-		Description:    s.Description,
-		IsBuiltin:      s.IsBuiltin,
-		CreatedAt:      s.CreatedAt,
-		UpdatedAt:      s.UpdatedAt,
+		ID:             view.ID,
+		Name:           view.Cfg.System,
+		DisplayName:    view.Cfg.DisplayName,
+		NsPattern:      view.Cfg.NsPattern,
+		ExtractPattern: view.Cfg.ExtractPattern,
+		AppLabelKey:    view.Cfg.AppLabelKey,
+		Count:          view.Cfg.Count,
+		Description:    view.Description,
+		IsBuiltin:      view.Cfg.IsBuiltin,
+		CreatedAt:      view.CreatedAt,
+		UpdatedAt:      view.UpdatedAt,
+	}
+}
+
+// systemView is the server-side aggregate returned to the HTTP layer. It is a
+// composite of the Viper-backed ChaosSystemConfig and the DynamicConfig row
+// metadata (id/timestamps/description) so response timestamps and IDs remain
+// stable across restarts.
+type systemView struct {
+	ID          int
+	Cfg         config.ChaosSystemConfig
+	Description string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// newSystemView assembles a view from the anchor DynamicConfig row and the
+// in-memory ChaosSystemConfig snapshot.
+func newSystemView(anchor *model.DynamicConfig, cfg config.ChaosSystemConfig) *systemView {
+	return &systemView{
+		ID:          anchor.ID,
+		Cfg:         cfg,
+		Description: anchor.Description,
+		CreatedAt:   anchor.CreatedAt,
+		UpdatedAt:   anchor.UpdatedAt,
 	}
 }
 

@@ -238,6 +238,36 @@ dynamic_configs:
     description: Extraction pattern for namespace prefix and number from Train Ticket
       instances
     is_secret: false
+  - key: injection.system.ts.display_name
+    default_value: Train Ticket
+    value_type: 0
+    scope: 1
+    category: injection.system.display_name
+    description: Human-readable display name for system Train Ticket
+    is_secret: false
+  - key: injection.system.ts.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 1
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select Train Ticket workloads
+    is_secret: false
+  - key: injection.system.ts.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 1
+    category: injection.system.is_builtin
+    description: Whether Train Ticket is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.ts.status
+    default_value: '1'
+    value_type: 2
+    scope: 1
+    category: injection.system.status
+    description: Status of system Train Ticket (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
   - key: injection.system.otel-demo.count
     default_value: '1'
     value_type: 2
@@ -262,6 +292,36 @@ dynamic_configs:
     description: Extraction pattern for namespace prefix and number from OpenTelemetry
       Demo instances
     is_secret: false
+  - key: injection.system.otel-demo.display_name
+    default_value: OpenTelemetry Demo
+    value_type: 0
+    scope: 1
+    category: injection.system.display_name
+    description: Human-readable display name for system OpenTelemetry Demo
+    is_secret: false
+  - key: injection.system.otel-demo.app_label_key
+    default_value: app.kubernetes.io/name
+    value_type: 0
+    scope: 1
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select OpenTelemetry Demo workloads
+    is_secret: false
+  - key: injection.system.otel-demo.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 1
+    category: injection.system.is_builtin
+    description: Whether OpenTelemetry Demo is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.otel-demo.status
+    default_value: '1'
+    value_type: 2
+    scope: 1
+    category: injection.system.status
+    description: Status of system OpenTelemetry Demo (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
   - key: algo.detector
     default_value: detector
     value_type: 0
