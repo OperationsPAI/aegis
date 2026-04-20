@@ -14,8 +14,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -35,6 +37,7 @@ type LiveEnv struct {
 	clickhouse  ClickHouseProbe
 	mysql       MySQLProbe
 	redis       RedisProbe
+	etcd        EtcdProbe
 	mysqlCreds  mysqlCreds
 	dialTimeout time.Duration
 }
@@ -82,8 +85,11 @@ func LoadConfig(explicitPath string) (Config, error) {
 		ClickHousePass: v.GetString("database.clickhouse.password"),
 		RedisAddr:      v.GetString("redis.host"),
 		EtcdEndpoints:  v.GetStringSlice("etcd.endpoints"),
+		EtcdUsername:   v.GetString("etcd.username"),
+		EtcdPassword:   v.GetString("etcd.password"),
 		ServiceAccount: v.GetString("k8s.job.service_account.name"),
 		DatasetPVC:     v.GetString("k8s.job.volume_mount.dataset.claim_name"),
+		ExperimentPVC:  v.GetString("k8s.job.volume_mount.experiment_storage.claim_name"),
 	}
 	loadedMySQLCreds = mysqlCreds{
 		user: firstNonEmpty(v.GetString("database.mysql.user"), "root"),
@@ -132,6 +138,13 @@ func (e *LiveEnv) Redis() RedisProbe {
 		e.redis = &liveRedis{cfg: e.cfg}
 	}
 	return e.redis
+}
+
+func (e *LiveEnv) Etcd() EtcdProbe {
+	if e.etcd == nil {
+		e.etcd = &liveEtcd{cfg: e.cfg}
+	}
+	return e.etcd
 }
 
 type tcpProbe struct{ timeout time.Duration }
@@ -197,6 +210,18 @@ func (k *liveK8s) NamespaceExists(ctx context.Context, name string) (bool, error
 	return true, nil
 }
 
+func (k *liveK8s) CreateNamespace(ctx context.Context, name string) error {
+	if k.loadErr != nil {
+		return k.loadErr
+	}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	_, err := k.cs.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if apierrors.IsAlreadyExists(err) {
+		return nil
+	}
+	return err
+}
+
 func (k *liveK8s) ServiceAccountExists(ctx context.Context, namespace, name string) (bool, error) {
 	if k.loadErr != nil {
 		return false, k.loadErr
@@ -252,6 +277,37 @@ func (k *liveK8s) CreateServiceAccount(ctx context.Context, namespace, name stri
 	}
 	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
 	_, err := k.cs.CoreV1().ServiceAccounts(namespace).Create(ctx, sa, metav1.CreateOptions{})
+	if apierrors.IsAlreadyExists(err) {
+		return nil
+	}
+	return err
+}
+
+func (k *liveK8s) CreatePVC(ctx context.Context, namespace, name string, spec PVCSpec) error {
+	if k.loadErr != nil {
+		return k.loadErr
+	}
+	size := spec.Size
+	if size == "" {
+		size = "10Gi"
+	}
+	qty, err := resource.ParseQuantity(size)
+	if err != nil {
+		return fmt.Errorf("parse pvc size %q: %w", size, err)
+	}
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{corev1.ResourceStorage: qty},
+			},
+		},
+	}
+	if spec.StorageClassName != "" {
+		pvc.Spec.StorageClassName = &spec.StorageClassName
+	}
+	_, err = k.cs.CoreV1().PersistentVolumeClaims(namespace).Create(ctx, pvc, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
 		return nil
 	}
@@ -372,4 +428,54 @@ func (r *liveRedis) SRem(ctx context.Context, key string, members ...string) (in
 		args[i] = m
 	}
 	return r.ensure().SRem(ctx, key, args...).Result()
+}
+
+type liveEtcd struct {
+	cfg    Config
+	client *clientv3.Client
+}
+
+func (e *liveEtcd) ensure() (*clientv3.Client, error) {
+	if e.client != nil {
+		return e.client, nil
+	}
+	endpoints := e.cfg.EtcdEndpoints
+	if len(endpoints) == 0 {
+		endpoints = []string{"localhost:2379"}
+	}
+	client, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: 5 * time.Second,
+		Username:    e.cfg.EtcdUsername,
+		Password:    e.cfg.EtcdPassword,
+	})
+	if err != nil {
+		return nil, err
+	}
+	e.client = client
+	return client, nil
+}
+
+func (e *liveEtcd) Get(ctx context.Context, key string) (string, bool, error) {
+	client, err := e.ensure()
+	if err != nil {
+		return "", false, err
+	}
+	resp, err := client.Get(ctx, key)
+	if err != nil {
+		return "", false, err
+	}
+	if len(resp.Kvs) == 0 {
+		return "", false, nil
+	}
+	return string(resp.Kvs[0].Value), true, nil
+}
+
+func (e *liveEtcd) Put(ctx context.Context, key, value string) error {
+	client, err := e.ensure()
+	if err != nil {
+		return err
+	}
+	_, err = client.Put(ctx, key, value)
+	return err
 }
