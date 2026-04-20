@@ -45,7 +45,7 @@ EXAMPLES:
   aegisctl inject guided --apply --project my_project \
     --pedestal-name ts --pedestal-tag 1.0.0 \
     --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 \
-    --interval 10 --pre-duration 5 -o json | \
+    --interval 10 --pre-duration 5 | \
     jq -r '.items[0].trace_id' | xargs aegisctl wait`,
 	Args: exactArgs(1, "wait <trace-id|task-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {

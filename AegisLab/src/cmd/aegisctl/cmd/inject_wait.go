@@ -7,12 +7,13 @@ import (
 )
 
 // injectWaitEvent is a normalized view of a TraceStreamEvent used by the
-// regression runner (see regression.go). A blank SSEEvent with non-empty
-// EventName represents an "update".
+// regression runner (see regression.go). SSEEvent carries the raw SSE frame
+// name ("update" or "end"); "update" frames also populate EventName + Payload.
 type injectWaitEvent struct {
-	// SSEEvent is the raw SSE event type (e.g. "update", "end").
+	// SSEEvent is the raw SSE event type ("update" or "end").
 	SSEEvent string
 	// EventName is the trace-stream `event_name` (e.g. "fault.injection.started").
+	// Only populated for "update" frames.
 	EventName string
 	// Payload is the decoded payload. The shape depends on EventName:
 	//   - fault.injection.started → string (CRD name)
