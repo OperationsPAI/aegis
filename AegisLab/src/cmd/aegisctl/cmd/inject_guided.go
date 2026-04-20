@@ -67,7 +67,7 @@ var (
 	guidedCPUCount        int
 	guidedStatusCode      int
 
-	// --apply envelope flags: mirror `inject submit` spec YAML so a finished
+	// --apply envelope flags: mirror the injection YAML contract so a finished
 	// guided session can be shipped to /inject with a single invocation.
 	guidedApplyPedestalName  string
 	guidedApplyPedestalTag   string
@@ -78,11 +78,10 @@ var (
 )
 
 // injectGuidedCmd is the AegisLab-aware wrapper around the chaos-experiment
-// guided session model. It mirrors `chaos-exp`'s interactive stepper but,
-// on --apply, would POST a GuidedConfig envelope to /inject. Until the
-// backend learns to accept GuidedConfig entries inside SubmitInjectionReq,
-// --apply currently saves the session YAML and prints guidance for using
-// `aegisctl inject submit`.
+// guided session model. It mirrors `chaos-exp`'s interactive stepper and, on
+// --apply, POSTs a GuidedConfig envelope to /inject. This is the only
+// supported submission path: the backend's SubmitInjectionReq accepts guided
+// configs exclusively.
 var injectGuidedCmd = &cobra.Command{
 	Use:   "guided",
 	Short: "Step through a guided fault-injection session (AI-friendly, enum-driven)",
@@ -256,7 +255,7 @@ func init() {
 	f.StringVar(&guidedOutput, "output", "json", "Output format: json|yaml")
 	f.BoolVar(&guidedApply, "apply", false, "Finalize the session and attempt to submit")
 
-	// --apply envelope flags (mirror `aegisctl inject submit`'s YAML fields)
+	// --apply envelope flags (mirror the injection YAML contract)
 	f.StringVar(&guidedApplyPedestalName, "pedestal-name", "", "Pedestal container name (required with --apply)")
 	f.StringVar(&guidedApplyPedestalTag, "pedestal-tag", "", "Pedestal container version/tag (required with --apply)")
 	f.StringVar(&guidedApplyBenchmarkName, "benchmark-name", "", "Benchmark container name (required with --apply)")
