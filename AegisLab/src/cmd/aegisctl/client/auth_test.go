@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -135,7 +136,7 @@ func TestLoginWithPasswordInvalidCredentials(t *testing.T) {
 	if got := err.Error(); got != "login failed: API error 401: invalid username or password" {
 		t.Fatalf("unexpected error: %q", got)
 	}
-	if got := err.Error(); got == "super-secret" {
+	if strings.Contains(err.Error(), "super-secret") {
 		t.Fatal("password leaked into error output")
 	}
 }
