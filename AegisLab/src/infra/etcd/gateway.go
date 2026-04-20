@@ -74,6 +74,28 @@ func (g *Gateway) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+// KeyValue is a minimal, client-v3-free view of a single etcd entry. Exposed
+// so migration code can list a prefix without importing the etcd client
+// directly.
+type KeyValue struct {
+	Key   string
+	Value string
+}
+
+// ListPrefix returns every key/value pair under the given prefix. Returns an
+// empty slice (not an error) when the prefix has no entries.
+func (g *Gateway) ListPrefix(ctx context.Context, prefix string) ([]KeyValue, error) {
+	resp, err := g.clientOrInit().Get(ctx, prefix, clientv3.WithPrefix())
+	if err != nil {
+		return nil, fmt.Errorf("failed to list prefix %s: %w", prefix, err)
+	}
+	out := make([]KeyValue, 0, len(resp.Kvs))
+	for _, kv := range resp.Kvs {
+		out = append(out, KeyValue{Key: string(kv.Key), Value: string(kv.Value)})
+	}
+	return out, nil
+}
+
 func (g *Gateway) Watch(ctx context.Context, key string, withPrefix bool) clientv3.WatchChan {
 	var opts []clientv3.OpOption
 	if withPrefix {

@@ -50,24 +50,22 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 		logrus.Info("Initial system data for producer already seeded, skipping initialization")
 	}
 
-	// Best-effort one-shot migration from the retired systems table → etcd
-	// (issue #75). Safe on fresh installs and on already-migrated installs.
-	if err := MigrateLegacySystemsTable(context.Background(), db, etcdGw); err != nil {
-		logrus.WithError(err).Warn("Legacy systems-table migration failed")
+	// Best-effort one-shot migration for issue #75:
+	//   1. Drain the retired systems table into dynamic_configs + etcd Global
+	//   2. Rewrite any Consumer-scoped `injection.system.*` rows to Global
+	//   3. Move any stale etcd keys from the Consumer prefix to Global
+	// Safe on fresh installs and on already-migrated installs.
+	if err := MigrateLegacyInjectionSystem(context.Background(), db, etcdGw); err != nil {
+		logrus.WithError(err).Warn("Legacy injection.system migration failed")
 	}
 
 	// Activate config listener first so Viper is populated from etcd before
-	// InitializeSystems reads it to drive chaos.RegisterSystem. In producer
-	// mode we also opt in to the consumer-scope prefix so injection.system.*
-	// keys (which are consumer-scoped) are loaded; read-only is fine here.
+	// InitializeSystems reads it to drive chaos.RegisterSystem.
+	// injection.system.* is Global-scoped (issue #75 follow-up), so both
+	// producer and consumer pick it up through the standard Global listener.
 	common.RegisterGlobalHandlers(publisher)
 	if err := activateConfigScope(producerData.scope, listener); err != nil {
 		return err
-	}
-	if err := listener.EnsureScope(consts.ConfigScopeConsumer); err != nil {
-		// Not fatal — InitializeSystems will log warnings for any missing
-		// keys. The consumer-side init path will complete the setup.
-		logrus.WithError(err).Warn("Failed to load consumer-scope configs in producer init")
 	}
 
 	// Initialize systems (register with chaos-experiment from etcd, set MetadataStore)

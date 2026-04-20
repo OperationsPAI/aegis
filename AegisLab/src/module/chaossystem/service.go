@@ -189,12 +189,14 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 
 	// Seed dynamic_config rows first so the etcd listener has validation
 	// metadata to fall back on if it needs to re-seed from defaults later.
+	// injection.system.* rows are Global-scoped so both producer and consumer
+	// pick them up through the shared /rcabench/config/global/ watcher.
 	for _, field := range allSystemFields() {
 		cfg := &model.DynamicConfig{
 			Key:          systemKey(name, field),
 			DefaultValue: defaults[field],
 			ValueType:    valueTypeForField(field),
-			Scope:        consts.ConfigScopeConsumer,
+			Scope:        consts.ConfigScopeGlobal,
 			Category:     "injection.system." + string(field),
 			Description:  descriptions[field],
 		}
@@ -454,7 +456,7 @@ func (s *Service) applyChange(ctx context.Context, system string, field systemFi
 		return fmt.Errorf("config %s not seeded: %w", key, consts.ErrNotFound)
 	}
 
-	etcdKey := consts.ConfigEtcdConsumerPrefix + key
+	etcdKey := consts.ConfigEtcdGlobalPrefix + key
 	oldValue, err := s.etcd.Get(ctx, etcdKey)
 	if err != nil {
 		return fmt.Errorf("failed to get current value from etcd: %w", err)
@@ -478,9 +480,10 @@ func (s *Service) applyChange(ctx context.Context, system string, field systemFi
 	return nil
 }
 
-// publishKey pushes value to etcd with a short retry. Consumer-scope only.
+// publishKey pushes value to etcd with a short retry. Global-scope only —
+// injection.system.* keys are shared across producer + consumer.
 func (s *Service) publishKey(ctx context.Context, key, value string) error {
-	etcdKey := consts.ConfigEtcdConsumerPrefix + key
+	etcdKey := consts.ConfigEtcdGlobalPrefix + key
 	const maxRetries = 3
 	var lastErr error
 	for attempt := 0; attempt < maxRetries; attempt++ {

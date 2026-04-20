@@ -85,6 +85,19 @@ func seedViperSystem(t *testing.T, name, nsPattern, appLabelKey, displayName str
 	}
 }
 
+func TestChaosSystemCategoryHandlerReportsGlobalScope(t *testing.T) {
+	h := newChaosSystemHandler(nil, nil, nil)
+	for _, category := range chaosSystemCategories() {
+		handler := h.forCategory(category)
+		if got := handler.Scope(); got != consts.ConfigScopeGlobal {
+			t.Fatalf("category %q scope = %v, want %v (Global)", category, got, consts.ConfigScopeGlobal)
+		}
+		if handler.Category() != category {
+			t.Fatalf("Category() = %q, want %q", handler.Category(), category)
+		}
+	}
+}
+
 func TestParseInjectionSystemKey(t *testing.T) {
 	cases := []struct {
 		in           string

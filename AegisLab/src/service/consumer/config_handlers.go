@@ -15,7 +15,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// RegisterConsumerHandlers registers all consumer-scoped configuration handlers.
+// RegisterConsumerHandlers registers the configuration handlers that the
+// consumer process owns. The chaos-system handler covers cross-process data
+// (producer validates against it, consumer applies it) and is therefore
+// registered under Global scope; everything else is consumer-local.
+//
 // Should be called during consumer initialization, after RegisterGlobalHandlers.
 func RegisterConsumerHandlers(
 	controller *k8s.Controller,
@@ -25,7 +29,6 @@ func RegisterConsumerHandlers(
 	buildLimiter *TokenBucketRateLimiter,
 	algoLimiter *TokenBucketRateLimiter,
 ) {
-	scope := consts.ConfigScopeConsumer
 	h := newChaosSystemHandler(monitor, controller, publisher)
 	for _, category := range chaosSystemCategories() {
 		common.RegisterHandler(h.forCategory(category))
@@ -36,7 +39,11 @@ func RegisterConsumerHandlers(
 		buildLimiter,
 		algoLimiter,
 	))
-	logrus.Infof("Registered consumer config handlers: %v", common.ListRegisteredConfigKeys(&scope))
+	consumerScope := consts.ConfigScopeConsumer
+	globalScope := consts.ConfigScopeGlobal
+	logrus.Infof("Registered consumer config handlers: consumer=%v global=%v",
+		common.ListRegisteredConfigKeys(&consumerScope),
+		common.ListRegisteredConfigKeys(&globalScope))
 }
 
 // UpdateK8sController updates K8s controller informers based on namespace changes.
@@ -127,8 +134,14 @@ type chaosSystemCategoryHandler struct {
 	category string
 }
 
-func (h *chaosSystemCategoryHandler) Category() string          { return h.category }
-func (h *chaosSystemCategoryHandler) Scope() consts.ConfigScope { return consts.ConfigScopeConsumer }
+func (h *chaosSystemCategoryHandler) Category() string { return h.category }
+
+// Scope reports Global: injection.system.* is cross-process data (producer
+// validates via SystemType.IsValid / GetAllSystemTypes, consumer applies the
+// chaos runtime registry), so both sides subscribe to the same etcd prefix.
+func (h *chaosSystemCategoryHandler) Scope() consts.ConfigScope {
+	return consts.ConfigScopeGlobal
+}
 
 func (h *chaosSystemCategoryHandler) Handle(ctx context.Context, key, oldValue, newValue string) error {
 	return h.parent.reconcile(ctx, key, oldValue, newValue)
