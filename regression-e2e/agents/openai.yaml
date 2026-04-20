@@ -1,0 +1,4 @@
+interface:
+  display_name: "Regression / E2E"
+  short_description: "Triage regression and E2E failures"
+  default_prompt: "Use $regression-e2e to outline likely regression or E2E failure causes and the next debugging directions."
