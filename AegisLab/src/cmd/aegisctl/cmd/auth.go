@@ -118,7 +118,7 @@ func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecre
 	}
 
 	if username != "" && keyID != "" {
-		return "", "", "", "", "", fmt.Errorf("choose either username/password login or api-key login, not both")
+		return "", "", "", "", "", usageErrorf("choose either username/password login or api-key login, not both")
 	}
 
 	if username != "" {
@@ -130,7 +130,7 @@ func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecre
 	}
 
 	if keyID == "" {
-		return "", "", "", "", "", fmt.Errorf("either --username or --key-id is required")
+		return "", "", "", "", "", usageErrorf("either --username or --key-id is required")
 	}
 
 	keySecret = authLoginKeySecret
@@ -138,7 +138,7 @@ func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecre
 		keySecret = os.Getenv("AEGIS_KEY_SECRET")
 	}
 	if keySecret == "" {
-		return "", "", "", "", "", fmt.Errorf("--key-secret is required")
+		return "", "", "", "", "", usageErrorf("--key-secret is required")
 	}
 
 	return "api_key", "", keyID, keySecret, "", nil
@@ -162,7 +162,7 @@ func resolvePasswordInput(cmd *cobra.Command) (string, error) {
 		sources++
 	}
 	if sources > 1 {
-		return "", fmt.Errorf("choose only one password source: --password-stdin, --password-file, AEGIS_PASSWORD, or AEGIS_PASSWORD_FILE")
+		return "", usageErrorf("choose only one password source: --password-stdin, --password-file, AEGIS_PASSWORD, or AEGIS_PASSWORD_FILE")
 	}
 
 	switch {
@@ -177,7 +177,7 @@ func resolvePasswordInput(cmd *cobra.Command) (string, error) {
 	case envPassword != "":
 		return sanitizePassword(envPassword)
 	default:
-		return "", fmt.Errorf("password is required via --password-stdin, --password-file, AEGIS_PASSWORD, or AEGIS_PASSWORD_FILE")
+		return "", usageErrorf("password is required via --password-stdin, --password-file, AEGIS_PASSWORD, or AEGIS_PASSWORD_FILE")
 	}
 }
 
@@ -192,7 +192,7 @@ func readPassword(r io.Reader) (string, error) {
 func sanitizePassword(raw string) (string, error) {
 	password := strings.TrimRight(raw, "\r\n")
 	if password == "" {
-		return "", fmt.Errorf("password cannot be empty")
+		return "", usageErrorf("password cannot be empty")
 	}
 	return password, nil
 }
