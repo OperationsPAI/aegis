@@ -333,124 +333,73 @@ func (req *SearchInjectionReq) ConvertToSearchReq() *dto.SearchReq[consts.Inject
 	return sr
 }
 
-// FriendlyFaultSpec is a human-readable fault specification format used by CLI tools.
-// It is automatically converted to chaos.Node DSL on the server side via FriendlySpecToNode.
-type FriendlyFaultSpec struct {
-	Type      string         `json:"type"`             // Fault type name (e.g., "CPUStress", "MemoryStress")
-	Namespace string         `json:"namespace"`        // Namespace prefix (e.g., "exp")
-	Target    string         `json:"target"`           // Target container/app name or numeric index
-	Duration  string         `json:"duration"`         // Duration as Go duration string (e.g., "60s", "5m") or integer minutes
-	Params    map[string]any `json:"params,omitempty"` // Additional spec-specific parameters (e.g., cpu_load, cpu_worker)
+// GuidedSpec is the only accepted HTTP fault-spec payload shape.
+// Legacy FriendlyFaultSpec and raw chaos.Node payloads are rejected at bind time.
+type GuidedSpec guidedcli.GuidedConfig
+
+func (spec *GuidedSpec) UnmarshalJSON(data []byte) error {
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return fmt.Errorf("invalid guided config JSON: %w", err)
+	}
+
+	_, hasChaosType := probe["chaos_type"]
+	_, hasLegacyType := probe["type"]
+	_, hasNodeValue := probe["value"]
+	_, hasNodeChildren := probe["children"]
+
+	switch {
+	case hasChaosType && (hasLegacyType || hasNodeValue || hasNodeChildren):
+		return fmt.Errorf("mixed guided/legacy fault spec fields are not supported; submit GuidedConfig entries only")
+	case hasLegacyType:
+		return fmt.Errorf("FriendlyFaultSpec payloads are no longer accepted; submit GuidedConfig entries with chaos_type")
+	case hasNodeValue || hasNodeChildren:
+		return fmt.Errorf("raw chaos.Node payloads are no longer accepted; submit GuidedConfig entries with chaos_type")
+	case !hasChaosType:
+		return fmt.Errorf("guided fault specs must include chaos_type")
+	}
+
+	type guidedSpecAlias GuidedSpec
+	var decoded guidedSpecAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return fmt.Errorf("failed to parse GuidedConfig: %w", err)
+	}
+	if strings.TrimSpace(decoded.ChaosType) == "" {
+		return fmt.Errorf("guided fault specs must include a non-empty chaos_type")
+	}
+
+	*spec = GuidedSpec(decoded)
+	return nil
 }
 
-// SubmitInjectionReq represents a request to submit fault injection tasks with parallel fault support.
-// Each element in Specs represents a batch of faults to be injected in parallel within a single experiment.
-// Specs accepts BOTH chaos.Node DSL (numeric tree) and FriendlyFaultSpec (human-readable YAML) formats.
-// Mixed formats within a single request are supported — each element is auto-detected.
+func (spec GuidedSpec) GuidedConfig() guidedcli.GuidedConfig {
+	return guidedcli.GuidedConfig(spec)
+}
+
+// SubmitInjectionReq represents a request to submit fault injection tasks with
+// parallel fault support. Each element in Specs represents a batch of guided
+// configs to be injected in parallel within a single experiment.
 type SubmitInjectionReq struct {
 	ProjectName string              `json:"project_name" binding:"omitempty"`      // Project name
 	Pedestal    *dto.ContainerSpec  `json:"pedestal" binding:"required"`           // Pedestal (workload) configuration
 	Benchmark   *dto.ContainerSpec  `json:"benchmark" binding:"required"`          // Benchmark (detector) configuration
 	Interval    int                 `json:"interval" binding:"required,min=1"`     // Total experiment interval in minutes
 	PreDuration int                 `json:"pre_duration" binding:"required,min=1"` // Normal data collection duration before fault injection
-	Specs       [][]json.RawMessage `json:"specs" binding:"required"`              // Fault injection specs - accepts both chaos.Node DSL and FriendlyFaultSpec
+	Specs       [][]GuidedSpec      `json:"specs" binding:"required"`              // GuidedConfig batches for fault injection
 	Algorithms  []dto.ContainerSpec `json:"algorithms" binding:"omitempty"`        // RCA algorithms to execute (optional)
 	Labels      []dto.LabelItem     `json:"labels" binding:"omitempty"`            // Labels to attach to the injection
-
-	// ResolvedSpecs holds the converted [][]chaos.Node after calling ResolveSpecs.
-	// Not serialized — populated server-side only.
-	// Mutually exclusive with ResolvedGuidedConfigs; legacy Node/Friendly path only.
-	ResolvedSpecs [][]chaos.Node `json:"-"`
-
-	// ResolvedGuidedConfigs holds the parsed GuidedConfig specs when the request
-	// carries chaos-experiment guided configs (detected by top-level chaos_type).
-	// Mutually exclusive with ResolvedSpecs.
-	ResolvedGuidedConfigs [][]guidedcli.GuidedConfig `json:"-"`
 }
 
-// ResolveSpecs auto-detects the format of each spec element and routes it:
-//  1. Top-level "chaos_type" string → guidedcli.GuidedConfig
-//  2. Otherwise "type" string → FriendlyFaultSpec via converter
-//  3. Otherwise chaos.Node DSL
-//
-// A request must be homogeneous in shape: guided configs cannot be mixed with
-// legacy Node/Friendly specs.
-func (req *SubmitInjectionReq) ResolveSpecs(converter func(*FriendlyFaultSpec) (chaos.Node, error)) error {
-	// First pass: detect guided vs legacy.
-	guidedCount := 0
-	legacyCount := 0
+func (req *SubmitInjectionReq) GuidedSpecs() [][]guidedcli.GuidedConfig {
+	result := make([][]guidedcli.GuidedConfig, len(req.Specs))
 	for i, batch := range req.Specs {
-		for j, raw := range batch {
-			var probe map[string]json.RawMessage
-			if err := json.Unmarshal(raw, &probe); err != nil {
-				return fmt.Errorf("specs[%d][%d]: invalid JSON: %w", i, j, err)
-			}
-			if _, hasChaosType := probe["chaos_type"]; hasChaosType {
-				guidedCount++
-			} else {
-				legacyCount++
-			}
+		configs := make([]guidedcli.GuidedConfig, len(batch))
+		for j, spec := range batch {
+			configs[j] = spec.GuidedConfig()
 		}
+		result[i] = configs
 	}
-	if guidedCount > 0 && legacyCount > 0 {
-		return fmt.Errorf("specs mix guided (chaos_type) and legacy (type/value) entries; please submit them in separate requests")
-	}
-
-	if guidedCount > 0 {
-		result := make([][]guidedcli.GuidedConfig, len(req.Specs))
-		for i, batch := range req.Specs {
-			cfgs := make([]guidedcli.GuidedConfig, len(batch))
-			for j, raw := range batch {
-				var cfg guidedcli.GuidedConfig
-				if err := json.Unmarshal(raw, &cfg); err != nil {
-					return fmt.Errorf("specs[%d][%d]: failed to parse guided config: %w", i, j, err)
-				}
-				cfgs[j] = cfg
-			}
-			result[i] = cfgs
-		}
-		req.ResolvedGuidedConfigs = result
-		req.ResolvedSpecs = nil
-		return nil
-	}
-
-	// Legacy path.
-	result := make([][]chaos.Node, len(req.Specs))
-	for i, batch := range req.Specs {
-		nodes := make([]chaos.Node, len(batch))
-		for j, raw := range batch {
-			var probe map[string]json.RawMessage
-			if err := json.Unmarshal(raw, &probe); err != nil {
-				return fmt.Errorf("specs[%d][%d]: invalid JSON: %w", i, j, err)
-			}
-
-			if typeRaw, hasType := probe["type"]; hasType {
-				var typeStr string
-				if err := json.Unmarshal(typeRaw, &typeStr); err == nil {
-					var friendly FriendlyFaultSpec
-					if err := json.Unmarshal(raw, &friendly); err != nil {
-						return fmt.Errorf("specs[%d][%d]: failed to parse friendly spec: %w", i, j, err)
-					}
-					node, err := converter(&friendly)
-					if err != nil {
-						return fmt.Errorf("specs[%d][%d]: failed to convert friendly spec: %w", i, j, err)
-					}
-					nodes[j] = node
-					continue
-				}
-			}
-
-			var node chaos.Node
-			if err := json.Unmarshal(raw, &node); err != nil {
-				return fmt.Errorf("specs[%d][%d]: failed to parse node spec: %w", i, j, err)
-			}
-			nodes[j] = node
-		}
-		result[i] = nodes
-	}
-	req.ResolvedSpecs = result
-	req.ResolvedGuidedConfigs = nil
-	return nil
+	return result
 }
 
 func (req *SubmitInjectionReq) Validate() error {
@@ -470,6 +419,16 @@ func (req *SubmitInjectionReq) Validate() error {
 	}
 	if len(req.Specs) == 0 {
 		return fmt.Errorf("specs must not be empty")
+	}
+	for i, batch := range req.Specs {
+		if len(batch) == 0 {
+			return fmt.Errorf("specs[%d] must contain at least one guided config", i)
+		}
+		for j, spec := range batch {
+			if strings.TrimSpace(spec.ChaosType) == "" {
+				return fmt.Errorf("specs[%d][%d].chaos_type is required", i, j)
+			}
+		}
 	}
 
 	if req.Algorithms != nil {
