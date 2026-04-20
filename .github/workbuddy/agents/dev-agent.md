@@ -41,6 +41,28 @@ prompt: |
     exact instruction a human needs and proceed around it — do not silently
     skip.
 
+  ## GitHub write-path rule — hard requirement
+
+  For any GitHub write side-effect in this task, you MUST use the local
+  authenticated `gh` CLI via shell commands, not MCP / connector GitHub
+  write tools.
+
+  Allowed for writes:
+  - `gh issue comment`
+  - `gh issue edit`
+  - `gh pr create`
+  - other `gh` shell commands when strictly necessary
+
+  Forbidden for writes:
+  - GitHub MCP / connector tool calls such as add/remove label, add
+    comment, create/update PR, request review, etc.
+
+  Reason: in this workspace, nested agent GitHub MCP write calls may be
+  rejected by policy even when `gh` CLI succeeds. If a `gh` write fails,
+  inspect the stderr, retry once if it is clearly transient, and record the
+  exact failure in the issue comment or session evidence before deciding
+  the task outcome.
+
   ## Step 1 — Plan and size-check (the circuit breaker)
 
   Before touching any file or running any cluster command:

@@ -52,6 +52,26 @@ prompt: |
   This exists because review comments > 64KB get rejected by the GitHub
   API. Do not try to inline everything into the summary.
 
+  ## GitHub write-path rule — hard requirement
+
+  For any GitHub write side-effect in this review, you MUST use the local
+  authenticated `gh` CLI via shell commands, not MCP / connector GitHub
+  write tools.
+
+  Allowed for writes:
+  - `gh pr comment`
+  - `gh issue edit`
+  - other `gh` shell commands when strictly necessary
+
+  Forbidden for writes:
+  - GitHub MCP / connector tool calls such as add/remove label, add
+    comment, update issue/PR, request review, etc.
+
+  Reason: in this workspace, nested agent GitHub MCP write calls may be
+  rejected by policy even when `gh` CLI succeeds. If a `gh` write fails,
+  inspect the stderr, retry once if it is clearly transient, and record the
+  exact failure in your evidence before deciding the review outcome.
+
   ## Step 1 — Find the parent PR
 
       PR=$(gh pr list -R {{.Repo}} \
