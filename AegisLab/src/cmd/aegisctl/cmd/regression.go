@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -45,6 +46,12 @@ type regressionTaskState struct {
 	State  string `json:"state"`
 }
 
+type regressionTraceTask struct {
+	ID    string `json:"id"`
+	Type  string `json:"type"`
+	State string `json:"state"`
+}
+
 type regressionEnvCheck struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
@@ -70,7 +77,7 @@ type regressionTraceDetail struct {
 	ID        string                `json:"id"`
 	State     string                `json:"state"`
 	LastEvent string                `json:"last_event"`
-	Tasks     []regressionTaskState `json:"tasks"`
+	Tasks     []regressionTraceTask `json:"tasks"`
 }
 
 type regressionCaseDefinition struct {
@@ -225,7 +232,7 @@ func runRegressionCase(ctx context.Context, caseName string, opts regressionRunO
 		if err != nil {
 			return summarizeRegressionError(summary, err)
 		}
-		if rendered != "" && output.OutputFormat(flagOutput) != output.FormatJSON {
+		if rendered != "" && output.OutputFormat(flagOutput) != output.FormatJSON && !output.Quiet {
 			output.PrintInfo("Running regression preflight checks:")
 			fmt.Fprint(os.Stderr, rendered)
 		}
@@ -305,6 +312,8 @@ func waitForRegressionTrace(ctx context.Context, traceID string, timeout, interv
 	defer cancel()
 
 	c := newClient()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	for {
 		state, _, err := pollState(c, "trace", traceID)
 		if err != nil {
@@ -320,7 +329,7 @@ func waitForRegressionTrace(ctx context.Context, traceID string, timeout, interv
 				return nil, fmt.Errorf("timed out waiting for trace %s after %s", traceID, timeout)
 			}
 			return nil, waitCtx.Err()
-		case <-time.After(interval):
+		case <-ticker.C:
 		}
 	}
 }
@@ -340,7 +349,14 @@ func populateRegressionSummaryFromTrace(summary *regressionSummary, detail *regr
 	summary.TraceID = nonEmpty(summary.TraceID, detail.ID)
 	summary.TraceState = detail.State
 	summary.FinalEvent = detail.LastEvent
-	summary.TaskStates = append([]regressionTaskState(nil), detail.Tasks...)
+	summary.TaskStates = make([]regressionTaskState, 0, len(detail.Tasks))
+	for _, task := range detail.Tasks {
+		summary.TaskStates = append(summary.TaskStates, regressionTaskState{
+			TaskID: task.ID,
+			Type:   task.Type,
+			State:  task.State,
+		})
+	}
 }
 
 func isPassingRegressionTrace(detail *regressionTraceDetail) bool {
@@ -383,16 +399,6 @@ func sortedRegressionCases() []string {
 	for name := range regressionCases {
 		out = append(out, name)
 	}
-	// Single case today, but keep output stable as the catalog grows.
-	if len(out) < 2 {
-		return out
-	}
-	for i := 0; i < len(out)-1; i++ {
-		for j := i + 1; j < len(out); j++ {
-			if out[j] < out[i] {
-				out[i], out[j] = out[j], out[i]
-			}
-		}
-	}
+	sort.Strings(out)
 	return out
 }

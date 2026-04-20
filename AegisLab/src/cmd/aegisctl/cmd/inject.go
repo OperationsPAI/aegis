@@ -161,12 +161,16 @@ var (
 // injectSubmitResponse captures the fields we care about from the server's
 // SubmitInjectionResp envelope (see src/dto/injection.go).
 type injectSubmitResponse struct {
-	GroupID string `json:"group_id"`
-	Items   []struct {
-		Index   int    `json:"index"`
-		TraceID string `json:"trace_id"`
-		TaskID  string `json:"task_id"`
-	} `json:"items"`
+	GroupID       string             `json:"group_id"`
+	Items         []injectSubmitItem `json:"items"`
+	OriginalCount int                `json:"original_count"`
+	Warnings      map[string]any     `json:"warnings,omitempty"`
+}
+
+type injectSubmitItem struct {
+	Index   int    `json:"index"`
+	TraceID string `json:"trace_id"`
+	TaskID  string `json:"task_id"`
 }
 
 var injectSubmitCmd = &cobra.Command{

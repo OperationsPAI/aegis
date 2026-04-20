@@ -75,9 +75,9 @@ func TestRunRegressionCaseWaitSuccess(t *testing.T) {
 					"state":      "Completed",
 					"last_event": "datapack.no_anomaly",
 					"tasks": []map[string]any{
-						{"task_id": "t1", "type": "RestartPedestal", "state": "Completed"},
-						{"task_id": "t2", "type": "FaultInjection", "state": "Completed"},
-						{"task_id": "t3", "type": "BuildDatapack", "state": "Completed"},
+						{"id": "t1", "type": "RestartPedestal", "state": "Completed"},
+						{"id": "t2", "type": "FaultInjection", "state": "Completed"},
+						{"id": "t3", "type": "BuildDatapack", "state": "Completed"},
 					},
 				},
 			})
