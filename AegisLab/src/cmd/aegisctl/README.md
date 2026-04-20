@@ -45,8 +45,22 @@ aegisctl dataset list
 | `dataset` | List, get, manage datasets |
 | `eval` | List, get evaluation results |
 | `wait` | Block until a resource reaches terminal state |
+| `regression` | Run curated regression validations |
 | `status` | View system status |
 | `completion` | Generate shell completions |
+
+## Canonical regression case
+
+```bash
+# Submit the curated otel-demo guided regression case
+aegisctl regression run otel-demo-guided
+
+# Preflight the local environment and wait for a pass/fail result
+aegisctl regression run otel-demo-guided --ensure-env --wait
+
+# CI/agent-friendly summary payload
+aegisctl regression run otel-demo-guided --ensure-env --wait --output json
+```
 
 ## Environment Variables
 

@@ -189,6 +189,7 @@ func init() {
 	rootCmd.AddCommand(datasetCmd)
 	rootCmd.AddCommand(evalCmd)
 	rootCmd.AddCommand(waitCmd)
+	rootCmd.AddCommand(regressionCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(pedestalCmd)
