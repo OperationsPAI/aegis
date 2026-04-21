@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -14,6 +16,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type regressionCase struct {
@@ -48,9 +54,30 @@ type regressionSummary struct {
 }
 
 var (
-	regressionCasesDir string
-	regressionCaseFile string
+	regressionCasesDir       string
+	regressionCaseFile       string
+	regressionSkipPreflight  bool
+	regressionAutoInstall    bool
+	regressionAppLabelKey    string
+	regressionPodListerHook  PodLister // test injection seam; nil => real k8s client
+	regressionInstallerHook  chartInstaller
 )
+
+// PodLister is the minimal k8s surface preflightRegressionCase needs. Tests
+// can inject a fake; production uses a client-go backed implementation.
+type PodLister interface {
+	ListPods(ctx context.Context, namespace, labelSelector string) (count int, err error)
+}
+
+type chartInstaller func(ctx context.Context, system, namespace string) error
+
+// regressionTarget captures one (namespace, app, system) preflight subject
+// derived from a regression case's submit.specs entries.
+type regressionTarget struct {
+	System    string
+	Namespace string
+	App       string
+}
 
 var regressionCmd = &cobra.Command{
 	Use:   "regression",
@@ -90,6 +117,12 @@ var regressionRunCmd = &cobra.Command{
 		}
 		if err != nil {
 			return err
+		}
+
+		if !regressionSkipPreflight {
+			if err := preflightRegressionCase(cmd.Context(), rc, regressionPodListerHook, regressionInstallerHook); err != nil {
+				return err
+			}
 		}
 
 		summary, err := runRegressionCase(cmd.Context(), casePath, rc)
@@ -408,9 +441,192 @@ func requireOrderedSubsequence(label string, observed, required []string) error 
 	return fmt.Errorf("%s: missing ordered subsequence %q in observed sequence %q", label, strings.Join(missing, " -> "), strings.Join(observed, " -> "))
 }
 
+// extractRegressionTargets walks rc.Submit.specs (shape: [[{system, namespace,
+// app, ...}, ...], ...]) and returns the unique (namespace, app) triples the
+// backend will validate against live pods. Entries missing namespace or app
+// are skipped — the backend will surface its own error for those.
+func extractRegressionTargets(rc regressionCase) []regressionTarget {
+	specsRaw, ok := rc.Submit["specs"]
+	if !ok {
+		return nil
+	}
+	groups, ok := specsRaw.([]any)
+	if !ok {
+		return nil
+	}
+	pedestalName := ""
+	if ped, ok := rc.Submit["pedestal"].(map[string]any); ok {
+		pedestalName, _ = ped["name"].(string)
+	}
+	seen := make(map[string]struct{})
+	var out []regressionTarget
+	for _, g := range groups {
+		inner, ok := g.([]any)
+		if !ok {
+			continue
+		}
+		for _, s := range inner {
+			spec, ok := s.(map[string]any)
+			if !ok {
+				continue
+			}
+			ns := strings.TrimSpace(stringField(spec, "namespace"))
+			app := strings.TrimSpace(stringField(spec, "app"))
+			if ns == "" || app == "" {
+				continue
+			}
+			sys := strings.TrimSpace(stringField(spec, "system"))
+			if sys == "" {
+				sys = pedestalName
+			}
+			key := ns + "\x00" + app
+			if _, dup := seen[key]; dup {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, regressionTarget{System: sys, Namespace: ns, App: app})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Namespace != out[j].Namespace {
+			return out[i].Namespace < out[j].Namespace
+		}
+		return out[i].App < out[j].App
+	})
+	return out
+}
+
+// preflightRegressionCase verifies, for each unique (namespace, app) pair in
+// the regression submit payload, that at least one pod matches
+// `<appLabelKey>=<app>`. When a target has zero pods the check fails fast with
+// an actionable "fix:" hint pointing at `aegisctl pedestal chart install`.
+// When --auto-install is set, it attempts the install in-process.
+//
+// Error format (grep-friendly):
+//
+//	preflight: namespace <ns> has no pods matching <labelKey>=<app>
+//	  fix: aegisctl pedestal chart install <system> --namespace <ns>
+func preflightRegressionCase(ctx context.Context, rc regressionCase, lister PodLister, installer chartInstaller) error {
+	targets := extractRegressionTargets(rc)
+	if len(targets) == 0 {
+		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if lister == nil {
+		l, err := newLivePodLister()
+		if err != nil {
+			return fmt.Errorf("preflight: build k8s client: %w (use --skip-preflight to bypass)", err)
+		}
+		lister = l
+	}
+	labelKey := strings.TrimSpace(regressionAppLabelKey)
+	if labelKey == "" {
+		labelKey = "app"
+	}
+
+	var misses []regressionTarget
+	for _, t := range targets {
+		selector := labelKey + "=" + t.App
+		n, err := lister.ListPods(ctx, t.Namespace, selector)
+		if err != nil {
+			return fmt.Errorf("preflight: list pods in ns=%s selector=%s: %w (use --skip-preflight to bypass)", t.Namespace, selector, err)
+		}
+		if n == 0 {
+			misses = append(misses, t)
+		}
+	}
+	if len(misses) == 0 {
+		return nil
+	}
+
+	var b strings.Builder
+	for _, m := range misses {
+		sys := m.System
+		if sys == "" {
+			sys = "<system>"
+		}
+		fmt.Fprintf(&b, "preflight: namespace %s has no pods matching %s=%s\n", m.Namespace, labelKey, m.App)
+		fmt.Fprintf(&b, "  fix: aegisctl pedestal chart install %s --namespace %s\n", sys, m.Namespace)
+	}
+
+	if regressionAutoInstall {
+		if installer == nil {
+			installer = defaultChartInstaller
+		}
+		fmt.Fprint(os.Stderr, b.String())
+		fmt.Fprintln(os.Stderr, "preflight: --auto-install set; attempting chart install for each miss")
+		installed := make(map[string]struct{})
+		for _, m := range misses {
+			sys := m.System
+			if sys == "" {
+				return fmt.Errorf("preflight: cannot auto-install for namespace %s (no system resolvable from spec or pedestal.name)", m.Namespace)
+			}
+			key := sys + "\x00" + m.Namespace
+			if _, dup := installed[key]; dup {
+				continue
+			}
+			installed[key] = struct{}{}
+			if err := installer(ctx, sys, m.Namespace); err != nil {
+				return fmt.Errorf("preflight: auto-install failed for system=%s namespace=%s: %w", sys, m.Namespace, err)
+			}
+		}
+		return nil
+	}
+
+	return fmt.Errorf("%spreflight failed: %d missing chart(s); rerun with --auto-install or run the printed fix command, or pass --skip-preflight to bypass", b.String(), len(misses))
+}
+
+// defaultChartInstaller shells out to the current aegisctl binary via
+// os.Args[0] so this module does not depend on the pedestal chart install
+// implementation (landed in parallel).
+func defaultChartInstaller(ctx context.Context, system, namespace string) error {
+	bin := os.Args[0]
+	if bin == "" {
+		bin = "aegisctl"
+	}
+	cmd := exec.CommandContext(ctx, bin, "pedestal", "chart", "install", system, "--namespace", namespace)
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+// livePodLister is the real k8s-backed PodLister built from the usual
+// in-cluster-or-kubeconfig resolution path.
+type livePodLister struct{ cs *kubernetes.Clientset }
+
+func newLivePodLister() (*livePodLister, error) {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		home, _ := os.UserHomeDir()
+		path := filepath.Join(home, ".kube", "config")
+		cfg, err = clientcmd.BuildConfigFromFlags("", path)
+		if err != nil {
+			return nil, err
+		}
+	}
+	cs, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &livePodLister{cs: cs}, nil
+}
+
+func (l *livePodLister) ListPods(ctx context.Context, namespace, labelSelector string) (int, error) {
+	pods, err := l.cs.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		return 0, err
+	}
+	return len(pods.Items), nil
+}
+
 func init() {
 	regressionRunCmd.Flags().StringVar(&regressionCasesDir, "cases-dir", "regression", "Directory containing repo-tracked regression case YAML files")
 	regressionRunCmd.Flags().StringVar(&regressionCaseFile, "file", "", "Path to a regression case YAML file")
+	regressionRunCmd.Flags().BoolVar(&regressionSkipPreflight, "skip-preflight", false, "Skip the pod/chart-installed preflight check (use when the CLI host cannot reach the target k8s cluster)")
+	regressionRunCmd.Flags().BoolVar(&regressionAutoInstall, "auto-install", false, "If preflight finds missing charts, shell out to `aegisctl pedestal chart install <system> --namespace <ns>` to fix them before submit")
+	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight")
 
 	regressionCmd.AddCommand(regressionRunCmd)
 }

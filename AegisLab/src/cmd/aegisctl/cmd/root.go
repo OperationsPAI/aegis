@@ -211,6 +211,7 @@ func init() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(pedestalCmd)
 	rootCmd.AddCommand(schemaCmd)
+	rootCmd.AddCommand(systemCmd)
 }
 
 // setupDryRunRegistry records which commands opt in to --dry-run. It must be
