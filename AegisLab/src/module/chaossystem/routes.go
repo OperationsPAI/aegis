@@ -20,6 +20,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 					systemRead.GET("", handler.ListSystems)
 					systemRead.GET("/:id", handler.GetSystem)
 					systemRead.GET("/:id/metadata", handler.ListMetadata)
+					systemRead.GET("/by-name/:name/chart", handler.GetSystemChart)
 				}
 
 				systemConfigure := systems.Group("", middleware.RequireSystemConfigure)

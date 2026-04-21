@@ -166,21 +166,21 @@ func TestNsPatternToNamespace(t *testing.T) {
 // via TestNsPatternToNamespace.
 func TestPedestalChartInstallValidation(t *testing.T) {
 	t.Run("missing_code", func(t *testing.T) {
-		err := runPedestalChartInstall("", "ts0", "/tmp/x.tgz", "", false)
+		err := runPedestalChartInstall("", "ts0", "/tmp/x.tgz", "", "", "", false)
 		if err == nil || !strings.Contains(err.Error(), "short-code") {
 			t.Fatalf("want short-code error, got %v", err)
 		}
 	})
 
-	t.Run("tgz_required_when_namespace_given", func(t *testing.T) {
-		err := runPedestalChartInstall("ts", "ts0", "", "", false)
-		if err == nil || !strings.Contains(err.Error(), "--tgz is required") {
-			t.Fatalf("want --tgz-required error, got %v", err)
+	t.Run("repo_without_chart_rejected", func(t *testing.T) {
+		err := runPedestalChartInstall("ts", "ts0", "", "https://example.com/charts", "", "", false)
+		if err == nil || !strings.Contains(err.Error(), "--repo and --chart must be provided together") {
+			t.Fatalf("want repo/chart pairing error, got %v", err)
 		}
 	})
 
 	t.Run("tgz_not_found", func(t *testing.T) {
-		err := runPedestalChartInstall("ts", "ts0", "/does/not/exist.tgz", "", false)
+		err := runPedestalChartInstall("ts", "ts0", "/does/not/exist.tgz", "", "", "", false)
 		if err == nil || !strings.Contains(err.Error(), "not found") {
 			t.Fatalf("want not-found error, got %v", err)
 		}
@@ -193,9 +193,44 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		err := runPedestalChartInstall("ts", "ts0", tgz, "", false)
+		err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "", false)
 		if err == nil || !strings.Contains(err.Error(), "helm not found") {
 			t.Fatalf("want helm-missing error, got %v", err)
+		}
+	})
+
+	t.Run("url_tgz_passes_through_without_stat", func(t *testing.T) {
+		var got []string
+		f := &fakeChartExec{
+			fallback: func(name string, args []string) ([]byte, error) {
+				got = append([]string{name}, args...)
+				return []byte("ok"), nil
+			},
+		}
+		withFakeRunner(t, f)
+		url := "https://example.com/charts/foo-0.1.0.tgz"
+		if err := runPedestalChartInstall("ts", "ts0", url, "", "", "", false); err != nil {
+			t.Fatalf("url install failed: %v", err)
+		}
+		if len(got) == 0 || got[0] != "helm" || !containsArg(got, url) {
+			t.Fatalf("expected helm to receive URL %q, got %v", url, got)
+		}
+	})
+
+	t.Run("repo_plus_chart_invokes_helm_with_repo_flag", func(t *testing.T) {
+		var got []string
+		f := &fakeChartExec{
+			fallback: func(name string, args []string) ([]byte, error) {
+				got = append([]string{name}, args...)
+				return []byte("ok"), nil
+			},
+		}
+		withFakeRunner(t, f)
+		if err := runPedestalChartInstall("ts", "ts0", "", "https://charts.example.com", "foo", "1.0.0", false); err != nil {
+			t.Fatalf("repo install failed: %v", err)
+		}
+		if !containsArg(got, "--repo") || !containsArg(got, "https://charts.example.com") || !containsArg(got, "foo") {
+			t.Fatalf("expected helm --repo ... foo, got %v", got)
 		}
 	})
 
@@ -210,7 +245,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if err := runPedestalChartInstall("ts", "ts0", tgz, "1.2.3", true); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", true); err != nil {
 			t.Fatalf("install failed: %v", err)
 		}
 		if len(f.calls) != 1 {
@@ -227,4 +262,13 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 			}
 		}
 	})
+}
+
+func containsArg(args []string, want string) bool {
+	for _, a := range args {
+		if a == want {
+			return true
+		}
+	}
+	return false
 }

@@ -78,6 +78,29 @@ func (h *Handler) GetSystem(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// GetChaosSystemChartHandler returns the chart source for a system by short name.
+//
+//	@Summary		Get chart source for a chaos system by name
+//	@Description	Resolves the chart (repo_url/chart_name/version/local_path) bound to the active pedestal ContainerVersion for the given system short code (e.g. "mm", "tea"). Used by aegisctl pedestal chart install to fetch the tgz without walking containers→versions→helm_configs.
+//	@Tags			Systems
+//	@ID				get_chaos_system_chart_by_name
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			name	path		string									true	"System short code"
+//	@Success		200		{object}	dto.GenericResponse[SystemChartResp]	"Chart retrieved"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"System has no active pedestal chart"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/systems/by-name/{name}/chart [get]
+//	@x-api-type		{"admin":"true","sdk":"true"}
+func (h *Handler) GetSystemChart(c *gin.Context) {
+	name := c.Param("name")
+	resp, err := h.service.GetSystemChart(c.Request.Context(), name)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 // CreateChaosSystemHandler handles creating a new chaos system
 //
 //	@Summary		Create chaos system

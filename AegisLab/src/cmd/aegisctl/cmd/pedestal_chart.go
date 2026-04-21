@@ -172,6 +172,8 @@ func resolveProducerPod(namespace string) (string, error) {
 var (
 	pedestalChartInstallNamespace string
 	pedestalChartInstallTgz       string
+	pedestalChartInstallRepo      string
+	pedestalChartInstallChart     string
 	pedestalChartInstallVersion   string
 	pedestalChartInstallWait      bool
 )
@@ -188,22 +190,34 @@ Namespace resolution order:
   derived from system's ns_pattern via GET /api/v2/systems
     (e.g. "^ts\\d+$" -> "ts0")
 
-Chart source resolution:
-  --tgz <path>                   (local file wins)
-  else: GET /api/v2/pedestal/helm/<container_version_id> for chart_name +
-        repo_url + version  (NOTE: requires knowing a container_version_id
-        — not yet resolvable by system short-code; see TODO below).
+Chart source resolution (first match wins):
+  --tgz <path-or-url>            local .tgz, or https:// URL of a packaged chart
+  --repo <url> --chart <name>    helm-style repo install (passed as
+                                 "helm install <ns> <chart> --repo <url>")
+  else: GET /api/v2/systems/by-name/<code>/chart and use
+        local_path -> repo_url/chart_name -> error.
 
 The release name is set to the namespace (matches aegis's own
 installPedestal behavior so app labels line up).`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runPedestalChartInstall(args[0], pedestalChartInstallNamespace,
-			pedestalChartInstallTgz, pedestalChartInstallVersion, pedestalChartInstallWait)
+			pedestalChartInstallTgz, pedestalChartInstallRepo, pedestalChartInstallChart,
+			pedestalChartInstallVersion, pedestalChartInstallWait)
 	},
 }
 
-func runPedestalChartInstall(systemCode, namespace, tgz, version string, wait bool) error {
+// chartSource captures the resolved helm positional + optional --repo flag.
+// `positional` is what goes as the second helm-install arg (can be local path,
+// URL, or chart name); `repo` is non-empty only when positional is a repo
+// chart name that needs --repo.
+type chartSource struct {
+	positional string
+	repo       string
+	version    string
+}
+
+func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool) error {
 	if strings.TrimSpace(systemCode) == "" {
 		return usageErrorf("system short-code is required")
 	}
@@ -219,28 +233,21 @@ func runPedestalChartInstall(systemCode, namespace, tgz, version string, wait bo
 		namespace = derived
 	}
 
-	source := tgz
-	if source == "" {
-		// Backend lookup by system short-code is not yet wired up:
-		// /api/v2/pedestal/helm/<id> is keyed by container_version_id, not by
-		// system short-code. Until Agent D lands the systems -> chart
-		// resolution endpoint, require --tgz for this path.
-		return usageErrorf("--tgz is required (backend lookup by system short-code is not yet implemented; pass a local .tgz)")
-	}
-	if _, err := os.Stat(source); err != nil {
-		if os.IsNotExist(err) {
-			return notFoundErrorf("--tgz file not found: %s", source)
-		}
-		return fmt.Errorf("stat --tgz: %w", err)
+	src, err := resolveChartSource(systemCode, tgz, repo, chartName, version)
+	if err != nil {
+		return err
 	}
 
 	if _, err := chartRunner.LookPath("helm"); err != nil {
 		return missingEnvErrorf("helm not found on PATH; install helm or place it on PATH")
 	}
 
-	helmArgs := []string{"install", namespace, source, "-n", namespace, "--create-namespace"}
-	if version != "" {
-		helmArgs = append(helmArgs, "--version", version)
+	helmArgs := []string{"install", namespace, src.positional, "-n", namespace, "--create-namespace"}
+	if src.repo != "" {
+		helmArgs = append(helmArgs, "--repo", src.repo)
+	}
+	if src.version != "" {
+		helmArgs = append(helmArgs, "--version", src.version)
 	}
 	if wait {
 		helmArgs = append(helmArgs, "--wait")
@@ -254,8 +261,83 @@ func runPedestalChartInstall(systemCode, namespace, tgz, version string, wait bo
 	if err != nil {
 		return fmt.Errorf("helm install failed: %w", err)
 	}
-	output.PrintInfo(fmt.Sprintf("installed chart %q as release %q in namespace %q", source, namespace, namespace))
+	output.PrintInfo(fmt.Sprintf("installed chart %q as release %q in namespace %q", src.positional, namespace, namespace))
 	return nil
+}
+
+// isURL returns true for http(s), oci, and file URLs that helm accepts as a
+// positional chart source without a local stat check.
+func isURL(s string) bool {
+	lower := strings.ToLower(s)
+	return strings.HasPrefix(lower, "http://") ||
+		strings.HasPrefix(lower, "https://") ||
+		strings.HasPrefix(lower, "oci://") ||
+		strings.HasPrefix(lower, "file://")
+}
+
+// resolveChartSource picks the helm positional argument (and optional --repo)
+// based on the precedence documented on pedestalChartInstallCmd.Long. It falls
+// back to GET /api/v2/systems/by-name/<code>/chart when the operator didn't
+// pass a source explicitly.
+func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chartSource, error) {
+	switch {
+	case tgz != "":
+		if isURL(tgz) {
+			return chartSource{positional: tgz, version: version}, nil
+		}
+		if _, err := os.Stat(tgz); err != nil {
+			if os.IsNotExist(err) {
+				return chartSource{}, notFoundErrorf("--tgz file not found: %s", tgz)
+			}
+			return chartSource{}, fmt.Errorf("stat --tgz: %w", err)
+		}
+		return chartSource{positional: tgz, version: version}, nil
+
+	case repo != "" && chartName != "":
+		return chartSource{positional: chartName, repo: repo, version: version}, nil
+
+	case repo != "" || chartName != "":
+		return chartSource{}, usageErrorf("--repo and --chart must be provided together")
+	}
+
+	// No explicit source — consult the backend.
+	if err := requireAPIContext(true); err != nil {
+		return chartSource{}, err
+	}
+	c := newClient()
+	var resp client.APIResponse[chartLookupResp]
+	if err := c.Get(fmt.Sprintf("/api/v2/systems/by-name/%s/chart", systemCode), &resp); err != nil {
+		return chartSource{}, fmt.Errorf("lookup chart for system %q: %w (hint: pass --tgz or --repo/--chart explicitly)", systemCode, err)
+	}
+	backendVersion := version
+	if backendVersion == "" {
+		backendVersion = resp.Data.Version
+	}
+	// Local path wins over repo lookup when the file is actually present —
+	// this is the air-gapped / pre-staged case.
+	if resp.Data.LocalPath != "" {
+		if _, err := os.Stat(resp.Data.LocalPath); err == nil {
+			return chartSource{positional: resp.Data.LocalPath, version: backendVersion}, nil
+		}
+	}
+	if resp.Data.RepoURL != "" && resp.Data.ChartName != "" {
+		return chartSource{positional: resp.Data.ChartName, repo: resp.Data.RepoURL, version: backendVersion}, nil
+	}
+	return chartSource{}, notFoundErrorf("system %q has no installable chart source (no local_path, no repo_url); pass --tgz or --repo/--chart", systemCode)
+}
+
+// chartLookupResp mirrors chaossystem.SystemChartResp; kept decoupled so the
+// CLI has no direct dependency on server-internal types.
+type chartLookupResp struct {
+	SystemName  string `json:"system_name"`
+	ChartName   string `json:"chart_name"`
+	Version     string `json:"version"`
+	RepoURL     string `json:"repo_url"`
+	RepoName    string `json:"repo_name"`
+	LocalPath   string `json:"local_path"`
+	ValueFile   string `json:"value_file"`
+	Checksum    string `json:"checksum"`
+	PedestalTag string `json:"pedestal_tag"`
 }
 
 // deriveNamespaceFromSystem calls GET /api/v2/systems and converts the named
@@ -310,7 +392,9 @@ func init() {
 	pedestalChartPushCmd.Flags().StringVar(&pedestalChartPushNamespace, "backend-namespace", defaultBackendNamespace, "Namespace where the producer pod lives")
 
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallNamespace, "namespace", "", "Target namespace (derived from system ns_pattern if omitted)")
-	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallTgz, "tgz", "", "Local .tgz to install (wins over backend lookup)")
+	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallTgz, "tgz", "", "Local .tgz path OR https://... URL (wins over backend lookup and --repo)")
+	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallRepo, "repo", "", "Helm chart repo URL (use with --chart)")
+	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallChart, "chart", "", "Chart name in the repo given by --repo")
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallVersion, "version", "", "Chart version (passed to helm --version)")
 	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallWait, "wait", false, "Pass --wait to helm install")
 

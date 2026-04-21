@@ -10,6 +10,7 @@ import (
 type HandlerService interface {
 	ListSystems(context.Context, *ListChaosSystemReq) (*dto.ListResp[ChaosSystemResp], error)
 	GetSystem(context.Context, int) (*ChaosSystemResp, error)
+	GetSystemChart(context.Context, string) (*SystemChartResp, error)
 	CreateSystem(context.Context, *CreateChaosSystemReq) (*ChaosSystemResp, error)
 	UpdateSystem(context.Context, int, *UpdateChaosSystemReq) (*ChaosSystemResp, error)
 	DeleteSystem(context.Context, int) error

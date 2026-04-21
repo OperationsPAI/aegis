@@ -107,6 +107,45 @@ func (r *Repository) ListSystemMetadata(systemName, metadataType string) ([]mode
 	return metas, nil
 }
 
+// GetPedestalHelmConfigByName returns the HelmConfig for the latest active
+// pedestal ContainerVersion whose Container.Name equals the system short
+// code. The chaossystem module consumes this to expose GET /systems/by-name/
+// :name/chart — clients use it to pull the chart tgz without needing to walk
+// containers → versions → helm_configs themselves.
+//
+// Returns (nil, nil) when the system has no pedestal container or no active
+// version — the HTTP layer maps that to a 404.
+func (r *Repository) GetPedestalHelmConfigByName(name string) (*model.HelmConfig, *model.ContainerVersion, error) {
+	var container model.Container
+	if err := r.db.Where("name = ? AND type = ? AND status >= 0", name, "pedestal").
+		First(&container).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("failed to find pedestal container %s: %w", name, err)
+	}
+
+	var version model.ContainerVersion
+	if err := r.db.Where("container_id = ? AND status >= 0", container.ID).
+		Order("name_major DESC, name_minor DESC, name_patch DESC, id DESC").
+		First(&version).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("failed to find active version for pedestal %s: %w", name, err)
+	}
+
+	var helm model.HelmConfig
+	if err := r.db.Where("container_version_id = ?", version.ID).First(&helm).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("failed to find helm config for version %d: %w", version.ID, err)
+	}
+
+	return &helm, &version, nil
+}
+
 // We intentionally do not expose a "delete config" helper. Removing a system
 // is modeled as setting its status to CommonDeleted via the etcd write path so
 // history/audit stays consistent.

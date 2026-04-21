@@ -176,7 +176,7 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 		fieldExtractPattern: req.ExtractPattern,
 		fieldDisplayName:    req.DisplayName,
 		fieldAppLabelKey:    appLabelKey,
-		fieldIsBuiltin:      "false",
+		fieldIsBuiltin:      strconv.FormatBool(req.IsBuiltin),
 		fieldStatus:         strconv.Itoa(int(consts.CommonEnabled)),
 	}
 	descriptions := map[systemField]string{
@@ -228,6 +228,34 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 		return nil, err
 	}
 	return NewChaosSystemResp(view), nil
+}
+
+// GetSystemChart returns the chart source bound to the system's latest active
+// pedestal ContainerVersion. Returns ErrNotFound when the system has no
+// pedestal container / no active version / no helm config.
+func (s *Service) GetSystemChart(_ context.Context, name string) (*SystemChartResp, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
+	}
+	helm, version, err := s.repo.GetPedestalHelmConfigByName(name)
+	if err != nil {
+		return nil, err
+	}
+	if helm == nil || version == nil {
+		return nil, fmt.Errorf("no active pedestal chart for system %s: %w", name, consts.ErrNotFound)
+	}
+	return &SystemChartResp{
+		SystemName:  name,
+		ChartName:   helm.ChartName,
+		Version:     helm.Version,
+		RepoURL:     helm.RepoURL,
+		RepoName:    helm.RepoName,
+		LocalPath:   helm.LocalPath,
+		ValueFile:   helm.ValueFile,
+		Checksum:    helm.Checksum,
+		PedestalTag: version.Name,
+	}, nil
 }
 
 // UpdateSystem mutates one or more injection.system.<name>.* keys via etcd
