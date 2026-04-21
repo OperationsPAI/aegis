@@ -25,6 +25,10 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				containers.PATCH("/:container_id/labels", middleware.RequireContainerUpdate, handler.ManageContainerCustomLabels)
 				containers.DELETE("/:container_id", middleware.RequireContainerDelete, handler.DeleteContainer)
 				containers.POST("/build", middleware.RequireContainerExecute, handler.SubmitContainerBuilding)
+				// Atomic register: creates (container, container_version,
+				// helm_config) in one transaction with stage-tagged logs
+				// correlated by register_id (issue #102).
+				containers.POST("/register", middleware.RequireContainerCreate, handler.RegisterContainer)
 
 				containerVersions := containers.Group("/:container_id/versions")
 				{

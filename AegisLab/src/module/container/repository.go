@@ -3,6 +3,7 @@ package container
 import (
 	"aegis/consts"
 	"aegis/model"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -446,6 +447,38 @@ func (r *Repository) getHelmConfigByContainerVersionID(versionID int) (*model.He
 		return nil, fmt.Errorf("failed to find helm config for version id %d: %w", versionID, err)
 	}
 	return &helmConfig, nil
+}
+
+// findContainerByNameAndType returns the live container with the given name
+// and type, or (nil, nil) if none exists. Used by the atomic register flow
+// to decide whether to create a new row or reuse an existing one (after the
+// pre-transaction collision check has already guaranteed any same-name row
+// shares the same type).
+func (r *Repository) findContainerByNameAndType(name string, cType consts.ContainerType) (*model.Container, error) {
+	var container model.Container
+	err := r.db.Where("name = ? AND type = ? AND status = ?", name, cType, consts.CommonEnabled).
+		First(&container).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to find container %q of type %d: %w", name, cType, err)
+	}
+	return &container, nil
+}
+
+// getContainerVersionByNameAndContainer reloads the newly-inserted version
+// row so the atomic register flow can surface its DB-assigned ID and
+// AfterFind-composed image_ref to the caller.
+func (r *Repository) getContainerVersionByNameAndContainer(containerID int, name string) (*model.ContainerVersion, error) {
+	var version model.ContainerVersion
+	if err := r.db.
+		Where("container_id = ? AND name = ? AND status = ?", containerID, name, consts.CommonEnabled).
+		Order("id DESC").
+		First(&version).Error; err != nil {
+		return nil, fmt.Errorf("failed to reload container_version (%d, %s): %w", containerID, name, err)
+	}
+	return &version, nil
 }
 
 func (r *Repository) updateHelmConfig(helmConfig *model.HelmConfig) error {

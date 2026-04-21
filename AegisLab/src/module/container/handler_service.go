@@ -11,6 +11,7 @@ import (
 // HandlerService captures the container operations consumed by the HTTP handler.
 type HandlerService interface {
 	CreateContainer(context.Context, *CreateContainerReq, int) (*ContainerResp, error)
+	RegisterContainer(context.Context, *RegisterContainerReq, int) (*RegisterContainerResp, error)
 	DeleteContainer(context.Context, int) error
 	GetContainer(context.Context, int) (*ContainerDetailResp, error)
 	ListContainers(context.Context, *ListContainerReq) (*dto.ListResp[ContainerResp], error)
