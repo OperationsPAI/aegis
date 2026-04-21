@@ -4,7 +4,7 @@ project_name: pair_diagnosis
 submit:
   pedestal:
     name: otel-demo
-    version: "1.0.0"
+    version: "0.1.0"
   benchmark:
     name: clickhouse
     version: "1.0.0"

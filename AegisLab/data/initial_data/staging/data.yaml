@@ -65,14 +65,14 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 1.0.0
-        github_link: OperationsPAI/opentelemetry-demo
+      - name: 0.1.0
+        github_link: open-telemetry/opentelemetry-demo
         status: 1
         helm_config:
-          version: 0.38.1
-          chart_name: opentelemetry-demo
-          repo_name: open-telemetry
-          repo_url: https://operationspai.github.io/opentelemetry-demo
+          version: 0.1.0
+          chart_name: otel-demo-aegis
+          repo_name: opspai
+          repo_url: oci://registry-1.docker.io/opspai
           status: 1
   - type: 2
     name: ob
