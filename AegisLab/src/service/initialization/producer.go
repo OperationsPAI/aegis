@@ -15,7 +15,6 @@ import (
 	dataset "aegis/module/dataset"
 	label "aegis/module/label"
 	"aegis/service/common"
-	"aegis/utils"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -48,6 +47,16 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 		logrus.Info("Successfully seeded initial system data for producer")
 	} else {
 		logrus.Info("Initial system data for producer already seeded, skipping initialization")
+	}
+
+	// Issue #104: even after first-boot seeding, a new permission added to
+	// consts.SystemRolePermissions (or contributed via a module's RoleGrants
+	// registrar and merged by rbac.AggregatePermissions) must reach the
+	// permissions + role_permissions tables. Running ReconcileSystemPermissions
+	// unconditionally is the canonical place — it is idempotent and only
+	// writes rows that are missing.
+	if err := ReconcileSystemPermissions(db); err != nil {
+		return fmt.Errorf("failed to reconcile system permissions: %w", err)
 	}
 
 	// Best-effort one-shot migration for issue #75:
@@ -84,141 +93,18 @@ func initializeProducer(db *gorm.DB) error {
 		return fmt.Errorf("failed to load initial data from file: %w", err)
 	}
 
-	// System resources (following the order in system.go)
-	resources := []model.Resource{
-		{Name: consts.ResourceSystem, Type: consts.ResourceTypeSystem, Category: consts.ResourceCategorySystem},
-		{Name: consts.ResourceAudit, Type: consts.ResourceTypeTable, Category: consts.ResourceCategorySystem},
-		{Name: consts.ResourceConfiguration, Type: consts.ResourceTypeTable, Category: consts.ResourceCategorySystem},
-		{Name: consts.ResourceContainer, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryAsset},
-		{Name: consts.ResourceContainerVersion, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryAsset},
-		{Name: consts.ResourceDataset, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryAsset},
-		{Name: consts.ResourceDatasetVersion, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryAsset},
-		{Name: consts.ResourceProject, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryPlatform},
-		{Name: consts.ResourceTeam, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryPlatform},
-		{Name: consts.ResourceLabel, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryAsset},
-		{Name: consts.ResourceUser, Type: consts.ResourceTypeTable, Category: consts.ResourceCategorySystem},
-		{Name: consts.ResourceRole, Type: consts.ResourceTypeTable, Category: consts.ResourceCategorySystem},
-		{Name: consts.ResourcePermission, Type: consts.ResourceTypeTable, Category: consts.ResourceCategorySystem},
-		{Name: consts.ResourceTask, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
-		{Name: consts.ResourceTrace, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
-		{Name: consts.ResourceInjection, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
-		{Name: consts.ResourceExecution, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
-	}
-
-	for i := range resources {
-		resources[i].DisplayName = consts.GetResourceDisplayName(resources[i].Name)
-	}
-
-	systemRoles := make([]model.Role, 0)
-	for role, displayName := range consts.SystemRoleDisplayNames {
-		systemRoles = append(systemRoles, model.Role{
-			Name:        role.String(),
-			DisplayName: displayName,
-			IsSystem:    true,
-			Status:      consts.CommonEnabled,
-		})
-	}
+	resources := systemResources()
 
 	return withOptimizedDBSettings(db, func() error {
 		return db.Transaction(func(tx *gorm.DB) error {
 			txStore := newBootstrapStore(tx)
 
-			if err := txStore.upsertResources(resources); err != nil {
-				return fmt.Errorf("failed to create system resources: %w", err)
-			}
-
-			resourceNames := make([]consts.ResourceName, 0, len(resources))
-			for _, res := range resources {
-				resourceNames = append(resourceNames, res.Name)
-			}
-
-			allResourcesInDB, err := txStore.listResourcesByNames(resourceNames)
-			if err != nil {
-				return fmt.Errorf("failed to get system resources from database: %w", err)
-			}
-
-			if len(allResourcesInDB) != len(resources) {
-				return fmt.Errorf("mismatch in number of resources created and fetched")
-			}
-
-			resourceMap := make(map[consts.ResourceName]*model.Resource, len(allResourcesInDB))
-			resourceIDMap := make(map[consts.ResourceName]int, len(allResourcesInDB))
-			for _, res := range allResourcesInDB {
-				resourceIDMap[res.Name] = res.ID
-				resourceMap[res.Name] = &res
-			}
-
-			resourceMap[consts.ResourceContainerVersion].ParentID = utils.IntPtr(resourceIDMap[consts.ResourceContainer])
-			resourceMap[consts.ResourceDatasetVersion].ParentID = utils.IntPtr(resourceIDMap[consts.ResourceDataset])
-
-			toUpdatedResources := []model.Resource{
-				*resourceMap[consts.ResourceContainerVersion],
-				*resourceMap[consts.ResourceDatasetVersion],
-			}
-
-			if err := txStore.upsertResources(toUpdatedResources); err != nil {
-				return fmt.Errorf("failed to update resource parent IDs: %w", err)
-			}
-
-			// Extract unique permissions from SystemRolePermissions to avoid creating unused permissions
-			uniquePermissions := make(map[string]permMeta)
-
-			for _, permissionRules := range consts.SystemRolePermissions {
-				for _, rule := range permissionRules {
-					resourceID, ok := resourceIDMap[rule.Resource]
-					if !ok {
-						return fmt.Errorf("resource %s not found in resourceIDMap", rule.Resource)
-					}
-
-					key := rule.String()
-					if _, exists := uniquePermissions[key]; !exists {
-						uniquePermissions[key] = permMeta{
-							action:        rule.Action,
-							resourceID:    resourceID,
-							resourceName:  rule.Resource,
-							resourceScope: rule.Scope,
-						}
-					}
-				}
-			}
-
-			var permissionsToCreate []model.Permission
-			for permName, permData := range uniquePermissions {
-				resource, ok := resourceMap[permData.resourceName]
-				if !ok {
-					for _, res := range allResourcesInDB {
-						if res.ID == permData.resourceID {
-							resource = &res
-							break
-						}
-					}
-					if resource == nil {
-						return fmt.Errorf("resource with ID %d not found", permData.resourceID)
-					}
-				}
-
-				permission := model.Permission{
-					Name:        permName,
-					DisplayName: permData.String(),
-					Action:      permData.action,
-					Scope:       permData.resourceScope,
-					ResourceID:  permData.resourceID,
-					IsSystem:    true,
-					Status:      consts.CommonEnabled,
-				}
-				permissionsToCreate = append(permissionsToCreate, permission)
-			}
-
-			if err := txStore.upsertPermissions(permissionsToCreate); err != nil {
-				return fmt.Errorf("failed to create system permissions: %w", err)
-			}
-
-			if err := txStore.upsertRoles(systemRoles); err != nil {
-				return fmt.Errorf("failed to create system roles: %w", err)
-			}
-
-			if err := assignSystemRolePermissions(txStore); err != nil {
-				return fmt.Errorf("failed to assign system role permissions: %w", err)
+			// Reconcile the RBAC baseline (resources + permissions + roles +
+			// role_permissions) via the shared idempotent path so first-boot
+			// seeding and every-boot upserts write identical rows. See
+			// reconcileSystemPermissionsTx for the idempotency contract.
+			if err := reconcileSystemPermissionsTx(txStore, resources); err != nil {
+				return fmt.Errorf("failed to reconcile RBAC baseline: %w", err)
 			}
 
 			adminUser, err := initializeAdminUser(txStore, initialData)
@@ -249,61 +135,6 @@ func initializeProducer(db *gorm.DB) error {
 			return nil
 		})
 	})
-}
-
-func assignSystemRolePermissions(store *bootstrapStore) error {
-	for roleName, permissionRules := range consts.SystemRolePermissions {
-		role, err := store.getRoleByName(roleName.String())
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return fmt.Errorf("role %s not found", roleName)
-			}
-			return err
-		}
-
-		if roleName == consts.RoleSuperAdmin {
-			permissions, err := store.listSystemPermissions()
-			if err != nil {
-				return fmt.Errorf("failed to list system permissions: %w", err)
-			}
-
-			var rolePermissions []model.RolePermission
-			for _, perm := range permissions {
-				rolePermissions = append(rolePermissions, model.RolePermission{
-					RoleID:       role.ID,
-					PermissionID: perm.ID,
-				})
-			}
-
-			if err := store.createRolePermissions(rolePermissions); err != nil {
-				return fmt.Errorf("failed to assign all permissions to super admin role: %w", err)
-			}
-		} else {
-			var permissionStrs []string
-			for _, rule := range permissionRules {
-				permissionStrs = append(permissionStrs, rule.String())
-			}
-
-			permissions, err := store.listPermissionsByNames(permissionStrs)
-			if err != nil {
-				return fmt.Errorf("failed to list permissions for role %s: %w", roleName, err)
-			}
-
-			var rolePermissions []model.RolePermission
-			for _, perm := range permissions {
-				rolePermissions = append(rolePermissions, model.RolePermission{
-					RoleID:       role.ID,
-					PermissionID: perm.ID,
-				})
-			}
-
-			if err := store.createRolePermissions(rolePermissions); err != nil {
-				return fmt.Errorf("failed to assign permissions to role %s: %w", roleName, err)
-			}
-		}
-	}
-
-	return nil
 }
 
 func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User, error) {
