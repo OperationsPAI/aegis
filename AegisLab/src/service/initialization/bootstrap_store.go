@@ -114,6 +114,14 @@ func (s *bootstrapStore) listPermissionsByNames(names []string) ([]model.Permiss
 	return permissions, nil
 }
 
+func (s *bootstrapStore) listRolePermissionsByRole(roleID int) ([]model.RolePermission, error) {
+	var links []model.RolePermission
+	if err := s.db.Where("role_id = ?", roleID).Find(&links).Error; err != nil {
+		return nil, fmt.Errorf("failed to list role_permissions for role %d: %w", roleID, err)
+	}
+	return links, nil
+}
+
 func (s *bootstrapStore) createRolePermissions(rolePermissions []model.RolePermission) error {
 	if len(rolePermissions) == 0 {
 		return nil
