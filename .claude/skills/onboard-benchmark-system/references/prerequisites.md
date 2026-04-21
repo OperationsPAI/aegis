@@ -64,5 +64,10 @@ one of these four lines.
 - `aegisctl auth login` successful against a `pair_diagnosis` project or
   similar.
 - The target namespace must already be registered as a pedestal /
-  benchmark system on the backend. If it isn't, `aegisctl chaos`
-  returns HTTP 500 with `unknown namespace`. Fall back to path 2 or 3.
+  benchmark system on the backend. If it isn't (`aegisctl` submit returns
+  HTTP 500 with `unknown namespace` or `system ... does not match any
+  registered namespace pattern`), that's a control-plane task: run
+  `aegisctl system register --from-seed <seed.yaml>` followed by
+  `aegisctl pedestal chart push` / `install`. Full methodology lives in
+  the sibling skill `register-aegis-system` (`references/etcd.md`,
+  `references/db.md`, `references/chart.md`). Don't re-derive it here.

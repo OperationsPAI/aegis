@@ -50,16 +50,36 @@ panic: environment variable "COLLECTOR_SERVICE_ADDR" not set
 ```
 Fix: `kubectl set env deploy/frontend COLLECTOR_SERVICE_ADDR=... ENABLE_TRACING=1`.
 
-## 4. `aegisctl chaos …` returns HTTP 500
+## 4. `aegisctl` submit / `regression run` returns HTTP 500
 
 ```
 Warning: batch[0][0]: unknown namespace "demo", using 0
 Error: API error 500: An unexpected error occurred
 ```
-The backend's pedestal registry doesn't know your namespace. Either:
-(a) register the pedestal through the backend's project API, or
-(b) fall back to `chaos-experiment` CLI or raw CRD apply. For a
-one-off smoke test, always prefer (b).
+or `regression run` preflight prints `missing chart` for your namespace.
+
+The backend's pedestal registry doesn't know your namespace. This is a
+control-plane problem — don't patch it from the workload side. Two
+options, in order of preference:
+
+(a) **Register the system properly** via the sibling skill
+    `register-aegis-system`. Minimum sequence:
+
+```bash
+aegisctl system register --from-seed <seed.yaml>    # etcd + DB in one shot
+aegisctl pedestal chart push --chart <chart>.tgz    # into producer pod
+aegisctl pedestal chart install <system-code> --namespace <ns>
+# or: aegisctl regression run <case> --auto-install  (does push+install from preflight)
+```
+
+(b) Fall back to `chaos-experiment` CLI or raw CRD apply. Only pick this
+for a throw-away smoke test where you don't need the datapack or the
+guided flow — real onboarding should go through (a).
+
+Previous sessions used to recommend (b) as the default because
+registration was a multi-hour etcd+SQL+`kubectl cp` dance. That's no
+longer true; `system register --from-seed` + `pedestal chart install`
+replaces the whole ritual.
 
 ## Escalation ladder
 

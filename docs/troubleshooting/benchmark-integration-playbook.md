@@ -32,50 +32,56 @@ Layer 1 is optional: systems registered via etcd (`sn`, `mm`, `ss`, `hs`,
 
 ## 2. Step-by-step integration template
 
-This is the common path all 5 benchmarks followed. Use it as a checklist.
+Once chart + data.yaml are prepared, runtime wiring on a live cluster is
+3 `aegisctl` commands. Lower-level mechanics are under "What each step
+does" for debugging.
 
-1. **Pick the short code** (2–5 chars). Must not collide with existing
-   compiled registry (e.g. `ts`=TrainTicket, so TeaStore uses `tea`).
-2. **Fork / locate the upstream chart.** Put a wrapper under
-   `benchmark-charts/charts/<code>-aegis/` that embeds the upstream chart
-   as a subchart and layers aegis-specific patches on top.
-3. **Patch the chart for aegis assumptions:**
-   - `app` label propagation (aegis's guided resolver selects pods by
-     `app_label_key`). Each pod must carry the label value the regression
-     YAML will reference.
-   - Entry-service and mid-tier services all need deterministic labels.
-4. **Build or reuse images.** Several benchmarks ship single-binary
-   images (DSB hotel-reservation is one image with all Go services in
-   `/go/bin`). Others need per-service builds (sockshop Coherence/Helidon,
-   built via Jib).
-5. **Wire up telemetry.** If the stack uses OpenTracing-era Jaeger
-   clients (DSB family + TeaStore), drop in the Jaeger→OTLP bridge
-   (section 4). If it uses OTel SDK natively, just point its exporter at
-   `otel-collector.otel.svc.cluster.local:4317`.
-6. **Add a loadgen** (`templates/loadgen.yaml` in the wrapper chart).
-   `dsb-wrk2` for DSB family, locust for TeaStore, whatever upstream
-   ships for others. Always pick a mid-tier fault target — never the
-   entry service.
-7. **Package + upload chart.**
-   ```
-   helm package benchmark-charts/charts/<code>-aegis
-   kubectl cp <code>-aegis-<ver>.tgz aegislab-backend-producer-0:/var/lib/rcabench/dataset/charts/
-   ```
-   Also optionally push OCI (`helm push ... oci://registry-1.docker.io/opspai/...`).
-8. **Seed data.yaml** entries under
-   `AegisLab/data/initial_data/{prod,staging}/data.yaml` — pedestal
-   entry + 7 `injection.system.<code>.*` dynamic_configs.
-9. **Manually insert DB + etcd rows on the running cluster** (the
-   #91.5 auto-seed gap — see gotcha below). Order: DB first, etcd second,
-   else the `config_listener` rejects with `record not found`.
-10. **Pre-install the chart once** before the first regression
-    (`helm install <code>0 ... -n <code>0`). Release name must equal the
-    namespace — aegis's `installPedestal` uses `releaseName = namespace`
-    (`src/service/consumer/restart_pedestal.go:178`).
-11. **Add regression case** `AegisLab/regression/<code>-guided.yaml`.
-12. **Run** `aegisctl regression submit …` and trace through
-    RestartPedestal → FaultInjection → BuildDatapack → RunAlgorithm →
-    CollectResult.
+**Prep (outside aegisctl):** pick short code (no collision with compiled
+registry — `ts`=TrainTicket, TeaStore uses `tea`); author wrapper chart
+under `benchmark-charts/charts/<code>-aegis/` with `app_label_key`
+propagation, telemetry (Jaeger bridge or OTel SDK →
+`otel-collector.otel.svc.cluster.local:4317`), and a loadgen; add
+pedestal + 7 `injection.system.<code>.*` entries to
+`AegisLab/data/initial_data/{prod,staging}/data.yaml`;
+`helm package` → `<code>-aegis-<ver>.tgz`; add regression case
+`AegisLab/regression/<code>-guided.yaml`.
+
+**Runtime wiring (3 commands):**
+
+```bash
+# 1. Seed etcd + dynamic_configs atomically from data.yaml.
+aegisctl system register --from-seed AegisLab/data/initial_data/prod/data.yaml --name <code>
+
+# 2. Publish the chart (skip if published remotely; step 3 will fetch).
+aegisctl pedestal chart push --name <code> --tgz ./<code>-aegis-<ver>.tgz
+
+# 3. Preflight + submit. --auto-install runs chart install if ns is empty.
+aegisctl regression run <code>-guided --auto-install
+```
+
+### What each step does
+
+Useful when something goes sideways and you reach for `etcdctl`, `mysql`,
+or `kubectl cp` directly.
+
+1. **`system register --from-seed`** writes 7
+   `/rcabench/config/global/injection.system.<code>.*` etcd keys + 7
+   `dynamic_configs` rows atomically (DB before etcd, so
+   `config_listener` never sees a dangling key) and upserts `containers`
+   / `container_versions` / `helm_configs` so `system_type=<code>`
+   passes submit validation. Backend `POST /api/v2/systems` round-trips
+   `is_builtin`.
+2. **`pedestal chart push --tgz`** copies the tgz to
+   `/var/lib/rcabench/dataset/charts/` inside
+   `aegislab-backend-producer-0`. Alternative: publish remotely and skip
+   push — `chart install` resolves source via
+   `GET /api/v2/systems/by-name/:name/chart` and accepts
+   `--tgz <https://|oci://|file://>` URLs or `--repo/--chart` Helm repo
+   form.
+3. **`regression run --auto-install`** preflights pedestal pod existence;
+   if empty, invokes `pedestal chart install <code>` before submitting.
+   Release name = namespace
+   (`src/service/consumer/restart_pedestal.go:178`).
 
 ---
 
@@ -165,45 +171,47 @@ future RPC-only-instrumented stack.
 
 ---
 
-## 5. Recurring gotchas (deduped across all 5 integrations)
+## 5. Recurring gotchas
 
-1. **Editing `data.yaml` does not populate `dynamic_configs` on a running
-   cluster.** `initializeDynamicConfigs` (consumer.go:118) only runs on
-   fresh seed. You must manually INSERT the 7 rows + `etcdctl put` the
-   7 keys. Tracked as #91.5.
-2. **Order matters: DB rows first, etcd put second.** If you put etcd
-   before the DB row exists, `config_listener` rejects with
-   `record not found` and the runtime registry never picks up the system.
-3. **etcd keys live under `/rcabench/config/global/` prefix.** Writing at
-   root silently drops to "Removed runtime-only system registration".
-4. **Pedestal container `name` must equal the short system code.** Not
-   the display name. `UPDATE containers SET name='hs' WHERE name='hotelreservation'`.
-   Submit validator checks `container_name == system_type`.
-5. **Pre-install release name must equal the namespace.** aegis's
-   `installPedestal` uses `releaseName = namespace`. Mismatched release
-   names produce different pod-app-label suffixes.
-6. **First-submit guided resolution runs before RestartPedestal.** The
-   resolver lists pods in the target namespace at submit time, so an
-   empty ns fails with misleading `system X does not match any registered
-   namespace pattern` (actual cause: zero-app-set). Workaround: manual
-   `helm install` once. Tracked as #91.
-7. **Chart edits require `helm package` + `kubectl cp` into the backend
-   producer pod before next rerun**, or `RestartPedestal` silently rolls
-   back to the stored tgz. No automated upload yet.
-8. **Traces land in `otel.otel_traces`, not `default.otel_traces`.**
-9. **Never pick the entry service as fault target.** Killing the entry
-   stops all traffic, emptying the abnormal window. Regression should
-   warn or reject but does not today.
-10. **Backend image may predate #17 ca-certificates fix.** Remote OCI
-    helm install fails with `x509: certificate signed by unknown
-    authority`. Fallback: `local_path` tgz in `helm_configs`.
-11. **Cluster prerequisites are manual.** e.g. `coherence-operator` for
-    sockshop, `otel-kube-stack` for trace ingestion. No per-system
-    `prerequisites:` reconciler yet.
-12. **Datapack metrics validation often fails** on stacks that don't
-    emit OTel sum/histogram metrics. Set
-    `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the bench container's
-    `container_versions.env_vars`.
+### Now handled automatically
+
+- **data.yaml ↔ live cluster drift / DB-before-etcd ordering / etcd
+  prefix / `containers.name`=`<code>`** — all covered by
+  `system register --from-seed` (atomic, correct prefix, correct order).
+  Supersedes #91.5.
+- **First-submit empty-namespace 500** — `regression run
+  --auto-install` preflights pods and calls `chart install` if needed
+  (#91 mitigation).
+- **`cd AegisLab/` requirement** (fix 12) — `aegisctl regression run`
+  resolves repo-relative paths itself.
+- **Chart upload ritual** — `pedestal chart push` replaces the manual
+  `kubectl cp … aegislab-backend-producer-0:/var/lib/rcabench/dataset/charts/`.
+  Or publish remotely and skip push entirely.
+
+### Still applies
+
+1. **Never pick the entry service as fault target.** Killing the entry
+   empties the abnormal window. Regression does not warn today.
+2. **Pre-install timing vs backend restart.** If the chart is pushed via
+   `pedestal chart push` after the backend has cached the stored tgz,
+   `RestartPedestal` may still roll back to the old bytes until the
+   producer pod rereads. Prefer URL-based install for churn.
+3. **Jaeger→OTLP bridge still required** for DSB-family and TeaStore
+   (any OpenTracing-era `jaeger-client-*`). See section 4.1. Traces land
+   in `otel.otel_traces`, not `default.otel_traces`.
+4. **Release name = namespace.** `installPedestal` uses
+   `releaseName = namespace`; honored by `chart install` but still a
+   trap if you run raw `helm install` during debugging.
+5. **Backend image may predate #17 ca-certificates fix** — remote OCI
+   helm install fails with `x509: certificate signed by unknown
+   authority`. Fallback: local tgz via `chart push`.
+6. **Cluster prerequisites are manual** — `coherence-operator` for
+   sockshop, `otel-kube-stack` for trace ingestion. No per-system
+   `prerequisites:` reconciler yet.
+7. **Datapack metrics validation often fails** on stacks that don't
+   emit OTel sum/histogram metrics. Set
+   `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the bench container's
+   `container_versions.env_vars`.
 
 ---
 

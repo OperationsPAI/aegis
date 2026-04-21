@@ -11,14 +11,15 @@ The control plane state lives in five separate places, each one silently
 failing closed if it's missing. The symptoms look unrelated but almost
 always come back to one of these five layers being under-populated.
 
-Use this skill to build a mental model of what to wire up and what goes
-wrong if you miss a layer. This document is methodology only. Concrete
-commands, schemas, and reconciliation recipes live in `references/`:
+`aegisctl` now covers layers 2 and 4 as one-liners; layers 1, 3, 5 still
+need per-system work. Use this skill to map symptoms to layers and pick
+the right aegisctl command (or the raw-command fallback when aegisctl
+is unavailable). References hold concrete schemas + fallback recipes:
 
 - `references/registry.md` — Layer 1 compiled systemconfig registry
-- `references/etcd.md`     — Layer 2 etcd keys, dynamic_configs, value_type
+- `references/etcd.md`     — Layer 2 etcd + dynamic_configs (now `aegisctl system`)
 - `references/db.md`       — Layer 3 containers / helm_configs schemas
-- `references/chart.md`    — Layer 4 wrapper chart, values, /tmp gotcha
+- `references/chart.md`    — Layer 4 wrapper chart (now `aegisctl pedestal chart`)
 - `references/otel.md`     — Layer 5 collector + jaeger→OTLP bridge
 
 ## The five layers and what fails if you skip each
@@ -56,10 +57,20 @@ registration: <name>`. Submit fails with
 `system "<ns>" does not match any registered namespace pattern`. This
 is the single most common first-time failure.
 
-Details (seven-key layout, dynamic_configs rows, value_type enum,
-three-vs-seven-key trap, `/rcabench/config/<scope>/` prefix, DB-row-
-before-etcd-put ordering, data.yaml → etcd one-way gap, reconcile
-`etcdctl` commands): `references/etcd.md`.
+**What to run:**
+
+```bash
+aegisctl system register --from-seed AegisLab/data/initial_data \
+                         --env prod --name <code>
+aegisctl system list          # confirm enabled + is_builtin
+```
+
+One call writes all seven etcd keys + seven `dynamic_configs` rows
+atomically via POST /api/v2/systems, replacing the old "INSERT then
+etcdctl put" dance. `aegisctl system unregister --name <code>` is the
+symmetric cleanup. Manual `etcdctl`/SQL fallback and all of the
+ordering/scope-prefix traps it guarded against live in
+`references/etcd.md`.
 
 ### Layer 3 — Database fixtures (`containers`, `container_versions`, `helm_configs`)
 
@@ -74,13 +85,16 @@ fails stage by stage with different errors — `RestartPedestal` can't
 find the chart, `BuildDatapack`'s K8s job can't find an image, empty
 `command` fields yield `runc exec: "": executable file not found`.
 
+`aegisctl system register` does **not** touch this layer; it's still
+SQL-seeded (or `aegisctl pedestal helm set` for the single helm_configs
+row). The pedestal-name constraint below is *caller* responsibility.
+
 **Critical constraint — pedestal `containers.name` = short system code
 from Layer 1.** The submit validator checks `pedestal.name ==
 system_type`, where `system_type` is the short Go constant (`ts`, `ob`,
 `hs`, `sn`, `media`, `tea`, …), *not* the display-facing name. Seeding
 a pedestal row as `hotelreservation` while the registry uses `hs`
 produces `mismatched system type hs for pedestal hotelreservation`.
-This is the constraint the hotelreservation integration hit.
 
 Details (schemas, `type=1` vs `type=2` name collision, seed SQL):
 `references/db.md`.
@@ -94,20 +108,31 @@ at `/var/lib/rcabench/dataset/helm-values/`.
 **Skip it and:** every backend `rollout restart` wipes `/tmp`, so a
 pipeline assuming the local tgz exists fails with
 `failed to locate chart /tmp/<chart>.tgz: path ... not found` on the
-next inject. Upstream values that bake in dev-invalid DNS (e.g.
-`opentelemetry-kube-stack-deployment-collector.monitoring`) won't
+next inject. Upstream values that bake in dev-invalid DNS won't
 survive a `helm upgrade`; `kubectl set env` patches are not durable.
 Single-image Go stacks crash-loop with `exec: "./frontend": no such
 file or directory` when `WorkingDir` ≠ binaries dir.
 
-Two mitigations coexist: (a) `restart_pedestal.go` `os.Stat`s
-`LocalPath` and falls through to remote install when absent, and (b)
-etcd key `helm.repo.<repo_name>.url` supplies a URL when
-`helm_configs.repo_url` is empty.
+**What to run:**
 
-Details (wrapper chart layout, values conventions, `kubectl cp`
-commands, WorkingDir/PATH trap, pre-install release-name rule, operator
-prerequisites): `references/chart.md`.
+```bash
+# re-seed the tgz into the producer pod after a restart wiped /tmp
+aegisctl pedestal chart push --name <code> --tgz ./<chart>.tgz
+
+# pre-install a chart once (works around first-submit namespace race)
+aegisctl pedestal chart install <code> --tgz ./<chart>.tgz --wait
+aegisctl pedestal chart install <code> --repo <url> --chart <name> --version v
+# with no explicit source, falls back to GET /api/v2/systems/by-name/:name/chart
+aegisctl pedestal chart install <code>
+```
+
+`install` auto-derives the namespace from `ns_pattern` and uses it as
+the helm release name (matches what aegis produces internally — see
+`references/chart.md` for why that matters). `regression run
+--auto-install` does the same thing inline.
+
+Durable values-file edits, WorkingDir/PATH traps, and operator
+prerequisites aegisctl can't fix are still in `references/chart.md`.
 
 ### Layer 5 — Observability pipeline
 
@@ -124,75 +149,73 @@ ClickHouse. Writing to the `default` database instead of `otel` also
 silently yields empty parquets.
 
 Four of six current benchmarks use the **Jaeger→OTLP bridge** pattern
-(DSB Go/C++ and Java stacks all ship Jaeger clients, not OTLP). The
-bridge is a generic collector with a Jaeger receiver alongside OTLP;
-no benchmark code changes needed.
+(DSB Go/C++ and Java stacks all ship Jaeger clients, not OTLP).
+aegisctl does not manage collector configs — this layer is still YAML.
 
-Details (three-pipeline collector config, `service.name` derivation for
-non-SDK apps, `service.namespace` backfill transform, filelog gotchas,
-jaeger→OTLP bridge, operator-managed pod labels, optional-parquets
-env): `references/otel.md`.
+Details: `references/otel.md`.
 
 ## How to think about a new-system request
 
-When the user says "I want to add X", walk the five layers mentally
-before touching anything:
-
 1. Is the Go code registered? (Layer 1 — one-time compile-in.)
-2. Are all seven etcd keys + their `dynamic_configs` rows present and
-   does `status` read 1 after restart? (Layer 2 — silent fail class 1.)
-3. Are the three DB fixture rows present with matching types, the
-   pedestal name equal to the short system code, and non-empty
-   commands? (Layer 3 — silent fail class 2.)
-4. Is the chart findable — local tgz, configured repo URL, or etcd
-   override? Does the values file avoid baking in dev-env DNS?
-   (Layer 4 — restart fragility.)
-5. Does the OTel collector tag namespace on all three signal types and
-   export all three to ClickHouse? (Layer 5 — silent fail class 3.)
+2. Run `aegisctl system register --from-seed ... --name <code>`; verify
+   via `aegisctl system list` that status=1 and is_builtin is right.
+   (Layer 2.)
+3. Are `containers` + `container_versions` + `helm_configs` rows
+   present, pedestal name = short code, commands non-empty? (Layer 3 —
+   still SQL.)
+4. Chart reachable — `aegisctl pedestal chart push` if using local tgz,
+   or ensure `helm_configs.repo_url` / etcd override is set. Values
+   file avoids dev-env DNS. (Layer 4.)
+5. Collector tags namespace on all three signals and exports to
+   ClickHouse `otel` DB. (Layer 5.)
 
-If a new benchmark is failing, the log message usually points at the
-layer; the fix is almost never "more code", it's "fill in the row in
-layer N that the seed forgot".
+Failure logs almost always point at the layer; the fix is rarely "more
+code", it's "fill in what the seed forgot" — and for layers 2/4 that's
+an aegisctl command, not a manual procedure.
 
 ## Decision tree — which layer broke?
 
-Match the symptom to the layer, then open the corresponding reference:
-
 **"System doesn't show up in guided flow"**
-→ Layer 1 (unregistered) or Layer 2 (all-disabled because status keys
-missing). Check startup log's enabled count first.
-See `references/registry.md`, `references/etcd.md`.
+→ Layer 1 (unregistered) or Layer 2 (all-disabled). Run `aegisctl
+system list`; if the system is absent or `enabled=false`, run
+`aegisctl system register ...`. If it's not in the seed at all, it's
+Layer 1. See `references/registry.md`, `references/etcd.md`.
 
 **"Submit returns 500 with `system does not match`"**
-→ Layer 2. Count enabled systems in startup logs before debugging
-anything else. See `references/etcd.md`.
+→ Layer 2. `aegisctl system list` first; a missing entry or `status=0`
+is the cause. `aegisctl system register --name <code>` fixes it. See
+`references/etcd.md`.
 
 **"data.yaml seed is correct, backend still says `loaded N systems
 (0 enabled)` on a fresh cluster"**
-→ Layer 2 etcd-publishing gap: `initializeDynamicConfigs` seeds DB
-metadata rows only; first-boot needs a manual etcdctl pass. See
-`references/etcd.md` "data.yaml to etcd is one-way and incomplete".
+→ Layer 2 etcd-publishing gap — `initializeDynamicConfigs` writes DB
+rows but not etcd. `aegisctl system register --from-seed ... --name
+<code>` publishes both in one shot. (Historic workaround was a manual
+etcdctl pass; see `references/etcd.md` fallback.)
 
 **"Submit returns `mismatched system type X for pedestal Y`"**
 → Layer 3 pedestal-name constraint. `containers.name` for the pedestal
-must equal the short `SystemType` code. See `references/db.md`.
+must equal the short `SystemType` code. aegisctl does not enforce this
+— it's a pure DB-seed concern. See `references/db.md`.
 
 **"Submit succeeds, pipeline fails at RestartPedestal"**
-→ Layer 3 (`helm_configs` missing/wrong) or Layer 4 (chart gone /
-values broken). See `references/db.md` and `references/chart.md`.
+→ Layer 3 (`helm_configs` missing/wrong — use `aegisctl pedestal helm
+get/set`) or Layer 4 (chart gone — `aegisctl pedestal chart push` or
+`install`). See `references/db.md` and `references/chart.md`.
 
-**"Submit returns `available apps: <only a few of the services>`"**
-→ Layer 5 operator-managed workloads don't propagate CR metadata labels
-to generated pods. Patch the CR's pod-facing labels field; don't change
-`app_label_key`. See `references/otel.md` "Operator-managed pod labels".
+**"Submit returns `available apps: <only a few services>`"**
+→ Layer 5 operator-managed workloads don't propagate CR metadata
+labels. Patch the CR's pod-facing labels field; don't change
+`app_label_key`. See `references/otel.md`.
 
-**"Pipeline fully completes but `datapack.no_anomaly` or empty parquets"**
-→ Layer 5 (collector attrs missing) or the chaos window is shorter
-than the algorithm's required sample window. See `references/otel.md`.
+**"Pipeline fully completes but `datapack.no_anomaly` / empty parquets"**
+→ Layer 5 (collector attrs missing) or chaos window shorter than the
+algorithm's required sample window. See `references/otel.md`.
 
 **"It worked yesterday, now fails after backend restart"**
-→ Layer 4 (`/tmp` wiped) or Layer 2 (new keys added to code that
-aren't yet in etcd). See `references/chart.md`, `references/etcd.md`.
+→ Layer 4 (`/tmp` wiped — re-run `aegisctl pedestal chart push`) or
+Layer 2 (new keys in code not yet in etcd — `aegisctl system register
+--force`). See `references/chart.md`, `references/etcd.md`.
 
 **"RestartPedestal hangs forever / helm install in `pending-install`"**
 → A rendered resource can never become Ready. `installAction.Wait=true`
@@ -201,61 +224,59 @@ server) or a `LoadBalancer` Service (no LB provider in kind) blocks the
 whole install. Post-install hooks do NOT fire under deadlock — patch
 the chart, don't use hook Jobs. See `references/chart.md`.
 
-**"Pipeline runs green but `abnormal_logs.parquet` has no data rows"**
-→ The system emits only traces over OTLP, AND the cluster
-`otel-collector` has no `filelog`/`prometheus` receivers. Universal fix
-is cluster-side: deploy the kube-stack to harvest logs/metrics
-passively regardless of system instrumentation. Config lives at
+**"Pipeline runs green but `abnormal_logs.parquet` empty"**
+→ System emits only traces over OTLP, AND cluster `otel-collector` has
+no `filelog`/`prometheus` receivers. Deploy the kube-stack; config at
 `AegisLab/manifests/otel-collector/otel-kube-stack.kind.yaml`.
 
 **"abnormal_logs OK but abnormal_traces empty"**
 → Apps point OTLP at the legacy `otel-collector` Service, but the
 kube-stack creates new collector pods with different labels. Patch the
-Service selector — see `references/otel.md` "Legacy Service selector fix".
+Service selector — see `references/otel.md`.
 
 **"abnormal_trace_id_ts empty but otel_traces has rows"**
 → Traces land with `k8s.namespace.name` but `service.namespace` blank.
-BuildDatapack filters on `service.namespace` only. Add the transform
-in `references/otel.md` "service.namespace backfill".
+BuildDatapack filters on `service.namespace` only. Transform in
+`references/otel.md`.
 
 **"abnormal_metrics_histogram empty — ob/sockshop"**
 → Those stacks don't emit histograms (OpenCensus / Prometheus-only).
 Set `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the benchmark container. See
-`references/otel.md` "Per-system optional parquets".
+`references/otel.md`.
 
 **"ServiceName blank in otel_logs for an app without OTel SDK"**
 → k8sattributes `service.name` extraction needs
 `app.kubernetes.io/name`. Add label-mapping rules covering `app`,
-`name`, etc. See `references/otel.md` "service.name derivation".
+`name`, etc. See `references/otel.md`.
 
 **"Submit 500s with `namespaces "<ns>" not found`"**
 → First-use chicken-and-egg: submit's groundtruth resolution runs
-before RestartPedestal creates the namespace. Workaround: `helm
-install` the chart manually once (release name = namespace — see
-`references/chart.md` "Pre-install release name"). Tracked as aegisctl
-gap on issue #91.
+before RestartPedestal creates the namespace. Fix: `aegisctl pedestal
+chart install <code>` once to pre-create the namespace with the
+release-name convention. (Issue #91 — now closed by the install
+subcommand.)
 
-## What's worth pushing upstream as `aegisctl` commands
+## What aegisctl does and doesn't cover
 
-Every one of the five layers currently requires SQL + etcdctl +
-`kubectl cp` gymnastics. A single `aegisctl system register --name foo
---ns-pattern ... --app-label-key ...` that writes all seven etcd keys +
-all three DB fixture rows atomically would remove the biggest failure
-mode. `aegisctl cluster preflight` that checks all five layers is the
-companion tool. Until those exist, walking the five layers by hand is
-the only reliable way.
+Covered as one-liners:
+- Layer 2: `aegisctl system register / list / unregister`.
+- Layer 4 distribution: `aegisctl pedestal chart push / install`,
+  `aegisctl regression run --auto-install`.
+
+Still manual:
+- Layer 1 (Go source change).
+- Layer 3 DB seed (containers + container_versions rows — only
+  `helm_configs` has an aegisctl verb).
+- Layer 5 collector YAML.
+- Pedestal name = short-code invariant: aegisctl does not cross-check.
 
 ## Related
 
-- `docs/troubleshooting/e2e-cluster-bootstrap.md` — exact commands for
-  each layer on the current kind cluster.
+- `docs/troubleshooting/e2e-cluster-bootstrap.md` — per-layer commands.
 - `docs/troubleshooting/e2e-repair-record-2026-04-21.md` — session
   where layers 2 and 4 were root-caused and partially code-fixed.
-- `.claude/skills/onboard-benchmark-system/` — complementary skill for
-  the workload-side (deploy pods, instrument OTLP) half of onboarding.
-- `memory/aegislab_e2e_pitfalls.md` — terse list of pitfalls hit in
-  previous sessions.
-- Issue #91 — `aegisctl` control-plane tooling (atomic `system
-  register`, `cluster preflight`, `trace cancel`).
+- `.claude/skills/onboard-benchmark-system/` — workload-side half.
+- `memory/aegislab_e2e_pitfalls.md` — terse pitfalls list.
+- Issue #91 — aegisctl control-plane tooling (mostly landed).
 - Issue #92 — `benchmark-charts` umbrella + wrapper-chart design.
 - Issues #93–#98 — per-system wrapper chart sub-issues.

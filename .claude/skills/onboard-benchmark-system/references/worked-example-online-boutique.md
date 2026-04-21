@@ -57,16 +57,36 @@ usable default user in CH 24.x.
 
 ## Pick injection path (phase 4)
 
-- Tried `aegisctl chaos network delay --namespace demo ...` →
-  HTTP 500, `unknown namespace "demo"`. The backend's pedestal registry
-  only knows pre-declared systems.
-- Dry-run still produced a sensible `FaultSpec` yaml, but applying was
-  a dead end.
-- Fell back to raw NetworkChaos CRD (path 3). Wrote
-  `networkchaos-currency.yaml` — 20 lines.
+Historical note: the original session fell back to raw NetworkChaos
+because registering a pedestal used to be a multi-hour etcd+SQL+
+`kubectl cp` ritual. That's no longer the case. With current aegisctl:
 
-Decision: register `demo` as a pedestal is a multi-hour task; skip it
-and file a follow-up in `known-gaps.md`.
+```bash
+# register demo as a system (writes etcd keys + DB rows atomically)
+aegisctl system register --from-seed configs/systems/onlineboutique.yaml
+
+# stage the pedestal chart into the producer pod and install it
+aegisctl pedestal chart push   --chart dist/onlineboutique-<ver>.tgz
+aegisctl pedestal chart install ob --namespace demo
+
+# now the guided flow accepts the namespace
+aegisctl inject guided   # or: aegisctl regression run <case> --auto-install
+```
+
+See the sibling skill `register-aegis-system` for the seed-yaml schema
+and per-layer troubleshooting (etcd keys, DB fixture constraints, chart
+repo URL overrides). Don't re-derive those here.
+
+If you only want a one-shot smoke test and have no interest in the
+datapack, path 3 (raw NetworkChaos CRD, ~20 lines of YAML) is still
+perfectly fine — that's what the original session did:
+
+```yaml
+# networkchaos-currency.yaml — minimal path-3 escape hatch
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+# ... delay 200ms to=currencyservice, duration 120s
+```
 
 ## Run + measure (phases 5–6)
 

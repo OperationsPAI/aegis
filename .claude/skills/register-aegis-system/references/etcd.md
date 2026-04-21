@@ -1,18 +1,47 @@
 # Layer 2 reference: etcd runtime config
 
-Concrete commands and traps for `injection.system.<name>.*` keys. The
-methodology for *why* etcd is authoritative lives in `../SKILL.md` layer 2.
+Everything needed to get `injection.system.<name>.*` right. Methodology
+for *why* etcd is authoritative lives in `../SKILL.md` layer 2.
+
+## Happy path: `aegisctl system register`
+
+One command writes all seven etcd keys + seven `dynamic_configs` rows
+atomically (via POST /api/v2/systems), in the correct scope, with
+correct value_types:
+
+```bash
+# from a full data.yaml file
+aegisctl system register --from-seed AegisLab/data/initial_data/prod/data.yaml \
+                         --name <code>
+
+# or point at the initial_data root and resolve via --env
+aegisctl system register --from-seed AegisLab/data/initial_data \
+                         --env prod --name <code>
+
+# replace an existing registration
+aegisctl system register --from-seed ... --name <code> --force
+```
+
+Inspect / remove:
+
+```bash
+aegisctl system list
+aegisctl system unregister --name <code>            # prompts; add --yes to skip
+```
+
+`list` prints enabled/disabled + `is_builtin` as round-tripped from the
+backend (POST /api/v2/systems now preserves `is_builtin`). If a system
+is absent from `list` or shows `enabled=false`, that is the reason the
+backend logs `loaded N systems (0 enabled)`. Re-run `register`.
 
 ## Contents
 
+- [Happy path: `aegisctl system register`](#happy-path-aegisctl-system-register)
 - [Seven-key layout](#seven-key-layout)
 - [dynamic_configs row requirements](#dynamic_configs-row-requirements)
 - [value_type enum](#value_type-enum)
-- [Etcd key path (scope prefix) trap](#etcd-key-path-scope-prefix-trap)
-- [Three-vs-seven-key trap](#three-vs-seven-key-trap)
-- [Ordering: DB row before etcd put](#ordering-db-row-before-etcd-put)
-- [data.yaml to etcd is one-way and incomplete](#datayaml-to-etcd-is-one-way-and-incomplete)
-- [Reconcile commands](#reconcile-commands)
+- [What still goes wrong even with aegisctl](#what-still-goes-wrong-even-with-aegisctl)
+- [Fallback: raw etcdctl + SQL (aegisctl unavailable)](#fallback-raw-etcdctl--sql-aegisctl-unavailable)
 
 ## Seven-key layout
 
@@ -33,10 +62,10 @@ On boot, `InitializeSystems` iterates this config, unregisters every
 system not in the enabled set, then re-registers each enabled one. The
 compiled-in registry (layer 1) is a *template*, overridden by etcd.
 
-If `Status` reads as zero or any of the above keys are absent, `IsEnabled()`
+If `Status` reads zero or any of the above keys are absent, `IsEnabled()`
 returns false, `InitializeSystems` removes the runtime registration
-(`Removed runtime-only system registration: <name>`), and you see
-`loaded N systems (0 enabled)` in logs. Submit then fails with
+(`Removed runtime-only system registration: <name>`), and the backend
+logs `loaded N systems (0 enabled)`. Submit then fails with
 `system "<ns>" does not match any registered namespace pattern`.
 
 ## dynamic_configs row requirements
@@ -49,10 +78,7 @@ Each key needs both:
    matching the Go field's kind.
 2. The etcd value at the correct scoped path.
 
-`AegisLab/data/initial_data/prod/data.yaml` and `staging/data.yaml` ship
-all seven keys. Older seeds (and stale `aegislab-backend-rcabench-config`
-ConfigMaps) often ship only three (`count` + `ns_pattern` +
-`extract_pattern`). Check both before blaming code.
+`aegisctl system register` writes both sides in one transaction.
 
 ## value_type enum
 
@@ -70,26 +96,36 @@ For the seven injection.system.* keys:
 - `is_builtin` → bool (1)
 - `status` → int (2)
 
-## Etcd key path (scope prefix) trap
+## What still goes wrong even with aegisctl
+
+- **Stale backend:** if a prior boot cached an old view, restart the
+  backend after `register`. The listener re-reads on reconnect, but a
+  fresh cluster's first "register" happens *after* backend start and
+  some handlers lazy-load.
+- **Wrong env:** `aegisctl system register --from-seed initial_data/
+  --env staging` against a cluster seeded from `prod/` silently
+  registers different default values.
+- **Not in seed:** if a system isn't in data.yaml at all, `register`
+  has nothing to read. Add the entry to `AegisLab/data/initial_data/
+  {prod,staging}/data.yaml` first.
+- **Layer 3 still required:** enabling via etcd only surfaces the
+  system in the guided flow. Without `containers` + `container_versions`
+  + `helm_configs` rows (see `db.md`), submit still fails downstream.
+
+## Fallback: raw etcdctl + SQL (aegisctl unavailable)
+
+Use this only when you can't run aegisctl (e.g., backend API is down).
+Every trap below is what `aegisctl system register` hides.
+
+### Scope-prefix trap
 
 The listener reads from `/rcabench/config/<scope>/` where `<scope>` is
 one of `global`, `consumer`, `producer`. Writing at the etcd root
 produces `key not found: /rcabench/config/global/<key>` and the runtime
-registration is removed a moment later. Always prefix:
+registration is removed a moment later. Always prefix
+`/rcabench/config/global/`.
 
-```bash
-etcdctl put /rcabench/config/global/injection.system.<name>.status 1
-```
-
-## Three-vs-seven-key trap
-
-Older seeds used a three-key layout (`count` + `ns_pattern` +
-`extract_pattern`). The registry now requires seven. If a fresh backend
-boot reports `0 enabled` even though etcd has some keys, grep for the
-four extra ones (`display_name`, `app_label_key`, `is_builtin`, `status`)
-before anything else.
-
-## Ordering: DB row before etcd put
+### Ordering: DB row before etcd put
 
 `config_listener` validates every etcd change against `dynamic_configs`.
 If the key has no DB row, the put is logged but rejected:
@@ -98,37 +134,28 @@ If the key has no DB row, the put is logged but rejected:
 failed to retrieve existing config <key> from database: record not found
 ```
 
-`etcdctl get` will still show the value, but the runtime registry never
-picks it up; symptom is `loaded N systems (0 enabled)` persisting.
+Correct order: INSERT into `dynamic_configs` (scope=2, correct
+value_type) → `etcdctl put` → restart backend or re-submit.
 
-Correct reconcile order:
-
-1. INSERT into `dynamic_configs` (with scope=2, correct value_type).
-2. `etcdctl put /rcabench/config/global/<key> <value>`.
-3. Restart backend or re-submit.
-
-Not the reverse.
-
-## data.yaml to etcd is one-way and incomplete
+### data.yaml → etcd one-way gap
 
 The producer's fresh-seed path `initializeDynamicConfigs` writes the
 `dynamic_configs` rows but does **not** publish their `default_value`s
-to etcd. Only the legacy `systems`-table migration publishes — and that
-path is a no-op for data.yaml-sourced systems.
+to etcd. On a fresh cluster, DB and YAML look right but etcd is empty
+and first boot reports `0 enabled`. This is the gap `aegisctl system
+register` closes.
 
-Symptom: DB and YAML look right, first backend boot still reports
-`loaded N systems (0 enabled)` because etcd is empty.
+### Three-vs-seven-key trap
 
-Until this is closed in code, every new data.yaml-seeded system needs a
-one-time `etcdctl put` pass after the first boot. Treat a fresh cluster
-as "DB-seeded, etcd-empty" and reconcile explicitly.
+Older seeds shipped only `count` + `ns_pattern` + `extract_pattern`.
+The registry now requires all seven. `0 enabled` on a partially-seeded
+cluster is almost always the four new keys missing.
 
-## Reconcile commands
-
-Write all seven keys for system `<name>` (adjust values per system):
+### Raw commands
 
 ```bash
 NS=<name>
+# Seed dynamic_configs rows first (SQL), then:
 etcdctl put /rcabench/config/global/injection.system.$NS.count 1
 etcdctl put /rcabench/config/global/injection.system.$NS.ns_pattern "$NS[0-9]+"
 etcdctl put /rcabench/config/global/injection.system.$NS.extract_pattern "$NS([0-9]+)"
@@ -136,11 +163,7 @@ etcdctl put /rcabench/config/global/injection.system.$NS.display_name "<Display>
 etcdctl put /rcabench/config/global/injection.system.$NS.app_label_key app
 etcdctl put /rcabench/config/global/injection.system.$NS.is_builtin true
 etcdctl put /rcabench/config/global/injection.system.$NS.status 1
-```
 
-Verify:
-
-```bash
 etcdctl get --prefix /rcabench/config/global/injection.system.$NS.
 ```
 

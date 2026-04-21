@@ -1,10 +1,34 @@
 # Layer 3 reference: database fixtures
 
-Concrete schemas and seed commands for `containers`, `container_versions`,
+Concrete schemas and seed recipes for `containers`, `container_versions`,
 `helm_configs`. Methodology lives in `../SKILL.md` layer 3.
+
+## Happy path (partial): `aegisctl pedestal helm set`
+
+aegisctl covers *only* the `helm_configs` row. The two `containers`
+rows + `container_versions` rows are still SQL. The pedestal-name
+invariant is also caller responsibility — `aegisctl system register`
+does not cross-check it against `containers.name`.
+
+```bash
+# after the pedestal containers + container_versions row is seeded:
+aegisctl pedestal helm set \
+  --container-version-id <id> \
+  --chart-name <chart> --version 0.1.0 \
+  --repo-name <repo>  --repo-url https://example.org/charts \
+  --values-file /var/lib/rcabench/dataset/helm-values/<code>.yaml \
+  --local-path /tmp/<chart>.tgz
+
+aegisctl pedestal helm get    --container-version-id <id>
+aegisctl pedestal helm verify --container-version-id <id>  # dry-run helm pull
+```
+
+For the containers/container_versions rows, see [Seed commands](#seed-commands)
+below — SQL is still the only path.
 
 ## Contents
 
+- [Happy path (partial): `aegisctl pedestal helm set`](#happy-path-partial-aegisctl-pedestal-helm-set)
 - [containers](#containers)
 - [container_versions](#container_versions)
 - [helm_configs](#helm_configs)
@@ -47,7 +71,12 @@ Per-pedestal chart info. Required:
   `helm.repo.<repo_name>.url` (see `chart.md`)
 - `local_path` — optional pre-staged tgz (e.g. `/tmp/<chart>.tgz`)
 
+`aegisctl pedestal helm set` upserts this row given a
+`container-version-id`; prefer it over a direct INSERT.
+
 ## Pedestal name = system code constraint
+
+**Still a caller responsibility — aegisctl does not enforce it.**
 
 The submit validator checks `pedestal.name == system_type` where
 `system_type` is the short Go constant from
@@ -60,7 +89,8 @@ If you seed a pedestal row as `hotelreservation` while the registry uses
 Rules:
 
 - `containers.name` for the pedestal row = short system code.
-- data.yaml `name:` = short system code.
+- data.yaml `name:` = short system code (`aegisctl system register
+  --name` uses this exact value).
 - `DisplayName` (compiled constant) or the
   `injection.system.<code>.display_name` etcd key = user-facing string.
 
@@ -87,13 +117,14 @@ Minimal seed (adjust values). Short code `<code>`, upstream chart
 `<chart>`, registry image for the datapack `<img>:<tag>`:
 
 ```sql
--- pedestal
+-- pedestal (name MUST == short code)
 INSERT INTO containers (name, type) VALUES ('<code>', 2);
-INSERT INTO helm_configs (container_id, chart_name, version, repo_name,
-                          repo_url, value_file, local_path)
-  VALUES (LAST_INSERT_ID(), '<chart>', '0.1.0', '<repo>',
-          '', '/var/lib/rcabench/dataset/helm-values/<code>.yaml',
-          '/tmp/<chart>.tgz');
+SET @pedestal_id = LAST_INSERT_ID();
+
+INSERT INTO container_versions (container_id, registry, namespace,
+                                repository, tag, command)
+  VALUES (@pedestal_id, 'docker.io', 'opspai',
+          '<pedestal-repo>', '<tag>', '<entrypoint>');
 
 -- benchmark (datapack builder)
 INSERT INTO containers (name, type) VALUES ('<code>-bench', 1);
@@ -104,4 +135,14 @@ INSERT INTO container_versions (container_id, registry, namespace,
           'python -m rcabench_platform.v3.sdk.datasets.rcabench build');
 ```
 
-Then populate dynamic_configs + etcd per `etcd.md`.
+Then attach the helm_configs row via aegisctl:
+
+```bash
+aegisctl pedestal helm set --container-version-id <pedestal-cv-id> \
+  --chart-name <chart> --version 0.1.0 --repo-name <repo> \
+  --repo-url ''  --values-file /var/lib/rcabench/dataset/helm-values/<code>.yaml \
+  --local-path /tmp/<chart>.tgz
+```
+
+Finally populate etcd/dynamic_configs via `aegisctl system register`
+(see `etcd.md`).

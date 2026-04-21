@@ -51,17 +51,19 @@ env var and panic without it, some ship their own collector.
 ### 4. Pick the injection path
 Three in descending order of integration, ascending order of reliability:
 
-1. `aegisctl chaos …` → backend → CRD
+1. `aegisctl inject guided …` / `aegisctl regression run …` → backend → CRD
 2. `chaos-experiment` CLI → CRD directly
 3. Hand-written NetworkChaos / PodChaos YAML + `kubectl apply`
 
-Try 1 first; if the backend rejects your namespace (unknown benchmark)
-or requires project/pedestal wiring you don't have, fall back to 3 and
-file a follow-up issue — don't sink time into registering a brand-new
-pedestal just to run one smoke test.
+Try 1 first. If the backend rejects your namespace (unknown benchmark),
+that's an aegis-control-plane problem, not a workload problem — go run
+the `register-aegis-system` skill (specifically `aegisctl system
+register --from-seed` + `aegisctl pedestal chart push/install`), then
+come back here. Only fall back to path 3 if you explicitly want a
+one-shot smoke test and don't care about datapack collection.
 
-- Exit criterion: `--dry-run` against path 1 produces a sensible spec,
-  or you have a minimal NetworkChaos manifest ready.
+- Exit criterion: `aegisctl regression run <case> --auto-install`
+  passes preflight, or you have a minimal NetworkChaos manifest ready.
 
 ### 5. Define time windows before injecting
 Measurement is only meaningful against three timestamped windows:
