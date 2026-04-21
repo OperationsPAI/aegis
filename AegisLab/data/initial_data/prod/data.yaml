@@ -29,7 +29,7 @@ containers:
     status: 1
     versions:
       - name: 1.0.0
-        image_ref: pair-diag-cn-guangzhou.cr.volces.com/pair/clickhouse_dataset:latest
+        image_ref: docker.io/opspai/clickhouse_dataset:sum-optional-20260421
         command: bash /entrypoint.sh
         env_vars:
           - key: NAMESPACE
@@ -65,11 +65,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      - name: 0.1.1
         github_link: open-telemetry/opentelemetry-demo
         status: 1
         helm_config:
-          version: 0.1.0
+          version: 0.1.1
           chart_name: otel-demo-aegis
           repo_name: opspai
           repo_url: oci://registry-1.docker.io/opspai
@@ -104,6 +104,48 @@ containers:
             default_value: ob0
             required: true
             overridable: true
+  - type: 2
+    name: sockshop
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.1
+        github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
+        status: 1
+        helm_config:
+          version: 0.1.1
+          chart_name: sockshop-aegis
+          repo_name: opspai
+          repo_url: oci://registry-1.docker.io/opspai
+          status: 1
+  - type: 2
+    name: hotelreservation
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        github_link: delimitrou/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.1.0
+          chart_name: hotelreservation-aegis
+          repo_name: opspai
+          repo_url: oci://registry-1.docker.io/opspai
+          status: 1
+  - type: 2
+    name: sn
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        github_link: delimitrou/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.1.0
+          chart_name: socialnetwork-aegis
+          repo_name: opspai
+          repo_url: oci://registry-1.docker.io/opspai
+          status: 1
 datasets:
   - name: rca_pair_diagnosis_dataset
     description: RCA Pair Diagnosis Dataset
@@ -321,6 +363,165 @@ dynamic_configs:
     scope: 2
     category: injection.system.status
     description: Status of system OpenTelemetry Demo (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.sockshop.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system SockShop to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.sockshop.ns_pattern
+    default_value: ^sockshop\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system SockShop instances
+    is_secret: false
+  - key: injection.system.sockshop.extract_pattern
+    default_value: ^(sockshop)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from SockShop instances
+    is_secret: false
+  - key: injection.system.sockshop.display_name
+    default_value: SockShop
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system SockShop
+    is_secret: false
+  - key: injection.system.sockshop.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select SockShop workloads
+    is_secret: false
+  - key: injection.system.sockshop.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether SockShop is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.sockshop.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system SockShop (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.hs.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system HotelReservation to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.hs.ns_pattern
+    default_value: ^hs\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system HotelReservation instances
+    is_secret: false
+  - key: injection.system.hs.extract_pattern
+    default_value: ^(hs)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from HotelReservation instances
+    is_secret: false
+  - key: injection.system.hs.display_name
+    default_value: HotelReservation
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system HotelReservation
+    is_secret: false
+  - key: injection.system.hs.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select HotelReservation workloads
+    is_secret: false
+  - key: injection.system.hs.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether HotelReservation is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.hs.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system HotelReservation (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.sn.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system SocialNetwork to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.sn.ns_pattern
+    default_value: ^sn\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system SocialNetwork instances
+    is_secret: false
+  - key: injection.system.sn.extract_pattern
+    default_value: ^(sn)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from SocialNetwork instances
+    is_secret: false
+  - key: injection.system.sn.display_name
+    default_value: SocialNetwork
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system SocialNetwork
+    is_secret: false
+  - key: injection.system.sn.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select SocialNetwork workloads
+    is_secret: false
+  - key: injection.system.sn.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether SocialNetwork is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.sn.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system SocialNetwork (1=enabled, 0=disabled, -1=deleted)
     is_secret: false
     min_value: -1
     max_value: 1
