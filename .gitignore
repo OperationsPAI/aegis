@@ -1,6 +1,3 @@
-# Claude Code local state
-.claude/
-CLAUDE.local.md
 
 # Workspace-local backup artifacts (Phase 1 dumps etc.)
 .backup/

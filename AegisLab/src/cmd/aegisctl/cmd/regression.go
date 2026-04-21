@@ -114,16 +114,79 @@ func loadRegressionCaseByName(casesDir, name string) (regressionCase, string, er
 	if name == "" {
 		return regressionCase{}, "", fmt.Errorf("regression case name is required")
 	}
+	// If the argument resolves to an existing file on disk (absolute or
+	// relative path, or a bare filename with an extension), honor it as-is.
+	// This keeps `aegisctl regression run ./foo.yaml` working.
+	if strings.ContainsAny(name, string(filepath.Separator)) || strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml") {
+		if _, err := os.Stat(name); err == nil {
+			return loadRegressionCaseFile(name)
+		}
+	}
 	if name == "." || name == ".." || filepath.Base(name) != name {
 		return regressionCase{}, "", fmt.Errorf("invalid regression case name %q", name)
 	}
-	for _, ext := range []string{".yaml", ".yml"} {
+
+	tried := make([]string, 0, 8)
+	exts := []string{".yaml", ".yml"}
+
+	// (1) Honor explicit --cases-dir (defaults to "regression" relative to cwd).
+	for _, ext := range exts {
 		path := filepath.Join(casesDir, name+ext)
+		tried = append(tried, path)
 		if _, err := os.Stat(path); err == nil {
 			return loadRegressionCaseFile(path)
 		}
 	}
-	return regressionCase{}, "", fmt.Errorf("regression case %q not found in %s", name, casesDir)
+
+	// (2) Walk up from cwd looking for a sibling `regression/<name>.{yaml,yml}`.
+	// Bounded by filesystem root or by a directory containing `.git`.
+	if cwd, err := os.Getwd(); err == nil {
+		dir := cwd
+		for {
+			for _, ext := range exts {
+				path := filepath.Join(dir, "regression", name+ext)
+				// Skip duplicates already tried via casesDir.
+				if !containsPath(tried, path) {
+					tried = append(tried, path)
+					if _, err := os.Stat(path); err == nil {
+						return loadRegressionCaseFile(path)
+					}
+				}
+			}
+			if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+				break
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+
+	// (3) AEGIS_REPO fallback: $AEGIS_REPO/AegisLab/regression/<name>.{yaml,yml}.
+	if repo := strings.TrimSpace(os.Getenv("AEGIS_REPO")); repo != "" {
+		for _, ext := range exts {
+			path := filepath.Join(repo, "AegisLab", "regression", name+ext)
+			if !containsPath(tried, path) {
+				tried = append(tried, path)
+				if _, err := os.Stat(path); err == nil {
+					return loadRegressionCaseFile(path)
+				}
+			}
+		}
+	}
+
+	return regressionCase{}, "", fmt.Errorf("regression case %q not found; tried:\n  %s", name, strings.Join(tried, "\n  "))
+}
+
+func containsPath(list []string, target string) bool {
+	for _, p := range list {
+		if p == target {
+			return true
+		}
+	}
+	return false
 }
 
 func loadRegressionCaseFile(path string) (regressionCase, string, error) {

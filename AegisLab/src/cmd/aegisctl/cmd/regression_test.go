@@ -42,6 +42,163 @@ validation:
 	}
 }
 
+func TestLoadRegressionCaseByName_Resolution(t *testing.T) {
+	// Save and restore cwd + AEGIS_REPO around the whole test.
+	origCwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	origRepo, hadRepo := os.LookupEnv("AEGIS_REPO")
+	t.Cleanup(func() {
+		_ = os.Chdir(origCwd)
+		if hadRepo {
+			_ = os.Setenv("AEGIS_REPO", origRepo)
+		} else {
+			_ = os.Unsetenv("AEGIS_REPO")
+		}
+	})
+
+	writeCase := func(t *testing.T, path string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(path, []byte(`name: sample
+project_name: pair_diagnosis
+submit:
+  specs:
+    - - chaos_type: PodKill
+        duration: 1
+validation:
+  expected_final_event: datapack.result.collection
+  required_task_chain:
+    - RestartPedestal
+`), 0o644); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+	}
+
+	t.Run("absolute path passthrough", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "abs.yaml")
+		writeCase(t, path)
+
+		rc, got, err := loadRegressionCaseByName("regression", path)
+		if err != nil {
+			t.Fatalf("absolute path: %v", err)
+		}
+		if rc.Name != "sample" {
+			t.Fatalf("name=%q", rc.Name)
+		}
+		if filepath.Base(got) != "abs.yaml" {
+			t.Fatalf("got=%q", got)
+		}
+	})
+
+	t.Run("cwd relative hit via casesDir default", func(t *testing.T) {
+		// Make a standalone root (with .git) so walk-up cannot escape.
+		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+			t.Fatalf("mkdir .git: %v", err)
+		}
+		writeCase(t, filepath.Join(root, "regression", "cwd-hit.yaml"))
+		if err := os.Chdir(root); err != nil {
+			t.Fatalf("chdir: %v", err)
+		}
+		_ = os.Unsetenv("AEGIS_REPO")
+
+		rc, got, err := loadRegressionCaseByName("regression", "cwd-hit")
+		if err != nil {
+			t.Fatalf("cwd-hit: %v", err)
+		}
+		if rc.Name != "sample" {
+			t.Fatalf("name=%q", rc.Name)
+		}
+		if filepath.Base(got) != "cwd-hit.yaml" {
+			t.Fatalf("got=%q", got)
+		}
+	})
+
+	t.Run("walk up hit", func(t *testing.T) {
+		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+			t.Fatalf("mkdir .git: %v", err)
+		}
+		writeCase(t, filepath.Join(root, "regression", "walk.yaml"))
+		deep := filepath.Join(root, "a", "b", "c")
+		if err := os.MkdirAll(deep, 0o755); err != nil {
+			t.Fatalf("mkdirall: %v", err)
+		}
+		if err := os.Chdir(deep); err != nil {
+			t.Fatalf("chdir: %v", err)
+		}
+		_ = os.Unsetenv("AEGIS_REPO")
+
+		rc, got, err := loadRegressionCaseByName("regression", "walk")
+		if err != nil {
+			t.Fatalf("walk-up: %v", err)
+		}
+		if rc.Name != "sample" {
+			t.Fatalf("name=%q", rc.Name)
+		}
+		if filepath.Base(got) != "walk.yaml" {
+			t.Fatalf("got=%q", got)
+		}
+	})
+
+	t.Run("AEGIS_REPO fallback", func(t *testing.T) {
+		// Cwd somewhere unrelated and bounded by a .git dir so walk-up finds nothing.
+		isolated := t.TempDir()
+		if err := os.Mkdir(filepath.Join(isolated, ".git"), 0o755); err != nil {
+			t.Fatalf("mkdir .git: %v", err)
+		}
+		if err := os.Chdir(isolated); err != nil {
+			t.Fatalf("chdir: %v", err)
+		}
+		repo := t.TempDir()
+		writeCase(t, filepath.Join(repo, "AegisLab", "regression", "env-hit.yaml"))
+		_ = os.Setenv("AEGIS_REPO", repo)
+
+		rc, got, err := loadRegressionCaseByName("regression", "env-hit")
+		if err != nil {
+			t.Fatalf("env-hit: %v", err)
+		}
+		if rc.Name != "sample" {
+			t.Fatalf("name=%q", rc.Name)
+		}
+		if filepath.Base(got) != "env-hit.yaml" {
+			t.Fatalf("got=%q", got)
+		}
+	})
+
+	t.Run("miss lists tried locations", func(t *testing.T) {
+		isolated := t.TempDir()
+		if err := os.Mkdir(filepath.Join(isolated, ".git"), 0o755); err != nil {
+			t.Fatalf("mkdir .git: %v", err)
+		}
+		if err := os.Chdir(isolated); err != nil {
+			t.Fatalf("chdir: %v", err)
+		}
+		repo := t.TempDir()
+		_ = os.Setenv("AEGIS_REPO", repo)
+
+		_, _, err := loadRegressionCaseByName("regression", "does-not-exist")
+		if err == nil {
+			t.Fatal("expected miss error")
+		}
+		msg := err.Error()
+		if !strings.Contains(msg, "does-not-exist") || !strings.Contains(msg, "tried:") {
+			t.Fatalf("expected clear miss error, got %v", err)
+		}
+		if !strings.Contains(msg, filepath.Join("regression", "does-not-exist.yaml")) {
+			t.Fatalf("expected tried path in error, got %v", err)
+		}
+		if !strings.Contains(msg, filepath.Join(repo, "AegisLab", "regression", "does-not-exist.yaml")) {
+			t.Fatalf("expected AEGIS_REPO path in error, got %v", err)
+		}
+	})
+}
+
 func TestLoadRegressionCaseParseFailure(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "broken.yaml")
