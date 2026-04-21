@@ -33,8 +33,9 @@ type Groundtruth struct {
 // GetGroundtruthFromAppIdx returns a Groundtruth object for a given app index
 func GetGroundtruthFromAppIdx(ctx context.Context, system systemconfig.SystemType, namespace string, appIdx int) (Groundtruth, error) {
 	systemCache := resourcelookup.GetSystemCache(system)
+	appLabelKey := systemconfig.GetAppLabelKey(system)
 
-	appLabels, err := systemCache.GetAllAppLabels(ctx, namespace, defaultAppLabel)
+	appLabels, err := systemCache.GetAllAppLabels(ctx, namespace, appLabelKey)
 	if err != nil || len(appLabels) == 0 {
 		return Groundtruth{}, fmt.Errorf("failed to get app labels: %w", err)
 	}
@@ -51,7 +52,7 @@ func GetGroundtruthFromAppIdx(ctx context.Context, system systemconfig.SystemTyp
 		return Groundtruth{}, fmt.Errorf("failed to get containers: %w", err)
 	}
 
-	pods, err := systemCache.GetPodsByService(ctx, namespace, defaultAppLabel)
+	pods, err := systemCache.GetPodsByService(ctx, namespace, appLabelKey)
 	if err != nil {
 		return Groundtruth{}, fmt.Errorf("failed to get pods: %w", err)
 	}

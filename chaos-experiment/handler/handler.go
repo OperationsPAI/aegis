@@ -495,7 +495,7 @@ func parseInjection(ctx context.Context, instance Injection) (map[string]any, er
 		case 2:
 			switch instanceType.Field(i).Name {
 			case keyApp:
-				labels, err := systemCache.GetAllAppLabels(ctx, namespace, defaultAppLabel)
+				labels, err := systemCache.GetAllAppLabels(ctx, namespace, systemconfig.GetAppLabelKey(system))
 				if err != nil || len(labels) == 0 {
 					return nil, err
 				}
@@ -703,7 +703,7 @@ func GetSystemResourceMap(ctx context.Context) (map[SystemType]SystemResource, e
 			return nil, fmt.Errorf("failed to get namespace prefix for system %s: %v", system, err)
 		}
 
-		appLabels, err := systemCache.GetAllAppLabels(ctx, namespace, defaultAppLabel)
+		appLabels, err := systemCache.GetAllAppLabels(ctx, namespace, systemconfig.GetAppLabelKey(system))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get app labels namespace %s for system %s: %v", namespace, system, err)
 		}
@@ -794,7 +794,7 @@ func GetSystemResource(ctx context.Context, system SystemType) (SystemResource, 
 		return SystemResource{}, fmt.Errorf("failed to get namespace prefix for system %s: %v", system, err)
 	}
 
-	appLabels, err := systemCache.GetAllAppLabels(ctx, namespace, defaultAppLabel)
+	appLabels, err := systemCache.GetAllAppLabels(ctx, namespace, systemconfig.GetAppLabelKey(internalSystem))
 	if err != nil {
 		return SystemResource{}, fmt.Errorf("failed to get app labels namespace %s for system %s: %v", namespace, system, err)
 	}
