@@ -214,6 +214,7 @@ var ValidTraceStates = map[TraceState]struct{}{
 	TraceRunning:   {},
 	TraceCompleted: {},
 	TraceFailed:    {},
+	TraceCancelled: {},
 }
 
 var ValidTraceTypes = map[TraceType]struct{}{

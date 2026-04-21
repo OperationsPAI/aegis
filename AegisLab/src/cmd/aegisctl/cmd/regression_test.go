@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -76,6 +77,100 @@ validation:
 	}
 	if !strings.Contains(err.Error(), "validation.expected_final_event") {
 		t.Fatalf("expected clear validation error, got %v", err)
+	}
+}
+
+// TestRegressionRunDedupedResponseReturnsFriendlyError verifies that when the
+// backend accepts a submission with HTTP 200 but drops every batch as a
+// duplicate, the CLI emits a human-friendly warning and returns an error that
+// maps to ExitCodeDedupeSuppressed — not the legacy "missing trace_id" path.
+// Regression for issues #91 and #92.
+func TestRegressionRunDedupedResponseReturnsFriendlyError(t *testing.T) {
+	oldServer := flagServer
+	oldToken := flagToken
+	oldProject := flagProject
+	oldOutput := flagOutput
+	oldCasesDir := regressionCasesDir
+	oldCaseFile := regressionCaseFile
+	defer func() {
+		flagServer = oldServer
+		flagToken = oldToken
+		flagProject = oldProject
+		flagOutput = oldOutput
+		regressionCasesDir = oldCasesDir
+		regressionCaseFile = oldCaseFile
+	}()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/v2/projects":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    200,
+				"message": "success",
+				"data": map[string]any{
+					"items":      []map[string]any{{"id": 11, "name": "pair_diagnosis"}},
+					"pagination": map[string]any{"page": 1, "size": 100, "total": 1, "total_pages": 1},
+				},
+			})
+		case r.URL.Path == "/api/v2/projects/11/injections/inject":
+			// Deduped: items empty, batches_exist_in_database populated.
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    200,
+				"message": "success",
+				"data": map[string]any{
+					"group_id":       "group-dedup",
+					"items":          []map[string]any{},
+					"original_count": 1,
+					"warnings": map[string]any{
+						"batches_exist_in_database": []int{0},
+					},
+				},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	casesDir := t.TempDir()
+	casePath := filepath.Join(casesDir, "dedup.yaml")
+	if err := os.WriteFile(casePath, []byte(`name: dedup
+project_name: pair_diagnosis
+submit:
+  specs:
+    - - chaos_type: PodKill
+        duration: 1
+validation:
+  expected_final_event: datapack.no_anomaly
+  required_task_chain:
+    - RestartPedestal
+`), 0o644); err != nil {
+		t.Fatalf("write case: %v", err)
+	}
+
+	flagServer = ts.URL
+	flagToken = ""
+	flagProject = ""
+	flagOutput = "json"
+	regressionCasesDir = casesDir
+	regressionCaseFile = ""
+
+	err := regressionRunCmd.RunE(regressionRunCmd, []string{"dedup"})
+	if err == nil {
+		t.Fatal("expected dedupe error, got nil")
+	}
+	if !errors.Is(err, errDedupeSuppressed) {
+		t.Fatalf("expected errDedupeSuppressed in chain, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "duplicate submission suppressed") {
+		t.Fatalf("expected friendly dedupe message, got %v", err)
+	}
+	if code := exitCodeFor(err); code != ExitCodeDedupeSuppressed {
+		t.Fatalf("exitCodeFor = %d, want %d", code, ExitCodeDedupeSuppressed)
+	}
+	// And must NOT be the old "missing trace_id" path.
+	if strings.Contains(err.Error(), "missing trace_id") {
+		t.Fatalf("expected new dedupe path, got legacy message: %v", err)
 	}
 }
 

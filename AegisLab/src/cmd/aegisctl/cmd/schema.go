@@ -89,6 +89,7 @@ func buildSchemaDocument() schemaDocument {
 			"6": "Timeout",
 			"7": "Not found (HTTP 404 on GET by name/ID)",
 			"8": "Conflict (HTTP 409; resource already exists / state conflict)",
+			"9": "Injection submission deduplicated by server (no trace_id produced)",
 		},
 	}
 }

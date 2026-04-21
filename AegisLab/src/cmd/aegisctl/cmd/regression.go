@@ -188,6 +188,11 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 	if err := c.Post(path, rc.Submit, &submitResp); err != nil {
 		return regressionSummary{}, fmt.Errorf("submit regression case %q: %w", rc.Name, err)
 	}
+	if submitResp.Data.IsDedupedAll() {
+		summary := submitResp.Data.DedupeSummary()
+		output.PrintInfo(fmt.Sprintf("regression case %q: %s", rc.Name, summary))
+		return regressionSummary{}, newDedupeSuppressedError(fmt.Sprintf("submit regression case %q: %s", rc.Name, summary))
+	}
 	if len(submitResp.Data.Items) == 0 || strings.TrimSpace(submitResp.Data.Items[0].TraceID) == "" {
 		return regressionSummary{}, fmt.Errorf("submit regression case %q: server response missing trace_id", rc.Name)
 	}

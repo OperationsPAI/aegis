@@ -162,8 +162,14 @@ func (cv *ContainerVersion) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// AfterFind GORM hook - set the Image field after retrieving from DB
+// AfterFind GORM hook - set the Image field after retrieving from DB.
+// Pedestal (helm) versions have no image; skip composition when both
+// Repository and Tag are empty so we don't surface "docker.io/:" strings.
 func (c *ContainerVersion) AfterFind(tx *gorm.DB) error {
+	if c.Repository == "" && c.Tag == "" {
+		c.ImageRef = ""
+		return nil
+	}
 	if c.Namespace == "" {
 		c.ImageRef = fmt.Sprintf("%s/%s:%s", c.Registry, c.Repository, c.Tag)
 	} else {

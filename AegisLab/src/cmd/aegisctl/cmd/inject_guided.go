@@ -346,6 +346,14 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	if err != nil {
 		return err
 	}
+	if resp.Data.IsDedupedAll() {
+		summary := resp.Data.DedupeSummary()
+		output.PrintInfo(summary)
+		// Still emit the raw response envelope so scripts that captured stdout
+		// before we tightened the contract can inspect warnings.
+		output.PrintJSON(resp.Data)
+		return newDedupeSuppressedError(summary)
+	}
 	output.PrintJSON(resp.Data)
 	return nil
 }

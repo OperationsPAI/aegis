@@ -343,6 +343,7 @@ var (
 	// Trace permissions
 	PermTraceReadAll    = PermissionRule{Resource: ResourceTrace, Action: ActionRead, Scope: ScopeAll}
 	PermTraceMonitorAll = PermissionRule{Resource: ResourceTrace, Action: ActionMonitor, Scope: ScopeAll}
+	PermTraceStopAll    = PermissionRule{Resource: ResourceTrace, Action: ActionStop, Scope: ScopeAll}
 )
 
 // SystemRolePermissions defines the default permission rules for each system role

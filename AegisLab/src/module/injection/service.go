@@ -228,6 +228,15 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 		return nil, fmt.Errorf("no guided specs available for fault injection")
 	}
 
+	// Break the submit→restart-pedestal chicken-and-egg: on a first run,
+	// the target namespace doesn't exist yet (RestartPedestal hasn't run),
+	// so guidedcli.BuildInjection's pod listing would 500. Pre-create any
+	// missing namespaces now; RestartPedestal helm-installs into them in a
+	// few seconds. See github issues #91 item 1 and #92 item 1.
+	for _, batch := range guidedSpecs {
+		ensureGuidedNamespaces(ctx, batch)
+	}
+
 	processedItems := make([]injectionProcessItem, 0, len(guidedSpecs))
 	var parseWarnings []string
 	for i := range guidedSpecs {

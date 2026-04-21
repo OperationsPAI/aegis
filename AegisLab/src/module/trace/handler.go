@@ -58,6 +58,38 @@ func (h *Handler) GetTrace(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// CancelTrace handles best-effort cancellation of a running trace.
+//
+//	@Summary		Cancel a running trace (best-effort)
+//	@Description	Marks the trace as Cancelled, evicts any pending/delayed redis queue entries for its in-flight tasks, and issues best-effort delete on any chaos CRDs labelled with traceID=<id>. Returns 200 with a no-op response if the trace is already terminal.
+//	@Tags			Traces
+//	@ID				cancel_trace
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			trace_id	path		string									true	"Trace ID"
+//	@Success		200			{object}	dto.GenericResponse[CancelTraceResp]	"Trace cancelled (or already terminal)"
+//	@Failure		400			{object}	dto.GenericResponse[any]				"Invalid trace ID"
+//	@Failure		401			{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403			{object}	dto.GenericResponse[any]				"Permission denied"
+//	@Failure		404			{object}	dto.GenericResponse[any]				"Trace not found"
+//	@Failure		500			{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/traces/{trace_id}/cancel [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) CancelTrace(c *gin.Context) {
+	traceID := c.Param(consts.URLPathTraceID)
+	if !utils.IsValidUUID(traceID) {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid trace ID")
+		return
+	}
+
+	resp, err := h.service.CancelTrace(c.Request.Context(), traceID)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+
+	dto.SuccessResponse(c, resp)
+}
+
 // ListTraces handles listing traces with filtering
 //
 //	@Summary		List traces

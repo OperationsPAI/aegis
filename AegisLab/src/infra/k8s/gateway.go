@@ -9,9 +9,13 @@ import (
 
 	"aegis/consts"
 
+	chaosCli "github.com/OperationsPAI/chaos-experiment/client"
 	"github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -63,6 +67,49 @@ func (g *Gateway) GetJobPodLogs(ctx context.Context, namespace, jobName string) 
 
 func (g *Gateway) DeleteJob(ctx context.Context, namespace, jobName string) error {
 	return deleteJob(ctx, namespace, jobName)
+}
+
+// DeleteChaosCRDsByLabel scans every registered chaos CRD kind and deletes
+// objects matching `labelKey=labelValue` across all namespaces. See
+// DeleteChaosCRDsByLabel for semantics. Failures on individual CRDs are
+// surfaced as warnings, not fatal errors.
+func (g *Gateway) DeleteChaosCRDsByLabel(ctx context.Context, labelKey, labelValue string) ([]DeletedCRD, []error) {
+	chaosGVRs := make([]schema.GroupVersionResource, 0, len(chaosCli.GetCRDMapping()))
+	for gvr := range chaosCli.GetCRDMapping() {
+		chaosGVRs = append(chaosGVRs, gvr)
+	}
+	return DeleteChaosCRDsByLabel(ctx, chaosGVRs, labelKey, labelValue)
+}
+
+// EnsureNamespace creates the namespace if it doesn't exist. Returns
+// (created, err). Harmless on existing namespaces — AlreadyExists is treated
+// as success. Breaks the submit→restart-pedestal chicken-and-egg: a first-run
+// submit used to 500 with `namespaces "X" not found` because guided app
+// resolution lists pods in a namespace that RestartPedestal hasn't created
+// yet. See github issue #91 item 1 / #92 item 1.
+func (g *Gateway) EnsureNamespace(ctx context.Context, name string) (bool, error) {
+	client := getK8sClient()
+	if client == nil {
+		return false, fmt.Errorf("kubernetes client not available")
+	}
+	_, err := client.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err == nil {
+		return false, nil
+	}
+	if !k8serrors.IsNotFound(err) {
+		return false, fmt.Errorf("check namespace %q: %w", name, err)
+	}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   name,
+		Labels: map[string]string{"app.kubernetes.io/managed-by": "aegis"},
+	}}
+	if _, err := client.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{}); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("create namespace %q: %w", name, err)
+	}
+	return true, nil
 }
 
 func (g *Gateway) CheckHealth(ctx context.Context) error {

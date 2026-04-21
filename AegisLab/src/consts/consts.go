@@ -271,6 +271,7 @@ const (
 	TraceRunning                     // Trace is currently running
 	TraceCompleted                   // Trace completed successfully
 	TraceFailed                      // Trace failed with errors
+	TraceCancelled                   // Trace cancelled by user
 )
 
 func (t TraceState) MarshalBinary() ([]byte, error) {
@@ -430,6 +431,7 @@ const (
 	EventTaskStateUpdate EventType = "task.state.update"
 	EventTaskRetryStatus EventType = "task.retry.status"
 	EventTaskScheduled   EventType = "task.scheduled"
+	EventTraceCancelled  EventType = "trace.cancelled"
 
 	EventNoNamespaceAvailable EventType = "no.namespace.available"
 	EventNoTokenAvailable     EventType = "no.token.available"

@@ -148,6 +148,7 @@ var traceStateMap = map[TraceState]string{
 	TraceRunning:   "Running",
 	TraceCompleted: "Completed",
 	TraceFailed:    "Failed",
+	TraceCancelled: "Cancelled",
 }
 
 // SystemRoleDisplayNames maps system role names to their display names

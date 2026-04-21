@@ -124,6 +124,19 @@ func NewTraceResp(trace *model.Trace) *TraceResp {
 	return resp
 }
 
+// CancelTraceResp describes the outcome of a best-effort trace cancellation.
+// All fields are optional so a partial success still renders cleanly on the
+// aegisctl side. See cmd/aegisctl/cmd/trace.go `traceCancelResponseData` for
+// the consumer shape.
+type CancelTraceResp struct {
+	TraceID           string   `json:"trace_id,omitempty"`
+	State             string   `json:"state,omitempty"`
+	Message           string   `json:"message,omitempty"`
+	CancelledTasks    []string `json:"cancelled_tasks,omitempty"`
+	DeletedPodChaos   []string `json:"deleted_podchaos,omitempty"`
+	RemovedRedisTasks []string `json:"removed_redis_tasks,omitempty"`
+}
+
 type TraceDetailResp struct {
 	TraceResp
 

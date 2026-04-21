@@ -489,7 +489,11 @@ func init() {
 
 	containerVersionListVersionsCmd.Flags().StringVar(&containerVersionListVersionsName, "name", "", "Container name (alternatively pass as positional arg)")
 
+	containerVersionDescribeCmd.Flags().StringVar(&containerVersionDescribeFormat, "format", "",
+		"Output format: text|json|yaml (default text; falls back to --output when unset)")
+
 	containerVersionCmd.AddCommand(containerVersionSetImageCmd)
 	containerVersionCmd.AddCommand(containerVersionListVersionsCmd)
+	containerVersionCmd.AddCommand(containerVersionDescribeCmd)
 	containerCmd.AddCommand(containerVersionCmd)
 }

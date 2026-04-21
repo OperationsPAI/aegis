@@ -734,7 +734,7 @@ func resolveAppLevel(ctx context.Context, cfg GuidedConfig, systemType systemcon
 	}
 	appIdx := indexOf(apps, cfg.App)
 	if appIdx < 0 {
-		return 0, 0, 0, fmt.Errorf("app %q not found", cfg.App)
+		return 0, 0, 0, fmt.Errorf("app %q not found in namespace %q; available apps: %s", cfg.App, cfg.Namespace, formatAppList(apps))
 	}
 	systemIdx, err := systemTypeIndex(systemType.String())
 	if err != nil {
@@ -757,7 +757,7 @@ func resolveContainerLevel(cfg GuidedConfig, systemType systemconfig.SystemType)
 		}
 	}
 	if containerIdx < 0 {
-		return 0, 0, 0, fmt.Errorf("container %q not found under app %q", cfg.Container, cfg.App)
+		return 0, 0, 0, fmt.Errorf("container %q not found under app %q in namespace %q; available containers: %s", cfg.Container, cfg.App, cfg.Namespace, formatContainerList(containers, cfg.App))
 	}
 
 	systemIdx, err := systemTypeIndex(systemType.String())
@@ -765,6 +765,34 @@ func resolveContainerLevel(cfg GuidedConfig, systemType systemconfig.SystemType)
 		return 0, 0, 0, err
 	}
 	return containerIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+// formatAppList renders a sorted comma list of valid apps or a sentinel when empty.
+// Length-cap prevents explosion on large namespaces (ob has 12, but e.g. ts has 50+).
+func formatAppList(apps []string) string {
+	if len(apps) == 0 {
+		return "<none resolvable in this namespace>"
+	}
+	const maxShow = 20
+	if len(apps) <= maxShow {
+		return strings.Join(apps, ", ")
+	}
+	return strings.Join(apps[:maxShow], ", ") + fmt.Sprintf(", ... (+%d more)", len(apps)-maxShow)
+}
+
+// formatContainerList returns only containers under a specific app; useful for
+// sidecar-level targeting errors.
+func formatContainerList(containers []resourcelookup.ContainerInfo, app string) string {
+	names := make([]string, 0)
+	for _, c := range containers {
+		if c.AppLabel == app {
+			names = append(names, c.ContainerName)
+		}
+	}
+	if len(names) == 0 {
+		return "<no containers found under this app>"
+	}
+	return strings.Join(names, ", ")
 }
 
 func resolveEndpointLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {

@@ -563,4 +563,5 @@ var (
 	// Trace management permissions (monitor > read)
 	RequireTraceRead    = RequireAnyPermission([]consts.PermissionRule{consts.PermTraceReadAll, consts.PermTraceMonitorAll})
 	RequireTraceMonitor = RequireAnyPermission([]consts.PermissionRule{consts.PermTraceMonitorAll})
+	RequireTraceWrite   = RequireAnyPermission([]consts.PermissionRule{consts.PermTraceStopAll})
 )

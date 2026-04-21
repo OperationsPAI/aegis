@@ -1,14 +1,14 @@
-name: otel-demo-guided
-description: Canonical otel-demo smoke case used by local/e2e validation.
+name: sockshop-guided
+description: Canonical sockshop smoke case (Coherence/Helidon fork) used by local/e2e validation.
 project_name: pair_diagnosis
 submit:
   pedestal:
-    name: otel-demo
+    name: sockshop
     version: "0.1.1"
   benchmark:
     name: clickhouse
     version: "1.0.0"
-  interval: 3
+  interval: 2
   pre_duration: 1
   algorithms:
     - name: random
@@ -17,13 +17,13 @@ submit:
     - key: env
       value: local
     - key: batch
-      value: wrapper-0.1.1-verify
+      value: smoke
   specs:
-    - - system: otel-demo
-        system_type: otel-demo
-        namespace: otel-demo0
-        app: frontend
-        chaos_type: PodFailure
+    - - system: sockshop
+        system_type: sockshop
+        namespace: sockshop0
+        app: carts
+        chaos_type: PodKill
         duration: 1
 validation:
   timeout_seconds: 3000

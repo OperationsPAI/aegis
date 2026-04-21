@@ -1,10 +1,10 @@
-name: otel-demo-guided
-description: Canonical otel-demo smoke case used by local/e2e validation.
+name: hotelreservation-guided
+description: Canonical hotelreservation smoke case (DeathStarBench Go microservices) for local/e2e validation.
 project_name: pair_diagnosis
 submit:
   pedestal:
-    name: otel-demo
-    version: "0.1.1"
+    name: hs
+    version: "0.1.0"
   benchmark:
     name: clickhouse
     version: "1.0.0"
@@ -17,13 +17,15 @@ submit:
     - key: env
       value: local
     - key: batch
-      value: wrapper-0.1.1-verify
+      value: smoke
+    - key: run
+      value: sum-optional-20260421
   specs:
-    - - system: otel-demo
-        system_type: otel-demo
-        namespace: otel-demo0
-        app: frontend
-        chaos_type: PodFailure
+    - - system: hs
+        system_type: hs
+        namespace: hs0
+        app: frontend-hs0-hotelres
+        chaos_type: PodKill
         duration: 1
 validation:
   timeout_seconds: 3000

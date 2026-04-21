@@ -2,6 +2,7 @@ package injection
 
 import (
 	"aegis/dto"
+	"aegis/infra/k8s"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,36 @@ import (
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 )
+
+// ensureGuidedNamespaces creates any referenced namespace that doesn't exist
+// yet, so that the guided-build submit-time pod listing can find the (empty)
+// namespace instead of failing with `namespaces "X" not found`. RestartPedestal
+// will helm-install workloads into the namespace moments later; creating it
+// early is harmless. First-run only: existing namespaces are left alone.
+// Errors here are warnings, not fatal — if the cluster genuinely rejects the
+// create, the subsequent BuildInjection will fail and report that instead.
+func ensureGuidedNamespaces(ctx context.Context, configs []guidedcli.GuidedConfig) {
+	gw := k8s.NewGateway(nil)
+	seen := make(map[string]struct{}, len(configs))
+	for _, cfg := range configs {
+		ns := strings.TrimSpace(cfg.Namespace)
+		if ns == "" {
+			continue
+		}
+		if _, dup := seen[ns]; dup {
+			continue
+		}
+		seen[ns] = struct{}{}
+		created, err := gw.EnsureNamespace(ctx, ns)
+		if err != nil {
+			logrus.Warnf("submit: could not ensure namespace %q exists (will let BuildInjection surface the real error): %v", ns, err)
+			continue
+		}
+		if created {
+			logrus.Infof("submit: created namespace %q for guided submit (first-run bootstrap)", ns)
+		}
+	}
+}
 
 type injectionProcessItem struct {
 	index         int

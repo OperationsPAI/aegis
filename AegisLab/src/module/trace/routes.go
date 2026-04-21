@@ -18,6 +18,10 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				traces.GET("/:trace_id", handler.GetTrace)
 				traces.GET("/:trace_id/stream", handler.GetTraceStream)
 			}
+			tracesWrite := v2.Group("/traces", middleware.JWTAuth(), middleware.RequireTraceWrite)
+			{
+				tracesWrite.POST("/:trace_id/cancel", handler.CancelTrace)
+			}
 		},
 	}
 }

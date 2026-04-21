@@ -23,6 +23,11 @@ const (
 	ExitCodeTimeout         = 6
 	ExitCodeNotFound        = 7
 	ExitCodeConflict        = 8
+	// ExitCodeDedupeSuppressed signals that an inject/regression submission
+	// returned HTTP 200 but every batch was deduplicated against an existing
+	// injection. No trace_id was produced; the caller should change a spec
+	// field or wait for cooldown. See issues #91/#92.
+	ExitCodeDedupeSuppressed = 9
 )
 
 type exitError struct {

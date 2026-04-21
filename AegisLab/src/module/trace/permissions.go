@@ -11,6 +11,7 @@ func Permissions() framework.PermissionRegistrar {
 		Rules: []consts.PermissionRule{
 			consts.PermTraceReadAll,
 			consts.PermTraceMonitorAll,
+			consts.PermTraceStopAll,
 		},
 	}
 }
@@ -22,6 +23,7 @@ func RoleGrants() framework.RoleGrantsRegistrar {
 			consts.RoleAdmin: {
 				consts.PermTraceReadAll,
 				consts.PermTraceMonitorAll,
+				consts.PermTraceStopAll,
 			},
 		},
 	}
