@@ -1,6 +1,9 @@
 package client
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // Resolver resolves human-readable names (e.g. "train-ticket") to numeric IDs
 // by calling the list APIs. Results are cached in memory for the lifetime of the
@@ -94,4 +97,73 @@ func (r *Resolver) ContainerID(name string) (int, error) {
 func (r *Resolver) DatasetID(name string) (int, error) {
 	return resolve(r, "dataset", "/api/v2/datasets?page=1&size=100", name,
 		func(d datasetItem) (int, string) { return d.ID, d.Name })
+}
+
+// resolveByID looks up a resource by its numeric ID via GET /{path}/{id} and
+// returns its name. The response is expected to conform to APIResponse[T] where
+// T contains `id` and `name` fields.
+func resolveByID[T any](r *Resolver, path string, id int, extract func(T) (int, string)) (string, error) {
+	var resp APIResponse[T]
+	if err := r.client.Get(fmt.Sprintf("%s/%d", path, id), &resp); err != nil {
+		return "", err
+	}
+	_, name := extract(resp.Data)
+	if name == "" {
+		return "", fmt.Errorf("resource %d has no name", id)
+	}
+	return name, nil
+}
+
+// ProjectIDOrName accepts either a numeric ID or a project name and returns
+// both the numeric ID and the project name.
+func (r *Resolver) ProjectIDOrName(arg string) (int, string, error) {
+	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
+		name, err := resolveByID(r, "/api/v2/projects", id,
+			func(p projectItem) (int, string) { return p.ID, p.Name })
+		if err != nil {
+			return 0, "", err
+		}
+		return id, name, nil
+	}
+	id, err := r.ProjectID(arg)
+	if err != nil {
+		return 0, "", err
+	}
+	return id, arg, nil
+}
+
+// ContainerIDOrName accepts either a numeric ID or a container name and
+// returns both the numeric ID and the container name.
+func (r *Resolver) ContainerIDOrName(arg string) (int, string, error) {
+	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
+		name, err := resolveByID(r, "/api/v2/containers", id,
+			func(c containerItem) (int, string) { return c.ID, c.Name })
+		if err != nil {
+			return 0, "", err
+		}
+		return id, name, nil
+	}
+	id, err := r.ContainerID(arg)
+	if err != nil {
+		return 0, "", err
+	}
+	return id, arg, nil
+}
+
+// DatasetIDOrName accepts either a numeric ID or a dataset name and returns
+// both the numeric ID and the dataset name.
+func (r *Resolver) DatasetIDOrName(arg string) (int, string, error) {
+	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
+		name, err := resolveByID(r, "/api/v2/datasets", id,
+			func(d datasetItem) (int, string) { return d.ID, d.Name })
+		if err != nil {
+			return 0, "", err
+		}
+		return id, name, nil
+	}
+	id, err := r.DatasetID(arg)
+	if err != nil {
+		return 0, "", err
+	}
+	return id, arg, nil
 }

@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -55,7 +57,7 @@ Read-only / listing commands:
   aegisctl inject get <injection-name>
   aegisctl inject search --name-pattern "cpu*" --project pair_diagnosis
   aegisctl inject files <injection-name>
-  aegisctl inject download <injection-name> -O ./output.tar.gz
+  aegisctl inject download <injection-name> --output-file ./output.tar.gz
 
 NOTE: --project is required for list, search, and guided --apply.
       It accepts project names (resolved to IDs automatically).`,
@@ -153,9 +155,84 @@ var injectGetCmd = &cobra.Command{
 			return err
 		}
 
-		output.PrintJSON(resp.Data)
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(resp.Data)
+			return nil
+		}
+
+		if resp.Data == nil {
+			return nil
+		}
+
+		data, ok := resp.Data.(map[string]any)
+		if !ok {
+			// Fallback: unknown shape, just JSON it.
+			output.PrintJSON(resp.Data)
+			return nil
+		}
+
+		preferredOrder := []string{
+			"name", "id", "state", "fault_type",
+			"start_time", "end_time", "project_id", "display_config",
+		}
+		seen := map[string]bool{}
+		headers := []string{"FIELD", "VALUE"}
+		var rows [][]string
+
+		appendRow := func(k string) {
+			v, exists := data[k]
+			if !exists {
+				return
+			}
+			rows = append(rows, []string{k, formatInjectGetValue(v)})
+			seen[k] = true
+		}
+
+		for _, k := range preferredOrder {
+			appendRow(k)
+		}
+
+		// Append any remaining scalar keys in sorted order.
+		var remaining []string
+		for k, v := range data {
+			if seen[k] {
+				continue
+			}
+			switch v.(type) {
+			case string, float64, float32, int, int32, int64, bool, nil:
+				remaining = append(remaining, k)
+			}
+		}
+		sort.Strings(remaining)
+		for _, k := range remaining {
+			appendRow(k)
+		}
+
+		output.PrintTable(headers, rows)
 		return nil
 	},
+}
+
+func formatInjectGetValue(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return x
+	case bool:
+		return fmt.Sprintf("%t", x)
+	case float64:
+		// Render whole numbers without decimal noise.
+		if x == float64(int64(x)) {
+			return fmt.Sprintf("%d", int64(x))
+		}
+		return fmt.Sprintf("%v", x)
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf("%v", v)
+	}
+	return string(b)
 }
 
 // ---------- inject search ----------
@@ -243,7 +320,7 @@ var injectDownloadCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if injectDownloadOutput == "" {
-			return fmt.Errorf("-o <path> is required")
+			return usageErrorf("--output-file <path> is required")
 		}
 
 		r := newResolver()
@@ -306,7 +383,7 @@ func init() {
 	injectSearchCmd.Flags().StringVar(&injectSearchNamePattern, "name-pattern", "", "Name pattern to search for")
 	injectSearchCmd.Flags().StringVar(&injectSearchLabels, "labels", "", "Labels to filter (key=val,...)")
 
-	injectDownloadCmd.Flags().StringVarP(&injectDownloadOutput, "output-file", "O", "", "Output file path")
+	injectDownloadCmd.Flags().StringVar(&injectDownloadOutput, "output-file", "", "Output file path")
 
 	injectCmd.AddCommand(injectListCmd)
 	injectCmd.AddCommand(injectGetCmd)

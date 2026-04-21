@@ -21,6 +21,8 @@ const (
 	ExitCodeMissingEnv      = 4
 	ExitCodeWorkflowFailure = 5
 	ExitCodeTimeout         = 6
+	ExitCodeNotFound        = 7
+	ExitCodeConflict        = 8
 )
 
 type exitError struct {
@@ -61,6 +63,14 @@ func workflowFailureErrorf(format string, args ...any) error {
 
 func timeoutErrorf(format string, args ...any) error {
 	return &exitError{Code: ExitCodeTimeout, Message: fmt.Sprintf(format, args...)}
+}
+
+func notFoundErrorf(format string, args ...any) error {
+	return &exitError{Code: ExitCodeNotFound, Message: fmt.Sprintf(format, args...)}
+}
+
+func conflictErrorf(format string, args ...any) error {
+	return &exitError{Code: ExitCodeConflict, Message: fmt.Sprintf(format, args...)}
 }
 
 func silentExit(code int) error {
@@ -111,6 +121,7 @@ func requireAPIContext(needsToken bool) error {
 }
 
 func executeArgs(args []string) int {
+	setupDryRunRegistry()
 	rootCmd.SetArgs(args)
 	err := rootCmd.Execute()
 	rootCmd.SetArgs(nil)
@@ -143,6 +154,10 @@ func exitCodeFor(err error) int {
 		switch apiErr.StatusCode {
 		case 401, 403:
 			return ExitCodeAuthFailure
+		case 404:
+			return ExitCodeNotFound
+		case 409:
+			return ExitCodeConflict
 		}
 	}
 

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
@@ -176,7 +175,7 @@ var pedestalHelmVerifyCmd = &cobra.Command{
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
 			output.PrintJSON(resp.Data)
 			if !resp.Data.OK {
-				os.Exit(1)
+				return missingEnvErrorf("pedestal helm verify failed for container_version_id=%d", pedestalHelmVersionID)
 			}
 			return nil
 		}
@@ -191,7 +190,7 @@ var pedestalHelmVerifyCmd = &cobra.Command{
 			}
 		}
 		if !resp.Data.OK {
-			os.Exit(1)
+			return missingEnvErrorf("pedestal helm verify failed for container_version_id=%d", pedestalHelmVersionID)
 		}
 		return nil
 	},

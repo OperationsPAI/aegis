@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
@@ -137,8 +138,78 @@ var datasetVersionsCmd = &cobra.Command{
 	},
 }
 
+// --- dataset delete ---
+
+var datasetDeleteYes bool
+
+var datasetDeleteCmd = &cobra.Command{
+	Use:   "delete <name-or-id>",
+	Short: "Delete a dataset",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		c := newClient()
+		r := client.NewResolver(c)
+		id, name, err := r.DatasetIDOrName(args[0])
+		if err != nil {
+			return notFoundErrorf("dataset %q not found: %v", args[0], err)
+		}
+
+		if flagDryRun {
+			fmt.Fprintf(os.Stderr, "Dry run — would DELETE /api/v2/datasets/%d (%s)\n", id, name)
+			if output.OutputFormat(flagOutput) == output.FormatJSON {
+				output.PrintJSON(map[string]any{"dry_run": true, "id": id, "name": name})
+			} else {
+				fmt.Printf("Would delete dataset %s (id %d)\n", name, id)
+			}
+			return nil
+		}
+		if err := confirmDeletion("dataset", name, id, datasetDeleteYes); err != nil {
+			return err
+		}
+		var resp client.APIResponse[any]
+		if err := c.Delete(fmt.Sprintf("/api/v2/datasets/%d", id), &resp); err != nil {
+			return err
+		}
+		output.PrintInfo(fmt.Sprintf("Dataset %q (id %d) deleted", name, id))
+		return nil
+	},
+}
+
+// --- dataset resolve ---
+
+var datasetResolveCmd = &cobra.Command{
+	Use:   "resolve <name-or-id>",
+	Short: "Resolve a dataset reference to both its ID and name",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		c := newClient()
+		r := client.NewResolver(c)
+		id, name, err := r.DatasetIDOrName(args[0])
+		if err != nil {
+			return notFoundErrorf("dataset %q not found", args[0])
+		}
+		printResolvedIDName(id, name)
+		return nil
+	},
+}
+
 func init() {
+	datasetDeleteCmd.Flags().BoolVar(&datasetDeleteYes, "yes", false, "Skip confirmation prompt")
+	datasetDeleteCmd.Flags().BoolVar(&datasetDeleteYes, "force", false, "Alias for --yes")
+
 	datasetCmd.AddCommand(datasetListCmd)
 	datasetCmd.AddCommand(datasetGetCmd)
 	datasetCmd.AddCommand(datasetVersionsCmd)
+	datasetCmd.AddCommand(datasetDeleteCmd)
+	datasetCmd.AddCommand(datasetResolveCmd)
+
+	cobra.OnInitialize(func() {
+		markDryRunSupported(datasetDeleteCmd)
+	})
 }

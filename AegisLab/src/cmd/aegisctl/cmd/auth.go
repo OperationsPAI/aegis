@@ -236,7 +236,7 @@ var authStatusCmd = &cobra.Command{
 		}
 
 		if ctx.Token == "" {
-			return fmt.Errorf("no token set in context %q; run 'aegisctl auth login'", ctxName)
+			return authErrorf("no token set in context %q (run 'aegisctl auth login' to refresh your token)", ctxName)
 		}
 
 		expired := client.IsTokenExpired(ctx.TokenExpiry)
@@ -275,7 +275,11 @@ var authStatusCmd = &cobra.Command{
 		// Also try to fetch profile to verify token is actually valid.
 		profile, err := client.GetProfile(ctx.Server, ctx.Token)
 		if err != nil {
-			output.PrintInfo(fmt.Sprintf("Warning: could not verify token with server: %v", err))
+			hint := ""
+			if expired {
+				hint = " (run 'aegisctl auth login' to refresh your token)"
+			}
+			output.PrintInfo(fmt.Sprintf("Warning: could not verify token with server: %v%s", err, hint))
 		} else {
 			output.PrintInfo(fmt.Sprintf("Authenticated as: %s (id: %d)", profile.Username, profile.ID))
 		}
@@ -463,7 +467,7 @@ var authTokenCmd = &cobra.Command{
 				return err
 			}
 			if ctx.Token == "" {
-				return fmt.Errorf("no token set in context %q", ctxName)
+				return authErrorf("no token set in context %q (run 'aegisctl auth login' to refresh your token)", ctxName)
 			}
 			// Show truncated token.
 			token := ctx.Token

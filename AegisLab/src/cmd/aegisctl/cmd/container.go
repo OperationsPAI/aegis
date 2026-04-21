@@ -369,6 +369,67 @@ func runListVersions(containerName string) error {
 	return nil
 }
 
+// --- container delete ---
+
+var containerDeleteYes bool
+
+var containerDeleteCmd = &cobra.Command{
+	Use:   "delete <name-or-id>",
+	Short: "Delete a container",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		c := newClient()
+		r := client.NewResolver(c)
+		id, name, err := r.ContainerIDOrName(args[0])
+		if err != nil {
+			return notFoundErrorf("container %q not found: %v", args[0], err)
+		}
+
+		if flagDryRun {
+			fmt.Fprintf(os.Stderr, "Dry run — would DELETE /api/v2/containers/%d (%s)\n", id, name)
+			if output.OutputFormat(flagOutput) == output.FormatJSON {
+				output.PrintJSON(map[string]any{"dry_run": true, "id": id, "name": name})
+			} else {
+				fmt.Printf("Would delete container %s (id %d)\n", name, id)
+			}
+			return nil
+		}
+		if err := confirmDeletion("container", name, id, containerDeleteYes); err != nil {
+			return err
+		}
+		var resp client.APIResponse[any]
+		if err := c.Delete(fmt.Sprintf("/api/v2/containers/%d", id), &resp); err != nil {
+			return err
+		}
+		output.PrintInfo(fmt.Sprintf("Container %q (id %d) deleted", name, id))
+		return nil
+	},
+}
+
+// --- container resolve ---
+
+var containerResolveCmd = &cobra.Command{
+	Use:   "resolve <name-or-id>",
+	Short: "Resolve a container reference to both its ID and name",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		c := newClient()
+		r := client.NewResolver(c)
+		id, name, err := r.ContainerIDOrName(args[0])
+		if err != nil {
+			return notFoundErrorf("container %q not found", args[0])
+		}
+		printResolvedIDName(id, name)
+		return nil
+	},
+}
+
 // --- container build ---
 
 var containerBuildVersion string
@@ -407,10 +468,19 @@ func init() {
 
 	containerBuildCmd.Flags().StringVar(&containerBuildVersion, "version", "", "Version tag for the build")
 
+	containerDeleteCmd.Flags().BoolVar(&containerDeleteYes, "yes", false, "Skip confirmation prompt")
+	containerDeleteCmd.Flags().BoolVar(&containerDeleteYes, "force", false, "Alias for --yes")
+
 	containerCmd.AddCommand(containerListCmd)
 	containerCmd.AddCommand(containerGetCmd)
 	containerCmd.AddCommand(containerVersionsCmd)
 	containerCmd.AddCommand(containerBuildCmd)
+	containerCmd.AddCommand(containerDeleteCmd)
+	containerCmd.AddCommand(containerResolveCmd)
+
+	cobra.OnInitialize(func() {
+		markDryRunSupported(containerDeleteCmd)
+	})
 
 	// `container version` subcommands
 	containerVersionSetImageCmd.Flags().IntVar(&setImageID, "id", 0, "Container version ID to update (required)")

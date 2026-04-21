@@ -34,6 +34,8 @@ These codes apply to validation-oriented and automation-facing command paths:
 | `4` | Missing environment / dependency | `cluster preflight` finds required dependencies unavailable, missing config or required runtime environment |
 | `5` | Terminal workflow failure | `wait` reaches `Failed`, `Error`, or `Cancelled` |
 | `6` | Timeout | `wait` exceeds `--timeout` |
+| `7` | Not found | `inject get <unknown>` or any GET by name/ID where the server returns HTTP `404` |
+| `8` | Conflict | `project create <duplicate>` or any create/update where the server returns HTTP `409` |
 
 ## Covered commands
 

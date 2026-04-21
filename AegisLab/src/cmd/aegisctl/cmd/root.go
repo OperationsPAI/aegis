@@ -168,6 +168,16 @@ NAMING CONVENTION:
 		// Forward quiet flag into the output package.
 		output.Quiet = flagQuiet
 
+		// Reject --dry-run on commands that don't implement it. We do this
+		// after the resolution logic so env-expansion still runs, but before
+		// any RunE executes — otherwise users get a silently-ignored flag.
+		// --help and --dump-schema / non-runnable groups are exempt because
+		// PersistentPreRunE is not invoked for pure --help paths, and group
+		// commands have no Run/RunE so they'd just print usage.
+		if flagDryRun && cmd.Runnable() && !isDryRunSupported(cmd) {
+			return usageErrorf("--dry-run is not supported for '%s'", cmd.CommandPath())
+		}
+
 		return nil
 	},
 }
@@ -175,7 +185,7 @@ NAMING CONVENTION:
 func init() {
 	rootCmd.PersistentFlags().StringVar(&flagServer, "server", "", "AegisLab server URL (env: AEGIS_SERVER)")
 	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "Authentication token (env: AEGIS_TOKEN)")
-	rootCmd.PersistentFlags().StringVar(&flagProject, "project", "", "Default project ID (env: AEGIS_PROJECT)")
+	rootCmd.PersistentFlags().StringVar(&flagProject, "project", "", "Default project name (resolved to ID; env: AEGIS_PROJECT)")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table|json (env: AEGIS_OUTPUT)")
 	rootCmd.PersistentFlags().IntVar(&flagRequestTimeout, "request-timeout", 0, "Request timeout in seconds (env: AEGIS_TIMEOUT)")
 	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
@@ -201,6 +211,28 @@ func init() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(pedestalCmd)
 	rootCmd.AddCommand(regressionCmd)
+	rootCmd.AddCommand(schemaCmd)
+}
+
+// setupDryRunRegistry records which commands opt in to --dry-run. It must be
+// invoked after ALL package-level init() functions have wired subcommands into
+// their parents (so CommandPath() resolves to the full dotted path). We call
+// it from Execute(), which is the single entry point.
+func setupDryRunRegistry() {
+	if injectGuidedCmd != nil {
+		markDryRunSupported(injectGuidedCmd)
+	}
+	if executeSubmitCmd != nil {
+		markDryRunSupported(executeSubmitCmd)
+	}
+	if clusterPrepareCmd != nil {
+		markDryRunSupported(clusterPrepareCmd)
+	}
+	if schemaDumpCmd != nil {
+		// schema dump is read-only; --dry-run is a no-op but allowed.
+		markDryRunSupported(schemaDumpCmd)
+	}
+	markPedestalDryRunSupported()
 }
 
 // Execute runs the root command and returns the process exit code.
