@@ -16,6 +16,7 @@ import (
 	etcd "aegis/infra/etcd"
 	"aegis/model"
 	"aegis/service/common"
+	"aegis/service/initialization"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/sirupsen/logrus"
@@ -451,6 +452,41 @@ func (s *Service) ListMetadata(_ context.Context, id int, metadataType string) (
 		items = append(items, *NewSystemMetadataResp(&meta))
 	}
 	return items, nil
+}
+
+// Reseed drives initialization.ReseedFromDataFile against the live DB and
+// etcd gateway. It is the HTTP-facing entry point for issue #105 — callers
+// (aegisctl system reseed) use this to propagate data.yaml bumps (chart
+// version / chart name / new container_version rows / dynamic_config
+// default drift) to a running DB + etcd without redeploying the backend.
+//
+// The data file location is resolved from the `initialization.data_path`
+// config key (the same key used by the first-boot seed path) so reseed and
+// seed always read the same file. An optional `env` field lets operators
+// pick prod/staging when the configured path is the initial_data root.
+func (s *Service) ReseedSystems(ctx context.Context, req *ReseedSystemReq) (*initialization.ReseedReport, error) {
+	if req == nil {
+		req = &ReseedSystemReq{}
+	}
+	if !req.Apply {
+		// Safety: default to dry-run so an accidental POST never writes.
+		req.DryRun = true
+	}
+	basePath := strings.TrimSpace(req.DataPath)
+	if basePath == "" {
+		basePath = config.GetString("initialization.data_path")
+	}
+	seedPath, err := initialization.ResolveSeedPath(basePath, req.Env)
+	if err != nil {
+		return nil, fmt.Errorf("resolve seed path: %w: %w", err, consts.ErrBadRequest)
+	}
+	return initialization.ReseedFromDataFile(ctx, s.repo.DB(), s.etcd, initialization.ReseedRequest{
+		DataPath:       seedPath,
+		Env:            req.Env,
+		SystemName:     strings.TrimSpace(req.Name),
+		DryRun:         req.DryRun,
+		ResetOverrides: req.ResetOverrides,
+	})
 }
 
 // =====================================================================

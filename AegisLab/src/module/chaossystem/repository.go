@@ -21,6 +21,11 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
+// DB exposes the underlying *gorm.DB for callers that need to run operations
+// across multiple tables (e.g. the reseed service, which diffs containers
+// + container_versions + helm_configs + dynamic_configs in one pass).
+func (r *Repository) DB() *gorm.DB { return r.db }
+
 // GetConfigByKey returns the DynamicConfig row for the given key. Returns a
 // (nil, nil) tuple when the row does not exist — callers treat the absence
 // as "system has no state yet".

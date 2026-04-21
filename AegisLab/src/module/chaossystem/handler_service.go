@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"aegis/dto"
+	"aegis/service/initialization"
 )
 
 // HandlerService captures chaos system operations consumed by HTTP and resource gRPC handlers.
@@ -16,6 +17,7 @@ type HandlerService interface {
 	DeleteSystem(context.Context, int) error
 	UpsertMetadata(context.Context, int, *BulkUpsertSystemMetadataReq) error
 	ListMetadata(context.Context, int, string) ([]SystemMetadataResp, error)
+	ReseedSystems(context.Context, *ReseedSystemReq) (*initialization.ReseedReport, error)
 }
 
 func AsHandlerService(service *Service) HandlerService {

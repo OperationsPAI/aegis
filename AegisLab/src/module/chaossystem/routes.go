@@ -28,6 +28,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 					systemConfigure.POST("", handler.CreateSystem)
 					systemConfigure.PUT("/:id", handler.UpdateSystem)
 					systemConfigure.POST("/:id/metadata", handler.UpsertMetadata)
+					systemConfigure.POST("/reseed", handler.ReseedSystems)
 				}
 
 				systems.DELETE("/:id", middleware.RequirePermission(consts.PermSystemManage), handler.DeleteSystem)

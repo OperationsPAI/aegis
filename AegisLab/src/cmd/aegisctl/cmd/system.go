@@ -632,4 +632,171 @@ func init() {
 	systemCmd.AddCommand(systemUnregisterCmd)
 	systemCmd.AddCommand(systemEnableCmd)
 	systemCmd.AddCommand(systemDisableCmd)
+
+	systemReseedCmd.Flags().StringVar(&systemReseedName, "name", "", "Short code of a single system to reseed (empty = all systems)")
+	systemReseedCmd.Flags().StringVar(&systemReseedEnv, "env", "", "Environment: 'prod' or 'staging' (server resolves relative to initialization.data_path)")
+	systemReseedCmd.Flags().StringVar(&systemReseedDataPath, "data-path", "", "Override server-side initialization.data_path (advanced)")
+	systemReseedCmd.Flags().BoolVar(&systemReseedApply, "apply", false, "Actually write changes (default is dry-run for safety)")
+	systemReseedCmd.Flags().BoolVar(&systemReseedResetOverrides, "reset-overrides", false, "Replace live etcd values that differ from the new default")
+	systemCmd.AddCommand(systemReseedCmd)
+}
+
+// --- system reseed ---------------------------------------------------------
+
+var (
+	systemReseedName           string
+	systemReseedEnv            string
+	systemReseedDataPath       string
+	systemReseedApply          bool
+	systemReseedResetOverrides bool
+)
+
+// reseedActionResp mirrors initialization.ReseedAction without importing the
+// backend package — keeps the CLI binary buildable without cgo / the backend
+// build tags.
+type reseedActionResp struct {
+	Layer    string `json:"layer"`
+	System   string `json:"system"`
+	Key      string `json:"key"`
+	OldValue string `json:"old_value"`
+	NewValue string `json:"new_value"`
+	Note     string `json:"note"`
+	Applied  bool   `json:"applied"`
+}
+
+type reseedReportResp struct {
+	Env             string             `json:"env"`
+	DryRun          bool               `json:"dry_run"`
+	ResetOverrides  bool               `json:"reset_overrides"`
+	SystemFilter    string             `json:"system_filter"`
+	SeedPath        string             `json:"seed_path"`
+	Actions         []reseedActionResp `json:"actions"`
+	PreservedCount  int                `json:"preserved_overrides"`
+	NewVersions     int                `json:"new_versions"`
+	DefaultsUpdated int                `json:"defaults_updated"`
+	EtcdPublished   int                `json:"etcd_published"`
+}
+
+type reseedSystemReqBody struct {
+	Name           string `json:"name,omitempty"`
+	Env            string `json:"env,omitempty"`
+	DataPath       string `json:"data_path,omitempty"`
+	Apply          bool   `json:"apply"`
+	ResetOverrides bool   `json:"reset_overrides"`
+}
+
+var systemReseedCmd = &cobra.Command{
+	Use:   "reseed",
+	Short: "Propagate data.yaml bumps (chart / version / defaults) to DB + etcd",
+	Long: `Diff the server-side data.yaml against the live DB + etcd and apply drift.
+Defaults to DRY-RUN for safety — pass --apply to actually write.
+
+What is written:
+  - container_versions: a new version INSERTs a new row (history preserved;
+    existing versions are never mutated).
+  - helm_configs: a new version gets its helm_config. Chart drift on an
+    already-seeded version is reported but NOT applied — bump the version
+    name in data.yaml to honor the history contract.
+  - dynamic_configs: default_value drift is UPDATEd in DB.
+  - etcd: if the live etcd value equals the old default (i.e. no operator
+    override), follow it forward. A live value that differs from both the
+    old and new default is treated as a user override and preserved unless
+    --reset-overrides is passed.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		c := newClient()
+		body := reseedSystemReqBody{
+			Name:           strings.TrimSpace(systemReseedName),
+			Env:            strings.TrimSpace(systemReseedEnv),
+			DataPath:       strings.TrimSpace(systemReseedDataPath),
+			Apply:          systemReseedApply,
+			ResetOverrides: systemReseedResetOverrides,
+		}
+		var resp client.APIResponse[reseedReportResp]
+		if err := c.Post("/api/v2/systems/reseed", body, &resp); err != nil {
+			return fmt.Errorf("reseed: %w (hint: retry with --apply=false to diff without writing; check backend logs for which subsystem failed)", err)
+		}
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(resp.Data)
+			return nil
+		}
+		printReseedReport(&resp.Data)
+		return nil
+	},
+}
+
+// printReseedReport renders the engine report as a human-readable table
+// grouped by layer. Empty action list is an explicit "in sync" message so
+// ops can distinguish it from an error.
+func printReseedReport(r *reseedReportResp) {
+	mode := "APPLY"
+	if r.DryRun {
+		mode = "DRY-RUN"
+	}
+	output.PrintInfo(fmt.Sprintf("reseed %s (seed=%s%s)", mode, r.SeedPath, func() string {
+		if r.SystemFilter != "" {
+			return " filter=" + r.SystemFilter
+		}
+		return ""
+	}()))
+
+	if len(r.Actions) == 0 {
+		output.PrintInfo("No drift — DB + etcd already in sync with data.yaml.")
+		return
+	}
+
+	// Sort: layer, then system, then key.
+	actions := append([]reseedActionResp(nil), r.Actions...)
+	sort.SliceStable(actions, func(i, j int) bool {
+		if actions[i].Layer != actions[j].Layer {
+			return actions[i].Layer < actions[j].Layer
+		}
+		if actions[i].System != actions[j].System {
+			return actions[i].System < actions[j].System
+		}
+		return actions[i].Key < actions[j].Key
+	})
+
+	rows := make([][]string, 0, len(actions))
+	for _, a := range actions {
+		status := "plan"
+		if a.Applied {
+			status = "applied"
+		} else if r.DryRun {
+			status = "would-apply"
+		} else if a.Note != "" && strings.Contains(a.Note, "preserved") {
+			status = "preserved"
+		} else if a.Note != "" && strings.Contains(a.Note, "bump container_version") {
+			status = "skipped"
+		}
+		rows = append(rows, []string{
+			a.Layer,
+			a.System,
+			truncCell(a.Key, 48),
+			truncCell(a.OldValue, 28),
+			truncCell(a.NewValue, 28),
+			status,
+			truncCell(a.Note, 48),
+		})
+	}
+	output.PrintTable([]string{"Layer", "System", "Key", "Old", "New", "Status", "Note"}, rows)
+	output.PrintInfo(fmt.Sprintf("Summary: new_versions=%d defaults_updated=%d etcd_published=%d preserved_overrides=%d",
+		r.NewVersions, r.DefaultsUpdated, r.EtcdPublished, r.PreservedCount))
+	if r.DryRun && r.PreservedCount == 0 && len(actions) > 0 {
+		output.PrintInfo("Re-run with --apply to write the planned changes.")
+	}
+	if r.PreservedCount > 0 && !r.ResetOverrides {
+		output.PrintInfo(fmt.Sprintf("%d etcd override(s) preserved; re-run with --reset-overrides to replace.", r.PreservedCount))
+	}
+}
+
+// truncCell keeps a cell readable when the value embeds a long chart URL or
+// regex without hiding it entirely.
+func truncCell(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max-1] + "…"
 }

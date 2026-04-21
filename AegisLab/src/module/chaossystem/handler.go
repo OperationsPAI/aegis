@@ -228,6 +228,36 @@ func (h *Handler) UpsertMetadata(c *gin.Context) {
 	dto.JSONResponse[any](c, http.StatusOK, "Metadata upserted successfully", nil)
 }
 
+// ReseedSystemsHandler propagates data.yaml bumps (chart version / chart
+// name / new container_version rows / dynamic_config default drift) onto a
+// running DB + etcd. Defaults to dry-run.
+//
+//	@Summary		Reseed systems from data.yaml
+//	@Description	Diff the on-disk data.yaml against the live DB + etcd and apply drift. Defaults to dry-run; set `apply=true` to write. Use `name` to limit to one system; `reset_overrides=true` to replace live etcd values that differ from the new default.
+//	@Tags			Systems
+//	@ID				reseed_chaos_systems
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		ReseedSystemReq	true	"Reseed request"
+//	@Success		200		{object}	dto.GenericResponse[any]	"Reseed report"
+//	@Failure		400		{object}	dto.GenericResponse[any]	"Invalid request"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/systems/reseed [post]
+//	@x-api-type		{"admin":"true"}
+func (h *Handler) ReseedSystems(c *gin.Context) {
+	var req ReseedSystemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
+		return
+	}
+	resp, err := h.service.ReseedSystems(c.Request.Context(), &req)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 // ListChaosSystemMetadataHandler handles listing metadata for a chaos system
 //
 //	@Summary		List chaos system metadata

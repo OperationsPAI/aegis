@@ -151,6 +151,23 @@ func (req *BulkUpsertSystemMetadataReq) Validate() error {
 	return nil
 }
 
+// ReseedSystemReq drives POST /api/v2/systems/reseed — propagate data.yaml
+// bumps (chart version, chart name, new container_version rows, dynamic_config
+// default drift) to the running DB + etcd. See issue #105.
+//
+// Defaults to dry-run (Apply=false) as a safety net so a mis-click never
+// writes. `Env` picks prod|staging when `DataPath` is the initial_data root
+// (or omitted — the handler falls back to the configured
+// initialization.data_path).
+type ReseedSystemReq struct {
+	Name           string `json:"name,omitempty"`            // optional filter: only reseed the named system
+	Env            string `json:"env,omitempty"`             // prod | staging
+	DataPath       string `json:"data_path,omitempty"`       // optional override for initialization.data_path
+	Apply          bool   `json:"apply,omitempty"`           // false (default) = dry-run; true = actually write
+	DryRun         bool   `json:"dry_run,omitempty"`         // informational: client can set true to force dry run even if apply=true
+	ResetOverrides bool   `json:"reset_overrides,omitempty"` // true = stomp user etcd overrides that differ from new default
+}
+
 // SystemChartResp returns the chart source for a system's active pedestal
 // ContainerVersion. Consumers (aegisctl pedestal chart install) use this to
 // resolve where to pull the chart tgz from when no --tgz override is given.
