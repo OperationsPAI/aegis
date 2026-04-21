@@ -1,7 +1,0 @@
-# Values overrides for the onlineboutique-aegis wrapper chart.
-# The chart itself is maintained in OperationsPAI/benchmark-charts (issue #93);
-# it wraps GoogleCloudPlatform/microservices-demo (v0.10.5) and swaps the
-# upstream in-namespace OTel collector for an ExternalName Service pointing
-# at the cluster otel-collector.
-clusterCollector:
-  service: otel-collector.otel.svc.cluster.local

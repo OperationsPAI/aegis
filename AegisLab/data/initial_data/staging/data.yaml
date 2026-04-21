@@ -74,6 +74,36 @@ containers:
           repo_name: open-telemetry
           repo_url: https://operationspai.github.io/opentelemetry-demo
           status: 1
+  - type: 2
+    name: ob
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.1
+        github_link: GoogleCloudPlatform/microservices-demo
+        status: 1
+        helm_config:
+          version: 0.1.1
+          chart_name: onlineboutique-aegis
+          repo_name: opspai
+          repo_url: oci://registry-1.docker.io/opspai
+          status: 1
+  - type: 1
+    name: ob-bench
+    is_public: true
+    status: 1
+    versions:
+      - name: e2e-kind-20260421
+        image_ref: docker.io/opspai/clickhouse_dataset:e2e-kind-20260421
+        command: bash /entrypoint.sh
+        env_vars:
+          - key: NAMESPACE
+            type: 0
+            category: 0
+            value_type: 0
+            default_value: ob0
+            required: true
+            overridable: true
 datasets:
   - name: rca_pair_diagnosis_dataset
     description: RCA Pair Diagnosis Dataset
