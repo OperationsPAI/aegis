@@ -21,9 +21,18 @@ ENV NORMAL_END=${NORMAL_END_VAR}
 # valid() (in rcabench_platform…sdk.datasets.rcabench) honours this env var:
 # parquets in this list are allowed to have zero rows (file must still exist
 # and parse cleanly). Override per-task via container_versions.env_vars when
-# a benchmark should enforce the full set. Currently histograms: the Google
-# microservices-demo stack (onlineboutique) doesn't emit OTel histograms,
-# whereas otel-demo's SDK does — so the relaxation is no-op for otel-demo.
-ENV RCABENCH_OPTIONAL_EMPTY_PARQUETS="abnormal_metrics_histogram.parquet,normal_metrics_histogram.parquet"
+# a benchmark should enforce the full set.
+#
+# Histograms: the Google microservices-demo stack (onlineboutique) doesn't
+# emit OTel histograms, whereas otel-demo's SDK does — so the relaxation is
+# a no-op for otel-demo.
+# Sum metrics: DSB-family (hotelreservation, mediamicroservices, socialnetwork)
+# and the Coherence/Helidon sockshop fork export via Prometheus/Jaeger, not
+# OTLP, so OTel sum metrics are never produced. Otel-demo and onlineboutique
+# (with the cluster-side kube-stack prometheus receiver) do emit sum metrics,
+# so the relaxation is a no-op for them too. Overall effect: the full datapack
+# still validates for non-OTel-native stacks while telemetry-complete stacks
+# enforce the strict set naturally via the presence of real data.
+ENV RCABENCH_OPTIONAL_EMPTY_PARQUETS="abnormal_metrics_histogram.parquet,normal_metrics_histogram.parquet,abnormal_metrics_sum.parquet,normal_metrics_sum.parquet"
 
 ENTRYPOINT ["/entrypoint.sh"]
