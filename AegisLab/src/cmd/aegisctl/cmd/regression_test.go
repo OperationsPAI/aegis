@@ -49,6 +49,149 @@ func makePreflightCase() regressionCase {
 	}
 }
 
+type fakeSystemsFetcher struct {
+	byName map[string]struct {
+		pattern string
+		count   int
+	}
+	err error
+}
+
+func (f *fakeSystemsFetcher) FetchSystem(_ context.Context, name string) (string, int, error) {
+	if f.err != nil {
+		return "", 0, f.err
+	}
+	if e, ok := f.byName[name]; ok {
+		return e.pattern, e.count, nil
+	}
+	return "", 0, fmt.Errorf("system %q not found", name)
+}
+
+func firstSpec(rc regressionCase) map[string]any {
+	groups, _ := rc.Submit["specs"].([]any)
+	inner, _ := groups[0].([]any)
+	spec, _ := inner[0].(map[string]any)
+	return spec
+}
+
+func newRegressionCaseWithSpec(system, namespace string) regressionCase {
+	spec := map[string]any{
+		"system": system,
+		"app":    "frontend",
+	}
+	if namespace != "" {
+		spec["namespace"] = namespace
+	}
+	return regressionCase{
+		Name:        "ns-resolve",
+		ProjectName: "p",
+		Submit: map[string]any{
+			"specs": []any{[]any{spec}},
+		},
+		Validation: regressionValidation{
+			ExpectedFinalEvent: "x",
+			RequiredTaskChain:  []string{"y"},
+		},
+	}
+}
+
+func TestResolveRegressionNamespaces_BareSystemNameRewrites(t *testing.T) {
+	rc := newRegressionCaseWithSpec("otel-demo", "otel-demo")
+	fetcher := &fakeSystemsFetcher{byName: map[string]struct {
+		pattern string
+		count   int
+	}{"otel-demo": {pattern: `^otel-demo\d+$`, count: 1}}}
+
+	if err := resolveRegressionNamespaces(context.Background(), &rc, fetcher); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	got, _ := firstSpec(rc)["namespace"].(string)
+	if got != "otel-demo0" {
+		t.Fatalf("expected namespace rewritten to otel-demo0, got %q", got)
+	}
+}
+
+func TestResolveRegressionNamespaces_AlreadyMatchingKept(t *testing.T) {
+	rc := newRegressionCaseWithSpec("otel-demo", "otel-demo0")
+	fetcher := &fakeSystemsFetcher{byName: map[string]struct {
+		pattern string
+		count   int
+	}{"otel-demo": {pattern: `^otel-demo\d+$`, count: 1}}}
+
+	if err := resolveRegressionNamespaces(context.Background(), &rc, fetcher); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	got, _ := firstSpec(rc)["namespace"].(string)
+	if got != "otel-demo0" {
+		t.Fatalf("expected unchanged otel-demo0, got %q", got)
+	}
+}
+
+func TestResolveRegressionNamespaces_EmptyFilled(t *testing.T) {
+	rc := newRegressionCaseWithSpec("otel-demo", "")
+	fetcher := &fakeSystemsFetcher{byName: map[string]struct {
+		pattern string
+		count   int
+	}{"otel-demo": {pattern: `^otel-demo\d+$`, count: 1}}}
+
+	if err := resolveRegressionNamespaces(context.Background(), &rc, fetcher); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	got, _ := firstSpec(rc)["namespace"].(string)
+	if got != "otel-demo0" {
+		t.Fatalf("expected filled otel-demo0, got %q", got)
+	}
+}
+
+func TestResolveRegressionNamespaces_MismatchErrors(t *testing.T) {
+	rc := newRegressionCaseWithSpec("otel-demo", "nonsense")
+	fetcher := &fakeSystemsFetcher{byName: map[string]struct {
+		pattern string
+		count   int
+	}{"otel-demo": {pattern: `^otel-demo\d+$`, count: 1}}}
+
+	err := resolveRegressionNamespaces(context.Background(), &rc, fetcher)
+	if err == nil {
+		t.Fatal("expected error for mismatched namespace")
+	}
+	if !strings.Contains(err.Error(), "does not match system") {
+		t.Fatalf("expected clear mismatch error, got %v", err)
+	}
+}
+
+func TestResolveRegressionNamespaces_NoSystemLeftAlone(t *testing.T) {
+	spec := map[string]any{"namespace": "whatever", "app": "frontend"}
+	rc := regressionCase{
+		Name:        "n",
+		ProjectName: "p",
+		Submit:      map[string]any{"specs": []any{[]any{spec}}},
+		Validation: regressionValidation{
+			ExpectedFinalEvent: "x",
+			RequiredTaskChain:  []string{"y"},
+		},
+	}
+	fetcher := &fakeSystemsFetcher{err: fmt.Errorf("should not be called")}
+	if err := resolveRegressionNamespaces(context.Background(), &rc, fetcher); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if ns, _ := spec["namespace"].(string); ns != "whatever" {
+		t.Fatalf("expected unchanged namespace, got %q", ns)
+	}
+}
+
+func TestResolveRegressionNamespaces_BackendDownFallsBack(t *testing.T) {
+	rc := newRegressionCaseWithSpec("otel-demo", "otel-demo0")
+	fetcher := &fakeSystemsFetcher{err: fmt.Errorf("connection refused")}
+
+	if err := resolveRegressionNamespaces(context.Background(), &rc, fetcher); err != nil {
+		t.Fatalf("expected fallback no-op, got %v", err)
+	}
+	got, _ := firstSpec(rc)["namespace"].(string)
+	if got != "otel-demo0" {
+		t.Fatalf("expected namespace preserved on backend-down fallback, got %q", got)
+	}
+}
+
 func TestRegressionPreflight_AllPresent(t *testing.T) {
 	rc := makePreflightCase()
 	lister := &fakePodLister{byNSApp: map[string]int{

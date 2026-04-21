@@ -306,6 +306,28 @@ func (s *Service) UpdateSystem(ctx context.Context, id int, req *UpdateChaosSyst
 			value string
 		}{fieldCount, strconv.Itoa(*req.Count)})
 	}
+	if req.Status != nil {
+		// -1 (CommonDeleted) is the tombstone marker written by DeleteSystem.
+		// Refuse it here so callers can't bypass the builtin guard / local
+		// chaos.UnregisterSystem side-effect by sneaking a status flip in
+		// through the generic update endpoint.
+		if *req.Status == int(consts.CommonDeleted) {
+			return nil, fmt.Errorf("status -1 is reserved for delete; use DELETE instead: %w", consts.ErrBadRequest)
+		}
+		if *req.Status != int(consts.CommonEnabled) && *req.Status != int(consts.CommonDisabled) {
+			return nil, fmt.Errorf("status must be 0 (disabled) or 1 (enabled), got %d: %w", *req.Status, consts.ErrBadRequest)
+		}
+		// Builtin systems are immutable w.r.t. deletion (see DeleteSystem).
+		// Mirror that guard for enable/disable so builtin benchmarks can't be
+		// silently turned off by a status PUT.
+		if view.Cfg.IsBuiltin {
+			return nil, fmt.Errorf("cannot change status of builtin system %s: %w", view.Cfg.System, consts.ErrBadRequest)
+		}
+		changes = append(changes, struct {
+			field systemField
+			value string
+		}{fieldStatus, strconv.Itoa(*req.Status)})
+	}
 
 	for _, change := range changes {
 		if err := s.applyChange(ctx, view.Cfg.System, change.field, change.value); err != nil {

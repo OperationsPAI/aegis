@@ -24,6 +24,10 @@ type CreateChaosSystemReq struct {
 }
 
 // UpdateChaosSystemReq represents the request to update a chaos system.
+//
+// Status is a pointer so "unset" is distinguishable from the zero value
+// (disabled). Only 0/1 are accepted via this endpoint; -1 (CommonDeleted) is
+// reserved for DeleteSystem, which owns the tombstone transition.
 type UpdateChaosSystemReq struct {
 	DisplayName    *string `json:"display_name"`
 	NsPattern      *string `json:"ns_pattern"`
@@ -31,6 +35,7 @@ type UpdateChaosSystemReq struct {
 	AppLabelKey    *string `json:"app_label_key"`
 	Count          *int    `json:"count" binding:"omitempty,min=1"`
 	Description    *string `json:"description"`
+	Status         *int    `json:"status,omitempty" binding:"omitempty,oneof=0 1"`
 }
 
 // ChaosSystemResp represents a chaos system in API responses.

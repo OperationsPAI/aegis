@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -61,7 +62,15 @@ var (
 	regressionAppLabelKey    string
 	regressionPodListerHook  PodLister // test injection seam; nil => real k8s client
 	regressionInstallerHook  chartInstaller
+	regressionSystemsHook    SystemsFetcher // test injection seam; nil => real HTTP client
 )
+
+// SystemsFetcher is the minimal /api/v2/systems surface
+// resolveRegressionNamespaces needs. Tests can inject a fake; production uses
+// an HTTP-backed implementation.
+type SystemsFetcher interface {
+	FetchSystem(ctx context.Context, name string) (nsPattern string, count int, err error)
+}
 
 // PodLister is the minimal k8s surface preflightRegressionCase needs. Tests
 // can inject a fake; production uses a client-go backed implementation.
@@ -116,6 +125,10 @@ var regressionRunCmd = &cobra.Command{
 			rc, casePath, err = loadRegressionCaseByName(regressionCasesDir, args[0])
 		}
 		if err != nil {
+			return err
+		}
+
+		if err := resolveRegressionNamespaces(cmd.Context(), &rc, regressionSystemsHook); err != nil {
 			return err
 		}
 
@@ -439,6 +452,157 @@ func requireOrderedSubsequence(label string, observed, required []string) error 
 	}
 	missing := required[idx:]
 	return fmt.Errorf("%s: missing ordered subsequence %q in observed sequence %q", label, strings.Join(missing, " -> "), strings.Join(observed, " -> "))
+}
+
+// resolveRegressionNamespaces rewrites every `spec.namespace` in rc.Submit.specs
+// in-place (on the in-memory copy only; the YAML on disk is untouched) so that
+// both preflight and the backend submit see a namespace that actually exists on
+// the cluster.
+//
+// For each spec that carries a `system` field:
+//   - fetch the system's ns_pattern once (per-run cache), via fetcher.
+//   - if spec.namespace is empty, fill with nsPatternToNamespace(pattern, 0).
+//   - if spec.namespace matches the pattern regex, leave it alone.
+//   - if spec.namespace equals the bare system name (no digit suffix), rewrite
+//     it to nsPatternToNamespace(pattern, 0) with a WARN on stderr.
+//   - otherwise fail with a clear error pointing at the expected form.
+//
+// Specs without a `system` field are left untouched (back-compat). When the
+// backend is unreachable we emit a warning and fall back to the current
+// verbatim behavior so existing --skip-preflight flows aren't regressed.
+func resolveRegressionNamespaces(ctx context.Context, rc *regressionCase, fetcher SystemsFetcher) error {
+	if rc == nil {
+		return nil
+	}
+	specsRaw, ok := rc.Submit["specs"]
+	if !ok {
+		return nil
+	}
+	groups, ok := specsRaw.([]any)
+	if !ok {
+		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	type sysInfo struct {
+		pattern string
+		re      *regexp.Regexp
+		derived string
+		err     error
+	}
+	cache := map[string]*sysInfo{}
+	backendDown := false
+
+	lookup := func(sys string) *sysInfo {
+		if info, ok := cache[sys]; ok {
+			return info
+		}
+		info := &sysInfo{}
+		cache[sys] = info
+		if backendDown {
+			info.err = fmt.Errorf("backend unreachable")
+			return info
+		}
+		if fetcher == nil {
+			f, err := newLiveSystemsFetcher()
+			if err != nil {
+				backendDown = true
+				output.PrintInfo(fmt.Sprintf("WARN: cannot build systems fetcher (%v); falling back to verbatim spec.namespace", err))
+				info.err = err
+				return info
+			}
+			fetcher = f
+		}
+		pat, _, err := fetcher.FetchSystem(ctx, sys)
+		if err != nil {
+			backendDown = true
+			output.PrintInfo(fmt.Sprintf("WARN: cannot resolve system %q from /api/v2/systems (%v); falling back to verbatim spec.namespace", sys, err))
+			info.err = err
+			return info
+		}
+		info.pattern = pat
+		if pat != "" {
+			if re, reErr := regexp.Compile(pat); reErr == nil {
+				info.re = re
+			}
+			info.derived = nsPatternToNamespace(pat, 0)
+		}
+		return info
+	}
+
+	for _, g := range groups {
+		inner, ok := g.([]any)
+		if !ok {
+			continue
+		}
+		for _, s := range inner {
+			spec, ok := s.(map[string]any)
+			if !ok {
+				continue
+			}
+			sys := strings.TrimSpace(stringField(spec, "system"))
+			if sys == "" {
+				continue // back-compat: no system => leave namespace alone
+			}
+			info := lookup(sys)
+			if info.err != nil || info.pattern == "" {
+				continue // fallback: keep whatever was in YAML
+			}
+			ns := strings.TrimSpace(stringField(spec, "namespace"))
+			switch {
+			case ns == "":
+				if info.derived == "" {
+					return fmt.Errorf("regression: cannot derive namespace for system %q from ns_pattern %q", sys, info.pattern)
+				}
+				spec["namespace"] = info.derived
+			case info.re != nil && info.re.MatchString(ns):
+				// User already wrote a valid namespace — trust it.
+			case ns == sys:
+				if info.derived == "" {
+					return fmt.Errorf("regression: cannot derive namespace for system %q from ns_pattern %q", sys, info.pattern)
+				}
+				output.PrintInfo(fmt.Sprintf("WARN: namespace %q auto-resolved to %q from ns_pattern %q", ns, info.derived, info.pattern))
+				spec["namespace"] = info.derived
+			default:
+				expected := info.derived
+				if expected == "" {
+					expected = sys + "0"
+				}
+				return fmt.Errorf("regression: namespace %q does not match system %q ns_pattern %q; expected e.g. %q",
+					ns, sys, info.pattern, expected)
+			}
+		}
+	}
+	return nil
+}
+
+// liveSystemsFetcher is the real /api/v2/systems-backed SystemsFetcher. It
+// mirrors deriveNamespaceFromSystem's API call but returns the raw pattern +
+// count so callers can cache and run their own pattern logic.
+type liveSystemsFetcher struct{ c *client.Client }
+
+func newLiveSystemsFetcher() (*liveSystemsFetcher, error) {
+	return &liveSystemsFetcher{c: newClient()}, nil
+}
+
+func (l *liveSystemsFetcher) FetchSystem(_ context.Context, name string) (string, int, error) {
+	type systemItem struct {
+		Name      string `json:"name"`
+		NsPattern string `json:"ns_pattern"`
+		Count     int    `json:"count"`
+	}
+	var resp client.APIResponse[client.PaginatedData[systemItem]]
+	if err := l.c.Get("/api/v2/systems?page=1&size=500", &resp); err != nil {
+		return "", 0, err
+	}
+	for _, s := range resp.Data.Items {
+		if s.Name == name {
+			return s.NsPattern, s.Count, nil
+		}
+	}
+	return "", 0, fmt.Errorf("system %q not found via /api/v2/systems", name)
 }
 
 // extractRegressionTargets walks rc.Submit.specs (shape: [[{system, namespace,

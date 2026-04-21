@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"aegis/config"
 	"aegis/consts"
+	etcd "aegis/infra/etcd"
 	k8s "aegis/infra/k8s"
 	redis "aegis/infra/redis"
 	"aegis/model"
@@ -24,6 +27,7 @@ func InitializeConsumer(
 	controller *k8s.Controller,
 	monitor consumer.NamespaceMonitor,
 	publisher *redis.Gateway,
+	etcdGw *etcd.Gateway,
 	listener *common.ConfigUpdateListener,
 	restartLimiter *consumer.TokenBucketRateLimiter,
 	buildLimiter *consumer.TokenBucketRateLimiter,
@@ -36,7 +40,7 @@ func InitializeConsumer(
 
 	if len(consumerData.configs) == 0 {
 		logrus.Info("Seeding initial system data for consumer...")
-		if err := initializeConsumer(db); err != nil {
+		if err := initializeConsumer(ctx, db, etcdGw); err != nil {
 			return fmt.Errorf("failed to initialize system data for consumer: %w", err)
 		}
 		logrus.Info("Successfully seeded initial system data for consumer")
@@ -92,7 +96,7 @@ func InitializeConsumer(
 	return nil
 }
 
-func initializeConsumer(db *gorm.DB) error {
+func initializeConsumer(ctx context.Context, db *gorm.DB, etcdGw *etcd.Gateway) error {
 	dataPath := config.GetString("initialization.data_path")
 	filePath := filepath.Join(dataPath, consts.InitialFilename)
 	initialData, err := loadInitialDataFromFile(filePath)
@@ -100,19 +104,32 @@ func initializeConsumer(db *gorm.DB) error {
 		return fmt.Errorf("failed to load initial data from file: %w", err)
 	}
 
-	return withOptimizedDBSettings(db, func() error {
-		err := db.Transaction(func(tx *gorm.DB) error {
-			if _, err := initializeDynamicConfigs(tx, initialData); err != nil {
+	var seededConfigs []model.DynamicConfig
+	err = withOptimizedDBSettings(db, func() error {
+		txErr := db.Transaction(func(tx *gorm.DB) error {
+			configs, err := initializeDynamicConfigs(tx, initialData)
+			if err != nil {
 				return fmt.Errorf("failed to initialize dynamic configs for consumer: %w", err)
 			}
+			seededConfigs = configs
 			return nil
 		})
-		if err != nil {
-			return fmt.Errorf("failed to initialize consumer data: %w", err)
+		if txErr != nil {
+			return fmt.Errorf("failed to initialize consumer data: %w", txErr)
 		}
-
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// Publish seeded defaults to etcd AFTER the DB transaction commits so we
+	// never leak pending DB state into etcd. Mirrors the legacy-migration
+	// publish path in legacy_systems_migration.go so a fresh cluster boots
+	// with /rcabench/config/<scope>/... populated for every seed row (else
+	// backend logs `loaded N systems (0 enabled)`).
+	publishSeededConfigsToEtcd(ctx, etcdGw, seededConfigs)
+	return nil
 }
 
 func initializeDynamicConfigs(tx *gorm.DB, data *InitialData) ([]model.DynamicConfig, error) {
@@ -131,4 +148,65 @@ func initializeDynamicConfigs(tx *gorm.DB, data *InitialData) ([]model.DynamicCo
 	}
 
 	return configs, nil
+}
+
+// seedEtcdPrefixForScope mirrors service/common.scopePrefix (and
+// module/system.etcdPrefixForScope) without pulling those packages in as a
+// dependency for seeding. Scopes without an etcd representation return "".
+func seedEtcdPrefixForScope(scope consts.ConfigScope) string {
+	switch scope {
+	case consts.ConfigScopeProducer:
+		return consts.ConfigEtcdProducerPrefix
+	case consts.ConfigScopeConsumer:
+		return consts.ConfigEtcdConsumerPrefix
+	case consts.ConfigScopeGlobal:
+		return consts.ConfigEtcdGlobalPrefix
+	default:
+		return ""
+	}
+}
+
+// publishSeededConfigsToEtcd writes each seeded row's DefaultValue to etcd
+// under `<scope-prefix><config_key>`, but only when the key is absent. This
+// keeps the operation idempotent across restarts and avoids stomping any
+// live override that may have been written between DB seed and this call.
+// Gateway errors are logged, not propagated — a missing etcd endpoint (e.g.
+// in unit tests) must not break the DB seed path.
+func publishSeededConfigsToEtcd(ctx context.Context, etcdGw *etcd.Gateway, configs []model.DynamicConfig) {
+	if etcdGw == nil {
+		logrus.Info("seed: etcd gateway unavailable, skipping default_value publish for seeded dynamic_configs")
+		return
+	}
+	for i := range configs {
+		cfg := &configs[i]
+		prefix := seedEtcdPrefixForScope(cfg.Scope)
+		if prefix == "" {
+			continue
+		}
+		etcdKey := prefix + cfg.Key
+
+		getCtx, getCancel := context.WithTimeout(ctx, 5*time.Second)
+		_, err := etcdGw.Get(getCtx, etcdKey)
+		getCancel()
+		if err == nil {
+			// Key already present — never overwrite; a live operator value
+			// (or a previous seed) takes precedence.
+			continue
+		}
+		// Gateway.Get returns an ad-hoc "key not found: <key>" error when the
+		// key is absent. Any other error (connection, auth) — log and skip.
+		if !strings.Contains(err.Error(), "key not found") {
+			logrus.WithError(err).Warnf("seed: etcd lookup failed for %s, skipping publish", etcdKey)
+			continue
+		}
+
+		putCtx, putCancel := context.WithTimeout(ctx, 5*time.Second)
+		putErr := etcdGw.Put(putCtx, etcdKey, cfg.DefaultValue, 0)
+		putCancel()
+		if putErr != nil {
+			logrus.WithError(putErr).Warnf("seed: failed to publish %s to etcd", etcdKey)
+			continue
+		}
+		logrus.Infof("seed: published %s to etcd", etcdKey)
+	}
 }

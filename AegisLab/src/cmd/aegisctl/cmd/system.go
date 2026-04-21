@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"aegis/cmd/aegisctl/output"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
 
@@ -292,6 +294,158 @@ var systemUnregisterCmd = &cobra.Command{
 	},
 }
 
+// --- system enable / disable ---
+//
+// Both are thin wrappers around PUT /api/v2/systems/{id} with a single
+// `status` field. We intentionally do NOT add a dedicated enable/disable
+// sub-route on the backend — the generic update endpoint already handles the
+// mutation, and keeping the API surface narrow reduces drift.
+
+var systemDisableYes bool
+
+// setSystemStatusReq is the minimal PUT body the CLI sends. Using a tight
+// struct (instead of a map) makes the JSON shape explicit and lets the cobra
+// test pin the wire format.
+type setSystemStatusReq struct {
+	Status int `json:"status"`
+}
+
+// setSystemStatus resolves name -> id and issues PUT /api/v2/systems/{id}
+// with the given status. Shared by `enable` and `disable`.
+func setSystemStatus(c *client.Client, name string, status int) (*chaosSystemResp, error) {
+	existing, err := findSystemByName(c, name)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		known, lookupErr := listSystemNames(c)
+		if lookupErr != nil || len(known) == 0 {
+			return nil, notFoundErrorf("system %q is not registered", name)
+		}
+		return nil, notFoundErrorf("system %q is not registered; known systems: %s",
+			name, strings.Join(known, ", "))
+	}
+	var resp client.APIResponse[chaosSystemResp]
+	if err := c.Put(fmt.Sprintf("/api/v2/systems/%d", existing.ID), setSystemStatusReq{Status: status}, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Data, nil
+}
+
+// listSystemNames returns a sorted list of registered system names for use
+// in error messages. Never fatal: callers fall back to a generic message.
+func listSystemNames(c *client.Client) ([]string, error) {
+	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
+	if err := c.Get("/api/v2/systems?page=1&size=500", &resp); err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(resp.Data.Items))
+	for _, s := range resp.Data.Items {
+		names = append(names, s.Name)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+var systemEnableCmd = &cobra.Command{
+	Use:   "enable <name>",
+	Short: "Enable a registered benchmark system (status=1)",
+	Long: `Flip injection.system.<name>.status to 1 via PUT /api/v2/systems/{id}.
+Name is resolved to the backend system ID by listing /api/v2/systems.
+Builtin systems cannot be enabled/disabled through this endpoint.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(args[0])
+		if name == "" {
+			return usageErrorf("system name is required")
+		}
+		c := newClient()
+		updated, err := setSystemStatus(c, name, 1)
+		if err != nil {
+			return err
+		}
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(updated)
+			return nil
+		}
+		output.PrintInfo(fmt.Sprintf("Enabled system %q (id %d)", updated.Name, updated.ID))
+		return nil
+	},
+}
+
+var systemDisableCmd = &cobra.Command{
+	Use:   "disable <name>",
+	Short: "Disable a registered benchmark system (status=0)",
+	Long: `Flip injection.system.<name>.status to 0 via PUT /api/v2/systems/{id}.
+Disabled systems stay visible in list responses so they can be re-enabled.
+Builtin systems cannot be enabled/disabled through this endpoint.
+Use --yes to skip the confirmation prompt.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(args[0])
+		if name == "" {
+			return usageErrorf("system name is required")
+		}
+		c := newClient()
+		existing, err := findSystemByName(c, name)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			known, lookupErr := listSystemNames(c)
+			if lookupErr != nil || len(known) == 0 {
+				return notFoundErrorf("system %q is not registered", name)
+			}
+			return notFoundErrorf("system %q is not registered; known systems: %s",
+				name, strings.Join(known, ", "))
+		}
+		// Disable is reversible (unlike unregister) but still user-visible, so
+		// gate it behind the same TTY/--yes contract the delete commands use.
+		if err := confirmDisable(existing.Name, existing.ID, systemDisableYes); err != nil {
+			return err
+		}
+		var resp client.APIResponse[chaosSystemResp]
+		if err := c.Put(fmt.Sprintf("/api/v2/systems/%d", existing.ID), setSystemStatusReq{Status: 0}, &resp); err != nil {
+			return err
+		}
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(resp.Data)
+			return nil
+		}
+		output.PrintInfo(fmt.Sprintf("Disabled system %q (id %d)", resp.Data.Name, resp.Data.ID))
+		return nil
+	},
+}
+
+// confirmDisable mirrors confirmDeletion but phrased for a reversible flip.
+// Kept local to system.go so project.go's confirmDeletion stays narrowly
+// focused on delete flows.
+func confirmDisable(name string, id int, yes bool) error {
+	if yes {
+		return nil
+	}
+	if flagNonInteractive {
+		return usageErrorf("refusing to disable without --yes in non-interactive mode")
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return usageErrorf("refusing to disable without --yes when stdin is not a TTY")
+	}
+	fmt.Fprintf(os.Stderr, "Disable system %s (id %d)? [y/N] ", name, id)
+	reader := bufio.NewReader(os.Stdin)
+	line, _ := reader.ReadString('\n')
+	line = strings.TrimSpace(strings.ToLower(line))
+	if line != "y" && line != "yes" {
+		return usageErrorf("aborted by user")
+	}
+	return nil
+}
+
 // --- Helpers ---
 
 // resolveSeedPath lets callers pass either an exact file path, a directory,
@@ -470,7 +624,12 @@ func init() {
 	systemUnregisterCmd.Flags().BoolVar(&systemUnregisterYes, "yes", false, "Skip confirmation prompt")
 	systemUnregisterCmd.Flags().BoolVar(&systemUnregisterYes, "force", false, "Alias for --yes")
 
+	systemDisableCmd.Flags().BoolVar(&systemDisableYes, "yes", false, "Skip confirmation prompt")
+	systemDisableCmd.Flags().BoolVar(&systemDisableYes, "force", false, "Alias for --yes")
+
 	systemCmd.AddCommand(systemRegisterCmd)
 	systemCmd.AddCommand(systemListCmd)
 	systemCmd.AddCommand(systemUnregisterCmd)
+	systemCmd.AddCommand(systemEnableCmd)
+	systemCmd.AddCommand(systemDisableCmd)
 }
