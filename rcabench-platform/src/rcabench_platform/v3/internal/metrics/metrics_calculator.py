@@ -23,7 +23,20 @@ class DatasetMetricsCalculator:
         self.root_services = loader.get_root_services()[0]
         self.services = loader.get_all_services()
 
-        assert self.root_services in self.graph, f"Service '{self.root_services}' not found in graph"
+        # The graph is built from observed trace edges (plus a TrainTicket-shaped
+        # predefined baseline). Stacks whose tracers only instrument RPC between
+        # services (e.g. DSB's jaeger-client-cpp, which doesn't auto-instrument
+        # mongo/redis/memcached clients) legitimately omit some services the
+        # fault can target. compute_sdd / compute_cpl / get_root_cause_degree
+        # already fall back to sensible defaults (distance=999, CPL=0, degree=-1)
+        # when root_services is absent, so a missing node is surfaced via logs
+        # rather than aborting the whole metrics pass.
+        if self.root_services not in self.graph:
+            logger.warning(
+                f"Root service '{self.root_services}' not found in trace-derived "
+                f"service graph; downstream metrics that depend on graph "
+                f"traversal will report fallback values."
+            )
 
     def compute_sdd(self, k: int = 1) -> tuple[float, dict]:
         """

@@ -23,7 +23,17 @@ class DatasetMetricsCalculator:
         self.root_services = loader.get_root_services()[0]
         self.services = loader.get_all_services()
 
-        assert self.root_services in self.graph, f"Service '{self.root_services}' not found in graph"
+        # See v3/internal/metrics/metrics_calculator.py for rationale — stacks
+        # whose tracers don't instrument DB/cache clients (DSB family) can
+        # legitimately target services missing from the trace-derived graph;
+        # downstream methods already return fallback values, so warn rather
+        # than abort the whole metrics pass.
+        if self.root_services not in self.graph:
+            logger.warning(
+                f"Root service '{self.root_services}' not found in trace-derived "
+                f"service graph; downstream metrics that depend on graph "
+                f"traversal will report fallback values."
+            )
 
     def compute_sdd(self, k: int = 1) -> tuple[float, dict]:
         """
