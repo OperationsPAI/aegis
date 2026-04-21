@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -21,6 +22,20 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 )
+
+// defaultHelmRepoURL resolves a repository URL for the given repo_name from
+// etcd-backed dynamic config (`helm.repo.<name>.url`). Used when
+// helm_configs.repo_url is empty — lets RestartPedestal self-install the chart
+// without requiring the operator to pre-stage a local tgz.
+//
+// Returns an empty string when no override is configured; caller then falls
+// back to the local tgz (if any) or fails with a clear error.
+func defaultHelmRepoURL(name string) string {
+	if name == "" {
+		return ""
+	}
+	return config.GetString(fmt.Sprintf("helm.repo.%s.url", name))
+}
 
 type restartPayload struct {
 	pedestal      dto.ContainerVersionItem
@@ -295,9 +310,29 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 
 		helmValues := item.GetValuesMap()
 
-		// Determine chart source and installation strategy
-		hasRemote := item.RepoURL != "" && item.RepoName != ""
+		// Determine chart source and installation strategy.
+		// local_path is only usable if the file actually exists — a missing
+		// pre-staged tgz (common after pod restart since /tmp is ephemeral)
+		// should fall through to a remote install instead of hard-failing.
 		hasLocal := item.LocalPath != ""
+		if hasLocal {
+			if _, err := os.Stat(item.LocalPath); err != nil {
+				logEntry.Warnf("local chart %q not accessible (%v); will try remote install", item.LocalPath, err)
+				hasLocal = false
+			}
+		}
+
+		// If the operator didn't record a repo_url, try the etcd-backed
+		// override `helm.repo.<repo_name>.url`. Lets ops swap defaults at
+		// runtime without a DB migration.
+		if item.RepoURL == "" && item.RepoName != "" {
+			if url := defaultHelmRepoURL(item.RepoName); url != "" {
+				logEntry.Infof("helm_configs.repo_url empty for %q; using etcd override %q", item.RepoName, url)
+				item.RepoURL = url
+			}
+		}
+
+		hasRemote := item.RepoURL != "" && item.RepoName != ""
 
 		var installErr error
 
