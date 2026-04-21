@@ -8,13 +8,14 @@ import (
 )
 
 type fakeEnv struct {
-	cfg Config
-	k8s *fakeK8s
-	net *fakeNet
-	ch  *fakeCH
-	sql *fakeMySQL
-	rds *fakeRedis
-	etd *fakeEtcd
+	cfg  Config
+	k8s  *fakeK8s
+	net  *fakeNet
+	ch   *fakeCH
+	sql  *fakeMySQL
+	rds  *fakeRedis
+	etd  *fakeEtcd
+	helm *fakeHelm
 }
 
 func (f *fakeEnv) Config() Config              { return f.cfg }
@@ -24,6 +25,7 @@ func (f *fakeEnv) ClickHouse() ClickHouseProbe { return f.ch }
 func (f *fakeEnv) MySQL() MySQLProbe           { return f.sql }
 func (f *fakeEnv) Redis() RedisProbe           { return f.rds }
 func (f *fakeEnv) Etcd() EtcdProbe             { return f.etd }
+func (f *fakeEnv) Helm() HelmProbe             { return f.helm }
 
 type fakeK8s struct {
 	namespaces      map[string]bool
@@ -32,9 +34,26 @@ type fakeK8s struct {
 		exists bool
 		bound  bool
 	}
-	crdGroups map[string]bool
-	saCreated []string
-	err       error
+	crdGroups   map[string]bool
+	saCreated   []string
+	configMaps  map[string]map[string]string // "ns/name" -> data
+	clusterRBAC bool
+	err         error
+}
+
+func (f *fakeK8s) ConfigMapData(_ context.Context, ns, n string) (map[string]string, bool, error) {
+	if f.err != nil {
+		return nil, false, f.err
+	}
+	d, ok := f.configMaps[ns+"/"+n]
+	return d, ok, nil
+}
+
+func (f *fakeK8s) ClusterRoleAllowsPodNamespaceRead(_ context.Context) (bool, error) {
+	if f.err != nil {
+		return false, f.err
+	}
+	return f.clusterRBAC, nil
 }
 
 func (f *fakeK8s) NamespaceExists(_ context.Context, n string) (bool, error) {
@@ -117,8 +136,13 @@ func (f *fakeCH) TablesIn(_ context.Context, db string) ([]string, error) {
 }
 
 type fakeMySQL struct {
-	state  map[string]int
-	exists map[string]bool
+	state          map[string]int
+	exists         map[string]bool
+	dynamicConfigs map[string]string
+	fixtures       map[string]SystemFixtureSummary
+	fixtureErr     error
+	helmSources    map[string]HelmChartSource
+	helmMissing    map[string]bool
 }
 
 func (f *fakeMySQL) TaskState(_ context.Context, id string) (int, bool, error) {
@@ -126,6 +150,31 @@ func (f *fakeMySQL) TaskState(_ context.Context, id string) (int, bool, error) {
 		return 0, false, nil
 	}
 	return f.state[id], true, nil
+}
+
+func (f *fakeMySQL) DynamicConfigsByPrefix(_ context.Context, prefix string) (map[string]string, error) {
+	out := map[string]string{}
+	for k, v := range f.dynamicConfigs {
+		if strings.HasPrefix(k, prefix) {
+			out[k] = v
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeMySQL) SystemFixtures(_ context.Context, name string) (SystemFixtureSummary, error) {
+	if f.fixtureErr != nil {
+		return SystemFixtureSummary{}, f.fixtureErr
+	}
+	return f.fixtures[name], nil
+}
+
+func (f *fakeMySQL) HelmSourceForSystem(_ context.Context, name string) (HelmChartSource, bool, error) {
+	if f.helmMissing[name] {
+		return HelmChartSource{}, false, nil
+	}
+	src, ok := f.helmSources[name]
+	return src, ok, nil
 }
 
 type fakeRedis struct {
@@ -181,6 +230,32 @@ func (f *fakeEtcd) Put(_ context.Context, key, value string) error {
 }
 
 func (f *fakeEtcd) Close() error { return nil }
+
+func (f *fakeEtcd) ListPrefix(_ context.Context, prefix string) (map[string]string, error) {
+	out := map[string]string{}
+	for k, v := range f.values {
+		if strings.HasPrefix(k, prefix) {
+			out[k] = v
+		}
+	}
+	return out, nil
+}
+
+type fakeHelm struct {
+	failures map[string]error // keyed by chart name or repo URL
+	calls    []HelmChartSource
+}
+
+func (f *fakeHelm) ResolveChart(_ context.Context, src HelmChartSource) error {
+	f.calls = append(f.calls, src)
+	if err, ok := f.failures[src.RepoURL]; ok {
+		return err
+	}
+	if err, ok := f.failures[src.ChartName]; ok {
+		return err
+	}
+	return nil
+}
 
 func TestCheckRcabenchSA_Missing(t *testing.T) {
 	env := &fakeEnv{
@@ -273,6 +348,8 @@ func TestDefaultChecks_RegistryCatalog(t *testing.T) {
 		"k8s.exp-namespace", "k8s.rcabench-sa", "k8s.dataset-pvc", "k8s.chaosmesh-crds",
 		"db.mysql", "db.clickhouse", "db.redis", "db.etcd",
 		"clickhouse.otel-tables", "redis.token-bucket-leaks",
+		"registry.parity", "etcd.db-agreement", "db.fixtures-per-system",
+		"helm.source-reachable", "otel.pipeline-to-clickhouse",
 	}
 	for _, id := range expected {
 		if _, ok := reg.Get(id); !ok {

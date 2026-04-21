@@ -44,10 +44,13 @@ func DefaultChecks() []Check {
 		{ID: "db.etcd", Description: "etcd is TCP-reachable", Run: checkEtcd},
 		{ID: "clickhouse.otel-tables", Description: "ClickHouse has all otel pipeline tables", Run: checkOtelTables},
 		{ID: "redis.token-bucket-leaks", Description: "restart_service token bucket has no terminal tasks", Run: checkTokenBucketLeaks, Fix: fixTokenBucketLeaks},
-		// TODO(issue-17 follow-up): skipped in the MVP (too slow for a
-		// synchronous preflight):
-		//   - container_versions registries pullable
-		//   - helm_configs.repo_url reachability
+		// 5-layer onboarding sweep (issue #101): catch the 80% of
+		// "newly-registered system silently broken" failures in one command.
+		{ID: "registry.parity", Description: "enabled systems match between DB and etcd", Run: checkRegistryParity},
+		{ID: "etcd.db-agreement", Description: "7 injection.system.<name>.* keys agree between DB and etcd", Run: checkEtcdDBAgreement, Fix: fixEtcdDBAgreement},
+		{ID: "db.fixtures-per-system", Description: "each enabled system has pedestal+benchmark containers with versions", Run: checkFixturesPerSystem},
+		{ID: "helm.source-reachable", Description: "helm chart source for each enabled system resolves", Run: checkHelmSourceReachable},
+		{ID: "otel.pipeline-to-clickhouse", Description: "otel collector exports traces/metrics/logs to clickhouse with k8sattributes RBAC", Run: checkOtelPipelineToClickHouse},
 	}
 }
 

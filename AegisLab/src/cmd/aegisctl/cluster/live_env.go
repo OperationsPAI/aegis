@@ -38,6 +38,7 @@ type LiveEnv struct {
 	mysql       MySQLProbe
 	redis       RedisProbe
 	etcd        EtcdProbe
+	helm        HelmProbe
 	mysqlCreds  mysqlCreds
 	dialTimeout time.Duration
 }
@@ -145,6 +146,13 @@ func (e *LiveEnv) Etcd() EtcdProbe {
 		e.etcd = &liveEtcd{cfg: e.cfg}
 	}
 	return e.etcd
+}
+
+func (e *LiveEnv) Helm() HelmProbe {
+	if e.helm == nil {
+		e.helm = &liveHelm{timeout: 10 * time.Second}
+	}
+	return e.helm
 }
 
 type tcpProbe struct{ timeout time.Duration }
@@ -487,4 +495,267 @@ func (e *liveEtcd) Close() error {
 	err := e.client.Close()
 	e.client = nil
 	return err
+}
+
+func (e *liveEtcd) ListPrefix(ctx context.Context, prefix string) (map[string]string, error) {
+	client, err := e.ensure()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Get(ctx, prefix, clientv3.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(resp.Kvs))
+	for _, kv := range resp.Kvs {
+		out[string(kv.Key)] = string(kv.Value)
+	}
+	return out, nil
+}
+
+func (k *liveK8s) ConfigMapData(ctx context.Context, namespace, name string) (map[string]string, bool, error) {
+	if k.loadErr != nil {
+		return nil, false, k.loadErr
+	}
+	cm, err := k.cs.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return cm.Data, true, nil
+}
+
+func (k *liveK8s) ClusterRoleAllowsPodNamespaceRead(ctx context.Context) (bool, error) {
+	if k.loadErr != nil {
+		return false, k.loadErr
+	}
+	roles, err := k.cs.RbacV1().ClusterRoles().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+	needVerbs := map[string]struct{}{"get": {}, "list": {}, "watch": {}}
+	for _, cr := range roles.Items {
+		var hasPods, hasNs bool
+		for _, rule := range cr.Rules {
+			verbMatch := false
+			for _, v := range rule.Verbs {
+				if v == "*" {
+					verbMatch = true
+					break
+				}
+				if _, ok := needVerbs[v]; ok {
+					verbMatch = true
+				}
+			}
+			if !verbMatch {
+				continue
+			}
+			apiMatch := false
+			for _, g := range rule.APIGroups {
+				if g == "" || g == "*" {
+					apiMatch = true
+					break
+				}
+			}
+			if !apiMatch {
+				continue
+			}
+			for _, r := range rule.Resources {
+				if r == "*" || r == "pods" {
+					hasPods = true
+				}
+				if r == "*" || r == "namespaces" {
+					hasNs = true
+				}
+			}
+			if hasPods && hasNs {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+type dynConfigRow struct {
+	ConfigKey    string
+	DefaultValue string
+}
+
+func (m *liveMySQL) openDB() (*sql.DB, error) {
+	host := m.cfg.MySQLHost
+	port := m.cfg.MySQLPort
+	if port == "" {
+		port = "3306"
+	}
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=3s&readTimeout=3s",
+		m.creds.user, m.creds.pass, host, port, m.creds.db)
+	return sql.Open("mysql", dsn)
+}
+
+func (m *liveMySQL) DynamicConfigsByPrefix(ctx context.Context, prefix string) (map[string]string, error) {
+	conn, err := m.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	rows, err := conn.QueryContext(ctx,
+		"SELECT config_key, default_value FROM dynamic_configs WHERE config_key LIKE ?",
+		prefix+"%")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var r dynConfigRow
+		if err := rows.Scan(&r.ConfigKey, &r.DefaultValue); err != nil {
+			return nil, err
+		}
+		out[r.ConfigKey] = r.DefaultValue
+	}
+	return out, rows.Err()
+}
+
+func (m *liveMySQL) SystemFixtures(ctx context.Context, systemName string) (SystemFixtureSummary, error) {
+	var summary SystemFixtureSummary
+	conn, err := m.openDB()
+	if err != nil {
+		return summary, err
+	}
+	defer conn.Close()
+
+	// Pedestals (type=2) for this system (pedestal container name == system name).
+	rows, err := conn.QueryContext(ctx,
+		"SELECT id FROM containers WHERE type = 2 AND status >= 0 AND name = ?", systemName)
+	if err != nil {
+		return summary, err
+	}
+	var pedestalIDs []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return summary, err
+		}
+		pedestalIDs = append(pedestalIDs, id)
+	}
+	rows.Close()
+	summary.PedestalCount = len(pedestalIDs)
+
+	// Benchmarks (type=1) are labeled with the system; we conservatively look
+	// for containers whose name contains the system name. A stricter check
+	// would require joining container_labels, but DB introspection is enough
+	// to flag the "no benchmark at all" case.
+	rows, err = conn.QueryContext(ctx,
+		"SELECT id FROM containers WHERE type = 1 AND status >= 0 AND name LIKE ?",
+		"%"+systemName+"%")
+	if err != nil {
+		return summary, err
+	}
+	var benchIDs []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return summary, err
+		}
+		benchIDs = append(benchIDs, id)
+	}
+	rows.Close()
+	summary.BenchmarkCount = len(benchIDs)
+
+	countVersionsPed := func(id int) error {
+		vrows, err := conn.QueryContext(ctx,
+			`SELECT cv.id,
+			        COALESCE(hc.id, 0) AS helm_id
+			 FROM container_versions cv
+			 LEFT JOIN helm_configs hc ON hc.container_version_id = cv.id
+			 WHERE cv.container_id = ? AND cv.status >= 0`, id)
+		if err != nil {
+			return err
+		}
+		defer vrows.Close()
+		for vrows.Next() {
+			var vid, helmID int
+			if err := vrows.Scan(&vid, &helmID); err != nil {
+				return err
+			}
+			summary.PedestalVersionCount++
+			if helmID == 0 {
+				summary.PedestalVersionsMissingHelm++
+			}
+		}
+		return vrows.Err()
+	}
+	for _, id := range pedestalIDs {
+		if err := countVersionsPed(id); err != nil {
+			return summary, err
+		}
+	}
+
+	countVersionsBench := func(id int) error {
+		vrows, err := conn.QueryContext(ctx,
+			"SELECT id, COALESCE(command, '') FROM container_versions WHERE container_id = ? AND status >= 0", id)
+		if err != nil {
+			return err
+		}
+		defer vrows.Close()
+		for vrows.Next() {
+			var vid int
+			var cmd string
+			if err := vrows.Scan(&vid, &cmd); err != nil {
+				return err
+			}
+			summary.BenchmarkVersionCount++
+			if strings.TrimSpace(cmd) == "" {
+				summary.BenchmarkVersionsEmptyCmd++
+			}
+		}
+		return vrows.Err()
+	}
+	for _, id := range benchIDs {
+		if err := countVersionsBench(id); err != nil {
+			return summary, err
+		}
+	}
+	return summary, nil
+}
+
+// HelmSourceForSystem returns the most-recent helm_config (by container
+// version id DESC) for the pedestal container named after the system.
+func (m *liveMySQL) HelmSourceForSystem(ctx context.Context, systemName string) (HelmChartSource, bool, error) {
+	conn, err := m.openDB()
+	if err != nil {
+		return HelmChartSource{}, false, err
+	}
+	defer conn.Close()
+	row := conn.QueryRowContext(ctx, `
+		SELECT COALESCE(hc.chart_name,''), COALESCE(hc.version,''),
+		       COALESCE(hc.repo_url,''), COALESCE(hc.repo_name,''),
+		       COALESCE(hc.local_path,'')
+		FROM containers c
+		JOIN container_versions cv ON cv.container_id = c.id AND cv.status >= 0
+		JOIN helm_configs hc ON hc.container_version_id = cv.id
+		WHERE c.type = 2 AND c.status >= 0 AND c.name = ?
+		ORDER BY cv.id DESC LIMIT 1`, systemName)
+	var src HelmChartSource
+	if err := row.Scan(&src.ChartName, &src.Version, &src.RepoURL, &src.RepoName, &src.LocalPath); err != nil {
+		if err == sql.ErrNoRows {
+			return HelmChartSource{}, false, nil
+		}
+		return HelmChartSource{}, false, err
+	}
+	return src, true, nil
+}
+
+// liveHelm implements HelmProbe by shelling out to the `helm` binary when
+// resolving OCI refs and by HTTP-GETting `index.yaml` for https repos.
+type liveHelm struct {
+	timeout time.Duration
+}
+
+func (h *liveHelm) ResolveChart(ctx context.Context, src HelmChartSource) error {
+	return resolveHelmChart(ctx, src, h.timeout)
 }
