@@ -146,6 +146,20 @@ containers:
           repo_name: opspai
           repo_url: oci://registry-1.docker.io/opspai
           status: 1
+  - type: 2
+    name: mm
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        github_link: delimitrou/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.1.0
+          chart_name: mediamicroservices-aegis
+          repo_name: opspai
+          repo_url: oci://registry-1.docker.io/opspai
+          status: 1
 datasets:
   - name: rca_pair_diagnosis_dataset
     description: RCA Pair Diagnosis Dataset
@@ -522,6 +536,59 @@ dynamic_configs:
     scope: 2
     category: injection.system.status
     description: Status of system SocialNetwork (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.mm.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system MediaMicroservices to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.mm.ns_pattern
+    default_value: ^mm\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system MediaMicroservices instances
+    is_secret: false
+  - key: injection.system.mm.extract_pattern
+    default_value: ^(mm)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from MediaMicroservices instances
+    is_secret: false
+  - key: injection.system.mm.display_name
+    default_value: MediaMicroservices
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system MediaMicroservices
+    is_secret: false
+  - key: injection.system.mm.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select MediaMicroservices workloads
+    is_secret: false
+  - key: injection.system.mm.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether MediaMicroservices is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.mm.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system MediaMicroservices (1=enabled, 0=disabled, -1=deleted)
     is_secret: false
     min_value: -1
     max_value: 1
