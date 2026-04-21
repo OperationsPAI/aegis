@@ -19,14 +19,14 @@ submit:
     - key: batch
       value: smoke
     - key: run
-      value: loadgen-v2-20260421
+      value: detector-fix-20260421
   specs:
     - - system: sn
         system_type: sn
         namespace: sn0
         app: user-service
         chaos_type: PodKill
-        duration: 1
+        duration: 5
 validation:
   timeout_seconds: 3000
   min_events: 6
