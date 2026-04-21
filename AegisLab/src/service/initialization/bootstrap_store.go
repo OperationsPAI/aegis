@@ -197,11 +197,3 @@ func (s *bootstrapStore) createUserProject(userProject *model.UserProject) error
 	}
 	return nil
 }
-
-func (s *bootstrapStore) listEnabledSystems() ([]model.System, error) {
-	var systems []model.System
-	if err := s.db.Where("status = ?", consts.CommonEnabled).Find(&systems).Error; err != nil {
-		return nil, fmt.Errorf("failed to list enabled systems: %w", err)
-	}
-	return systems, nil
-}

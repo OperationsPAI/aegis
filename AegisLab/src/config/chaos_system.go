@@ -2,167 +2,81 @@ package config
 
 import (
 	"fmt"
-	"maps"
 	"regexp"
-	"sync"
+
+	"aegis/consts"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
-
-// chaosConfigDB holds a reference to the DB for System table queries.
-// Set via SetChaosConfigDB to avoid circular imports with the database package.
-var chaosConfigDB *gorm.DB
-
-// SetChaosConfigDB sets the database reference used by the chaos config manager
-// to load system configs from the System table.
-func SetChaosConfigDB(db *gorm.DB) {
-	chaosConfigDB = db
-}
-
-func getDBForChaosConfig() *gorm.DB {
-	return chaosConfigDB
-}
 
 const (
 	ConfigKeyChaosSystem = "injection.system"
 )
 
+// ChaosSystemConfig is the aggregate of every injection.system.<name>.* key in
+// Viper (which mirrors etcd at runtime). etcd is the single source of truth —
+// there is no longer a systems table to consult.
 type ChaosSystemConfig struct {
 	System         string
-	Count          int    `mapstructure:"count"`
-	NsPattern      string `mapstructure:"ns_pattern"`
-	ExtractPattern string `mapstructure:"extract_pattern"`
+	Count          int               `mapstructure:"count"`
+	NsPattern      string            `mapstructure:"ns_pattern"`
+	ExtractPattern string            `mapstructure:"extract_pattern"`
+	DisplayName    string            `mapstructure:"display_name"`
+	AppLabelKey    string            `mapstructure:"app_label_key"`
+	IsBuiltin      bool              `mapstructure:"is_builtin"`
+	Status         consts.StatusType `mapstructure:"status"`
 }
 
-type chaosSystemConfigManager struct {
-	configs map[string]ChaosSystemConfig
-	mu      sync.RWMutex
-}
+// chaosSystemConfigManager is now a stateless façade over Viper — every call
+// decodes the current `injection.system.*` subtree on demand. Keeping the
+// manager type lets existing call sites (`config.GetChaosSystemConfigManager().Get(...)`)
+// continue to compile without change.
+//
+// Previously this held an in-memory cache that only refreshed when the etcd
+// watcher fired `Reload`. That produced two bugs:
+//  1. Producer processes — which don't register the consumer watch handler
+//     — saw a frozen snapshot from startup.
+//  2. Consumer had a narrow race between a Viper update and the Reload call.
+//
+// Reading Viper on demand removes both hazards. The decode is cheap (a map
+// lookup + mapstructure on a handful of string keys).
+type chaosSystemConfigManager struct{}
 
-var (
-	managerInstance *chaosSystemConfigManager
-	managerOnce     sync.Once
-)
-
-// GetChaosSystemConfigManager returns the singleton instance of SystemConfigManager
+// GetChaosSystemConfigManager returns the singleton façade. The old cached
+// implementation is gone; this is kept so existing callers compile.
 func GetChaosSystemConfigManager() *chaosSystemConfigManager {
-	managerOnce.Do(func() {
-		managerInstance = &chaosSystemConfigManager{
-			configs: make(map[string]ChaosSystemConfig),
-		}
-		if err := managerInstance.load(); err != nil {
-			logrus.Fatalf("failed to load chaos system config: %v", err)
-		}
-	})
-	return managerInstance
+	return &chaosSystemConfigManager{}
 }
 
-// Get returns the configuration for a specific system
+// Get returns the configuration for a specific system, reading fresh from
+// Viper on every call.
 func (m *chaosSystemConfigManager) Get(system chaos.SystemType) (ChaosSystemConfig, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	cfg, exists := m.configs[system.String()]
-	return cfg, exists
+	all := readChaosSystemConfigs()
+	cfg, ok := all[system.String()]
+	return cfg, ok
 }
 
-// GetAll returns all system configurations
+// GetAll returns a fresh snapshot of every configured system.
 func (m *chaosSystemConfigManager) GetAll() map[string]ChaosSystemConfig {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	// Return a copy to prevent external modification
-	result := make(map[string]ChaosSystemConfig, len(m.configs))
-	maps.Copy(result, m.configs)
-	return result
+	return readChaosSystemConfigs()
 }
 
-// Reload reloads system configurations from config
-func (m *chaosSystemConfigManager) Reload(callback func() error) error {
-	if err := m.load(); err != nil {
-		return err
-	}
-	if err := callback(); err != nil {
-		return fmt.Errorf("callback execution failed: %w", err)
-	}
-	return nil
-}
-
-func (m *chaosSystemConfigManager) load() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	systemConfigMap := make(map[string]ChaosSystemConfig)
-
-	// Try to load from System table first (new approach)
-	if loaded := m.loadFromSystemTable(systemConfigMap); loaded {
-		m.configs = systemConfigMap
-		return nil
-	}
-
-	// Fall back to DynamicConfig (backward compatibility)
-	cfg := GetMap(ConfigKeyChaosSystem)
-	for sys, c := range cfg {
-		var sysCfg ChaosSystemConfig
-		if err := mapstructure.Decode(c, &sysCfg); err != nil {
-			return fmt.Errorf("failed to decode config for system %s: %w", sys, err)
+// readChaosSystemConfigs decodes the `injection.system.*` subtree from Viper
+// into the strongly-typed aggregate shape. Invalid entries (decode errors)
+// are dropped so a single malformed key can't blow up the whole read.
+func readChaosSystemConfigs() map[string]ChaosSystemConfig {
+	raw := GetMap(ConfigKeyChaosSystem)
+	out := make(map[string]ChaosSystemConfig, len(raw))
+	for name, entry := range raw {
+		var cfg ChaosSystemConfig
+		if err := mapstructure.Decode(entry, &cfg); err != nil {
+			continue
 		}
-
-		system := chaos.SystemType(sys)
-		if !system.IsValid() {
-			return fmt.Errorf("invalid system type: %s", sys)
-		}
-
-		sysCfg.System = system.String()
-		systemConfigMap[system.String()] = sysCfg
+		cfg.System = name
+		out[name] = cfg
 	}
-
-	m.configs = systemConfigMap
-	return nil
-}
-
-// loadFromSystemTable attempts to load configs from the System database table.
-// Returns true if any systems were loaded, false otherwise (fallback to DynamicConfig).
-func (m *chaosSystemConfigManager) loadFromSystemTable(out map[string]ChaosSystemConfig) bool {
-	// Import database lazily to avoid circular dependency at init time
-	db := getDBForChaosConfig()
-	if db == nil {
-		return false
-	}
-
-	type systemRow struct {
-		Name           string
-		NsPattern      string
-		ExtractPattern string
-		Count          int
-	}
-
-	var rows []systemRow
-	if err := db.Table("systems").
-		Select("name, ns_pattern, extract_pattern, count").
-		Where("status = ?", 1). // CommonEnabled
-		Find(&rows).Error; err != nil {
-		logrus.Warnf("Failed to load systems from table, falling back to DynamicConfig: %v", err)
-		return false
-	}
-
-	if len(rows) == 0 {
-		return false
-	}
-
-	for _, row := range rows {
-		out[row.Name] = ChaosSystemConfig{
-			System:         row.Name,
-			Count:          row.Count,
-			NsPattern:      row.NsPattern,
-			ExtractPattern: row.ExtractPattern,
-		}
-	}
-
-	return true
+	return out
 }
 
 // ExtractNsPrefixAndNumber extracts the number from a namespace string
@@ -190,13 +104,19 @@ func (s *ChaosSystemConfig) ExtractNsNumber(namespace string) (int, error) {
 	return 0, fmt.Errorf("namespace '%s' does not match extract pattern for system %s", namespace, s.System)
 }
 
+// IsEnabled reports whether the system is enabled (status == CommonEnabled).
+func (s *ChaosSystemConfig) IsEnabled() bool {
+	return s.Status == consts.CommonEnabled
+}
+
 // GetAllNamespaces generates a list of all namespaces based on the system count map
 func GetAllNamespaces() ([]string, error) {
-	manager := GetChaosSystemConfigManager()
-
-	systemConfigMap := manager.GetAll()
+	systemConfigMap := GetChaosSystemConfigManager().GetAll()
 	namespaces := make([]string, 0)
 	for _, cfg := range systemConfigMap {
+		if !cfg.IsEnabled() {
+			continue
+		}
 		template := convertPatternToTemplate(cfg.NsPattern)
 		if template == "" {
 			return nil, fmt.Errorf("failed to convert ns_pattern to template: %s", cfg.NsPattern)

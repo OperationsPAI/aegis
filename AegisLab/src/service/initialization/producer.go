@@ -1,12 +1,14 @@
 package initialization
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
 
 	"aegis/config"
 	"aegis/consts"
+	etcd "aegis/infra/etcd"
 	redis "aegis/infra/redis"
 	"aegis/model"
 	container "aegis/module/container"
@@ -32,7 +34,7 @@ func (r permMeta) String() string {
 	return fmt.Sprintf("%v %v %v", r.action, r.resourceScope, r.resourceName)
 }
 
-func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, listener *common.ConfigUpdateListener) error {
+func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gateway, listener *common.ConfigUpdateListener) error {
 	producerData, err := newConfigDataWithDB(db, consts.ConfigScopeProducer)
 	if err != nil {
 		return fmt.Errorf("failed to load producer config metadata: %w", err)
@@ -48,13 +50,27 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, listener *common.
 		logrus.Info("Initial system data for producer already seeded, skipping initialization")
 	}
 
-	// Initialize systems (seed builtins, register with chaos-experiment, set MetadataStore)
-	if err := InitializeSystems(db); err != nil {
-		return fmt.Errorf("failed to initialize systems: %w", err)
+	// Best-effort one-shot migration for issue #75:
+	//   1. Drain the retired systems table into dynamic_configs + etcd Global
+	//   2. Rewrite any Consumer-scoped `injection.system.*` rows to Global
+	//   3. Move any stale etcd keys from the Consumer prefix to Global
+	// Safe on fresh installs and on already-migrated installs.
+	if err := MigrateLegacyInjectionSystem(context.Background(), db, etcdGw); err != nil {
+		logrus.WithError(err).Warn("Legacy injection.system migration failed")
 	}
+
+	// Activate config listener first so Viper is populated from etcd before
+	// InitializeSystems reads it to drive chaos.RegisterSystem.
+	// injection.system.* is Global-scoped (issue #75 follow-up), so both
+	// producer and consumer pick it up through the standard Global listener.
 	common.RegisterGlobalHandlers(publisher)
 	if err := activateConfigScope(producerData.scope, listener); err != nil {
 		return err
+	}
+
+	// Initialize systems (register with chaos-experiment from etcd, set MetadataStore)
+	if err := InitializeSystems(db); err != nil {
+		return fmt.Errorf("failed to initialize systems: %w", err)
 	}
 
 	return nil

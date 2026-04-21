@@ -162,17 +162,6 @@ func (r *Repository) listConfigHistoriesByConfigID(configID int) ([]model.Config
 	return histories, nil
 }
 
-func (r *Repository) GetSystemByID(id int) (*model.System, error) {
-	var system model.System
-	if err := r.db.Where("id = ? AND status != ?", id, consts.CommonDeleted).First(&system).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("system with id %d: %w", id, consts.ErrNotFound)
-		}
-		return nil, fmt.Errorf("failed to find system with id %d: %w", id, err)
-	}
-	return &system, nil
-}
-
 func (r *Repository) GetSystemMetadata(systemName, metadataType, serviceName string) (*model.SystemMetadata, error) {
 	var meta model.SystemMetadata
 	if err := r.db.Where("system_name = ? AND metadata_type = ? AND service_name = ?", systemName, metadataType, serviceName).

@@ -3,7 +3,6 @@ package db
 import (
 	"aegis/framework"
 	"aegis/model"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -59,59 +58,9 @@ func migrate(db *gorm.DB, contribs []framework.MigrationRegistrar) {
 		logrus.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	seedBuiltinSystems(db)
+	// The retired `systems` table (issue #75) is migrated into etcd by
+	// service/initialization/legacy_systems_migration.go before it is dropped.
 	createDetectorViews(db)
-}
-
-func seedBuiltinSystems(db *gorm.DB) {
-	rows := [][]any{
-		{"train-ticket", "Train Ticket", "^ts\\d+$", "^(ts)(\\d+)$", "app", 1, true, 1, "Built-in benchmark system"},
-		{"sock-shop", "Sock Shop", "^ss\\d+$", "^(ss)(\\d+)$", "app", 1, true, 1, "Built-in benchmark system"},
-		{"social-network", "Social Network", "^sn\\d+$", "^(sn)(\\d+)$", "app", 1, true, 1, "Built-in benchmark system"},
-		{"online-boutique", "Online Boutique", "^ob\\d+$", "^(ob)(\\d+)$", "app", 1, true, 1, "Built-in benchmark system"},
-		{"hotel-reservation", "Hotel Reservation", "^hr\\d+$", "^(hr)(\\d+)$", "app", 1, true, 1, "Built-in benchmark system"},
-		{"media-microsvc", "Media Microservices", "^mm\\d+$", "^(mm)(\\d+)$", "app", 1, true, 1, "Built-in benchmark system"},
-	}
-
-	valueSQL := make([]string, 0, len(rows))
-	args := make([]any, 0, len(rows)*9)
-	for range rows {
-		valueSQL = append(valueSQL, "(?,?,?,?,?,?,?,?,?,NOW(),NOW())")
-	}
-	for _, row := range rows {
-		args = append(args, row...)
-	}
-
-	query := `
-INSERT INTO systems (
-	name,
-	display_name,
-	ns_pattern,
-	extract_pattern,
-	app_label_key,
-	count,
-	is_builtin,
-	status,
-	description,
-	created_at,
-	updated_at
-)
-VALUES ` + strings.Join(valueSQL, ",") + `
-ON DUPLICATE KEY UPDATE
-	display_name = VALUES(display_name),
-	ns_pattern = VALUES(ns_pattern),
-	extract_pattern = VALUES(extract_pattern),
-	app_label_key = VALUES(app_label_key),
-	count = VALUES(count),
-	is_builtin = VALUES(is_builtin),
-	status = VALUES(status),
-	description = VALUES(description),
-	updated_at = NOW()
-`
-
-	if err := db.Exec(query, args...).Error; err != nil {
-		logrus.Warnf("Failed to seed builtin systems: %v", err)
-	}
 }
 
 func addDetectorJoins(query *gorm.DB) *gorm.DB {
