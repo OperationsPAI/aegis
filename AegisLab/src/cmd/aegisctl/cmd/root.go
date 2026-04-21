@@ -210,7 +210,6 @@ func init() {
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(pedestalCmd)
-	rootCmd.AddCommand(regressionCmd)
 	rootCmd.AddCommand(schemaCmd)
 }
 
