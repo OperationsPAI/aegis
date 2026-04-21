@@ -45,6 +45,7 @@ var (
 	guidedNext          string
 	guidedOutput        string
 	guidedApply         bool
+	guidedSkipStaleCheck bool
 
 	guidedDuration        int
 	guidedMemorySize      int
@@ -254,6 +255,7 @@ func init() {
 	f.StringVar(&guidedNext, "next", "", "Apply a single next-step selection using the current session state")
 	f.StringVar(&guidedOutput, "output", "json", "Output format: json|yaml")
 	f.BoolVar(&guidedApply, "apply", false, "Finalize the session and attempt to submit")
+	f.BoolVar(&guidedSkipStaleCheck, "skip-stale-check", false, "Skip the pre-submit warning about orphaned PodChaos CRs in the target namespace")
 
 	// --apply envelope flags (mirror the injection YAML contract)
 	f.StringVar(&guidedApplyPedestalName, "pedestal-name", "", "Pedestal container name (required with --apply)")
@@ -304,6 +306,11 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	}
 	if err := requireAPIContext(true); err != nil {
 		return err
+	}
+	if !guidedSkipStaleCheck {
+		// Non-blocking: any error from the check itself is silently downgraded
+		// to an info line by warnStalePodChaos. We still ignore its return.
+		_ = warnStalePodChaos(context.Background(), cfg.Namespace, guidedStalePodChaosListerHook, os.Stderr)
 	}
 	opts := guidedApplyOptions{
 		PedestalName:  guidedApplyPedestalName,
