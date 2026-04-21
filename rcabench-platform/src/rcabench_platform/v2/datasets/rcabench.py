@@ -100,6 +100,12 @@ REQUIRED_FILES = [
 ]
 
 
+def _get_optional_empty_parquets() -> set[str]:
+    """See v3 copy — mirrored bypass for legacy v2 callers."""
+    raw = os.environ.get("RCABENCH_OPTIONAL_EMPTY_PARQUETS", "")
+    return {name.strip() for name in raw.split(",") if name.strip()}
+
+
 def get_service_names(injection: dict[str, Any]) -> list[str]:
     """Extract service names from injection.json for batch fault injections"""
     groundtruths: list[dict[str, Any]] = injection.get("ground_truth", [])
@@ -296,6 +302,8 @@ def valid(path: Path, force_refresh: bool = False) -> tuple[Path, bool]:
     if invalid_cache.exists():
         invalid_cache.unlink()
 
+    optional_empty = _get_optional_empty_parquets()
+
     for filename in REQUIRED_FILES:
         file_path = path_obj / filename
 
@@ -330,11 +338,18 @@ def valid(path: Path, force_refresh: bool = False) -> tuple[Path, bool]:
                 row_count = df.height
 
                 if row_count == 0:
-                    reason = f"Parquet file has no data rows: {filename}"
-                    logger.warning("Validation failed: {}", reason)
-                    invalid_f = path_obj / ".invalid"
-                    invalid_f.write_text(reason)
-                    return path, False
+                    if filename in optional_empty:
+                        logger.warning(
+                            "Parquet file has no data rows but is opted out via "
+                            "RCABENCH_OPTIONAL_EMPTY_PARQUETS: {}",
+                            filename,
+                        )
+                    else:
+                        reason = f"Parquet file has no data rows: {filename}"
+                        logger.warning("Validation failed: {}", reason)
+                        invalid_f = path_obj / ".invalid"
+                        invalid_f.write_text(reason)
+                        return path, False
 
             except Exception as e:
                 reason = f"Failed to read Parquet file {filename}: {e}"

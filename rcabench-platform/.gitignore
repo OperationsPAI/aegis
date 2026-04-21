@@ -25,3 +25,4 @@ wheels/
 
 __marimo__/
 .env
+.docker-build/
