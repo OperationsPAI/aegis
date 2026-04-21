@@ -62,6 +62,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		params.Controller,
 		params.Monitor,
 		params.RedisGateway,
+		params.Etcd,
 		commonservice.NewConfigUpdateListener(ctx, params.DB, params.Etcd),
 		params.RestartLimiter,
 		params.BuildLimiter,

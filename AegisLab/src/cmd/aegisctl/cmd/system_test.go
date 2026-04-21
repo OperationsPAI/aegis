@@ -1,8 +1,15 @@
 package cmd
 
 import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"aegis/cmd/aegisctl/client"
 
 	"gopkg.in/yaml.v3"
 )
@@ -112,5 +119,143 @@ func TestSystemSeedWrongValueTypeRejected(t *testing.T) {
 	}
 	if !strings.Contains(msg, "value_type") {
 		t.Errorf("error should mention value_type; got: %v", err)
+	}
+}
+
+// fakeAPIResp is a minimal envelope that mirrors client.APIResponse[T] for
+// tests — avoids pulling generics-at-the-bench into the fake server.
+type fakeAPIResp struct {
+	Code    int            `json:"code"`
+	Message string         `json:"message"`
+	Data    any            `json:"data,omitempty"`
+}
+
+// newFakeSystemServer stubs the two endpoints the enable/disable path hits:
+// GET /api/v2/systems (for name→id resolution) and PUT /api/v2/systems/{id}.
+// The last PUT body is stored in the returned *capturedPut so tests can
+// assert the wire shape.
+type capturedPut struct {
+	path string
+	body map[string]any
+}
+
+func newFakeSystemServer(t *testing.T, systems []chaosSystemResp) (*httptest.Server, *capturedPut) {
+	t.Helper()
+	captured := &capturedPut{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/systems", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "unexpected method", http.StatusMethodNotAllowed)
+			return
+		}
+		resp := fakeAPIResp{
+			Code: 200,
+			Data: client.PaginatedData[chaosSystemResp]{
+				Items: systems,
+				Pagination: client.Pagination{
+					Page: 1, Size: len(systems), Total: len(systems), TotalPages: 1,
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	})
+	mux.HandleFunc("/api/v2/systems/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "unexpected method", http.StatusMethodNotAllowed)
+			return
+		}
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		captured.path = r.URL.Path
+		captured.body = map[string]any{}
+		_ = json.Unmarshal(raw, &captured.body)
+		// Echo back a minimal system; the CLI only reads .data.Name/.data.ID.
+		var echo chaosSystemResp
+		if len(systems) > 0 {
+			echo = systems[0]
+		}
+		resp := fakeAPIResp{Code: 200, Data: echo}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv, captured
+}
+
+// TestSystemEnableSendsStatusOne pins the wire shape: PUT to /{id} with
+// exactly {"status": 1}. If this ever changes, the backend contract pinned
+// by UpdateChaosSystemReq.Status must be revisited in lockstep.
+func TestSystemEnableSendsStatusOne(t *testing.T) {
+	srv, captured := newFakeSystemServer(t, []chaosSystemResp{
+		{ID: 42, Name: "ts"},
+	})
+	c := client.NewClient(srv.URL, "tok", 5*time.Second)
+
+	if _, err := setSystemStatus(c, "ts", 1); err != nil {
+		t.Fatalf("setSystemStatus(enable): %v", err)
+	}
+	if captured.path != "/api/v2/systems/42" {
+		t.Errorf("PUT path = %q, want /api/v2/systems/42", captured.path)
+	}
+	got, ok := captured.body["status"]
+	if !ok {
+		t.Fatalf("PUT body missing status: %+v", captured.body)
+	}
+	// JSON decodes numbers as float64 by default.
+	if n, _ := got.(float64); int(n) != 1 {
+		t.Errorf("PUT body status = %v, want 1", got)
+	}
+	if len(captured.body) != 1 {
+		t.Errorf("PUT body should only carry status; got %+v", captured.body)
+	}
+}
+
+// TestSystemDisableSendsStatusZero mirrors the enable test for the disable
+// wire shape ({"status": 0}).
+func TestSystemDisableSendsStatusZero(t *testing.T) {
+	srv, captured := newFakeSystemServer(t, []chaosSystemResp{
+		{ID: 7, Name: "hr"},
+	})
+	c := client.NewClient(srv.URL, "tok", 5*time.Second)
+
+	if _, err := setSystemStatus(c, "hr", 0); err != nil {
+		t.Fatalf("setSystemStatus(disable): %v", err)
+	}
+	if captured.path != "/api/v2/systems/7" {
+		t.Errorf("PUT path = %q, want /api/v2/systems/7", captured.path)
+	}
+	got, ok := captured.body["status"]
+	if !ok {
+		t.Fatalf("PUT body missing status: %+v", captured.body)
+	}
+	if n, _ := got.(float64); int(n) != 0 {
+		t.Errorf("PUT body status = %v, want 0", got)
+	}
+}
+
+// TestSystemEnableUnknownNameListsKnown pins that trying to enable an
+// unregistered system surfaces the registered names in the error. Keeps the
+// UX guard documented in the task brief.
+func TestSystemEnableUnknownNameListsKnown(t *testing.T) {
+	srv, _ := newFakeSystemServer(t, []chaosSystemResp{
+		{ID: 1, Name: "ts"}, {ID: 2, Name: "hr"},
+	})
+	c := client.NewClient(srv.URL, "tok", 5*time.Second)
+
+	_, err := setSystemStatus(c, "does-not-exist", 1)
+	if err == nil {
+		t.Fatal("setSystemStatus: expected error for unknown name, got nil")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "does-not-exist") {
+		t.Errorf("error should mention the missing name; got %v", err)
+	}
+	if !strings.Contains(msg, "ts") || !strings.Contains(msg, "hr") {
+		t.Errorf("error should list known names ts, hr; got %v", err)
 	}
 }

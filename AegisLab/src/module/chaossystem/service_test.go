@@ -2,11 +2,14 @@ package chaossystem
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"aegis/consts"
 	"aegis/model"
 	"aegis/service/common"
 
+	"github.com/spf13/viper"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -89,5 +92,81 @@ func TestUpsertTopologyMetadataInvalidatesCache(t *testing.T) {
 	}
 	if len(pairs) != 1 || pairs[0].Source != "frontend" || pairs[0].Target != "checkout" {
 		t.Fatalf("GetNetworkPairs() = %+v, want frontend->checkout", pairs)
+	}
+}
+
+// seedSystemInViper installs a chaos-system entry into the global Viper tree
+// so lookupByID/lookupByName can find it. Returns a cleanup closure.
+func seedSystemInViper(t *testing.T, name string, isBuiltin bool) func() {
+	t.Helper()
+	key := "injection.system." + name
+	prev := viper.Get("injection.system")
+	viper.Set(key, map[string]any{
+		"count":           1,
+		"ns_pattern":      "^" + name + `\d+$`,
+		"extract_pattern": "^(" + name + `)(\d+)$`,
+		"display_name":    name,
+		"app_label_key":   "app",
+		"is_builtin":      isBuiltin,
+		"status":          int(consts.CommonEnabled),
+	})
+	return func() { viper.Set("injection.system", prev) }
+}
+
+// TestUpdateSystemStatusRejectsDeleteSentinel pins that the generic update
+// endpoint refuses status=-1 (CommonDeleted). -1 is the tombstone written by
+// DeleteSystem; callers must go through DELETE so the builtin guard and the
+// local chaos.UnregisterSystem hook run. This check fires before any etcd
+// round-trip, so a nil-etcd Service is safe.
+func TestUpdateSystemStatusRejectsDeleteSentinel(t *testing.T) {
+	service, db, _ := newMetadataService(t)
+	const systemName = "bench-update-status-delete"
+	cleanup := seedSystemInViper(t, systemName, false)
+	defer cleanup()
+
+	anchor := &model.DynamicConfig{
+		Key:          systemKey(systemName, fieldCount),
+		DefaultValue: "1",
+		ValueType:    consts.ConfigValueTypeInt,
+	}
+	if err := db.Create(anchor).Error; err != nil {
+		t.Fatalf("seed anchor: %v", err)
+	}
+
+	deleted := int(consts.CommonDeleted)
+	_, err := service.UpdateSystem(context.Background(), anchor.ID, &UpdateChaosSystemReq{Status: &deleted})
+	if err == nil {
+		t.Fatal("UpdateSystem: expected error for status=-1, got nil")
+	}
+	if !errors.Is(err, consts.ErrBadRequest) {
+		t.Errorf("UpdateSystem: error should wrap ErrBadRequest; got %v", err)
+	}
+}
+
+// TestUpdateSystemStatusRejectsBuiltin pins that builtin systems refuse
+// enable/disable through the generic update endpoint, mirroring the guard in
+// DeleteSystem.
+func TestUpdateSystemStatusRejectsBuiltin(t *testing.T) {
+	service, db, _ := newMetadataService(t)
+	const systemName = "bench-update-status-builtin"
+	cleanup := seedSystemInViper(t, systemName, true)
+	defer cleanup()
+
+	anchor := &model.DynamicConfig{
+		Key:          systemKey(systemName, fieldCount),
+		DefaultValue: "1",
+		ValueType:    consts.ConfigValueTypeInt,
+	}
+	if err := db.Create(anchor).Error; err != nil {
+		t.Fatalf("seed anchor: %v", err)
+	}
+
+	disabled := int(consts.CommonDisabled)
+	_, err := service.UpdateSystem(context.Background(), anchor.ID, &UpdateChaosSystemReq{Status: &disabled})
+	if err == nil {
+		t.Fatal("UpdateSystem: expected error disabling a builtin, got nil")
+	}
+	if !errors.Is(err, consts.ErrBadRequest) {
+		t.Errorf("UpdateSystem: error should wrap ErrBadRequest; got %v", err)
 	}
 }
