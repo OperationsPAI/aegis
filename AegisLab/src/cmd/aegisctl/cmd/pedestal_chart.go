@@ -350,7 +350,7 @@ func deriveNamespaceFromSystem(systemCode string) (string, error) {
 		NsPattern string `json:"ns_pattern"`
 	}
 	var resp client.APIResponse[client.PaginatedData[systemItem]]
-	if err := c.Get("/api/v2/systems?page=1&size=200", &resp); err != nil {
+	if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
 		return "", fmt.Errorf("list systems: %w", err)
 	}
 	for _, s := range resp.Data.Items {
