@@ -118,6 +118,16 @@ containers:
           repo_name: opspai
           repo_url: oci://registry-1.docker.io/opspai
           status: 1
+    # issue #115: sockshop's coherence-helidon variant requires the
+    # Coherence operator installed cluster-wide before the chart can be
+    # rendered. `aegisctl system reconcile-prereqs --name sockshop` installs
+    # it; `aegisctl system enable sockshop` refuses until it's reconciled.
+    prerequisites:
+      - name: coherence-operator
+        kind: helm
+        chart: coherence/coherence-operator
+        namespace: coherence-test
+        version: '>=3.4'
   - type: 2
     name: hotelreservation
     is_public: true

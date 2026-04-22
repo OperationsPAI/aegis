@@ -258,6 +258,69 @@ func (h *Handler) ReseedSystems(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// ListSystemPrerequisitesHandler returns the declared cluster-level
+// prerequisites for a system (issue #115). aegisctl consumes this before
+// running `helm upgrade --install` against each prereq.
+//
+//	@Summary		List system prerequisites
+//	@Description	List the cluster-level prerequisites declared for a benchmark system (issue #115). Returns [] if the system has none.
+//	@Tags			Systems
+//	@ID				list_system_prerequisites
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			name	path		string											true	"System short code"
+//	@Success		200		{object}	dto.GenericResponse[[]SystemPrerequisiteResp]	"Prerequisites retrieved"
+//	@Failure		404		{object}	dto.GenericResponse[any]						"System not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]						"Internal server error"
+//	@Router			/api/v2/systems/by-name/{name}/prerequisites [get]
+//	@x-api-type		{"admin":"true","sdk":"true"}
+func (h *Handler) ListPrerequisites(c *gin.Context) {
+	name := c.Param("name")
+	resp, err := h.service.ListPrerequisites(c.Request.Context(), name)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
+// MarkSystemPrerequisiteHandler lets aegisctl flip the status of a single
+// prerequisite (reconciled after a successful helm install, failed on error).
+// Backend never shells out to helm — it just tracks state.
+//
+//	@Summary		Mark a prerequisite status
+//	@Description	Flip the status of one prerequisite (pending/reconciled/failed). aegisctl is the sole writer; backend does not shell out to helm.
+//	@Tags			Systems
+//	@ID				mark_system_prerequisite
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			name	path		string									true	"System short code"
+//	@Param			id		path		int										true	"Prerequisite ID"
+//	@Param			request	body		MarkPrerequisiteReq						true	"Mark request"
+//	@Success		200		{object}	dto.GenericResponse[SystemPrerequisiteResp]	"Status updated"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid request"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"Prerequisite not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/systems/by-name/{name}/prerequisites/{id}/mark [post]
+//	@x-api-type		{"admin":"true","sdk":"true"}
+func (h *Handler) MarkPrerequisite(c *gin.Context) {
+	name := c.Param("name")
+	id, ok := httpx.ParsePositiveID(c, c.Param(consts.URLPathID), "prerequisite ID")
+	if !ok {
+		return
+	}
+	var req MarkPrerequisiteReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
+		return
+	}
+	resp, err := h.service.MarkPrerequisite(c.Request.Context(), name, id, &req)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 // ListChaosSystemMetadataHandler handles listing metadata for a chaos system
 //
 //	@Summary		List chaos system metadata

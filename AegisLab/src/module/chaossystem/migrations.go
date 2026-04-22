@@ -13,6 +13,9 @@ func Migrations() framework.MigrationRegistrar {
 		Module: "chaossystem",
 		Entities: []interface{}{
 			&model.SystemMetadata{},
+			// system_prerequisites (issue #115): cluster-level prerequisites
+			// (helm charts, in v1) a system needs before it can be enabled.
+			&model.SystemPrerequisite{},
 		},
 	}
 }

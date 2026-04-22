@@ -21,6 +21,9 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 					systemRead.GET("/:id", handler.GetSystem)
 					systemRead.GET("/:id/metadata", handler.ListMetadata)
 					systemRead.GET("/by-name/:name/chart", handler.GetSystemChart)
+					// Prerequisites (issue #115) — read is system_read gated so
+					// the default admin flow can surface status in dashboards.
+					systemRead.GET("/by-name/:name/prerequisites", handler.ListPrerequisites)
 				}
 
 				systemConfigure := systems.Group("", middleware.RequireSystemConfigure)
@@ -29,6 +32,8 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 					systemConfigure.PUT("/:id", handler.UpdateSystem)
 					systemConfigure.POST("/:id/metadata", handler.UpsertMetadata)
 					systemConfigure.POST("/reseed", handler.ReseedSystems)
+					// aegisctl calls this after a successful helm upgrade --install.
+					systemConfigure.POST("/by-name/:name/prerequisites/:id/mark", handler.MarkPrerequisite)
 				}
 
 				systems.DELETE("/:id", middleware.RequirePermission(consts.PermSystemManage), handler.DeleteSystem)

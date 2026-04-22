@@ -183,6 +183,47 @@ type SystemChartResp struct {
 	PedestalTag  string `json:"pedestal_tag"`
 }
 
+// SystemPrerequisiteResp is one system prerequisite in API responses (issue
+// #115). Spec is the raw JSON payload the seed loader stored; its shape is
+// dictated by Kind (e.g. kind=helm -> {chart,namespace,version}).
+type SystemPrerequisiteResp struct {
+	ID         int             `json:"id"`
+	SystemName string          `json:"system_name"`
+	Kind       string          `json:"kind"`
+	Name       string          `json:"name"`
+	Spec       json.RawMessage `json:"spec"`
+	Status     string          `json:"status"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+}
+
+// NewSystemPrerequisiteResp builds the API payload from a DB row.
+func NewSystemPrerequisiteResp(m *model.SystemPrerequisite) *SystemPrerequisiteResp {
+	raw := json.RawMessage(m.SpecJSON)
+	if len(raw) == 0 {
+		raw = json.RawMessage(`{}`)
+	}
+	return &SystemPrerequisiteResp{
+		ID:         m.ID,
+		SystemName: m.SystemName,
+		Kind:       m.Kind,
+		Name:       m.Name,
+		Spec:       raw,
+		Status:     m.Status,
+		CreatedAt:  m.CreatedAt,
+		UpdatedAt:  m.UpdatedAt,
+	}
+}
+
+// MarkPrerequisiteReq is the POST body for marking a prerequisite
+// reconciled/failed. Status must be one of the
+// model.SystemPrerequisiteStatus* constants. Reason is free-form text stored
+// nowhere today but reserved for future audit / error capture.
+type MarkPrerequisiteReq struct {
+	Status string `json:"status" binding:"required,oneof=pending reconciled failed"`
+	Reason string `json:"reason,omitempty"`
+}
+
 // SystemMetadataResp represents system metadata in API responses.
 type SystemMetadataResp struct {
 	ID           int             `json:"id"`

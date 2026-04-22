@@ -151,6 +151,48 @@ func (r *Repository) GetPedestalHelmConfigByName(name string) (*model.HelmConfig
 	return &helm, &version, nil
 }
 
+// ListPrerequisites returns every prerequisite for the given system, sorted
+// by kind then name so CLI output is stable. An empty result is not an
+// error — a system without prereqs is the common case.
+func (r *Repository) ListPrerequisites(systemName string) ([]model.SystemPrerequisite, error) {
+	var rows []model.SystemPrerequisite
+	if err := r.db.Where("system_name = ?", systemName).
+		Order("kind ASC, name ASC").Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list prerequisites for %s: %w", systemName, err)
+	}
+	return rows, nil
+}
+
+// GetPrerequisiteByID fetches one row by primary key, scoped to the given
+// system so a mismatched (system,id) pair returns NotFound instead of
+// silently leaking another system's row.
+func (r *Repository) GetPrerequisiteByID(systemName string, id int) (*model.SystemPrerequisite, error) {
+	var row model.SystemPrerequisite
+	err := r.db.Where("id = ? AND system_name = ?", id, systemName).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get prerequisite %d for %s: %w", id, systemName, err)
+	}
+	return &row, nil
+}
+
+// UpdatePrerequisiteStatus flips the status column. Used by aegisctl after a
+// successful `helm upgrade --install`.
+func (r *Repository) UpdatePrerequisiteStatus(id int, status string) error {
+	res := r.db.Model(&model.SystemPrerequisite{}).
+		Where("id = ?", id).
+		Update("status", status)
+	if res.Error != nil {
+		return fmt.Errorf("update prerequisite %d status: %w", id, res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 // We intentionally do not expose a "delete config" helper. Removing a system
 // is modeled as setting its status to CommonDeleted via the etcd write path so
 // history/audit stays consistent.
