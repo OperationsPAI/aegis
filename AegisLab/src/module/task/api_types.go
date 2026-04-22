@@ -3,6 +3,7 @@ package task
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,6 +42,11 @@ type ListTaskFilters struct {
 }
 
 // ListTaskReq represents the request to list tasks.
+//
+// State accepts either the numeric TaskState (e.g. "2") or the canonical
+// name (e.g. "Running"). Binding as string keeps gin from failing with
+// `strconv.ParseInt: parsing "Running": invalid syntax` — resolution to the
+// numeric consts.TaskState is done in ToFilterOptions.
 type ListTaskReq struct {
 	dto.PaginationReq
 	TaskType  *consts.TaskType   `form:"task_type" binding:"omitempty"`
@@ -48,7 +54,7 @@ type ListTaskReq struct {
 	TraceID   string             `form:"trace_id" binding:"omitempty"`
 	GroupID   string             `form:"group_id" binding:"omitempty"`
 	ProjectID int                `form:"project_id" binding:"omitempty"`
-	State     *consts.TaskState  `form:"state" binding:"omitempty"`
+	State     string             `form:"state" binding:"omitempty"`
 	Status    *consts.StatusType `form:"status" binding:"omitempty"`
 }
 
@@ -68,22 +74,48 @@ func (req *ListTaskReq) Validate() error {
 	if req.ProjectID < 0 {
 		return fmt.Errorf("invalid project ID: %d", req.ProjectID)
 	}
-	if err := validateState(req.State); err != nil {
+	if _, err := parseTaskStateParam(req.State); err != nil {
 		return err
 	}
 	return validateStatus(req.Status)
 }
 
 func (req *ListTaskReq) ToFilterOptions() *ListTaskFilters {
+	state, _ := parseTaskStateParam(req.State)
 	return &ListTaskFilters{
 		Immediate: req.Immediate,
 		TaskType:  req.TaskType,
 		TraceID:   req.TraceID,
 		GroupID:   req.GroupID,
 		ProjectID: req.ProjectID,
-		State:     req.State,
+		State:     state,
 		Status:    req.Status,
 	}
+}
+
+// parseTaskStateParam accepts either a TaskState numeric string ("2") or its
+// canonical name ("Running"). Empty input means "no filter" and returns nil
+// without error.
+func parseTaskStateParam(raw string) (*consts.TaskState, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return nil, nil
+	}
+	if state := consts.GetTaskStateByName(s); state != nil {
+		if _, exists := consts.ValidTaskStates[*state]; !exists {
+			return nil, fmt.Errorf("invalid task state: %s", s)
+		}
+		return state, nil
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return nil, fmt.Errorf("invalid task state %q: want a name (e.g. Running) or int", s)
+	}
+	state := consts.TaskState(n)
+	if _, exists := consts.ValidTaskStates[state]; !exists {
+		return nil, fmt.Errorf("invalid task state: %d", n)
+	}
+	return &state, nil
 }
 
 // TaskResp represents the response for a task.
@@ -146,15 +178,6 @@ func NewTaskDetailResp(task *model.Task, logs []string) *TaskDetailResp {
 type QueuedTasksResp struct {
 	ReadyTasks   []TaskResp `json:"ready_tasks"`
 	DelayedTasks []TaskResp `json:"delayed_tasks"`
-}
-
-func validateState(state *consts.TaskState) error {
-	if state != nil {
-		if _, exists := consts.ValidTaskStates[*state]; !exists {
-			return fmt.Errorf("invalid task state: %d", *state)
-		}
-	}
-	return nil
 }
 
 func validateTaskType(taskType *consts.TaskType) error {

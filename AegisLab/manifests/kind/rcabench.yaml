@@ -4,14 +4,18 @@
 #   - kind cluster (default storageclass "standard" / local-path)
 #   - in-cluster observability already provided by docs/deployment/otel-pipeline.yaml
 #     (ClickHouse + otel-collector in namespace "otel")
-#   - backend image pre-loaded via `kind load docker-image aegislab-backend:local`
+#   - backend image pulled from Docker Hub (`opspai/rcabench:latest`). Fresh
+#     clones therefore don't need a local `docker build` + `kind load`.
+#     For local-dev iteration, override with:
+#       --set images.rcabench.name=aegislab-backend --set images.rcabench.tag=local
+#     after `kind load docker-image aegislab-backend:local --name <cluster>`.
 #
 # Used by `aegisctl` regression flow; aligns with skills in .claude/skills/.
 
 images:
   rcabench:
-    name: aegislab-backend
-    tag: local
+    name: opspai/rcabench
+    tag: latest
     pullPolicy: IfNotPresent
 
 # In-chart observability is redundant when otel-pipeline.yaml runs separately.

@@ -2,6 +2,8 @@ package trace
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"aegis/consts"
@@ -45,12 +47,18 @@ type ListTraceFilters struct {
 	Status    *consts.StatusType
 }
 
+// ListTraceReq represents the request to list traces.
+//
+// State accepts either the numeric TraceState (e.g. "1") or the canonical
+// name (e.g. "Running"). Binding as string keeps gin from failing with
+// `strconv.ParseInt: parsing "Running": invalid syntax` — resolution to the
+// numeric consts.TraceState is done in ToFilterOptions.
 type ListTraceReq struct {
 	dto.PaginationReq
 	TraceType *consts.TraceType  `form:"trace_type" binding:"omitempty"`
 	GroupID   string             `form:"group_id" binding:"omitempty"`
 	ProjectID int                `form:"project_id" binding:"omitempty"`
-	State     *consts.TraceState `form:"state" binding:"omitempty"`
+	State     string             `form:"state" binding:"omitempty"`
 	Status    *consts.StatusType `form:"status" binding:"omitempty"`
 }
 
@@ -69,22 +77,46 @@ func (req *ListTraceReq) Validate() error {
 	if req.ProjectID < 0 {
 		return fmt.Errorf("invalid project ID: %d", req.ProjectID)
 	}
-	if req.State != nil {
-		if _, exists := consts.ValidTraceStates[*req.State]; !exists {
-			return fmt.Errorf("invalid trace state: %d", *req.State)
-		}
+	if _, err := parseTraceStateParam(req.State); err != nil {
+		return err
 	}
 	return validateStatus(req.Status)
 }
 
 func (req *ListTraceReq) ToFilterOptions() *ListTraceFilters {
+	state, _ := parseTraceStateParam(req.State)
 	return &ListTraceFilters{
 		TraceType: req.TraceType,
 		GroupID:   req.GroupID,
 		ProjectID: req.ProjectID,
-		State:     req.State,
+		State:     state,
 		Status:    req.Status,
 	}
+}
+
+// parseTraceStateParam accepts either a TraceState numeric string ("1") or
+// its canonical name ("Running"). Empty input means "no filter" and returns
+// nil without error.
+func parseTraceStateParam(raw string) (*consts.TraceState, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return nil, nil
+	}
+	if state := consts.GetTraceStateByName(s); state != nil {
+		if _, exists := consts.ValidTraceStates[*state]; !exists {
+			return nil, fmt.Errorf("invalid trace state: %s", s)
+		}
+		return state, nil
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return nil, fmt.Errorf("invalid trace state %q: want a name (e.g. Running) or int", s)
+	}
+	state := consts.TraceState(n)
+	if _, exists := consts.ValidTraceStates[state]; !exists {
+		return nil, fmt.Errorf("invalid trace state: %d", n)
+	}
+	return &state, nil
 }
 
 type TraceResp struct {

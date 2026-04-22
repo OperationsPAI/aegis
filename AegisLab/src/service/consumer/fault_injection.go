@@ -106,11 +106,16 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		if monitor == nil {
 			return handleExecutionError(span, logEntry, "monitor not initialized", fmt.Errorf("monitor not initialized"))
 		}
+		// Default: release the lock on exit. Ownership transfers to the
+		// CRD-success/CRD-failed path only after both BatchCreate and
+		// CreateInjection succeed; until then every early-return must free
+		// the namespace lock or the next inject into this ns will loop on
+		// `failed to acquire lock for namespace, retrying`.
 		toReleased := false
 		if err := monitor.CheckNamespaceToInject(payload.namespace, time.Now(), task.TraceID); err != nil {
-			toReleased = true
 			return handleExecutionError(span, logEntry, "failed to get namespace to inject fault", err)
 		}
+		toReleased = true
 
 		defer func() {
 			if toReleased {
@@ -182,7 +187,6 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		// Batch create all fault injections in parallel
 		names, err := chaos.BatchCreate(childCtx, injectionConfs, chaos.SystemType(payload.system), payload.namespace, annotations, crdLabels)
 		if err != nil {
-			toReleased = true
 			return handleExecutionError(span, logEntry, "failed to inject faults", err)
 		}
 
@@ -224,6 +228,9 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to write fault injection schedule to owner service", err)
 		}
+		// Ownership of the namespace lock passes to the CRD controller from
+		// here on; it will release on CRD success/failure (k8s_handler).
+		toReleased = false
 		return nil
 	})
 }

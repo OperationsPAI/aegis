@@ -47,14 +47,13 @@ func TestTaskServiceListSuccess(t *testing.T) {
 	defer cleanup()
 
 	now := time.Now()
-	state := consts.TaskPending
-	req := &ListTaskReq{State: &state}
+	req := &ListTaskReq{State: "Pending"}
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `tasks` WHERE state = ?")).
-		WithArgs(state).
+		WithArgs(consts.TaskPending).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `tasks` WHERE state = ? ORDER BY created_at DESC LIMIT ?")).
-		WithArgs(state, 20).
+		WithArgs(consts.TaskPending, 20).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "type", "immediate", "execute_time", "cron_expr", "payload", "trace_id", "parent_task_id",
 			"level", "sequence", "state", "status", "created_at", "updated_at",

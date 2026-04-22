@@ -371,3 +371,13 @@ func GetTraceStateName(state TraceState) string {
 	}
 	return "Unknown"
 }
+
+func GetTraceStateByName(name string) *TraceState {
+	for s, n := range traceStateMap {
+		if n == name {
+			state := s
+			return &state
+		}
+	}
+	return nil
+}

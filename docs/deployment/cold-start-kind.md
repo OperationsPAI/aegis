@@ -133,11 +133,11 @@ Verify: `kubectl -n otel get endpoints otel-collector` should be non-empty.
 
 ## 6. rcabench
 
-The kind profile pins `aegislab-backend:local` (expected to be
-built locally and `kind load`'d). For a quick cold-start, override to the
-public image. The `--atomic --timeout 10m` combo from `just rcabench-install`
-is too aggressive for first-pull — use a longer timeout and drop atomic so
-the release survives long pulls:
+The kind profile now defaults to `opspai/rcabench:latest` (public Docker
+Hub image) so fresh clones don't need a local build + `kind load`. The
+`--atomic --timeout 10m` combo from `just rcabench-install` is too
+aggressive for first-pull — use a longer timeout and drop atomic so the
+release survives long pulls:
 
 ```bash
 cd AegisLab
@@ -147,10 +147,16 @@ helm upgrade -i rcabench ./helm \
   --set-file initialDataFiles.data_yaml=data/initial_data/prod/data.yaml \
   --set-file initialDataFiles.otel_demo_yaml=data/initial_data/prod/otel-demo.yaml \
   --set-file initialDataFiles.ts_yaml=data/initial_data/prod/ts.yaml \
-  --set images.rcabench.name=opspai/rcabench \
-  --set images.rcabench.tag=latest \
-  --set images.rcabench.pullPolicy=IfNotPresent \
   --timeout 15m
+```
+
+For local-dev iteration on top of a locally-built image:
+
+```bash
+kind load docker-image aegislab-backend:local --name aegis-local
+helm upgrade -i rcabench ./helm ... \
+  --set images.rcabench.name=aegislab-backend \
+  --set images.rcabench.tag=local
 ```
 
 ### Seed-race recovery (always do this once)
@@ -238,15 +244,16 @@ Ordered roughly by how likely they block a first-timer. Full details with
 backend log signatures are in
 `~/.claude/projects/-home-ddq-AoyangSpace-aegis/memory/project_cold_start_gaps_2026_04_22.md`.
 
-| # | Layer | Workaround used here |
-|---|---|---|
-| 9 | kind image | Override `images.rcabench` to `opspai/rcabench:latest` |
-| 17 | seed race | `DROP DATABASE` + double `rollout restart` (step 6b) |
-| 22 | kube-stack chart | Leave `scrape_configs_file` unset; use chart default |
-| 23 | redis lock | `redis-cli del monitor:ns:<ns>` after a failed trace |
-| 25 | compat svc | Manual `otel-collector` Service in `otel` ns (step 5b) |
-| 8 | helm atomic | Drop `--atomic`, raise `--timeout` to 15m |
-| 11 | pod ordering | Tolerate 1–3 CrashLoops while mysql provisions |
-| 12 | admin creds | `admin / admin123` (from `data/initial_data/prod/data.yaml`) |
-| 15 | guided cache | Always pass `--reset-config` on first inject |
-| 18 | bitnami chart | Needed for `ts` pedestal only; not used in this runbook |
+| # | Layer | Workaround used here | Status |
+|---|---|---|---|
+| 9 | kind image | Fixed: defaults to `opspai/rcabench:latest` | **resolved** |
+| 17 | seed race | `DROP DATABASE` + double `rollout restart` (step 6b) | open (#124) |
+| 22 | kube-stack chart | Leave `scrape_configs_file` unset; use chart default | resolved |
+| 23 | redis lock | Fixed: fault-injection path now releases on every error exit | **resolved** |
+| 25 | compat svc | Manual `otel-collector` Service in `otel` ns (step 5b) | resolved |
+| 8 | helm atomic | Drop `--atomic`, raise `--timeout` to 15m | workaround |
+| 11 | pod ordering | Tolerate 1–3 CrashLoops while mysql provisions | workaround |
+| 12 | admin creds | `admin / admin123` (from `data/initial_data/prod/data.yaml`) | as-designed |
+| 15 | guided cache | Always pass `--reset-config` on first inject | workaround |
+| 18 | bitnami chart | Needed for `ts` pedestal only; not used in this runbook | as-designed |
+| 19 | `task list --state Running` | Fixed: backend accepts both names ("Running") and ints ("2") | **resolved** |
