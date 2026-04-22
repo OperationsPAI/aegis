@@ -17,7 +17,7 @@ This pack deploys the AegisLab stack onto a ByteDance/Volcengine Kubernetes clus
 - a storage class named `rcabench` exists and can satisfy the chart's PVCs
 - `metrics-server` (or an equivalent metrics API implementation) is healthy
 - `pair-diag-cn-guangzhou.cr.volces.com` is reachable from the cluster
-- `docker.io` / `registry-1.docker.io` is reachable from the cluster for the remaining `clickhouse_dataset:*` images and OCI chart repo refs
+- `pair-cn-shanghai.cr.volces.com` is reachable from the cluster for the mirrored `opspai/*` images and OCI chart repo refs
 
 ## 0. Preflight
 
@@ -115,10 +115,10 @@ The frontend is exposed as `NodePort 32180` by default.
 
 ## 6. Optional: pre-install otel-demo for smoke tests
 
-If you want a ready namespace before driving `aegisctl inject guided`, install the benchmark workload directly. To stay aligned with the seed data that AegisLab registers, use the `opspai` OCI chart on Docker Hub:
+If you want a ready namespace before driving `aegisctl inject guided`, install the benchmark workload directly. To stay aligned with the seed data that AegisLab registers, use the mirrored `opspai` OCI chart:
 
 ```bash
-helm upgrade --install otel-demo0 oci://registry-1.docker.io/opspai/otel-demo-aegis   --version 0.1.2   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
+helm upgrade --install otel-demo0 oci://pair-cn-shanghai.cr.volces.com/opspai/otel-demo-aegis   --version 0.1.2   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
 ```
 
 ## 7. Smoke / regression validation
@@ -146,4 +146,5 @@ kubectl -n monitoring exec deploy/clickstack-clickhouse -- clickhouse-client --q
 
 - This pack disables the chart-managed Alloy/Loki/Prometheus/Grafana stack and relies on ClickStack + OTel Collector instead.
 - The OTel deployment collector HPA is intentionally more aggressive than the collector `memory_limiter`; if the limiter still fires, increase `maxReplicas` or lower the HPA targets further.
-- Most runtime images now point directly at `pair-diag-cn-guangzhou.cr.volces.com/pair/*`; only `clickhouse_dataset:*` and the OCI chart repo refs still depend on Docker Hub.
+- The rcabench init containers now seed etcd through the etcd HTTP API using the mirrored `busybox` image, so they no longer depend on a separate `etcdctl` image pull.
+- Most runtime images now point directly at `pair-diag-cn-guangzhou.cr.volces.com/pair/*` or `pair-cn-shanghai.cr.volces.com/opspai/*`.

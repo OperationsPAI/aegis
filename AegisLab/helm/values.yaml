@@ -26,13 +26,6 @@ images:
     name: quay.io/coreos/etcd
     tag: "v3.6.7"
     pullPolicy: IfNotPresent
-  # Image used by init containers that need both `sh` and `etcdctl`.
-  # quay.io/coreos/etcd is distroless (no shell), so init containers use a
-  # shell-capable image with etcdctl pre-installed instead.
-  etcdctl:
-    name: bitnamilegacy/etcd
-    tag: "3.6.4"
-    pullPolicy: IfNotPresent
   busybox:
     name: busybox
     tag: "1.35"

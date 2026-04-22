@@ -29,7 +29,7 @@ containers:
     status: 1
     versions:
       - name: 1.0.0
-        image_ref: docker.io/opspai/clickhouse_dataset:sum-optional-20260421
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:sum-optional-20260421
         command: bash /entrypoint.sh
         env_vars:
           - key: NAMESPACE
@@ -72,7 +72,7 @@ containers:
           version: 0.1.2
           chart_name: otel-demo-aegis
           repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
   - type: 2
     name: ob
@@ -86,7 +86,7 @@ containers:
           version: 0.1.1
           chart_name: onlineboutique-aegis
           repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
   - type: 1
     name: ob-bench
@@ -94,7 +94,7 @@ containers:
     status: 1
     versions:
       - name: e2e-kind-20260421
-        image_ref: docker.io/opspai/clickhouse_dataset:e2e-kind-20260421
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:e2e-kind-20260421
         command: bash /entrypoint.sh
         env_vars:
           - key: NAMESPACE
@@ -116,7 +116,7 @@ containers:
           version: 0.1.1
           chart_name: sockshop-aegis
           repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be
@@ -140,7 +140,7 @@ containers:
           version: 0.1.0
           chart_name: hotelreservation-aegis
           repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
   - type: 2
     name: sn
@@ -154,7 +154,7 @@ containers:
           version: 0.1.0
           chart_name: socialnetwork-aegis
           repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
   - type: 2
     name: mm
@@ -168,7 +168,7 @@ containers:
           version: 0.1.0
           chart_name: mediamicroservices-aegis
           repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
   - type: 2
     name: tea
@@ -182,7 +182,7 @@ containers:
           version: 0.1.0
           chart_name: teastore-aegis
           repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
 datasets:
   - name: rca_pair_diagnosis_dataset

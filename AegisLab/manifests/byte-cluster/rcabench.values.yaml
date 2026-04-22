@@ -1,33 +1,33 @@
 global:
-  imageRegistry: pair-diag-cn-guangzhou.cr.volces.com
+  imageRegistry: ""
 
 images:
   rcabench:
-    name: pair/rcabench
-    tag: "1.0.0"
+    name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
+    tag: latest
     pullPolicy: IfNotPresent
   jaeger:
-    name: pair/jaeger
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/jaeger
     tag: latest
     pullPolicy: IfNotPresent
   redis:
-    name: pair/redis
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/redis
     tag: "8.0-M02-alpine3.20"
     pullPolicy: IfNotPresent
   mysql:
-    name: pair/mysql
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/mysql
     tag: "8.0.43"
     pullPolicy: IfNotPresent
   etcd:
-    name: pair/etcd
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/etcd
     tag: "v3.6.7"
     pullPolicy: IfNotPresent
   busybox:
-    name: pair/busybox
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox
     tag: "1.35"
     pullPolicy: IfNotPresent
   buildkit:
-    name: pair/buildkit
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/buildkit
     tag: buildx-stable-1
     pullPolicy: IfNotPresent
 
@@ -55,12 +55,12 @@ harbor:
 initialization:
   initDrainTemplate:
     image:
-      name: pair/init-drain-template
+      name: pair-diag-cn-guangzhou.cr.volces.com/pair/init-drain-template
       tag: latest
       pullPolicy: IfNotPresent
   initHelmCharts:
     image:
-      name: pair/init-helm-charts
+      name: pair-cn-shanghai.cr.volces.com/opspai/init-helm-charts
       tag: latest
       pullPolicy: IfNotPresent
 
