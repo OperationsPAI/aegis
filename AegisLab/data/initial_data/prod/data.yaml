@@ -112,7 +112,10 @@ containers:
             type: 0
             category: 0
             value_type: 0
-            default_value: "abnormal_metrics,abnormal_metrics_histogram,abnormal_logs"
+            # Filenames MUST include the .parquet extension (rcabench_platform
+            # matches on full basename). Covers metric + log tables that kind
+            # clusters don't populate through the otel collector pipeline.
+            default_value: "abnormal_metrics.parquet,abnormal_metrics_histogram.parquet,abnormal_metrics_sum.parquet,abnormal_logs.parquet,normal_metrics.parquet,normal_metrics_histogram.parquet,normal_metrics_sum.parquet,normal_logs.parquet"
             required: false
             overridable: true
   - type: 2

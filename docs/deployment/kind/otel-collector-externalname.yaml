@@ -1,0 +1,16 @@
+# Cross-namespace OTLP endpoint for benchmark charts (otel-demo, etc.)
+# that hardcode `otel-collector` as the collector DNS name. Apply this
+# into every benchmark namespace (or add it to the pedestal chart).
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: REPLACE_NAMESPACE
+spec:
+  type: ExternalName
+  externalName: otel-collector.otel.svc.cluster.local
+  ports:
+  - name: grpc
+    port: 4317
+  - name: http
+    port: 4318
