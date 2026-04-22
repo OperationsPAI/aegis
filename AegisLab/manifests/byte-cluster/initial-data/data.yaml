@@ -129,7 +129,7 @@ containers:
         namespace: coherence-test
         version: '>=3.4'
   - type: 2
-    name: hotelreservation
+    name: hs
     is_public: true
     status: 1
     versions:
@@ -157,7 +157,7 @@ containers:
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
   - type: 2
-    name: mm
+    name: media
     is_public: true
     status: 1
     versions:
@@ -171,7 +171,7 @@ containers:
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
           status: 1
   - type: 2
-    name: tea
+    name: teastore
     is_public: true
     status: 1
     versions:
@@ -563,7 +563,7 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
-  - key: injection.system.mm.count
+  - key: injection.system.media.count
     default_value: '1'
     value_type: 2
     scope: 2
@@ -572,42 +572,42 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 20
-  - key: injection.system.mm.ns_pattern
+  - key: injection.system.media.ns_pattern
     default_value: ^mm\d+$
     value_type: 0
     scope: 2
     category: injection.system.ns_pattern
     description: Namespace pattern for system MediaMicroservices instances
     is_secret: false
-  - key: injection.system.mm.extract_pattern
+  - key: injection.system.media.extract_pattern
     default_value: ^(mm)(\d+)$
     value_type: 0
     scope: 2
     category: injection.system.extract_pattern
     description: Extraction pattern for namespace prefix and number from MediaMicroservices instances
     is_secret: false
-  - key: injection.system.mm.display_name
+  - key: injection.system.media.display_name
     default_value: MediaMicroservices
     value_type: 0
     scope: 2
     category: injection.system.display_name
     description: Human-readable display name for system MediaMicroservices
     is_secret: false
-  - key: injection.system.mm.app_label_key
+  - key: injection.system.media.app_label_key
     default_value: app
     value_type: 0
     scope: 2
     category: injection.system.app_label_key
     description: Kubernetes pod label key used to select MediaMicroservices workloads
     is_secret: false
-  - key: injection.system.mm.is_builtin
+  - key: injection.system.media.is_builtin
     default_value: 'true'
     value_type: 1
     scope: 2
     category: injection.system.is_builtin
     description: Whether MediaMicroservices is a builtin benchmark system
     is_secret: false
-  - key: injection.system.mm.status
+  - key: injection.system.media.status
     default_value: '1'
     value_type: 2
     scope: 2
@@ -616,7 +616,7 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
-  - key: injection.system.tea.count
+  - key: injection.system.teastore.count
     default_value: '1'
     value_type: 2
     scope: 2
@@ -625,42 +625,42 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 20
-  - key: injection.system.tea.ns_pattern
+  - key: injection.system.teastore.ns_pattern
     default_value: ^tea\d+$
     value_type: 0
     scope: 2
     category: injection.system.ns_pattern
     description: Namespace pattern for system TeaStore instances
     is_secret: false
-  - key: injection.system.tea.extract_pattern
+  - key: injection.system.teastore.extract_pattern
     default_value: ^(tea)(\d+)$
     value_type: 0
     scope: 2
     category: injection.system.extract_pattern
     description: Extraction pattern for namespace prefix and number from TeaStore instances
     is_secret: false
-  - key: injection.system.tea.display_name
+  - key: injection.system.teastore.display_name
     default_value: TeaStore
     value_type: 0
     scope: 2
     category: injection.system.display_name
     description: Human-readable display name for system TeaStore
     is_secret: false
-  - key: injection.system.tea.app_label_key
+  - key: injection.system.teastore.app_label_key
     default_value: app.kubernetes.io/name
     value_type: 0
     scope: 2
     category: injection.system.app_label_key
     description: Kubernetes pod label key used to select TeaStore workloads (per-microservice)
     is_secret: false
-  - key: injection.system.tea.is_builtin
+  - key: injection.system.teastore.is_builtin
     default_value: 'true'
     value_type: 1
     scope: 2
     category: injection.system.is_builtin
     description: Whether TeaStore is a builtin benchmark system
     is_secret: false
-  - key: injection.system.tea.status
+  - key: injection.system.teastore.status
     default_value: '1'
     value_type: 2
     scope: 2
