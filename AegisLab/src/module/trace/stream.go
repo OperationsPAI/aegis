@@ -17,6 +17,7 @@ var payloadTypeRegistry = map[consts.EventType]reflect.Type{
 	consts.EventAlgoRunStarted:       reflect.TypeFor[dto.ExecutionInfo](),
 	consts.EventAlgoRunSucceed:       reflect.TypeFor[dto.ExecutionResult](),
 	consts.EventAlgoRunFailed:        reflect.TypeFor[dto.ExecutionResult](),
+	consts.EventAlgoResultCollection: reflect.TypeFor[dto.ExecutionResult](),
 	consts.EventDatapackBuildStarted: reflect.TypeFor[dto.DatapackInfo](),
 	consts.EventDatapackBuildSucceed: reflect.TypeFor[dto.DatapackResult](),
 	consts.EventDatapackBuildFailed:  reflect.TypeFor[dto.DatapackResult](),
