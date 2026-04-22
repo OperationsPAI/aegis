@@ -489,6 +489,50 @@ func (s *Service) ReseedSystems(ctx context.Context, req *ReseedSystemReq) (*ini
 	})
 }
 
+// ListPrerequisites returns the declared cluster-level prereqs for a system
+// (issue #115). Existence of the system is checked first so the caller gets
+// 404 for an unknown name rather than an empty list masquerading as success.
+func (s *Service) ListPrerequisites(_ context.Context, name string) ([]SystemPrerequisiteResp, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
+	}
+	if _, err := s.lookupByName(name); err != nil {
+		return nil, err
+	}
+	rows, err := s.repo.ListPrerequisites(name)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]SystemPrerequisiteResp, 0, len(rows))
+	for i := range rows {
+		out = append(out, *NewSystemPrerequisiteResp(&rows[i]))
+	}
+	return out, nil
+}
+
+// MarkPrerequisite updates the status of one prerequisite. aegisctl is the
+// sole writer; backend never shells out to helm. "pending"/"failed"/"reconciled"
+// are the only allowed values (validated by MarkPrerequisiteReq binding).
+func (s *Service) MarkPrerequisite(_ context.Context, name string, id int, req *MarkPrerequisiteReq) (*SystemPrerequisiteResp, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
+	}
+	row, err := s.repo.GetPrerequisiteByID(name, id)
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return nil, fmt.Errorf("prerequisite %d for system %s: %w", id, name, consts.ErrNotFound)
+	}
+	if err := s.repo.UpdatePrerequisiteStatus(id, req.Status); err != nil {
+		return nil, err
+	}
+	row.Status = req.Status
+	return NewSystemPrerequisiteResp(row), nil
+}
+
 // =====================================================================
 // Internal helpers
 // =====================================================================

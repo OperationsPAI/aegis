@@ -44,6 +44,24 @@ type InitialDataContainer struct {
 	IsPublic bool                      `yaml:"is_public"`
 	Status   consts.StatusType         `yaml:"status"`
 	Versions []InitialContainerVersion `yaml:"versions"`
+	// Prerequisites is the cluster-level dependency list a benchmark system
+	// declares (issue #115). Only meaningful for Type == ContainerTypePedestal
+	// (type: 2); ignored for other container kinds. Empty slice = no prereqs.
+	Prerequisites []InitialSystemPrerequisite `yaml:"prerequisites"`
+}
+
+// InitialSystemPrerequisite is the data.yaml DTO for a single prerequisite.
+// Kind defaults to "helm" so existing entries stay terse; future kinds must
+// name themselves explicitly. Chart/Namespace/Version are the helm-kind
+// payload; when a non-helm Kind is introduced, additional fields can be added
+// without a schema change because consumer.go serialises the whole struct
+// (minus Name/Kind) into the per-row spec_json column.
+type InitialSystemPrerequisite struct {
+	Name      string `yaml:"name"`
+	Kind      string `yaml:"kind"`
+	Chart     string `yaml:"chart"`
+	Namespace string `yaml:"namespace"`
+	Version   string `yaml:"version"`
 }
 
 func (c *InitialDataContainer) ConvertToDBContainer() *model.Container {

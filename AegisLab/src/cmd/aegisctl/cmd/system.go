@@ -347,12 +347,19 @@ func listSystemNames(c *client.Client) ([]string, error) {
 	return names, nil
 }
 
+var systemEnableSkipPrereqs bool
+
 var systemEnableCmd = &cobra.Command{
 	Use:   "enable <name>",
 	Short: "Enable a registered benchmark system (status=1)",
 	Long: `Flip injection.system.<name>.status to 1 via PUT /api/v2/systems/{id}.
 Name is resolved to the backend system ID by listing /api/v2/systems.
-Builtin systems cannot be enabled/disabled through this endpoint.`,
+Builtin systems cannot be enabled/disabled through this endpoint.
+
+If the system has any system_prerequisites rows (issue #115) whose status is
+not "reconciled", enable refuses with a list of pending prereqs. Use
+aegisctl system reconcile-prereqs --name <name> to install them, or
+--skip-prereqs to bypass the gate.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireAPIContext(true); err != nil {
@@ -363,6 +370,20 @@ Builtin systems cannot be enabled/disabled through this endpoint.`,
 			return usageErrorf("system name is required")
 		}
 		c := newClient()
+		if !systemEnableSkipPrereqs {
+			pending, err := listPendingPrereqs(c, name)
+			if err != nil {
+				return fmt.Errorf("check prerequisites for %q: %w", name, err)
+			}
+			if len(pending) > 0 {
+				lines := make([]string, 0, len(pending))
+				for _, p := range pending {
+					lines = append(lines, fmt.Sprintf("  - %s/%s (status=%s)", p.Kind, p.Name, p.Status))
+				}
+				return fmt.Errorf("refusing to enable %q: %d prerequisite(s) not reconciled\n%s\n(run `aegisctl system reconcile-prereqs --name %s` or re-run with --skip-prereqs)",
+					name, len(pending), strings.Join(lines, "\n"), name)
+			}
+		}
 		updated, err := setSystemStatus(c, name, 1)
 		if err != nil {
 			return err
