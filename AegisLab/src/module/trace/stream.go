@@ -9,25 +9,28 @@ import (
 
 	"aegis/consts"
 	"aegis/dto"
+	"aegis/module/execution"
 
 	"github.com/redis/go-redis/v9"
 )
 
 var payloadTypeRegistry = map[consts.EventType]reflect.Type{
-	consts.EventAlgoRunStarted:       reflect.TypeFor[dto.ExecutionInfo](),
-	consts.EventAlgoRunSucceed:       reflect.TypeFor[dto.ExecutionResult](),
-	consts.EventAlgoRunFailed:        reflect.TypeFor[dto.ExecutionResult](),
-	consts.EventAlgoResultCollection: reflect.TypeFor[dto.ExecutionResult](),
-	consts.EventDatapackBuildStarted: reflect.TypeFor[dto.DatapackInfo](),
-	consts.EventDatapackBuildSucceed: reflect.TypeFor[dto.DatapackResult](),
-	consts.EventDatapackBuildFailed:  reflect.TypeFor[dto.DatapackResult](),
-	consts.EventJobSucceed:           reflect.TypeFor[dto.JobMessage](),
-	consts.EventJobFailed:            reflect.TypeFor[dto.JobMessage](),
+	consts.EventAlgoRunStarted:           reflect.TypeFor[dto.ExecutionInfo](),
+	consts.EventAlgoRunSucceed:           reflect.TypeFor[dto.ExecutionResult](),
+	consts.EventAlgoRunFailed:            reflect.TypeFor[dto.ExecutionResult](),
+	consts.EventAlgoResultCollection:     reflect.TypeFor[[]execution.GranularityResultItem](),
+	consts.EventDatapackBuildStarted:     reflect.TypeFor[dto.DatapackInfo](),
+	consts.EventDatapackBuildSucceed:     reflect.TypeFor[dto.DatapackResult](),
+	consts.EventDatapackBuildFailed:      reflect.TypeFor[dto.DatapackResult](),
+	consts.EventDatapackResultCollection: reflect.TypeFor[[]execution.DetectorResultItem](),
+	consts.EventJobSucceed:               reflect.TypeFor[dto.JobMessage](),
+	consts.EventJobFailed:                reflect.TypeFor[dto.JobMessage](),
 }
 
 type StreamProcessor struct {
 	isCompleted   bool
 	algorithmMap  map[string]struct{}
+	finishedTasks map[string]struct{}
 	finishedCount int
 }
 
@@ -40,6 +43,7 @@ func NewStreamProcessor(algorithms []dto.ContainerVersionItem) *StreamProcessor 
 	return &StreamProcessor{
 		isCompleted:   false,
 		algorithmMap:  algorithmMap,
+		finishedTasks: make(map[string]struct{}, len(algorithms)),
 		finishedCount: 0,
 	}
 }
@@ -59,21 +63,19 @@ func (sp *StreamProcessor) ProcessMessageForSSE(msg redis.XMessage) (string, *dt
 		sp.isCompleted = true
 	case consts.EventDatapackResultCollection:
 		sp.isCompleted = len(sp.algorithmMap) == 0
-	case consts.EventAlgoResultCollection, consts.EventAlgoRunFailed:
-		payload, ok := streamEvent.Payload.(*dto.ExecutionResult)
-		if !ok {
-			return "", nil, fmt.Errorf("invalid payload type for task status update event: %T", streamEvent.Payload)
-		}
-
+	case consts.EventAlgoResultCollection, consts.EventAlgoNoResultData, consts.EventAlgoRunFailed:
 		if len(sp.algorithmMap) == 0 {
 			sp.isCompleted = true
 			break
 		}
-		if _, exists := sp.algorithmMap[payload.Algorithm]; exists {
-			sp.finishedCount++
-			if sp.finishedCount >= len(sp.algorithmMap) {
-				sp.isCompleted = true
-			}
+
+		if _, seen := sp.finishedTasks[streamEvent.TaskID]; seen {
+			break
+		}
+		sp.finishedTasks[streamEvent.TaskID] = struct{}{}
+		sp.finishedCount++
+		if sp.finishedCount >= len(sp.algorithmMap) {
+			sp.isCompleted = true
 		}
 	}
 
