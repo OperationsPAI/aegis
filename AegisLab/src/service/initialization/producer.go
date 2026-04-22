@@ -35,14 +35,19 @@ func (r permMeta) String() string {
 }
 
 func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gateway, listener *common.ConfigUpdateListener) error {
-	producerData, err := newConfigDataWithDB(db, consts.ConfigScopeProducer)
+	initialData, err := loadInitialDataFromConfiguredPath()
 	if err != nil {
-		return fmt.Errorf("failed to load producer config metadata: %w", err)
+		return fmt.Errorf("failed to load producer initial data: %w", err)
 	}
 
-	if len(producerData.configs) == 0 {
+	shouldSeed, err := producerSeedRequired(db, initialData)
+	if err != nil {
+		return fmt.Errorf("failed to determine producer bootstrap state: %w", err)
+	}
+
+	if shouldSeed {
 		logrus.Info("Seeding initial system data for producer...")
-		if err := initializeProducer(db); err != nil {
+		if err := initializeProducer(db, initialData); err != nil {
 			return fmt.Errorf("failed to initialize system data for producer: %w", err)
 		}
 		logrus.Info("Successfully seeded initial system data for producer")
@@ -74,7 +79,7 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 	// injection.system.* is Global-scoped (issue #75 follow-up), so both
 	// producer and consumer pick it up through the standard Global listener.
 	common.RegisterGlobalHandlers(publisher)
-	if err := activateConfigScope(producerData.scope, listener); err != nil {
+	if err := activateConfigScope(consts.ConfigScopeProducer, listener); err != nil {
 		return err
 	}
 
@@ -86,14 +91,32 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 	return nil
 }
 
-func initializeProducer(db *gorm.DB) error {
+func loadInitialDataFromConfiguredPath() (*InitialData, error) {
 	dataPath := config.GetString("initialization.data_path")
 	filePath := filepath.Join(dataPath, consts.InitialFilename)
-	initialData, err := loadInitialDataFromFile(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to load initial data from file: %w", err)
+	return loadInitialDataFromFile(filePath)
+}
+
+func producerSeedRequired(db *gorm.DB, initialData *InitialData) (bool, error) {
+	if initialData == nil {
+		return false, fmt.Errorf("initial data is nil")
+	}
+	adminUsername := initialData.AdminUser.Username
+	if adminUsername == "" {
+		return false, fmt.Errorf("initial data admin user username is empty")
 	}
 
+	_, err := newBootstrapStore(db).getUserByUsername(adminUsername)
+	if err == nil {
+		return false, nil
+	}
+	if errors.Is(err, consts.ErrNotFound) {
+		return true, nil
+	}
+	return false, err
+}
+
+func initializeProducer(db *gorm.DB, initialData *InitialData) error {
 	resources := systemResources()
 
 	return withOptimizedDBSettings(db, func() error {
