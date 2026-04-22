@@ -230,7 +230,7 @@ var systemListCmd = &cobra.Command{
 		c := newClient()
 
 		var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-		if err := c.Get("/api/v2/systems?page=1&size=200", &resp); err != nil {
+		if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
 			return err
 		}
 
@@ -336,7 +336,7 @@ func setSystemStatus(c *client.Client, name string, status int) (*chaosSystemRes
 // in error messages. Never fatal: callers fall back to a generic message.
 func listSystemNames(c *client.Client) ([]string, error) {
 	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-	if err := c.Get("/api/v2/systems?page=1&size=500", &resp); err != nil {
+	if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
 		return nil, err
 	}
 	names := make([]string, 0, len(resp.Data.Items))
@@ -592,7 +592,7 @@ func validateSystemSeed(seed *systemSeed) error {
 // registered (distinguished from lookup errors).
 func findSystemByName(c *client.Client, name string) (*chaosSystemResp, error) {
 	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-	if err := c.Get("/api/v2/systems?page=1&size=500", &resp); err != nil {
+	if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
 		var apiErr *client.APIError
 		if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
 			return nil, nil

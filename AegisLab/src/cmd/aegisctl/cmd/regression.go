@@ -594,7 +594,7 @@ func (l *liveSystemsFetcher) FetchSystem(_ context.Context, name string) (string
 		Count     int    `json:"count"`
 	}
 	var resp client.APIResponse[client.PaginatedData[systemItem]]
-	if err := l.c.Get("/api/v2/systems?page=1&size=500", &resp); err != nil {
+	if err := l.c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
 		return "", 0, err
 	}
 	for _, s := range resp.Data.Items {
