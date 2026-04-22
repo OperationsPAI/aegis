@@ -15,3 +15,9 @@ _tmp*/
 # Workbuddy local runtime state
 .workbuddy/*
 !.workbuddy/.gitignore
+
+# cache
+.cache
+.aegisctl
+.kube
+
