@@ -39,6 +39,18 @@ containers:
             default_value: ts0
             required: true
             overridable: true
+          # Kind profiles ship only OTLP traces+logs via the otel collector;
+          # metrics tables (otel_metrics_*) do not exist and the datapack
+          # builder would fail with UNKNOWN_TABLE. Allow empty parquets so
+          # the pipeline completes on kind. Filenames MUST include the
+          # `.parquet` extension (rcabench_platform matches on full basename).
+          - key: RCABENCH_OPTIONAL_EMPTY_PARQUETS
+            type: 0
+            category: 0
+            value_type: 0
+            default_value: "abnormal_metrics.parquet,abnormal_metrics_histogram.parquet,abnormal_metrics_sum.parquet,abnormal_logs.parquet,normal_metrics.parquet,normal_metrics_histogram.parquet,normal_metrics_sum.parquet,normal_logs.parquet"
+            required: false
+            overridable: true
   - type: 2
     name: ts
     is_public: true
@@ -268,8 +280,14 @@ dynamic_configs:
     category: debugging
     description: Enable or disable debugging features
     is_secret: false
+  # ClickHouse connection defaults align with the OTLP collector shipped in
+  # `docs/deployment/otel-pipeline.yaml` + `docs/deployment/kind/otel-collector-cfg.yaml`.
+  # The collector auto-creates `otel_*` tables under database `otel` using
+  # user=default password=clickhouse. Operators running a different stack
+  # (e.g. the legacy clickstack-clickhouse.monitoring) override via etcd
+  # after bootstrap.
   - key: database.clickhouse.host
-    default_value: clickstack-clickhouse.monitoring.svc.cluster.local
+    default_value: clickhouse.otel.svc.cluster.local
     value_type: 0
     scope: 1
     category: database.clickhouse
@@ -290,14 +308,14 @@ dynamic_configs:
     description: ClickHouse database user
     is_secret: false
   - key: database.clickhouse.password
-    default_value: ''
+    default_value: 'clickhouse'
     value_type: 0
     scope: 1
     category: database.clickhouse
     description: ClickHouse database password
     is_secret: true
   - key: database.clickhouse.db
-    default_value: default
+    default_value: otel
     value_type: 0
     scope: 1
     category: database.clickhouse
@@ -577,7 +595,60 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
-  - key: injection.system.mm.count
+  - key: injection.system.ob.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system OnlineBoutique to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.ob.ns_pattern
+    default_value: ^ob\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system OnlineBoutique instances
+    is_secret: false
+  - key: injection.system.ob.extract_pattern
+    default_value: ^(ob)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from OnlineBoutique instances
+    is_secret: false
+  - key: injection.system.ob.display_name
+    default_value: OnlineBoutique
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system OnlineBoutique
+    is_secret: false
+  - key: injection.system.ob.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select OnlineBoutique workloads
+    is_secret: false
+  - key: injection.system.ob.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether OnlineBoutique is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.ob.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system OnlineBoutique (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.media.count
     default_value: '1'
     value_type: 2
     scope: 2
@@ -586,42 +657,42 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 20
-  - key: injection.system.mm.ns_pattern
+  - key: injection.system.media.ns_pattern
     default_value: ^mm\d+$
     value_type: 0
     scope: 2
     category: injection.system.ns_pattern
     description: Namespace pattern for system MediaMicroservices instances
     is_secret: false
-  - key: injection.system.mm.extract_pattern
+  - key: injection.system.media.extract_pattern
     default_value: ^(mm)(\d+)$
     value_type: 0
     scope: 2
     category: injection.system.extract_pattern
     description: Extraction pattern for namespace prefix and number from MediaMicroservices instances
     is_secret: false
-  - key: injection.system.mm.display_name
+  - key: injection.system.media.display_name
     default_value: MediaMicroservices
     value_type: 0
     scope: 2
     category: injection.system.display_name
     description: Human-readable display name for system MediaMicroservices
     is_secret: false
-  - key: injection.system.mm.app_label_key
+  - key: injection.system.media.app_label_key
     default_value: app
     value_type: 0
     scope: 2
     category: injection.system.app_label_key
     description: Kubernetes pod label key used to select MediaMicroservices workloads
     is_secret: false
-  - key: injection.system.mm.is_builtin
+  - key: injection.system.media.is_builtin
     default_value: 'true'
     value_type: 1
     scope: 2
     category: injection.system.is_builtin
     description: Whether MediaMicroservices is a builtin benchmark system
     is_secret: false
-  - key: injection.system.mm.status
+  - key: injection.system.media.status
     default_value: '1'
     value_type: 2
     scope: 2
@@ -630,7 +701,7 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
-  - key: injection.system.tea.count
+  - key: injection.system.teastore.count
     default_value: '1'
     value_type: 2
     scope: 2
@@ -639,42 +710,42 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 20
-  - key: injection.system.tea.ns_pattern
+  - key: injection.system.teastore.ns_pattern
     default_value: ^tea\d+$
     value_type: 0
     scope: 2
     category: injection.system.ns_pattern
     description: Namespace pattern for system TeaStore instances
     is_secret: false
-  - key: injection.system.tea.extract_pattern
+  - key: injection.system.teastore.extract_pattern
     default_value: ^(tea)(\d+)$
     value_type: 0
     scope: 2
     category: injection.system.extract_pattern
     description: Extraction pattern for namespace prefix and number from TeaStore instances
     is_secret: false
-  - key: injection.system.tea.display_name
+  - key: injection.system.teastore.display_name
     default_value: TeaStore
     value_type: 0
     scope: 2
     category: injection.system.display_name
     description: Human-readable display name for system TeaStore
     is_secret: false
-  - key: injection.system.tea.app_label_key
+  - key: injection.system.teastore.app_label_key
     default_value: app.kubernetes.io/name
     value_type: 0
     scope: 2
     category: injection.system.app_label_key
     description: Kubernetes pod label key used to select TeaStore workloads (per-microservice)
     is_secret: false
-  - key: injection.system.tea.is_builtin
+  - key: injection.system.teastore.is_builtin
     default_value: 'true'
     value_type: 1
     scope: 2
     category: injection.system.is_builtin
     description: Whether TeaStore is a builtin benchmark system
     is_secret: false
-  - key: injection.system.tea.status
+  - key: injection.system.teastore.status
     default_value: '1'
     value_type: 2
     scope: 2

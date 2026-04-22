@@ -307,6 +307,17 @@ class Converter:
             config_path = template_base / "drain_ts.ini"
             persistence_path = template_base / "drain_ts.bin"
 
+            if not config_path.exists():
+                logger.warning(
+                    f"drain_template config missing at {config_path}; skipping log template extraction"
+                )
+                return df.with_columns(
+                    [
+                        pl.lit(None, dtype=pl.UInt16).alias("attr.template_id"),
+                        pl.lit(None, dtype=pl.String).alias("attr.log_template"),
+                    ]
+                )
+
             logger.info(f"Using template paths: config={config_path}, persistence={persistence_path}")
 
             template_miner = create_template_miner(config_path, persistence_path)

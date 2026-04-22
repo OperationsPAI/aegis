@@ -116,6 +116,7 @@ spec:
     metadata:
       labels: { app: otel-collector }
     spec:
+      serviceAccountName: otel-collector
       containers:
         - name: collector
           image: otel/opentelemetry-collector-contrib:0.112.0

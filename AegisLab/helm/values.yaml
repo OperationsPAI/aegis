@@ -133,7 +133,7 @@ initialization:
   enabled: true
 
   initDrainTemplate:
-    enabled: true
+    enabled: false
     image:
       name: opspai/init-drain-template
       tag: latest
