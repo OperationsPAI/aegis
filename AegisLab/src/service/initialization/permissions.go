@@ -49,6 +49,13 @@ func ReconcileSystemPermissions(db *gorm.DB) error {
 // systemResources is the canonical list of RBAC resources. It mirrors the
 // list used by initializeProducer (first-boot seed) so both paths produce
 // identical rows.
+//
+// The hardcoded list covers the core platform resources. Module-contributed
+// resources (registered via fx-group RoleGrantsRegistrar and merged into
+// consts.SystemRolePermissions by rbac.AggregatePermissions) are unioned in
+// by extendWithReferencedResources. This prevents the "resource X referenced
+// by permission rule not found" boot-time crash when a new module adds a
+// permission on a resource that the canonical list doesn't know about yet.
 func systemResources() []model.Resource {
 	resources := []model.Resource{
 		{Name: consts.ResourceSystem, Type: consts.ResourceTypeSystem, Category: consts.ResourceCategorySystem},
@@ -69,10 +76,42 @@ func systemResources() []model.Resource {
 		{Name: consts.ResourceInjection, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
 		{Name: consts.ResourceExecution, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
 	}
+	resources = extendWithReferencedResources(resources)
 	for i := range resources {
 		resources[i].DisplayName = consts.GetResourceDisplayName(resources[i].Name)
 	}
 	return resources
+}
+
+// extendWithReferencedResources ensures every resource referenced by a
+// permission rule in consts.SystemRolePermissions has a corresponding
+// Resource row. Module-contributed rules (via fx-group PermissionRegistrar /
+// RoleGrantsRegistrar) may reference resources that the hardcoded base list
+// doesn't know about — widget is a concrete example (#104 follow-up).
+// Unknown resources get safe defaults: Type=Table, Category=Asset.
+func extendWithReferencedResources(base []model.Resource) []model.Resource {
+	known := make(map[consts.ResourceName]struct{}, len(base))
+	for _, r := range base {
+		known[r.Name] = struct{}{}
+	}
+	seen := make(map[consts.ResourceName]struct{})
+	for _, rules := range consts.SystemRolePermissions {
+		for _, rule := range rules {
+			if _, ok := known[rule.Resource]; ok {
+				continue
+			}
+			if _, ok := seen[rule.Resource]; ok {
+				continue
+			}
+			seen[rule.Resource] = struct{}{}
+			base = append(base, model.Resource{
+				Name:     rule.Resource,
+				Type:     consts.ResourceTypeTable,
+				Category: consts.ResourceCategoryAsset,
+			})
+		}
+	}
+	return base
 }
 
 // systemRoles is the set of system roles derived from
