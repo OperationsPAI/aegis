@@ -121,7 +121,60 @@ If you want a ready namespace before driving `aegisctl inject guided`, install t
 helm upgrade --install otel-demo0 oci://pair-cn-shanghai.cr.volces.com/opspai/otel-demo-aegis   --version 0.1.2   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
 ```
 
+<<<<<<< HEAD
 ## 7. Smoke / regression validation
+=======
+## 6.1 Optional: pre-install ts namespaces
+
+For Byte cluster validation we used `ts0` as the fault-injection target namespace, and a separate `ts1` namespace for shared use. Install them with explicit `ts-ui-dashboard` NodePorts so they do not collide:
+
+```bash
+helm install ts0 trainticket   -n ts0   --create-namespace   --repo https://operationspai.github.io/train-ticket   --version 0.1.0   -f AegisLab/manifests/byte-cluster/initial-data/ts.yaml   --set services.tsUiDashboard.nodePort=31000   --wait
+
+helm install ts1 trainticket   -n ts1   --create-namespace   --repo https://operationspai.github.io/train-ticket   --version 0.1.0   -f AegisLab/manifests/byte-cluster/initial-data/ts.yaml   --set services.tsUiDashboard.nodePort=31001   --wait
+```
+
+Verify:
+
+```bash
+kubectl get pods -n ts0
+kubectl get pods -n ts1
+kubectl get svc -n ts0 ts-ui-dashboard mysql
+kubectl get svc -n ts1 ts-ui-dashboard mysql
+```
+
+Expected:
+- `ts0` UI NodePort is `31000`
+- `ts1` UI NodePort is `31001`
+
+## 7. CLI control validation (Byte cluster)
+
+Expose the API gateway and run `aegisctl` against the forwarded endpoint:
+
+```bash
+kubectl port-forward -n exp svc/rcabench-api-gateway 28082:8082
+
+cd AegisLab
+HOME=/home/nn/workspace/aegis \
+AEGIS_SERVER=http://127.0.0.1:28082 \
+AEGIS_PASSWORD=admin123 \
+./bin/aegisctl auth login --username admin
+
+HOME=/home/nn/workspace/aegis \
+AEGIS_SERVER=http://127.0.0.1:28082 \
+./bin/aegisctl system list -o json
+cd ..
+```
+
+Important behavior:
+- all seeded systems in this pack are `is_builtin=true`
+- `aegisctl system enable <builtin-system>` is rejected by backend by design (HTTP 400, cannot change status of builtin system); this was rechecked for both `otel-demo` and `ts`
+- use `aegisctl pedestal chart install ...` or `aegisctl regression run ...` for benchmark/injection validation instead of enable/disable toggling
+- `aegisctl pedestal chart install ts --namespace ts4 --wait` now works on this branch because the CLI can materialize backend `value_file` / inline `values` before shelling out to Helm
+- `aegisctl regression run` currently false-negatives the pod preflight on this Byte cluster even when the target namespace is healthy, so use `--skip-preflight`
+- repeated submissions against the same regression spec can be deduped by the backend; change the namespace/spec or wait for cooldown before retrying
+
+## 8. Smoke / regression validation
 
 Build `aegisctl` and validate the environment:
 
@@ -130,10 +183,83 @@ cd AegisLab
 just build-aegisctl output=./bin/aegisctl
 ./bin/aegisctl status -o json
 ./bin/aegisctl cluster preflight
-./bin/aegisctl regression run otel-demo-guided --output json
 cd ..
 ```
 
+Builtin-system enable check:
+
+```bash
+cd AegisLab
+HOME=/home/nn \
+AEGIS_SERVER=http://127.0.0.1:28082 \
+./bin/aegisctl system enable otel-demo
+
+HOME=/home/nn \
+AEGIS_SERVER=http://127.0.0.1:28082 \
+./bin/aegisctl system enable ts
+cd ..
+```
+
+Expected: both return HTTP 400 (`cannot change status of builtin system ...`).
+
+If `pedestal chart install` or regression gets stuck on workload readiness, check for image pull errors first:
+
+```bash
+kubectl get pods -n otel-demo0
+kubectl get events -n otel-demo0 --sort-by=.lastTimestamp | tail -n 40
+```
+
+For the Byte cluster `otel-demo` smoke path, run the repo-tracked regression case against the already-installed namespace:
+
+```bash
+cd AegisLab
+HOME=/home/nn \
+AEGIS_SERVER=http://127.0.0.1:28082 \
+./bin/aegisctl regression run otel-demo-guided --skip-preflight --output json
+cd ..
+```
+
+Observed behavior on April 22, 2026:
+- the first `otel-demo` regression reached `restart.pedestal.failed` because the live backend still referenced a stale `/var/lib/rcabench/dataset/helm-values/otel-demo_values_*.yaml`
+- if this happens, verify the backend file matches `AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml`; in particular it must keep the top-level `opentelemetry-demo:` key and the collector override under `pair-cn-shanghai.cr.volces.com/opspai/otel-demo-opentelemetry-collector-contrib:0.135.0`
+- after changing `initial-data/otel-demo.yaml`, also refresh the live backend value file or re-run the backend Helm upgrade; otherwise `restart.pedestal` still uses the stale value file and falls back to Docker Hub images
+
+For the Byte cluster `ts` smoke path, run the repo-tracked regression case against the already-installed namespace. If `ts0` was already used recently and gets deduped, switch the namespace in a temporary copy to `ts4` and rerun:
+
+```bash
+cd AegisLab
+HOME=/home/nn \
+AEGIS_SERVER=http://127.0.0.1:28082 \
+./bin/aegisctl regression run ts-guided --skip-preflight --output json
+
+cp regression/ts-guided.yaml /tmp/ts-guided-ts4.yaml
+sed -i 's/namespace: ts0/namespace: ts4/' /tmp/ts-guided-ts4.yaml
+sed -i 's/value: ts-smoke/value: ts-smoke-ts4-rerun/' /tmp/ts-guided-ts4.yaml
+
+HOME=/home/nn \
+AEGIS_SERVER=http://127.0.0.1:28082 \
+./bin/aegisctl regression run --file /tmp/ts-guided-ts4.yaml --skip-preflight --output json
+cd ..
+```
+
+Observed behavior on April 22, 2026:
+- `ts` reached `restart.pedestal.completed` and `fault.injection.completed`
+- the next step failed at `datapack.build.failed`
+- the failing build pod log showed ClickHouse missing `otel_metrics_gauge`, for example:
+
+```bash
+kubectl logs -n exp <build-datapack-pod> --tail=200
+```
+
+and the key error was:
+
+```text
+Unknown table expression identifier 'otel_metrics_gauge'
+```
+
+Notes:
+- `--skip-preflight` is currently needed on this Byte cluster even when the target namespace already has matching pods
+- keep `ts1` free from experiments if it is reserved for other users
 Cluster-side checks:
 
 ```bash

@@ -246,6 +246,10 @@ func (s *Service) GetSystemChart(_ context.Context, name string) (*SystemChartRe
 	if helm == nil || version == nil {
 		return nil, fmt.Errorf("no active pedestal chart for system %s: %w", name, consts.ErrNotFound)
 	}
+	values := dto.NewHelmConfigItem(helm).GetValuesMap()
+	if len(values) == 0 {
+		values = nil
+	}
 	return &SystemChartResp{
 		SystemName:  name,
 		ChartName:   helm.ChartName,
@@ -254,6 +258,7 @@ func (s *Service) GetSystemChart(_ context.Context, name string) (*SystemChartRe
 		RepoName:    helm.RepoName,
 		LocalPath:   helm.LocalPath,
 		ValueFile:   helm.ValueFile,
+		Values:      values,
 		Checksum:    helm.Checksum,
 		PedestalTag: version.Name,
 	}, nil
