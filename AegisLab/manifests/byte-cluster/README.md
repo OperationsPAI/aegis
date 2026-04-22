@@ -121,9 +121,24 @@ If you want a ready namespace before driving `aegisctl inject guided`, install t
 helm upgrade --install otel-demo0 oci://pair-cn-shanghai.cr.volces.com/opspai/otel-demo-aegis   --version 0.1.2   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
 ```
 
-<<<<<<< HEAD
-## 7. Smoke / regression validation
-=======
+Verify:
+
+```bash
+kubectl get pods -n otel-demo0
+kubectl get deploy -n otel-demo0 frontend-proxy -o=jsonpath='{.spec.template.spec.containers[0].resources}'
+helm status -n otel-demo0 otel-demo0
+```
+
+Expected:
+- every pod in `otel-demo0` is `Running`
+- `frontend-proxy` has the memory override from `AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml`
+- Helm release state is `deployed`
+
+Notes:
+- this pack keeps the app images on `pair-diag-cn-guangzhou.cr.volces.com/pair/*`
+- the in-namespace collector stays on `pair-cn-shanghai.cr.volces.com/opspai/otel-demo-opentelemetry-collector-contrib:0.135.0`
+- `frontend-proxy` now requests `128Mi` and limits at `256Mi`; without this override it was OOM-killed repeatedly on the Byte cluster
+
 ## 6.1 Optional: pre-install ts namespaces
 
 For Byte cluster validation we used `ts0` as the fault-injection target namespace, and a separate `ts1` namespace for shared use. Install them with explicit `ts-ui-dashboard` NodePorts so they do not collide:
@@ -152,16 +167,16 @@ Expected:
 Expose the API gateway and run `aegisctl` against the forwarded endpoint:
 
 ```bash
-kubectl port-forward -n exp svc/rcabench-api-gateway 28082:8082
+kubectl port-forward -n exp svc/rcabench-api-gateway 28084:8082
 
 cd AegisLab
 HOME=/home/nn/workspace/aegis \
-AEGIS_SERVER=http://127.0.0.1:28082 \
+AEGIS_SERVER=http://127.0.0.1:28084 \
 AEGIS_PASSWORD=admin123 \
 ./bin/aegisctl auth login --username admin
 
 HOME=/home/nn/workspace/aegis \
-AEGIS_SERVER=http://127.0.0.1:28082 \
+AEGIS_SERVER=http://127.0.0.1:28084 \
 ./bin/aegisctl system list -o json
 cd ..
 ```
@@ -191,75 +206,76 @@ Builtin-system enable check:
 ```bash
 cd AegisLab
 HOME=/home/nn \
-AEGIS_SERVER=http://127.0.0.1:28082 \
+AEGIS_SERVER=http://127.0.0.1:28084 \
 ./bin/aegisctl system enable otel-demo
 
 HOME=/home/nn \
-AEGIS_SERVER=http://127.0.0.1:28082 \
+AEGIS_SERVER=http://127.0.0.1:28084 \
 ./bin/aegisctl system enable ts
 cd ..
 ```
 
 Expected: both return HTTP 400 (`cannot change status of builtin system ...`).
 
-If `pedestal chart install` or regression gets stuck on workload readiness, check for image pull errors first:
+If `pedestal chart install` or regression gets stuck on workload readiness, check pod state first:
 
 ```bash
 kubectl get pods -n otel-demo0
 kubectl get events -n otel-demo0 --sort-by=.lastTimestamp | tail -n 40
 ```
 
-For the Byte cluster `otel-demo` smoke path, run the repo-tracked regression case against the already-installed namespace:
+For the Byte cluster `otel-demo` smoke path, use the repo-tracked regression case in `AegisLab/regression/otel-demo-guided.yaml`. It now tracks chart version `0.1.2`. If the backend dedupes the canonical spec, run a temporary copy with a changed batch label and/or guided spec:
 
 ```bash
 cd AegisLab
 HOME=/home/nn \
-AEGIS_SERVER=http://127.0.0.1:28082 \
+AEGIS_SERVER=http://127.0.0.1:28084 \
 ./bin/aegisctl regression run otel-demo-guided --skip-preflight --output json
+
+cp regression/otel-demo-guided.yaml /tmp/otel-demo-guided-byte-verify.yaml
+sed -i 's/value: wrapper-0.1.2-verify/value: byte-otel-demo-verify-20260423/' /tmp/otel-demo-guided-byte-verify.yaml
+sed -i 's/value: local/value: byte/' /tmp/otel-demo-guided-byte-verify.yaml
+sed -i 's/app: frontend/app: cart/' /tmp/otel-demo-guided-byte-verify.yaml
+sed -i '0,/pre_duration: 1/s//pre_duration: 2/' /tmp/otel-demo-guided-byte-verify.yaml
+sed -i '0,/duration: 1/s//duration: 2/' /tmp/otel-demo-guided-byte-verify.yaml
+
+HOME=/home/nn \
+AEGIS_SERVER=http://127.0.0.1:28084 \
+./bin/aegisctl regression run --file /tmp/otel-demo-guided-byte-verify.yaml --skip-preflight --output json
 cd ..
 ```
 
-Observed behavior on April 22, 2026:
-- the first `otel-demo` regression reached `restart.pedestal.failed` because the live backend still referenced a stale `/var/lib/rcabench/dataset/helm-values/otel-demo_values_*.yaml`
-- if this happens, verify the backend file matches `AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml`; in particular it must keep the top-level `opentelemetry-demo:` key and the collector override under `pair-cn-shanghai.cr.volces.com/opspai/otel-demo-opentelemetry-collector-contrib:0.135.0`
-- after changing `initial-data/otel-demo.yaml`, also refresh the live backend value file or re-run the backend Helm upgrade; otherwise `restart.pedestal` still uses the stale value file and falls back to Docker Hub images
+Observed behavior on April 23, 2026:
+- `otel-demo0` was upgraded to Helm revision `3`
+- `frontend-proxy` stayed `Running` after the memory override
+- a fresh regression run passed on trace `79c12836-f9a9-457f-88ae-7224683b7f00`
+- the final event was `datapack.no_anomaly`
 
-For the Byte cluster `ts` smoke path, run the repo-tracked regression case against the already-installed namespace. If `ts0` was already used recently and gets deduped, switch the namespace in a temporary copy to `ts4` and rerun:
+For the Byte cluster `ts` smoke path, run the repo-tracked regression case against `ts0`. If `ts0` was already used recently and gets deduped, make a temporary copy and change at least one guided spec field:
 
 ```bash
 cd AegisLab
 HOME=/home/nn \
-AEGIS_SERVER=http://127.0.0.1:28082 \
+AEGIS_SERVER=http://127.0.0.1:28084 \
 ./bin/aegisctl regression run ts-guided --skip-preflight --output json
 
-cp regression/ts-guided.yaml /tmp/ts-guided-ts4.yaml
-sed -i 's/namespace: ts0/namespace: ts4/' /tmp/ts-guided-ts4.yaml
-sed -i 's/value: ts-smoke/value: ts-smoke-ts4-rerun/' /tmp/ts-guided-ts4.yaml
+cp regression/ts-guided.yaml /tmp/ts-guided-byte-verify.yaml
+sed -i 's/value: ts-smoke/value: ts-byte-verify-20260423/' /tmp/ts-guided-byte-verify.yaml
+sed -i 's/app: ts-user-service/app: ts-food-service/' /tmp/ts-guided-byte-verify.yaml
+sed -i '0,/duration: 6/s//duration: 5/' /tmp/ts-guided-byte-verify.yaml
 
 HOME=/home/nn \
-AEGIS_SERVER=http://127.0.0.1:28082 \
-./bin/aegisctl regression run --file /tmp/ts-guided-ts4.yaml --skip-preflight --output json
+AEGIS_SERVER=http://127.0.0.1:28084 \
+./bin/aegisctl regression run --file /tmp/ts-guided-byte-verify.yaml --skip-preflight --output json
 cd ..
 ```
 
-Observed behavior on April 22, 2026:
-- `ts` reached `restart.pedestal.completed` and `fault.injection.completed`
-- the next step failed at `datapack.build.failed`
-- the failing build pod log showed ClickHouse missing `otel_metrics_gauge`, for example:
+Observed behavior on April 23, 2026:
+- `aegisctl trace watch cfc7de69-ac38-42b6-afd6-c18a64e2d2de` now replays through the final `algorithm.result.collection`
+- a fresh TS regression passed on trace `4a5e011b-8335-4f87-928b-0c50532fc2f0`
+- the final event was `algorithm.result.collection`
+- the observed task chain was `RestartPedestal -> FaultInjection -> BuildDatapack -> RunAlgorithm -> CollectResult -> RunAlgorithm -> CollectResult`
 
-```bash
-kubectl logs -n exp <build-datapack-pod> --tail=200
-```
-
-and the key error was:
-
-```text
-Unknown table expression identifier 'otel_metrics_gauge'
-```
-
-Notes:
-- `--skip-preflight` is currently needed on this Byte cluster even when the target namespace already has matching pods
-- keep `ts1` free from experiments if it is reserved for other users
 Cluster-side checks:
 
 ```bash
@@ -267,6 +283,9 @@ kubectl get networkchaos -A
 kubectl get hpa -n monitoring
 kubectl -n monitoring exec deploy/clickstack-clickhouse -- clickhouse-client --query "SHOW TABLES FROM otel LIKE 'otel_%'"
 ```
+
+- `--skip-preflight` is currently needed on this Byte cluster even when the target namespace already has matching pods
+- keep `ts1` free from experiments if it is reserved for other users
 
 ## Notes
 
