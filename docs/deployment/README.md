@@ -32,6 +32,7 @@ AegisLab behavior with `aegisctl` once the environment exists.
 
 ## Document map
 
+- [`cold-start-kind.md`](./cold-start-kind.md) - **validated** single-path runbook from zero to a Completed inject→datapack trace on a fresh kind cluster (2026-04-22). Start here for new setups.
 - [`prerequisites.md`](./prerequisites.md) - host prerequisites and environment assumptions
 - [`01-kind-cluster.md`](./01-kind-cluster.md) - kind bootstrap notes
 - [`02-chaos-mesh.md`](./02-chaos-mesh.md) - Chaos Mesh install path

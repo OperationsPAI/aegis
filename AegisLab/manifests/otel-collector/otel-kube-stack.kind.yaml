@@ -499,15 +499,13 @@ collectors:
       requests:
         cpu: 1000m
         memory: 2500Mi
-    # kind-local: the daemon does NOT run a prometheus receiver. All pod
-    # annotation scraping + endpoints scraping happens in the deployment
-    # collector (see collectors.deploy below). The former
-    # `scrape_configs_file: daemon_scrape_configs.yaml` also pulled
-    # node-exporter / cilium / kubelet-cadvisor — none of those targets
-    # exist in an aegis-local kind cluster, so dropping the prometheus
-    # receiver here keeps the daemon's job narrow: filelog + kubeletstats
-    # + otlp + hostmetrics + k8s_cluster.
-    scrape_configs_file: ""
+    # kind-local: chart renders prometheus receiver unconditionally; empty
+    # scrape_configs -> collector fails to start. Use chart's bundled
+    # daemon_scrape_configs.yaml (`.Files.Get` reads chart-relative paths,
+    # not --set-file / CWD). The chart default is exactly that file.
+    # NB: earlier comment said daemon should NOT run prometheus — chart
+    # version 0.144+ does not honor that intent; revisit upstream.
+    # scrape_configs_file: ""   # <-- do not set; falls back to chart default
     presets:
       logsCollection:
         enabled: false

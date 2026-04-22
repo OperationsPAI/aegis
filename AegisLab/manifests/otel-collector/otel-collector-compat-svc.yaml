@@ -1,0 +1,24 @@
+# Compatibility Service for benchmarks that hardcode `otel-collector:4317`
+# as the OTLP endpoint (otel-demo, sockshop, etc.). The kube-stack chart
+# creates `otel-kube-stack-deployment-collector` as the canonical Service;
+# this one keeps the short DNS name usable.
+#
+# Apply AFTER `helm upgrade --install otel-kube-stack ...` has populated
+# the deployment collector pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: otel
+spec:
+  selector:
+    app.kubernetes.io/component: opentelemetry-collector
+    app.kubernetes.io/managed-by: opentelemetry-operator
+    app.kubernetes.io/name: otel-kube-stack-deployment-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318

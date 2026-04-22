@@ -6,9 +6,9 @@ Environment-specific Kubernetes manifests and Helm values for deploying AegisLab
 
 | Dir | Status | Notes |
 |---|---|---|
-| `kind/` | **Validated 2026-04-22** | Fresh kind-cluster cold-start. Uses public Docker Hub images (`opspai/*`) and in-cluster NFS for RWX. Pairs with `docs/deployment/otel-pipeline.yaml` + `docs/deployment/kind/`. |
+| `kind/` | **Validated 2026-04-22** | Fresh kind-cluster cold-start. Uses public Docker Hub images (`opspai/*`) and in-cluster NFS for RWX. Paired with `manifests/otel-collector/otel-kube-stack.kind.yaml` — the minimal `docs/deployment/otel-pipeline.yaml` is traces-only and is NOT sufficient for datapack build on its own. See `aegis/docs/deployment/cold-start-kind.md` for the full sequence. |
 | `chaos-mesh/` | Supporting | Chaos Mesh helm values (runtime=containerd, socketPath=/run/containerd/containerd.sock). Required by all profiles on kind v1.34+. |
-| `otel-collector/` | Supporting | Legacy otel-collector manifests — kept for reference; prefer `docs/deployment/otel-pipeline.yaml` for new installs. |
+| `otel-collector/` | **Validated 2026-04-22** | `otel-kube-stack.kind.yaml` is the end-to-end-viable collector stack for kind. `docs/deployment/otel-pipeline.yaml` only installs ClickHouse + a traces-only collector — insufficient on its own for datapack build (traces, metrics, logs all need to land). Apply `otel-collector-compat-svc.yaml` after install for benchmarks that hardcode `otel-collector` DNS. |
 | `cilium/`, `microservices/` | Supporting | Misc infra add-ons, not primary deploy targets. |
 | `dev/` | **Unverified** | Likely still wired to internal registries. Treat as reference, not a ready-to-apply profile. |
 | `prod/` | **Legacy / unverified** | References `pair-diag-cn-guangzhou.cr.volces.com` and `10.10.10.240` private registries. Not exercised by the cold-start flow — do not use without updating image refs. |

@@ -31,15 +31,27 @@ helm repo update
 helm -n otel upgrade --install otel-kube-stack \
   open-telemetry/opentelemetry-kube-stack \
   -f otel-kube-stack.kind.yaml \
-  --set-file 'collectors.daemon.scrape_configs_file=daemon-scrape-configs.kind.yaml' \
-  --wait --timeout 5m
+  --wait --timeout 10m
 ```
+
+**Do not** pass `--set-file collectors.daemon.scrape_configs_file=...` — chart
+≥ 0.144 resolves `scrape_configs_file` via `.Files.Get`, which only reads
+files packaged inside the chart, not CWD-relative paths or --set-file content.
+The values file here leaves the field unset so the chart falls back to its
+bundled `daemon_scrape_configs.yaml` (the pod-annotation scrape config we
+want). `daemon-scrape-configs.kind.yaml` in this directory is retained for
+reference and should be kept in sync with the chart's bundled file.
 
 Before installing, delete the ad-hoc `otel-collector` Deployment currently
 running in the `otel` namespace (the kube-stack chart creates its own
 collectors via the operator). The existing `clickhouse` StatefulSet and
 its `clickhouse` Service are the destination for log/metric/trace
 exporters; leave those in place.
+
+After install, benchmarks that hardcode `otel-collector` as the OTLP DNS
+(otel-demo, sockshop, etc.) need a compat Service in the `otel` namespace
+pointing at the deployment collector — see step 5 of
+`aegis/docs/deployment/cold-start-kind.md`.
 
 ## Verifying after install
 
