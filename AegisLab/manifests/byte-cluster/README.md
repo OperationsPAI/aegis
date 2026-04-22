@@ -139,7 +139,7 @@ Cluster-side checks:
 ```bash
 kubectl get networkchaos -A
 kubectl get hpa -n monitoring
-kubectl -n monitoring exec clickstack-clickhouse-0 -- clickhouse-client --password otelcollectorpass   --query "SHOW TABLES FROM otel LIKE 'otel_%'"
+kubectl -n monitoring exec deploy/clickstack-clickhouse -- clickhouse-client --query "SHOW TABLES FROM otel LIKE 'otel_%'"
 ```
 
 ## Notes

@@ -283,7 +283,7 @@ dynamic_configs:
     description: ClickHouse database password
     is_secret: true
   - key: database.clickhouse.db
-    default_value: default
+    default_value: otel
     value_type: 0
     scope: 1
     category: database.clickhouse
