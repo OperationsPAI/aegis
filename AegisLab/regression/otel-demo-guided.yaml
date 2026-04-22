@@ -4,7 +4,7 @@ project_name: pair_diagnosis
 submit:
   pedestal:
     name: otel-demo
-    version: "0.1.1"
+    version: "0.1.2"
   benchmark:
     name: clickhouse
     version: "1.0.0"
@@ -17,7 +17,7 @@ submit:
     - key: env
       value: local
     - key: batch
-      value: wrapper-0.1.1-verify
+      value: wrapper-0.1.2-verify
   specs:
     - - system: otel-demo
         system_type: otel-demo
