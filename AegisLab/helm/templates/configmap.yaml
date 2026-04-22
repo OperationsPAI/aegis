@@ -22,6 +22,16 @@ data:
     password = "{{ .Values.configmap.database.mysql.password }}"
     db = "{{ .Values.configmap.database.mysql.db }}"
 
+    {{- if .Values.configmap.database.clickhouse.host }}
+    [database.clickhouse]
+    host = "{{ .Values.configmap.database.clickhouse.host }}"
+    port = "{{ .Values.configmap.database.clickhouse.port }}"
+    user = "{{ .Values.configmap.database.clickhouse.user }}"
+    password = "{{ .Values.configmap.database.clickhouse.password }}"
+    db = "{{ .Values.configmap.database.clickhouse.db }}"
+    timezone = "{{ .Values.configmap.database.clickhouse.timezone }}"
+    {{- end }}
+
     [jaeger]
     endpoint = "{{ .Release.Name }}-jaeger:4318"
 

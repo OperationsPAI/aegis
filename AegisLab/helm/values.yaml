@@ -172,6 +172,13 @@ configmap:
       port: "3306"
       password: "yourpassword"
       db: "rcabench"
+    clickhouse:
+      host: ""
+      port: "9000"
+      user: "otelcollector"
+      password: "otelcollectorpass"
+      db: "otel"
+      timezone: "UTC"
   etcd:
     username: ""
     password: ""
@@ -300,3 +307,6 @@ initialDataFiles:
   data_yaml: ""
   otel_demo_yaml: ""
   ts_yaml: ""
+
+serviceAccount:
+  imagePullSecrets: []

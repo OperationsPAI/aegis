@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: clickstack-init-otel-db
+  namespace: monitoring
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: clickhouse-client
+          image: pair-diag-cn-guangzhou.cr.volces.com/pair/clickhouse-server:25.7-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              clickhouse-client \
+                --host clickstack-clickhouse \
+                --query "CREATE DATABASE IF NOT EXISTS otel"

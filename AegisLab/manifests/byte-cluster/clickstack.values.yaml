@@ -1,0 +1,25 @@
+global:
+  storageClassName: rcabench
+  keepPVC: false
+
+hyperdx:
+  image:
+    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/hyperdx
+  service:
+    type: ClusterIP
+
+clickhouse:
+  image: pair-diag-cn-guangzhou.cr.volces.com/pair/clickhouse-server:25.7-alpine
+  config:
+    users:
+      appUserPassword: hyperdx
+      otelUserName: otelcollector
+      otelUserPassword: otelcollectorpass
+  service:
+    type: ClusterIP
+
+mongodb:
+  enabled: false
+
+otel:
+  enabled: false

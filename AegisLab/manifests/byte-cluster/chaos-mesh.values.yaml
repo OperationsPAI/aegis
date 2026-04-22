@@ -1,0 +1,14 @@
+images:
+  # Prefer the CN mirror lineage: pair-diag-cn-guangzhou.cr.volces.com/pair/*
+  # The Byte cluster can pull directly from the pair mirror, so use it as-is.
+  registry: pair-diag-cn-guangzhou.cr.volces.com/pair
+
+controllerManager:
+  podChaos:
+    podFailure:
+      pauseImage: pair-diag-cn-guangzhou.cr.volces.com/pair/google-containers/pause:latest
+
+chaosDaemon:
+  hostNetwork: true
+  runtime: containerd
+  socketPath: /run/containerd/containerd.sock

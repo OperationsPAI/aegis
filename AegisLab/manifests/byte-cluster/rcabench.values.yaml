@@ -1,0 +1,99 @@
+global:
+  imageRegistry: pair-diag-cn-guangzhou.cr.volces.com
+
+images:
+  rcabench:
+    name: pair/rcabench
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  jaeger:
+    name: pair/jaeger
+    tag: latest
+    pullPolicy: IfNotPresent
+  redis:
+    name: pair/redis
+    tag: "8.0-M02-alpine3.20"
+    pullPolicy: IfNotPresent
+  mysql:
+    name: pair/mysql
+    tag: "8.0.43"
+    pullPolicy: IfNotPresent
+  etcd:
+    name: pair/etcd
+    tag: "v3.6.7"
+    pullPolicy: IfNotPresent
+  busybox:
+    name: pair/busybox
+    tag: "1.35"
+    pullPolicy: IfNotPresent
+  buildkit:
+    name: pair/buildkit
+    tag: buildx-stable-1
+    pullPolicy: IfNotPresent
+
+buildkit:
+  enabled: false
+
+alloy:
+  enabled: false
+
+loki:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+grafana:
+  enabled: false
+
+rcabench-frontend:
+  enabled: false
+
+harbor:
+  enabled: false
+
+initialization:
+  initDrainTemplate:
+    image:
+      name: pair/init-drain-template
+      tag: latest
+      pullPolicy: IfNotPresent
+  initHelmCharts:
+    image:
+      name: pair/init-helm-charts
+      tag: latest
+      pullPolicy: IfNotPresent
+
+configmap:
+  system:
+    env_mode: "prod"
+  k8s:
+    namespace: "exp"
+    init_container:
+      busybox_image: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox:1.35
+  database:
+    clickhouse:
+      host: clickstack-clickhouse.monitoring.svc.cluster.local
+      port: "8123"
+      user: default
+      password: ""
+      db: otel
+      timezone: UTC
+
+microservices:
+  apiGateway:
+    service:
+      type: ClusterIP
+
+persistence:
+  storageType: volcengine
+  jaeger:
+    storageClass: rcabench
+  redis:
+    storageClass: rcabench
+  mysql:
+    storageClass: rcabench
+  etcd:
+    storageClass: rcabench
+
+serviceAccount: {}
