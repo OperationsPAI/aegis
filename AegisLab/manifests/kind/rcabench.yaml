@@ -1,0 +1,69 @@
+# Kind-cluster profile for cold-start / regression validation.
+#
+# Assumes:
+#   - kind cluster (default storageclass "standard" / local-path)
+#   - in-cluster observability already provided by docs/deployment/otel-pipeline.yaml
+#     (ClickHouse + otel-collector in namespace "otel")
+#   - backend image pre-loaded via `kind load docker-image aegislab-backend:local`
+#
+# Used by `aegisctl` regression flow; aligns with skills in .claude/skills/.
+
+images:
+  rcabench:
+    name: aegislab-backend
+    tag: local
+    pullPolicy: IfNotPresent
+
+# In-chart observability is redundant when otel-pipeline.yaml runs separately.
+alloy:
+  enabled: false
+loki:
+  enabled: false
+prometheus:
+  enabled: false
+grafana:
+  enabled: false
+
+# Not needed for regression smoke.
+buildkit:
+  enabled: false
+harbor:
+  enabled: false
+rcabench-frontend:
+  enabled: false
+
+configmap:
+  system:
+    env_mode: "prod"
+
+# Drain template + init-helm-charts are not required for regression-only paths.
+initialization:
+  initDrainTemplate:
+    enabled: false
+  # opspai/init-helm-charts is not published publicly; aegisctl pedestal chart
+  # push seeds pedestal charts on demand instead.
+  initHelmCharts:
+    enabled: false
+
+# Kind has no JuiceFS / Volcengine. Use the default local-path provisioner.
+persistence:
+  # RWX shared volumes (containers, juicefs dataset) use an in-cluster NFS SC.
+  # See prerequisites: `helm install nfs-server nfs-ganesha/nfs-server-provisioner ...`.
+  storageType: external
+  storageClassNames:
+    external: nfs
+  jaeger:
+    storageClass: standard
+  redis:
+    storageClass: standard
+  mysql:
+    storageClass: standard
+  etcd:
+    storageClass: standard
+  observability:
+    enabled: false
+  juicefs:
+    enabled: true
+    useStaticPV: false
+    external:
+      accessMode: ReadWriteMany

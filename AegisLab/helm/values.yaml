@@ -26,6 +26,13 @@ images:
     name: quay.io/coreos/etcd
     tag: "v3.6.7"
     pullPolicy: IfNotPresent
+  # Image used by init containers that need both `sh` and `etcdctl`.
+  # quay.io/coreos/etcd is distroless (no shell), so init containers use a
+  # shell-capable image with etcdctl pre-installed instead.
+  etcdctl:
+    name: bitnamilegacy/etcd
+    tag: "3.6.4"
+    pullPolicy: IfNotPresent
   busybox:
     name: busybox
     tag: "1.35"
@@ -143,6 +150,11 @@ initialization:
     env:
       HELM_CHARTS_CONFIG: /app/config.json
       HELM_CHARTS_TARGET_PATH: /var/lib/rcabench/dataset/helm-charts
+
+auth:
+  # JWT signing secret (AEGIS_JWT_SECRET). If empty, a random value is
+  # generated on first install and retained across helm upgrades.
+  jwtSecret: ""
 
 configmap:
   name: "rcabench"

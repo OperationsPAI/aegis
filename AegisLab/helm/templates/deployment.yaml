@@ -17,8 +17,8 @@ spec:
       serviceAccountName: {{ .Release.Name }}-sa
       initContainers:
         - name: init-etcd-producer-config
-          image: pair-diag-cn-guangzhou.cr.volces.com/pair/etcdctl:latest
-          imagePullPolicy: IfNotPresent
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.etcdctl "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.etcdctl.pullPolicy }}"
           command:
             - sh
             - -c
@@ -65,16 +65,14 @@ spec:
             - containerPort: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
               name: intake-grpc
           readinessProbe:
-            httpGet:
-              path: /system/health
+            tcpSocket:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /system/health
+            tcpSocket:
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 15
           env:
             - name: GOPRIVATE
@@ -83,6 +81,11 @@ spec:
               value: "prod"
             - name: GIN_MODE
               value: "release"
+            - name: AEGIS_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-auth
+                  key: jwt_secret
           volumeMounts:
             - name: config
               mountPath: /etc/rcabench/config.prod.toml
@@ -130,8 +133,8 @@ spec:
       serviceAccountName: {{ .Release.Name }}-sa
       initContainers:
         - name: init-etcd-consumer-config
-          image: pair-diag-cn-guangzhou.cr.volces.com/pair/etcdctl:latest
-          imagePullPolicy: IfNotPresent
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.etcdctl "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.etcdctl.pullPolicy }}"
           command:
             - sh
             - -c
@@ -190,6 +193,11 @@ spec:
               value: "github.com/OperationsPAI/chaos-experiment"
             - name: ENV
               value: "prod"
+            - name: AEGIS_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-auth
+                  key: jwt_secret
           volumeMounts:
             - name: config
               mountPath: /etc/rcabench/config.prod.toml

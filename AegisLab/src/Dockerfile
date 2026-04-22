@@ -8,11 +8,17 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y g++ gcc
 
-COPY src/go.mod src/go.sum ./
+# chaos-experiment is a sibling repo referenced via `replace ../../chaos-experiment`
+# from AegisLab/src/go.mod. Build context must be the parent `aegis/` directory
+# so both trees are available. Staged at /chaos-experiment to match ../../chaos-experiment
+# when go resolves from /app (AegisLab/src/).
+COPY chaos-experiment /chaos-experiment
+
+COPY AegisLab/src/go.mod AegisLab/src/go.sum ./
 ENV GOPROXY=$GOPROXY
 RUN go mod download
 
-COPY src/ .
+COPY AegisLab/src/ .
 RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/exp
 FROM debian:bookworm AS runner
 
@@ -39,7 +45,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/exp /app/exp
-COPY ./src/entrypoint.sh ./entrypoint.sh
+COPY AegisLab/src/entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh
 ENTRYPOINT ["./entrypoint.sh"]
