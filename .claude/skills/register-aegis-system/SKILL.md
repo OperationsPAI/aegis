@@ -91,10 +91,23 @@ row). The pedestal-name constraint below is *caller* responsibility.
 
 **Critical constraint — pedestal `containers.name` = short system code
 from Layer 1.** The submit validator checks `pedestal.name ==
-system_type`, where `system_type` is the short Go constant (`ts`, `ob`,
-`hs`, `sn`, `media`, `tea`, …), *not* the display-facing name. Seeding
-a pedestal row as `hotelreservation` while the registry uses `hs`
-produces `mismatched system type hs for pedestal hotelreservation`.
+system_type`, where `system_type` is the short Go constant defined in
+`chaos-experiment/internal/systemconfig`. Current short codes:
+`ts`, `otel-demo`, `ob`, `sockshop`, `hs`, `sn`, `media`, `teastore`.
+Full-form names (`hotelreservation`, `mediamicroservices`, `teastore`
+vs `tea`, etc.) are NOT accepted — seed fails with
+`invalid pedestal name: X` and the whole `initializeProducer`
+transaction rolls back, leaving the DB half-populated. Frequently
+wrong in older data.yaml snapshots: `hotelreservation→hs`,
+`mm→media`, `tea→teastore`.
+
+**Note on `ob`**: its 7 `injection.system.ob.*` etcd keys are NOT in
+`data/initial_data/prod/data.yaml` (only `ts`, `otel-demo`, `sockshop`,
+`hs`, `sn`, `media`, `teastore`). Onboarding ob requires adding those
+keys to the seed or POSTing via `aegisctl system register --force`
+with a hand-crafted seed. Running `aegisctl regression run
+ob-guided` against a stock install will return an empty
+`aegisctl system list` for `ob`.
 
 Details (schemas, `type=1` vs `type=2` name collision, seed SQL):
 `references/db.md`.
@@ -216,6 +229,52 @@ algorithm's required sample window. See `references/otel.md`.
 → Layer 4 (`/tmp` wiped — re-run `aegisctl pedestal chart push`) or
 Layer 2 (new keys in code not yet in etcd — `aegisctl system register
 --force`). See `references/chart.md`, `references/etcd.md`.
+
+**"Fresh DB says `(0 enabled)` but dynamic_configs is non-empty; users
+table is empty yet seed log says `already seeded, skipping`"**
+→ Layer 2 seed-idempotency race. Producer + consumer AutoMigrate
+concurrently on a fresh DB; consumer tx "succeeds" but rows land in
+tables the migrator then drops. The `newConfigDataWithDB` guard then
+sees non-empty dynamic_configs and skips user/container seeding on the
+next boot. Recover with a forced re-seed:
+`kubectl scale deploy -n exp rcabench-api-gateway --replicas=0 &&
+kubectl wait --for=delete pod -n exp -l app=rcabench-api-gateway &&
+kubectl exec -n exp rcabench-mysql-0 -- env MYSQL_PWD=yourpassword
+mysql -uroot -e 'DROP DATABASE rcabench; CREATE DATABASE rcabench;' &&
+kubectl scale deploy -n exp rcabench-api-gateway --replicas=1`.
+Scaling down first matters — a still-running pod will race the drop
+and re-publish stale rows.
+
+**"`aegisctl system list` still shows old names (e.g. `mm`/`tea`) after
+a seed rename"**
+→ Layer 2 stale etcd. `publishSeededConfigsToEtcd` is additive: it
+writes new `injection.system.<new>.*` keys but never deletes old
+`<old>.*`. Clean with
+`kubectl exec -n exp rcabench-etcd-0 -- etcdctl --endpoints=http://localhost:2379
+del --prefix /rcabench/config/global/injection.system.<old>.`
+then restart `rcabench-api-gateway`.
+
+**"First-install chart install fails with `repository not valid, no
+index.yaml` against `oci://registry-1.docker.io/opspai`"**
+→ Layer 4 / aegisctl-side OCI handling. OCI repos expose no
+index.yaml; the install must pass
+`oci://<repo>/<chart>` as the positional chart arg (no `--repo`).
+Already handled in `aegisctl pedestal chart install` and in the
+backend's `restart_pedestal.go` after the kind-cold-start fixes —
+re-build if on an older binary.
+
+**"Chart install fails with `missing registry client`"**
+→ Layer 4, Helm actionConfig needs `registry.NewClient(...)` attached.
+Fixed in `infra/helm/gateway.go` by the kind-cold-start PR.
+
+**"BuildDatapack job env vars only include NAMESPACE; seeded env vars
+(e.g. RCABENCH_OPTIONAL_EMPTY_PARQUETS) aren't propagated"**
+→ Layer 3 / consumer glue. `HandleCRDSucceeded` used to hardcode the
+benchmark env list to just NAMESPACE. Fixed by reading
+`container_version_env_vars` and merging. Also note: env var rows must
+be linked to the BENCHMARK (`clickhouse`) container_version, not the
+pedestal (`ob-bench` etc.) — the regression case's
+`benchmark.name=clickhouse` is what the job reads.
 
 **"RestartPedestal hangs forever / helm install in `pending-install`"**
 → A rendered resource can never become Ready. `installAction.Wait=true`

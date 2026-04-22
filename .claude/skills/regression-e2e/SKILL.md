@@ -36,6 +36,9 @@ Provide a short triage frame for E2E failures. Focus on likely problem classes a
 - **Weak observability** — user-facing error is generic; the real blocker is only visible in trace or runtime logs.
 - **Selector/label mismatch from operators** — app-label-based selectors return a partial set of services because operator-generated pods (Coherence, Kafka, Postgres controllers) carry different labels than plain Deployments. Pattern to watch: "everything installs healthy, but the selector only sees N of M services."
 - **Bootstrap-edge gaps** — seed path populates some stores (DB, configmap, etc.) but not the one the runtime actually reads on first boot. Symptom: the data is "there" somewhere, but the process that needs it gets `not found` the first time and works after a manual reconciliation.
+- **Duplicate-submission suppression** — aegisctl regression silently refuses re-submitting the same (app, namespace, chaos_type, duration) within a cooldown; symptom is `duplicate submission suppressed (batches [0])`. Vary `spec[].app` or `duration` to force a fresh hash.
+- **App name filtered by serviceendpoints** — backend pre-filters live pod labels against the `serviceendpoints` metadata store before returning them to guided-resolve. A pod WITH the label (e.g. `currency` in otel-demo) still errors `app ... not found; available apps: accounting, ad, cart, ...` if it isn't in the endpoint map. Pick an app that IS in the "available apps" list the error prints.
+- **Empty parquet with `.parquet` suffix required** — `RCABENCH_OPTIONAL_EMPTY_PARQUETS` values match on the full filename INCLUDING `.parquet`. Leaving the extension off silently fails to opt in.
 
 ## Output Shape
 
@@ -49,6 +52,9 @@ Provide a short triage frame for E2E failures. Focus on likely problem classes a
 When triaging in this repo, common concrete surfaces worth naming early:
 
 - `aegis/docs/troubleshooting/{datapack-schema,app-label-key,benchmark-integration-playbook}.md` — consolidated E2E pitfalls.
+- `aegis/docs/deployment/kind/otel-collector-{cfg,rbac,externalname}.yaml` — kind-profile collector manifests (k8sattributes + upsert + 3-signal pipelines).
 - `pkg/guidedcli` — guided-first inject pipeline; `/translate` and `GET /metadata` are 410.
 - etcd `injection.system.*` — runtime source of truth for injection config (not YAML).
 - ClickHouse OTLP traces + Redis task keys — the usual "did the data path complete" inspection.
+- Per-stage failure triage: `datapack.build.failed` → inspect the job pod logs (`kubectl logs -n exp <task-uuid>-xxxx`) for UNKNOWN_TABLE (collector missing pipeline), `Parquet file has no data rows: X.parquet` (wrong env-var filename or missing resource enrichment), or `No such file or directory: /data/drain_template/*.bin` (initDrainTemplate disabled but detector algo still wired in).
+- `--app-label-key` must match the workload's actual label key (otel-demo uses `app.kubernetes.io/name`, not the default `app`). Mismatch surfaces as "app not found; available apps: <subset>" at backend submit.

@@ -9,10 +9,24 @@ order; any failure blocks the rest.
   kind-aegis-local get nodes` returning Ready across all nodes.
 - Host inotify limits bumped — `fs.inotify.max_user_instances >= 1024`,
   `fs.inotify.max_user_watches >= 524288`. Below these, `kind create
-  cluster` fails during `Preparing nodes`. See
-  `docs/deployment/known-gaps.md` for the nsenter workaround.
-- `local-path-provisioner` (or equivalent) available as the default
-  StorageClass. The AegisLab backend helm chart assumes it.
+  cluster` fails during `Preparing nodes`.
+- **`HTTP_PROXY` unset** when running `kind create cluster`. kind bakes
+  the host proxy into containerd; a broken one (e.g. `crash:crash@...`)
+  makes every image pull fail. Clear in the shell:
+  `unset HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy`.
+- Default `standard` StorageClass from `local-path-provisioner` is
+  **RWO only**. The AegisLab chart's `containers-data` and
+  `juicefs-dataset` PVCs demand RWX. Install an in-cluster NFS
+  provisioner before `helm install rcabench`:
+  ```bash
+  helm repo add nfs-ganesha https://kubernetes-sigs.github.io/nfs-ganesha-server-and-external-provisioner
+  helm install nfs-server nfs-ganesha/nfs-server-provisioner \
+    -n nfs --create-namespace \
+    --set storageClass.name=nfs --set persistence.enabled=true \
+    --set persistence.storageClass=standard --set persistence.size=20Gi
+  ```
+  The kind profile `AegisLab/manifests/kind/rcabench.yaml` already
+  points `storageClassNames.external=nfs`.
 
 ## Chaos Mesh
 
@@ -32,7 +46,9 @@ order; any failure blocks the rest.
 ## Observability pipeline
 
 ClickHouse + OTEL collector running in namespace `otel`. Full manifest:
-`docs/deployment/otel-pipeline.yaml` in this repo.
+`docs/deployment/otel-pipeline.yaml` + the kind-profile collector config
+at `docs/deployment/kind/otel-collector-cfg.yaml` +
+`otel-collector-rbac.yaml`.
 
 - ClickHouse 24.x requires a non-empty password on `default`. The
   collector's `clickhouse` exporter config must match — setting
@@ -42,6 +58,25 @@ ClickHouse + OTEL collector running in namespace `otel`. Full manifest:
   (not the base `collector`) — only contrib ships the ClickHouse
   exporter, which auto-creates `otel_traces*` tables with
   `create_schema: true`.
+- **Three pipelines required** (traces, metrics, logs). A traces-only
+  config works for a smoke `NetworkChaos` but BuildDatapack queries
+  `otel_metrics_gauge` / `otel_logs` / etc., so the datapack builder
+  fails with `UNKNOWN_TABLE` if metrics + logs pipelines are missing.
+- **`k8sattributes` processor** enabled on all three pipelines, backed
+  by a ClusterRole granting pods/namespaces/replicasets/deployments/nodes
+  read. Without it, resource attributes miss `k8s.namespace.name` and
+  BuildDatapack's filter returns 0 rows.
+- **`resource` processor: `action: upsert service.namespace =
+  k8s.namespace.name`**, not `insert`. Benchmark SDKs that set
+  their own `service.namespace` (otel-demo ships
+  `service.namespace=opentelemetry-demo`) win over `insert` and leak
+  downstream. BuildDatapack filters on `service.namespace` specifically.
+- **Cross-namespace collector DNS**: benchmark charts often hardcode
+  `http://otel-collector:4317` as the OTLP endpoint. Since the collector
+  lives in `otel`, create a stub ExternalName Service in each benchmark
+  namespace pointing to `otel-collector.otel.svc.cluster.local` (see
+  `docs/deployment/kind/otel-collector-externalname.yaml`). Absent this,
+  pod logs show `connect ECONNREFUSED <otel-collector cluster IP>`.
 
 Check all three with this script:
 
