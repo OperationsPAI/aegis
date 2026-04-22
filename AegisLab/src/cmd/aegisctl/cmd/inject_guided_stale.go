@@ -90,7 +90,7 @@ func warnStalePodChaos(ctx context.Context, namespace string, lister StalePodCha
 	if extra > 0 {
 		listStr = fmt.Sprintf("%s, … and %d more", listStr, extra)
 	}
-	fmt.Fprintf(stderr, "WARN: %d PodChaos CR(s) in ns=%s from prior trace(s): %s\n", total, namespace, listStr)
+	fmt.Fprintf(stderr, "WARN: %d PodChaos CR(s) in ns=%s from unrelated trace(s): %s\n", total, namespace, listStr)
 	fmt.Fprintf(stderr, "      These will not block the new submit but may confuse kubectl get podchaos.\n")
 	fmt.Fprintf(stderr, "      Run `aegisctl trace cancel <id>` to clean up.\n")
 	return nil
