@@ -172,15 +172,16 @@ type ReseedSystemReq struct {
 // ContainerVersion. Consumers (aegisctl pedestal chart install) use this to
 // resolve where to pull the chart tgz from when no --tgz override is given.
 type SystemChartResp struct {
-	SystemName   string `json:"system_name"`
-	ChartName    string `json:"chart_name"`
-	Version      string `json:"version"`
-	RepoURL      string `json:"repo_url"`
-	RepoName     string `json:"repo_name"`
-	LocalPath    string `json:"local_path,omitempty"`
-	ValueFile    string `json:"value_file,omitempty"`
-	Checksum     string `json:"checksum,omitempty"`
-	PedestalTag  string `json:"pedestal_tag"`
+	SystemName  string         `json:"system_name"`
+	ChartName   string         `json:"chart_name"`
+	Version     string         `json:"version"`
+	RepoURL     string         `json:"repo_url"`
+	RepoName    string         `json:"repo_name"`
+	LocalPath   string         `json:"local_path,omitempty"`
+	ValueFile   string         `json:"value_file,omitempty"`
+	Values      map[string]any `json:"values,omitempty"`
+	Checksum    string         `json:"checksum,omitempty"`
+	PedestalTag string         `json:"pedestal_tag"`
 }
 
 // SystemPrerequisiteResp is one system prerequisite in API responses (issue

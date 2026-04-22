@@ -13,6 +13,7 @@ import (
 	"aegis/cmd/aegisctl/output"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 // chartExecRunner abstracts shelling out to external binaries (kubectl / helm)
@@ -45,6 +46,8 @@ const producerChartDir = "/var/lib/rcabench/dataset/charts"
 
 // Default namespace where the aegis backend / producer runs.
 const defaultBackendNamespace = "aegislab-backend"
+
+var backendNamespaceHints = []string{"exp", defaultBackendNamespace}
 
 var pedestalChartCmd = &cobra.Command{
 	Use:   "chart",
@@ -215,6 +218,8 @@ type chartSource struct {
 	positional string
 	repo       string
 	version    string
+	valuesFile string
+	values     map[string]any
 }
 
 func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool) error {
@@ -243,6 +248,14 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 	}
 
 	helmArgs := []string{"install", namespace, src.positional, "-n", namespace, "--create-namespace"}
+	cleanup := func() {}
+	if valuesFile, fileCleanup, err := materializeChartValuesFile(src); err != nil {
+		return err
+	} else if valuesFile != "" {
+		helmArgs = append(helmArgs, "-f", valuesFile)
+		cleanup = fileCleanup
+	}
+	defer cleanup()
 	if src.repo != "" {
 		helmArgs = append(helmArgs, "--repo", src.repo)
 	}
@@ -320,30 +333,177 @@ func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chart
 	// this is the air-gapped / pre-staged case.
 	if resp.Data.LocalPath != "" {
 		if _, err := os.Stat(resp.Data.LocalPath); err == nil {
-			return chartSource{positional: resp.Data.LocalPath, version: backendVersion}, nil
+			return chartSource{
+				positional: resp.Data.LocalPath,
+				version:    backendVersion,
+				valuesFile: resp.Data.ValueFile,
+				values:     resp.Data.Values,
+			}, nil
 		}
 	}
 	if resp.Data.RepoURL != "" && resp.Data.ChartName != "" {
 		if strings.HasPrefix(resp.Data.RepoURL, "oci://") {
-			return chartSource{positional: buildOCIRef(resp.Data.RepoURL, resp.Data.ChartName), version: backendVersion}, nil
+			return chartSource{
+				positional: buildOCIRef(resp.Data.RepoURL, resp.Data.ChartName),
+				version:    backendVersion,
+				valuesFile: resp.Data.ValueFile,
+				values:     resp.Data.Values,
+			}, nil
 		}
-		return chartSource{positional: resp.Data.ChartName, repo: resp.Data.RepoURL, version: backendVersion}, nil
+		return chartSource{
+			positional: resp.Data.ChartName,
+			repo:       resp.Data.RepoURL,
+			version:    backendVersion,
+			valuesFile: resp.Data.ValueFile,
+			values:     resp.Data.Values,
+		}, nil
 	}
 	return chartSource{}, notFoundErrorf("system %q has no installable chart source (no local_path, no repo_url); pass --tgz or --repo/--chart", systemCode)
+}
+
+func materializeChartValuesFile(src chartSource) (string, func(), error) {
+	if src.valuesFile != "" {
+		if _, err := os.Stat(src.valuesFile); err == nil {
+			return src.valuesFile, func() {}, nil
+		}
+		if data, err := fetchRemoteChartValuesFile(src.valuesFile); err == nil && len(data) > 0 {
+			return writeTempChartValuesFile(data)
+		}
+	}
+	if len(src.values) == 0 {
+		return "", func() {}, nil
+	}
+	data, err := yaml.Marshal(src.values)
+	if err != nil {
+		return "", func() {}, fmt.Errorf("marshal chart values: %w", err)
+	}
+	return writeTempChartValuesFile(data)
+}
+
+func writeTempChartValuesFile(data []byte) (string, func(), error) {
+	f, err := os.CreateTemp("", "aegisctl-chart-values-*.yaml")
+	if err != nil {
+		return "", func() {}, fmt.Errorf("create temp chart values file: %w", err)
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return "", func() {}, fmt.Errorf("write temp chart values file: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(f.Name())
+		return "", func() {}, fmt.Errorf("close temp chart values file: %w", err)
+	}
+	return f.Name(), func() { _ = os.Remove(f.Name()) }, nil
+}
+
+func fetchRemoteChartValuesFile(remotePath string) ([]byte, error) {
+	if strings.TrimSpace(remotePath) == "" {
+		return nil, fmt.Errorf("remote chart values path is empty")
+	}
+	if _, err := chartRunner.LookPath("kubectl"); err != nil {
+		return nil, fmt.Errorf("kubectl not found on PATH; cannot read remote chart values %q", remotePath)
+	}
+	namespace, pod, err := resolveBackendValuesPod()
+	if err != nil {
+		return nil, err
+	}
+	out, err := chartRunner.Run("kubectl", "-n", namespace, "exec", pod, "--", "cat", remotePath)
+	if err != nil {
+		return nil, fmt.Errorf("read remote chart values %q from %s/%s: %w\n%s", remotePath, namespace, pod, err, string(out))
+	}
+	return out, nil
+}
+
+func resolveBackendValuesPod() (string, string, error) {
+	if ns, pod := resolveBackendValuesPodBySelector("app.kubernetes.io/component=api-gateway"); pod != "" {
+		return ns, pod, nil
+	}
+	if ns, pod := resolveBackendValuesPodBySelector("app.kubernetes.io/component=producer"); pod != "" {
+		return ns, pod, nil
+	}
+
+	out, err := chartRunner.Run("kubectl", "get", "pods", "-A", "-o", "jsonpath={range .items[*]}{.metadata.namespace}{\"\\t\"}{.metadata.name}{\"\\n\"}{end}")
+	if err != nil {
+		return "", "", fmt.Errorf("list backend pods for remote values lookup: %w\n%s", err, string(out))
+	}
+
+	type match struct {
+		namespace string
+		pod       string
+		score     int
+	}
+	best := match{}
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		ns, pod := fields[0], fields[1]
+		score := backendPodMatchScore(ns, pod)
+		if score > best.score {
+			best = match{namespace: ns, pod: pod, score: score}
+		}
+	}
+	if best.score > 0 {
+		return best.namespace, best.pod, nil
+	}
+	return "", "", notFoundErrorf("could not find an api-gateway or producer pod to read remote helm values")
+}
+
+func resolveBackendValuesPodBySelector(selector string) (string, string) {
+	out, err := chartRunner.Run("kubectl", "get", "pods", "-A", "-l", selector, "-o", "jsonpath={range .items[*]}{.metadata.namespace}{\"\\t\"}{.metadata.name}{\"\\n\"}{end}")
+	if err != nil {
+		return "", ""
+	}
+	bestNS, bestPod, bestScore := "", "", 0
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		ns, pod := fields[0], fields[1]
+		score := backendPodMatchScore(ns, pod)
+		if score > bestScore {
+			bestNS, bestPod, bestScore = ns, pod, score
+		}
+	}
+	return bestNS, bestPod
+}
+
+func backendPodMatchScore(namespace, pod string) int {
+	if namespace == "" || pod == "" {
+		return 0
+	}
+	score := 1
+	for i, hint := range backendNamespaceHints {
+		if namespace == hint {
+			score += 20 - i
+			break
+		}
+	}
+	switch {
+	case strings.Contains(pod, "api-gateway"):
+		score += 10
+	case strings.Contains(pod, "producer"):
+		score += 8
+	}
+	return score
 }
 
 // chartLookupResp mirrors chaossystem.SystemChartResp; kept decoupled so the
 // CLI has no direct dependency on server-internal types.
 type chartLookupResp struct {
-	SystemName  string `json:"system_name"`
-	ChartName   string `json:"chart_name"`
-	Version     string `json:"version"`
-	RepoURL     string `json:"repo_url"`
-	RepoName    string `json:"repo_name"`
-	LocalPath   string `json:"local_path"`
-	ValueFile   string `json:"value_file"`
-	Checksum    string `json:"checksum"`
-	PedestalTag string `json:"pedestal_tag"`
+	SystemName  string         `json:"system_name"`
+	ChartName   string         `json:"chart_name"`
+	Version     string         `json:"version"`
+	RepoURL     string         `json:"repo_url"`
+	RepoName    string         `json:"repo_name"`
+	LocalPath   string         `json:"local_path"`
+	ValueFile   string         `json:"value_file"`
+	Values      map[string]any `json:"values,omitempty"`
+	Checksum    string         `json:"checksum"`
+	PedestalTag string         `json:"pedestal_tag"`
 }
 
 // deriveNamespaceFromSystem calls GET /api/v2/systems and converts the named

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,9 +12,9 @@ import (
 
 // fakeChartExec captures invocations and returns scripted results.
 type fakeChartExec struct {
-	lookPath map[string]error           // name -> err (nil = found)
-	results  map[string]fakeExecResult  // "kubectl get pods..." -> result
-	calls    [][]string                 // record of {name, args...} for assertions
+	lookPath map[string]error          // name -> err (nil = found)
+	results  map[string]fakeExecResult // "kubectl get pods..." -> result
+	calls    [][]string                // record of {name, args...} for assertions
 	fallback func(name string, args []string) ([]byte, error)
 }
 
@@ -260,6 +262,56 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 			if !strings.Contains(joined, want) {
 				t.Errorf("helm args missing %q: %s", want, joined)
 			}
+		}
+	})
+
+	t.Run("backend_chart_values_are_written_to_temp_file", func(t *testing.T) {
+		oldServer, oldToken := flagServer, flagToken
+		t.Cleanup(func() {
+			flagServer, flagToken = oldServer, oldToken
+		})
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/api/v2/systems/by-name/ts/chart" {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":200,"message":"ok","data":{"system_name":"ts","chart_name":"trainticket","version":"0.1.0","repo_url":"https://operationspai.github.io/train-ticket","repo_name":"train-ticket","value_file":"/var/lib/rcabench/dataset/helm-values/ts_values.yaml","values":{"global":{"security":{"allowInsecureImages":true}}}}}`))
+		}))
+		defer ts.Close()
+		flagServer = ts.URL
+		flagToken = "test-token"
+
+		var gotValues string
+		f := &fakeChartExec{
+			fallback: func(name string, args []string) ([]byte, error) {
+				for i := 0; i < len(args)-1; i++ {
+					if args[i] == "-f" {
+						data, err := os.ReadFile(args[i+1])
+						if err != nil {
+							t.Fatalf("read temp values file: %v", err)
+						}
+						gotValues = string(data)
+					}
+				}
+				return []byte("ok"), nil
+			},
+		}
+		withFakeRunner(t, f)
+
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false); err != nil {
+			t.Fatalf("backend chart install failed: %v", err)
+		}
+		if len(f.calls) != 1 {
+			t.Fatalf("want 1 helm call, got %d: %v", len(f.calls), f.calls)
+		}
+		call := f.calls[0]
+		if !containsArg(call, "-f") {
+			t.Fatalf("expected helm values file flag, got %v", call)
+		}
+		if !strings.Contains(gotValues, "allowInsecureImages: true") {
+			t.Fatalf("expected marshaled backend values, got %q", gotValues)
 		}
 	})
 }
