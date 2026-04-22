@@ -118,7 +118,7 @@ The frontend is exposed as `NodePort 32180` by default.
 If you want a ready namespace before driving `aegisctl inject guided`, install the benchmark workload directly. To stay aligned with the seed data that AegisLab registers, use the `opspai` OCI chart on Docker Hub:
 
 ```bash
-helm upgrade --install otel-demo0 oci://registry-1.docker.io/opspai/otel-demo-aegis   --version 0.1.1   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
+helm upgrade --install otel-demo0 oci://registry-1.docker.io/opspai/otel-demo-aegis   --version 0.1.2   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
 ```
 
 ## 7. Smoke / regression validation
