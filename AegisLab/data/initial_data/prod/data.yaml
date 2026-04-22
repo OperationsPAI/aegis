@@ -93,7 +93,7 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: e2e-kind-20260421
+      - name: 1.0.0
         image_ref: docker.io/opspai/clickhouse_dataset:e2e-kind-20260421
         command: bash /entrypoint.sh
         env_vars:
@@ -129,7 +129,7 @@ containers:
         namespace: coherence-test
         version: '>=3.4'
   - type: 2
-    name: hotelreservation
+    name: hs
     is_public: true
     status: 1
     versions:
@@ -157,7 +157,7 @@ containers:
           repo_url: oci://registry-1.docker.io/opspai
           status: 1
   - type: 2
-    name: mm
+    name: media
     is_public: true
     status: 1
     versions:
@@ -171,7 +171,7 @@ containers:
           repo_url: oci://registry-1.docker.io/opspai
           status: 1
   - type: 2
-    name: tea
+    name: teastore
     is_public: true
     status: 1
     versions:
