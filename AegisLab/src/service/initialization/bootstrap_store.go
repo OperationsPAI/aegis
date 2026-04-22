@@ -142,6 +142,17 @@ func (s *bootstrapStore) createUser(user *model.User) error {
 	return nil
 }
 
+func (s *bootstrapStore) getUserByUsername(username string) (*model.User, error) {
+	var user model.User
+	if err := s.db.Where("username = ? AND status != ?", username, consts.CommonDeleted).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: user %s not found", consts.ErrNotFound, username)
+		}
+		return nil, fmt.Errorf("failed to find user with username %s: %w", username, err)
+	}
+	return &user, nil
+}
+
 func (s *bootstrapStore) createUserRole(userRole *model.UserRole) error {
 	if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(userRole).Error; err != nil {
 		return fmt.Errorf("failed to create user-role association: %w", err)
