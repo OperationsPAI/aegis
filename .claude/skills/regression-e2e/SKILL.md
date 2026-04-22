@@ -48,7 +48,7 @@ Provide a short triage frame for E2E failures. Focus on likely problem classes a
 
 When triaging in this repo, common concrete surfaces worth naming early:
 
-- `aegis/docs/troubleshooting/e2e-cluster-bootstrap.md`, `datapack-schema.md`, `app-label-key.md` — consolidated E2E pitfalls.
+- `aegis/docs/troubleshooting/{datapack-schema,app-label-key,benchmark-integration-playbook}.md` — consolidated E2E pitfalls.
 - `pkg/guidedcli` — guided-first inject pipeline; `/translate` and `GET /metadata` are 410.
 - etcd `injection.system.*` — runtime source of truth for injection config (not YAML).
 - ClickHouse OTLP traces + Redis task keys — the usual "did the data path complete" inspection.

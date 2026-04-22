@@ -178,8 +178,6 @@ Notes on older docs:
 ## Troubleshooting shortcuts
 
 - Current cross-repo troubleshooting index: [`../docs/troubleshooting/README.md`](../docs/troubleshooting/README.md)
-- Local / cluster bootstrap runbook: [`../docs/troubleshooting/e2e-cluster-bootstrap.md`](../docs/troubleshooting/e2e-cluster-bootstrap.md)
-- Latest repair log: [`../docs/troubleshooting/e2e-repair-record-2026-04-20.md`](../docs/troubleshooting/e2e-repair-record-2026-04-20.md)
 
 ## License
 

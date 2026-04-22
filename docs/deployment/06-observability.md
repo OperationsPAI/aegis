@@ -55,4 +55,4 @@ Expected:
 
 ## Storage note
 
-The chart defaults to `persistence.storageType: juicefs`, so observability PVC behavior is entangled with the same JuiceFS assumptions described in [prerequisites.md](./prerequisites.md) and [known-gaps.md](./known-gaps.md).
+The chart defaults to `persistence.storageType: juicefs`, so observability PVC behavior is entangled with the same JuiceFS assumptions described in [prerequisites.md](./prerequisites.md).

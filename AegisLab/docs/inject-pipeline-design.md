@@ -86,8 +86,6 @@ Chaos Mesh CRDs
 - [x] Consumer runtime executes only `guidedcli.BuildInjection(...) -> handler.BatchCreate(...)`
 - [x] FriendlySpec / raw Node compatibility helpers are removed from the main submit path
 
-## Related docs
+## Related
 
-- [`../../docs/troubleshooting/e2e-cluster-bootstrap.md`](../../docs/troubleshooting/e2e-cluster-bootstrap.md)
-- [`../../docs/troubleshooting/e2e-repair-record-2026-04-20.md`](../../docs/troubleshooting/e2e-repair-record-2026-04-20.md)
 - `OperationsPAI/aegis#23`, `#28`, `#36`-`#40`

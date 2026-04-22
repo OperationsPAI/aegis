@@ -272,9 +272,6 @@ Still manual:
 
 ## Related
 
-- `docs/troubleshooting/e2e-cluster-bootstrap.md` — per-layer commands.
-- `docs/troubleshooting/e2e-repair-record-2026-04-21.md` — session
-  where layers 2 and 4 were root-caused and partially code-fixed.
 - `.claude/skills/onboard-benchmark-system/` — workload-side half.
 - `memory/aegislab_e2e_pitfalls.md` — terse pitfalls list.
 - Issue #91 — aegisctl control-plane tooling (mostly landed).

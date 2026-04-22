@@ -36,13 +36,8 @@ AegisLab behavior with `aegisctl` once the environment exists.
 - [`01-kind-cluster.md`](./01-kind-cluster.md) - kind bootstrap notes
 - [`02-chaos-mesh.md`](./02-chaos-mesh.md) - Chaos Mesh install path
 - [`03-microservices.md`](./03-microservices.md) - demo workload install notes
-- [`04-backend.md`](./04-backend.md) - backend-in-cluster notes and overlays
 - [`05-frontend.md`](./05-frontend.md) - frontend deployment notes
 - [`06-observability.md`](./06-observability.md) - observability stacks present in the repo
-- [`07-smoke-test.md`](./07-smoke-test.md) - archived manual smoke checklist; prefer `just test-regression` for the current repo-supported smoke path
-- [`08-aegisctl-chaos.md`](./08-aegisctl-chaos.md) - archived CLI-driven chaos smoke notes; use `AegisLab/docs/aegisctl-cli-spec.md` for the supported validation contract
-- [`09-smoke-run.md`](./09-smoke-run.md) - archived one-off latency experiment, not the canonical operator smoke path
-- [`known-gaps.md`](./known-gaps.md) - environment-specific blockers and caveats
 
 ## Important distinctions
 
