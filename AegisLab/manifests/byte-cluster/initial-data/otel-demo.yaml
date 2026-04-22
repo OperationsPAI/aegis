@@ -40,6 +40,13 @@ opentelemetry-demo:
           image: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox:1.35
           command: ["sh", "-c", "until nc -z -v -w30 kafka 9092; do echo waiting for kafka; sleep 2; done;"]
 
+    frontend-proxy:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 256Mi
+
     flagd:
       imageOverride:
         repository: pair-diag-cn-guangzhou.cr.volces.com/pair/flagd
