@@ -17,8 +17,8 @@ spec:
       serviceAccountName: {{ .Release.Name }}-sa
       initContainers:
         - name: init-etcd-producer-config
-          image: {{ include "helm.image" (dict "imageConfig" .Values.images.etcdctl "global" .Values.global) }}
-          imagePullPolicy: "{{ .Values.images.etcdctl.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.busybox "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.busybox.pullPolicy }}"
           command:
             - sh
             - -c
@@ -26,10 +26,34 @@ spec:
               INIT_KEY="/initialized_producer"
               CONFIG_PREFIX="/rcabench/config/producer"
               CONFIG_YAML_PATH="/initial-config/etcd.yaml"
+              ETCD_ENDPOINT="http://{{ .Release.Name }}-etcd-headless:2379"
               FORCE_INIT="{{ .Values.initialConfig.force }}"
 
-              INIT_VALUE=$(etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 get "$INIT_KEY" --print-value-only 2>/dev/null || echo "")
-              if [ "$INIT_VALUE" = "true" ] && [ "$FORCE_INIT" != "true" ]; then
+              b64enc() {
+                printf '%s' "$1" | base64 | tr -d '\n'
+              }
+
+              etcd_range() {
+                local key_b64
+                key_b64=$(b64enc "$1")
+                wget -qO- \
+                  --header='Content-Type: application/json' \
+                  --post-data="{\"key\":\"${key_b64}\"}" \
+                  "${ETCD_ENDPOINT}/v3/kv/range"
+              }
+
+              etcd_put() {
+                local key_b64 value_b64
+                key_b64=$(b64enc "$1")
+                value_b64=$(b64enc "$2")
+                wget -qO- \
+                  --header='Content-Type: application/json' \
+                  --post-data="{\"key\":\"${key_b64}\",\"value\":\"${value_b64}\"}" \
+                  "${ETCD_ENDPOINT}/v3/kv/put" >/dev/null
+              }
+
+              INIT_RESPONSE=$(etcd_range "$INIT_KEY" 2>/dev/null || echo "")
+              if echo "$INIT_RESPONSE" | grep -q '"value":"dHJ1ZQ=="' && [ "$FORCE_INIT" != "true" ]; then
                 echo "producer config already initialized"
                 exit 0
               fi
@@ -41,9 +65,9 @@ spec:
                   key_name=$(echo "$key_name" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
                   value=$(echo "$value" | sed "s/^[[:space:]]*//; s/[[:space:]]*$//; s/^[\"']//; s/[\"']$//")
                   [ -n "$key_name" ] || continue
-                  etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$CONFIG_PREFIX/$key_name" "$value" || true
+                  etcd_put "$CONFIG_PREFIX/$key_name" "$value" || true
                 done < "$CONFIG_YAML_PATH"
-                etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$INIT_KEY" "true" || true
+                etcd_put "$INIT_KEY" "true" || true
               fi
           volumeMounts:
             - name: etcd-initial-config
@@ -133,8 +157,8 @@ spec:
       serviceAccountName: {{ .Release.Name }}-sa
       initContainers:
         - name: init-etcd-consumer-config
-          image: {{ include "helm.image" (dict "imageConfig" .Values.images.etcdctl "global" .Values.global) }}
-          imagePullPolicy: "{{ .Values.images.etcdctl.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.busybox "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.busybox.pullPolicy }}"
           command:
             - sh
             - -c
@@ -142,10 +166,34 @@ spec:
               INIT_KEY="/initialized_consumer"
               CONFIG_PREFIX="/rcabench/config/consumer"
               CONFIG_YAML_PATH="/initial-config/etcd.yaml"
+              ETCD_ENDPOINT="http://{{ .Release.Name }}-etcd-headless:2379"
               FORCE_INIT="{{ .Values.initialConfig.force }}"
 
-              INIT_VALUE=$(etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 get "$INIT_KEY" --print-value-only 2>/dev/null || echo "")
-              if [ "$INIT_VALUE" = "true" ] && [ "$FORCE_INIT" != "true" ]; then
+              b64enc() {
+                printf '%s' "$1" | base64 | tr -d '\n'
+              }
+
+              etcd_range() {
+                local key_b64
+                key_b64=$(b64enc "$1")
+                wget -qO- \
+                  --header='Content-Type: application/json' \
+                  --post-data="{\"key\":\"${key_b64}\"}" \
+                  "${ETCD_ENDPOINT}/v3/kv/range"
+              }
+
+              etcd_put() {
+                local key_b64 value_b64
+                key_b64=$(b64enc "$1")
+                value_b64=$(b64enc "$2")
+                wget -qO- \
+                  --header='Content-Type: application/json' \
+                  --post-data="{\"key\":\"${key_b64}\",\"value\":\"${value_b64}\"}" \
+                  "${ETCD_ENDPOINT}/v3/kv/put" >/dev/null
+              }
+
+              INIT_RESPONSE=$(etcd_range "$INIT_KEY" 2>/dev/null || echo "")
+              if echo "$INIT_RESPONSE" | grep -q '"value":"dHJ1ZQ=="' && [ "$FORCE_INIT" != "true" ]; then
                 echo "consumer config already initialized"
                 exit 0
               fi
@@ -157,9 +205,9 @@ spec:
                   key_name=$(echo "$key_name" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
                   value=$(echo "$value" | sed "s/^[[:space:]]*//; s/[[:space:]]*$//; s/^[\"']//; s/[\"']$//")
                   [ -n "$key_name" ] || continue
-                  etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$CONFIG_PREFIX/$key_name" "$value" || true
+                  etcd_put "$CONFIG_PREFIX/$key_name" "$value" || true
                 done < "$CONFIG_YAML_PATH"
-                etcdctl --endpoints=http://{{ .Release.Name }}-etcd-headless:2379 put "$INIT_KEY" "true" || true
+                etcd_put "$INIT_KEY" "true" || true
               fi
           volumeMounts:
             - name: etcd-initial-config

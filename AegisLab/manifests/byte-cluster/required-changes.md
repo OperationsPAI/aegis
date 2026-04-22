@@ -5,18 +5,18 @@ This directory is the ByteDance/Volcengine deployment pack derived from the repo
 ## 1. What must change vs. the current repo defaults
 
 - Image sources:
-  - repo defaults still mix `pair-diag-cn-guangzhou.cr.volces.com`, `10.10.10.240`, raw `docker.io`, and external Helm OCI refs
+  - repo defaults still mix `pair-diag-cn-guangzhou.cr.volces.com`, `10.10.10.240`, and external Helm OCI refs
   - this pack now points all locally proven platform and workload images directly at `pair-diag-cn-guangzhou.cr.volces.com/pair/*`
-  - only the still-non-pair `clickhouse_dataset:*` images and the `oci://registry-1.docker.io/opspai` chart repo refs remain on Docker Hub
+  - the remaining `opspai/*` runtime images and OCI chart refs are mirrored to `pair-cn-shanghai.cr.volces.com`
 - Seed data:
-  - `AegisLab/data/initial_data/prod/data.yaml` contains `docker.io/opspai/clickhouse_dataset:*` and `oci://registry-1.docker.io/opspai`
-  - this pack ships patched copies under `initial-data/` so benchmark/runtime jobs no longer pull from raw Docker Hub
+  - upstream prod seed data still points at raw `opspai/clickhouse_dataset:*` and `opspai` OCI chart refs
+  - this pack ships patched copies under `initial-data/` so benchmark/runtime jobs and system chart installs resolve from `pair-cn-shanghai.cr.volces.com/opspai/*`
 - Backend config:
   - the Helm chart did not previously emit a `[database.clickhouse]` block even though datapack and `aegisctl cluster preflight` need it
   - this pack adds chart support for ClickHouse connection settings and points them at `clickstack-clickhouse.monitoring.svc.cluster.local:8123` / database `otel`
 - Image pull secrets:
   - the Helm chart service account did not previously support `imagePullSecrets`
-  - this pack adds that support, but the provided Byte-cluster values no longer require a secret by default because the cluster can pull proven `pair/*` images directly
+  - this pack adds that support, but the current Byte-cluster values do not require an image pull Secret because both `pair/*` and `pair-cn-shanghai.cr.volces.com/opspai/*` are expected to be directly reachable
 - Observability stack:
   - the repo's `cn_mirror/otel-kube-stack.yaml` still carries the old prod-only receivers (`httpcheck/frontend-proxy`, `nginx`, `postgresql`, `redis`), opensearch exporter, and Prometheus jobs that do not help this cluster
   - this pack keeps the kind pipeline shape: daemon collector for filelog/kubeletstats, deployment collector for OTLP + generic pod/endpoints Prometheus scrape + spanmetrics + k8s events
