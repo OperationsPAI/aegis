@@ -15,6 +15,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -339,15 +340,23 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 		if hasRemote {
 			logEntry.Infof("Attempting to install chart from remote repository: %s/%s", item.RepoName, item.ChartName)
 
-			if err := gateway.AddRepo(releaseName, item.RepoName, item.RepoURL); err != nil {
+			isOCI := strings.HasPrefix(item.RepoURL, "oci://")
+			var fullChart string
+			if isOCI {
+				// OCI registries don't expose an index.yaml; skip AddRepo/UpdateRepo
+				// and let installAction.LocateChart pull the OCI reference directly.
+				fullChart = strings.TrimRight(item.RepoURL, "/") + "/" + item.ChartName
+			} else if err := gateway.AddRepo(releaseName, item.RepoName, item.RepoURL); err != nil {
 				logEntry.Warnf("Failed to add repository: %v", err)
 				installErr = err
 			} else if err := gateway.UpdateRepo(releaseName, item.RepoName); err != nil {
 				logEntry.Warnf("Failed to update repository: %v", err)
 				installErr = err
 			} else {
-				fullChart := fmt.Sprintf("%s/%s", item.RepoName, item.ChartName)
+				fullChart = fmt.Sprintf("%s/%s", item.RepoName, item.ChartName)
+			}
 
+			if installErr == nil && fullChart != "" {
 				logrus.WithFields(logrus.Fields{
 					"release_name": releaseName,
 					"chart":        fullChart,

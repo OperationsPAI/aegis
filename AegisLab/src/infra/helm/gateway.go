@@ -17,6 +17,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/getter"
+	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/repo"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/yaml"
@@ -213,6 +214,15 @@ func newRuntime(namespace string) (*cli.EnvSettings, *action.Configuration, erro
 	if err := actionConfig.Init(configFlags, namespace, os.Getenv("HELM_DRIVER"), log.Printf); err != nil {
 		return nil, nil, fmt.Errorf("failed to initialize Helm action configuration: %w", err)
 	}
+	// Required for installing charts from OCI references (oci://...).
+	registryClient, err := registry.NewClient(
+		registry.ClientOptDebug(settings.Debug),
+		registry.ClientOptCredentialsFile(settings.RegistryConfig),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize Helm registry client: %w", err)
+	}
+	actionConfig.RegistryClient = registryClient
 
 	return settings, actionConfig, nil
 }

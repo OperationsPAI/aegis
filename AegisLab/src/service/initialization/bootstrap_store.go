@@ -200,7 +200,7 @@ func (s *bootstrapStore) createUserTeam(userTeam *model.UserTeam) error {
 }
 
 func (s *bootstrapStore) createUserProject(userProject *model.UserProject) error {
-	if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(userProject).Error; err != nil {
+	if err := s.db.Omit("active_user_project").Clauses(clause.OnConflict{DoNothing: true}).Create(userProject).Error; err != nil {
 		return fmt.Errorf("failed to create user-project association: %w", err)
 	}
 	return nil

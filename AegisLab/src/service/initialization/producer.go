@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"aegis/config"
@@ -242,10 +243,16 @@ func initializeContainers(tx *gorm.DB, data *InitialData, userID int) error {
 		}
 
 		if createdContainer.Type == consts.ContainerTypePedestal {
+			valuesPath := filepath.Join(dataPath, fmt.Sprintf("%s.yaml", createdContainer.Name))
+			if _, statErr := os.Stat(valuesPath); errors.Is(statErr, os.ErrNotExist) {
+				// Values file is optional at seed time; operators can push values later via
+				// `aegisctl pedestal chart push` / helm values in etcd dynamic config.
+				continue
+			}
 			if err := container.NewRepository(tx).UploadHelmValueFileFromPath(
 				containerData.Name,
 				containerModel.Versions[0].HelmConfig,
-				filepath.Join(dataPath, fmt.Sprintf("%s.yaml", createdContainer.Name)),
+				valuesPath,
 			); err != nil {
 				return fmt.Errorf("failed to upload helm value file for container %s: %w", containerData.Name, err)
 			}

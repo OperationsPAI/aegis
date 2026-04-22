@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"aegis/consts"
 	"aegis/model"
 
 	"gorm.io/gorm"
@@ -122,7 +123,7 @@ func (r *Repository) ListSystemMetadata(systemName, metadataType string) ([]mode
 // version — the HTTP layer maps that to a 404.
 func (r *Repository) GetPedestalHelmConfigByName(name string) (*model.HelmConfig, *model.ContainerVersion, error) {
 	var container model.Container
-	if err := r.db.Where("name = ? AND type = ? AND status >= 0", name, "pedestal").
+	if err := r.db.Where("name = ? AND type = ? AND status >= 0", name, consts.ContainerTypePedestal).
 		First(&container).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil, nil

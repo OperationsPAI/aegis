@@ -283,7 +283,7 @@ func (r *Repository) assignContainerRole(userID, containerID, roleID int) error 
 		return err
 	}
 
-	if err := r.db.Create(&model.UserContainer{
+	if err := r.db.Omit("active_user_container").Create(&model.UserContainer{
 		UserID:      userID,
 		ContainerID: containerID,
 		RoleID:      roleID,
@@ -320,7 +320,7 @@ func (r *Repository) assignDatasetRole(userID, datasetID, roleID int) error {
 		return err
 	}
 
-	if err := r.db.Create(&model.UserDataset{
+	if err := r.db.Omit("active_user_dataset").Create(&model.UserDataset{
 		UserID:    userID,
 		DatasetID: datasetID,
 		RoleID:    roleID,
@@ -357,7 +357,7 @@ func (r *Repository) assignProjectRole(userID, projectID, roleID int) error {
 		return err
 	}
 
-	if err := r.db.Create(&model.UserProject{
+	if err := r.db.Omit("active_user_project").Create(&model.UserProject{
 		UserID:    userID,
 		ProjectID: projectID,
 		RoleID:    roleID,

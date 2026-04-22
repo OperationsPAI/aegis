@@ -294,6 +294,9 @@ func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chart
 		return chartSource{positional: tgz, version: version}, nil
 
 	case repo != "" && chartName != "":
+		if strings.HasPrefix(repo, "oci://") {
+			return chartSource{positional: buildOCIRef(repo, chartName), version: version}, nil
+		}
 		return chartSource{positional: chartName, repo: repo, version: version}, nil
 
 	case repo != "" || chartName != "":
@@ -321,6 +324,9 @@ func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chart
 		}
 	}
 	if resp.Data.RepoURL != "" && resp.Data.ChartName != "" {
+		if strings.HasPrefix(resp.Data.RepoURL, "oci://") {
+			return chartSource{positional: buildOCIRef(resp.Data.RepoURL, resp.Data.ChartName), version: backendVersion}, nil
+		}
 		return chartSource{positional: resp.Data.ChartName, repo: resp.Data.RepoURL, version: backendVersion}, nil
 	}
 	return chartSource{}, notFoundErrorf("system %q has no installable chart source (no local_path, no repo_url); pass --tgz or --repo/--chart", systemCode)

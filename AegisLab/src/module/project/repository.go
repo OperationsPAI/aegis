@@ -29,7 +29,7 @@ func (r *Repository) createProjectWithOwner(project *model.Project, userID int) 
 		return fmt.Errorf("failed to create project: %w", err)
 	}
 
-	if err := r.db.Create(&model.UserProject{
+	if err := r.db.Omit("active_user_project").Create(&model.UserProject{
 		UserID:    userID,
 		ProjectID: project.ID,
 		RoleID:    role.ID,
