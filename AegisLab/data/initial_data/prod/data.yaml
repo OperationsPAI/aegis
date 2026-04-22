@@ -104,6 +104,17 @@ containers:
             default_value: ob0
             required: true
             overridable: true
+          # Kind profiles ship only OTLP traces+logs via the otel collector;
+          # metrics tables (otel_metrics_*) do not exist and the datapack
+          # builder would fail with UNKNOWN_TABLE. Allow empty parquets so
+          # the pipeline completes on kind.
+          - key: RCABENCH_OPTIONAL_EMPTY_PARQUETS
+            type: 0
+            category: 0
+            value_type: 0
+            default_value: "abnormal_metrics,abnormal_metrics_histogram,abnormal_logs"
+            required: false
+            overridable: true
   - type: 2
     name: sockshop
     is_public: true

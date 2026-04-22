@@ -301,9 +301,27 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 			return
 		}
 
-		parsedAnnotations.benchmark.EnvVars = []dto.ParameterItem{
-			{Key: "NAMESPACE", Value: namespace},
+		// Seeded env vars (from container_version_env_vars) must reach the
+		// BuildDatapack job; the injection-time NAMESPACE override is
+		// appended on top (and wins on key collision below).
+		benchEnvVars, err := container.NewRepository(h.db).ListEnvVarsByVersionID(parsedAnnotations.benchmark.ID)
+		if err != nil {
+			errCtx.Warn(nil, "list benchmark env vars failed", err)
+			benchEnvVars = nil
 		}
+		mergedEnvVars := make([]dto.ParameterItem, 0, len(benchEnvVars)+1)
+		seen := map[string]bool{}
+		nsOverride := dto.ParameterItem{Key: "NAMESPACE", Value: namespace}
+		mergedEnvVars = append(mergedEnvVars, nsOverride)
+		seen[nsOverride.Key] = true
+		for _, ev := range benchEnvVars {
+			if seen[ev.Key] {
+				continue
+			}
+			seen[ev.Key] = true
+			mergedEnvVars = append(mergedEnvVars, ev)
+		}
+		parsedAnnotations.benchmark.EnvVars = mergedEnvVars
 
 		payload := map[string]any{
 			consts.BuildBenchmark:        *parsedAnnotations.benchmark,

@@ -2,6 +2,7 @@ package container
 
 import (
 	"aegis/consts"
+	"aegis/dto"
 	"aegis/model"
 	"errors"
 	"fmt"
@@ -309,6 +310,24 @@ func (r *Repository) listParameterConfigsByKeys(configs []model.ParameterConfig)
 		return nil, fmt.Errorf("failed to list parameter configs by keys: %w", err)
 	}
 	return results, nil
+}
+
+// ListEnvVarsByVersionID is a thin wrapper exposing the seeded env vars for a
+// container_version so the consumer can inject them into downstream Job envs.
+func (r *Repository) ListEnvVarsByVersionID(containerVersionID int) ([]dto.ParameterItem, error) {
+	params, err := r.listContainerVersionEnvVars(nil, containerVersionID)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]dto.ParameterItem, 0, len(params))
+	for _, p := range params {
+		val := ""
+		if p.DefaultValue != nil {
+			val = *p.DefaultValue
+		}
+		items = append(items, dto.ParameterItem{Key: p.Key, Value: val})
+	}
+	return items, nil
 }
 
 func (r *Repository) listContainerVersionEnvVars(keys []string, containerVersionID int) ([]model.ParameterConfig, error) {
