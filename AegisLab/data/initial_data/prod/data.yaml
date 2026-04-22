@@ -5,7 +5,7 @@ containers:
     status: 1
     versions:
       - name: 1.0.0
-        image_ref: pair-diag-cn-guangzhou.cr.volces.com/pair/detector:latest
+        image_ref: docker.io/opspai/detector:drain-optional-20260422
         command: bash /entrypoint.sh
   - type: 0
     name: random
@@ -29,7 +29,7 @@ containers:
     status: 1
     versions:
       - name: 1.0.0
-        image_ref: docker.io/opspai/clickhouse_dataset:sum-optional-20260421
+        image_ref: docker.io/opspai/clickhouse_dataset:drain-optional-20260422
         command: bash /entrypoint.sh
         env_vars:
           - key: NAMESPACE
@@ -106,7 +106,7 @@ containers:
     status: 1
     versions:
       - name: 1.0.0
-        image_ref: docker.io/opspai/clickhouse_dataset:e2e-kind-20260421
+        image_ref: docker.io/opspai/clickhouse_dataset:drain-optional-20260422
         command: bash /entrypoint.sh
         env_vars:
           - key: NAMESPACE
