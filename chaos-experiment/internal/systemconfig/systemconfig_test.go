@@ -467,3 +467,49 @@ func TestRegisterSystemLifecycle(t *testing.T) {
 		t.Fatalf("GetCurrentSystem() = %q after unregister, want %q", GetCurrentSystem(), SystemTrainTicket)
 	}
 }
+
+func TestUpdateSystem(t *testing.T) {
+	const testSystem = SystemType("update-test-system")
+
+	t.Cleanup(func() {
+		_ = UnregisterSystem(testSystem)
+	})
+
+	// UpdateSystem on an unregistered system must error.
+	if err := UpdateSystem(SystemRegistration{Name: testSystem, NsPattern: "x", DisplayName: "X"}); err == nil {
+		t.Fatal("UpdateSystem() on unregistered system should return an error")
+	}
+
+	orig := SystemRegistration{
+		Name:        testSystem,
+		NsPattern:   "^update-test-system\\d+$",
+		DisplayName: "Original",
+		AppLabelKey: "app",
+	}
+	if err := RegisterSystem(orig); err != nil {
+		t.Fatalf("RegisterSystem() error = %v", err)
+	}
+
+	updated := SystemRegistration{
+		Name:        testSystem,
+		NsPattern:   "^uts\\d+$",
+		DisplayName: "Renamed",
+		AppLabelKey: "app.kubernetes.io/name",
+	}
+	if err := UpdateSystem(updated); err != nil {
+		t.Fatalf("UpdateSystem() error = %v", err)
+	}
+
+	got := GetRegistration(testSystem)
+	if got == nil {
+		t.Fatal("GetRegistration() returned nil after update")
+	}
+	if got.NsPattern != updated.NsPattern || got.DisplayName != updated.DisplayName || got.AppLabelKey != updated.AppLabelKey {
+		t.Fatalf("GetRegistration() = %+v, want %+v", got, updated)
+	}
+
+	// Empty name must be rejected.
+	if err := UpdateSystem(SystemRegistration{}); err == nil {
+		t.Fatal("UpdateSystem() with empty name should return an error")
+	}
+}

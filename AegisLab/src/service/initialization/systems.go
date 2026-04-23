@@ -24,21 +24,30 @@ func InitializeSystems(db *gorm.DB) error {
 		}
 		enabled[name] = struct{}{}
 
-		if chaos.IsSystemRegistered(name) {
-			if err := chaos.UnregisterSystem(name); err != nil {
-				logrus.WithError(err).Warnf("Failed to replace registered system %s", name)
-			}
-		}
-		if err := chaos.RegisterSystem(chaos.SystemConfig{
+		sysCfg := chaos.SystemConfig{
 			Name:        name,
 			NsPattern:   cfg.NsPattern,
 			DisplayName: cfg.DisplayName,
 			AppLabelKey: normalizeAppLabelKey(cfg.AppLabelKey),
-		}); err != nil {
-			logrus.WithError(err).Warnf("Failed to register system %s", name)
-			continue
 		}
-		logrus.Infof("Registered system: %s (%s)", name, cfg.DisplayName)
+		// Update in place when already registered so the compile-time
+		// static metadata providers (service endpoints, DB ops, JVM methods)
+		// survive the etcd refresh. Unregister+Register would wipe them,
+		// which breaks guided resolve when system_metadata is empty
+		// (see issue #129).
+		if chaos.IsSystemRegistered(name) {
+			if err := chaos.UpdateSystem(sysCfg); err != nil {
+				logrus.WithError(err).Warnf("Failed to update registered system %s", name)
+				continue
+			}
+			logrus.Infof("Updated system registration: %s (%s)", name, cfg.DisplayName)
+		} else {
+			if err := chaos.RegisterSystem(sysCfg); err != nil {
+				logrus.WithError(err).Warnf("Failed to register system %s", name)
+				continue
+			}
+			logrus.Infof("Registered system: %s (%s)", name, cfg.DisplayName)
+		}
 	}
 
 	// Drop any runtime-only registrations that are no longer enabled in etcd.
