@@ -142,8 +142,14 @@ current stage's selection, and --apply to submit the finalized config.`,
 			MemType:        guidedMemType,
 			BodyType:       guidedBodyType,
 			ReplaceMethod:  guidedReplaceMethod,
-			Apply:          guidedApply,
-			SaveConfig:     effectiveSave,
+			// Apply is intentionally left false for the local guidedcli.Resolve
+			// call below: the aegisctl CLI submits via the backend /inject
+			// endpoint (see submitGuidedApply), and we do not want the local
+			// resolver to run handler.BatchCreate against the caller's
+			// kubeconfig. Doing so would emit misleading "namespaces not found"
+			// errors while the real execution happens server-side (issue #132).
+			Apply:      false,
+			SaveConfig: effectiveSave,
 			ResetConfig:    guidedResetConfig,
 		}
 
@@ -175,6 +181,10 @@ current stage's selection, and --apply to submit the finalized config.`,
 		setInt(&cliCfg.StatusCode, guidedStatusCode, false)
 
 		merged := guidedcli.MergeConfig(fileCfg, cliCfg)
+		// Suppress any Apply=true inherited from the persisted session — see
+		// the Apply comment above; apply happens exclusively via the backend
+		// submit path.
+		merged.Apply = false
 		if guidedNext != "" {
 			current, err := guidedcli.Resolve(ctx, merged)
 			if err != nil {
@@ -186,7 +196,7 @@ current stage's selection, and --apply to submit the finalized config.`,
 			}
 			merged.SaveConfig = effectiveSave
 			merged.ResetConfig = guidedResetConfig
-			merged.Apply = guidedApply
+			merged.Apply = false
 		}
 
 		response, err := guidedcli.Resolve(ctx, merged)
