@@ -24,7 +24,7 @@ submit:
     - - system: tea
         system_type: tea
         namespace: tea0
-        app: auth
+        app: teastore
         chaos_type: PodKill
         duration: 5
 validation:

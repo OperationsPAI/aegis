@@ -24,7 +24,7 @@ submit:
     - - system: hs
         system_type: hs
         namespace: hs0
-        app: frontend-hs0-hotelres
+        app: user
         chaos_type: PodKill
         duration: 1
 validation:
