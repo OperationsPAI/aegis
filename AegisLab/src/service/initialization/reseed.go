@@ -17,6 +17,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // reseedEtcdClient is the minimal etcd surface the reseed engine needs.
@@ -168,6 +169,9 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir 
 	for _, vSeed := range seed.Versions {
 		versionName := vSeed.Name
 		if existingVersion, ok := have[versionName]; ok {
+			if err := backfillContainerVersionEnvVars(db, existingVersion, &vSeed, seed.Name, dryRun, report); err != nil {
+				return err
+			}
 			// Existing row: check helm_config drift but NEVER update the row.
 			// We surface drift in helm_config as a skipped action so operators
 			// can see it; applying a chart/version change requires bumping the
@@ -240,6 +244,95 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir 
 	}
 
 	return nil
+}
+
+func backfillContainerVersionEnvVars(db *gorm.DB, version *model.ContainerVersion, seed *InitialContainerVersion, systemName string, dryRun bool, report *ReseedReport) error {
+	if len(seed.EnvVars) == 0 {
+		return nil
+	}
+
+	var existing []model.ParameterConfig
+	if err := db.Table("parameter_configs").
+		Joins("JOIN container_version_env_vars ON container_version_env_vars.parameter_config_id = parameter_configs.id").
+		Where("container_version_env_vars.container_version_id = ? AND parameter_configs.category = ?", version.ID, consts.ParameterCategoryEnvVars).
+		Find(&existing).Error; err != nil {
+		return fmt.Errorf("list env vars for %s@%s: %w", systemName, version.Name, err)
+	}
+
+	have := make(map[string]struct{}, len(existing))
+	for i := range existing {
+		have[parameterConfigIdentity(&existing[i])] = struct{}{}
+	}
+
+	for _, envSeed := range seed.EnvVars {
+		cfg := envSeed.ConvertToDBParameterConfig()
+		key := parameterConfigIdentity(cfg)
+		if _, ok := have[key]; ok {
+			continue
+		}
+
+		act := ReseedAction{
+			Layer:    "container_version_env_vars",
+			System:   systemName,
+			Key:      fmt.Sprintf("%s@%s:%s", systemName, version.Name, cfg.Key),
+			OldValue: "",
+			NewValue: parameterConfigSummary(cfg),
+			Note:     "backfilled env var on existing container_version",
+		}
+		if dryRun {
+			report.Actions = append(report.Actions, act)
+			continue
+		}
+
+		actualCfg, err := findOrCreateParameterConfig(db, cfg)
+		if err != nil {
+			return fmt.Errorf("resolve env var %s for %s@%s: %w", cfg.Key, systemName, version.Name, err)
+		}
+
+		rel := model.ContainerVersionEnvVar{
+			ContainerVersionID: version.ID,
+			ParameterConfigID:  actualCfg.ID,
+		}
+		if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&rel).Error; err != nil {
+			return fmt.Errorf("link env var %s to %s@%s: %w", cfg.Key, systemName, version.Name, err)
+		}
+
+		act.Applied = true
+		report.Actions = append(report.Actions, act)
+		have[key] = struct{}{}
+	}
+
+	return nil
+}
+
+func findOrCreateParameterConfig(db *gorm.DB, seed *model.ParameterConfig) (*model.ParameterConfig, error) {
+	var existing model.ParameterConfig
+	err := db.Where("config_key = ? AND type = ? AND category = ?", seed.Key, seed.Type, seed.Category).First(&existing).Error
+	switch {
+	case err == nil:
+		return &existing, nil
+	case !errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, err
+	}
+
+	if err := db.Omit("id").Create(seed).Error; err != nil {
+		return nil, err
+	}
+	return seed, nil
+}
+
+func parameterConfigIdentity(cfg *model.ParameterConfig) string {
+	return fmt.Sprintf("%s:%d:%d", cfg.Key, cfg.Type, cfg.Category)
+}
+
+func parameterConfigSummary(cfg *model.ParameterConfig) string {
+	if cfg.TemplateString != nil && *cfg.TemplateString != "" {
+		return fmt.Sprintf("template=%q", *cfg.TemplateString)
+	}
+	if cfg.DefaultValue != nil {
+		return fmt.Sprintf("default=%q", *cfg.DefaultValue)
+	}
+	return "default=<nil>"
 }
 
 // compareHelmConfigDrift is a read-only diff: when the DB already has the
