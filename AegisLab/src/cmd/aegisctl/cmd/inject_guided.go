@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
@@ -46,6 +47,19 @@ var (
 	guidedOutput        string
 	guidedApply         bool
 	guidedSkipStaleCheck bool
+
+	// Issue #138: install-aware guided. --install bootstraps a missing
+	// workload before app discovery so the first guided invocation works on
+	// an empty namespace. Restart on apply is still scheduled by the
+	// backend's RestartPedestal task (default-on); --skip-restart-pedestal
+	// just threads the existing no-op hint through the submit envelope.
+	guidedInstall               bool
+	guidedInstallReadyTimeoutSec int
+	guidedSkipRestartPedestal   bool
+
+	// Test seams: replace with fakes in unit tests.
+	guidedInstallerHook chartInstaller
+	guidedPodListerHook PodLister
 
 	guidedDuration        int
 	guidedMemorySize      int
@@ -181,6 +195,21 @@ current stage's selection, and --apply to submit the finalized config.`,
 		setInt(&cliCfg.StatusCode, guidedStatusCode, false)
 
 		merged := guidedcli.MergeConfig(fileCfg, cliCfg)
+
+		// Issue #138: before any guidedcli.Resolve call (which performs
+		// in-cluster app discovery via list-pods), optionally bootstrap the
+		// target workload via `aegisctl pedestal chart install` when the
+		// namespace is empty. Restart on apply is NOT performed here — it
+		// remains the backend's RestartPedestal task, default-scheduled by
+		// every submit. --install is a one-time bootstrap for the empty
+		// first-run case; repeat runs skip it automatically because pods
+		// already exist.
+		if guidedInstall {
+			if err := bootstrapGuidedInstall(ctx, merged); err != nil {
+				return err
+			}
+		}
+
 		// Suppress any Apply=true inherited from the persisted session — see
 		// the Apply comment above; apply happens exclusively via the backend
 		// submit path.
@@ -267,6 +296,11 @@ func init() {
 	f.BoolVar(&guidedApply, "apply", false, "Finalize the session and attempt to submit")
 	f.BoolVar(&guidedSkipStaleCheck, "skip-stale-check", false, "Skip the pre-submit warning about orphaned PodChaos CRs in the target namespace")
 
+	// Issue #138 flags.
+	f.BoolVar(&guidedInstall, "install", false, "Before app discovery, if --namespace has no pods, shell out to 'aegisctl pedestal chart install <system>' and wait for readiness (requires --system and --namespace)")
+	f.IntVar(&guidedInstallReadyTimeoutSec, "install-ready-timeout", 600, "Seconds --install waits for pods in the target namespace to reach Ready before continuing with discovery")
+	f.BoolVar(&guidedSkipRestartPedestal, "skip-restart-pedestal", false, "On --apply, hint the backend's RestartPedestal task to skip the helm install when the release is already healthy (task still runs; only the install step short-circuits)")
+
 	// --apply envelope flags (mirror the injection YAML contract)
 	f.StringVar(&guidedApplyPedestalName, "pedestal-name", "", "Pedestal container name (required with --apply)")
 	f.StringVar(&guidedApplyPedestalTag, "pedestal-tag", "", "Pedestal container version/tag (required with --apply)")
@@ -347,6 +381,9 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 		"pre_duration": opts.PreDuration,
 		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
 	}
+	if guidedSkipRestartPedestal {
+		envelope["skip_restart_pedestal"] = true
+	}
 	if flagDryRun {
 		output.PrintJSON(map[string]any{
 			"dry_run":    true,
@@ -413,6 +450,9 @@ func submitGuidedApplyWithOptions(projectName string, cfg guidedcli.GuidedConfig
 		"pre_duration": opts.PreDuration,
 		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
 	}
+	if guidedSkipRestartPedestal {
+		envelope["skip_restart_pedestal"] = true
+	}
 
 	c := newClient()
 	var resp client.APIResponse[injectSubmitResponse]
@@ -427,4 +467,66 @@ func resolveProjectIDForApply(projectName string) (int, error) {
 		return resolveProjectIDByName()
 	}
 	return newResolver().ProjectID(projectName)
+}
+
+// bootstrapGuidedInstall is the --install path: on an empty target namespace,
+// shell out to `aegisctl pedestal chart install <system> --namespace <ns>` and
+// wait for readiness before returning. If pods already exist it is a no-op,
+// so repeated guided invocations stay cheap. It reuses the regression-preflight
+// installer + pod-lister surfaces verbatim to avoid a second install path.
+func bootstrapGuidedInstall(ctx context.Context, cfg guidedcli.GuidedConfig) error {
+	if cfg.System == "" || cfg.Namespace == "" {
+		return usageErrorf("--install requires both --system and --namespace so we know what chart to install and where")
+	}
+	lister := guidedPodListerHook
+	if lister == nil {
+		l, err := newLivePodLister()
+		if err != nil {
+			return fmt.Errorf("--install: build k8s client: %w", err)
+		}
+		lister = l
+	}
+
+	// Skip install if anything is already present in the namespace — guided
+	// discovery will pick up whatever is there. This makes --install
+	// idempotent across repeated invocations.
+	if n, err := lister.ListPods(ctx, cfg.Namespace, ""); err != nil {
+		return fmt.Errorf("--install: probe namespace %q: %w", cfg.Namespace, err)
+	} else if n > 0 {
+		return nil
+	}
+
+	installer := guidedInstallerHook
+	if installer == nil {
+		installer = defaultChartInstaller
+	}
+	output.PrintInfo(fmt.Sprintf("--install: namespace %q is empty; installing chart for system %q", cfg.Namespace, cfg.System))
+	if err := installer(ctx, cfg.System, cfg.Namespace); err != nil {
+		return fmt.Errorf("--install: chart install failed for system=%s namespace=%s: %w", cfg.System, cfg.Namespace, err)
+	}
+
+	timeoutSec := guidedInstallReadyTimeoutSec
+	if timeoutSec <= 0 {
+		timeoutSec = 600
+	}
+	deadline := time.Now().Add(time.Duration(timeoutSec) * time.Second)
+	for {
+		total, ready, err := lister.CountReadyPods(ctx, cfg.Namespace, "")
+		if err != nil {
+			return fmt.Errorf("--install: wait-for-ready ns=%s: %w", cfg.Namespace, err)
+		}
+		if total > 0 && ready == total {
+			output.PrintInfo(fmt.Sprintf("--install: ns=%s ready (%d/%d)", cfg.Namespace, ready, total))
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("--install: timed out after %ds waiting for pods in ns=%s (ready %d/%d); bump --install-ready-timeout or inspect with `kubectl -n %s get pods`",
+				timeoutSec, cfg.Namespace, ready, total, cfg.Namespace)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
