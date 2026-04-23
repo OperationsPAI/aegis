@@ -118,7 +118,7 @@ The frontend is exposed as `NodePort 32180` by default.
 If you want a ready namespace before driving `aegisctl inject guided`, install the benchmark workload directly. To stay aligned with the seed data that AegisLab registers, use the mirrored `opspai` OCI chart:
 
 ```bash
-helm upgrade --install otel-demo0 oci://pair-cn-shanghai.cr.volces.com/opspai/otel-demo-aegis   --version 0.1.2   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
+helm upgrade --install otel-demo0 oci://pair-cn-shanghai.cr.volces.com/opspai/otel-demo-aegis   --version 0.1.3   --namespace otel-demo0   --create-namespace   -f AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml   --wait --timeout 15m
 ```
 
 Verify:
@@ -138,6 +138,7 @@ Notes:
 - this pack keeps the app images on `pair-diag-cn-guangzhou.cr.volces.com/pair/*`
 - the in-namespace collector stays on `pair-cn-shanghai.cr.volces.com/opspai/otel-demo-opentelemetry-collector-contrib:0.135.0`
 - `frontend-proxy` now requests `128Mi` and limits at `256Mi`; without this override it was OOM-killed repeatedly on the Byte cluster
+- `flagd-ui` now requests `128Mi` and limits at `512Mi`; without this bump the sidecar was OOM-killed during `aegisctl pedestal chart install`
 
 ## 6.1 Optional: pre-install ts namespaces
 
@@ -224,7 +225,7 @@ kubectl get pods -n otel-demo0
 kubectl get events -n otel-demo0 --sort-by=.lastTimestamp | tail -n 40
 ```
 
-For the Byte cluster `otel-demo` smoke path, use the repo-tracked regression case in `AegisLab/regression/otel-demo-guided.yaml`. It now tracks chart version `0.1.2`. If the backend dedupes the canonical spec, run a temporary copy with a changed batch label and/or guided spec:
+For the Byte cluster `otel-demo` smoke path, use the repo-tracked regression case in `AegisLab/regression/otel-demo-guided.yaml`. It now tracks chart version `0.1.3`. If the backend dedupes the canonical spec, run a temporary copy with a changed batch label and/or guided spec:
 
 ```bash
 cd AegisLab
@@ -233,7 +234,7 @@ AEGIS_SERVER=http://127.0.0.1:28084 \
 ./bin/aegisctl regression run otel-demo-guided --skip-preflight --output json
 
 cp regression/otel-demo-guided.yaml /tmp/otel-demo-guided-byte-verify.yaml
-sed -i 's/value: wrapper-0.1.2-verify/value: byte-otel-demo-verify-20260423/' /tmp/otel-demo-guided-byte-verify.yaml
+sed -i 's/value: wrapper-0.1.3-verify/value: byte-otel-demo-verify-20260423/' /tmp/otel-demo-guided-byte-verify.yaml
 sed -i 's/value: local/value: byte/' /tmp/otel-demo-guided-byte-verify.yaml
 sed -i 's/app: frontend/app: cart/' /tmp/otel-demo-guided-byte-verify.yaml
 sed -i '0,/pre_duration: 1/s//pre_duration: 2/' /tmp/otel-demo-guided-byte-verify.yaml
@@ -250,6 +251,7 @@ Observed behavior on April 23, 2026:
 - `frontend-proxy` stayed `Running` after the memory override
 - a fresh regression run passed on trace `79c12836-f9a9-457f-88ae-7224683b7f00`
 - the final event was `datapack.no_anomaly`
+- after reseeding `otel-demo` to `0.1.3`, `aegisctl pedestal chart install otel-demo --namespace otel-demo13 --wait` completed successfully and every pod in `otel-demo13` reached `Running`
 
 For the Byte cluster `ts` smoke path, run the repo-tracked regression case against `ts0`. If `ts0` was already used recently and gets deduped, make a temporary copy and change at least one guided spec field:
 
