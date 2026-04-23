@@ -226,6 +226,63 @@ done
 Expected: `Completed` in roughly 4 minutes (pre=1min + duration=2min +
 build+run).
 
+### 7b. Regression tests per benchmark
+
+Once the smoke submit above completes, the tracked regression cases in
+`AegisLab/regression/*.yaml` are the canonical way to re-verify each
+benchmark. `--auto-install` makes aegisctl install the chart into the
+pedestal namespace if it isn't there yet.
+
+```bash
+# Run all shipped cases (one at a time — they share the aegis runner).
+for case in otel-demo-guided hotelreservation-guided socialnetwork-guided \
+            mediamicroservices-guided teastore-guided ob-guided \
+            sockshop-guided; do
+  /tmp/aegisctl regression run "$case" \
+    --cases-dir AegisLab/regression --auto-install --output json || break
+done
+```
+
+Benchmark-specific prereqs the runner does NOT auto-handle:
+
+| Benchmark | Extra step before first run | Why |
+|---|---|---|
+| `sockshop` | `helm repo add coherence https://oracle.github.io/coherence-operator/charts && helm upgrade -i coherence-operator coherence/coherence-operator -n coherence --create-namespace --wait` | Coherence CRs don't render without the operator. |
+| `teastore` | none | Jaeger-client-java bridge is inside the chart. |
+| `hs`/`sn`/`mm` | none | `dsb-wrk2` loader + Jaeger bridge are inside each chart. |
+
+The sockshop case additionally needs two chart-value overrides in the
+aegis seed because the upstream chart hardcodes
+`monitoring/opentelemetry-kube-stack` for the OTel injector — the kind
+profile puts both the Instrumentation CR and the collector in the
+`otel` namespace instead. These are now shipped in
+`AegisLab/data/initial_data/prod/data.yaml` under sockshop's
+`helm_config.values`:
+
+- `otel.instrumentation=otel/otel-kube-stack`
+- `otel.collectorEndpoint=http://otel-kube-stack-deployment-collector.otel:4317`
+
+Without these, BuildDatapack fails with
+`Parquet file has no data rows: abnormal_traces.parquet` because the
+OTel operator webhook silently skips injection when the Instrumentation
+CR's namespace/name doesn't resolve.
+
+If the chart was installed with stale values (e.g. the run raced the
+`aegisctl system reseed` that propagates data.yaml drift), uninstall
+and let `--auto-install` retry:
+
+```bash
+helm uninstall sockshop0 -n sockshop0
+/tmp/aegisctl regression run sockshop-guided \
+  --cases-dir AegisLab/regression --auto-install
+```
+
+`RunAlgorithm` uses `docker.io/opspai/detector` (public) by default;
+the `random` and `traceback` algos in the aegis seed point at a
+private Volces CN registry (`pair-diag-cn-guangzhou.cr.volces.com`)
+and will hang on `Pulling` from overseas until configured. Swap to
+`detector` in the regression YAML if that registry isn't reachable.
+
 ## 8. If a previous trace failed, clear the namespace lock
 
 rcabench holds a per-namespace lock in redis; a failed trace does not
