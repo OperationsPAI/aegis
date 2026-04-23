@@ -1,0 +1,198 @@
+name: Build auxiliary images
+
+# Builds and publishes helper/init images that live under AegisLab/images/<name>/.
+# Each subdir is a self-contained Dockerfile context. New images = add a matrix
+# entry below (dir + image repo name) — no other wiring needed.
+#
+# Trigger model:
+#   - push to main touching AegisLab/images/** → build and push
+#       tags: :latest  +  :<git-sha-7>
+#   - PR to main touching AegisLab/images/**   → build only (no push)
+#   - manual workflow_dispatch                 → build and push :<git-sha-7>
+#
+# Auth: reuses the same org-level Docker Hub config as release-docker.yml
+#   vars.DOCKERHUB_REGISTRY  (e.g. docker.io)
+#   vars.DOCKERHUB_USERNAME
+#   secrets.DOCKERHUB_PASSWORD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'AegisLab/images/**'
+      - '.github/workflows/images-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'AegisLab/images/**'
+      - '.github/workflows/images-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  detect:
+    name: Detect changed images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+      any: ${{ steps.set.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: set
+        name: Build matrix of images to process
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # All registered images: "dir:image-repo".
+          # Add a new line here to onboard a new image.
+          declare -A IMAGES=(
+            [init-helm-charts]=opspai/init-helm-charts
+          )
+
+          # Decide which images changed.
+          changed_all=0
+          case "$EVENT" in
+            workflow_dispatch)
+              changed_all=1
+              ;;
+            pull_request)
+              git fetch --no-tags --depth=1 origin "$BASE" >/dev/null 2>&1 || true
+              mapfile -t files < <(git diff --name-only "$BASE" "$PR_HEAD")
+              ;;
+            push)
+              if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+                changed_all=1
+              else
+                mapfile -t files < <(git diff --name-only "$BEFORE" "$HEAD")
+              fi
+              ;;
+          esac
+
+          # If the workflow file itself changed, rebuild everything as a safety net.
+          if [ "$changed_all" -eq 0 ]; then
+            for f in "${files[@]:-}"; do
+              if [ "$f" = ".github/workflows/images-build.yml" ]; then
+                changed_all=1
+                break
+              fi
+            done
+          fi
+
+          included=()
+          for dir in "${!IMAGES[@]}"; do
+            repo="${IMAGES[$dir]}"
+            if [ "$changed_all" -eq 1 ]; then
+              included+=("$dir|$repo")
+              continue
+            fi
+            for f in "${files[@]:-}"; do
+              case "$f" in
+                AegisLab/images/$dir/*)
+                  included+=("$dir|$repo")
+                  break
+                  ;;
+              esac
+            done
+          done
+
+          # Emit JSON matrix.
+          if [ "${#included[@]}" -eq 0 ]; then
+            echo "any=false" >> "$GITHUB_OUTPUT"
+            echo "matrix={\"include\":[]}" >> "$GITHUB_OUTPUT"
+            echo "No image dirs changed."
+            exit 0
+          fi
+
+          json='{"include":['
+          first=1
+          for entry in "${included[@]}"; do
+            dir="${entry%%|*}"
+            repo="${entry##*|}"
+            [ $first -eq 1 ] || json+=','
+            first=0
+            json+="{\"dir\":\"$dir\",\"image\":\"$repo\"}"
+          done
+          json+=']}'
+
+          echo "any=true" >> "$GITHUB_OUTPUT"
+          echo "matrix=$json" >> "$GITHUB_OUTPUT"
+          echo "Matrix: $json"
+
+  build:
+    name: ${{ matrix.dir }}
+    needs: detect
+    if: needs.detect.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute tags
+        id: tags
+        env:
+          REGISTRY: ${{ vars.DOCKERHUB_REGISTRY }}
+          IMAGE: ${{ matrix.image }}
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          short="${SHA:0:7}"
+          full="${REGISTRY}/${IMAGE}"
+          tags="${full}:${short}"
+          push=false
+          case "$EVENT" in
+            push|workflow_dispatch)
+              push=true
+              if [ "$EVENT" = "push" ]; then
+                tags="${tags}"$'\n'"${full}:latest"
+              fi
+              ;;
+            pull_request)
+              push=false
+              ;;
+          esac
+          {
+            echo "push=$push"
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Login to Docker Hub
+        if: steps.tags.outputs.push == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.DOCKERHUB_REGISTRY }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: AegisLab/images/${{ matrix.dir }}
+          file: AegisLab/images/${{ matrix.dir }}/Dockerfile
+          # amd64-only: Dockerfile pins helm-linux-amd64 and the published
+          # :latest on Docker Hub is also amd64-only. Add arm64 here + a
+          # dynamic HELM arch only if a real arm64 target shows up.
+          platforms: linux/amd64
+          push: ${{ steps.tags.outputs.push }}
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.dir }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.dir }}
