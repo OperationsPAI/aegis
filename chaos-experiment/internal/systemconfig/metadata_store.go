@@ -333,12 +333,11 @@ func (m *metadataStoreRouter) listInternalServices(system SystemType) []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	if provider := m.serviceEndpoints[system]; provider != nil {
-		names := append([]string(nil), provider.GetServiceNames()...)
-		sort.Strings(names)
-		return names
-	}
-
+	// Always union every metadata category. The previous fast-path returned only
+	// serviceEndpoints[system] when registered, silently hiding services that
+	// only appear in grpcoperations / databaseoperations / javaclassmethods —
+	// e.g. hs/sn/media leaf services whose ClickHouse traces only carried
+	// Server-kind spans.
 	serviceSet := make(map[string]struct{})
 	addNames := func(provider MetadataProvider) {
 		if provider == nil {

@@ -9,9 +9,11 @@ import (
 )
 
 // GetInjectableAppLabels returns the app labels used by guided app-level chaos.
-// This intentionally filters the namespace pod labels down to services that can
-// act as network sources so AppIdx stays consistent between guided resolution
-// and later handler-side CRD creation / groundtruth lookup.
+// The allowlist is the union of every service the system has metadata for
+// (service-endpoints, gRPC operations, database operations, JVM class methods,
+// runtime mutator targets). Limiting it to network-pair Sources used to drop
+// every leaf service whose recorded spans were Server-kind only — even though
+// PodKill / PodFailure / CPUStress legitimately target those pods.
 func GetInjectableAppLabels(ctx context.Context, system systemconfig.SystemType, namespace string) ([]string, error) {
 	labelKey := systemconfig.GetAppLabelKey(system)
 	labels, err := client.GetLabels(ctx, namespace, labelKey)
@@ -35,7 +37,7 @@ func GetInjectableAppLabels(ctx context.Context, system systemconfig.SystemType,
 }
 
 func filterInjectableServiceLabels(system systemconfig.SystemType, labels []string) []string {
-	allowed := injectableSourceServices(system)
+	allowed := injectableServices(system)
 	if len(allowed) == 0 {
 		return labels
 	}
@@ -51,17 +53,19 @@ func filterInjectableServiceLabels(system systemconfig.SystemType, labels []stri
 	return result
 }
 
-func injectableSourceServices(system systemconfig.SystemType) map[string]bool {
-	pairs, err := systemconfig.GetMetadataStore().GetNetworkPairs(string(system))
-	if err != nil || len(pairs) == 0 {
+// injectableServices returns every service the system has metadata for, in any
+// metadata category. Used as the allowlist for app-level chaos.
+func injectableServices(system systemconfig.SystemType) map[string]bool {
+	names, err := systemconfig.GetMetadataStore().GetAllServiceNames(string(system))
+	if err != nil || len(names) == 0 {
 		return nil
 	}
-
-	allowed := make(map[string]bool, len(pairs))
-	for _, pair := range pairs {
-		if pair.Source != "" {
-			allowed[pair.Source] = true
+	allowed := make(map[string]bool, len(names))
+	for _, name := range names {
+		if name != "" {
+			allowed[name] = true
 		}
 	}
 	return allowed
 }
+
