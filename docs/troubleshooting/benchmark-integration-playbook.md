@@ -250,17 +250,29 @@ items are covered above.
 
 ### `ss` — SockShop (Coherence/Helidon Java)
 
+- **Chart + images are now self-hosted in the fork** (same pattern as
+  hs/sn/media/teastore): chart at
+  `https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample/`
+  (repo `sockshop-lgu`, chart `sockshop`, ≥ `1.1.1`); images at
+  `docker.io/opspai/ss-{carts,catalog,orders,payment,shipping,users,frontend,loadgen}`
+  tagged `YYYYMMDD-<sha>` + `latest`. The previous
+  `opspai/sockshop-aegis` wrapper is retired.
 - **Coherence pods don't inherit `app` label.** Coherence Operator reads
-  `spec.labels` from the CR, not `metadata.labels`. Fix: patch each
-  `Coherence` CR template in the wrapper to also include `spec.labels`
-  with `{app: <name>}`. Bumped wrapper 0.1.0 → 0.1.1.
-- **Prerequisite: `coherence-operator`.** `helm repo add coherence …`
-  + `helm install operator coherence/coherence-operator` by hand before
-  installing sockshop-aegis.
+  `spec.labels` from the CR, not `metadata.labels`. Fix baked into the
+  chart since `1.1.1`: each `Coherence` CR template emits `spec.labels`
+  with `{app: <name>}`. Without this, aegisctl preflight fails with
+  `namespace sockshop0 has no pods matching app=carts`.
+- **Prerequisite: `coherence-operator`.** `helm repo add coherence
+  https://oracle.github.io/coherence-operator/charts` +
+  `helm install coherence-operator coherence/coherence-operator` by
+  hand before the first chart install. (Seed has this wired as a
+  `prerequisites` entry for the system, reconciled via
+  `aegisctl system reconcile-prereqs --name sockshop`.)
 - **No tracing bridge** — Coherence MP emits Prometheus metrics only.
   Needs `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the bench container.
-- Per-service Jib builds: `opspai/ss-{carts,catalog,orders,payment,
-  shipping,users}:2.12.3` + `opspai/ss-frontend:propagator`.
+- **Frontend is Node.js**, vendored into the fork at `frontend/` from
+  `YifanYang6/front-end@64dff7d` so the fork builds a single `ss-frontend`
+  image in its own CI. Provenance + re-sync in `frontend/PROVENANCE.md`.
 
 ### `tea` — TeaStore (Descartes Java)
 
