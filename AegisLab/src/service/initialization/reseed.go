@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"aegis/consts"
 	etcd "aegis/infra/etcd"
+	containerrepo "aegis/module/container"
 	"aegis/model"
 	"aegis/service/common"
 
@@ -92,11 +94,12 @@ func ReseedFromDataFile(ctx context.Context, db *gorm.DB, etcdGw reseedEtcdClien
 	}
 
 	// --- Containers / ContainerVersions / HelmConfigs ----------------------
+	valuesDir := filepath.Dir(req.DataPath)
 	for _, containerData := range data.Containers {
 		if req.SystemName != "" && containerData.Name != req.SystemName {
 			continue
 		}
-		if err := reseedContainerVersions(db, &containerData, req.DryRun, report); err != nil {
+		if err := reseedContainerVersions(db, &containerData, valuesDir, req.DryRun, report); err != nil {
 			return report, fmt.Errorf("reseed container %s: %w", containerData.Name, err)
 		}
 	}
@@ -138,7 +141,7 @@ func configBelongsToSystem(key, system string) bool {
 // against the DB and INSERTs any missing version row. Existing (container_id,
 // version_name) pairs are never UPDATEd — that is the explicit contract: seed
 // is additive for historical versions.
-func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, dryRun bool, report *ReseedReport) error {
+func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir string, dryRun bool, report *ReseedReport) error {
 	// Look up container row by name. If absent, skip — a brand-new system
 	// should go through `aegisctl system register` / InitializeProducer,
 	// not reseed, which is for bumping already-seeded systems.
@@ -200,7 +203,10 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, dryRun boo
 		// non-pedestal containers; pedestal rows have empty image fields
 		// which is also correct.
 		row.ImageRef = vSeed.ImageRef
-		if err := db.Create(row).Error; err != nil {
+		// MySQL computes active_version_key as a generated column. Reseed only
+		// needs to insert the user-visible version fields, so omit the generated
+		// column on insert instead of sending the zero-value back to MySQL.
+		if err := db.Omit("active_version_key").Create(row).Error; err != nil {
 			return fmt.Errorf("insert container_version %s@%s: %w", seed.Name, versionName, err)
 		}
 		if vSeed.HelmConfig != nil {
@@ -208,6 +214,14 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, dryRun boo
 			helm.ContainerVersionID = row.ID
 			if err := db.Create(helm).Error; err != nil {
 				return fmt.Errorf("insert helm_config for %s@%s: %w", seed.Name, versionName, err)
+			}
+			valuesPath := filepath.Join(valuesDir, fmt.Sprintf("%s.yaml", seed.Name))
+			if _, statErr := os.Stat(valuesPath); statErr == nil {
+				if err := containerrepo.NewRepository(db).UploadHelmValueFileFromPath(seed.Name, helm, valuesPath); err != nil {
+					return fmt.Errorf("upload helm value file for %s@%s: %w", seed.Name, versionName, err)
+				}
+			} else if !errors.Is(statErr, os.ErrNotExist) {
+				return fmt.Errorf("stat helm value file for %s@%s: %w", seed.Name, versionName, statErr)
 			}
 			hact := ReseedAction{
 				Layer:   "helm_configs",
