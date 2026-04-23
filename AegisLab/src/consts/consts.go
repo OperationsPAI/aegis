@@ -321,6 +321,7 @@ const (
 	RestartIntarval      = "interval"
 	RestartFaultDuration = "fault_duration"
 	RestartInjectPayload = "inject_payload"
+	RestartSkipInstall   = "skip_install"
 
 	InjectBenchmark     = "benchmark_version"
 	InjectPreDuration   = "pre_duration"

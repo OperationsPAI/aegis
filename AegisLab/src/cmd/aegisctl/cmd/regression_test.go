@@ -29,6 +29,14 @@ func (f *fakePodLister) ListPods(_ context.Context, namespace, selector string) 
 	return f.byNSApp[key], nil
 }
 
+func (f *fakePodLister) CountReadyPods(_ context.Context, namespace, selector string) (int, int, error) {
+	if f.err != nil {
+		return 0, 0, f.err
+	}
+	n := f.byNSApp[namespace+"|"+selector]
+	return n, n, nil
+}
+
 func makePreflightCase() regressionCase {
 	return regressionCase{
 		Name:        "preflight-sample",
@@ -275,6 +283,9 @@ func TestRegressionPreflight_AutoInstallInvokesInstaller(t *testing.T) {
 	var installed []string
 	installer := func(_ context.Context, system, namespace string) error {
 		installed = append(installed, system+"/"+namespace)
+		// Simulate the chart coming up Ready so wait-for-ready terminates.
+		lister.byNSApp["mm0|app=user-service"] = 1
+		lister.byNSApp["mm0|app=compose-post-service"] = 1
 		return nil
 	}
 	oldAuto := regressionAutoInstall
