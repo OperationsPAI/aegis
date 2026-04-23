@@ -169,7 +169,7 @@ func resolveSystems(cfg GuidedConfig) *GuidedResponse {
 }
 
 func resolveApps(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (*GuidedResponse, error) {
-	apps, err := safeAppLabels(cfg.Namespace, systemType)
+	apps, err := safeAppLabels(ctx, cfg.Namespace, systemType)
 	if err != nil {
 		return nil, err
 	}

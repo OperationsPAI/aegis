@@ -438,7 +438,7 @@ func getValueRange(field reflect.StructField, rootNode *Node) (int, int, error) 
 
 		switch field.Name {
 		case keyApp:
-			labels, err := systemCache.GetAllAppLabels(ctx, namespace, systemconfig.GetAppLabelKey(system))
+			labels, err := resourcelookup.GetInjectableAppLabels(ctx, system, namespace)
 			if err != nil || len(labels) == 0 {
 				return 0, 0, fmt.Errorf("failed to get labels: %w", err)
 			}
