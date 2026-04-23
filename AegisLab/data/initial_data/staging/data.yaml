@@ -119,6 +119,25 @@ containers:
           chart_name: sockshop
           repo_name: sockshop-lgu
           repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
+          # Chart hardcodes aegis-compatible defaults pointing at
+          # `monitoring/opentelemetry-kube-stack`. This cluster layout puts
+          # the Instrumentation CR and collector in the `otel` namespace,
+          # so override both before install — otherwise the OTel operator
+          # webhook silently skips auto-inject and BuildDatapack fails with
+          # an empty `abnormal_traces.parquet`.
+          values:
+            - key: otel.instrumentation
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel/otel-kube-stack
+              overridable: true
+            - key: otel.collectorEndpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://otel-kube-stack-deployment-collector.otel:4317
+              overridable: true
           status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be

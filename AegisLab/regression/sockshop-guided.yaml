@@ -24,7 +24,7 @@ submit:
         namespace: sockshop0
         app: carts
         chaos_type: PodKill
-        duration: 1
+        duration: 5
 validation:
   timeout_seconds: 3000
   min_events: 6
