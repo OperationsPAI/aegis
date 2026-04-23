@@ -4,7 +4,7 @@ project_name: pair_diagnosis
 submit:
   pedestal:
     name: hs
-    version: "0.1.0"
+    version: "0.1.1"
   benchmark:
     name: clickhouse
     version: "1.0.0"

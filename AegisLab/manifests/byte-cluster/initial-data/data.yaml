@@ -133,11 +133,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      - name: 0.1.1
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
-          version: 0.1.0
+          version: 0.1.1
           chart_name: hotel-reservation
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -166,11 +166,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      - name: 0.1.1
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
-          version: 0.1.0
+          version: 0.1.1
           chart_name: social-network
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -199,11 +199,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      - name: 0.1.1
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
-          version: 0.1.0
+          version: 0.1.1
           chart_name: media-microservices
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
