@@ -39,6 +39,14 @@ func (f *fakeSyncer) Register(cfg chaos.SystemConfig) error {
 	return nil
 }
 
+func (f *fakeSyncer) Update(cfg chaos.SystemConfig) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.registered[cfg.Name] = cfg
+	f.events = append(f.events, "update:"+cfg.Name+":"+cfg.NsPattern+":"+cfg.AppLabelKey)
+	return nil
+}
+
 func (f *fakeSyncer) Unregister(name string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -175,8 +183,16 @@ func TestChaosSystemHandlerReRegistersOnNsPatternChange(t *testing.T) {
 		t.Fatalf("ns_pattern reconcile: %v", err)
 	}
 	last := fs.lastEvent()
-	if !strings.HasPrefix(last, "register:ts:^trainticket") {
-		t.Fatalf("last event = %q, want register:ts:^trainticket...", last)
+	// Re-registration must happen as an in-place Update so attached metadata
+	// providers survive (issue #129). A plain register: event would mean we
+	// regressed to Unregister+Register and wiped the providers.
+	if !strings.HasPrefix(last, "update:ts:^trainticket") {
+		t.Fatalf("last event = %q, want update:ts:^trainticket...", last)
+	}
+	for _, ev := range fs.events {
+		if strings.HasPrefix(ev, "unregister:ts") {
+			t.Fatalf("unexpected unregister during pattern update: events=%v", fs.events)
+		}
 	}
 }
 

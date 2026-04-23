@@ -95,6 +95,7 @@ var registrySyncer chaosRegistrySyncer = defaultChaosRegistrySyncer{}
 type chaosRegistrySyncer interface {
 	IsRegistered(name string) bool
 	Register(cfg chaos.SystemConfig) error
+	Update(cfg chaos.SystemConfig) error
 	Unregister(name string) error
 }
 
@@ -106,6 +107,10 @@ func (defaultChaosRegistrySyncer) IsRegistered(name string) bool {
 
 func (defaultChaosRegistrySyncer) Register(cfg chaos.SystemConfig) error {
 	return chaos.RegisterSystem(cfg)
+}
+
+func (defaultChaosRegistrySyncer) Update(cfg chaos.SystemConfig) error {
+	return chaos.UpdateSystem(cfg)
 }
 
 func (defaultChaosRegistrySyncer) Unregister(name string) error {
@@ -197,23 +202,29 @@ func (h *chaosSystemHandler) syncRegistry(name string) error {
 		return nil
 	}
 
-	// Always re-register so NsPattern / AppLabelKey / DisplayName edits take
-	// effect. RegisterSystem is cheap and idempotent after an unregister.
-	if registrySyncer.IsRegistered(name) {
-		if err := registrySyncer.Unregister(name); err != nil {
-			return fmt.Errorf("unregister %s before re-register: %w", name, err)
-		}
-	}
 	appLabelKey := cfg.AppLabelKey
 	if appLabelKey == "" {
 		appLabelKey = "app"
 	}
-	if err := registrySyncer.Register(chaos.SystemConfig{
+	sysCfg := chaos.SystemConfig{
 		Name:        name,
 		NsPattern:   cfg.NsPattern,
 		DisplayName: cfg.DisplayName,
 		AppLabelKey: appLabelKey,
-	}); err != nil {
+	}
+	// Update in place when the system is already registered; this preserves
+	// the compile-time static metadata providers that Unregister+Register
+	// would drop (see issue #129). Falls back to Register for brand-new
+	// systems that were added at runtime via etcd.
+	if registrySyncer.IsRegistered(name) {
+		if err := registrySyncer.Update(sysCfg); err != nil {
+			return fmt.Errorf("update %s: %w", name, err)
+		}
+		logrus.Infof("Updated system %s (ns_pattern=%q, app_label=%q)",
+			name, cfg.NsPattern, appLabelKey)
+		return nil
+	}
+	if err := registrySyncer.Register(sysCfg); err != nil {
 		return fmt.Errorf("register %s: %w", name, err)
 	}
 	logrus.Infof("Registered system %s (ns_pattern=%q, app_label=%q)",

@@ -102,6 +102,27 @@ func RegisterSystem(reg SystemRegistration) error {
 	return nil
 }
 
+// UpdateSystem updates the registration fields (NsPattern/DisplayName/AppLabelKey)
+// of an already-registered system in place. Unlike UnregisterSystem + RegisterSystem,
+// this does NOT touch any metadata providers attached to the system, so the
+// compile-time static service-endpoint / database / JVM-method providers stay
+// wired up for callers that rely on internal-data fallback.
+func UpdateSystem(reg SystemRegistration) error {
+	if reg.Name == "" {
+		return fmt.Errorf("system name must not be empty")
+	}
+
+	registeredSystemsMu.Lock()
+	defer registeredSystemsMu.Unlock()
+
+	if _, exists := registeredSystems[reg.Name]; !exists {
+		return fmt.Errorf("system %s is not registered", reg.Name)
+	}
+
+	registeredSystems[reg.Name] = reg
+	return nil
+}
+
 // UnregisterSystem removes a previously registered system.
 func UnregisterSystem(name SystemType) error {
 	registeredSystemsMu.Lock()

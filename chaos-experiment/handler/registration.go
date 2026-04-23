@@ -49,6 +49,19 @@ func RegisterSystem(cfg SystemConfig) error {
 	})
 }
 
+// UpdateSystem updates the registration fields of an already-registered system
+// in place. It is intended for callers that want to refresh NsPattern / DisplayName
+// / AppLabelKey from a dynamic source (e.g. etcd) without discarding the
+// compile-time static metadata providers that Unregister+Register would wipe.
+func UpdateSystem(cfg SystemConfig) error {
+	return systemconfig.UpdateSystem(systemconfig.SystemRegistration{
+		Name:        systemconfig.SystemType(cfg.Name),
+		NsPattern:   cfg.NsPattern,
+		DisplayName: cfg.DisplayName,
+		AppLabelKey: cfg.AppLabelKey,
+	})
+}
+
 // RegisterSystemData registers a system-data bundle and wires it into both the
 // injectionv2 registry layer and the dynamic metadata provider layer.
 func RegisterSystemData(name string, data *SystemData) error {
