@@ -31,7 +31,7 @@ type HelmConfigItem struct {
 }
 
 func NewHelmConfigItem(cfg *model.HelmConfig) *HelmConfigItem {
-	return &HelmConfigItem{
+	item := &HelmConfigItem{
 		Version:   cfg.Version,
 		RepoURL:   cfg.RepoURL,
 		RepoName:  cfg.RepoName,
@@ -39,6 +39,17 @@ func NewHelmConfigItem(cfg *model.HelmConfig) *HelmConfigItem {
 		LocalPath: cfg.LocalPath,
 		ValueFile: cfg.ValueFile,
 	}
+	if len(cfg.DynamicValues) > 0 {
+		item.DynamicValues = make([]ParameterItem, 0, len(cfg.DynamicValues))
+		for _, p := range cfg.DynamicValues {
+			val := ""
+			if p.DefaultValue != nil {
+				val = *p.DefaultValue
+			}
+			item.DynamicValues = append(item.DynamicValues, ParameterItem{Key: p.Key, Value: val})
+		}
+	}
+	return item
 }
 
 // GetValuesMap constructs a nested map of Helm values by merging file and dynamic values.

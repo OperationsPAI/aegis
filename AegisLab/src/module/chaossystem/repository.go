@@ -142,7 +142,7 @@ func (r *Repository) GetPedestalHelmConfigByName(name string) (*model.HelmConfig
 	}
 
 	var helm model.HelmConfig
-	if err := r.db.Where("container_version_id = ?", version.ID).First(&helm).Error; err != nil {
+	if err := r.db.Preload("DynamicValues").Where("container_version_id = ?", version.ID).First(&helm).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil, nil
 		}
