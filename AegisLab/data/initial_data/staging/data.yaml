@@ -134,13 +134,32 @@ containers:
     status: 1
     versions:
       - name: 0.1.0
-        github_link: delimitrou/DeathStarBench
+        github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
           version: 0.1.0
-          chart_name: hotelreservation-aegis
-          repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          chart_name: hotel-reservation
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: docker.io/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.services.environments.OTEL_EXPORTER_OTLP_ENDPOINT
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              overridable: true
           status: 1
   - type: 2
     name: sn
@@ -148,13 +167,32 @@ containers:
     status: 1
     versions:
       - name: 0.1.0
-        github_link: delimitrou/DeathStarBench
+        github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
           version: 0.1.0
-          chart_name: socialnetwork-aegis
-          repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          chart_name: social-network
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: docker.io/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              overridable: true
           status: 1
   - type: 2
     name: mm
@@ -162,13 +200,32 @@ containers:
     status: 1
     versions:
       - name: 0.1.0
-        github_link: delimitrou/DeathStarBench
+        github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
           version: 0.1.0
-          chart_name: mediamicroservices-aegis
-          repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          chart_name: media-microservices
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: docker.io/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              overridable: true
           status: 1
   - type: 2
     name: tea
@@ -176,13 +233,32 @@ containers:
     status: 1
     versions:
       - name: 0.1.0
-        github_link: DescartesResearch/TeaStore
+        github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
           version: 0.1.0
-          chart_name: teastore-aegis
-          repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          chart_name: teastore
+          repo_name: lgu-tea
+          repo_url: https://lgu-se-internal.github.io/TeaStore
+          values:
+            - key: global.image.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: docker.io/opspai
+              overridable: true
+            - key: global.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-2b3fd43
+              overridable: true
+            - key: opentelemetry.otlpEndpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://otel-collector.otel.svc.cluster.local:4317
+              overridable: true
           status: 1
 datasets:
   - name: rca_pair_diagnosis_dataset
