@@ -187,6 +187,30 @@ func (g *Gateway) isReleaseInstalled(actionConfig *action.Configuration, release
 	return true, nil
 }
 
+// IsReleaseDeployed returns true when <releaseName> exists in <namespace> and
+// is in the `deployed` status. Used by callers (e.g. RestartPedestal with
+// SkipRestartPedestal=true) to short-circuit a reinstall when the chart is
+// already in place. Unreachable/failed releases return false so the caller
+// falls through to a real install.
+func (g *Gateway) IsReleaseDeployed(namespace, releaseName string) (bool, error) {
+	_, actionConfig, err := newRuntime(namespace)
+	if err != nil {
+		return false, err
+	}
+	statusAction := action.NewStatus(actionConfig)
+	rel, err := statusAction.Run(releaseName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get release status: %w", err)
+	}
+	if rel == nil || rel.Info == nil {
+		return false, nil
+	}
+	return rel.Info.Status.String() == "deployed", nil
+}
+
 func (g *Gateway) uninstallRelease(actionConfig *action.Configuration, releaseName string, timeout time.Duration) error {
 	uninstallAction := action.NewUninstall(actionConfig)
 	uninstallAction.Wait = true

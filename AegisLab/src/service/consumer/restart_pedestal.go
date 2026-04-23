@@ -38,11 +38,32 @@ func defaultHelmRepoURL(name string) string {
 	return config.GetString(fmt.Sprintf("helm.repo.%s.url", name))
 }
 
+// helmInstallTimeouts resolves the (overall, k8s-wait) timeouts used when
+// helm-installing a pedestal chart. Defaults are 1800s overall / 600s wait,
+// overridable via dynamic config keys so ops can retune without a rebuild:
+//
+//	helm.restart_pedestal.timeout_seconds       (overall install timeout)
+//	helm.restart_pedestal.wait_timeout_seconds  (k8s readiness wait timeout)
+//
+// Non-positive values fall back to the defaults.
+func helmInstallTimeouts() (time.Duration, time.Duration) {
+	overall := 1800 * time.Second
+	wait := 600 * time.Second
+	if v := config.GetInt("helm.restart_pedestal.timeout_seconds"); v > 0 {
+		overall = time.Duration(v) * time.Second
+	}
+	if v := config.GetInt("helm.restart_pedestal.wait_timeout_seconds"); v > 0 {
+		wait = time.Duration(v) * time.Second
+	}
+	return overall, wait
+}
+
 type restartPayload struct {
 	pedestal      dto.ContainerVersionItem
 	interval      int
 	faultDuration int
 	injectPayload map[string]any
+	skipInstall   bool
 }
 
 // executeRestartPedestal handles the execution of a restart pedestal task
@@ -176,16 +197,37 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			return handleExecutionError(span, logEntry, "missing extra info in pedestal item", fmt.Errorf("missing extra info in pedestal item"))
 		}
 
-		if err := installPedestal(childCtx, helmGateway, namespace, index, payload.pedestal.Extra); err != nil {
-			toReleased = true
-			publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
-				TaskID:    task.TaskID,
-				TaskType:  consts.TaskTypeRestartPedestal,
-				EventName: consts.EventRestartPedestalFailed,
-				Payload:   err.Error(),
-			})
+		// Skip the helm install when the caller has pre-installed the chart
+		// out-of-band (e.g. `aegisctl pedestal chart install` +
+		// wait-for-ready) and the release is already deployed. Namespace
+		// lock, index extraction, and the FaultInjection handoff below still
+		// run unchanged. Falls through to a real install if the release is
+		// missing, in a non-deployed state, or the status check errors out.
+		skippedInstall := false
+		if payload.skipInstall {
+			deployed, checkErr := helmGateway.IsReleaseDeployed(namespace, namespace)
+			if checkErr != nil {
+				logEntry.Warnf("skip_install requested but status check failed (%v); falling back to install", checkErr)
+			} else if deployed {
+				logEntry.Infof("skip_install: release %s/%s already deployed; skipping helm install", namespace, namespace)
+				skippedInstall = true
+			} else {
+				logEntry.Infof("skip_install requested but release %s/%s not deployed; installing", namespace, namespace)
+			}
+		}
 
-			return handleExecutionError(span, logEntry, fmt.Sprintf("failed to install pedestal of system %s", system), err)
+		if !skippedInstall {
+			if err := installPedestal(childCtx, helmGateway, namespace, index, payload.pedestal.Extra); err != nil {
+				toReleased = true
+				publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
+					TaskID:    task.TaskID,
+					TaskType:  consts.TaskTypeRestartPedestal,
+					EventName: consts.EventRestartPedestalFailed,
+					Payload:   err.Error(),
+				})
+
+				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to install pedestal of system %s", system), err)
+			}
 		}
 
 		message := fmt.Sprintf("Injection start at %s, duration %dm", injectTime.Local().String(), payload.faultDuration)
@@ -280,11 +322,16 @@ func parseRestartPayload(payload map[string]any) (*restartPayload, error) {
 		return nil, fmt.Errorf(message, consts.RestartInjectPayload)
 	}
 
+	// skipInstall is optional — absent or non-bool payloads fall through to
+	// "run the helm install normally".
+	skipInstall, _ := payload[consts.RestartSkipInstall].(bool)
+
 	return &restartPayload{
 		pedestal:      pedestal,
 		interval:      interval,
 		faultDuration: faultDuration,
 		injectPayload: injectPayload,
+		skipInstall:   skipInstall,
 	}, nil
 }
 
@@ -364,14 +411,15 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 					"namespace":    releaseName,
 				}).Infof("Installing Helm chart from remote with parameters: %+v", helmValues)
 
+				overallTO, waitTO := helmInstallTimeouts()
 				if err := gateway.Install(ctx,
 					releaseName,
 					releaseName,
 					fullChart,
 					item.Version,
 					helmValues,
-					600*time.Second,
-					300*time.Second,
+					overallTO,
+					waitTO,
 				); err != nil {
 					logEntry.Warnf("Failed to install chart from remote: %v", err)
 					installErr = err
@@ -396,14 +444,15 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 				"namespace":    releaseName,
 			}).Infof("Installing Helm chart from local path with parameters: %+v", helmValues)
 
+			overallTO, waitTO := helmInstallTimeouts()
 			if err := gateway.Install(ctx,
 				releaseName,
 				releaseName,
 				item.LocalPath,
 				item.Version,
 				helmValues,
-				600*time.Second,
-				360*time.Second,
+				overallTO,
+				waitTO,
 			); err != nil {
 				return fmt.Errorf("failed to install chart from local path %s: %w", item.LocalPath, err)
 			}

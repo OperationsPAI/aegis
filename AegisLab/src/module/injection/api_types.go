@@ -388,6 +388,12 @@ type SubmitInjectionReq struct {
 	Specs       [][]GuidedSpec      `json:"specs" binding:"required"`              // GuidedConfig batches for fault injection
 	Algorithms  []dto.ContainerSpec `json:"algorithms" binding:"omitempty"`        // RCA algorithms to execute (optional)
 	Labels      []dto.LabelItem     `json:"labels" binding:"omitempty"`            // Labels to attach to the injection
+	// SkipRestartPedestal hints the RestartPedestal step to skip the helm
+	// install when the target release is already deployed and healthy. Namespace
+	// locking, index extraction, and the FaultInjection handoff still run as
+	// normal. Use when the caller has already installed the chart out-of-band
+	// (e.g. `aegisctl pedestal chart install` + preflight readiness wait).
+	SkipRestartPedestal bool `json:"skip_restart_pedestal" binding:"omitempty"`
 }
 
 func (req *SubmitInjectionReq) GuidedSpecs() [][]guidedcli.GuidedConfig {

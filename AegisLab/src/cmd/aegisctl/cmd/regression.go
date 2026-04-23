@@ -55,14 +55,16 @@ type regressionSummary struct {
 }
 
 var (
-	regressionCasesDir       string
-	regressionCaseFile       string
-	regressionSkipPreflight  bool
-	regressionAutoInstall    bool
-	regressionAppLabelKey    string
-	regressionPodListerHook  PodLister // test injection seam; nil => real k8s client
-	regressionInstallerHook  chartInstaller
-	regressionSystemsHook    SystemsFetcher // test injection seam; nil => real HTTP client
+	regressionCasesDir          string
+	regressionCaseFile          string
+	regressionSkipPreflight     bool
+	regressionAutoInstall       bool
+	regressionSkipRestartPedestal bool
+	regressionReadyTimeoutSeconds int
+	regressionAppLabelKey       string
+	regressionPodListerHook     PodLister // test injection seam; nil => real k8s client
+	regressionInstallerHook     chartInstaller
+	regressionSystemsHook       SystemsFetcher // test injection seam; nil => real HTTP client
 )
 
 // SystemsFetcher is the minimal /api/v2/systems surface
@@ -76,6 +78,10 @@ type SystemsFetcher interface {
 // can inject a fake; production uses a client-go backed implementation.
 type PodLister interface {
 	ListPods(ctx context.Context, namespace, labelSelector string) (count int, err error)
+	// CountReadyPods returns (total, ready) where `ready` is the number of
+	// matching pods whose containers all have Ready=true. Used by
+	// --auto-install to wait for chart rollout before submitting.
+	CountReadyPods(ctx context.Context, namespace, labelSelector string) (total int, ready int, err error)
 }
 
 type chartInstaller func(ctx context.Context, system, namespace string) error
@@ -293,6 +299,16 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 
 	c := newClient()
 	path := fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid)
+	// When --skip-restart-pedestal is set, hint the backend to no-op the
+	// helm install inside RestartPedestal (preflight already installed +
+	// waited for readiness). Backend falls back to a real install if the
+	// release is missing or unhealthy, so this is safe either way.
+	if regressionSkipRestartPedestal {
+		if rc.Submit == nil {
+			rc.Submit = map[string]any{}
+		}
+		rc.Submit["skip_restart_pedestal"] = true
+	}
 	var submitResp client.APIResponse[injectSubmitResponse]
 	if err := c.Post(path, rc.Submit, &submitResp); err != nil {
 		return regressionSummary{}, fmt.Errorf("submit regression case %q: %w", rc.Name, err)
@@ -736,6 +752,38 @@ func preflightRegressionCase(ctx context.Context, rc regressionCase, lister PodL
 				return fmt.Errorf("preflight: auto-install failed for system=%s namespace=%s: %w", sys, m.Namespace, err)
 			}
 		}
+		// Wait for the newly-installed charts to reach Ready before returning.
+		// Without this the caller submits immediately and the backend's
+		// RestartPedestal step re-uninstalls/reinstalls before pods stabilize,
+		// erasing the install work done here. Poll each missed target for
+		// --ready-timeout seconds (default 600) and fail fast with context.
+		timeoutSec := regressionReadyTimeoutSeconds
+		if timeoutSec <= 0 {
+			timeoutSec = 600
+		}
+		deadline := time.Now().Add(time.Duration(timeoutSec) * time.Second)
+		for _, m := range misses {
+			selector := labelKey + "=" + m.App
+			for {
+				total, ready, err := lister.CountReadyPods(ctx, m.Namespace, selector)
+				if err != nil {
+					return fmt.Errorf("preflight: wait-for-ready ns=%s selector=%s: %w", m.Namespace, selector, err)
+				}
+				if total > 0 && ready == total {
+					fmt.Fprintf(os.Stderr, "preflight: ready ns=%s %s (%d/%d)\n", m.Namespace, selector, ready, total)
+					break
+				}
+				if time.Now().After(deadline) {
+					return fmt.Errorf("preflight: timed out after %ds waiting for pods ns=%s selector=%s (ready %d/%d); bump --ready-timeout or inspect with `kubectl -n %s get pods -l %s`",
+						timeoutSec, m.Namespace, selector, ready, total, m.Namespace, selector)
+				}
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(5 * time.Second):
+				}
+			}
+		}
 		return nil
 	}
 
@@ -785,11 +833,35 @@ func (l *livePodLister) ListPods(ctx context.Context, namespace, labelSelector s
 	return len(pods.Items), nil
 }
 
+func (l *livePodLister) CountReadyPods(ctx context.Context, namespace, labelSelector string) (int, int, error) {
+	pods, err := l.cs.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		return 0, 0, err
+	}
+	ready := 0
+	for i := range pods.Items {
+		p := &pods.Items[i]
+		allReady := len(p.Status.ContainerStatuses) > 0
+		for _, cs := range p.Status.ContainerStatuses {
+			if !cs.Ready {
+				allReady = false
+				break
+			}
+		}
+		if allReady {
+			ready++
+		}
+	}
+	return len(pods.Items), ready, nil
+}
+
 func init() {
 	regressionRunCmd.Flags().StringVar(&regressionCasesDir, "cases-dir", "regression", "Directory containing repo-tracked regression case YAML files")
 	regressionRunCmd.Flags().StringVar(&regressionCaseFile, "file", "", "Path to a regression case YAML file")
 	regressionRunCmd.Flags().BoolVar(&regressionSkipPreflight, "skip-preflight", false, "Skip the pod/chart-installed preflight check (use when the CLI host cannot reach the target k8s cluster)")
 	regressionRunCmd.Flags().BoolVar(&regressionAutoInstall, "auto-install", false, "If preflight finds missing charts, shell out to `aegisctl pedestal chart install <system> --namespace <ns>` to fix them before submit")
+	regressionRunCmd.Flags().BoolVar(&regressionSkipRestartPedestal, "skip-restart-pedestal", false, "Hint the backend to skip the RestartPedestal helm install when the chart is already deployed (useful after --auto-install + wait-for-ready)")
+	regressionRunCmd.Flags().IntVar(&regressionReadyTimeoutSeconds, "ready-timeout", 600, "Seconds --auto-install waits for all preflight targets to become Ready before submit")
 	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight")
 
 	regressionCmd.AddCommand(regressionRunCmd)

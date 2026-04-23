@@ -316,6 +316,7 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 			consts.RestartIntarval:      req.Interval,
 			consts.RestartFaultDuration: item.faultDuration,
 			consts.RestartInjectPayload: injectPayload,
+			consts.RestartSkipInstall:   req.SkipRestartPedestal,
 		}
 
 		task := &dto.UnifiedTask{
