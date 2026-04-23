@@ -28,13 +28,18 @@ submit:
 validation:
   timeout_seconds: 3000
   min_events: 6
-  expected_final_event: datapack.no_anomaly
+  # The sockshop chart enables loadgen by default, so there is always
+  # live traffic against `carts` during the PodKill window. The algo
+  # therefore finds real anomaly signal and the chain terminates at
+  # `algorithm.result.collection` rather than the shortcut
+  # `datapack.no_anomaly` used by the quieter pedestals.
+  expected_final_event: algorithm.result.collection
   required_events:
     - restart.pedestal.started
     - fault.injection.started
     - datapack.build.started
     - algorithm.run.started
-    - datapack.no_anomaly
+    - algorithm.result.collection
   required_task_chain:
     - RestartPedestal
     - FaultInjection
