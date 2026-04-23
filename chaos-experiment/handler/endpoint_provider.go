@@ -9,7 +9,7 @@ import (
 )
 
 func getAllAppLabels(ctx context.Context, system systemconfig.SystemType, namespace string) ([]string, error) {
-	labels, err := resourcelookup.GetSystemCache(system).GetAllAppLabels(ctx, namespace, systemconfig.GetAppLabelKey(system))
+	labels, err := resourcelookup.GetInjectableAppLabels(ctx, system, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app labels: %w", err)
 	}

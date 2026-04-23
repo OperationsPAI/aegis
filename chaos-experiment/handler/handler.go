@@ -495,7 +495,7 @@ func parseInjection(ctx context.Context, instance Injection) (map[string]any, er
 		case 2:
 			switch instanceType.Field(i).Name {
 			case keyApp:
-				labels, err := systemCache.GetAllAppLabels(ctx, namespace, systemconfig.GetAppLabelKey(system))
+				labels, err := resourcelookup.GetInjectableAppLabels(ctx, system, namespace)
 				if err != nil || len(labels) == 0 {
 					return nil, err
 				}

@@ -728,7 +728,7 @@ func buildJVMRuntimeMutator(ctx context.Context, cfg GuidedConfig, systemType sy
 }
 
 func resolveAppLevel(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
-	apps, err := safeAppLabels(cfg.Namespace, systemType)
+	apps, err := safeAppLabels(ctx, cfg.Namespace, systemType)
 	if err != nil {
 		return 0, 0, 0, err
 	}
