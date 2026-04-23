@@ -232,11 +232,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      - name: 0.1.1
         github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
-          version: 0.1.0
+          version: 0.1.1
           chart_name: teastore
           repo_name: lgu-tea
           repo_url: https://lgu-se-internal.github.io/TeaStore
@@ -258,6 +258,21 @@ containers:
               category: 1
               value_type: 0
               default_value: http://otel-collector.otel.svc.cluster.local:4317
+              overridable: true
+            # 0.1.1 parameterizes the inject-<language> annotation from these
+            # two values (previously hardcoded to "monitoring/opentelemetry-kube-stack").
+            # Point at our cluster's Instrumentation CR at otel/otel-kube-stack.
+            - key: opentelemetry.monitoringNamespace
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel
+              overridable: true
+            - key: opentelemetry.instrumentationName
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-kube-stack
               overridable: true
           status: 1
 datasets:
