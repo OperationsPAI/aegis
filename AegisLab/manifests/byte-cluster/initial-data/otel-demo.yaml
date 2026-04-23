@@ -1,3 +1,7 @@
+global:
+  clusterCollector:
+    service: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local
+
 opentelemetry-demo:
   default:
     image:
