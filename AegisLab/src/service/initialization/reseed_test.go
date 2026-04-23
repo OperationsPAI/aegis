@@ -71,6 +71,25 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 			checksum TEXT,
 			value_file TEXT
 		)`,
+		`CREATE TABLE parameter_configs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			config_key TEXT NOT NULL,
+			type INTEGER NOT NULL,
+			category INTEGER NOT NULL,
+			value_type INTEGER NOT NULL,
+			description TEXT,
+			default_value TEXT,
+			template_string TEXT,
+			required INTEGER NOT NULL DEFAULT 0,
+			overridable INTEGER NOT NULL DEFAULT 1,
+			UNIQUE(config_key, type, category)
+		)`,
+		`CREATE TABLE container_version_env_vars (
+			container_version_id INTEGER NOT NULL,
+			parameter_config_id INTEGER NOT NULL,
+			created_at DATETIME,
+			PRIMARY KEY (container_version_id, parameter_config_id)
+		)`,
 	}
 	for _, s := range stmts {
 		if err := db.Exec(s).Error; err != nil {
@@ -224,6 +243,109 @@ containers:
 	}
 	if !driftFound {
 		t.Fatalf("expected unapplied helm_config drift action, got %+v", report.Actions)
+	}
+}
+
+func TestReseedBackfillsEnvVarsOnExistingVersion(t *testing.T) {
+	db := newReseedTestDB(t)
+	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'clickhouse', 1, 1)`).Error
+	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.0.0', 1, 0, 1)`).Error
+
+	ns := "ts0"
+	if err := db.Create(&model.ParameterConfig{
+		Key:          "NAMESPACE",
+		Type:         consts.ParameterTypeFixed,
+		Category:     consts.ParameterCategoryEnvVars,
+		ValueType:    consts.ValueDataTypeString,
+		DefaultValue: &ns,
+		Required:     true,
+		Overridable:  true,
+	}).Error; err != nil {
+		t.Fatalf("seed namespace param: %v", err)
+	}
+	var namespaceCfg model.ParameterConfig
+	if err := db.Where("config_key = ?", "NAMESPACE").First(&namespaceCfg).Error; err != nil {
+		t.Fatalf("lookup namespace param: %v", err)
+	}
+	if err := db.Create(&model.ContainerVersionEnvVar{
+		ContainerVersionID: 10,
+		ParameterConfigID:  namespaceCfg.ID,
+	}).Error; err != nil {
+		t.Fatalf("seed namespace relation: %v", err)
+	}
+
+	optional := "normal_logs.parquet"
+	seed := writeSeedFile(t, `
+containers:
+  - type: 1
+    name: clickhouse
+    is_public: true
+    status: 1
+    versions:
+      - name: 1.0.0
+        image_ref: docker.io/opspai/clickhouse_dataset:latest
+        command: bash /entrypoint.sh
+        env_vars:
+          - key: NAMESPACE
+            type: 0
+            category: 0
+            value_type: 0
+            default_value: ts0
+            required: true
+            overridable: true
+          - key: RCABENCH_OPTIONAL_EMPTY_PARQUETS
+            type: 0
+            category: 0
+            value_type: 0
+            default_value: normal_logs.parquet
+            required: false
+            overridable: true
+`)
+
+	report, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	var linked []struct {
+		Key          string
+		DefaultValue *string
+	}
+	if err := db.Raw(`
+		SELECT pc.config_key AS key, pc.default_value
+		FROM parameter_configs pc
+		JOIN container_version_env_vars cve ON cve.parameter_config_id = pc.id
+		WHERE cve.container_version_id = 10
+		ORDER BY pc.config_key
+	`).Scan(&linked).Error; err != nil {
+		t.Fatalf("list linked env vars: %v", err)
+	}
+	if len(linked) != 2 {
+		t.Fatalf("expected 2 linked env vars, got %d (%+v)", len(linked), linked)
+	}
+	if linked[0].Key != "NAMESPACE" || linked[1].Key != "RCABENCH_OPTIONAL_EMPTY_PARQUETS" {
+		t.Fatalf("unexpected env vars linked: %+v", linked)
+	}
+	if linked[1].DefaultValue == nil || *linked[1].DefaultValue != optional {
+		t.Fatalf("optional env default = %v, want %q", linked[1].DefaultValue, optional)
+	}
+
+	found := false
+	for _, a := range report.Actions {
+		if a.Layer == "container_version_env_vars" && a.Key == "clickhouse@1.0.0:RCABENCH_OPTIONAL_EMPTY_PARQUETS" && a.Applied {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected applied env-var backfill action, got %+v", report.Actions)
+	}
+
+	r2, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("second reseed: %v", err)
+	}
+	if len(r2.Actions) != 0 {
+		t.Fatalf("expected idempotent rerun after env-var backfill, got %+v", r2.Actions)
 	}
 }
 
