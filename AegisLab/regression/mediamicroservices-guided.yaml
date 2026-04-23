@@ -3,7 +3,7 @@ description: Canonical mediaMicroservices smoke case (DeathStarBench C++ microse
 project_name: pair_diagnosis
 submit:
   pedestal:
-    name: mm
+    name: media
     version: "0.1.1"
   benchmark:
     name: clickhouse
@@ -21,8 +21,8 @@ submit:
     - key: run
       value: media-initial-20260421
   specs:
-    - - system: mm
-        system_type: mm
+    - - system: media
+        system_type: media
         namespace: mm0
         app: user-service
         chaos_type: PodKill

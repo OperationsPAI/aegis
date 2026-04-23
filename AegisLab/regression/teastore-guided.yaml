@@ -3,7 +3,7 @@ description: Canonical TeaStore smoke case (Descartes Java microservices) for lo
 project_name: pair_diagnosis
 submit:
   pedestal:
-    name: tea
+    name: teastore
     version: "0.1.0"
   benchmark:
     name: clickhouse
@@ -21,8 +21,8 @@ submit:
     - key: run
       value: teastore-initial-20260421
   specs:
-    - - system: tea
-        system_type: tea
+    - - system: teastore
+        system_type: teastore
         namespace: tea0
         app: teastore
         chaos_type: PodKill
