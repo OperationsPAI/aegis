@@ -109,14 +109,16 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.1
+      - name: 1.1.1
         github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
         status: 1
+        # Chart is now self-hosted in the fork's gh-pages site (same pattern
+        # as hs/sn/media/teastore). Images live at docker.io/opspai/ss-*.
         helm_config:
-          version: 0.1.1
-          chart_name: sockshop-aegis
-          repo_name: opspai
-          repo_url: oci://registry-1.docker.io/opspai
+          version: 1.1.1
+          chart_name: sockshop
+          repo_name: sockshop-lgu
+          repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
           status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be
