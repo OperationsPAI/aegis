@@ -90,6 +90,12 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 			created_at DATETIME,
 			PRIMARY KEY (container_version_id, parameter_config_id)
 		)`,
+		`CREATE TABLE helm_config_values (
+			helm_config_id INTEGER NOT NULL,
+			parameter_config_id INTEGER NOT NULL,
+			created_at DATETIME,
+			PRIMARY KEY (helm_config_id, parameter_config_id)
+		)`,
 	}
 	for _, s := range stmts {
 		if err := db.Exec(s).Error; err != nil {
@@ -148,6 +154,21 @@ containers:
           chart_name: trainticket
           repo_name: r
           repo_url: https://x
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              required: false
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              required: false
+              overridable: true
 `)
 
 	report, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
@@ -173,6 +194,26 @@ containers:
 	db.Raw(`SELECT COUNT(*) FROM helm_configs WHERE container_version_id = ?`, v020.ID).Scan(&helmCount)
 	if helmCount != 1 {
 		t.Fatalf("want 1 helm_config for new version, got %d", helmCount)
+	}
+	var linked []struct {
+		Key          string
+		DefaultValue *string
+	}
+	if err := db.Raw(`
+		SELECT pc.config_key AS key, pc.default_value
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		JOIN helm_configs hc ON hc.id = hcv.helm_config_id
+		WHERE hc.container_version_id = ?
+		ORDER BY pc.config_key
+	`, v020.ID).Scan(&linked).Error; err != nil {
+		t.Fatalf("list linked helm values: %v", err)
+	}
+	if len(linked) != 2 {
+		t.Fatalf("expected 2 linked helm values, got %d (%+v)", len(linked), linked)
+	}
+	if linked[0].Key != "global.imageRegistry" || linked[1].Key != "global.imageTag" {
+		t.Fatalf("unexpected helm values linked: %+v", linked)
 	}
 
 	// Existing 0.1.0 row and its helm_config are untouched.
@@ -243,6 +284,85 @@ containers:
 	}
 	if !driftFound {
 		t.Fatalf("expected unapplied helm_config drift action, got %+v", report.Actions)
+	}
+}
+
+func TestReseedBackfillsHelmValuesOnExistingVersion(t *testing.T) {
+	db := newReseedTestDB(t)
+	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'sockshop', 2, 1)`).Error
+	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.1.1', 1, 0, 1)`).Error
+	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (20, 'sockshop', '1.1.1', 10, 'https://x', 'r')`).Error
+
+	seed := writeSeedFile(t, `
+containers:
+  - type: 2
+    name: sockshop
+    is_public: true
+    status: 1
+    versions:
+      - name: 1.1.1
+        helm_config:
+          version: 1.1.1
+          chart_name: sockshop
+          repo_name: r
+          repo_url: https://x
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              required: false
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              required: false
+              overridable: true
+`)
+
+	report, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	var linked []struct {
+		Key string
+	}
+	if err := db.Raw(`
+		SELECT pc.config_key AS key
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		WHERE hcv.helm_config_id = 20
+		ORDER BY pc.config_key
+	`).Scan(&linked).Error; err != nil {
+		t.Fatalf("list linked helm values: %v", err)
+	}
+	if len(linked) != 2 {
+		t.Fatalf("expected 2 linked helm values, got %d (%+v)", len(linked), linked)
+	}
+	if linked[0].Key != "global.imageRegistry" || linked[1].Key != "global.imageTag" {
+		t.Fatalf("unexpected helm values linked: %+v", linked)
+	}
+
+	found := false
+	for _, a := range report.Actions {
+		if a.Layer == "helm_config_values" && a.Key == "sockshop@1.1.1:global.imageRegistry" && a.Applied {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected applied helm-value backfill action, got %+v", report.Actions)
+	}
+
+	r2, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("second reseed: %v", err)
+	}
+	if len(r2.Actions) != 0 {
+		t.Fatalf("expected idempotent rerun after helm-value backfill, got %+v", r2.Actions)
 	}
 }
 
