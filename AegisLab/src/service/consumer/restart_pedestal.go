@@ -5,6 +5,7 @@ import (
 	"aegis/consts"
 	"aegis/dto"
 	helm "aegis/infra/helm"
+	k8s "aegis/infra/k8s"
 	redis "aegis/infra/redis"
 	"aegis/service/common"
 	"aegis/tracing"
@@ -56,6 +57,87 @@ func helmInstallTimeouts() (time.Duration, time.Duration) {
 		wait = time.Duration(v) * time.Second
 	}
 	return overall, wait
+}
+
+func restartWorkloadReadyTimeout() time.Duration {
+	timeout := 600 * time.Second
+	if v := config.GetInt("restart_pedestal.workload_ready_timeout_seconds"); v > 0 {
+		timeout = time.Duration(v) * time.Second
+	}
+	return timeout
+}
+
+func restartPostReadySoakDuration() time.Duration {
+	soak := 20 * time.Second
+	if v := config.GetInt("restart_pedestal.post_ready_soak_seconds"); v >= 0 {
+		soak = time.Duration(v) * time.Second
+	}
+	return soak
+}
+
+func extractPreDuration(injectPayload map[string]any) time.Duration {
+	if injectPayload == nil {
+		return 0
+	}
+	raw, ok := injectPayload[consts.InjectPreDuration]
+	if !ok || raw == nil {
+		return 0
+	}
+
+	switch v := raw.(type) {
+	case float64:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	case float32:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	case int:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	case int64:
+		if v > 0 {
+			return time.Duration(v) * time.Minute
+		}
+	}
+	return 0
+}
+
+func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, namespace string) (time.Time, error) {
+	if gateway == nil {
+		logrus.Warnf("k8s gateway is nil; skipping workload-ready wait for namespace %q", namespace)
+		return time.Now(), nil
+	}
+
+	timeout := restartWorkloadReadyTimeout()
+	if err := gateway.WaitForNamespacePodsReady(ctx, namespace, timeout); err != nil {
+		return time.Time{}, err
+	}
+
+	soak := restartPostReadySoakDuration()
+	if soak <= 0 {
+		return time.Now(), nil
+	}
+
+	timer := time.NewTimer(soak)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return time.Time{}, ctx.Err()
+	case <-timer.C:
+		return time.Now(), nil
+	}
+}
+
+func adjustInjectTimeAfterWarmup(injectTime, warmupReadyAt time.Time, injectPayload map[string]any) time.Time {
+	minInjectTime := warmupReadyAt.Add(extractPreDuration(injectPayload))
+	if injectTime.Before(minInjectTime) {
+		return minInjectTime
+	}
+	return injectTime
 }
 
 type restartPayload struct {
@@ -228,6 +310,21 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 
 				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to install pedestal of system %s", system), err)
 			}
+		}
+
+		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace)
+		if err != nil {
+			toReleased = true
+			return handleExecutionError(span, logEntry, "workload readiness/warmup wait failed", err)
+		}
+		adjustedInjectTime := adjustInjectTimeAfterWarmup(injectTime, warmupReadyAt, payload.injectPayload)
+		if !adjustedInjectTime.Equal(injectTime) {
+			logEntry.WithFields(logrus.Fields{
+				"old_inject_time": injectTime.String(),
+				"new_inject_time": adjustedInjectTime.String(),
+				"pre_duration":    extractPreDuration(payload.injectPayload).String(),
+			}).Warn("inject time adjusted to guarantee warm-up and normal-window coverage")
+			injectTime = adjustedInjectTime
 		}
 
 		message := fmt.Sprintf("Injection start at %s, duration %dm", injectTime.Local().String(), payload.faultDuration)

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"aegis/consts"
 
@@ -128,6 +129,80 @@ func (g *Gateway) CheckHealth(ctx context.Context) error {
 		return fmt.Errorf("kubernetes API request failed: %w", err)
 	}
 	return nil
+}
+
+// WaitForNamespacePodsReady blocks until every active pod in the namespace is
+// Ready. "Active" means phase Pending/Running/Unknown (Succeeded/Failed pods
+// are ignored). The check requires at least one active pod to avoid a false
+// positive immediately after a helm release returns.
+func (g *Gateway) WaitForNamespacePodsReady(ctx context.Context, namespace string, timeout time.Duration) error {
+	client := getK8sClient()
+	if client == nil {
+		return fmt.Errorf("kubernetes client not available")
+	}
+	if timeout <= 0 {
+		timeout = 10 * time.Minute
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	var lastSummary string
+	for {
+		podList, err := client.CoreV1().Pods(namespace).List(waitCtx, metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("list pods in namespace %q: %w", namespace, err)
+		}
+
+		ready, summary := evaluateNamespacePodReadiness(podList.Items)
+		lastSummary = summary
+		if ready {
+			return nil
+		}
+
+		select {
+		case <-waitCtx.Done():
+			return fmt.Errorf("wait for pods ready in namespace %q timed out (%s): %w", namespace, lastSummary, waitCtx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
+func evaluateNamespacePodReadiness(pods []corev1.Pod) (bool, string) {
+	activeNames := make([]string, 0, len(pods))
+	notReadyNames := make([]string, 0)
+
+	for _, pod := range pods {
+		switch pod.Status.Phase {
+		case corev1.PodSucceeded, corev1.PodFailed:
+			continue
+		}
+
+		activeNames = append(activeNames, pod.Name)
+		if !isPodReady(pod.Status.Conditions) {
+			notReadyNames = append(notReadyNames, pod.Name)
+		}
+	}
+
+	if len(activeNames) == 0 {
+		return false, "no active pods found yet"
+	}
+	if len(notReadyNames) > 0 {
+		return false, fmt.Sprintf("%d/%d active pods not ready: %v", len(notReadyNames), len(activeNames), notReadyNames)
+	}
+	return true, fmt.Sprintf("all %d active pods are ready", len(activeNames))
+}
+
+func isPodReady(conditions []corev1.PodCondition) bool {
+	for _, cond := range conditions {
+		if cond.Type == corev1.PodReady {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 func getK8sClient() *kubernetes.Clientset {
