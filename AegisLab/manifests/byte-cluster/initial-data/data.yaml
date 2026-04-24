@@ -109,14 +109,54 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.1
+      - name: 1.1.1
         github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
         status: 1
+        # Chart is now self-hosted in the fork's gh-pages site. For the Byte
+        # cluster we pin all app images to the Shanghai mirror because direct
+        # Docker Hub pulls time out in-cluster.
         helm_config:
-          version: 0.1.1
-          chart_name: sockshop-aegis
-          repo_name: opspai
-          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          version: 1.1.1
+          chart_name: sockshop
+          repo_name: sockshop-lgu
+          repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              overridable: true
+            - key: frontend.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              overridable: true
+            - key: loadgen.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              overridable: true
+            - key: otel.instrumentation
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring/opentelemetry-kube-stack
+              overridable: true
+            - key: otel.collectorEndpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              overridable: true
           status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be
@@ -159,7 +199,13 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: docker.io/opspai
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.infraDockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
               overridable: true
             - key: global.defaultImageVersion
               type: 0
@@ -171,7 +217,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -192,7 +238,13 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: docker.io/opspai
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.infraDockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
               overridable: true
             - key: global.defaultImageVersion
               type: 0
@@ -204,7 +256,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -225,7 +277,13 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: docker.io/opspai
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.infraDockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
               overridable: true
             - key: global.defaultImageVersion
               type: 0
@@ -237,7 +295,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -258,7 +316,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: docker.io/opspai
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
               overridable: true
             - key: global.image.tag
               type: 0
@@ -270,22 +328,22 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://otel-collector.otel.svc.cluster.local:4317
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
               overridable: true
             # 0.1.1 parameterizes the inject-<language> annotation from these
             # two values (previously hardcoded to "monitoring/opentelemetry-kube-stack").
-            # Point at our cluster's Instrumentation CR at otel/otel-kube-stack.
+            # Point at the Byte cluster's monitoring-stack naming.
             - key: opentelemetry.monitoringNamespace
               type: 0
               category: 1
               value_type: 0
-              default_value: otel
+              default_value: monitoring
               overridable: true
             - key: opentelemetry.instrumentationName
               type: 0
               category: 1
               value_type: 0
-              default_value: otel-kube-stack
+              default_value: opentelemetry-kube-stack
               overridable: true
           status: 1
 datasets:
