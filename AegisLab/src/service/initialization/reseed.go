@@ -11,8 +11,8 @@ import (
 
 	"aegis/consts"
 	etcd "aegis/infra/etcd"
-	containerrepo "aegis/module/container"
 	"aegis/model"
+	containerrepo "aegis/module/container"
 	"aegis/service/common"
 
 	"github.com/sirupsen/logrus"
@@ -30,9 +30,9 @@ type reseedEtcdClient interface {
 
 // ReseedAction is a single planned mutation from a data.yaml diff.
 type ReseedAction struct {
-	Layer    string `json:"layer"`    // "container_versions" | "helm_configs" | "dynamic_configs" | "etcd"
-	System   string `json:"system"`   // container / system name the action belongs to
-	Key      string `json:"key"`      // semantic identifier: version name / config key / etcd key
+	Layer    string `json:"layer"`  // "container_versions" | "helm_configs" | "dynamic_configs" | "etcd"
+	System   string `json:"system"` // container / system name the action belongs to
+	Key      string `json:"key"`    // semantic identifier: version name / config key / etcd key
 	OldValue string `json:"old_value"`
 	NewValue string `json:"new_value"`
 	Note     string `json:"note,omitempty"` // human-readable context ("new version", "default drift", "preserved override")
@@ -178,7 +178,7 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir 
 			// version_name in data.yaml to honor the history preservation
 			// contract.
 			if vSeed.HelmConfig != nil {
-				if err := compareHelmConfigDrift(db, existingVersion, vSeed.HelmConfig, seed.Name, report); err != nil {
+				if err := compareHelmConfigDrift(db, existingVersion, vSeed.HelmConfig, seed.Name, dryRun, report); err != nil {
 					return err
 				}
 			}
@@ -219,6 +219,9 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir 
 			if err := db.Create(helm).Error; err != nil {
 				return fmt.Errorf("insert helm_config for %s@%s: %w", seed.Name, versionName, err)
 			}
+			if err := backfillHelmConfigValues(db, helm, versionName, vSeed.HelmConfig, seed.Name, dryRun, "new helm value for new version", report); err != nil {
+				return err
+			}
 			valuesPath := filepath.Join(valuesDir, fmt.Sprintf("%s.yaml", seed.Name))
 			if _, statErr := os.Stat(valuesPath); statErr == nil {
 				if err := containerrepo.NewRepository(db).UploadHelmValueFileFromPath(seed.Name, helm, valuesPath); err != nil {
@@ -228,9 +231,9 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir 
 				return fmt.Errorf("stat helm value file for %s@%s: %w", seed.Name, versionName, statErr)
 			}
 			hact := ReseedAction{
-				Layer:   "helm_configs",
-				System:  seed.Name,
-				Key:     versionName,
+				Layer:    "helm_configs",
+				System:   seed.Name,
+				Key:      versionName,
 				NewValue: fmt.Sprintf("chart=%s version=%s repo=%s", helm.ChartName, helm.Version, helm.RepoName),
 				Note:     "new helm_config for new version",
 				Applied:  true,
@@ -340,7 +343,7 @@ func parameterConfigSummary(cfg *model.ParameterConfig) string {
 // history-preservation contract). But we DO surface the drift so operators
 // see that their data.yaml bumped chart_name or version without also bumping
 // the container_version name.
-func compareHelmConfigDrift(db *gorm.DB, version *model.ContainerVersion, seed *InitialHelmConfig, systemName string, report *ReseedReport) error {
+func compareHelmConfigDrift(db *gorm.DB, version *model.ContainerVersion, seed *InitialHelmConfig, systemName string, dryRun bool, report *ReseedReport) error {
 	var existing model.HelmConfig
 	err := db.Where("container_version_id = ?", version.ID).First(&existing).Error
 	if err != nil {
@@ -349,20 +352,31 @@ func compareHelmConfigDrift(db *gorm.DB, version *model.ContainerVersion, seed *
 			// here because the version-level identity is preserved.
 			helm := seed.ConvertToDBHelmConfig()
 			helm.ContainerVersionID = version.ID
-			if err := db.Create(helm).Error; err != nil {
-				return fmt.Errorf("insert missing helm_config for %s@%s: %w", systemName, version.Name, err)
-			}
-			report.Actions = append(report.Actions, ReseedAction{
+			act := ReseedAction{
 				Layer:    "helm_configs",
 				System:   systemName,
 				Key:      version.Name,
-				NewValue: fmt.Sprintf("chart=%s version=%s", helm.ChartName, helm.Version),
+				NewValue: fmt.Sprintf("chart=%s version=%s", seed.ChartName, seed.Version),
 				Note:     "backfilled helm_config on existing version",
-				Applied:  true,
-			})
+			}
+			if dryRun {
+				report.Actions = append(report.Actions, act)
+				return nil
+			}
+			if err := db.Create(helm).Error; err != nil {
+				return fmt.Errorf("insert missing helm_config for %s@%s: %w", systemName, version.Name, err)
+			}
+			act.Applied = true
+			report.Actions = append(report.Actions, act)
+			if err := backfillHelmConfigValues(db, helm, version.Name, seed, systemName, dryRun, "backfilled helm value on existing helm_config", report); err != nil {
+				return err
+			}
 			return nil
 		}
 		return fmt.Errorf("lookup helm_config for version %d: %w", version.ID, err)
+	}
+	if err := backfillHelmConfigValues(db, &existing, version.Name, seed, systemName, dryRun, "backfilled helm value on existing helm_config", report); err != nil {
+		return err
 	}
 
 	// Same version row, different chart metadata. Surface as a warning-
@@ -379,6 +393,65 @@ func compareHelmConfigDrift(db *gorm.DB, version *model.ContainerVersion, seed *
 			Applied:  false,
 		})
 	}
+	return nil
+}
+
+func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName string, seed *InitialHelmConfig, systemName string, dryRun bool, note string, report *ReseedReport) error {
+	if helm == nil || seed == nil || len(seed.Values) == 0 {
+		return nil
+	}
+
+	var existing []model.ParameterConfig
+	if err := db.Table("parameter_configs").
+		Joins("JOIN helm_config_values ON helm_config_values.parameter_config_id = parameter_configs.id").
+		Where("helm_config_values.helm_config_id = ? AND parameter_configs.category = ?", helm.ID, consts.ParameterCategoryHelmValues).
+		Find(&existing).Error; err != nil {
+		return fmt.Errorf("list helm values for %s@%s: %w", systemName, versionName, err)
+	}
+
+	have := make(map[string]struct{}, len(existing))
+	for i := range existing {
+		have[parameterConfigIdentity(&existing[i])] = struct{}{}
+	}
+
+	for _, valueSeed := range seed.Values {
+		cfg := valueSeed.ConvertToDBParameterConfig()
+		key := parameterConfigIdentity(cfg)
+		if _, ok := have[key]; ok {
+			continue
+		}
+
+		act := ReseedAction{
+			Layer:    "helm_config_values",
+			System:   systemName,
+			Key:      fmt.Sprintf("%s@%s:%s", systemName, versionName, cfg.Key),
+			OldValue: "",
+			NewValue: parameterConfigSummary(cfg),
+			Note:     note,
+		}
+		if dryRun {
+			report.Actions = append(report.Actions, act)
+			continue
+		}
+
+		actualCfg, err := findOrCreateParameterConfig(db, cfg)
+		if err != nil {
+			return fmt.Errorf("resolve helm value %s for %s@%s: %w", cfg.Key, systemName, versionName, err)
+		}
+
+		rel := model.HelmConfigValue{
+			HelmConfigID:      helm.ID,
+			ParameterConfigID: actualCfg.ID,
+		}
+		if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&rel).Error; err != nil {
+			return fmt.Errorf("link helm value %s to %s@%s: %w", cfg.Key, systemName, versionName, err)
+		}
+
+		act.Applied = true
+		report.Actions = append(report.Actions, act)
+		have[key] = struct{}{}
+	}
+
 	return nil
 }
 
