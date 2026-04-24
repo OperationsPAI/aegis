@@ -189,7 +189,7 @@ class StartingPointResolver:
         callers: list[int] = []
         # In the graph: caller_span --calls--> callee_span
         # We need in_edges of type 'calls'
-        for src_id, _dst_id, edge_key in self.graph._graph.in_edges(span_node_id, keys=True):
+        for src_id, _dst_id, edge_key in self.graph._graph.in_edges(span_node_id, keys=True):  # type: ignore[call-arg]
             if edge_key == DepKind.calls:
                 callers.append(src_id)
         return callers
@@ -205,7 +205,7 @@ class StartingPointResolver:
         """
         # In the graph: service --includes--> span
         # We need in_edges of type 'includes'
-        for src_id, _dst_id, edge_key in self.graph._graph.in_edges(span_node_id, keys=True):
+        for src_id, _dst_id, edge_key in self.graph._graph.in_edges(span_node_id, keys=True):  # type: ignore[call-arg]
             if edge_key == DepKind.includes:
                 src_node = self.graph.get_node_by_id(src_id)
                 if src_node.kind == PlaceKind.service:
@@ -224,7 +224,7 @@ class StartingPointResolver:
         spans: list[int] = []
         # In the graph: service --includes--> span
         # We need out_edges of type 'includes'
-        for _src_id, dst_id, edge_key in self.graph._graph.out_edges(service_node_id, keys=True):
+        for _src_id, dst_id, edge_key in self.graph._graph.out_edges(service_node_id, keys=True):  # type: ignore[call-arg]
             if edge_key == DepKind.includes:
                 dst_node = self.graph.get_node_by_id(dst_id)
                 if dst_node.kind == PlaceKind.span:

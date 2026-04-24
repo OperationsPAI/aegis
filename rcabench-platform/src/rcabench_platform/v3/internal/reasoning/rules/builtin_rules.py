@@ -142,10 +142,3 @@ def get_rules_for_place_kind(place_kind: PlaceKind, as_source: bool = True) -> l
         return [rule for rule in _get_builtin_rules_list() if rule.src_kind == place_kind]
     else:
         return [rule for rule in _get_builtin_rules_list() if rule.dst_kind == place_kind]
-
-
-def visualize_builtin_rules(output_path: str | None = None, format: str = "png") -> str:
-    from rcabench_platform.v3.internal.reasoning.rules.visualizer import visualize_rules
-
-    dot = visualize_rules(_get_builtin_rules_list(), output_path=output_path, format=format, group_by_place_kind=True)
-    return dot.source  # type: ignore[no-any-return]

@@ -250,7 +250,7 @@ class StateEnhancer:
         span_ids: list[int] = []
 
         # Traverse 'includes' edges from service to spans
-        for src_id, dst_id, key in self.graph._graph.out_edges(service_id, keys=True):
+        for src_id, dst_id, key in self.graph._graph.out_edges(service_id, keys=True):  # type: ignore[call-arg]
             edge_data = self.graph._graph.edges[src_id, dst_id, key].get("ref")
             if edge_data and edge_data.kind == DepKind.includes:
                 dst_node = self.graph.get_node_by_id(dst_id)
@@ -286,7 +286,7 @@ class StateEnhancer:
         # direction="to" or "both": find source spans that call target spans
         if direction in ("to", "both"):
             for src_span_id in source_spans:
-                for _, dst_id, key in self.graph._graph.out_edges(src_span_id, keys=True):
+                for _, dst_id, key in self.graph._graph.out_edges(src_span_id, keys=True):  # type: ignore[call-arg]
                     edge_data = self.graph._graph.edges[src_span_id, dst_id, key].get("ref")
                     if edge_data and edge_data.kind == DepKind.calls and dst_id in target_spans:
                         result.add(src_span_id)
@@ -295,7 +295,7 @@ class StateEnhancer:
         # direction="from" or "both": find target spans that call source spans
         if direction in ("from", "both"):
             for tgt_span_id in target_spans:
-                for _, dst_id, key in self.graph._graph.out_edges(tgt_span_id, keys=True):
+                for _, dst_id, key in self.graph._graph.out_edges(tgt_span_id, keys=True):  # type: ignore[call-arg]
                     edge_data = self.graph._graph.edges[tgt_span_id, dst_id, key].get("ref")
                     if edge_data and edge_data.kind == DepKind.calls and dst_id in source_spans:
                         result.add(tgt_span_id)
@@ -529,13 +529,13 @@ class StateEnhancer:
 
         if direction == PropagationDirection.FORWARD:
             # Follow edge direction: node -> neighbor
-            for src_id, dst_id, key in self.graph._graph.out_edges(node_id, keys=True):
+            for src_id, dst_id, key in self.graph._graph.out_edges(node_id, keys=True):  # type: ignore[call-arg]
                 edge_data = self.graph._graph.edges[src_id, dst_id, key].get("ref")
                 if edge_data and edge_data.kind == edge_kind:
                     neighbors.append(dst_id)
         else:
             # Against edge direction: neighbor -> node
-            for src_id, dst_id, key in self.graph._graph.in_edges(node_id, keys=True):
+            for src_id, dst_id, key in self.graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
                 edge_data = self.graph._graph.edges[src_id, dst_id, key].get("ref")
                 if edge_data and edge_data.kind == edge_kind:
                     neighbors.append(src_id)

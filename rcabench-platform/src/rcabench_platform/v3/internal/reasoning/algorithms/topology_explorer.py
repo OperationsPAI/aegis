@@ -64,11 +64,11 @@ class TopologyExplorer:
         neighbors: list[int] = []
 
         # Forward neighbors (outgoing edges)
-        for _, dst_id, _ in self.graph._graph.out_edges(node_id, keys=True):
+        for _, dst_id, _ in self.graph._graph.out_edges(node_id, keys=True):  # type: ignore[call-arg]
             neighbors.append(dst_id)
 
         # Backward neighbors (incoming edges)
-        for src_id, _, _ in self.graph._graph.in_edges(node_id, keys=True):
+        for src_id, _, _ in self.graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
             neighbors.append(src_id)
 
         return neighbors

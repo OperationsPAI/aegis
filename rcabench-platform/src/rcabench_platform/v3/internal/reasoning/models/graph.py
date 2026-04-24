@@ -484,7 +484,7 @@ class GraphEditSequence(BaseModel):
     def __getitem__(self, idx: int) -> GraphEdit:
         return self.edits[idx]
 
-    def __iter__(self):
+    def __iter__(self):  # type: ignore[override]
         return iter(self.edits)
 
 
