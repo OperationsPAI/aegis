@@ -34,7 +34,7 @@ die() { echo "error: $*" >&2; exit 1; }
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-[[ -z "$(git status --porcelain)" ]] || die "working tree not clean"
+git diff --quiet HEAD -- || die "working tree has uncommitted tracked changes"
 branch=$(git rev-parse --abbrev-ref HEAD)
 [[ "$branch" == "main" ]] || die "must be on main (currently: $branch)"
 
