@@ -957,7 +957,7 @@ instrumentation:
   exporter:
     # This is the default collector's service
     # Upon creation of a tracing collector, edit this endpoint.
-    endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+    endpoint: http://otel-kube-stack-deployment-collector.otel:4317
 
   # Resource configuration
   resource:
@@ -994,7 +994,7 @@ instrumentation:
   # volumeLimitSize: 200Mi
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+        value: http://otel-kube-stack-deployment-collector.otel:4317
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: grpc
   # resources:
@@ -1031,7 +1031,7 @@ instrumentation:
   # #  Python autoinstrumentation uses http/proto by default
   # #  so data must be sent to 4318 instead of 4317.
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4318
+        value: http://otel-kube-stack-deployment-collector.otel:4318
       - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
         value: 'true'
   # resourceRequirements:
@@ -1053,7 +1053,7 @@ instrumentation:
   #   # Dotnet autoinstrumentation uses http/proto by default
   #   # See https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/blob/888e2cd216c77d12e56b54ee91dafbc4e7452a52/docs/config.md#otlp
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4318
+        value: http://otel-kube-stack-deployment-collector.otel:4318
   # resourceRequirements:
   #   requests:
   #     memory: "64Mi"
@@ -1073,7 +1073,7 @@ instrumentation:
   #   # Dotnet autoinstrumentation uses http/proto by default
   #   # See https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/blob/888e2cd216c77d12e56b54ee91dafbc4e7452a52/docs/config.md#otlp
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4318
+        value: http://otel-kube-stack-deployment-collector.otel:4318
   # resourceRequirements:
   #   requests:
   #     memory: "64Mi"

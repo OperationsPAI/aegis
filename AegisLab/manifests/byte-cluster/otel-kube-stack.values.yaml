@@ -520,5 +520,71 @@ clusterRole:
       resources: ['pods', 'nodes', 'namespaces', 'nodes/stats', 'nodes/proxy']
       verbs: ['get', 'list', 'watch']
 
+# Instrumentation configuration.
+#
+# Renders an `Instrumentation` CR named `opentelemetry-kube-stack` in the
+# release namespace (`monitoring` on Byte). Benchmark charts that auto-inject
+# (e.g. teastore via `opentelemetry.monitoringNamespace=monitoring` +
+# `opentelemetry.instrumentationName=opentelemetry-kube-stack`) require this
+# CR to exist. Previously `enabled: false`, which silently skipped injection
+# and caused zero traces from auto-instrumented pods.
 instrumentation:
-  enabled: false
+  enabled: true
+  labels: {}
+  annotations: {}
+
+  # Default collector's service (deployment collector in the release namespace).
+  exporter:
+    endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+
+  resource:
+    resourceAttributes: {}
+    addK8sUIDAttributes: true
+
+  propagators:
+    - tracecontext
+    - baggage
+    - b3
+    - b3multi
+    - jaeger
+    - xray
+    - ottrace
+
+  env:
+    - name: OTEL_TRACES_EXPORTER
+      value: otlp
+    - name: OTEL_METRICS_EXPORTER
+      value: otlp
+    - name: OTEL_LOGS_EXPORTER
+      value: otlp
+    - name: OTEL_EXPORTER_OTLP_SPAN_INSECURE
+      value: '"true"'
+
+  # Java agent: OTLP gRPC to :4317 matches the exporter default above.
+  java:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.23.0
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: grpc
+
+  nodejs: {}
+
+  # Python / .NET / Go SDKs default to OTLP HTTP — must hit :4318.
+  python:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4318
+      - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+        value: 'true'
+
+  dotnet:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4318
+
+  go:
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4318
