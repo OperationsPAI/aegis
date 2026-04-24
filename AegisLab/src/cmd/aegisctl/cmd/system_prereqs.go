@@ -27,9 +27,15 @@ type systemPrereqResp struct {
 
 // helmPrereqSpec decodes the kind=helm payload inside SystemPrereqResp.Spec.
 type helmPrereqSpec struct {
-	Chart     string `json:"chart"`
-	Namespace string `json:"namespace"`
-	Version   string `json:"version"`
+	Chart     string               `json:"chart"`
+	Namespace string               `json:"namespace"`
+	Version   string               `json:"version"`
+	Values    []helmPrereqSetValue `json:"values"`
+}
+
+type helmPrereqSetValue struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // Prereq status values — mirror model.SystemPrerequisiteStatus*. Duplicated
@@ -64,8 +70,8 @@ var prereqRunner prereqReconcileRunner = realPrereqRunner{}
 
 // --- flags ---
 var (
-	systemReconcileName    string
-	systemReconcileDryRun  bool
+	systemReconcileName   string
+	systemReconcileDryRun bool
 )
 
 // systemReconcilePrereqsCmd implements `aegisctl system reconcile-prereqs`.
@@ -170,20 +176,14 @@ failed.`,
 			if systemReconcileDryRun {
 				r.Action = "dry-run"
 				results = append(results, r)
-				fmt.Fprintf(os.Stderr, "[plan] helm upgrade --install %s %s -n %s --create-namespace %s\n",
-					item.Prereq.Name, spec.Chart, spec.Namespace, versionFlag(spec.Version))
+				fmt.Fprintf(os.Stderr, "[plan] helm %s\n",
+					strings.Join(buildHelmUpgradeInstallArgs(item.Prereq.Name, spec), " "))
 				continue
 			}
 
 			fmt.Fprintf(os.Stderr, "[run]  helm upgrade --install %s %s -n %s (version=%s)\n",
 				item.Prereq.Name, spec.Chart, spec.Namespace, fallback(spec.Version, "<any>"))
-			helmArgs := []string{
-				"upgrade", "--install", item.Prereq.Name, spec.Chart,
-				"-n", spec.Namespace, "--create-namespace",
-			}
-			if strings.TrimSpace(spec.Version) != "" {
-				helmArgs = append(helmArgs, "--version", spec.Version)
-			}
+			helmArgs := buildHelmUpgradeInstallArgs(item.Prereq.Name, spec)
 			if _, err := prereqRunner.Run("helm", helmArgs...); err != nil {
 				r.Action = "failed"
 				r.Error = err.Error()
@@ -286,18 +286,28 @@ func writeReconcileReport(items interface{}) {
 	fmt.Fprintln(os.Stdout, string(b))
 }
 
-func versionFlag(v string) string {
-	if strings.TrimSpace(v) == "" {
-		return ""
-	}
-	return "--version " + v
-}
-
 func fallback(s, def string) string {
 	if strings.TrimSpace(s) == "" {
 		return def
 	}
 	return s
+}
+
+func buildHelmUpgradeInstallArgs(releaseName string, spec helmPrereqSpec) []string {
+	helmArgs := []string{
+		"upgrade", "--install", releaseName, spec.Chart,
+		"-n", spec.Namespace, "--create-namespace",
+	}
+	if strings.TrimSpace(spec.Version) != "" {
+		helmArgs = append(helmArgs, "--version", spec.Version)
+	}
+	for _, v := range spec.Values {
+		if strings.TrimSpace(v.Key) == "" {
+			continue
+		}
+		helmArgs = append(helmArgs, "--set", fmt.Sprintf("%s=%s", v.Key, v.Value))
+	}
+	return helmArgs
 }
 
 // prereqReconcileResult is one row in the machine-parseable stdout summary.

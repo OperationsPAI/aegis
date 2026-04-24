@@ -126,6 +126,31 @@ func TestBuildPrerequisiteRow_RejectsHelmWithoutChart(t *testing.T) {
 	}
 }
 
+func TestBuildPrerequisiteRow_StoresHelmValues(t *testing.T) {
+	row, err := buildPrerequisiteRow("sockshop", InitialSystemPrerequisite{
+		Name:      "coherence-operator",
+		Kind:      "helm",
+		Chart:     "coherence/coherence-operator",
+		Namespace: "coherence-test",
+		Values: []InitialHelmSetValue{
+			{Key: "image.registry", Value: "pair-cn-shanghai.cr.volces.com/opspai"},
+			{Key: "image.name", Value: "coherence-operator"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if !containsSubstr(row.SpecJSON, `"values":[`) {
+		t.Fatalf("spec_json missing values: %s", row.SpecJSON)
+	}
+	if !containsSubstr(row.SpecJSON, `"key":"image.registry"`) {
+		t.Fatalf("spec_json missing values key: %s", row.SpecJSON)
+	}
+	if !containsSubstr(row.SpecJSON, `"value":"pair-cn-shanghai.cr.volces.com/opspai"`) {
+		t.Fatalf("spec_json missing values value: %s", row.SpecJSON)
+	}
+}
+
 func containsSubstr(s, sub string) bool {
 	return len(s) >= len(sub) && (func() bool {
 		for i := 0; i+len(sub) <= len(s); i++ {
