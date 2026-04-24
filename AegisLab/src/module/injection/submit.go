@@ -43,6 +43,50 @@ func ensureGuidedNamespaces(ctx context.Context, configs []guidedcli.GuidedConfi
 	}
 }
 
+// mergeSpecServicesForDupCheck merges one spec's groundtruth services into
+// the running cross-spec `uniqueServices` map and returns a duplicate
+// warning for each service that clashes with a *different* spec at a
+// previous index. Services repeated within the same spec are deduped
+// first — see #157: HTTP chaos groundtruth can legitimately list the same
+// service name twice (e.g. `GET /` against `front-end` yields
+// `["front-end","front-end"]`), and without this dedup the cross-spec
+// check would fire against itself and produce `positions 0 and 0`
+// self-duplicates.
+func mergeSpecServicesForDupCheck(uniqueServices map[string]int, specServices []string, idx int) []string {
+	seenInSpec := make(map[string]struct{}, len(specServices))
+	var warnings []string
+	for _, service := range specServices {
+		if service == "" {
+			continue
+		}
+		if _, dup := seenInSpec[service]; dup {
+			continue
+		}
+		seenInSpec[service] = struct{}{}
+		if oldIdx, exists := uniqueServices[service]; exists {
+			warnings = append(warnings,
+				fmt.Sprintf("service '%s' at positions %d and %d", service, oldIdx, idx))
+			continue
+		}
+		uniqueServices[service] = idx
+	}
+	return warnings
+}
+
+// firstGuidedNamespace returns the first non-empty `namespace` among the
+// given guided configs. Used by SubmitFaultInjection to promote the
+// user-supplied namespace into RestartPedestal's payload as a hard
+// constraint (#156). Empty when no config names a namespace — callers must
+// then fall back to the NsPattern-pool selection in monitor.
+func firstGuidedNamespace(configs []guidedcli.GuidedConfig) string {
+	for _, cfg := range configs {
+		if ns := strings.TrimSpace(cfg.Namespace); ns != "" {
+			return ns
+		}
+	}
+	return ""
+}
+
 type injectionProcessItem struct {
 	index         int
 	faultDuration int
@@ -176,17 +220,8 @@ func parseBatchGuidedSpecs(ctx context.Context, pedestal string, batchIndex int,
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to get groundtruth from guided config at index %d: %w", idx, err)
 		}
-		for _, service := range groundtruth.Service {
-			if service == "" {
-				continue
-			}
-			if oldIdx, exists := uniqueServices[service]; exists {
-				duplicateServiceWarnings = append(duplicateServiceWarnings,
-					fmt.Sprintf("service '%s' at positions %d and %d", service, oldIdx, idx))
-				continue
-			}
-			uniqueServices[service] = idx
-		}
+		duplicateServiceWarnings = append(duplicateServiceWarnings,
+			mergeSpecServicesForDupCheck(uniqueServices, groundtruth.Service, idx)...)
 	}
 
 	var warning string

@@ -115,3 +115,50 @@ func TestParseBatchGuidedSpecsWarnsOnDuplicateServices(t *testing.T) {
 	require.NotNil(t, item)
 	require.Contains(t, warning, "duplicate service injections")
 }
+
+// TestMergeSpecServicesForDupCheck covers the #157 regression: a single
+// spec whose groundtruth legitimately lists the same service twice
+// (e.g. HTTP self-loop `GET /` on `front-end`) must NOT flag a self-
+// duplicate, and cross-spec conflicts must still be reported.
+func TestMergeSpecServicesForDupCheck(t *testing.T) {
+	t.Run("single spec with repeated service does not self-duplicate", func(t *testing.T) {
+		uniq := map[string]int{}
+		warnings := mergeSpecServicesForDupCheck(uniq, []string{"front-end", "front-end"}, 0)
+		require.Empty(t, warnings, "a spec's own repeated service should not warn against itself")
+		require.Equal(t, map[string]int{"front-end": 0}, uniq)
+	})
+
+	t.Run("cross-spec duplicate still warns", func(t *testing.T) {
+		uniq := map[string]int{}
+		_ = mergeSpecServicesForDupCheck(uniq, []string{"front-end", "front-end"}, 0)
+		warnings := mergeSpecServicesForDupCheck(uniq, []string{"front-end"}, 1)
+		require.Len(t, warnings, 1)
+		require.Contains(t, warnings[0], "positions 0 and 1")
+	})
+
+	t.Run("cross-spec duplicate among multi-service specs", func(t *testing.T) {
+		uniq := map[string]int{}
+		_ = mergeSpecServicesForDupCheck(uniq, []string{"a", "b"}, 0)
+		warnings := mergeSpecServicesForDupCheck(uniq, []string{"b", "c"}, 1)
+		require.Len(t, warnings, 1)
+		require.Contains(t, warnings[0], "service 'b'")
+		require.Contains(t, warnings[0], "positions 0 and 1")
+	})
+
+	t.Run("empty service names are ignored", func(t *testing.T) {
+		uniq := map[string]int{}
+		warnings := mergeSpecServicesForDupCheck(uniq, []string{"", "front-end", ""}, 0)
+		require.Empty(t, warnings)
+		require.Equal(t, map[string]int{"front-end": 0}, uniq)
+	})
+}
+
+func TestFirstGuidedNamespace(t *testing.T) {
+	require.Equal(t, "", firstGuidedNamespace(nil))
+	require.Equal(t, "", firstGuidedNamespace([]guidedcli.GuidedConfig{{Namespace: "  "}}))
+	require.Equal(t, "sockshop14", firstGuidedNamespace([]guidedcli.GuidedConfig{
+		{Namespace: ""},
+		{Namespace: "sockshop14"},
+		{Namespace: "sockshop15"},
+	}))
+}
