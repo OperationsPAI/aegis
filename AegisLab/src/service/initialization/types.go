@@ -57,11 +57,19 @@ type InitialDataContainer struct {
 // without a schema change because consumer.go serialises the whole struct
 // (minus Name/Kind) into the per-row spec_json column.
 type InitialSystemPrerequisite struct {
-	Name      string `yaml:"name"`
-	Kind      string `yaml:"kind"`
-	Chart     string `yaml:"chart"`
-	Namespace string `yaml:"namespace"`
-	Version   string `yaml:"version"`
+	Name      string                `yaml:"name"`
+	Kind      string                `yaml:"kind"`
+	Chart     string                `yaml:"chart"`
+	Namespace string                `yaml:"namespace"`
+	Version   string                `yaml:"version"`
+	Values    []InitialHelmSetValue `yaml:"values"`
+}
+
+// InitialHelmSetValue represents one `--set key=value` pair for a
+// kind=helm system prerequisite.
+type InitialHelmSetValue struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
 }
 
 func (c *InitialDataContainer) ConvertToDBContainer() *model.Container {

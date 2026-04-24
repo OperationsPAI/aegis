@@ -262,12 +262,12 @@ items are covered above.
   chart since `1.1.1`: each `Coherence` CR template emits `spec.labels`
   with `{app: <name>}`. Without this, aegisctl preflight fails with
   `namespace sockshop0 has no pods matching app=carts`.
-- **Prerequisite: `coherence-operator`.** `helm repo add coherence
-  https://oracle.github.io/coherence-operator/charts` +
-  `helm install coherence-operator coherence/coherence-operator` by
-  hand before the first chart install. (Seed has this wired as a
-  `prerequisites` entry for the system, reconciled via
-  `aegisctl system reconcile-prereqs --name sockshop`.)
+- **Prerequisite: `coherence-operator`.** Install with the Shanghai
+  mirror overrides:
+  `helm repo add coherence https://oracle.github.io/coherence-operator/charts && helm repo update && helm upgrade -i coherence-operator coherence/coherence-operator -n coherence-test --create-namespace --wait --version 3.5.11 --set image.registry=pair-cn-shanghai.cr.volces.com/opspai --set image.name=coherence-operator --set image.tag=3.5.11 --set defaultCoherenceImage.registry=pair-cn-shanghai.cr.volces.com/opspai --set defaultCoherenceImage.name=coherence-ce --set defaultCoherenceImage.tag=14.1.2-0-3`.
+  The same values are seeded in `prerequisites.values`, so
+  `aegisctl system reconcile-prereqs --name sockshop` applies them
+  automatically.
 - **No tracing bridge** — Coherence MP emits Prometheus metrics only.
   Needs `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the bench container.
 - **Frontend is Node.js**, vendored into the fork at `frontend/` from

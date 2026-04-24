@@ -276,7 +276,7 @@ func buildPrerequisiteRow(systemName string, p InitialSystemPrerequisite) (*mode
 	if kind == "" {
 		kind = model.SystemPrerequisiteKindHelm
 	}
-	spec := map[string]string{}
+	spec := map[string]any{}
 	switch kind {
 	case model.SystemPrerequisiteKindHelm:
 		if strings.TrimSpace(p.Chart) == "" {
@@ -285,6 +285,21 @@ func buildPrerequisiteRow(systemName string, p InitialSystemPrerequisite) (*mode
 		spec["chart"] = p.Chart
 		spec["namespace"] = p.Namespace
 		spec["version"] = p.Version
+		if len(p.Values) > 0 {
+			values := make([]map[string]string, 0, len(p.Values))
+			for _, v := range p.Values {
+				if strings.TrimSpace(v.Key) == "" {
+					continue
+				}
+				values = append(values, map[string]string{
+					"key":   v.Key,
+					"value": v.Value,
+				})
+			}
+			if len(values) > 0 {
+				spec["values"] = values
+			}
+		}
 	default:
 		// Best-effort: preserve every non-Name/Kind field we know about so a
 		// new-kind reader can pick them up without a new seeder.
@@ -296,6 +311,21 @@ func buildPrerequisiteRow(systemName string, p InitialSystemPrerequisite) (*mode
 		}
 		if p.Version != "" {
 			spec["version"] = p.Version
+		}
+		if len(p.Values) > 0 {
+			values := make([]map[string]string, 0, len(p.Values))
+			for _, v := range p.Values {
+				if strings.TrimSpace(v.Key) == "" {
+					continue
+				}
+				values = append(values, map[string]string{
+					"key":   v.Key,
+					"value": v.Value,
+				})
+			}
+			if len(values) > 0 {
+				spec["values"] = values
+			}
 		}
 	}
 	raw, err := json.Marshal(spec)

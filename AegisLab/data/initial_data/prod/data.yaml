@@ -175,6 +175,19 @@ containers:
         chart: coherence/coherence-operator
         namespace: coherence-test
         version: '>=3.4'
+        values:
+          - key: image.registry
+            value: pair-cn-shanghai.cr.volces.com/opspai
+          - key: image.name
+            value: coherence-operator
+          - key: image.tag
+            value: 3.5.11
+          - key: defaultCoherenceImage.registry
+            value: pair-cn-shanghai.cr.volces.com/opspai
+          - key: defaultCoherenceImage.name
+            value: coherence-ce
+          - key: defaultCoherenceImage.tag
+            value: 14.1.2-0-3
   - type: 2
     name: hs
     is_public: true

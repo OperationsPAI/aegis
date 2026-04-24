@@ -30,7 +30,8 @@ const (
 //
 //	{"chart": "coherence/coherence-operator",
 //	 "namespace": "coherence-test",
-//	 "version": ">=3.4"}
+//	 "version": ">=3.4",
+//	 "values": [{"key":"image.registry","value":"pair-cn-shanghai.cr.volces.com/opspai"}]}
 type SystemPrerequisite struct {
 	ID         int       `gorm:"primaryKey;autoIncrement" json:"id"`
 	SystemName string    `gorm:"not null;size:128;uniqueIndex:idx_sysprereq,priority:1" json:"system_name"`

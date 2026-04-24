@@ -247,7 +247,7 @@ Benchmark-specific prereqs the runner does NOT auto-handle:
 
 | Benchmark | Extra step before first run | Why |
 |---|---|---|
-| `sockshop` | `helm repo add coherence https://oracle.github.io/coherence-operator/charts && helm upgrade -i coherence-operator coherence/coherence-operator -n coherence --create-namespace --wait` | Coherence CRs don't render without the operator. |
+| `sockshop` | `helm repo add coherence https://oracle.github.io/coherence-operator/charts && helm repo update && helm upgrade -i coherence-operator coherence/coherence-operator -n coherence-test --create-namespace --wait --version 3.5.11 --set image.registry=pair-cn-shanghai.cr.volces.com/opspai --set image.name=coherence-operator --set image.tag=3.5.11 --set defaultCoherenceImage.registry=pair-cn-shanghai.cr.volces.com/opspai --set defaultCoherenceImage.name=coherence-ce --set defaultCoherenceImage.tag=14.1.2-0-3` | Coherence CRs don't render without the operator. |
 | `teastore` | none | Jaeger-client-java bridge is inside the chart. |
 | `hs`/`sn`/`mm` | none | `dsb-wrk2` loader + Jaeger bridge are inside each chart. |
 
