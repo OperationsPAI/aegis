@@ -562,7 +562,7 @@ instrumentation:
 
   # Java agent: OTLP gRPC to :4317 matches the exporter default above.
   java:
-    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.23.0
+    image: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-operator-autoinstrumentation-java:2.23.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
