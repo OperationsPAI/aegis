@@ -173,11 +173,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.1
+      - name: 0.1.2
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
-          version: 0.1.1
+          version: 0.1.2
           chart_name: hotel-reservation
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -200,11 +200,11 @@ containers:
               value_type: 0
               default_value: 20260423-61074ea
               overridable: true
-            - key: global.services.environments.OTEL_EXPORTER_OTLP_ENDPOINT
+            - key: global.otel.endpoint
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
+              default_value: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -212,11 +212,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.1
+      - name: 0.1.2
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
-          version: 0.1.1
+          version: 0.1.2
           chart_name: social-network
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -243,7 +243,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
+              default_value: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -251,11 +251,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.1
+      - name: 0.1.2
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
-          version: 0.1.1
+          version: 0.1.2
           chart_name: media-microservices
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
@@ -282,7 +282,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
+              default_value: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
