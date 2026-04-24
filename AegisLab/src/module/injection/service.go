@@ -319,6 +319,18 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 			consts.RestartSkipInstall:   req.SkipRestartPedestal,
 		}
 
+		// #156: when the guided config names a namespace, treat it as a hard
+		// constraint on RestartPedestal. Without this the runtime falls back
+		// to `monitor.GetNamespaceToRestart`, which picks the first enabled
+		// namespace matching the system's NsPattern — silently rerouting a
+		// `sockshop14`-targeted submit to `sockshop0`. We thread a single
+		// required namespace per task; within one guided batch all configs
+		// must share the same namespace anyway (they run under one lock), so
+		// the first non-empty value is authoritative.
+		if requiredNs := firstGuidedNamespace(item.guidedConfigs); requiredNs != "" {
+			payload[consts.RestartRequiredNamespace] = requiredNs
+		}
+
 		task := &dto.UnifiedTask{
 			Type:        consts.TaskTypeRestartPedestal,
 			Immediate:   false,

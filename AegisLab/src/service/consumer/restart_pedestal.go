@@ -16,6 +16,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -146,6 +147,11 @@ type restartPayload struct {
 	faultDuration int
 	injectPayload map[string]any
 	skipInstall   bool
+	// requiredNamespace, when non-empty, pins this RestartPedestal task to a
+	// specific namespace instead of picking one from the NsPattern pool.
+	// Populated by SubmitFaultInjection whenever a guided config names a
+	// namespace — see #156 for the silent-fallback bug this fixes.
+	requiredNamespace string
 }
 
 // executeRestartPedestal handles the execution of a restart pedestal task
@@ -233,19 +239,59 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 
 		t := time.Now()
 		deltaTime := time.Duration(payload.interval) * consts.DefaultTimeUnit
-		namespace = monitor.GetNamespaceToRestart(t.Add(deltaTime), cfg.NsPattern, task.TraceID)
-		if namespace == "" {
-			// Failed to acquire namespace lock, immediately release rate limit token
-			if releaseErr := rateLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
-				logEntry.Errorf("failed to release restart pedestal token after namespace lock failure: %v", releaseErr)
+		lockEndTime := t.Add(deltaTime)
+
+		// #156: honor the guided-submitted namespace as a hard constraint.
+		// Without this branch, GetNamespaceToRestart would iterate every
+		// enabled ns matching cfg.NsPattern and silently downgrade a
+		// `sockshop14` request to `sockshop0`. If the required ns is not
+		// (yet) registered in the chaos-system config, AcquireLock will
+		// return a clear "not found in current configuration" error — the
+		// user's next step is to bump that system's Count and retry, not
+		// have the submit quietly reroute.
+		if payload.requiredNamespace != "" {
+			rx, patternErr := regexp.Compile(cfg.NsPattern)
+			if patternErr != nil {
+				toReleased = false
+				return handleExecutionError(span, logEntry,
+					fmt.Sprintf("invalid NsPattern %q for system %s", cfg.NsPattern, system),
+					patternErr)
+			}
+			if !rx.MatchString(payload.requiredNamespace) {
+				toReleased = false
+				return handleExecutionError(span, logEntry,
+					fmt.Sprintf("required namespace %q does not match system %s NsPattern %q",
+						payload.requiredNamespace, system, cfg.NsPattern),
+					fmt.Errorf("namespace/system mismatch"))
 			}
 
-			acquired = false
-			if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, "failed to acquire lock for namespace, retrying"); err != nil {
-				return err
+			if lockErr := monitor.AcquireNamespaceForRestart(payload.requiredNamespace, lockEndTime, task.TraceID); lockErr != nil {
+				if releaseErr := rateLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
+					logEntry.Errorf("failed to release restart pedestal token after required-namespace lock failure: %v", releaseErr)
+				}
+				acquired = false
+				reason := fmt.Sprintf("failed to acquire lock for required namespace %s: %v, retrying", payload.requiredNamespace, lockErr)
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, reason); err != nil {
+					return err
+				}
+				return nil
 			}
+			namespace = payload.requiredNamespace
+		} else {
+			namespace = monitor.GetNamespaceToRestart(lockEndTime, cfg.NsPattern, task.TraceID)
+			if namespace == "" {
+				// Failed to acquire namespace lock, immediately release rate limit token
+				if releaseErr := rateLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
+					logEntry.Errorf("failed to release restart pedestal token after namespace lock failure: %v", releaseErr)
+				}
 
-			return nil
+				acquired = false
+				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, "failed to acquire lock for namespace, retrying"); err != nil {
+					return err
+				}
+
+				return nil
+			}
 		}
 
 		deltaTime = time.Duration(payload.interval-payload.faultDuration) * consts.DefaultTimeUnit
@@ -423,12 +469,17 @@ func parseRestartPayload(payload map[string]any) (*restartPayload, error) {
 	// "run the helm install normally".
 	skipInstall, _ := payload[consts.RestartSkipInstall].(bool)
 
+	// requiredNamespace is optional. When set (guided submit carried a
+	// user-specified namespace) we bypass pool selection; see #156.
+	requiredNamespace, _ := payload[consts.RestartRequiredNamespace].(string)
+
 	return &restartPayload{
-		pedestal:      pedestal,
-		interval:      interval,
-		faultDuration: faultDuration,
-		injectPayload: injectPayload,
-		skipInstall:   skipInstall,
+		pedestal:          pedestal,
+		interval:          interval,
+		faultDuration:     faultDuration,
+		injectPayload:     injectPayload,
+		skipInstall:       skipInstall,
+		requiredNamespace: strings.TrimSpace(requiredNamespace),
 	}, nil
 }
 

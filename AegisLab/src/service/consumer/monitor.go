@@ -51,6 +51,13 @@ type NamespaceMonitor interface {
 	ReleaseLock(ctx context.Context, namespace string, traceID string) error
 	CheckNamespaceToInject(namespace string, executeTime time.Time, traceID string) error
 	GetNamespaceToRestart(endTime time.Time, nsPattern, traceID string) string
+	// AcquireNamespaceForRestart locks a specific namespace for a
+	// RestartPedestal task, bypassing the NsPattern-pool selection done by
+	// GetNamespaceToRestart. Used when a guided submit pinned a namespace
+	// (see #156). Returns the same errors as AcquireLock, in particular
+	// "namespace X not found in current configuration" when the required
+	// ns has not been registered in the chaos-system config yet.
+	AcquireNamespaceForRestart(namespace string, endTime time.Time, traceID string) error
 }
 
 // monitor manages namespace locks and status using Redis
@@ -222,6 +229,15 @@ func (m *monitor) ReleaseLock(ctx context.Context, namespace string, traceID str
 	err = m.locks.release(m.currentContext(), namespace, traceID, time.Now())
 
 	return
+}
+
+// AcquireNamespaceForRestart pins a RestartPedestal task to the given
+// namespace, bypassing the NsPattern-pool selection in
+// GetNamespaceToRestart. See #156: without this, a guided submit that names
+// a specific namespace would silently fall back to the first enabled
+// namespace matching the system's regex.
+func (m *monitor) AcquireNamespaceForRestart(namespace string, endTime time.Time, traceID string) error {
+	return m.AcquireLock(namespace, endTime, traceID, consts.TaskTypeRestartPedestal)
 }
 
 // CheckNamespaceToInject checks if a specific namespace is available for injection and acquires it
