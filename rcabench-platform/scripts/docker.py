@@ -10,6 +10,7 @@ CONTEXTS: dict[str, Path] = {
     "rcabench-platform": Path.cwd(),
     "clickhouse_dataset": Path.cwd() / "docker/clickhouse_dataset",
     "detector": Path.cwd() / "docker/detector",
+    "reason": Path.cwd() / "docker/reason",
 }
 
 HARBOR_REPO = "10.10.10.240/library"

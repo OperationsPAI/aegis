@@ -1,0 +1,237 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "propagation_rules_schema.json",
+  "title": "Propagation Rules Schema",
+  "description": "JSON Schema for fault propagation rule definitions",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "Description of the rules file"
+    },
+    "available_node_kinds": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/node_kind" },
+      "description": "List of available node types"
+    },
+    "available_edge_kinds": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/edge_kind" },
+      "description": "List of available edge types"
+    },
+    "available_directions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/direction" },
+      "description": "List of available propagation directions"
+    },
+    "available_states": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "description": "Map of node_kind to available states"
+    },
+    "default_states": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Map of node_kind to default (healthy) state"
+    },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/rule" },
+      "description": "List of propagation rules"
+    },
+    "edge_condition_operators": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Available comparison operators for edge conditions"
+    },
+    "edge_data_fields": {
+      "type": "object",
+      "description": "Documentation of available edge data fields by edge type"
+    },
+    "topology_reference": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Reference documentation for topology edge relationships"
+    }
+  },
+  "required": ["rules"],
+
+  "definitions": {
+    "node_kind": {
+      "type": "string",
+      "enum": [
+        "machine", "namespace", "deployment", "replica_set", "stateful_set",
+        "daemon_set", "pod", "container", "service", "span",
+        "pvc", "pv", "configmap", "secret", "ingress", "endpoints", "function"
+      ],
+      "description": "Type of node in the topology graph"
+    },
+
+    "edge_kind": {
+      "type": "string",
+      "enum": [
+        "owns", "routes_to", "scales", "manages", "schedules",
+        "runs", "claims", "binds_to", "calls", "includes",
+        "related_to", "mounts", "exposes", "depends_on", "affects"
+      ],
+      "description": "Type of edge in the topology graph"
+    },
+
+    "direction": {
+      "type": "string",
+      "enum": ["forward", "backward"],
+      "description": "Propagation direction along the edge"
+    },
+
+    "path_hop": {
+      "type": "object",
+      "properties": {
+        "edge_kind": { "$ref": "#/definitions/edge_kind" },
+        "direction": { "$ref": "#/definitions/direction" },
+        "intermediate_kind": { "$ref": "#/definitions/node_kind" },
+        "intermediate_states": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed states at intermediate node. If specified, the intermediate node must have at least one of these states for the path to be valid. Use ['healthy', 'unknown'] to bypass nodes without detected anomalies."
+        },
+        "edge_condition": { "$ref": "#/definitions/edge_condition" }
+      },
+      "required": ["edge_kind", "direction"],
+      "additionalProperties": false,
+      "description": "A single hop in a multi-hop propagation path"
+    },
+
+    "edge_condition": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Field path to check, e.g., 'data.abnormal_error_rate'"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [">", "<", ">=", "<=", "==", "!="],
+          "description": "Comparison operator"
+        },
+        "value": {
+          "type": "number",
+          "description": "Value to compare against"
+        }
+      },
+      "required": ["field", "operator", "value"],
+      "additionalProperties": false,
+      "description": "Condition on edge data for rule to apply"
+    },
+
+    "rule": {
+      "type": "object",
+      "properties": {
+        "_comment": {
+          "type": "string",
+          "description": "Optional comment (ignored)"
+        },
+        "_usage": {
+          "type": "string",
+          "description": "Optional usage hint (ignored)"
+        },
+        "rule_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Unique identifier for the rule (snake_case)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the propagation"
+        },
+        "src_kind": {
+          "$ref": "#/definitions/node_kind",
+          "description": "Source node type"
+        },
+        "src_states": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Source states that trigger this propagation"
+        },
+        "edge_kind": {
+          "$ref": "#/definitions/edge_kind",
+          "description": "[Single-hop] Edge type for propagation"
+        },
+        "direction": {
+          "$ref": "#/definitions/direction",
+          "description": "[Single-hop] Propagation direction"
+        },
+        "path": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/path_hop" },
+          "minItems": 1,
+          "description": "[Multi-hop] Sequence of hops from src to dst"
+        },
+        "dst_kind": {
+          "$ref": "#/definitions/node_kind",
+          "description": "Destination node type"
+        },
+        "possible_dst_states": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Possible resulting states in destination node"
+        },
+        "edge_condition": {
+          "$ref": "#/definitions/edge_condition",
+          "description": "[Single-hop] Optional condition on edge data"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.8,
+          "description": "Confidence score for this rule (0.0 to 1.0)"
+        },
+        "min_delay": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum propagation delay in seconds"
+        },
+        "max_delay": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum propagation delay in seconds"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["builtin", "llm_generated", "manual"],
+          "default": "builtin",
+          "description": "Origin of this rule"
+        }
+      },
+      "required": ["rule_id", "description", "src_kind", "src_states", "dst_kind", "possible_dst_states"],
+      "oneOf": [
+        {
+          "properties": {
+            "edge_kind": { "$ref": "#/definitions/edge_kind" },
+            "direction": { "$ref": "#/definitions/direction" }
+          },
+          "required": ["edge_kind", "direction"],
+          "not": { "required": ["path"] }
+        },
+        {
+          "properties": {
+            "path": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/path_hop" },
+              "minItems": 1
+            }
+          },
+          "required": ["path"],
+          "not": { "required": ["edge_kind", "direction"] }
+        }
+      ],
+      "additionalProperties": false,
+      "description": "A fault propagation rule"
+    }
+  }
+}

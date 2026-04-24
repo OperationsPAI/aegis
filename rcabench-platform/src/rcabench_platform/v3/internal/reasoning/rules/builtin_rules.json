@@ -1,0 +1,278 @@
+{
+    "$schema": "propagation_rules_schema.json",
+    "description": "Fault propagation rules with multi-granularity injection support",
+    "source": "Data-driven optimization + fault-type-aware injection support",
+    "version": "2.3-injection-point-enhancement",
+    "rules": [
+        {"_comment": "===== Container → Pod → Service → Span Multi-hop (for Container Resource Faults) ====="},
+        {
+            "name": "RULE_CONTAINER_RESOURCE_TO_SPANS",
+            "rule_id": "container_001",
+            "description": "Container HIGH_CPU/HIGH_MEMORY affects all spans of the service via multi-hop path. Resource stress can cause latency, errors, or even missing spans.",
+            "src_kind": "container",
+            "src_states": ["high_cpu", "high_memory"],
+            "path": [
+                {
+                    "edge_kind": "runs",
+                    "direction": "backward",
+                    "intermediate_kind": "pod",
+                    "intermediate_states": ["high_cpu", "high_memory", "healthy", "unknown"]
+                },
+                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
+                {"edge_kind": "includes", "direction": "forward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "TIMEOUT", "MISSING_SPAN", "HIGH_ERROR_RATE"],
+            "confidence": 0.85
+        },
+        {
+            "name": "RULE_CONTAINER_RESTART_TO_SPANS",
+            "rule_id": "container_002",
+            "description": "Container RESTARTING causes missing spans via multi-hop path",
+            "src_kind": "container",
+            "src_states": ["RESTARTING"],
+            "path": [
+                {
+                    "edge_kind": "runs",
+                    "direction": "backward",
+                    "intermediate_kind": "pod",
+                    "intermediate_states": ["healthy", "unknown"]
+                },
+                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
+                {"edge_kind": "includes", "direction": "forward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["MISSING_SPAN", "HIGH_ERROR_RATE", "TIMEOUT"],
+            "confidence": 0.9
+        },
+        {"_comment": "===== Pod → Service → Span Multi-hop (for Pod Lifecycle Faults) ====="},
+        {
+            "name": "RULE_POD_RESOURCE_TO_SPANS",
+            "rule_id": "pod_001",
+            "description": "Pod HIGH_CPU/HIGH_MEMORY affects all spans of the service",
+            "src_kind": "pod",
+            "src_states": ["high_cpu", "high_memory"],
+            "path": [
+                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
+                {"edge_kind": "includes", "direction": "forward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "TIMEOUT"],
+            "confidence": 0.85
+        },
+        {"_comment": "===== Service → Span First Hop ====="},
+        {
+            "name": "RULE_SERVICE_DELAY_TO_SPAN",
+            "rule_id": "service_001",
+            "description": "Service delay propagates to span latency (first hop). Usage: 81,043",
+            "src_kind": "service",
+            "src_states": [],
+            "edge_kind": "includes",
+            "direction": "forward",
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "TIMEOUT"],
+            "confidence": 0.85,
+            "first_hop_config": {
+                "require_src_states": false,
+                "require_dst_states": true,
+                "lenient_dst_state_match": true
+            }
+        },
+        {
+            "name": "RULE_SERVICE_ERROR_TO_SPAN",
+            "rule_id": "service_002",
+            "description": "Service errors propagate to span errors (first hop). Included for completeness even with 0 usage.",
+            "src_kind": "service",
+            "src_states": ["ERROR", "UNAVAILABLE", "DOWN"],
+            "edge_kind": "includes",
+            "direction": "forward",
+            "dst_kind": "span",
+            "possible_dst_states": [
+                "HIGH_ERROR_RATE",
+                "TIMEOUT",
+                "CONNECTION_RESET",
+                "MISSING_SPAN",
+                "HIGH_LOG_ERROR",
+                "MALFORMED_RESPONSE"
+            ],
+            "confidence": 0.85,
+            "first_hop_config": {
+                "require_src_states": false,
+                "require_dst_states": true,
+                "lenient_dst_state_match": true
+            }
+        },
+        {"_comment": "===== Span-to-Span Propagation (Main Engine) ====="},
+        {
+            "name": "RULE_SPAN_HIGH_LATENCY_TO_CALLER",
+            "rule_id": "span_003",
+            "description": "Latency propagates through call chain. Usage: 191,012 (PRIMARY RULE)",
+            "src_kind": "span",
+            "src_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY"],
+            "edge_kind": "calls",
+            "direction": "backward",
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "TIMEOUT"],
+            "confidence": 0.8
+        },
+        {
+            "name": "RULE_SPAN_ERROR_TO_CALLER",
+            "rule_id": "span_004",
+            "description": "Errors propagate through call chain. Usage: 6,573",
+            "src_kind": "span",
+            "src_states": ["HIGH_ERROR_RATE", "TIMEOUT"],
+            "edge_kind": "calls",
+            "direction": "backward",
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_ERROR_RATE", "TIMEOUT"],
+            "confidence": 0.8
+        },
+        {
+            "name": "RULE_SPAN_MISSING_TO_CALLER_ERROR",
+            "rule_id": "span_006",
+            "description": "Missing spans (e.g., from container restart) propagate as errors. Usage: 14,691",
+            "src_kind": "span",
+            "src_states": ["MISSING_SPAN"],
+            "edge_kind": "calls",
+            "direction": "backward",
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_ERROR_RATE", "TIMEOUT", "MISSING_SPAN"],
+            "confidence": 0.85
+        },
+        {
+            "name": "RULE_SPAN_ERROR_BYPASS_HEALTHY_CONTROLLER",
+            "rule_id": "span_007",
+            "description": "Errors bypass healthy controller spans (Java OTel quirk). Usage: 32,311",
+            "src_kind": "span",
+            "src_states": ["HIGH_ERROR_RATE", "MISSING_SPAN"],
+            "path": [
+                {
+                    "edge_kind": "calls",
+                    "direction": "backward",
+                    "intermediate_kind": "span",
+                    "intermediate_states": ["healthy", "unknown"]
+                },
+                {"edge_kind": "calls", "direction": "backward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_ERROR_RATE", "MISSING_SPAN"],
+            "confidence": 0.7
+        },
+        {
+            "name": "RULE_SPAN_ERROR_TO_CALLER_LATENCY",
+            "rule_id": "span_008",
+            "description": "Errors/timeouts cause upstream latency while waiting. Usage: 8 (new rule)",
+            "src_kind": "span",
+            "src_states": ["HIGH_ERROR_RATE", "TIMEOUT"],
+            "edge_kind": "calls",
+            "direction": "backward",
+            "dst_kind": "span",
+            "possible_dst_states": ["TIMEOUT"],
+            "confidence": 0.75
+        },
+        {
+            "name": "RULE_SPAN_INJECTION_AFFECTED_TO_CALLER",
+            "rule_id": "span_009",
+            "description": "Injection-affected spans propagate errors/latency to callers. For infrastructure faults (network, container, pod, dns) where injection point spans may not show detectable anomalies.",
+            "src_kind": "span",
+            "src_states": ["injection_affected"],
+            "edge_kind": "calls",
+            "direction": "backward",
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_ERROR_RATE", "HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "TIMEOUT", "MISSING_SPAN"],
+            "confidence": 0.85
+        },
+        {
+            "name": "RULE_SPAN_HEALTHY_INJECTION_BYPASS_TO_ERROR",
+            "rule_id": "span_011",
+            "description": "For JVM method faults: injection span (controller, no error metrics) propagates through spans to reach caller HTTP spans with errors. Allows healthy/unknown src to bypass intermediate spans.",
+            "src_kind": "span",
+            "src_states": ["healthy", "unknown"],
+            "path": [
+                {
+                    "edge_kind": "calls",
+                    "direction": "backward",
+                    "intermediate_kind": "span",
+                    "intermediate_states": ["healthy", "unknown", "high_error_rate", "high_avg_latency", "high_p99_latency"]
+                },
+                {"edge_kind": "calls", "direction": "backward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_ERROR_RATE", "HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "MISSING_SPAN"],
+            "confidence": 0.7,
+            "first_hop_config": {
+                "require_src_states": false,
+                "require_dst_states": true,
+                "lenient_dst_state_match": true
+            }
+        },
+        {"_comment": "===== Span → Pod → Span (JVM Stress Resource Contention via Pod) ====="},
+        {
+            "name": "RULE_SPAN_JVM_STRESS_TO_SIBLING_VIA_POD",
+            "rule_id": "span_010",
+            "description": "JVM stress span affects sibling spans via pod resource contention. Requires pod to have HIGH_MEMORY/HIGH_CPU state to validate resource contention causality.",
+            "src_kind": "span",
+            "src_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY"],
+            "path": [
+                {
+                    "edge_kind": "includes",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "forward",
+                    "intermediate_kind": "pod",
+                    "intermediate_states": ["high_memory", "high_cpu"]
+                },
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {"edge_kind": "includes", "direction": "forward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "TIMEOUT"],
+            "confidence": 0.8,
+            "first_hop_config": {
+                "require_src_states": true,
+                "require_dst_states": false,
+                "lenient_dst_state_match": true
+            }
+        }
+    ],
+    "notes": {
+        "optimization": "Multi-granularity injection support - rules for container, pod, and service starting points",
+        "version_2.3_changes": [
+            "Added span_009: INJECTION_AFFECTED spans propagate to callers for infrastructure faults"
+        ],
+        "version_2.2_changes": [
+            "Added first_hop_config to service_001 and service_002 for explicit first-hop validation",
+            "Removed unused rule_categories section"
+        ],
+        "version_2.1_changes": [
+            "Added container_001: Container resource faults to spans via multi-hop",
+            "Added container_002: Container restart to missing spans via multi-hop",
+            "Added pod_001: Pod resource faults to spans via multi-hop"
+        ],
+        "removed_from_v2.0-streamlined": [
+            "span_005: Circuit breaker (no usage data)",
+            "network_001, network_002: Pod network faults (0 usage)",
+            "disk_004, disk_005, disk_006: Pod disk faults (0 usage)",
+            "stress_003, stress_004: Pod resource competition (0 usage)"
+        ],
+        "architecture": {
+            "preprocessor": "Container RESTARTING → Span MISSING_SPAN (before rule propagation)",
+            "injection_point_enhancer": "Infrastructure faults → Mark injection service spans as INJECTION_AFFECTED",
+            "first_hop_container": "Container[injection] → Pod → Service → Span (container_001/002)",
+            "first_hop_pod": "Pod[injection] → Service → Span (pod_001)",
+            "first_hop_service": "Service[injection] → Span (service_001/002) - uses first_hop_config for lenient matching",
+            "first_hop_span": "Span[injection] → Caller Spans (span_003/004 as first hop for HTTP faults)",
+            "main_engine": "Span → Span chains (span_003-009)",
+            "propagation_source_note": "HTTP Response fault handling uses fault_category in StartingPointResolver, not rule-level propagation_source"
+        },
+        "first_hop_config_note": "Service rules use first_hop_config with lenient matching since service is a dummy aggregation node without observable states",
+        "service_002_note": "Kept despite 0 usage for completeness - captures first-hop error propagation to spans"
+    }
+}
