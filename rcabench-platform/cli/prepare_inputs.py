@@ -269,7 +269,9 @@ def query_injection(base_url: str, name: str):
                     return item
 
         # Legacy fallback for older backends that still expose the unscoped route.
-        resp = requests.post(f"{base}/api/v2/injections/search", json={"name_pattern": name}, headers=headers, timeout=30)
+        resp = requests.post(
+            f"{base}/api/v2/injections/search", json={"name_pattern": name}, headers=headers, timeout=30
+        )
         resp.raise_for_status()
         payload = resp.json()
         data = payload.get("data") or {}

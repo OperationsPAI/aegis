@@ -1,0 +1,148 @@
+name: Release Helm charts
+
+# Monorepo replacement for the two separate release-helm workflows under
+# AegisLab/ and AegisLab-frontend/. Publishes both charts to the *same*
+# gh-pages branch of this monorepo, preserving existing chart versions in the
+# merged index.yaml (no force-orphan — that would clobber sibling charts).
+#
+# Consumers point to:   https://operationspai.github.io/aegis/
+# (Make sure GitHub Pages is enabled on this repo's gh-pages branch.)
+#
+# Triggers:
+#   - Tag `release-helm-backend/v<ver>`  → package AegisLab/helm
+#   - Tag `release-helm-frontend/v<ver>` → package AegisLab-frontend/helm
+#   - push to main touching either chart → repackage whichever changed
+#   - workflow_dispatch                  → repackage both
+#
+# Version selection:
+#   - Tag push:    chart is packaged at the tag's version (stripped of prefix)
+#   - Non-tag:     chart is packaged at the version declared in its Chart.yaml
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "AegisLab/helm/**"
+      - "AegisLab-frontend/helm/**"
+      - ".github/workflows/release-helm.yml"
+    tags:
+      - "release-helm-backend/v[0-9]+.[0-9]+.[0-9]+*"
+      - "release-helm-frontend/v[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  REPO_URL: https://operationspai.github.io/aegis/
+
+jobs:
+  package-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.0
+        with:
+          version: v3.16.3
+
+      - name: Select charts to repackage
+        id: select
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Each entry: "<chart-dir>|<override-version-or-empty>"
+          selections=()
+
+          case "$EVENT" in
+            workflow_dispatch)
+              selections+=("AegisLab/helm|" "AegisLab-frontend/helm|")
+              ;;
+            push)
+              if [[ "$REF" == refs/tags/release-helm-backend/v* ]]; then
+                ver="${REF#refs/tags/release-helm-backend/v}"
+                selections+=("AegisLab/helm|$ver")
+              elif [[ "$REF" == refs/tags/release-helm-frontend/v* ]]; then
+                ver="${REF#refs/tags/release-helm-frontend/v}"
+                selections+=("AegisLab-frontend/helm|$ver")
+              else
+                # branch push to main: pick charts whose files changed
+                if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+                  mapfile -t files < <(git ls-files AegisLab/helm AegisLab-frontend/helm)
+                else
+                  mapfile -t files < <(git diff --name-only "$BEFORE" "$HEAD")
+                fi
+                touched_backend=0; touched_frontend=0
+                for f in "${files[@]:-}"; do
+                  case "$f" in
+                    AegisLab/helm/*)          touched_backend=1 ;;
+                    AegisLab-frontend/helm/*) touched_frontend=1 ;;
+                  esac
+                done
+                [ "$touched_backend"  = 1 ] && selections+=("AegisLab/helm|")
+                [ "$touched_frontend" = 1 ] && selections+=("AegisLab-frontend/helm|")
+              fi
+              ;;
+          esac
+
+          if [ "${#selections[@]}" -eq 0 ]; then
+            echo "No charts to repackage."
+            echo "any=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          {
+            echo "any=true"
+            echo "selections<<EOF"
+            printf '%s\n' "${selections[@]}"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Package charts
+        if: steps.select.outputs.any == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .deploy
+
+          # Pull the existing index.yaml so helm repo index --merge can keep
+          # previously published chart versions (of both charts).
+          curl -fsSL -o .deploy/index.yaml "${REPO_URL}index.yaml" \
+            || echo "No existing index.yaml (first publish)."
+
+          while IFS='|' read -r chart_dir override_ver; do
+            [ -z "$chart_dir" ] && continue
+            echo "=== Packaging $chart_dir (override='${override_ver}') ==="
+            helm dependency update "$chart_dir"
+            if [ -n "$override_ver" ]; then
+              helm package "$chart_dir" -d .deploy --version "$override_ver" --app-version "$override_ver"
+            else
+              helm package "$chart_dir" -d .deploy
+            fi
+          done <<< "${{ steps.select.outputs.selections }}"
+
+          cd .deploy
+          if [ -f index.yaml ]; then
+            helm repo index . --url "$REPO_URL" --merge index.yaml
+          else
+            helm repo index . --url "$REPO_URL"
+          fi
+          ls -la
+
+      - name: Publish to gh-pages
+        if: steps.select.outputs.any == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .deploy
+          publish_branch: gh-pages
+          # keep_files: index.yaml merge already dedupes — but don't force_orphan
+          # or we'd wipe sibling chart tarballs previously pushed.
+          keep_files: true

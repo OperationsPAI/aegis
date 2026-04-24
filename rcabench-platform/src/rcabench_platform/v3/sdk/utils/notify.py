@@ -38,8 +38,8 @@ import os
 import smtplib
 import threading
 import time
+from collections.abc import Sequence
 from email.mime.text import MIMEText
-from typing import Sequence
 
 import requests
 

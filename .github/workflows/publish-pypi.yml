@@ -1,0 +1,185 @@
+name: Publish PyPI packages
+
+# Unified PyPI release flow for the two Python packages in this monorepo:
+#   - rcabench-platform   (source: rcabench-platform/)            tag prefix: release-platform/
+#   - rcabench            (source: AegisLab/sdk/python/)          tag prefix: release-sdk/
+#
+# Versions are INDEPENDENT: the tag carries the version, and each job asserts
+# the tag version matches the in-tree pyproject.toml before publishing.
+#
+# To ship both in one shot, push both tags in a single `git push`:
+#   git tag release-platform/v0.5.0
+#   git tag release-sdk/v1.3.0
+#   git push origin release-platform/v0.5.0 release-sdk/v1.3.0
+# Each tag fires its own job; unrelated packages are skipped.
+#
+# Manual override via workflow_dispatch: pick a target (platform/sdk/both) and
+# a version per package. Useful for re-running a failed publish without
+# re-tagging.
+
+on:
+  push:
+    tags:
+      - "release-platform/v[0-9]+.[0-9]+.[0-9]+*"
+      - "release-sdk/v[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which package(s) to publish"
+        required: true
+        default: "both"
+        type: choice
+        options: [platform, sdk, both]
+      platform_version:
+        description: "rcabench-platform version (no leading v). Required if target includes platform."
+        required: false
+        type: string
+      sdk_version:
+        description: "rcabench SDK version (no leading v). Required if target includes sdk."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write   # PyPI trusted publishing
+
+jobs:
+  # ------------------------------------------------------------------
+  # rcabench-platform
+  # ------------------------------------------------------------------
+  resolve-platform:
+    name: Resolve rcabench-platform version
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/release-platform/'))
+      || (github.event_name == 'workflow_dispatch' && (inputs.target == 'platform' || inputs.target == 'both'))
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ref="${GITHUB_REF#refs/tags/release-platform/v}"
+          else
+            ref="${{ inputs.platform_version }}"
+          fi
+          if [[ -z "$ref" ]]; then
+            echo "::error::platform version is empty"; exit 1
+          fi
+          pyver=$(sed -n 's/^version = "\([^"]*\)"/\1/p' rcabench-platform/pyproject.toml | head -n1)
+          if [[ "$ref" != "$pyver" ]]; then
+            echo "::error::tag/input version '$ref' != rcabench-platform/pyproject.toml version '$pyver'"
+            exit 1
+          fi
+          echo "version=$ref" >> "$GITHUB_OUTPUT"
+
+  test-platform:
+    name: Test rcabench-platform (py${{ matrix.python-version }})
+    needs: resolve-platform
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      - name: just ci
+        working-directory: rcabench-platform
+        run: just ci
+
+  publish-platform:
+    name: Publish rcabench-platform to PyPI
+    needs: [resolve-platform, test-platform]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/rcabench-platform/${{ needs.resolve-platform.outputs.version }}/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Build
+        working-directory: rcabench-platform
+        run: uv build
+      - name: Publish
+        working-directory: rcabench-platform
+        run: uv publish --trusted-publishing always
+
+  # ------------------------------------------------------------------
+  # rcabench (AegisLab SDK)
+  # ------------------------------------------------------------------
+  resolve-sdk:
+    name: Resolve rcabench SDK version
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/release-sdk/'))
+      || (github.event_name == 'workflow_dispatch' && (inputs.target == 'sdk' || inputs.target == 'both'))
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ref="${GITHUB_REF#refs/tags/release-sdk/v}"
+          else
+            ref="${{ inputs.sdk_version }}"
+          fi
+          if [[ -z "$ref" ]]; then
+            echo "::error::sdk version is empty"; exit 1
+          fi
+          echo "version=$ref" >> "$GITHUB_OUTPUT"
+
+  publish-sdk:
+    name: Publish rcabench SDK to PyPI
+    needs: resolve-sdk
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/rcabench/${{ needs.resolve-sdk.outputs.version }}/
+    env:
+      SDK_VERSION: ${{ needs.resolve-sdk.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: taiki-e/install-action@just
+      - name: Install Go build deps
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@latest
+          (cd AegisLab/src && go mod tidy)
+      - name: Generate Python SDK (bakes version into sources)
+        working-directory: AegisLab
+        run: just generate-python-sdk "${SDK_VERSION}"
+      - name: Sanity-check generated version
+        shell: bash
+        run: |
+          set -euo pipefail
+          pyver=$(sed -n 's/^version = "\([^"]*\)"/\1/p' AegisLab/sdk/python/pyproject.toml | head -n1)
+          if [[ "$pyver" != "${SDK_VERSION}" ]]; then
+            echo "::error::generated pyproject.toml version '$pyver' != tag version '${SDK_VERSION}'"
+            exit 1
+          fi
+      - name: Build
+        working-directory: AegisLab/sdk/python
+        run: uv build
+      - name: Publish
+        working-directory: AegisLab/sdk/python
+        run: uv publish --trusted-publishing always

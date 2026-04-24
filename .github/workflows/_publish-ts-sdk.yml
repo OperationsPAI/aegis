@@ -1,0 +1,115 @@
+name: Publish a single TypeScript SDK (reusable)
+
+# Called by publish-npm.yml. Generates one AegisLab TypeScript SDK (portal or
+# admin), then pnpm-publishes it to GitHub Packages.
+#
+# The caller passes `version` as empty-string when the trigger was a git tag;
+# in that case the version is derived from $GITHUB_REF here. This keeps the
+# tag→version logic in one place.
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: "portal or admin"
+        required: true
+        type: string
+      version:
+        description: "Version without leading v. Empty string means: derive from the tag."
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+    env:
+      TARGET: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: v
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="${{ inputs.version }}"
+          if [[ -z "$v" ]]; then
+            case "$GITHUB_REF" in
+              refs/tags/release-ts-portal/v*) v="${GITHUB_REF#refs/tags/release-ts-portal/v}" ;;
+              refs/tags/release-ts-admin/v*)  v="${GITHUB_REF#refs/tags/release-ts-admin/v}" ;;
+              *) echo "::error::cannot derive version from ref '$GITHUB_REF'"; exit 1 ;;
+            esac
+          fi
+          [[ -n "$v" ]] || { echo "::error::empty version"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: taiki-e/install-action@just
+
+      - name: Install Go build deps
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@latest
+          (cd AegisLab/src && go mod tidy)
+
+      - name: Generate ${{ inputs.target }} SDK
+        working-directory: AegisLab
+        env:
+          SDK_VERSION: ${{ steps.v.outputs.version }}
+        run: just "release-${TARGET}" "${SDK_VERSION}"
+
+      - name: Sanity-check generated package version
+        shell: bash
+        env:
+          SDK_VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          pkg="AegisLab/sdk/typescript/${TARGET}/package.json"
+          [[ -f "$pkg" ]] || { echo "::error::$pkg not found after generation"; exit 1; }
+          pkgver=$(node -p "require('./$pkg').version")
+          if [[ "$pkgver" != "${SDK_VERSION}" ]]; then
+            echo "::error::generated $pkg version '$pkgver' != requested '${SDK_VERSION}'"
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@OperationsPAI"
+
+      - name: Install
+        working-directory: AegisLab/sdk/typescript/${{ inputs.target }}
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Build (if build script present)
+        working-directory: AegisLab/sdk/typescript/${{ inputs.target }}
+        shell: bash
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.build ? 0 : 1)"; then
+            pnpm run build
+          else
+            echo "no build script, skipping"
+          fi
+
+      - name: Publish
+        working-directory: AegisLab/sdk/typescript/${{ inputs.target }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm publish --no-git-checks --access restricted

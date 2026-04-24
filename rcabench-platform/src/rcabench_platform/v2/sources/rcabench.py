@@ -308,9 +308,7 @@ class Converter:
             persistence_path = template_base / "drain_ts.bin"
 
             if not config_path.exists():
-                logger.warning(
-                    f"drain_template config missing at {config_path}; skipping log template extraction"
-                )
+                logger.warning(f"drain_template config missing at {config_path}; skipping log template extraction")
                 return df.with_columns(
                     [
                         pl.lit(None, dtype=pl.UInt16).alias("attr.template_id"),

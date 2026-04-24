@@ -216,9 +216,7 @@ class DBDataManager(BaseDataManager):
         payload columns like ``trajectories``.
         """
         with SQLModelUtils.create_session() as session:
-            stmt = select(EvaluationSample.dataset_index).where(
-                EvaluationSample.exp_id == self.config.exp_id
-            )
+            stmt = select(EvaluationSample.dataset_index).where(EvaluationSample.exp_id == self.config.exp_id)
             return {idx for idx in session.exec(stmt).all() if idx is not None}
 
     def _check_exp_id(self) -> bool:
@@ -228,8 +226,12 @@ class DBDataManager(BaseDataManager):
         agent_type = self.config.agent_type
         model_name = self.config.model_name
         with SQLModelUtils.create_session() as session:
-            stmt = select(func.count()).select_from(EvaluationSample).where(  # type: ignore[call-overload]
-                EvaluationSample.exp_id == self.config.exp_id
+            stmt = (
+                select(func.count())
+                .select_from(EvaluationSample)
+                .where(  # type: ignore[call-overload]
+                    EvaluationSample.exp_id == self.config.exp_id
+                )
             )
             if agent_type is not None:
                 stmt = stmt.where(EvaluationSample.agent_type == agent_type)

@@ -482,10 +482,7 @@ class BaseBenchmark:
         await judge_queue.put(None)
         await consumer_task
 
-        logger.info(
-            f"Rollout+judge complete: {ok_count} ok / {fail_count} failed, "
-            f"{len(judged_samples)} judged."
-        )
+        logger.info(f"Rollout+judge complete: {ok_count} ok / {fail_count} failed, {len(judged_samples)} judged.")
         return ok_count, fail_count, judged_samples
 
     async def judge(self, stage: Literal["init", "rollout", "judged"] | None = "rollout") -> list[EvaluationSample]:

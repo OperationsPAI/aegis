@@ -1,0 +1,41 @@
+name: CI rcabench-platform
+
+# Python CI for the rcabench-platform subtree (formerly a separate repo).
+# Runs on any branch push / PR that touches rcabench-platform/** or this file,
+# plus a weekly cron as a liveness check.
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "rcabench-platform/**"
+      - ".github/workflows/ci-rcabench-platform.yml"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "rcabench-platform/**"
+      - ".github/workflows/ci-rcabench-platform.yml"
+  schedule:
+    - cron: "0 0 * * 0"   # midnight each Sunday
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: just ci (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      - name: just ci
+        working-directory: rcabench-platform
+        run: just ci

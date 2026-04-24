@@ -1,0 +1,64 @@
+name: Publish NPM packages
+
+# Unified NPM release flow for the two TypeScript SDKs generated from the
+# AegisLab backend OpenAPI spec:
+#   - @OperationsPAI/portal  (source: generated into AegisLab/sdk/typescript/portal/)
+#   - @OperationsPAI/admin   (source: generated into AegisLab/sdk/typescript/admin/)
+#
+# Publishes to GitHub Packages (npm.pkg.github.com) using the default
+# GITHUB_TOKEN. Versions are INDEPENDENT per package; the tag carries the
+# version and the generator bakes it into the generated package.json.
+#
+# Ship both in one push:
+#   git tag release-ts-portal/v1.3.0
+#   git tag release-ts-admin/v1.3.0
+#   git push origin release-ts-portal/v1.3.0 release-ts-admin/v1.3.0
+
+on:
+  push:
+    tags:
+      - "release-ts-portal/v[0-9]+.[0-9]+.[0-9]+*"
+      - "release-ts-admin/v[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which package(s) to publish"
+        required: true
+        default: "both"
+        type: choice
+        options: [portal, admin, both]
+      portal_version:
+        description: "portal version (no leading v). Required if target includes portal."
+        required: false
+        type: string
+      admin_version:
+        description: "admin version (no leading v). Required if target includes admin."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-portal:
+    name: Publish @OperationsPAI/portal
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/release-ts-portal/'))
+      || (github.event_name == 'workflow_dispatch' && (inputs.target == 'portal' || inputs.target == 'both'))
+    uses: ./.github/workflows/_publish-ts-sdk.yml
+    with:
+      target: portal
+      version: ${{ github.event_name == 'push' && '' || inputs.portal_version }}
+    secrets: inherit
+
+  publish-admin:
+    name: Publish @OperationsPAI/admin
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/release-ts-admin/'))
+      || (github.event_name == 'workflow_dispatch' && (inputs.target == 'admin' || inputs.target == 'both'))
+    uses: ./.github/workflows/_publish-ts-sdk.yml
+    with:
+      target: admin
+      version: ${{ github.event_name == 'push' && '' || inputs.admin_version }}
+    secrets: inherit

@@ -1,6 +1,6 @@
 import json
-import os
 import math
+import os
 import random
 import re
 from collections import defaultdict
@@ -352,8 +352,7 @@ def valid(path: Path, force_refresh: bool = False) -> tuple[Path, bool]:
                 if row_count == 0:
                     if filename in optional_empty:
                         logger.warning(
-                            "Parquet file has no data rows but is opted out via "
-                            "RCABENCH_OPTIONAL_EMPTY_PARQUETS: {}",
+                            "Parquet file has no data rows but is opted out via RCABENCH_OPTIONAL_EMPTY_PARQUETS: {}",
                             filename,
                         )
                     else:

@@ -1,0 +1,58 @@
+# Dependabot config for the aegis monorepo. Each Python project and the
+# frontend pnpm workspace get their own monthly grouped update PR.
+# Reference: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/rcabench-platform"
+    schedule:
+      interval: "monthly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "uv"
+    directory: "/AegisLab/sdk/python"
+    schedule:
+      interval: "monthly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "uv"
+    directory: "/AegisLab/scripts/command"
+    schedule:
+      interval: "monthly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/AegisLab-frontend"
+    schedule:
+      interval: "monthly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/AegisLab/src"
+    schedule:
+      interval: "monthly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "gomod"
+    directory: "/chaos-experiment"
+    schedule:
+      interval: "monthly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

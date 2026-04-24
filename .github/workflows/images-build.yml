@@ -19,13 +19,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'AegisLab/images/**'
-      - '.github/workflows/images-build.yml'
+      - "AegisLab/images/**"
+      - ".github/workflows/images-build.yml"
   pull_request:
     branches: [main]
     paths:
-      - 'AegisLab/images/**'
-      - '.github/workflows/images-build.yml'
+      - "AegisLab/images/**"
+      - ".github/workflows/images-build.yml"
   workflow_dispatch:
 
 permissions:
