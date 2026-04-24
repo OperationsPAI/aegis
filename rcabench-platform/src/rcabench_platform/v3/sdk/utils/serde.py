@@ -12,12 +12,25 @@ from ..logging import logger
 
 
 def json_default(obj):
-    if isinstance(obj, set):
+    if isinstance(obj, (set, frozenset)):
         return list(obj)
     elif isinstance(obj, Path):
         return str(obj)
     elif isinstance(obj, datetime.datetime):
         return obj.isoformat()
+    elif hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    try:
+        import numpy as np
+
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+    except ImportError:
+        pass
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 

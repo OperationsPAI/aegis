@@ -1,0 +1,323 @@
+"""Rule schema for bidirectional fault propagation.
+
+Rules define how faults propagate through the topology based on node states,
+edge types, and edge data conditions.
+
+Supports both single-hop and multi-hop propagation paths to reduce false positives
+by expressing complete causal chains.
+"""
+
+from collections.abc import Callable
+from enum import auto
+from rcabench_platform.compat import StrEnum
+from typing import TYPE_CHECKING, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, PlaceKind
+
+if TYPE_CHECKING:
+    pass
+
+
+class PropagationDirection(StrEnum):
+    FORWARD = auto()  # Propagate along edge direction (src → dst)
+    BACKWARD = auto()  # Propagate against edge direction (dst → src)
+
+
+class PathHop(BaseModel):
+    """A single hop in a multi-hop propagation path.
+
+    Represents one edge traversal: node_A --[edge_kind, direction]--> node_B
+    """
+
+    edge_kind: DepKind = Field(description="Edge type for this hop")
+    direction: PropagationDirection = Field(description="Traversal direction for this hop")
+    intermediate_kind: PlaceKind | None = Field(
+        default=None,
+        description="Expected PlaceKind of intermediate node (None for last hop)",
+    )
+    intermediate_states: list[str] | None = Field(
+        default=None,
+        description="Allowed states at intermediate node. If specified, the intermediate node must have at least one of these states for the path to be valid. Use ['healthy', 'unknown'] to bypass nodes without detected anomalies.",
+    )
+    edge_condition: Callable[[Edge], bool] | None = Field(
+        default=None,
+        description="Optional condition on edge data for this hop",
+    )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("intermediate_states", mode="after")
+    @classmethod
+    def normalize_intermediate_states(cls, v: list[str] | None) -> list[str] | None:
+        """Normalize state names to lowercase for consistent matching."""
+        if v is None:
+            return None
+        return [s.lower() for s in v]
+
+
+class FirstHopConfig(BaseModel):
+    """Configuration for first-hop validation behavior.
+
+    First-hop validation has different semantics depending on source PlaceKind:
+    - Span injection: Must validate anomalous states at source
+    - Service injection: Service is a dummy aggregation node, lenient matching
+    - Container/Pod injection: May not have exact rule states at injection point
+
+    This config allows rules to override default first-hop behavior.
+    """
+
+    require_src_states: bool = Field(
+        default=False,
+        description="If True, source must have states matching rule.src_states. "
+        "Span injection requires this; non-span injection is lenient by default.",
+    )
+    require_dst_states: bool = Field(
+        default=True,
+        description="If True, destination must have detected states. Always True for valid propagation paths.",
+    )
+    lenient_dst_state_match: bool = Field(
+        default=False,
+        description="If True, accept any detected states at destination, "
+        "not just rule.possible_dst_states. Useful for service->span first hop.",
+    )
+
+
+class PropagationRule(BaseModel):
+    """A single fault propagation rule.
+
+    Supports both single-hop and multi-hop propagation paths:
+    - Single-hop: Use edge_kind + direction (backward compatible)
+    - Multi-hop: Use path (list of PathHop), more precise causal chains
+
+    Examples:
+        # Single-hop: Pod KILLED --runs--> Container KILLED
+        PropagationRule(
+            src_kind=PlaceKind.pod,
+            src_states=[PodState.KILLED],
+            edge_kind=DepKind.runs,
+            direction=PropagationDirection.FORWARD,
+            dst_kind=PlaceKind.container,
+            possible_dst_states=[ContainerState.KILLED]
+        )
+
+        # Multi-hop: Pod NETWORK_DELAY --routes_to(BACKWARD)--> Service --includes(BACKWARD)--> Span
+        PropagationRule(
+            src_kind=PlaceKind.pod,
+            src_states=[PodState.NETWORK_DELAY],
+            path=[
+                PathHop(edge_kind=DepKind.routes_to, direction=BACKWARD, intermediate_kind=PlaceKind.service),
+                PathHop(edge_kind=DepKind.includes, direction=BACKWARD)
+            ],
+            dst_kind=PlaceKind.span,
+            possible_dst_states=[SpanState.HIGH_AVG_LATENCY]
+        )
+    """
+
+    rule_id: str = Field(description="Unique identifier for the rule")
+
+    description: str = Field(description="Human-readable description")
+
+    # Source node constraints
+    src_kind: PlaceKind = Field(description="Source node PlaceKind")
+    src_states: list[str] = Field(description="Source states that trigger propagation")
+
+    # Path specification: single-hop (legacy) or multi-hop (recommended)
+    edge_kind: DepKind | None = Field(default=None, description="[Single-hop] Edge type for propagation")
+    direction: PropagationDirection | None = Field(default=None, description="[Single-hop] Propagation direction")
+    path: list[PathHop] | None = Field(
+        default=None,
+        description="[Multi-hop] Sequence of hops from src to dst. Mutually exclusive with edge_kind+direction",
+    )
+
+    # Destination node constraints
+    dst_kind: PlaceKind = Field(description="Destination node PlaceKind")
+    possible_dst_states: list[str] = Field(description="Possible resulting states in destination node")
+
+    # Optional edge data condition (for single-hop only, use PathHop.edge_condition for multi-hop)
+    edge_condition: Callable[[Edge], bool] | None = Field(
+        default=None,
+        description="[Single-hop] Optional function to check edge data",
+    )
+
+    # Rule metadata
+    confidence: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Confidence score for this propagation rule",
+    )
+
+    # Temporal constraints for causality verification
+    min_delay: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Minimum propagation delay in seconds",
+    )
+    max_delay: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Maximum propagation delay in seconds",
+    )
+
+    source: str = Field(
+        default="builtin",
+        description="Source of the rule (builtin, llm_rag, manual)",
+    )
+
+    propagation_source: Literal["injection_point", "caller", "callee"] | None = Field(
+        default="injection_point",
+        description="Where propagation starts: injection_point=physical injection location, caller=for response faults where caller observes delay, callee=for request faults where callee processes fault",
+    )
+
+    first_hop_config: FirstHopConfig | None = Field(
+        default=None,
+        description="Override first-hop validation behavior. If None, uses defaults based on src_kind: "
+        "span requires src_states; service is lenient with dst_states; container/pod are lenient with src_states.",
+    )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("src_states", mode="after")
+    @classmethod
+    def normalize_src_states(cls, v: list[str]) -> list[str]:
+        """Normalize state names to lowercase for consistent matching."""
+        return [s.lower() for s in v]
+
+    @field_validator("possible_dst_states", mode="after")
+    @classmethod
+    def normalize_dst_states(cls, v: list[str]) -> list[str]:
+        """Normalize state names to lowercase for consistent matching."""
+        return [s.lower() for s in v]
+
+    @field_validator("path", mode="after")
+    @classmethod
+    def validate_path_xor_single_hop(cls, v, info):
+        """Ensure either path OR (edge_kind+direction) is specified, not both."""
+        edge_kind = info.data.get("edge_kind")
+        direction = info.data.get("direction")
+
+        has_single_hop = edge_kind is not None and direction is not None
+        has_path = v is not None and len(v) > 0
+
+        if has_single_hop and has_path:
+            raise ValueError("Cannot specify both path and (edge_kind, direction). Use one or the other.")
+
+        if not has_single_hop and not has_path:
+            raise ValueError("Must specify either path or (edge_kind, direction)")
+
+        return v
+
+    @property
+    def is_multi_hop(self) -> bool:
+        """Check if this rule uses multi-hop path."""
+        return self.path is not None and len(self.path) > 0
+
+    @property
+    def hop_count(self) -> int:
+        """Get number of hops in the propagation path."""
+        if self.is_multi_hop:
+            return len(self.path)  # type: ignore[arg-type]
+        return 1
+
+
+class RuleMatchResult(BaseModel):
+    """Result of matching a rule against a graph edge."""
+
+    rule: PropagationRule
+    matched: bool
+    src_node_id: int
+    dst_node_id: int
+    edge: Edge
+    reason: str = Field(description="Why the rule matched or didn't match")
+
+
+def match_rule(
+    rule: PropagationRule,
+    src_node_id: int,
+    src_node_kind: PlaceKind,
+    src_state: str,
+    edge: Edge,
+    dst_node_id: int,
+    dst_node_kind: PlaceKind,
+) -> RuleMatchResult:
+    """Check if a rule matches a given edge and node states.
+
+    Args:
+        rule: The propagation rule to match
+        src_node_id: Source node ID
+        src_node_kind: Source node PlaceKind
+        src_state: Current state of source node (single state string for compatibility)
+        edge: The edge connecting nodes
+        dst_node_id: Destination node ID
+        dst_node_kind: Destination node PlaceKind
+
+    Returns:
+        RuleMatchResult indicating if rule matched and why
+    """
+    # Check source PlaceKind
+    if src_node_kind != rule.src_kind:
+        return RuleMatchResult(
+            rule=rule,
+            matched=False,
+            src_node_id=src_node_id,
+            dst_node_id=dst_node_id,
+            edge=edge,
+            reason=f"Source kind mismatch: expected {rule.src_kind}, got {src_node_kind}",
+        )
+
+    # Check source state
+    if src_state not in rule.src_states:
+        return RuleMatchResult(
+            rule=rule,
+            matched=False,
+            src_node_id=src_node_id,
+            dst_node_id=dst_node_id,
+            edge=edge,
+            reason=f"Source state {src_state} not in trigger states {rule.src_states}",
+        )
+
+    # Check edge kind
+    if edge.kind != rule.edge_kind:
+        return RuleMatchResult(
+            rule=rule,
+            matched=False,
+            src_node_id=src_node_id,
+            dst_node_id=dst_node_id,
+            edge=edge,
+            reason=f"Edge kind mismatch: expected {rule.edge_kind}, got {edge.kind}",
+        )
+
+    # Check destination PlaceKind
+    if dst_node_kind != rule.dst_kind:
+        return RuleMatchResult(
+            rule=rule,
+            matched=False,
+            src_node_id=src_node_id,
+            dst_node_id=dst_node_id,
+            edge=edge,
+            reason=f"Destination kind mismatch: expected {rule.dst_kind}, got {dst_node_kind}",
+        )
+
+    # Check edge condition if specified
+    if rule.edge_condition is not None:
+        if not rule.edge_condition(edge):
+            return RuleMatchResult(
+                rule=rule,
+                matched=False,
+                src_node_id=src_node_id,
+                dst_node_id=dst_node_id,
+                edge=edge,
+                reason="Edge condition not satisfied",
+            )
+
+    # All checks passed
+    return RuleMatchResult(
+        rule=rule,
+        matched=True,
+        src_node_id=src_node_id,
+        dst_node_id=dst_node_id,
+        edge=edge,
+        reason="Rule matched successfully",
+    )
