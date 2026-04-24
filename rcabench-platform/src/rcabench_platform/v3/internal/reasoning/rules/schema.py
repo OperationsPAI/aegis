@@ -9,11 +9,11 @@ by expressing complete causal chains.
 
 from collections.abc import Callable
 from enum import auto
-from rcabench_platform.compat import StrEnum
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from rcabench_platform.compat import StrEnum
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, PlaceKind
 
 if TYPE_CHECKING:
@@ -39,7 +39,11 @@ class PathHop(BaseModel):
     )
     intermediate_states: list[str] | None = Field(
         default=None,
-        description="Allowed states at intermediate node. If specified, the intermediate node must have at least one of these states for the path to be valid. Use ['healthy', 'unknown'] to bypass nodes without detected anomalies.",
+        description=(
+            "Allowed states at intermediate node. If specified, the intermediate node must have at "
+            "least one of these states for the path to be valid. Use ['healthy', 'unknown'] to "
+            "bypass nodes without detected anomalies."
+        ),
     )
     edge_condition: Callable[[Edge], bool] | None = Field(
         default=None,
@@ -168,7 +172,11 @@ class PropagationRule(BaseModel):
 
     propagation_source: Literal["injection_point", "caller", "callee"] | None = Field(
         default="injection_point",
-        description="Where propagation starts: injection_point=physical injection location, caller=for response faults where caller observes delay, callee=for request faults where callee processes fault",
+        description=(
+            "Where propagation starts: injection_point=physical injection location, "
+            "caller=for response faults where caller observes delay, "
+            "callee=for request faults where callee processes fault"
+        ),
     )
 
     first_hop_config: FirstHopConfig | None = Field(

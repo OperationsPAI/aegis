@@ -13,6 +13,8 @@ try:
 
     _HAS_RICH = True
 except ImportError:
+    Console = None  # type: ignore[assignment,misc]
+    RichHandler = None  # type: ignore[assignment,misc]
     _HAS_RICH = False
 
 
@@ -27,7 +29,7 @@ def setup_logging(verbose: bool = False, log_file: Path | None = None) -> None:
     root_logger.setLevel(level)
     root_logger.handlers.clear()
 
-    if _HAS_RICH:
+    if _HAS_RICH and Console is not None and RichHandler is not None:
         console = Console(stderr=True, force_terminal=True)
         console_handler: logging.Handler = RichHandler(
             console=console,

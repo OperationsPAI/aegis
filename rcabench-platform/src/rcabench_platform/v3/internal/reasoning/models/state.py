@@ -1,8 +1,8 @@
 from enum import auto
-from rcabench_platform.compat import StrEnum
 
 from pydantic import BaseModel
 
+from rcabench_platform.compat import StrEnum
 from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
 
 

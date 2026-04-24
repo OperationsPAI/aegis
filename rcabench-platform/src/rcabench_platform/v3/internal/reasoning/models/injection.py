@@ -553,7 +553,7 @@ class InjectionNodeResolver:
             return False
 
         # Find service that includes this span
-        for src_id, _dst_id, edge_key in self.graph._graph.in_edges(span_node.id, keys=True):
+        for src_id, _dst_id, edge_key in self.graph._graph.in_edges(span_node.id, keys=True):  # type: ignore[call-arg]
             if edge_key == DepKind.includes:
                 src_node = self.graph.get_node_by_id(src_id)
                 if src_node and src_node.kind == PlaceKind.service:

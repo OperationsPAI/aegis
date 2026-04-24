@@ -155,10 +155,11 @@ def propagation_result_to_causal_graph(
                     alarm_nodes_dict[node_key] = causal_node
 
             # Collect service votes for this component
-            if path_services[i]:
+            svc = path_services[i]
+            if svc:
                 if component not in component_service_votes:
                     component_service_votes[component] = Counter()
-                component_service_votes[component][path_services[i]] += 1
+                component_service_votes[component][svc] += 1
 
             # Create component-level edge
             if i < len(path.nodes) - 1:
@@ -442,7 +443,7 @@ def run_single_case(
 
         logger.info(f"[{case_name}] Detecting states for {len(graph._node_id_map)} nodes...")
         for node in graph._node_id_map.values():
-            if node.state_timeline is None:  # Only detect if not already set
+            if node.state_timeline is None and node.id is not None:
                 timeline = detect_state_timeline(node)
                 graph.set_node_state_timeline(node.id, timeline)
         logger.info(f"[{case_name}] State detection complete")
@@ -538,7 +539,7 @@ def _resolve_injection_service_id(graph: HyperGraph, physical_node_ids: list[int
 
         # For span nodes, traverse via 'includes' edge (service -> span)
         if node.kind == PlaceKind.span:
-            for src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):
+            for src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
                 if key == DepKind.includes:
                     src_node = graph.get_node_by_id(src_id)
                     if src_node and src_node.kind == PlaceKind.service:
@@ -546,11 +547,11 @@ def _resolve_injection_service_id(graph: HyperGraph, physical_node_ids: list[int
 
         # For container nodes, traverse via runs (pod -> container) and routes_to (service -> pod)
         if node.kind == PlaceKind.container:
-            for pod_src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):
+            for pod_src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
                 if key == DepKind.runs:
                     pod_node = graph.get_node_by_id(pod_src_id)
                     if pod_node and pod_node.kind == PlaceKind.pod:
-                        for svc_src_id, _pod_dst_id, svc_key in graph._graph.in_edges(pod_src_id, keys=True):
+                        for svc_src_id, _pod_dst_id, svc_key in graph._graph.in_edges(pod_src_id, keys=True):  # type: ignore[call-arg]
                             if svc_key == DepKind.routes_to:
                                 svc_node = graph.get_node_by_id(svc_src_id)
                                 if svc_node and svc_node.kind == PlaceKind.service:
@@ -558,7 +559,7 @@ def _resolve_injection_service_id(graph: HyperGraph, physical_node_ids: list[int
 
         # For pod nodes, traverse via routes_to (service -> pod)
         if node.kind == PlaceKind.pod:
-            for src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):
+            for src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
                 if key == DepKind.routes_to:
                     src_node = graph.get_node_by_id(src_id)
                     if src_node and src_node.kind == PlaceKind.service:
