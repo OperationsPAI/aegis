@@ -24,11 +24,17 @@ Drive a closed-loop fault-injection campaign: a stable candidate pool, K paralle
 
 Maintain three files under `experiments/<system>-loop/`:
 
-- `candidates.json` — the pool: `{system, pedestal, benchmark, defaults, candidates: [{id, app, chaos_type, params, prior, history:[{trace_id, ns, terminal, reward}]}]}`. Defaults carry shared values like `interval`, `pre_duration`, `container` — values that the chart variant (e.g. coherence-based sockshop) may force. **`duration` defaults to 5 minutes** in guided-cli and aegisctl, so don't bother passing it unless you specifically want a different value (e.g. round-2 wants 7 minutes to test whether short fault on resilient service is the cause of `no_anomaly`).
-- `runs.jsonl` — append-only, one line per submission: `{ts, candidate_id, group_id, trace_id, task_id, allocated_namespace}`.
+- `candidates.json` — the pool: `{system, pedestal, benchmark, defaults, candidates: [{id, app, chaos_type, params, prior, history:[{trace_id, ns, terminal, reward}]}]}`. Defaults carry shared values like `interval`, `pre_duration`, `container` — values that the chart variant (e.g. coherence-based sockshop) may force. **`duration` defaults to 5 minutes** in aegisctl; only pass it explicitly when you want a non-default window (e.g. longer to combat persistent `no_anomaly` on a resilient service).
+- `runs.jsonl` — append-only, one line per submission: `{ts, candidate_id, group_id, trace_id, task_id, ns}`.
 - `logs/<candidate_id>.err` — captured stderr per submit attempt. Always inspect when a submit fails.
 
 State files persist between rounds and across sessions. Do not regenerate them; update in place.
+
+## Enumerate the candidate space
+
+Use `aegisctl inject candidates ls --system <code> --namespace <ns> -o json` to dump the full `(app, chaos_type, params)` tree for a system+namespace in one call. For sockshop1 this returns ~2900 candidates instantly; the data is whatever the platform's guided resolver knows about — JVM class+method targets (from chart annotations), HTTP routes (from observed traffic), Network pairs (from observed traffic), and the static chaos types like PodFailure / DNSError / TimeSkew.
+
+Don't walk `aegisctl inject guided` step-by-step to enumerate — that's per-(app, chaos_type) round-trip and was only the path before the bulk endpoint shipped.
 
 ## One round = pick → submit → watch → score
 
@@ -67,11 +73,11 @@ Default to explicit `--namespace sockshopN` (or equivalent) when you have a pre-
 If submit returns 500: **read the backend log immediately**, don't retry blindly. The error message names the exact missing field 90% of the time (network pair not found, container not found, latency-correlation-jitter-direction required, etc.).
 
 ### 3. Watch for terminal event
-Each trace runs ~8–15 minutes (`pre_duration + duration + datapack-build + algo + collect`). Use `aegisctl trace get <trace-id>` and read the `last_event` field. Terminal events you'll see:
-- `algorithm.result.collection` — full pipeline ran, RCA emitted top-K. **+1 reward.**
-- `datapack.no_anomaly` — fault didn't perturb metrics enough. **-1 reward.** Common with the default 5-minute fault on resilient services (statefulset pods that restart fast, async consumers, lightly-loaded code paths). If a candidate keeps producing this, retry once with longer `--duration` before retiring it.
-- `datapack.build.failed` / RestartPedestal failure — environment/contract bug, not a candidate property. **0 reward** (or skip; don't penalize the candidate).
-- Any `*.failed` upstream of datapack — same: 0 reward, treat as flaky.
+Each trace runs ~10–15 minutes (`pre_duration + duration + datapack-build + algo + collect`). Use `aegisctl trace get <trace-id>` and read the `last_event` field. Terminal events you'll see:
+- `algorithm.result.collection` or `datapack.result.collection` — full pipeline ran, datapack and/or algorithm emitted output. **+1 reward.** Treat both as success; the difference is just how far the result-collection pipeline got, and from a "did this candidate produce useful data" perspective both are wins.
+- `datapack.no_anomaly` — fault injected successfully but didn't perturb metrics enough for the detector to flag anything. **-1 reward.** Common with the default 5-minute fault on resilient services (statefulset pods that restart fast, async consumers, lightly-loaded code paths) and with sporadic chaos types (e.g. JVM exception with low call frequency). If a candidate keeps producing this, retry once with longer `--duration` before retiring it.
+- `fault.injection.failed` / `datapack.build.failed` / RestartPedestal failure — environment/contract bug, not a candidate property. **0 reward** (don't penalize the candidate). When you see this, read the runtime-worker log for the trace ID — the cause is usually visible there (target image incompatibility, lock-state divergence, missing target service for chosen route, etc.).
+- Any `*.failed` upstream of datapack — same: 0 reward, treat as flaky and surface to the user; don't silently retry without checking the cause.
 
 ### 4. Score / update
 Append `{trace_id, ns, terminal, reward}` to that candidate's `history`. If you have access to the algorithm result artifact and want the adversarial bonus (#5/#6 below), add `+α` when detector's top service ≠ injected service.
@@ -104,6 +110,7 @@ When the user asks for "anti-detector" or "adversarial" sampling:
 
 - **Service names vary by chart variant.** Sockshop has multiple charts: oracle/coherence (services: front-end, carts, catalog, orders, payment, shipping, users) vs. weaveworks (catalogue, user, queue-master, …). After install, run `kubectl -n <ns> get pods -L app` to see actual labels — never hardcode names from memory.
 - **CPUStress / MemoryStress need `--container <name>`** when pods run multiple containers (e.g. `coherence` for sockshop coherence chart). Symptom: `container "" not found under app X; available containers: …` — the error prints the right value.
+- **JVMChaos requires `/bin/sh` inside the target pod's filesystem.** Distroless or minimal images that put busybox at `/busybox/sh` (e.g. `gcr.io/distroless/java*:debug`) don't satisfy this — chaos-daemon's `nsexec sh -c "mkdir -p /usr/local/byteman/lib/"` step fails with `exit status 101` before `bminstall` ever runs. Switch the target image to a base that ships `/bin/sh` natively (eclipse-temurin, openjdk-slim, alpine variants).
 - **NetworkDelay needs all of `--latency --jitter --correlation --direction`**, plus `--target-service`. The target must form an *observed* network pair — freshly installed namespaces won't have any pairs yet. Either warm the cluster with traffic first, or skip NetworkDelay until later rounds.
 - **PodFailure needs no extra flags** — the easiest first-round chaos type when you're not sure what the chart supports.
 - **HTTPDelay/HTTPAbort need `--route` + `--http-method`** that an existing trace has already used; same warm-up caveat as NetworkDelay.
@@ -112,8 +119,10 @@ When the user asks for "anti-detector" or "adversarial" sampling:
 
 Two modes:
 
-- **Pre-installed pool**: `aegisctl pedestal chart install <system> --namespace <sysN>` for each slot upfront, then submit with explicit `--namespace <sysN>` per candidate. Reliable; recommended while loop framework is new.
-- **Auto-allocate**: `aegisctl inject guided --apply --auto --allow-bootstrap …`. Server picks a free deployed slot, bootstrapping a new one if the pool is empty. **Known quirk (#166)**: rapid sequential or parallel calls can converge on the same fresh slot and conflict — if you see `bootstrap-allocate: lock new slot sockshopN: namespace … locked by …`, fall back to pre-installed mode for the rest of the round.
+- **Pre-installed pool**: `aegisctl pedestal chart install <system> --namespace <sysN>` for each slot upfront, then submit with explicit `--namespace <sysN>` per candidate. Most predictable; you control which candidate runs in which ns and can trace state ns-by-ns.
+- **Auto-allocate**: `aegisctl inject guided --apply --auto --allow-bootstrap …`. Server picks a free deployed slot, bootstrapping a new one (helm install + bump system count) if the pool is empty. Use this when you want to grow the pool on demand without managing slots yourself.
+
+If `--auto --allow-bootstrap` returns `pool exhausted` and you're sure there should be free slots, the system count in etcd may have been reset to a smaller value than the pool actually has — bump it back up via the admin path (etcd or systems API) before retrying.
 
 ## What to put in the round-end summary for the user
 
