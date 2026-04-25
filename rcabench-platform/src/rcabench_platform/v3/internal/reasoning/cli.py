@@ -15,6 +15,7 @@ from rcabench_platform.v3.internal.reasoning._util import setup_logging
 from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultPropagator
 from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
+from rcabench_platform.v3.internal.reasoning.ir.adapters.inferred_edges import enrich_with_inferred_edges
 from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
@@ -450,6 +451,14 @@ def run_single_case(
             abnormal_traces=abnormal_traces,
         )
         logger.info(f"[{case_name}] IR pipeline: {len(timelines)} node timelines")
+
+        # Add inferred call-graph edges for trace-blind dependencies (e.g.
+        # Spring auth filters that fire before any controller span). This is
+        # NOT a StateAdapter — it mutates graph topology after the IR
+        # pipeline has settled, so the propagator sees the new edges
+        # naturally on construction. See ir/adapters/inferred_edges.py.
+        n_inferred = enrich_with_inferred_edges(graph, timelines)
+        logger.info(f"[{case_name}] inferred edges: {n_inferred}")
 
         # Resolve propagation starting points based on rule semantics
         # For HTTP response faults, propagation starts from caller service (not physical injection)
