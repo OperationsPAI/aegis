@@ -1,0 +1,21 @@
+{
+  "round": 2,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R1: 1/10 +1 (ad/NetworkLoss), 5 -1, 4 HTTP env-fail (tproxy stale on R1-touched pods). R2 strategy: (1) avoid R1-touched services for HTTP; (2) double down on Network types (R1 winner); (3) pair (30%) on services we expect synergy; (4) fresh ns via --auto --allow-bootstrap so tproxy state is clean.",
+  "candidates": [
+    {"id": "p01", "app": "ad",             "chaos_type": "NetworkLoss",      "params": {"target_service":"flagd","loss":80,"correlation":50,"direction":"to"}, "_note":"R1 winner extension: stronger loss"},
+    {"id": "p02", "app": "ad",             "chaos_type": "NetworkPartition", "params": {"target_service":"flagd","direction":"both"}, "duration_override": 7},
+    {"id": "p03", "app": "checkout",       "chaos_type": "NetworkDelay",     "params": {"target_service":"quote","latency":2000,"jitter":100,"correlation":25,"direction":"to"}, "duration_override": 7},
+    {"id": "p04", "app": "accounting",     "chaos_type": "NetworkLoss",      "params": {"target_service":"postgresql","loss":80,"correlation":50,"direction":"to"}, "duration_override": 7},
+    {"id": "p05", "app": "cart",           "chaos_type": "NetworkBandwidth", "params": {"target_service":"flagd","rate":1,"limit":1000,"buffer":1000,"direction":"to"}, "duration_override": 7},
+    {"id": "p06", "app": "recommendation", "chaos_type": "NetworkPartition", "params": {"target_service":"flagd","direction":"both"}, "duration_override": 7},
+    {"id": "p07", "app": "image-provider", "chaos_type": "PodKill",          "params": {}},
+    {"id": "p08", "app": "quote",          "chaos_type": "PodKill",          "params": {}},
+    {"id": "p09", "app": "fraud-detection","chaos_type": "DNSError",         "params": {"domain":"checkout"}},
+    {"id": "p10", "app": "email",          "chaos_type": "NetworkDelay",     "params": {"target_service":"checkout","latency":3000,"jitter":300,"correlation":25,"direction":"to"}, "duration_override": 7}
+  ]
+}
