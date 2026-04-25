@@ -61,8 +61,41 @@ type AllocateResult struct {
 type WorkloadProbe func(ctx context.Context, namespace string) (bool, error)
 
 const (
-	allocLockTTL        = 10 * time.Second
+	// allocLockTTL is the safety-net TTL for the per-system allocator
+	// lock. It is NOT the expected hold time — defer-CompareAndDelete is
+	// the normal release path. This must comfortably cover the worst-case
+	// allocation latency (etcd write in EnsureCountForNamespace, pod-list
+	// probes across every slot, viper reload). Bumped from 10s to 60s
+	// after PR #167 review (#166 hardening): real-world allocations have
+	// crossed 10s under k8s API hiccups, allowing the original lock to
+	// expire mid-allocation and a successor allocator's lock to be
+	// blown away by the deferred DEL.
+	allocLockTTL        = 60 * time.Second
 	allocLockKeyPattern = "alloc:%s"
+)
+
+// ErrNamespaceLocked is the sentinel returned by nsLockAcquire when the
+// candidate namespace is currently held by a different traceID. The
+// allocator catches this exact error class to skip the slot and continue
+// scanning; any other error (Redis network, parse, watch retry) aborts
+// allocation so the caller sees the real cause instead of a misleading
+// ErrPoolExhausted.
+var ErrNamespaceLocked = errors.New("namespace already locked by another trace")
+
+// nsLockProbeFn / nsLockAcquireFn are package-level seams for tests: real
+// production code wires them to nsLockActive / nsLockAcquire (the Redis
+// implementations). Tests substitute fakes to drive specific error classes
+// (e.g. simulated network failure) through the allocator without a live
+// Redis. Restored to the real impls via t.Cleanup.
+var (
+	nsLockProbeFn       = nsLockActive
+	nsLockAcquireFn     = nsLockAcquire
+	allocSetNXFn        = func(ctx context.Context, r *redisinfra.Gateway, key, val string, ttl time.Duration) (bool, error) {
+		return r.SetNX(ctx, key, val, ttl)
+	}
+	allocCompareDelFn = func(ctx context.Context, r *redisinfra.Gateway, key, val string) (int64, error) {
+		return r.CompareAndDeleteKey(ctx, key, val)
+	}
 )
 
 // AllocateNamespaceForRestart claims a free, deployed slot for `system`,
@@ -77,9 +110,10 @@ const (
 // Returns ErrPoolExhausted when no qualifying slot exists. Returns other
 // errors for Redis/probe failures.
 //
-// Race-safety: a per-system Redis SetNX lock at `alloc:<system>` (TTL 10s)
-// serializes concurrent allocators so two parallel submits cannot both end
-// up with the same slot. The chosen namespace is locked under `traceID`
+// Race-safety: a per-system Redis SetNX lock at `alloc:<system>` (TTL is
+// allocLockTTL — a safety net, NOT a deadline; defer-CompareAndDelete is
+// the normal release path) serializes concurrent allocators so two
+// parallel submits cannot both end up with the same slot. The chosen namespace is locked under `traceID`
 // immediately so when RestartPedestal eventually runs and calls
 // monitor.AcquireNamespaceForRestart with the same traceID, the
 // same-owner re-acquire path treats it as success (see
@@ -125,7 +159,7 @@ func AllocateNamespaceForRestart(
 	}
 
 	allocKey := fmt.Sprintf(allocLockKeyPattern, system)
-	acquired, err := redis.SetNX(ctx, allocKey, traceID, allocLockTTL)
+	acquired, err := allocSetNXFn(ctx, redis, allocKey, traceID, allocLockTTL)
 	if err != nil {
 		return AllocateResult{}, fmt.Errorf("acquire allocator lock for %s: %w", system, err)
 	}
@@ -133,7 +167,13 @@ func AllocateNamespaceForRestart(
 		return AllocateResult{}, fmt.Errorf("allocator busy for system %s, retry shortly", system)
 	}
 	defer func() {
-		_, _ = redis.DeleteKey(context.Background(), allocKey)
+		// CompareAndDelete (not DeleteKey): release the alloc lock only
+		// if its stored value still matches our traceID. Guards against
+		// the case where allocLockTTL expired mid-allocation and a
+		// successor allocator now owns the same allocKey — a naive DEL
+		// would silently destroy the successor's lock and let two
+		// allocators race on the same system. See #167 Copilot review.
+		_, _ = allocCompareDelFn(context.Background(), redis, allocKey, traceID)
 	}()
 
 	now := time.Now()
@@ -142,7 +182,7 @@ func AllocateNamespaceForRestart(
 	for idx := 0; idx < cfg.Count; idx++ {
 		ns := fmt.Sprintf(template, idx)
 
-		active, lockErr := nsLockActive(ctx, redis, ns, now)
+		active, lockErr := nsLockProbeFn(ctx, redis, ns, now)
 		if lockErr != nil {
 			return AllocateResult{}, fmt.Errorf("check lock for %s: %w", ns, lockErr)
 		}
@@ -160,11 +200,16 @@ func AllocateNamespaceForRestart(
 			}
 		}
 
-		if err := nsLockAcquire(ctx, redis, ns, endTime, traceID, now); err != nil {
-			// A concurrent runtime task may have grabbed it after our
-			// active-check; try the next slot rather than fail the whole
-			// allocation.
-			continue
+		if err := nsLockAcquireFn(ctx, redis, ns, endTime, traceID, now); err != nil {
+			// Only skip-and-continue on the explicit "another trace
+			// owns this slot" race. Real Redis/network/parse failures
+			// must abort allocation rather than be silently swallowed
+			// into ErrPoolExhausted, which would mask the underlying
+			// fault from the submit handler. See #167 Copilot review.
+			if errors.Is(err, ErrNamespaceLocked) {
+				continue
+			}
+			return AllocateResult{}, fmt.Errorf("acquire ns lock for %s: %w", ns, err)
 		}
 		return AllocateResult{Namespace: ns, Fresh: false}, nil
 	}
@@ -184,7 +229,7 @@ func AllocateNamespaceForRestart(
 		// allocator also locked it, our acquire returns busy and we
 		// fail clearly.
 	}
-	if err := nsLockAcquire(ctx, redis, freshNs, endTime, traceID, now); err != nil {
+	if err := nsLockAcquireFn(ctx, redis, freshNs, endTime, traceID, now); err != nil {
 		return AllocateResult{}, fmt.Errorf("bootstrap-allocate: lock new slot %s: %w", freshNs, err)
 	}
 	return AllocateResult{Namespace: freshNs, Fresh: true}, nil
@@ -246,7 +291,7 @@ func nsLockAcquire(ctx context.Context, redis *redisinfra.Gateway, ns string, en
 		if existingTrace != "" && existingTrace != traceID && endTimeStr != "" {
 			existingEnd, parseErr := strconv.ParseInt(endTimeStr, 10, 64)
 			if parseErr == nil && now.Unix() < existingEnd {
-				return fmt.Errorf("namespace %s locked by %s", ns, existingTrace)
+				return fmt.Errorf("%w: namespace %s held by trace %s", ErrNamespaceLocked, ns, existingTrace)
 			}
 		}
 		_, err = tx.TxPipelined(ctx, func(pipe goredis.Pipeliner) error {

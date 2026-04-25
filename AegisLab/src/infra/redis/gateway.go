@@ -347,6 +347,41 @@ func (g *Gateway) SetNX(ctx context.Context, key string, value any, expiration t
 	return result, nil
 }
 
+// compareAndDeleteScript is the canonical "del if value matches" primitive.
+// It avoids the classic SetNX-with-TTL race where, if the calling goroutine
+// stalls past the lock TTL, the key expires, a different owner re-acquires
+// it, and a naive deferred DEL would blow away the new owner's lock. The
+// Lua body executes atomically server-side so the GET/DEL pair cannot
+// interleave with another client's SET. Returns 1 when this caller's value
+// was deleted, 0 when the stored value differed (or the key was already
+// gone) — both are non-error outcomes.
+var compareAndDeleteScript = redis.NewScript(`
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+	return redis.call('DEL', KEYS[1])
+else
+	return 0
+end
+`)
+
+// CompareAndDeleteKey deletes `key` only if its current value equals `value`.
+// Used by lock holders to release their lock safely: it prevents a slow
+// allocator from accidentally releasing a successor's lock after the TTL
+// expired mid-allocation. Returns the number of keys deleted (0 or 1).
+func (g *Gateway) CompareAndDeleteKey(ctx context.Context, key, value string) (int64, error) {
+	result, err := compareAndDeleteScript.Run(ctx, g.clientOrInit(), []string{key}, value).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("redis compare-and-delete failed for key '%s': %w", key, err)
+	}
+	n, ok := result.(int64)
+	if !ok {
+		return 0, fmt.Errorf("redis compare-and-delete returned unexpected type %T for key '%s'", result, key)
+	}
+	return n, nil
+}
+
 func (g *Gateway) Subscribe(ctx context.Context, channel string) (*redis.PubSub, error) {
 	pubsub := g.clientOrInit().Subscribe(ctx, channel)
 	if _, err := pubsub.Receive(ctx); err != nil {
