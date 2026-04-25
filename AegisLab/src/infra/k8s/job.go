@@ -190,7 +190,13 @@ func createJob(ctx context.Context, jobConfig *JobConfig) error {
 			},
 		}
 
-		_, err := getK8sClient().BatchV1().Jobs(jobConfig.Namespace).Create(ctx, job, metav1.CreateOptions{})
+		client, err := getK8sClient()
+		if err != nil {
+			span.RecordError(err)
+			span.AddEvent("kubernetes client not available")
+			return fmt.Errorf("kubernetes client not available: %w", err)
+		}
+		_, err = client.BatchV1().Jobs(jobConfig.Namespace).Create(ctx, job, metav1.CreateOptions{})
 		if err != nil {
 			span.RecordError(err)
 			span.AddEvent("failed to create job")
@@ -249,8 +255,13 @@ func deleteJob(ctx context.Context, namespace, name string) error {
 
 	logEntry := logrus.WithField("namespace", namespace).WithField("name", name)
 
+	client, err := getK8sClient()
+	if err != nil {
+		return fmt.Errorf("kubernetes client not available: %w", err)
+	}
+
 	// 1. First check if Job exists and its status
-	job, err := getK8sClient().BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	job, err := client.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -265,7 +276,7 @@ func deleteJob(ctx context.Context, namespace, name string) error {
 	}
 
 	// 3. Execute deletion (idempotent operation)
-	err = getK8sClient().BatchV1().Jobs(namespace).Delete(ctx, name, deleteOptions)
+	err = client.BatchV1().Jobs(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -278,7 +289,11 @@ func deleteJob(ctx context.Context, namespace, name string) error {
 }
 
 func getJob(ctx context.Context, namespace, jobName string) (*batchv1.Job, error) {
-	job, err := getK8sClient().BatchV1().Jobs(namespace).Get(ctx, jobName, metav1.GetOptions{})
+	client, err := getK8sClient()
+	if err != nil {
+		return nil, fmt.Errorf("kubernetes client not available: %w", err)
+	}
+	job, err := client.BatchV1().Jobs(namespace).Get(ctx, jobName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get job: %v", err)
 	}
@@ -286,7 +301,11 @@ func getJob(ctx context.Context, namespace, jobName string) (*batchv1.Job, error
 }
 
 func getJobPodLogs(ctx context.Context, namespace, jobName string) (map[string][]string, error) {
-	podList, err := getK8sClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+	client, err := getK8sClient()
+	if err != nil {
+		return nil, fmt.Errorf("kubernetes client not available: %w", err)
+	}
+	podList, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", consts.JobLabelName, jobName),
 	})
 	if err != nil {
@@ -303,7 +322,7 @@ func getJobPodLogs(ctx context.Context, namespace, jobName string) (map[string][
 			continue
 		}
 
-		req := getK8sClient().CoreV1().Pods(namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
+		req := client.CoreV1().Pods(namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
 		logStream, err := req.Stream(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get logs for pod %s: %v", pod.Name, err)
@@ -350,8 +369,13 @@ func waitForJobCompletion(ctx context.Context, namespace, jobName string) error 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	client, err := getK8sClient()
+	if err != nil {
+		return fmt.Errorf("kubernetes client not available: %w", err)
+	}
+
 	for {
-		job, err := getK8sClient().BatchV1().Jobs(namespace).Get(ctx, jobName, metav1.GetOptions{})
+		job, err := client.BatchV1().Jobs(namespace).Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to get job: %v", err)
 		}

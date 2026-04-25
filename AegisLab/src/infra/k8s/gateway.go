@@ -29,8 +29,11 @@ type Gateway struct {
 
 var (
 	k8sRestConfig    *rest.Config
+	k8sRestConfigErr error
 	k8sClient        *kubernetes.Clientset
+	k8sClientErr     error
 	k8sDynamicClient *dynamic.DynamicClient
+	k8sDynamicErr    error
 	k8sController    *Controller
 
 	k8sRestConfigOnce    sync.Once
@@ -41,9 +44,25 @@ var (
 
 func NewGateway(controller *Controller) *Gateway {
 	if controller == nil {
-		controller = getK8sController()
+		// Best-effort lazy controller init. Errors here used to be
+		// logrus.Fatalf-fatal via the underlying client construction
+		// (issue #193); now they are surfaced via getK8sController's
+		// error log and the Gateway can still serve methods that don't
+		// touch the controller (e.g. NamespaceHasWorkload, EnsureNamespace).
+		controller, _ = getK8sController()
 	}
 	return &Gateway{controller: controller}
+}
+
+// k8sClientNotAvailableErr formats the canonical error returned by request-path
+// callers when the lazy-init Kubernetes client could not be constructed.
+// Replaces the previous logrus.Fatalf-on-init behavior so a transient API
+// failure does not crash the backend (issue #193).
+func k8sClientNotAvailableErr(err error) error {
+	if err == nil {
+		return fmt.Errorf("kubernetes client not available")
+	}
+	return fmt.Errorf("kubernetes client not available: %w", err)
 }
 
 func (g *Gateway) GetVolumeMountConfigMap() (map[consts.VolumeMountName]VolumeMountConfig, error) {
@@ -89,11 +108,11 @@ func (g *Gateway) DeleteChaosCRDsByLabel(ctx context.Context, labelKey, labelVal
 // resolution lists pods in a namespace that RestartPedestal hasn't created
 // yet. See github issue #91 item 1 / #92 item 1.
 func (g *Gateway) EnsureNamespace(ctx context.Context, name string) (bool, error) {
-	client := getK8sClient()
-	if client == nil {
-		return false, fmt.Errorf("kubernetes client not available")
+	client, err := getK8sClient()
+	if err != nil {
+		return false, k8sClientNotAvailableErr(err)
 	}
-	_, err := client.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	_, err = client.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err == nil {
 		return false, nil
 	}
@@ -120,9 +139,9 @@ func (g *Gateway) EnsureNamespace(ctx context.Context, name string) (bool, error
 // listing would return empty and "app X not found" would surface to the
 // user. Callers treat (false, nil) as "skip this slot, try next".
 func (g *Gateway) NamespaceHasWorkload(ctx context.Context, namespace string) (bool, error) {
-	client := getK8sClient()
-	if client == nil {
-		return false, fmt.Errorf("kubernetes client not available")
+	client, err := getK8sClient()
+	if err != nil {
+		return false, k8sClientNotAvailableErr(err)
 	}
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{Limit: 1})
 	if err != nil {
@@ -135,15 +154,15 @@ func (g *Gateway) NamespaceHasWorkload(ctx context.Context, namespace string) (b
 }
 
 func (g *Gateway) CheckHealth(ctx context.Context) error {
-	if getK8sRestConfig() == nil {
-		return fmt.Errorf("kubernetes config not available")
+	if _, err := getK8sRestConfig(); err != nil {
+		return fmt.Errorf("kubernetes config not available: %w", err)
 	}
-	client := getK8sClient()
-	if client == nil {
-		return fmt.Errorf("kubernetes client not available")
+	client, err := getK8sClient()
+	if err != nil {
+		return k8sClientNotAvailableErr(err)
 	}
-	if getK8sDynamicClient() == nil {
-		return fmt.Errorf("kubernetes dynamic client not available")
+	if _, err := getK8sDynamicClient(); err != nil {
+		return fmt.Errorf("kubernetes dynamic client not available: %w", err)
 	}
 
 	if _, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1}); err != nil {
@@ -157,9 +176,9 @@ func (g *Gateway) CheckHealth(ctx context.Context) error {
 // are ignored). The check requires at least one active pod to avoid a false
 // positive immediately after a helm release returns.
 func (g *Gateway) WaitForNamespacePodsReady(ctx context.Context, namespace string, timeout time.Duration) error {
-	client := getK8sClient()
-	if client == nil {
-		return fmt.Errorf("kubernetes client not available")
+	client, err := getK8sClient()
+	if err != nil {
+		return k8sClientNotAvailableErr(err)
 	}
 	if timeout <= 0 {
 		timeout = 10 * time.Minute
@@ -226,33 +245,58 @@ func isPodReady(conditions []corev1.PodCondition) bool {
 	return false
 }
 
-func getK8sClient() *kubernetes.Clientset {
+// getK8sClient lazily constructs the kubernetes clientset. On construction
+// failure it returns the error rather than calling logrus.Fatalf so request-
+// path callers (e.g. NamespaceHasWorkload on the auto-allocate submit path)
+// can surface a 5xx instead of crashing the backend process. See issue #193.
+func getK8sClient() (*kubernetes.Clientset, error) {
 	k8sClientOnce.Do(func() {
-		restConfig := getK8sRestConfig()
+		restConfig, err := getK8sRestConfig()
+		if err != nil {
+			k8sClientErr = err
+			return
+		}
 		clientset, err := kubernetes.NewForConfig(restConfig)
 		if err != nil {
-			logrus.Fatalf("failed to create Kubernetes clientset: %v", err)
+			k8sClientErr = fmt.Errorf("failed to create Kubernetes clientset: %w", err)
+			return
 		}
 
 		k8sClient = clientset
 	})
-	return k8sClient
+	if k8sClientErr != nil {
+		return nil, k8sClientErr
+	}
+	return k8sClient, nil
 }
 
-func getK8sDynamicClient() *dynamic.DynamicClient {
+// getK8sDynamicClient lazily constructs the dynamic client. See getK8sClient
+// for why errors are returned rather than fatal-logged.
+func getK8sDynamicClient() (*dynamic.DynamicClient, error) {
 	k8sDynamicClientOnce.Do(func() {
-		restConfig := getK8sRestConfig()
+		restConfig, err := getK8sRestConfig()
+		if err != nil {
+			k8sDynamicErr = err
+			return
+		}
 		dynamicClient, err := dynamic.NewForConfig(restConfig)
 		if err != nil {
-			logrus.Fatalf("failed to create Kubernetes dynamic client: %v", err)
+			k8sDynamicErr = fmt.Errorf("failed to create Kubernetes dynamic client: %w", err)
+			return
 		}
 
 		k8sDynamicClient = dynamicClient
 	})
-	return k8sDynamicClient
+	if k8sDynamicErr != nil {
+		return nil, k8sDynamicErr
+	}
+	return k8sDynamicClient, nil
 }
 
-func getK8sRestConfig() *rest.Config {
+// getK8sRestConfig lazily resolves the rest.Config (in-cluster preferred,
+// kubeconfig fallback). Errors are returned rather than fatal-logged so
+// callers can decide whether to fail the request or fail-fast at startup.
+func getK8sRestConfig() (*rest.Config, error) {
 	k8sRestConfigOnce.Do(func() {
 		restConfig, err := rest.InClusterConfig()
 		if err == nil {
@@ -266,20 +310,37 @@ func getK8sRestConfig() *rest.Config {
 		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 		config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			logrus.Fatalf("Failed to load Kubernetes config: %v", err)
+			k8sRestConfigErr = fmt.Errorf("failed to load Kubernetes config (neither in-cluster nor kubeconfig %q available): %w", kubeconfig, err)
+			return
 		}
 		if config == nil {
-			logrus.Fatalf("Failed to establish Kubernetes REST config: Neither In-Cluster nor external Kubeconfig available.")
+			k8sRestConfigErr = fmt.Errorf("failed to establish Kubernetes REST config: neither in-cluster nor external kubeconfig available")
+			return
 		}
 
 		k8sRestConfig = config
 	})
-	return k8sRestConfig
+	if k8sRestConfigErr != nil {
+		return nil, k8sRestConfigErr
+	}
+	return k8sRestConfig, nil
 }
 
-func getK8sController() *Controller {
+// k8sControllerErr captures a controller-init failure so repeated callers
+// see the same error rather than re-running construction (issue #193).
+var k8sControllerErr error
+
+func getK8sController() (*Controller, error) {
 	controllerOnce.Do(func() {
-		k8sController = newController()
+		ctrl, err := newController()
+		if err != nil {
+			k8sControllerErr = err
+			return
+		}
+		k8sController = ctrl
 	})
-	return k8sController
+	if k8sControllerErr != nil {
+		return nil, k8sControllerErr
+	}
+	return k8sController, nil
 }

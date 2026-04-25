@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
@@ -77,7 +78,7 @@ type Controller struct {
 	cancelFunc       context.CancelFunc
 }
 
-func newController() *Controller {
+func newController() (*Controller, error) {
 	crdInformers := make(map[string]map[schema.GroupVersionResource]cache.SharedIndexInformer)
 	activeNamespaces := make(map[string]bool)
 
@@ -85,8 +86,13 @@ func newController() *Controller {
 		options.LabelSelector = fmt.Sprintf("%s=%s", consts.K8sLabelAppID, consts.AppID)
 	}
 
+	client, err := getK8sClient()
+	if err != nil {
+		return nil, fmt.Errorf("kubernetes client not available: %w", err)
+	}
+
 	platformFactory := informers.NewSharedInformerFactoryWithOptions(
-		getK8sClient(),
+		client,
 		resyncPeriod,
 		informers.WithNamespace(config.GetString("k8s.namespace")),
 		informers.WithTweakListOptions(tweakListOptions),
@@ -111,7 +117,7 @@ func newController() *Controller {
 		podInformer:      podInformer,
 		queue:            queue,
 		chaosGVRs:        chaosGVRs,
-	}
+	}, nil
 }
 
 func (c *Controller) Initialize(ctx context.Context, cancelFunc context.CancelFunc, callback Callback) {
@@ -122,7 +128,13 @@ func (c *Controller) Initialize(ctx context.Context, cancelFunc context.CancelFu
 	c.callback = callback
 
 	if err := c.startJobAndPodInformers(); err != nil {
-		logrus.Fatalf("Failed to start Job and Pod informers: %v", err)
+		// Bootstrap-time failure: informers are required for the consumer
+		// to observe Job/Pod/CRD events at all. Without them no workflow
+		// callbacks fire and the process is effectively a no-op. We use
+		// an explicit Errorf+os.Exit(1) (instead of logrus.Fatalf) so the
+		// fail-fast intent is obvious in source per issue #193.
+		logrus.Errorf("Bootstrap failure: failed to start Job and Pod informers: %v", err)
+		os.Exit(1)
 	}
 
 	go c.startQueueWorker()
@@ -167,8 +179,12 @@ func (c *Controller) AddNamespaceInformers(namespaces []string) error {
 
 		// Create new factory for this namespace
 		logrus.Debugf("Creating new CRD informers for namespace: %s", namespace)
+		dynClient, err := getK8sDynamicClient()
+		if err != nil {
+			return fmt.Errorf("kubernetes dynamic client not available: %w", err)
+		}
 		chaosFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(
-			getK8sDynamicClient(),
+			dynClient,
 			resyncPeriod,
 			namespace,
 			tweakListOptions,
@@ -626,7 +642,11 @@ func (c *Controller) checkRecoveryStatus(item QueueItem) error {
 		"name":      item.Name,
 	})
 
-	obj, err := getK8sDynamicClient().
+	dyn, err := getK8sDynamicClient()
+	if err != nil {
+		return fmt.Errorf("kubernetes dynamic client not available: %w", err)
+	}
+	obj, err := dyn.
 		Resource(*item.GVR).
 		Namespace(item.Namespace).
 		Get(context.Background(), item.Name, metav1.GetOptions{})
@@ -810,7 +830,12 @@ func checkPodReason(pod *corev1.Pod, reason string) bool {
 
 func handlePodError(ctx context.Context, pod *corev1.Pod, job *batchv1.Job, reason string) {
 	// Get Pod events
-	events, err := getK8sClient().CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{
+	client, err := getK8sClient()
+	if err != nil {
+		logrus.WithField("pod_name", pod.Name).Errorf("kubernetes client not available, cannot fetch events: %v", err)
+		return
+	}
+	events, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name),
 	})
 	if err != nil {
