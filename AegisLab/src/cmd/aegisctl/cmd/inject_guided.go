@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"aegis/cmd/aegisctl/client"
@@ -56,6 +57,15 @@ var (
 	guidedInstall               bool
 	guidedInstallReadyTimeoutSec int
 	guidedSkipRestartPedestal   bool
+
+	// #166: --auto asks the server to pick a free deployed namespace from
+	// the system's pool at submit time, instead of the user pre-naming one.
+	// Mutually exclusive with --namespace. The chosen ns is surfaced in the
+	// submit response so scripts can read it back without parsing trace
+	// logs. Honors only the explicit-flag path; saved session configs that
+	// already have `namespace` set keep their value unless --auto is passed
+	// (in which case the namespace is cleared just for this apply).
+	guidedAutoAllocate bool
 
 	// Test seams: replace with fakes in unit tests.
 	guidedInstallerHook chartInstaller
@@ -300,6 +310,7 @@ func init() {
 	f.BoolVar(&guidedInstall, "install", false, "Before app discovery, if --namespace has no pods, shell out to 'aegisctl pedestal chart install <system>' and wait for readiness (requires --system and --namespace)")
 	f.IntVar(&guidedInstallReadyTimeoutSec, "install-ready-timeout", 600, "Seconds --install waits for pods in the target namespace to reach Ready before continuing with discovery")
 	f.BoolVar(&guidedSkipRestartPedestal, "skip-restart-pedestal", false, "On --apply, hint the backend's RestartPedestal task to skip the helm install when the release is already healthy (task still runs; only the install step short-circuits)")
+	f.BoolVar(&guidedAutoAllocate, "auto", false, "On --apply, ask the server to pick a free deployed namespace from the system's pool (mutually exclusive with --namespace; allocated namespace surfaces in submit response). See #166.")
 
 	// --apply envelope flags (mirror the injection YAML contract)
 	f.StringVar(&guidedApplyPedestalName, "pedestal-name", "", "Pedestal container name (required with --apply)")
@@ -348,6 +359,15 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	if guidedApplyInterval <= guidedApplyPreDuration {
 		return usageErrorf("--interval must be greater than --pre-duration")
 	}
+	if guidedAutoAllocate && strings.TrimSpace(cfg.Namespace) != "" && strings.TrimSpace(guidedNamespace) != "" {
+		// Only fire the conflict error when the user explicitly passed
+		// --namespace alongside --auto. A namespace inherited from the
+		// saved session config gets silently overridden below.
+		return usageErrorf("--auto cannot be combined with --namespace; pick one")
+	}
+	if guidedAutoAllocate {
+		cfg.Namespace = ""
+	}
 	if err := requireAPIContext(true); err != nil {
 		return err
 	}
@@ -383,6 +403,9 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	}
 	if guidedSkipRestartPedestal {
 		envelope["skip_restart_pedestal"] = true
+	}
+	if guidedAutoAllocate {
+		envelope["auto_allocate"] = true
 	}
 	if flagDryRun {
 		output.PrintJSON(map[string]any{
@@ -452,6 +475,9 @@ func submitGuidedApplyWithOptions(projectName string, cfg guidedcli.GuidedConfig
 	}
 	if guidedSkipRestartPedestal {
 		envelope["skip_restart_pedestal"] = true
+	}
+	if guidedAutoAllocate {
+		envelope["auto_allocate"] = true
 	}
 
 	c := newClient()
