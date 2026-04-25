@@ -573,7 +573,10 @@ func parseInjection(ctx context.Context, instance Injection) (map[string]any, er
 					break
 				}
 				if int(index) < 0 || int(index) >= len(containers) {
-					return nil, fmt.Errorf("container index out of range: %d (max: %d)", index, len(containers)-1)
+					return nil, fmt.Errorf(
+						"container index out of range in namespace %q: index %d, %d containers available (valid range 0..%d)",
+						namespace, index, len(containers), len(containers)-1,
+					)
 				}
 
 				value = containers[index]

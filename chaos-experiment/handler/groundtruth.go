@@ -8,6 +8,38 @@ import (
 	"github.com/OperationsPAI/chaos-experiment/internal/systemconfig"
 )
 
+// selectContainerByIndex resolves a container by its index against a snapshot
+// of the namespace's container list. It produces an actionable error when the
+// list is empty (typically a label-key mismatch or a stale cache reading a
+// transient namespace state) versus when the index merely overruns a populated
+// list. The previous implementation collapsed both cases into the unhelpful
+// "container index out of range: N (max: -1)" message, which made it look like
+// a code bug when the real issue was the runtime resource snapshot.
+func selectContainerByIndex(
+	containers []resourcelookup.ContainerInfo,
+	system systemconfig.SystemType,
+	namespace string,
+	containerIdx int,
+) (resourcelookup.ContainerInfo, error) {
+	if len(containers) == 0 {
+		labelKey := systemconfig.GetAppLabelKey(system)
+		return resourcelookup.ContainerInfo{}, fmt.Errorf(
+			"no containers found for system %q in namespace %q (app-label key %q): "+
+				"pods may not yet be scheduled, the namespace may be wrong, or pod labels do not match the configured key; "+
+				"requested container index %d",
+			system, namespace, labelKey, containerIdx,
+		)
+	}
+	if containerIdx < 0 || containerIdx >= len(containers) {
+		return resourcelookup.ContainerInfo{}, fmt.Errorf(
+			"container index out of range for system %q in namespace %q: "+
+				"index %d, %d containers available (valid range 0..%d)",
+			system, namespace, containerIdx, len(containers), len(containers)-1,
+		)
+	}
+	return containers[containerIdx], nil
+}
+
 // MetricType defines the type of metrics for groundtruth
 type MetricType string
 
@@ -75,11 +107,10 @@ func GetGroundtruthFromContainerIdx(ctx context.Context, system systemconfig.Sys
 		return Groundtruth{}, fmt.Errorf("failed to get containers: %w", err)
 	}
 
-	if containerIdx < 0 || containerIdx >= len(containers) {
-		return Groundtruth{}, fmt.Errorf("container index out of range: %d (max: %d)", containerIdx, len(containers)-1)
+	containerInfo, err := selectContainerByIndex(containers, system, namespace, containerIdx)
+	if err != nil {
+		return Groundtruth{}, err
 	}
-
-	containerInfo := containers[containerIdx]
 
 	// Create and populate the groundtruth
 	gt := Groundtruth{

@@ -27,6 +27,14 @@ func safeContainers(namespace string) ([]resourcelookup.ContainerInfo, error) {
 	result := make([]resourcelookup.ContainerInfo, 0)
 	for _, pod := range pods {
 		appLabel := pod.Labels[labelKey]
+		// Match systemCache.GetAllContainers semantics: pods that don't carry
+		// the configured app-label key cannot be groundtruth targets and must
+		// be filtered out, otherwise the submit-time and groundtruth-time
+		// container lists drift, which previously surfaced as
+		// "container index out of range: N (max: -1)" at groundtruth time.
+		if appLabel == "" {
+			continue
+		}
 		for _, container := range pod.Spec.Containers {
 			result = append(result, resourcelookup.ContainerInfo{
 				PodName:       pod.Name,

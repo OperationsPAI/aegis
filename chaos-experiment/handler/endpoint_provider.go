@@ -43,11 +43,11 @@ func getContainerInfoByIndex(ctx context.Context, system systemconfig.SystemType
 		return nil, err
 	}
 
-	if containerIdx < 0 || containerIdx >= len(containers) {
-		return nil, fmt.Errorf("container index out of range: %d (max: %d)", containerIdx, len(containers)-1)
+	info, err := selectContainerByIndex(containers, system, namespace, containerIdx)
+	if err != nil {
+		return nil, err
 	}
-
-	return &containers[containerIdx], nil
+	return &info, nil
 }
 
 func getAllHTTPEndpointInfos(system systemconfig.SystemType) ([]resourcelookup.AppEndpointPair, error) {
