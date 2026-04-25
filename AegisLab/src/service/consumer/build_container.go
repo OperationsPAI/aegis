@@ -197,8 +197,15 @@ func buildImageAndPush(ctx context.Context, buildKitGateway *buildkit.Gateway, p
 		defer func() { _ = c.Close() }()
 
 		dockerConfig := con.LoadDefaultConfigFile(os.Stderr)
+		// buildkit v0.29 reshaped authprovider.NewDockerAuthProvider's
+		// signature from (cfg, tlsConfigs) into a single
+		// DockerAuthProviderConfig struct. authprovider.LoadAuthConfig
+		// adapts a docker/cli configfile into the new AuthConfigProvider
+		// callback.
 		attachable := []session.Attachable{
-			authprovider.NewDockerAuthProvider(dockerConfig, nil),
+			authprovider.NewDockerAuthProvider(authprovider.DockerAuthProviderConfig{
+				AuthConfigProvider: authprovider.LoadAuthConfig(dockerConfig),
+			}),
 		}
 
 		exports := []buildkitclient.ExportEntry{
