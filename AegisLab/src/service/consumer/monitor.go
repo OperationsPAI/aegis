@@ -46,6 +46,12 @@ type NamespaceInitResult struct {
 
 type NamespaceMonitor interface {
 	SetContext(ctx context.Context)
+	// SetActivator wires a NamespaceActivator (typically *infra/k8s.Controller)
+	// so the monitor can keep the controller's active-namespace view in sync
+	// with the lock store on every successful AcquireLock. Wiring is optional
+	// — when unset (e.g. in unit tests that don't exercise the controller),
+	// AcquireLock skips the activation hook. See issue #194.
+	SetActivator(activator NamespaceActivator)
 	InitializeNamespaces() ([]string, error)
 	RefreshNamespaces() (*NamespaceRefreshResult, error)
 	ReleaseLock(ctx context.Context, namespace string, traceID string) error
@@ -60,6 +66,18 @@ type NamespaceMonitor interface {
 	AcquireNamespaceForRestart(namespace string, endTime time.Time, traceID string) error
 }
 
+// NamespaceActivator is the subset of *infra/k8s.Controller the monitor needs
+// to keep the controller's in-memory active-namespace view in sync with the
+// lock store (issue #194). The controller filters CRD events on its own
+// activeNamespaces map; without a re-activation hook, a namespace that was
+// marked inactive by RemoveNamespaceInformers remains filtered even after a
+// new trace successfully lazy-loads and locks it via the lock store, silently
+// dropping CRD AddFunc events. EnsureNamespaceActive is idempotent and safe
+// to call on every successful AcquireLock.
+type NamespaceActivator interface {
+	EnsureNamespaceActive(namespace string) error
+}
+
 // monitor manages namespace locks and status using Redis
 type monitor struct {
 	ctx          context.Context
@@ -67,6 +85,7 @@ type monitor struct {
 	namespaces   namespaceCatalogStore
 	locks        namespaceLockStore
 	status       namespaceStatusStore
+	activator    NamespaceActivator
 	mu           sync.RWMutex // Protects namespace operations
 }
 
@@ -78,6 +97,20 @@ func NewMonitor(gateway *redisinfra.Gateway) NamespaceMonitor {
 		locks:        newNamespaceLockStore(gateway),
 		status:       newNamespaceStatusStore(gateway),
 	}
+}
+
+func (m *monitor) SetActivator(activator NamespaceActivator) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.activator = activator
+}
+
+// currentActivator returns the wired activator under the read lock so tests
+// and AcquireLock can fetch it without racing against SetActivator.
+func (m *monitor) currentActivator() NamespaceActivator {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.activator
 }
 
 func (m *monitor) SetContext(ctx context.Context) {
@@ -177,6 +210,18 @@ func (m *monitor) AcquireLock(namespace string, endTime time.Time, traceID strin
 
 	if err == nil {
 		logEntry.Info("acquired namespace lock")
+		// Keep the k8s controller's active-namespace view in sync with the
+		// lock store. Without this, a CRD AddFunc for a namespace previously
+		// marked inactive (e.g. via RemoveNamespaceInformers) is silently
+		// dropped at infra/k8s/controller.go:isNamespaceActive even though
+		// this trace has just successfully acquired the lock and created the
+		// chaos CRD. See issue #194 — historically the workaround was a
+		// runtime-worker pod restart; this hook removes that need.
+		if activator := m.currentActivator(); activator != nil {
+			if actErr := activator.EnsureNamespaceActive(namespace); actErr != nil {
+				logEntry.WithError(actErr).Warn("failed to reactivate namespace in k8s controller; CRD events may be ignored until a refresh")
+			}
+		}
 	} else if err != goredis.TxFailedErr {
 		logEntry.Warn("failed to acquire namespace lock")
 	}

@@ -232,6 +232,28 @@ func (c *Controller) AddNamespaceInformers(namespaces []string) error {
 	return nil
 }
 
+// EnsureNamespaceActive marks the given namespace as active in the controller's
+// in-memory activeNamespaces set, creating informers on demand if they don't
+// already exist. Idempotent: safe to call repeatedly. Safe to call on a nil
+// receiver (no-op) so callers don't have to nil-check before invoking.
+//
+// This is the bridge between the namespace lock store and the controller's
+// CRD event filter (issue #194). When monitor.AcquireLock lazy-loads or
+// re-locks a namespace that the controller previously marked inactive (via
+// RemoveNamespaceInformers), it must call this method so subsequent CRD
+// AddFunc events for that namespace are not silently dropped at
+// genCRDEventHandlerFuncs::AddFunc — the historical "Ignoring CRD add event
+// for inactive namespace" symptom that required a worker pod restart to clear.
+func (c *Controller) EnsureNamespaceActive(namespace string) error {
+	if c == nil {
+		return nil
+	}
+	if namespace == "" {
+		return nil
+	}
+	return c.AddNamespaceInformers([]string{namespace})
+}
+
 // RemoveNamespaceInformers marks namespaces as inactive
 // Note: Kubernetes informers cannot be gracefully stopped, so we keep them running
 // but mark the namespaces as inactive to filter events in handlers
