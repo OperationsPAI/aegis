@@ -321,6 +321,35 @@ func (h *Handler) MarkPrerequisite(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// ListInjectCandidatesHandler returns every reachable (app, chaos_type, target)
+// tuple for a system+namespace pair (issue #181). One request replaces the
+// N-round-trip walk through `aegisctl inject guided` for adversarial /
+// coverage-driven loops.
+//
+//	@Summary		List inject candidates for a system+namespace
+//	@Description	Bulk enumeration of every (app, chaos_type, target) tuple reachable for the given system short code and namespace. Numerical params (latency, cpu_load, ...) are NOT expanded — the caller fills those in before submitting. Replaces the previous N-round-trip walk through `aegisctl inject guided`.
+//	@Tags			Systems
+//	@ID				list_system_inject_candidates
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			name		path		string										true	"System short code"
+//	@Param			namespace	query		string										true	"Target namespace (e.g. sockshop1)"
+//	@Success		200			{object}	dto.GenericResponse[InjectCandidatesResp]	"Candidates retrieved"
+//	@Failure		400			{object}	dto.GenericResponse[any]					"Missing namespace or invalid system code"
+//	@Failure		404			{object}	dto.GenericResponse[any]					"System not found"
+//	@Failure		500			{object}	dto.GenericResponse[any]					"k8s/resourcelookup failure"
+//	@Router			/api/v2/systems/by-name/{name}/inject-candidates [get]
+//	@x-api-type		{"admin":"true","sdk":"true"}
+func (h *Handler) ListInjectCandidates(c *gin.Context) {
+	name := c.Param("name")
+	namespace := c.Query("namespace")
+	resp, err := h.service.ListInjectCandidates(c.Request.Context(), name, namespace)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 // ListChaosSystemMetadataHandler handles listing metadata for a chaos system
 //
 //	@Summary		List chaos system metadata

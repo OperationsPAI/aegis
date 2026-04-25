@@ -24,6 +24,9 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 					// Prerequisites (issue #115) — read is system_read gated so
 					// the default admin flow can surface status in dashboards.
 					systemRead.GET("/by-name/:name/prerequisites", handler.ListPrerequisites)
+					// Bulk inject-candidate enumeration (issue #181) — agent
+					// loops fetch the full pool in one round-trip.
+					systemRead.GET("/by-name/:name/inject-candidates", handler.ListInjectCandidates)
 				}
 
 				systemConfigure := systems.Group("", middleware.RequireSystemConfigure)
