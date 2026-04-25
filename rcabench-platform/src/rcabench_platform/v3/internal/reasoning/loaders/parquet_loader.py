@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -160,6 +161,35 @@ CALLER_LIKE_SERVICES: set[str] = LOADGEN_LIKE_SERVICES | {
 
 def _is_caller_like(service_name: str) -> bool:
     return service_name.lower() in CALLER_LIKE_SERVICES
+
+
+def _ts_to_int_seconds(values) -> np.ndarray:
+    """Coerce a per-pod/container timestamp list to int64 unix-seconds.
+
+    Real OTel parquet emits ``time`` as ``Datetime[ns]``; after a groupby agg the
+    list contains ``datetime.datetime`` objects, so a naive ``np.array(...)`` gives
+    dtype=object which crashes every downstream ``int(np.min(ts))`` /
+    ``range(ts_min, ts_max+1)`` site in the IR adapters. Normalize once at the
+    boundary so consumers never have to know what shape the parquet stored.
+    """
+    arr = np.asarray(values)
+    if arr.dtype == np.int64 or arr.dtype == np.int32:
+        return arr.astype(np.int64, copy=False)
+    if arr.dtype.kind == "M":  # numpy datetime64
+        return arr.astype("datetime64[s]").astype(np.int64)
+    if arr.dtype == object and arr.size > 0 and isinstance(arr.flat[0], datetime):
+        return np.fromiter((int(x.timestamp()) for x in arr), dtype=np.int64, count=arr.size)
+    if arr.dtype.kind == "i":
+        x = arr.astype(np.int64, copy=False)
+        # Heuristic match to ir/adapters/traces._ts_seconds: detect ns/μs/s ints
+        if x.size > 0:
+            sample = int(x.flat[0])
+            if sample > 10**14:
+                return x // 1_000_000_000
+            if sample > 10**11:
+                return x // 1_000
+        return x
+    return arr.astype(np.int64, copy=False)
 
 
 def _resolve_span_service(span_name: str, service_names: list[str]) -> str | None:
@@ -461,8 +491,13 @@ class ParquetDataLoader:
         loadgens = list(LOADGEN_LIKE_SERVICES)
 
         def filter_root_spans(df: pl.DataFrame) -> pl.DataFrame:
+            # Backend "root" = first server-side span the request hits, regardless of whether
+            # an instrumented loadgen produced an outer client/root span above it. Using
+            # parent_span_id=="" alone breaks on TrainTicket-style data where 100% of true
+            # roots belong to the loadgenerator and the actual frontend (ts-ui-dashboard)
+            # only ever appears as a Server-kind child.
             return df.filter(
-                (pl.col("parent_span_id") == "") & (~pl.col("service_name").str.to_lowercase().is_in(loadgens))
+                (pl.col("attr.span_kind") == "Server") & (~pl.col("service_name").str.to_lowercase().is_in(loadgens))
             )
 
         baseline_root = filter_root_spans(baseline_traces)
@@ -1492,7 +1527,7 @@ class ParquetDataLoader:
                         result[entity] = ({}, {})
 
                     abnormal_metrics = result[entity][1]
-                    abnormal_metrics[metric] = (np.array(row["timestamps"]), np.array(row["values"]))
+                    abnormal_metrics[metric] = (_ts_to_int_seconds(row["timestamps"]), np.array(row["values"]))
 
             if len(baseline_gauge) > 0:
                 baseline_grouped = baseline_gauge.group_by([entity_col, "metric"]).agg(
@@ -1507,7 +1542,7 @@ class ParquetDataLoader:
                         result[entity] = ({}, {})
 
                     baseline_metrics = result[entity][0]
-                    baseline_metrics[metric] = (np.array(row["timestamps"]), np.array(row["values"]))
+                    baseline_metrics[metric] = (_ts_to_int_seconds(row["timestamps"]), np.array(row["values"]))
 
         # Process histogram metrics - optimized with group_by
         if hist_metrics:
@@ -1537,7 +1572,10 @@ class ParquetDataLoader:
                             result[entity] = ({}, {})
 
                         abnormal_metrics = result[entity][1]
-                        abnormal_metrics[f"{metric}{suffix}"] = (np.array(row["timestamps"]), np.array(row["values"]))
+                        abnormal_metrics[f"{metric}{suffix}"] = (
+                            _ts_to_int_seconds(row["timestamps"]),
+                            np.array(row["values"]),
+                        )
 
                 # Baseline period
                 if len(baseline_hist) > 0 and stat_col in baseline_hist.columns:
@@ -1553,7 +1591,10 @@ class ParquetDataLoader:
                             result[entity] = ({}, {})
 
                         baseline_metrics = result[entity][0]
-                        baseline_metrics[f"{metric}{suffix}"] = (np.array(row["timestamps"]), np.array(row["values"]))
+                        baseline_metrics[f"{metric}{suffix}"] = (
+                            _ts_to_int_seconds(row["timestamps"]),
+                            np.array(row["values"]),
+                        )
 
         # Process sum metrics - optimized with group_by
         if sum_metrics_list:
@@ -1575,7 +1616,7 @@ class ParquetDataLoader:
                         result[entity] = ({}, {})
 
                     abnormal_metrics = result[entity][1]
-                    abnormal_metrics[metric] = (np.array(row["timestamps"]), np.array(row["values"]))
+                    abnormal_metrics[metric] = (_ts_to_int_seconds(row["timestamps"]), np.array(row["values"]))
 
             # Baseline period
             if len(baseline_sum) > 0:
@@ -1591,7 +1632,7 @@ class ParquetDataLoader:
                         result[entity] = ({}, {})
 
                     baseline_metrics = result[entity][0]
-                    baseline_metrics[metric] = (np.array(row["timestamps"]), np.array(row["values"]))
+                    baseline_metrics[metric] = (_ts_to_int_seconds(row["timestamps"]), np.array(row["values"]))
 
         return result
 
@@ -1746,7 +1787,7 @@ class ParquetDataLoader:
                     .sort("time")
                     .select(["time", "value"])
                 )
-                baseline_timestamps = baseline_data.select("time").to_series().to_numpy()
+                baseline_timestamps = _ts_to_int_seconds(baseline_data.select("time").to_series().to_list())
                 baseline_values = baseline_data.select("value").to_series().to_numpy()
 
                 # Get abnormal gauge data
@@ -1757,7 +1798,7 @@ class ParquetDataLoader:
                     .sort("time")
                     .select(["time", "value"])
                 )
-                abnormal_timestamps = abnormal_data.select("time").to_series().to_numpy()
+                abnormal_timestamps = _ts_to_int_seconds(abnormal_data.select("time").to_series().to_list())
                 abnormal_values = abnormal_data.select("value").to_series().to_numpy()
 
                 if len(abnormal_values) == 0:

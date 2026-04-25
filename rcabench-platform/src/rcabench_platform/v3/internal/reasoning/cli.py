@@ -347,6 +347,29 @@ def _build_visualization_paths(
 # =============================================================================
 
 
+def _earliest_abnormal_seconds(abnormal_traces: pl.DataFrame) -> int:
+    """Earliest abnormal-trace timestamp normalized to unix seconds.
+
+    Mirrors ``ir/adapters/traces.py::_ts_seconds`` so the InjectionAdapter seed
+    lands on the same time axis as trace adapter transitions regardless of how
+    parquet stores ``time`` (Datetime[ns]/[us]/[ms], or int nanos/micros/secs).
+    """
+    if abnormal_traces.height == 0 or "time" not in abnormal_traces.columns:
+        return 0
+    raw = abnormal_traces["time"].min()
+    if raw is None:
+        return 0
+    if isinstance(raw, datetime):
+        return int(raw.timestamp())
+    if isinstance(raw, int):
+        if raw > 10**14:
+            return raw // 1_000_000_000
+        if raw > 10**11:
+            return raw // 1_000
+        return raw
+    return int(raw)  # type: ignore[arg-type]
+
+
 def run_single_case(
     data_dir: Path,
     max_hops: int,
@@ -416,9 +439,7 @@ def run_single_case(
         # at the start of the abnormal window).
         baseline_traces = loader.load_traces("normal")
         abnormal_traces = loader.load_traces("abnormal")
-        injection_at = (
-            int(abnormal_traces["time"].min()) if abnormal_traces.height > 0 else 0  # type: ignore[arg-type]
-        )
+        injection_at = _earliest_abnormal_seconds(abnormal_traces)
         ctx = AdapterContext(datapack_dir=data_dir, case_name=case_name)
         timelines = run_reasoning_ir(
             graph=graph,
