@@ -1,11 +1,27 @@
 """IR pipeline driver: assemble adapters, synth timelines, run inference fixpoint.
 
-Phase 2 entry point. Constructs the standard adapter trio (Injection +
-Traces + K8sMetrics) explicitly and feeds their transition stream into
-``synth_timelines`` + ``run_fixpoint``. The ``@register_adapter`` registry
-is preserved for future plug-in style assembly; this driver wires the
-core trio manually so that callers don't need to know which adapter
-classes are registered.
+Phase 2 entry point. Constructs the standard adapter set (Injection +
+Traces + K8sMetrics + JVM) explicitly and feeds their transition stream
+into ``synth_timelines`` + ``run_fixpoint``. The ``@register_adapter``
+registry is preserved for future plug-in style assembly; this driver
+wires the core set manually so that callers don't need to know which
+adapter classes are registered.
+
+Execution is two-phase:
+
+1. The observation adapters (Injection, Traces, K8sMetrics, JVM, plus any
+   ``extra_adapters``) emit transitions, which are synthesised into a first
+   pass of timelines.
+2. ``StructuralInheritanceAdapter`` is then constructed with those phase-1
+   timelines and the graph, and emits inferred transitions for derived
+   nodes (pod / service / span) when an infra-level node went unavailable
+   or degraded but its derived nodes have no observation. The combined
+   transition stream is synthesised once more so the final timelines
+   reflect both observed and inherited state.
+
+The structural pass is the only place where containment-driven state is
+expressed at the IR layer; rule matching and propagation continue to run
+unchanged downstream of synth.
 """
 
 from __future__ import annotations
@@ -16,6 +32,9 @@ from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext, S
 from rcabench_platform.v3.internal.reasoning.ir.adapters.injection import InjectionAdapter
 from rcabench_platform.v3.internal.reasoning.ir.adapters.jvm import JvmAugmenterAdapter
 from rcabench_platform.v3.internal.reasoning.ir.adapters.k8s_metrics import K8sMetricsAdapter
+from rcabench_platform.v3.internal.reasoning.ir.adapters.structural_inheritance import (
+    StructuralInheritanceAdapter,
+)
 from rcabench_platform.v3.internal.reasoning.ir.adapters.traces import TraceStateAdapter
 from rcabench_platform.v3.internal.reasoning.ir.inference import InferenceRule, run_fixpoint
 from rcabench_platform.v3.internal.reasoning.ir.synth import synth_timelines
@@ -49,14 +68,14 @@ def run_reasoning_ir(
         baseline_traces / abnormal_traces: polars DataFrames; passed
             untyped because polars is an optional import path elsewhere
             and this signature is shared with tests that pass mocks.
-        extra_adapters: optional adapters appended to the standard trio
+        extra_adapters: optional adapters appended to the standard set
             (e.g. JVM augmenter once it exists).
         inference_rules: rules for the post-synth fixpoint pass; default
             is empty (no rules).
         observation_start / observation_end: pinned observation bounds
             forwarded to ``synth_timelines``.
     """
-    adapters: list[StateAdapter] = [
+    observation_adapters: list[StateAdapter] = [
         InjectionAdapter(resolved=resolved, injection_at=injection_at),
         TraceStateAdapter(baseline_traces=baseline_traces, abnormal_traces=abnormal_traces),  # type: ignore[arg-type]
         K8sMetricsAdapter(graph=graph),
@@ -65,11 +84,20 @@ def run_reasoning_ir(
         JvmAugmenterAdapter(graph=graph),
     ]
     if extra_adapters:
-        adapters.extend(extra_adapters)
+        observation_adapters.extend(extra_adapters)
 
     transitions: list[Transition] = []
-    for adapter in adapters:
+    for adapter in observation_adapters:
         transitions.extend(adapter.emit(ctx))
+
+    phase1_timelines = synth_timelines(
+        transitions,
+        observation_start=observation_start,
+        observation_end=observation_end,
+    )
+
+    structural = StructuralInheritanceAdapter(graph=graph, prior_timelines=phase1_timelines)
+    transitions.extend(structural.emit(ctx))
 
     timelines = synth_timelines(
         transitions,
