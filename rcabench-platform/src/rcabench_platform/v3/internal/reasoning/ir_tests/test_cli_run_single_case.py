@@ -107,6 +107,12 @@ class _StubLoader:
     def load_traces(self, period: str = "abnormal") -> pl.DataFrame:
         return self._abnormal if period == "abnormal" else self._baseline
 
+    def load_logs(self, period: str = "abnormal") -> pl.DataFrame:
+        # Empty logs → log-dependency adapters short-circuit. The real
+        # loader raises FileNotFoundError when the parquet is absent;
+        # returning an empty frame is the equivalent for this stub.
+        return pl.DataFrame(schema={"service_name": pl.Utf8, "level": pl.Utf8, "message": pl.Utf8})
+
 
 def test_run_single_case_happy_path(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(reasoning_cli, "ParquetDataLoader", _StubLoader)

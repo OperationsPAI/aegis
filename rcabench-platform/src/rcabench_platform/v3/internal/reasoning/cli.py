@@ -16,6 +16,7 @@ from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultP
 from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
 from rcabench_platform.v3.internal.reasoning.ir.adapters.inferred_edges import enrich_with_inferred_edges
+from rcabench_platform.v3.internal.reasoning.ir.adapters.log_dependency import dispatch_log_adapters
 from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
@@ -459,6 +460,21 @@ def run_single_case(
         # naturally on construction. See ir/adapters/inferred_edges.py.
         n_inferred = enrich_with_inferred_edges(graph, timelines)
         logger.info(f"[{case_name}] inferred edges: {n_inferred}")
+
+        # Per-system log-evidence adapters: scan application logs for
+        # backing-service failure patterns (HikariPool / SQLException for
+        # Java/Spring, dial-tcp / EOF for Go, etc.) and add inferred
+        # ``service|backing -[includes]→ span|caller_alarm`` edges that
+        # the temporal-coincidence heuristic alone cannot reach (JDBC
+        # traffic is not in OTel spans). See ir/adapters/log_dependency.py.
+        try:
+            abnormal_logs_for_deps = loader.load_logs("abnormal")
+            normal_logs_for_deps = loader.load_logs("normal")
+        except FileNotFoundError:
+            logger.debug(f"[{case_name}] logs absent — skipping log-dependency adapters")
+        else:
+            n_log_inferred = dispatch_log_adapters(graph, timelines, abnormal_logs_for_deps, normal_logs_for_deps)
+            logger.info(f"[{case_name}] log-inferred edges: {n_log_inferred}")
 
         # Resolve propagation starting points based on rule semantics
         # For HTTP response faults, propagation starts from caller service (not physical injection)
