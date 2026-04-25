@@ -29,6 +29,15 @@ func RegisterConsumerHandlers(
 	buildLimiter *TokenBucketRateLimiter,
 	algoLimiter *TokenBucketRateLimiter,
 ) {
+	// Wire the controller as the monitor's NamespaceActivator so a successful
+	// AcquireLock (including the lazy-load path) re-marks the namespace as
+	// active in the controller's CRD-event filter. Without this hook, a
+	// namespace that was marked inactive by a prior RemoveNamespaceInformers
+	// stays filtered until the worker pod restarts — see issue #194.
+	if monitor != nil && controller != nil {
+		monitor.SetActivator(controller)
+	}
+
 	h := newChaosSystemHandler(monitor, controller, publisher)
 	for _, category := range chaosSystemCategories() {
 		common.RegisterHandler(h.forCategory(category))
