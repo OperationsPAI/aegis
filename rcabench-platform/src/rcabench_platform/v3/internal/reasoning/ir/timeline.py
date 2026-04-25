@@ -40,3 +40,23 @@ class StateTimeline:
             if w.start <= t < w.end:
                 return w.state
         return None
+
+    def ever_in(self, state: str) -> bool:
+        return any(w.state == state for w in self.windows)
+
+    def ever_in_any(self, states: set[str] | frozenset[str]) -> bool:
+        return any(w.state in states for w in self.windows)
+
+    def labels_at(self, t: int) -> frozenset[str]:
+        for w in self.windows:
+            if w.start <= t < w.end:
+                labels = w.evidence.get("specialization_labels")
+                return frozenset(labels) if labels else frozenset()
+        return frozenset()
+
+    def ever_carries(self, label: str) -> bool:
+        for w in self.windows:
+            labels = w.evidence.get("specialization_labels")
+            if labels and label in labels:
+                return True
+        return False
