@@ -121,6 +121,13 @@ type injectionProcessItem struct {
 	faultDuration int
 	guidedConfigs []guidedcli.GuidedConfig
 	executeTime   time.Time
+	// allocatedNamespace and preallocTraceID are populated by the
+	// AutoAllocate submit path (#166) when the server picks a namespace at
+	// submit time. The pre-generated traceID is later assigned to the
+	// task's TraceID so the runtime RestartPedestal's same-owner re-acquire
+	// matches the allocator's existing lock. Empty otherwise.
+	allocatedNamespace string
+	preallocTraceID    string
 }
 
 func flattenYAMLToParameters(data map[string]any, prefix string) []dto.ParameterSpec {
