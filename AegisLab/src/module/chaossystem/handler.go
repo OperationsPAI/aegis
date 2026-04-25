@@ -87,14 +87,16 @@ func (h *Handler) GetSystem(c *gin.Context) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			name	path		string									true	"System short code"
+//	@Param			version	query		string									false	"Container version (semver, e.g. 1.1.2). When omitted, returns the highest-versioned active container_version."
 //	@Success		200		{object}	dto.GenericResponse[SystemChartResp]	"Chart retrieved"
-//	@Failure		404		{object}	dto.GenericResponse[any]				"System has no active pedestal chart"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"System has no active pedestal chart for the requested version"
 //	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/systems/by-name/{name}/chart [get]
 //	@x-api-type		{"admin":"true","sdk":"true"}
 func (h *Handler) GetSystemChart(c *gin.Context) {
 	name := c.Param("name")
-	resp, err := h.service.GetSystemChart(c.Request.Context(), name)
+	version := c.Query("version")
+	resp, err := h.service.GetSystemChart(c.Request.Context(), name, version)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

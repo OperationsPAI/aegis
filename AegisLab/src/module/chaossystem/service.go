@@ -242,15 +242,23 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 	return NewChaosSystemResp(view), nil
 }
 
-// GetSystemChart returns the chart source bound to the system's latest active
-// pedestal ContainerVersion. Returns ErrNotFound when the system has no
-// pedestal container / no active version / no helm config.
-func (s *Service) GetSystemChart(_ context.Context, name string) (*SystemChartResp, error) {
+// GetSystemChart returns the chart source bound to the system's pedestal
+// ContainerVersion for the requested semver. When versionName is empty the
+// highest-versioned active container_version wins. Returns ErrNotFound when
+// the system has no pedestal container / no matching version / no helm
+// config.
+//
+// Issue #190: the response is built from a fresh JOIN of container_versions
+// × helm_configs × helm_config_values × parameter_configs every call, so a
+// reseed-then-curl loop sees the latest helm_config_values.default_value
+// without restarting the backend or re-rendering any cached configmap.
+func (s *Service) GetSystemChart(_ context.Context, name, versionName string) (*SystemChartResp, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
 	}
-	helm, version, err := s.repo.GetPedestalHelmConfigByName(name)
+	versionName = strings.TrimSpace(versionName)
+	helm, version, err := s.repo.GetPedestalHelmConfigByName(name, versionName)
 	if err != nil {
 		return nil, err
 	}
