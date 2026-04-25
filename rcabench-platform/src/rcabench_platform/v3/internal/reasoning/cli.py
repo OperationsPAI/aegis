@@ -14,6 +14,8 @@ from tqdm import tqdm
 from rcabench_platform.v3.internal.reasoning._util import setup_logging
 from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultPropagator
 from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
+from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
+from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperGraph, PlaceKind
@@ -397,61 +399,39 @@ def run_single_case(
 
         assert physical_node_ids != []
 
-        # Resolve injection service ID for state enhancement
-        injection_service_id = _resolve_injection_service_id(graph, physical_node_ids)
-        if injection_service_id is not None:
-            resolution_info["injection_service_id"] = injection_service_id
-
-        # Extract service-pair info from injection_point (for network and DNS faults)
-        source_service_id: int | None = None
-        target_service_id: int | None = None
-        fault_direction: str | None = None
-
         if resolved.injection_point:
             ip = resolved.injection_point
-
-            # Network faults: source_service, target_service, direction
             if resolved.category == "network":
-                if ip.source_service:
-                    src_node = graph.get_node_by_name(f"service|{ip.source_service}")
-                    source_service_id = src_node.id if src_node else None
-                if ip.target_service:
-                    tgt_node = graph.get_node_by_name(f"service|{ip.target_service}")
-                    target_service_id = tgt_node.id if tgt_node else None
-                fault_direction = ip.direction  # "to", "from", or "both"
-                if source_service_id or target_service_id:
-                    resolution_info["network_source"] = ip.source_service
-                    resolution_info["network_target"] = ip.target_service
-                    resolution_info["network_direction"] = fault_direction
-
-            # DNS faults: app_name (source) cannot resolve domain (target)
+                resolution_info["network_source"] = ip.source_service
+                resolution_info["network_target"] = ip.target_service
+                resolution_info["network_direction"] = ip.direction
             elif resolved.category == "dns":
-                if ip.app_name:
-                    src_node = graph.get_node_by_name(f"service|{ip.app_name}")
-                    source_service_id = src_node.id if src_node else None
-                if ip.domain:
-                    tgt_node = graph.get_node_by_name(f"service|{ip.domain}")
-                    target_service_id = tgt_node.id if tgt_node else None
-                fault_direction = "to"  # DNS affects outgoing direction only
-                if source_service_id or target_service_id:
-                    resolution_info["dns_app"] = ip.app_name
-                    resolution_info["dns_domain"] = ip.domain
+                resolution_info["dns_app"] = ip.app_name
+                resolution_info["dns_domain"] = ip.domain
 
         rules = get_builtin_rules()
 
-        from rcabench_platform.v3.internal.reasoning.algorithms.state_detector import detect_state_timeline
-
-        logger.info(f"[{case_name}] Detecting states for {len(graph._node_id_map)} nodes...")
-        for node in graph._node_id_map.values():
-            if node.state_timeline is None and node.id is not None:
-                timeline = detect_state_timeline(node)
-                graph.set_node_state_timeline(node.id, timeline)
-        logger.info(f"[{case_name}] State detection complete")
+        # Drive the canonical-state IR pipeline. Pick injection_at as the
+        # earliest abnormal-trace timestamp (so InjectionAdapter seed lands
+        # at the start of the abnormal window).
+        baseline_traces = loader.load_traces("normal")
+        abnormal_traces = loader.load_traces("abnormal")
+        injection_at = (
+            int(abnormal_traces["time"].min()) if abnormal_traces.height > 0 else 0  # type: ignore[arg-type]
+        )
+        ctx = AdapterContext(datapack_dir=data_dir, case_name=case_name)
+        timelines = run_reasoning_ir(
+            graph=graph,
+            ctx=ctx,
+            resolved=resolved,
+            injection_at=injection_at,
+            baseline_traces=baseline_traces,
+            abnormal_traces=abnormal_traces,
+        )
+        logger.info(f"[{case_name}] IR pipeline: {len(timelines)} node timelines")
 
         # Resolve propagation starting points based on rule semantics
         # For HTTP response faults, propagation starts from caller service (not physical injection)
-        assert injection_data is not None
-
         starting_resolver = StartingPointResolver(graph)
         injection_node_ids = starting_resolver.resolve(
             physical_node_ids=physical_node_ids,
@@ -469,16 +449,12 @@ def run_single_case(
         propagator = FaultPropagator(
             graph=graph,
             rules=rules,
+            timelines=timelines,
             max_hops=max_hops,
         )
         result = propagator.propagate_from_injection(
             injection_node_ids=injection_node_ids,
             alarm_nodes=alarm_nodes,
-            fault_category=resolved.category,
-            injection_service_id=injection_service_id,
-            source_service_id=source_service_id,
-            target_service_id=target_service_id,
-            fault_direction=fault_direction,
         )
 
         if result.paths:
@@ -510,62 +486,6 @@ def _resolve_alarm_nodes(graph: HyperGraph, alarm_node_names: list[str]) -> set[
         if node and node.id is not None:
             alarm_nodes.add(node.id)
     return alarm_nodes
-
-
-def _resolve_injection_service_id(graph: HyperGraph, physical_node_ids: list[int]) -> int | None:
-    """Resolve the service ID associated with injection nodes.
-
-    For injection point state enhancement, we need to find the service that
-    contains the injection point. This function traverses from injection nodes
-    to find the associated service.
-
-    Args:
-        graph: The HyperGraph
-        physical_node_ids: List of physical injection node IDs
-
-    Returns:
-        Service node ID if found, None otherwise
-    """
-    from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
-
-    for node_id in physical_node_ids:
-        node = graph.get_node_by_id(node_id)
-        if node is None:
-            continue
-
-        # If injection node is already a service, use it directly
-        if node.kind == PlaceKind.service:
-            return node_id
-
-        # For span nodes, traverse via 'includes' edge (service -> span)
-        if node.kind == PlaceKind.span:
-            for src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
-                if key == DepKind.includes:
-                    src_node = graph.get_node_by_id(src_id)
-                    if src_node and src_node.kind == PlaceKind.service:
-                        return int(src_id)
-
-        # For container nodes, traverse via runs (pod -> container) and routes_to (service -> pod)
-        if node.kind == PlaceKind.container:
-            for pod_src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
-                if key == DepKind.runs:
-                    pod_node = graph.get_node_by_id(pod_src_id)
-                    if pod_node and pod_node.kind == PlaceKind.pod:
-                        for svc_src_id, _pod_dst_id, svc_key in graph._graph.in_edges(pod_src_id, keys=True):  # type: ignore[call-arg]
-                            if svc_key == DepKind.routes_to:
-                                svc_node = graph.get_node_by_id(svc_src_id)
-                                if svc_node and svc_node.kind == PlaceKind.service:
-                                    return int(svc_src_id)
-
-        # For pod nodes, traverse via routes_to (service -> pod)
-        if node.kind == PlaceKind.pod:
-            for src_id, _dst_id, key in graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
-                if key == DepKind.routes_to:
-                    src_node = graph.get_node_by_id(src_id)
-                    if src_node and src_node.kind == PlaceKind.service:
-                        return int(src_id)
-
-    return None
 
 
 def _build_result(
