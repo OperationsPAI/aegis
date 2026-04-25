@@ -454,8 +454,27 @@ func (req *SubmitInjectionReq) Validate() error {
 			if strings.TrimSpace(spec.ChaosType) == "" {
 				return fmt.Errorf("specs[%d][%d].chaos_type is required", i, j)
 			}
-			if spec.Duration == nil || *spec.Duration <= 0 {
-				return fmt.Errorf("specs[%d][%d].duration must be greater than 0", i, j)
+			// Issue #176: distinguish "resolver never set Duration" from
+			// "resolver set Duration to a bad value". The chaos-experiment
+			// guidedcli's finalizeOrRequest only runs normalizeDuration on
+			// the success branch, so a nil Duration on the wire means the
+			// resolver bailed out (builder error: missing JVM method, unset
+			// mem_type, decode failure, ...) and shipped an un-normalized
+			// config. Surface that hypothesis instead of regurgitating a
+			// generic "duration > 0" message that hides the real cause.
+			// Defense-in-depth: aegisctl already short-circuits on
+			// response.Errors before reaching here, but a non-aegisctl
+			// caller (or a future bug in the CLI) would otherwise still
+			// hit the misleading message.
+			if spec.Duration == nil {
+				return fmt.Errorf(
+					"specs[%d][%d].duration is missing for chaos_type=%q — the chaos-experiment guided resolver typically default-fills duration on success, "+
+						"so a missing duration usually means the resolver hit a builder error (missing required field, JVM method not in cache, mem_type decode failure, ...) "+
+						"and shipped an un-normalized config; re-run the guided session and check the resolver's `errors` field, or pass `duration` explicitly",
+					i, j, strings.TrimSpace(spec.ChaosType))
+			}
+			if *spec.Duration <= 0 {
+				return fmt.Errorf("specs[%d][%d].duration must be greater than 0 (got %d)", i, j, *spec.Duration)
 			}
 		}
 	}
