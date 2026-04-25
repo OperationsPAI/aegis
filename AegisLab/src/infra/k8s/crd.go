@@ -40,7 +40,10 @@ func DeleteChaosCRDsByLabel(ctx context.Context, chaosGVRs []schema.GroupVersion
 		warnings []error
 	)
 
-	dyn := getK8sDynamicClient()
+	dyn, err := getK8sDynamicClient()
+	if err != nil {
+		return nil, []error{fmt.Errorf("kubernetes dynamic client not available: %w", err)}
+	}
 	for i := range chaosGVRs {
 		gvr := chaosGVRs[i]
 		list, err := dyn.Resource(gvr).Namespace("").List(ctx, metav1.ListOptions{
@@ -80,8 +83,13 @@ func deleteCRD(ctx context.Context, gvr *schema.GroupVersionResource, namespace,
 		"name":      name,
 	})
 
+	dyn, err := getK8sDynamicClient()
+	if err != nil {
+		return fmt.Errorf("kubernetes dynamic client not available: %w", err)
+	}
+
 	// 1. Check if resource exists
-	obj, err := getK8sDynamicClient().Resource(*gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := dyn.Resource(*gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -96,7 +104,7 @@ func deleteCRD(ctx context.Context, gvr *schema.GroupVersionResource, namespace,
 	}
 
 	// 3. Execute deletion (idempotent operation)
-	_, err = getK8sDynamicClient().Resource(*gvr).Namespace(namespace).Patch(
+	_, err = dyn.Resource(*gvr).Namespace(namespace).Patch(
 		timeoutCtx,
 		name,
 		types.MergePatchType,
@@ -113,7 +121,7 @@ func deleteCRD(ctx context.Context, gvr *schema.GroupVersionResource, namespace,
 
 	logEntry.Info("Successfully cleared finalizers")
 
-	err = getK8sDynamicClient().Resource(*gvr).Namespace(namespace).Delete(ctx, name, deleteOptions)
+	err = dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil && !errors.IsNotFound(err) {
 		if timeoutCtx.Err() != nil {
 			return fmt.Errorf("timeout while deleting CRD %s/%s: %v", namespace, name, timeoutCtx.Err())
