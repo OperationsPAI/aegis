@@ -1,13 +1,14 @@
 {
     "$schema": "propagation_rules_schema.json",
-    "description": "Canonical-state fault propagation rules (Phase 2B IR vocabulary)",
-    "source": "Phase 2B rewrite — predicates speak SLOW / ERRORING / DEGRADED / UNAVAILABLE / MISSING / HEALTHY / UNKNOWN only",
-    "version": "3.0-canonical-state",
+    "description": "Canonical-state fault propagation rules (Phase 5 — tiered).",
+    "source": "Phase 5 audit — every rule classified as core (canonical-state-only, fires on any OTel-instrumented stack) or augmentation (depends on specialization labels from a specific augmenter).",
+    "version": "3.1-tiered",
     "rules": [
         {
             "name": "RULE_CONTAINER_UNAVAILABLE_TO_SPAN",
             "rule_id": "container_unavailable_to_span",
             "description": "Container UNAVAILABLE -> Pod -> Service -> Span MISSING/UNAVAILABLE",
+            "tier": "core",
             "src_kind": "container",
             "src_states": ["unavailable"],
             "path": [
@@ -28,6 +29,7 @@
             "name": "RULE_CONTAINER_DEGRADED_TO_SPAN",
             "rule_id": "container_degraded_to_span",
             "description": "Container DEGRADED -> Pod -> Service -> Span SLOW/ERRORING",
+            "tier": "core",
             "src_kind": "container",
             "src_states": ["degraded"],
             "path": [
@@ -45,9 +47,49 @@
             "confidence": 0.8
         },
         {
+            "name": "RULE_CONTAINER_UNAVAILABLE_TO_POD",
+            "rule_id": "container_unavailable_to_pod",
+            "description": "Container UNAVAILABLE -> Pod DEGRADED (one bad container degrades the pod, structural).",
+            "tier": "core",
+            "src_kind": "container",
+            "src_states": ["unavailable"],
+            "edge_kind": "runs",
+            "direction": "backward",
+            "dst_kind": "pod",
+            "possible_dst_states": ["degraded", "unavailable", "erroring"],
+            "confidence": 0.85
+        },
+        {
+            "name": "RULE_POD_UNAVAILABLE_TO_CONTAINER",
+            "rule_id": "pod_unavailable_to_container",
+            "description": "Pod UNAVAILABLE -> all Containers UNAVAILABLE (containment, structural).",
+            "tier": "core",
+            "src_kind": "pod",
+            "src_states": ["unavailable"],
+            "edge_kind": "runs",
+            "direction": "forward",
+            "dst_kind": "container",
+            "possible_dst_states": ["unavailable", "erroring"],
+            "confidence": 0.95
+        },
+        {
+            "name": "RULE_POD_UNAVAILABLE_TO_SERVICE",
+            "rule_id": "pod_unavailable_to_service",
+            "description": "Pod UNAVAILABLE -> Service UNAVAILABLE/DEGRADED (rollup; the only routable backend went away).",
+            "tier": "core",
+            "src_kind": "pod",
+            "src_states": ["unavailable"],
+            "edge_kind": "routes_to",
+            "direction": "backward",
+            "dst_kind": "service",
+            "possible_dst_states": ["unavailable", "degraded", "erroring"],
+            "confidence": 0.85
+        },
+        {
             "name": "RULE_POD_UNAVAILABLE_TO_SPAN",
             "rule_id": "pod_unavailable_to_span",
-            "description": "Pod UNAVAILABLE -> Service -> Span MISSING/UNAVAILABLE",
+            "description": "Pod UNAVAILABLE -> Service -> Span MISSING/UNAVAILABLE (no requests served).",
+            "tier": "core",
             "src_kind": "pod",
             "src_states": ["unavailable"],
             "path": [
@@ -61,9 +103,10 @@
         {
             "name": "RULE_POD_DEGRADED_TO_SPAN",
             "rule_id": "pod_degraded_to_span",
-            "description": "Pod DEGRADED/RESTARTING -> Service -> Span SLOW/ERRORING",
+            "description": "Pod DEGRADED -> Service -> Span SLOW/ERRORING (resource pressure causes latency).",
+            "tier": "core",
             "src_kind": "pod",
-            "src_states": ["degraded", "restarting"],
+            "src_states": ["degraded"],
             "path": [
                 {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
                 {"edge_kind": "includes", "direction": "forward"}
@@ -76,6 +119,7 @@
             "name": "RULE_SERVICE_TO_SPAN",
             "rule_id": "service_to_span",
             "description": "Service-level fault propagates into its spans (first hop, lenient).",
+            "tier": "core",
             "src_kind": "service",
             "src_states": ["slow", "erroring", "degraded", "unavailable"],
             "edge_kind": "includes",
@@ -93,6 +137,7 @@
             "name": "RULE_SPAN_SLOW_TO_CALLER",
             "rule_id": "span_slow_to_caller",
             "description": "SLOW span propagates SLOW to its caller (callee->caller via reverse calls edge).",
+            "tier": "core",
             "src_kind": "span",
             "src_states": ["slow"],
             "edge_kind": "calls",
@@ -105,6 +150,7 @@
             "name": "RULE_SPAN_ERRORING_TO_CALLER",
             "rule_id": "span_erroring_to_caller",
             "description": "ERRORING span propagates ERRORING to its caller.",
+            "tier": "core",
             "src_kind": "span",
             "src_states": ["erroring"],
             "edge_kind": "calls",
@@ -117,6 +163,7 @@
             "name": "RULE_SPAN_UNAVAILABLE_TO_CALLER",
             "rule_id": "span_unavailable_to_caller",
             "description": "UNAVAILABLE/MISSING span propagates ERRORING/UNAVAILABLE to its caller.",
+            "tier": "core",
             "src_kind": "span",
             "src_states": ["unavailable", "missing"],
             "edge_kind": "calls",
@@ -138,10 +185,14 @@
             "missing"
         ],
         "vocabulary_version": "Aligned with rcabench_platform.v3.internal.reasoning.ir.states (Phase 1).",
+        "tiers": {
+            "core": "Canonical-state predicates only; fire on any OTel-instrumented stack out-of-the-box. Returned by get_builtin_rules() by default.",
+            "augmentation": "Depends on a specialization label that only specific augmenter adapters emit (e.g. frequent_gc, oom_killed, slow_db). Requires opt-in via get_builtin_rules(include_augmentation=True). Currently empty: rule_matcher.py predicates do not consume specialization labels, so any augmentation rule defined today would behave identically to its core counterpart. Augmentation rules will land alongside the JVM/OOM augmenter adapters in Phase 4 (#163)."
+        },
         "design": [
-            "Three propagation chains kept: UNAVAILABLE chain (container/pod -> span), SLOW chain (callee SLOW -> caller SLOW), ERRORING chain (callee ERRORING -> caller ERRORING).",
-            "Specialization labels are NOT matched in the JSON predicate; rule_matcher exposes them via Evidence.specialization_labels for future augmenters.",
-            "All TT-vocabulary predicates (HIGH_CPU, OOM_KILLED, INJECTION_AFFECTED, MISSING_SPAN, etc.) are dropped — InjectionAdapter seeds canonical-state semantics directly."
+            "All rules speak the canonical IR vocabulary: HEALTHY / SLOW / ERRORING / DEGRADED / RESTARTING / UNAVAILABLE / MISSING / UNKNOWN.",
+            "Specialization labels (e.g. high_cpu, crash_loop, pod_killed from K8sMetricsAdapter) ride on Evidence.specialization_labels and are surfaced via StateTimeline.labels_at — they do not constrain JSON-rule matching today.",
+            "Phase 2B-review cleanup: removed 'restarting' from RULE_POD_DEGRADED_TO_SPAN.src_states because no adapter emits pod.restarting (container restart -> container.unavailable + crash_loop instead)."
         ]
     }
 }
