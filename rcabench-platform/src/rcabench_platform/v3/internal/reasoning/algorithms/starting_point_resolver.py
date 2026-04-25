@@ -1,12 +1,23 @@
 """Starting point resolver for fault propagation.
 
 This module resolves where propagation should start based on rule semantics.
-InjectionNodeResolver finds physical injection points; StartingPointResolver
-determines where propagation actually begins (caller, callee, or injection point).
+:class:`InjectionNodeResolver` finds physical injection points; this resolver
+determines where propagation actually begins (caller, callee, or injection
+point).
+
+Phase 6 of #163: The chaos-tool fault catalog is now an authoritative
+contract. Before doing any topology-based inference, this resolver
+**first** confirms that the injected fault has a known canonical seed
+tier (via ``models/fault_seed.canonical_seed_tier``). Known faults take
+the deterministic path; only unknown chaos-tool extensions fall back to
+legacy ``fault_category``-driven heuristics.
 """
 
 import logging
 
+from rcabench_platform.v3.internal.reasoning.models.fault_seed import (
+    canonical_seed_tier,
+)
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperGraph, PlaceKind
 from rcabench_platform.v3.internal.reasoning.models.injection import ResolvedInjection
 from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationRule
@@ -17,18 +28,22 @@ logger = logging.getLogger(__name__)
 class StartingPointResolver:
     """Resolve propagation starting points based on rule semantics.
 
-    After InjectionNodeResolver returns physical injection points, this resolver
-    determines actual propagation starting points based on the rule's propagation_source:
-    - 'injection_point': Use physical injection location directly
-    - 'caller': For response faults, find caller service (observes delay/error)
-    - 'callee': For request faults, use injection point (processes fault)
+    After :class:`InjectionNodeResolver` returns physical injection points,
+    this resolver determines actual propagation starting points based on
+    the rule's ``propagation_source``:
+
+    - ``injection_point``: Use physical injection location directly.
+    - ``caller``: For response faults, find caller service (observes the
+      delay/error).
+    - ``callee``: For request faults, use injection point (processes the
+      fault).
     """
 
     def __init__(self, graph: HyperGraph) -> None:
         """Initialize the resolver.
 
         Args:
-            graph: The HyperGraph to traverse for caller/callee resolution
+            graph: The HyperGraph to traverse for caller/callee resolution.
         """
         self.graph = graph
 
@@ -41,16 +56,33 @@ class StartingPointResolver:
         """Resolve propagation starting points from physical injection nodes.
 
         Args:
-            physical_node_ids: Node IDs from InjectionNodeResolver (physical injection points)
-            resolved_injection: Injection metadata including fault_category
-            rules: Propagation rules to check for propagation_source
+            physical_node_ids: Node IDs from :class:`InjectionNodeResolver`
+                (physical injection points).
+            resolved_injection: Injection metadata including ``fault_category``
+                and ``fault_type_name``.
+            rules: Propagation rules to check for ``propagation_source``.
 
         Returns:
-            List of node IDs where propagation should start
+            List of node IDs where propagation should start.
         """
-        fault_category = resolved_injection.fault_category
+        # Phase 6: enforce fault_seed mapping as the non-optional first
+        # step. Known fault types skip topology-based inference entirely
+        # for the "did the IR get a deterministic seed?" question — the
+        # answer is unconditionally yes (InjectionAdapter handled it).
+        # We still compute propagation_source from the (deterministic)
+        # fault_category, because that decides *direction* of propagation,
+        # not *whether* the seed exists.
+        _tier, is_known_fault = canonical_seed_tier(resolved_injection.fault_type_name)
+        if not is_known_fault:
+            logger.warning(
+                "StartingPointResolver: unknown fault_type_name=%r; "
+                "InjectionAdapter has applied default-tier seed but "
+                "propagation_source falls back to legacy fault_category=%s heuristics",
+                resolved_injection.fault_type_name,
+                resolved_injection.fault_category,
+            )
 
-        # Determine propagation_source from fault_category or rules
+        fault_category = resolved_injection.fault_category
         propagation_source = self._determine_propagation_source(fault_category, rules)
 
         if propagation_source == "injection_point":
@@ -84,19 +116,22 @@ class StartingPointResolver:
         fault_category: str,
         rules: list[PropagationRule],
     ) -> str:
-        """Determine propagation_source from fault_category or rules.
+        """Determine ``propagation_source`` from ``fault_category`` or rules.
 
         Priority:
-        1. Find rules with explicit propagation_source matching this fault_category
-        2. Use fault_category semantics (http_response -> caller)
-        3. Default to 'injection_point'
+
+        1. Find rules with explicit ``propagation_source`` matching this
+           ``fault_category``.
+        2. Use ``fault_category`` semantics (``http_response`` -> caller).
+        3. Default to ``injection_point``.
 
         Args:
-            fault_category: Granular fault category from ResolvedInjection
-            rules: Propagation rules to check
+            fault_category: Granular fault category from
+                :class:`ResolvedInjection`.
+            rules: Propagation rules to check.
 
         Returns:
-            Propagation source: 'injection_point', 'caller', or 'callee'
+            Propagation source: ``injection_point``, ``caller``, or ``callee``.
         """
         # Check rules for explicit propagation_source
         for rule in rules:
@@ -126,20 +161,22 @@ class StartingPointResolver:
     ) -> list[int]:
         """Find caller service(s) for the given physical injection nodes.
 
-        For HTTP response faults, the physical injection is at the callee (server-side),
-        but propagation should start from the caller service that observes the fault.
+        For HTTP response faults, the physical injection is at the callee
+        (server-side), but propagation should start from the caller service
+        that observes the fault.
 
         Algorithm:
+
         1. For each physical node (span or service):
-           a. If span: find caller spans via 'calls' edges, then their services
-           b. If service: find spans calling this service's spans
+           a. If span: find caller spans via 'calls' edges, then their
+              services.
+           b. If service: find spans calling this service's spans.
 
         Args:
-            physical_node_ids: Physical injection node IDs
-            fault_category: Fault category for logging
+            physical_node_ids: Physical injection node IDs.
 
         Returns:
-            List of caller service node IDs
+            List of caller service node IDs.
         """
         caller_node_ids: list[int] = []
         seen_callers: set[int] = set()
@@ -181,10 +218,10 @@ class StartingPointResolver:
         """Find spans that call the given span (incoming 'calls' edges).
 
         Args:
-            span_node_id: The callee span node ID
+            span_node_id: The callee span node ID.
 
         Returns:
-            List of caller span node IDs
+            List of caller span node IDs.
         """
         callers: list[int] = []
         # In the graph: caller_span --calls--> callee_span
@@ -198,10 +235,10 @@ class StartingPointResolver:
         """Find the service that includes the given span.
 
         Args:
-            span_node_id: The span node ID
+            span_node_id: The span node ID.
 
         Returns:
-            Service node ID or None if not found
+            Service node ID or ``None`` if not found.
         """
         # In the graph: service --includes--> span
         # We need in_edges of type 'includes'
@@ -216,10 +253,10 @@ class StartingPointResolver:
         """Find all spans included by the given service.
 
         Args:
-            service_node_id: The service node ID
+            service_node_id: The service node ID.
 
         Returns:
-            List of span node IDs
+            List of span node IDs.
         """
         spans: list[int] = []
         # In the graph: service --includes--> span

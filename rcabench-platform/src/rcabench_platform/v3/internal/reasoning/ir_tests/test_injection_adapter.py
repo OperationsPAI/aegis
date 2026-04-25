@@ -143,10 +143,22 @@ def test_jvm_database(fault_type_name: str, expected_state: str) -> None:
     assert events[0].to_state == expected_state
 
 
-def test_network_delay_degraded() -> None:
+def test_network_delay_slow() -> None:
+    """Phase 6: NetworkDelay is a latency-style fault → ``slow``.
+
+    Pre-Phase-6 the fault_category-based logic collapsed every non-partition
+    network fault to ``degraded``; the chaos-tool contract is finer-grained.
+    """
     r = _resolve(["service|ts-order"], "service", "network", "network", "NetworkDelay")
     events = _emit_single(r)
     assert events[0].kind == PlaceKind.service
+    assert events[0].to_state == "slow"
+
+
+def test_network_loss_degraded() -> None:
+    """Network loss / corrupt / duplicate stay at ``degraded``."""
+    r = _resolve(["service|ts-order"], "service", "network", "network", "NetworkLoss")
+    events = _emit_single(r)
     assert events[0].to_state == "degraded"
 
 
@@ -169,10 +181,23 @@ def test_time_skew_degraded() -> None:
     assert events[0].to_state == "degraded"
 
 
-def test_unknown_fault_category_emits_nothing() -> None:
+def test_unknown_fault_type_emits_default_degraded_seed(caplog: pytest.LogCaptureFixture) -> None:
+    """Phase 6: unknown fault types must NOT silently emit nothing.
+
+    They should warn-log and seed the documented default tier so
+    propagation always has a starting point.
+    """
     r = _resolve(["service|ts-order"], "service", "weird", "weird", "UnknownFault")
-    events = _emit_single(r)
-    assert events == []
+    with caplog.at_level("WARNING"):
+        events = _emit_single(r)
+    assert len(events) == 1
+    t = events[0]
+    assert t.kind == PlaceKind.service
+    # service.degraded is a real ServiceStateIR member -> stays "degraded".
+    assert t.to_state == "degraded"
+    assert t.level == EvidenceLevel.structural
+    assert t.trigger == "fault:UnknownFault"
+    assert any("unknown fault_type_name" in rec.message for rec in caplog.records)
 
 
 def test_unknown_start_kind_emits_nothing() -> None:
