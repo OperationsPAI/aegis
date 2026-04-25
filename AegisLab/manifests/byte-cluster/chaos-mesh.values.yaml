@@ -1,9 +1,18 @@
 images:
-  # Prefer the CN mirror lineage: pair-diag-cn-guangzhou.cr.volces.com/pair/*
-  # The Byte cluster can pull directly from the pair mirror, so use it as-is.
-  registry: pair-diag-cn-guangzhou.cr.volces.com/pair
+  # Use the OperationsPAI fork of chaos-mesh, mirrored from docker.io/opspai/* via
+  # the Volces Shanghai pair registry. The fork carries patches we need
+  # (notably RuntimeMutatorChaos / mutator-agent JVM injection) that upstream
+  # v2.8.0 does not have.
+  registry: pair-cn-shanghai.cr.volces.com/opspai
+  tag: 20260425-517f3df
 
+# The chart's default per-image `repository` values are `chaos-mesh/<name>`,
+# which would resolve to `pair-cn-shanghai.cr.volces.com/opspai/chaos-mesh/<name>`
+# under the registry above. Override each component's repository to drop the
+# `chaos-mesh/` prefix so images resolve to opspai/<name>.
 controllerManager:
+  image:
+    repository: chaos-mesh
   podChaos:
     podFailure:
       pauseImage: pair-diag-cn-guangzhou.cr.volces.com/pair/google-containers/pause:latest
@@ -12,3 +21,18 @@ chaosDaemon:
   hostNetwork: true
   runtime: containerd
   socketPath: /run/containerd/containerd.sock
+  image:
+    repository: chaos-daemon
+
+dashboard:
+  image:
+    repository: chaos-dashboard
+
+# chaos-coredns is upstream (only DNSChaos needs it; no fork patches).
+# Pin it to the existing pair/ mirror of upstream chaos-mesh/chaos-coredns
+# so we don't have to re-mirror it under opspai.
+dnsServer:
+  image:
+    registry: pair-diag-cn-guangzhou.cr.volces.com/pair
+    repository: chaos-mesh/chaos-coredns
+    tag: v0.2.6
