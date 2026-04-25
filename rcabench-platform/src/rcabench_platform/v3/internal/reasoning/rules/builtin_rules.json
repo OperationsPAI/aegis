@@ -171,6 +171,52 @@
             "dst_kind": "span",
             "possible_dst_states": ["erroring", "unavailable", "missing"],
             "confidence": 0.85
+        },
+        {
+            "name": "RULE_POD_DEGRADED_FREQUENT_GC_TO_SPAN",
+            "rule_id": "pod_degraded_frequent_gc_to_span",
+            "description": "Pod DEGRADED with frequent_gc -> Service -> Span SLOW (Java GC pauses become user-visible latency).",
+            "tier": "augmentation",
+            "src_kind": "pod",
+            "src_states": ["degraded"],
+            "required_labels": ["frequent_gc"],
+            "path": [
+                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
+                {"edge_kind": "includes", "direction": "forward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["slow", "erroring"],
+            "confidence": 0.85
+        },
+        {
+            "name": "RULE_POD_DEGRADED_HIGH_HEAP_TO_SPAN",
+            "rule_id": "pod_degraded_high_heap_to_span",
+            "description": "Pod DEGRADED with high_heap_pressure -> Service -> Span SLOW (heap near limit -> sustained allocator stalls).",
+            "tier": "augmentation",
+            "src_kind": "pod",
+            "src_states": ["degraded"],
+            "required_labels": ["high_heap_pressure"],
+            "path": [
+                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
+                {"edge_kind": "includes", "direction": "forward"}
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": ["slow", "erroring"],
+            "confidence": 0.8
+        },
+        {
+            "name": "RULE_CONTAINER_UNAVAILABLE_OOM_KILLED",
+            "rule_id": "container_unavailable_oom_killed",
+            "description": "Container UNAVAILABLE with oom_killed -> Pod UNAVAILABLE (one OOM kill takes the pod out; distinct from generic crash_loop).",
+            "tier": "augmentation",
+            "src_kind": "container",
+            "src_states": ["unavailable"],
+            "required_labels": ["oom_killed"],
+            "edge_kind": "runs",
+            "direction": "backward",
+            "dst_kind": "pod",
+            "possible_dst_states": ["unavailable", "degraded", "erroring"],
+            "confidence": 0.9
         }
     ],
     "notes": {
@@ -187,7 +233,7 @@
         "vocabulary_version": "Aligned with rcabench_platform.v3.internal.reasoning.ir.states (Phase 1).",
         "tiers": {
             "core": "Canonical-state predicates only; fire on any OTel-instrumented stack out-of-the-box. Returned by get_builtin_rules() by default.",
-            "augmentation": "Depends on a specialization label that only specific augmenter adapters emit (e.g. frequent_gc, oom_killed, slow_db). Requires opt-in via get_builtin_rules(include_augmentation=True). Currently empty: rule_matcher.py predicates do not consume specialization labels, so any augmentation rule defined today would behave identically to its core counterpart. Augmentation rules will land alongside the JVM/OOM augmenter adapters in Phase 4 (#163)."
+            "augmentation": "Depends on a specialization label that only specific augmenter adapters emit (e.g. frequent_gc, oom_killed). Requires opt-in via get_builtin_rules(include_augmentation=True). As of Phase 4 of #163, rule_matcher.py honours required_labels — rules listed here only fire when the source node's timeline carries every label they declare, and no-op on stacks that don't (e.g. JVM rules don't fire on a Go stack)."
         },
         "design": [
             "All rules speak the canonical IR vocabulary: HEALTHY / SLOW / ERRORING / DEGRADED / RESTARTING / UNAVAILABLE / MISSING / UNKNOWN.",

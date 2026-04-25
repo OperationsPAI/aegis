@@ -247,7 +247,13 @@
           "default": "builtin",
           "description": "Origin of this rule"
         },
-        "first_hop_config": { "$ref": "#/definitions/first_hop_config" }
+        "first_hop_config": { "$ref": "#/definitions/first_hop_config" },
+        "required_labels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "description": "Specialization labels that must be present on the source node's timeline for the rule to fire. Empty/absent means label-agnostic (canonical-state only). Augmentation rules typically set this; core rules leave it empty."
+        }
       },
       "required": ["rule_id", "description", "tier", "src_kind", "src_states", "dst_kind", "possible_dst_states"],
       "oneOf": [
