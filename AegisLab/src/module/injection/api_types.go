@@ -405,6 +405,15 @@ type SubmitInjectionReq struct {
 	// to expand the pool. Configs that already specify a namespace
 	// continue to honor PR #164's hard-constraint path unchanged.
 	AutoAllocate bool `json:"auto_allocate" binding:"omitempty"`
+
+	// AllowBootstrap, in combination with AutoAllocate, lets the server
+	// extend the system's pool when no existing slot qualifies. The server
+	// bumps `injection.system.<system>.count` by 1, locks the new ns, and
+	// returns it as a "fresh" slot. RestartPedestal at runtime helm-
+	// installs into the fresh slot before the FaultInjection task runs;
+	// submit-time BuildInjection's pod listing is skipped for fresh
+	// slots since pods don't exist yet. See PR-C of #166.
+	AllowBootstrap bool `json:"allow_bootstrap" binding:"omitempty"`
 }
 
 func (req *SubmitInjectionReq) GuidedSpecs() [][]guidedcli.GuidedConfig {

@@ -31,10 +31,14 @@ import (
 // allocatedSlot pairs the namespace chosen by AllocateNamespaceForRestart
 // with the pre-generated traceID under which the namespace lock was taken.
 // Both flow into the per-batch task built later: namespace into the
-// payload's RestartRequiredNamespace, traceID into task.TraceID.
+// payload's RestartRequiredNamespace, traceID into task.TraceID. Fresh
+// indicates a bootstrapped slot (no workload yet); the submit path must
+// skip BuildInjection pod-listing and trust RestartPedestal to install
+// before the inject task runs.
 type allocatedSlot struct {
 	namespace string
 	traceID   string
+	fresh     bool
 }
 
 // batchNeedsAutoAllocate reports whether at least one config in the batch
@@ -289,19 +293,24 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 		// Sized to comfortably cover restart + injection + a slack buffer.
 		lockEndTime := time.Now().Add(time.Duration(req.Interval+10) * time.Minute)
 		probe := defaultWorkloadProbe()
+		allocOpts := AllocateOptions{
+			AllowBootstrap: req.AllowBootstrap,
+			CountWriter:    s.chaosSystems,
+		}
 		for batchIdx, batch := range guidedSpecs {
 			if !batchNeedsAutoAllocate(batch) {
 				continue
 			}
 			traceID := uuid.NewString()
-			allocatedNs, allocErr := AllocateNamespaceForRestart(ctx, s.redis, pedestalItem.ContainerName, lockEndTime, traceID, probe)
+			result, allocErr := AllocateNamespaceForRestart(ctx, s.redis, pedestalItem.ContainerName, lockEndTime, traceID, probe, allocOpts)
 			if allocErr != nil {
-				return nil, fmt.Errorf("auto-allocate batch %d for system %s: %w (hint: run `aegisctl inject guided --install --namespace %s<N>` to expand the pool)", batchIdx, pedestalItem.ContainerName, allocErr, pedestalItem.ContainerName)
+				hint := fmt.Sprintf("run `aegisctl inject guided --install --namespace %s<N>` to expand the pool, or pass --allow-bootstrap", pedestalItem.ContainerName)
+				return nil, fmt.Errorf("auto-allocate batch %d for system %s: %w (hint: %s)", batchIdx, pedestalItem.ContainerName, allocErr, hint)
 			}
-			allocations[batchIdx] = allocatedSlot{namespace: allocatedNs, traceID: traceID}
+			allocations[batchIdx] = allocatedSlot{namespace: result.Namespace, traceID: traceID, fresh: result.Fresh}
 			for cfgIdx := range guidedSpecs[batchIdx] {
 				if strings.TrimSpace(guidedSpecs[batchIdx][cfgIdx].Namespace) == "" {
-					guidedSpecs[batchIdx][cfgIdx].Namespace = allocatedNs
+					guidedSpecs[batchIdx][cfgIdx].Namespace = result.Namespace
 				}
 			}
 		}
@@ -321,11 +330,28 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 	processedItems := make([]injectionProcessItem, 0, len(guidedSpecs))
 	var parseWarnings []string
 	for i := range guidedSpecs {
+		alloc, hasAlloc := allocations[i]
+		// Fresh bootstrapped slots have no workload yet, so the submit-time
+		// guidedcli.BuildInjection inside parseBatchGuidedSpecs would fail
+		// at `app X not found in namespace Y` because pod listing returns
+		// empty. Build the item directly from the request-supplied fields
+		// — system-type sanity check has already been done implicitly by
+		// the allocator (it ran against the pedestal's system), and
+		// groundtruth dedup warnings don't apply since fresh slots can't
+		// collide with other batches in the same submit (each gets its
+		// own ns).
+		if hasAlloc && alloc.fresh {
+			item := buildFreshSlotItem(i, guidedSpecs[i])
+			item.allocatedNamespace = alloc.namespace
+			item.preallocTraceID = alloc.traceID
+			processedItems = append(processedItems, item)
+			continue
+		}
 		item, warning, err := parseBatchGuidedSpecs(ctx, pedestalItem.ContainerName, i, guidedSpecs[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse guided spec batch %d: %w", i, err)
 		}
-		if alloc, ok := allocations[i]; ok {
+		if hasAlloc {
 			item.allocatedNamespace = alloc.namespace
 			item.preallocTraceID = alloc.traceID
 		}

@@ -18,10 +18,42 @@ import (
 
 // ErrPoolExhausted is returned by AllocateNamespaceForRestart when every
 // 0..count-1 slot of a system is either lock-active or has no deployed
-// workload. Callers should surface an actionable hint suggesting
-// `aegisctl inject guided --install --namespace <system>N` to expand the
-// pool — see #166 for the design tradeoffs.
+// workload, AND opts.AllowBootstrap is false. Callers should surface an
+// actionable hint suggesting `aegisctl inject guided --install
+// --namespace <system>N` to expand the pool — see #166 for the design
+// tradeoffs.
 var ErrPoolExhausted = errors.New("namespace pool exhausted: every slot is locked or has no deployed workload")
+
+// AllocateOptions tunes the allocator behaviour without bloating the call
+// signature. v1 has only one knob (AllowBootstrap); future flags drop in
+// here.
+type AllocateOptions struct {
+	// AllowBootstrap, when true, lets the allocator extend the system's
+	// count by 1 when no existing slot qualifies (PR-C, #166). The new
+	// slot is reserved by locking the next ns name (<system><count>) and
+	// bumping the chaos-system count via CountWriter. AllocateResult.Fresh
+	// is set so callers know to skip submit-time BuildInjection for this
+	// slot — RestartPedestal at runtime helm-installs before the
+	// FaultInjection task runs.
+	AllowBootstrap bool
+
+	// CountWriter is required when AllowBootstrap is true. Used to bump
+	// `injection.system.<system>.count` so config.GetAllNamespaces()
+	// includes the new slot. Ignored when AllowBootstrap is false.
+	CountWriter ChaosSystemWriter
+}
+
+// AllocateResult is the return shape of AllocateNamespaceForRestart.
+type AllocateResult struct {
+	// Namespace is the chosen pool slot (e.g. "sockshop3"). Always
+	// non-empty on success.
+	Namespace string
+	// Fresh reports whether this allocation was satisfied by bumping the
+	// pool (AllowBootstrap path) rather than by filling a hole. Fresh
+	// slots have no workload at submit time and need RestartPedestal to
+	// install before the inject task can find pods.
+	Fresh bool
+}
 
 // WorkloadProbe checks whether `namespace` has at least one pod deployed.
 // Injected by callers so tests don't need a live cluster. Production wiring
@@ -71,45 +103,48 @@ func AllocateNamespaceForRestart(
 	endTime time.Time,
 	traceID string,
 	probe WorkloadProbe,
-) (string, error) {
+	opts AllocateOptions,
+) (AllocateResult, error) {
 	if redis == nil {
-		return "", fmt.Errorf("redis gateway required")
+		return AllocateResult{}, fmt.Errorf("redis gateway required")
 	}
 	if traceID == "" {
-		return "", fmt.Errorf("traceID required")
+		return AllocateResult{}, fmt.Errorf("traceID required")
+	}
+	if opts.AllowBootstrap && opts.CountWriter == nil {
+		return AllocateResult{}, fmt.Errorf("AllowBootstrap requires CountWriter")
 	}
 
 	cfg, ok := config.GetChaosSystemConfigManager().Get(chaos.SystemType(system))
 	if !ok {
-		return "", fmt.Errorf("system %q not registered", system)
-	}
-	if cfg.Count <= 0 {
-		return "", ErrPoolExhausted
+		return AllocateResult{}, fmt.Errorf("system %q not registered", system)
 	}
 	template := nsTemplateFromPattern(cfg.NsPattern)
 	if template == "" {
-		return "", fmt.Errorf("invalid ns_pattern for system %s: %q", system, cfg.NsPattern)
+		return AllocateResult{}, fmt.Errorf("invalid ns_pattern for system %s: %q", system, cfg.NsPattern)
 	}
 
 	allocKey := fmt.Sprintf(allocLockKeyPattern, system)
 	acquired, err := redis.SetNX(ctx, allocKey, traceID, allocLockTTL)
 	if err != nil {
-		return "", fmt.Errorf("acquire allocator lock for %s: %w", system, err)
+		return AllocateResult{}, fmt.Errorf("acquire allocator lock for %s: %w", system, err)
 	}
 	if !acquired {
-		return "", fmt.Errorf("allocator busy for system %s, retry shortly", system)
+		return AllocateResult{}, fmt.Errorf("allocator busy for system %s, retry shortly", system)
 	}
 	defer func() {
 		_, _ = redis.DeleteKey(context.Background(), allocKey)
 	}()
 
 	now := time.Now()
+
+	// Pass 1: hole-fill. Walk existing slots lowest-index first.
 	for idx := 0; idx < cfg.Count; idx++ {
 		ns := fmt.Sprintf(template, idx)
 
-		active, err := nsLockActive(ctx, redis, ns, now)
-		if err != nil {
-			return "", fmt.Errorf("check lock for %s: %w", ns, err)
+		active, lockErr := nsLockActive(ctx, redis, ns, now)
+		if lockErr != nil {
+			return AllocateResult{}, fmt.Errorf("check lock for %s: %w", ns, lockErr)
 		}
 		if active {
 			continue
@@ -118,7 +153,7 @@ func AllocateNamespaceForRestart(
 		if probe != nil {
 			hasWorkload, probeErr := probe(ctx, ns)
 			if probeErr != nil {
-				return "", fmt.Errorf("probe workload in %s: %w", ns, probeErr)
+				return AllocateResult{}, fmt.Errorf("probe workload in %s: %w", ns, probeErr)
 			}
 			if !hasWorkload {
 				continue
@@ -131,10 +166,28 @@ func AllocateNamespaceForRestart(
 			// allocation.
 			continue
 		}
-		return ns, nil
+		return AllocateResult{Namespace: ns, Fresh: false}, nil
 	}
 
-	return "", ErrPoolExhausted
+	// Pass 2: bootstrap a fresh slot at index = count, if allowed.
+	if !opts.AllowBootstrap {
+		return AllocateResult{}, ErrPoolExhausted
+	}
+	freshNs := fmt.Sprintf(template, cfg.Count)
+	bumped, bumpErr := opts.CountWriter.EnsureCountForNamespace(ctx, system, freshNs)
+	if bumpErr != nil {
+		return AllocateResult{}, fmt.Errorf("bootstrap-allocate: bump count for %s to register %s: %w", system, freshNs, bumpErr)
+	}
+	if !bumped {
+		// Count already covered this index — race with another allocator
+		// that just bumped. Fall through and lock anyway; if THAT
+		// allocator also locked it, our acquire returns busy and we
+		// fail clearly.
+	}
+	if err := nsLockAcquire(ctx, redis, freshNs, endTime, traceID, now); err != nil {
+		return AllocateResult{}, fmt.Errorf("bootstrap-allocate: lock new slot %s: %w", freshNs, err)
+	}
+	return AllocateResult{Namespace: freshNs, Fresh: true}, nil
 }
 
 // nsTemplateFromPattern mirrors config.convertPatternToTemplate (private
