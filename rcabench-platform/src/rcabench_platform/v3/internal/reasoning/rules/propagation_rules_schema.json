@@ -101,6 +101,12 @@
       "description": "Canonical IR state vocabulary (Phase 2)."
     },
 
+    "rule_tier": {
+      "type": "string",
+      "enum": ["core", "augmentation"],
+      "description": "Rule classification — core (canonical-state only, fires on any OTel stack) vs augmentation (depends on specialization labels from a specific augmenter)."
+    },
+
     "path_hop": {
       "type": "object",
       "properties": {
@@ -176,6 +182,10 @@
           "type": "string",
           "description": "Human-readable description of the propagation"
         },
+        "tier": {
+          "$ref": "#/definitions/rule_tier",
+          "description": "Rule classification (core vs augmentation)"
+        },
         "src_kind": {
           "$ref": "#/definitions/node_kind",
           "description": "Source node type"
@@ -239,7 +249,7 @@
         },
         "first_hop_config": { "$ref": "#/definitions/first_hop_config" }
       },
-      "required": ["rule_id", "description", "src_kind", "src_states", "dst_kind", "possible_dst_states"],
+      "required": ["rule_id", "description", "tier", "src_kind", "src_states", "dst_kind", "possible_dst_states"],
       "oneOf": [
         {
           "properties": {

@@ -34,6 +34,7 @@
     {
       "rule_id": "span_slow_to_caller",
       "description": "SLOW callee span propagates SLOW to its caller (callee waits the caller).",
+      "tier": "core",
       "src_kind": "span",
       "src_states": ["slow"],
       "edge_kind": "calls",
@@ -45,6 +46,7 @@
     {
       "rule_id": "span_erroring_to_caller",
       "description": "ERRORING callee span propagates ERRORING to its caller.",
+      "tier": "core",
       "src_kind": "span",
       "src_states": ["erroring"],
       "edge_kind": "calls",
@@ -57,6 +59,7 @@
     {
       "rule_id": "pod_unavailable_to_span",
       "description": "Pod UNAVAILABLE -> Service -> Span MISSING/UNAVAILABLE.",
+      "tier": "core",
       "src_kind": "pod",
       "src_states": ["unavailable"],
       "path": [

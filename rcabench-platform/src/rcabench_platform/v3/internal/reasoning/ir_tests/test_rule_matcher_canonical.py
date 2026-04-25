@@ -16,6 +16,7 @@ from rcabench_platform.v3.internal.reasoning.rules.schema import (
     PathHop,
     PropagationDirection,
     PropagationRule,
+    RuleTier,
 )
 
 
@@ -217,6 +218,7 @@ def test_extra_rule_can_target_specialization_label_for_augmenters() -> None:
     custom = PropagationRule(
         rule_id="custom_jvm_gc",
         description="JVM GC induced SLOW propagates SLOW",
+        tier=RuleTier.augmentation,
         src_kind=PlaceKind.span,
         src_states=["slow"],
         edge_kind=DepKind.calls,

@@ -3,8 +3,10 @@
 Rule predicates speak the canonical-state vocabulary defined in
 ``ir/states.py`` (``SLOW``, ``ERRORING``, ``DEGRADED``, ``UNAVAILABLE``,
 ``MISSING``, ``HEALTHY``, ``UNKNOWN``). Specialization labels travel via
-``Evidence.specialization_labels`` and are matched separately when a rule
-opts in via the ``required_labels`` predicate.
+``Evidence.specialization_labels`` on the timeline and are surfaced
+through ``StateTimeline.labels_at`` for downstream explainers — they do
+not constrain matching here. Augmentation rules (``RuleTier.augmentation``)
+are filtered out by ``get_builtin_rules()`` by default for the same reason.
 """
 
 from __future__ import annotations

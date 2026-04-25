@@ -5,6 +5,16 @@ edge types, and edge data conditions.
 
 Supports both single-hop and multi-hop propagation paths to reduce false positives
 by expressing complete causal chains.
+
+Rules are tiered (``RuleTier``):
+
+* ``core`` — operates only on canonical IR states (``HEALTHY``/``SLOW``/
+  ``ERRORING``/``DEGRADED``/``UNAVAILABLE``/``MISSING``/``RESTARTING``/
+  ``UNKNOWN``) and topology kinds. Should fire on any OTel-instrumented
+  stack out-of-the-box.
+* ``augmentation`` — requires specialization labels (e.g. ``frequent_gc``,
+  ``oom_killed``) that only specific augmenter adapters emit. Optional;
+  used for richer explanations and loaded only when explicitly requested.
 """
 
 from collections.abc import Callable
@@ -20,6 +30,23 @@ from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, 
 class PropagationDirection(StrEnum):
     FORWARD = auto()  # Propagate along edge direction (src → dst)
     BACKWARD = auto()  # Propagate against edge direction (dst → src)
+
+
+class RuleTier(StrEnum):
+    """Tier classification for propagation rules.
+
+    ``core``: rule predicates speak only the canonical IR state vocabulary
+    (and topology kinds), so the rule fires on any OTel-instrumented stack
+    out-of-the-box. ``get_builtin_rules()`` returns these by default.
+
+    ``augmentation``: rule depends on a specialization label that only
+    specific augmenter adapters emit (e.g. ``frequent_gc`` from a JVM
+    augmenter). These are skipped by default and opt-in via
+    ``get_builtin_rules(include_augmentation=True)``.
+    """
+
+    core = auto()
+    augmentation = auto()
 
 
 class PathHop(BaseModel):
@@ -95,6 +122,9 @@ class PropagationRule(BaseModel):
     Examples:
         # Single-hop: Span SLOW --calls(BACKWARD)--> Span SLOW
         PropagationRule(
+            rule_id="span_slow_to_caller",
+            description="...",
+            tier=RuleTier.core,
             src_kind=PlaceKind.span,
             src_states=["slow"],
             edge_kind=DepKind.calls,
@@ -105,6 +135,9 @@ class PropagationRule(BaseModel):
 
         # Multi-hop: Pod UNAVAILABLE --routes_to(BACKWARD)--> Service --includes(FORWARD)--> Span
         PropagationRule(
+            rule_id="pod_unavailable_to_span",
+            description="...",
+            tier=RuleTier.core,
             src_kind=PlaceKind.pod,
             src_states=["unavailable"],
             path=[
@@ -119,6 +152,14 @@ class PropagationRule(BaseModel):
     rule_id: str = Field(description="Unique identifier for the rule")
 
     description: str = Field(description="Human-readable description")
+
+    tier: RuleTier = Field(
+        description=(
+            "Rule classification — `core` rules speak only canonical IR states and "
+            "fire on any OTel-instrumented stack; `augmentation` rules depend on "
+            "specialization labels emitted by specific augmenter adapters."
+        ),
+    )
 
     # Source node constraints
     src_kind: PlaceKind = Field(description="Source node PlaceKind")

@@ -3,8 +3,18 @@
 These rules encode realistic fault propagation patterns based on ChaosMesh
 injection capabilities in cloud-native environments.
 
-Rules are loaded from builtin_rules.json. The PropagationRule model automatically
-converts string values to the appropriate enum types during initialization.
+Rules are loaded from ``builtin_rules.json``. The :class:`PropagationRule`
+model automatically converts string values to the appropriate enum types
+during initialization.
+
+Each rule carries a :class:`RuleTier` classification:
+
+* ``core`` rules speak only canonical IR states and fire on any
+  OTel-instrumented stack out-of-the-box. They are returned by
+  :func:`get_builtin_rules` by default.
+* ``augmentation`` rules depend on specialization labels emitted by
+  specific augmenter adapters. They are skipped by default and must be
+  opted-in via ``get_builtin_rules(include_augmentation=True)``.
 """
 
 from __future__ import annotations
@@ -14,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, PlaceKind
-from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationRule
+from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationRule, RuleTier
 
 # ==============================================================================
 # JSON Rules Loading
@@ -63,7 +73,7 @@ def _load_rules_from_json() -> dict[str, PropagationRule]:
 
 
 def _get_rules_dict() -> dict[str, PropagationRule]:
-    """Get the cached rules dictionary."""
+    """Get the cached rules dictionary (every rule, both tiers)."""
     return _load_rules_from_json()
 
 
@@ -100,45 +110,72 @@ def __dir__() -> list[str]:
 # ==============================================================================
 
 
-def _get_builtin_rules_list() -> list[PropagationRule]:
-    """Get the ordered list of builtin rules."""
+def _get_all_rules_list() -> list[PropagationRule]:
+    """Get the ordered list of every loaded rule (both tiers)."""
     return list(_get_rules_dict().values())
+
+
+def _get_core_rules_list() -> list[PropagationRule]:
+    """Get only ``core`` tier rules."""
+    return [rule for rule in _get_all_rules_list() if rule.tier == RuleTier.core]
 
 
 # Lazy-loaded BUILTIN_RULES for backward compatibility
 # Use property-like access through module __getattr__
 class _BuiltinRulesProxy:
-    """Proxy object that behaves like a list but loads rules lazily."""
+    """Proxy object that behaves like a list but loads rules lazily.
+
+    Returns *core* rules to match ``get_builtin_rules()`` default semantics.
+    """
 
     def __iter__(self):
-        return iter(_get_builtin_rules_list())
+        return iter(_get_core_rules_list())
 
     def __len__(self):
-        return len(_get_builtin_rules_list())
+        return len(_get_core_rules_list())
 
     def __getitem__(self, idx):
-        return _get_builtin_rules_list()[idx]
+        return _get_core_rules_list()[idx]
 
     def copy(self):
-        return _get_builtin_rules_list().copy()
+        return _get_core_rules_list().copy()
 
     def __repr__(self):
-        return repr(_get_builtin_rules_list())
+        return repr(_get_core_rules_list())
 
 
 BUILTIN_RULES: list[PropagationRule] = _BuiltinRulesProxy()  # type: ignore[assignment]
 
 
-def get_builtin_rules() -> list[PropagationRule]:
-    return _get_builtin_rules_list().copy()
+def get_builtin_rules(*, include_augmentation: bool = False) -> list[PropagationRule]:
+    """Return built-in propagation rules.
+
+    Args:
+        include_augmentation: If ``False`` (default), return only ``core``
+            rules — those whose predicates speak the canonical IR state
+            vocabulary and therefore fire on any OTel-instrumented stack.
+            If ``True``, also include ``augmentation`` rules that depend
+            on specialization labels emitted by specific augmenter
+            adapters (e.g. JVM, OOM augmenters).
+    """
+    if include_augmentation:
+        return _get_all_rules_list().copy()
+    return _get_core_rules_list().copy()
 
 
-def get_rules_for_edge_kind(edge_kind: DepKind) -> list[PropagationRule]:
-    return [rule for rule in _get_builtin_rules_list() if rule.edge_kind == edge_kind]
+def get_rules_for_edge_kind(edge_kind: DepKind, *, include_augmentation: bool = False) -> list[PropagationRule]:
+    rules = get_builtin_rules(include_augmentation=include_augmentation)
+    return [rule for rule in rules if rule.edge_kind == edge_kind]
 
 
-def get_rules_for_place_kind(place_kind: PlaceKind, as_source: bool = True) -> list[PropagationRule]:
+def get_rules_for_place_kind(
+    place_kind: PlaceKind,
+    as_source: bool = True,
+    *,
+    include_augmentation: bool = False,
+) -> list[PropagationRule]:
+    rules = get_builtin_rules(include_augmentation=include_augmentation)
     if as_source:
-        return [rule for rule in _get_builtin_rules_list() if rule.src_kind == place_kind]
+        return [rule for rule in rules if rule.src_kind == place_kind]
     else:
-        return [rule for rule in _get_builtin_rules_list() if rule.dst_kind == place_kind]
+        return [rule for rule in rules if rule.dst_kind == place_kind]
