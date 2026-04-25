@@ -9,15 +9,12 @@ by expressing complete causal chains.
 
 from collections.abc import Callable
 from enum import auto
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from rcabench_platform.compat import StrEnum
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, PlaceKind
-
-if TYPE_CHECKING:
-    pass
 
 
 class PropagationDirection(StrEnum):
@@ -96,26 +93,26 @@ class PropagationRule(BaseModel):
     - Multi-hop: Use path (list of PathHop), more precise causal chains
 
     Examples:
-        # Single-hop: Pod KILLED --runs--> Container KILLED
+        # Single-hop: Span SLOW --calls(BACKWARD)--> Span SLOW
         PropagationRule(
-            src_kind=PlaceKind.pod,
-            src_states=[PodState.KILLED],
-            edge_kind=DepKind.runs,
-            direction=PropagationDirection.FORWARD,
-            dst_kind=PlaceKind.container,
-            possible_dst_states=[ContainerState.KILLED]
+            src_kind=PlaceKind.span,
+            src_states=["slow"],
+            edge_kind=DepKind.calls,
+            direction=PropagationDirection.BACKWARD,
+            dst_kind=PlaceKind.span,
+            possible_dst_states=["slow", "erroring"],
         )
 
-        # Multi-hop: Pod NETWORK_DELAY --routes_to(BACKWARD)--> Service --includes(BACKWARD)--> Span
+        # Multi-hop: Pod UNAVAILABLE --routes_to(BACKWARD)--> Service --includes(FORWARD)--> Span
         PropagationRule(
             src_kind=PlaceKind.pod,
-            src_states=[PodState.NETWORK_DELAY],
+            src_states=["unavailable"],
             path=[
                 PathHop(edge_kind=DepKind.routes_to, direction=BACKWARD, intermediate_kind=PlaceKind.service),
-                PathHop(edge_kind=DepKind.includes, direction=BACKWARD)
+                PathHop(edge_kind=DepKind.includes, direction=FORWARD),
             ],
             dst_kind=PlaceKind.span,
-            possible_dst_states=[SpanState.HIGH_AVG_LATENCY]
+            possible_dst_states=["missing", "unavailable", "erroring"],
         )
     """
 
@@ -228,104 +225,3 @@ class PropagationRule(BaseModel):
         if self.is_multi_hop:
             return len(self.path)  # type: ignore[arg-type]
         return 1
-
-
-class RuleMatchResult(BaseModel):
-    """Result of matching a rule against a graph edge."""
-
-    rule: PropagationRule
-    matched: bool
-    src_node_id: int
-    dst_node_id: int
-    edge: Edge
-    reason: str = Field(description="Why the rule matched or didn't match")
-
-
-def match_rule(
-    rule: PropagationRule,
-    src_node_id: int,
-    src_node_kind: PlaceKind,
-    src_state: str,
-    edge: Edge,
-    dst_node_id: int,
-    dst_node_kind: PlaceKind,
-) -> RuleMatchResult:
-    """Check if a rule matches a given edge and node states.
-
-    Args:
-        rule: The propagation rule to match
-        src_node_id: Source node ID
-        src_node_kind: Source node PlaceKind
-        src_state: Current state of source node (single state string for compatibility)
-        edge: The edge connecting nodes
-        dst_node_id: Destination node ID
-        dst_node_kind: Destination node PlaceKind
-
-    Returns:
-        RuleMatchResult indicating if rule matched and why
-    """
-    # Check source PlaceKind
-    if src_node_kind != rule.src_kind:
-        return RuleMatchResult(
-            rule=rule,
-            matched=False,
-            src_node_id=src_node_id,
-            dst_node_id=dst_node_id,
-            edge=edge,
-            reason=f"Source kind mismatch: expected {rule.src_kind}, got {src_node_kind}",
-        )
-
-    # Check source state
-    if src_state not in rule.src_states:
-        return RuleMatchResult(
-            rule=rule,
-            matched=False,
-            src_node_id=src_node_id,
-            dst_node_id=dst_node_id,
-            edge=edge,
-            reason=f"Source state {src_state} not in trigger states {rule.src_states}",
-        )
-
-    # Check edge kind
-    if edge.kind != rule.edge_kind:
-        return RuleMatchResult(
-            rule=rule,
-            matched=False,
-            src_node_id=src_node_id,
-            dst_node_id=dst_node_id,
-            edge=edge,
-            reason=f"Edge kind mismatch: expected {rule.edge_kind}, got {edge.kind}",
-        )
-
-    # Check destination PlaceKind
-    if dst_node_kind != rule.dst_kind:
-        return RuleMatchResult(
-            rule=rule,
-            matched=False,
-            src_node_id=src_node_id,
-            dst_node_id=dst_node_id,
-            edge=edge,
-            reason=f"Destination kind mismatch: expected {rule.dst_kind}, got {dst_node_kind}",
-        )
-
-    # Check edge condition if specified
-    if rule.edge_condition is not None:
-        if not rule.edge_condition(edge):
-            return RuleMatchResult(
-                rule=rule,
-                matched=False,
-                src_node_id=src_node_id,
-                dst_node_id=dst_node_id,
-                edge=edge,
-                reason="Edge condition not satisfied",
-            )
-
-    # All checks passed
-    return RuleMatchResult(
-        rule=rule,
-        matched=True,
-        src_node_id=src_node_id,
-        dst_node_id=dst_node_id,
-        edge=edge,
-        reason="Rule matched successfully",
-    )
