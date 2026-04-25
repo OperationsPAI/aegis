@@ -102,6 +102,29 @@ func mergeSpecServicesForDupCheck(uniqueServices map[string]int, specServices []
 	return warnings
 }
 
+// buildFreshSlotItem produces an injectionProcessItem for a batch whose
+// namespace was bootstrapped (PR-C of #166): the slot has no deployed
+// workload at submit time, so we can't run guidedcli.BuildInjection's
+// pod-listing without a spurious "app not found" error. Skip the
+// validation entirely; pull maxDuration from the request fields and let
+// the runtime FaultInjection task do the real BuildInjection after
+// RestartPedestal has helm-installed the workload. Cross-spec
+// groundtruth dedup is skipped because fresh slots are exclusive — no
+// other batch lands here in the same submit.
+func buildFreshSlotItem(batchIndex int, configs []guidedcli.GuidedConfig) injectionProcessItem {
+	maxDuration := 0
+	for _, cfg := range configs {
+		if cfg.Duration != nil && *cfg.Duration > maxDuration {
+			maxDuration = *cfg.Duration
+		}
+	}
+	return injectionProcessItem{
+		index:         batchIndex,
+		faultDuration: maxDuration,
+		guidedConfigs: configs,
+	}
+}
+
 // firstGuidedNamespace returns the first non-empty `namespace` among the
 // given guided configs. Used by SubmitFaultInjection to promote the
 // user-supplied namespace into RestartPedestal's payload as a hard
