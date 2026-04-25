@@ -255,6 +255,17 @@ current stage's selection, and --apply to submit the finalized config.`,
 		}
 
 		if guidedApply {
+			// Issue #176: short-circuit before shipping an un-normalized
+			// config to the backend when the local resolver reported errors.
+			// Without this guard, finalizeOrRequest's failure path returns
+			// cfg with Duration=nil (normalizeDuration only runs on success),
+			// which the server's uniform validator then rejects with a
+			// misleading "specs[0][0].duration must be greater than 0"
+			// instead of the actual builder error (e.g. JVM method not
+			// found, mem_type unset, etc.).
+			if err := guidedResolveErr(response); err != nil {
+				return err
+			}
 			return submitGuidedApply(response.Config)
 		}
 
@@ -348,6 +359,67 @@ func init() {
 	f.IntVar(&guidedStatusCode, "status-code", 0, "HTTP status code")
 
 	injectCmd.AddCommand(injectGuidedCmd)
+}
+
+// guidedResolveErr inspects a GuidedResponse for resolver errors or a
+// non-final stage and returns a usage-coded error surfacing them to the user.
+// Returns nil when the response is safe to submit.
+//
+// Background (issue #176): chaos-experiment's finalizeOrRequest returns the
+// caller's config un-normalized (Duration still nil, etc.) whenever its
+// per-type builder fails. If the CLI ships that config to /inject anyway,
+// the server's uniform validator rejects it with a generic
+// "specs[0][0].duration must be greater than 0" that hides the real builder
+// error (missing JVM method, missing mem_type, decode failure, ...). We must
+// fail fast on the client and surface every resolver error so the user can
+// fix the actual root cause.
+func guidedResolveErr(response *guidedcli.GuidedResponse) error {
+	if response == nil {
+		return usageErrorf("guided resolver returned no response")
+	}
+	if len(response.Errors) == 0 && (response.Stage == "" || response.Stage == "ready_to_apply" || response.Stage == "applied") {
+		return nil
+	}
+
+	// Build a preamble that names what failed so the user knows which
+	// (chaos_type, app, class, method, ...) tuple to fix.
+	cfg := response.Config
+	preamble := "guided resolver did not finalize the config"
+	if strings.TrimSpace(cfg.ChaosType) != "" {
+		preamble = fmt.Sprintf("guided resolver failed for chaos_type=%s", strings.TrimSpace(cfg.ChaosType))
+		identifiers := make([]string, 0, 4)
+		if v := strings.TrimSpace(cfg.App); v != "" {
+			identifiers = append(identifiers, fmt.Sprintf("app=%s", v))
+		}
+		if v := strings.TrimSpace(cfg.Class); v != "" {
+			identifiers = append(identifiers, fmt.Sprintf("class=%s", v))
+		}
+		if v := strings.TrimSpace(cfg.Method); v != "" {
+			identifiers = append(identifiers, fmt.Sprintf("method=%s", v))
+		}
+		if v := strings.TrimSpace(cfg.Container); v != "" {
+			identifiers = append(identifiers, fmt.Sprintf("container=%s", v))
+		}
+		if len(identifiers) > 0 {
+			preamble = fmt.Sprintf("%s (%s)", preamble, strings.Join(identifiers, ", "))
+		}
+	}
+
+	if len(response.Errors) == 0 {
+		return usageErrorf("%s: stage=%q is not ready_to_apply (refusing to submit un-normalized config to /inject)",
+			preamble, response.Stage)
+	}
+
+	// Preserve every resolver error so the user sees the full set, not just
+	// the first one.
+	if len(response.Errors) == 1 {
+		return usageErrorf("%s: %s", preamble, response.Errors[0])
+	}
+	bullets := make([]string, 0, len(response.Errors))
+	for _, e := range response.Errors {
+		bullets = append(bullets, "  - "+e)
+	}
+	return usageErrorf("%s:\n%s", preamble, strings.Join(bullets, "\n"))
 }
 
 // submitGuidedApply wraps a finalized GuidedConfig in the SubmitInjectionReq

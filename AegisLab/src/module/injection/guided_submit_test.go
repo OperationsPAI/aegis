@@ -79,14 +79,32 @@ func TestSubmitInjectionReqValidateRejectsEmptyBatch(t *testing.T) {
 	require.ErrorContains(t, err, "must contain at least one guided config")
 }
 
+// TestSubmitInjectionReqValidateRejectsMissingDuration is the issue-#176
+// defense-in-depth assertion: when the resolver fails to default-fill
+// Duration (i.e. the chaos-experiment builder errored and shipped an
+// un-normalized config), the validator must point at the resolver as the
+// likely cause, NOT regurgitate the generic "duration > 0" message.
 func TestSubmitInjectionReqValidateRejectsMissingDuration(t *testing.T) {
 	req := validSubmitInjectionReq()
 	req.Specs[0][0].Duration = nil
+	req.Specs[0][0].ChaosType = "JVMMemoryStress"
 
 	err := req.Validate()
-	require.ErrorContains(t, err, "duration must be greater than 0")
+	require.Error(t, err)
+	msg := err.Error()
+	require.Contains(t, msg, "duration is missing")
+	require.Contains(t, msg, "JVMMemoryStress")
+	require.Contains(t, msg, "guided resolver")
+	// Crucially: must NOT say "must be greater than 0" for the nil case —
+	// that's the misleading message that issue #176 traced to.
+	require.NotContains(t, msg, "duration must be greater than 0")
 }
 
+// TestSubmitInjectionReqValidateRejectsNonPositiveDuration covers the case
+// where the resolver did normalize duration but a caller explicitly set it
+// to a non-positive value. The old "must be greater than 0" message is
+// still the right one here (it's accurate now); we keep the assertion to
+// guard against the two error paths swapping again.
 func TestSubmitInjectionReqValidateRejectsNonPositiveDuration(t *testing.T) {
 	req := validSubmitInjectionReq()
 	zero := 0
