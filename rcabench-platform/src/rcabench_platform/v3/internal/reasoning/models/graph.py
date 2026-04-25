@@ -3,16 +3,13 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from enum import auto
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import networkx as nx  # type: ignore[import-untyped]
 import numpy as np
 from pydantic import BaseModel, Field
 
 from rcabench_platform.compat import StrEnum
-
-if TYPE_CHECKING:
-    from .state import StateWindow
 
 logger = logging.getLogger(__name__)
 
@@ -173,10 +170,6 @@ class Node(BaseModel):
         description="abnormal period time-series metrics. "
         "metric_name -> (timestamps, values). "
         "timestamps: Unix seconds (shape: n); values: metric measurements (shape: n). ",
-    )
-    state_timeline: "list[StateWindow] | None" = Field(
-        default=None,
-        description="Time-windowed states. None = not computed; [] = computed but empty.",
     )
 
 
@@ -343,30 +336,6 @@ class HyperGraph:
 
         return subgraph
 
-    def set_node_state_timeline(self, node_id: int, timeline: "list[StateWindow]") -> None:
-        """Set the state timeline for a node.
-
-        Args:
-            node_id: The node ID to set timeline for
-            timeline: List of StateWindow objects representing state changes over time
-        """
-        if node_id not in self._node_id_map:
-            raise KeyError(f"Node {node_id} not found in graph")
-        self._node_id_map[node_id].state_timeline = timeline
-
-    def get_node_state_timeline(self, node_id: int) -> "list[StateWindow] | None":
-        """Get the state timeline for a node.
-
-        Args:
-            node_id: The node ID to get timeline for
-
-        Returns:
-            List of StateWindow objects or None if not computed
-        """
-        if node_id not in self._node_id_map:
-            raise KeyError(f"Node {node_id} not found in graph")
-        return self._node_id_map[node_id].state_timeline
-
 
 class GraphEditType(StrEnum):
     add_node = auto()
@@ -486,14 +455,3 @@ class GraphEditSequence(BaseModel):
 
     def __iter__(self):  # type: ignore[override]
         return iter(self.edits)
-
-
-# Rebuild Node model to resolve forward reference to StateWindow
-# This is necessary because StateWindow is defined in state.py which imports from this module
-def _rebuild_models() -> None:
-    from rcabench_platform.v3.internal.reasoning.models.state import StateWindow  # noqa: F401
-
-    Node.model_rebuild()
-
-
-_rebuild_models()

@@ -96,26 +96,26 @@ class PropagationRule(BaseModel):
     - Multi-hop: Use path (list of PathHop), more precise causal chains
 
     Examples:
-        # Single-hop: Pod KILLED --runs--> Container KILLED
+        # Single-hop: Span SLOW --calls(BACKWARD)--> Span SLOW
         PropagationRule(
-            src_kind=PlaceKind.pod,
-            src_states=[PodState.KILLED],
-            edge_kind=DepKind.runs,
-            direction=PropagationDirection.FORWARD,
-            dst_kind=PlaceKind.container,
-            possible_dst_states=[ContainerState.KILLED]
+            src_kind=PlaceKind.span,
+            src_states=["slow"],
+            edge_kind=DepKind.calls,
+            direction=PropagationDirection.BACKWARD,
+            dst_kind=PlaceKind.span,
+            possible_dst_states=["slow", "erroring"],
         )
 
-        # Multi-hop: Pod NETWORK_DELAY --routes_to(BACKWARD)--> Service --includes(BACKWARD)--> Span
+        # Multi-hop: Pod UNAVAILABLE --routes_to(BACKWARD)--> Service --includes(FORWARD)--> Span
         PropagationRule(
             src_kind=PlaceKind.pod,
-            src_states=[PodState.NETWORK_DELAY],
+            src_states=["unavailable"],
             path=[
                 PathHop(edge_kind=DepKind.routes_to, direction=BACKWARD, intermediate_kind=PlaceKind.service),
-                PathHop(edge_kind=DepKind.includes, direction=BACKWARD)
+                PathHop(edge_kind=DepKind.includes, direction=FORWARD),
             ],
             dst_kind=PlaceKind.span,
-            possible_dst_states=[SpanState.HIGH_AVG_LATENCY]
+            possible_dst_states=["missing", "unavailable", "erroring"],
         )
     """
 

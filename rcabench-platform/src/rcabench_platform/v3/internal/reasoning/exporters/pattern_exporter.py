@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from rcabench_platform.v3.internal.reasoning.models.graph import CallsEdgeData, DepKind, HyperGraph, PlaceKind
-from rcabench_platform.v3.internal.reasoning.models.state import get_default_state
 
 logger = logging.getLogger(__name__)
 
@@ -21,29 +20,14 @@ if TYPE_CHECKING:
     pass
 
 
-# Default states that are considered "normal" (not abnormal)
-DEFAULT_STATES = {
-    "HEALTHY",
-    "ACTIVE",
-    "AVAILABLE",
-    "READY",
-    "UNKNOWN",
-    "unknown",
-}
+# Canonical-state vocabulary (Phase 2 IR): non-abnormal states.
+_NON_ABNORMAL_STATES: frozenset[str] = frozenset({"healthy", "unknown"})
 
 
 def is_abnormal_state(state: str, node_kind: PlaceKind) -> bool:
-    """Check if a state is considered abnormal for the given node kind.
-
-    Args:
-        state: The detected state string
-        node_kind: The kind of node
-
-    Returns:
-        True if the state is abnormal, False otherwise
-    """
-    default = get_default_state(node_kind).value
-    return state.upper() != default.upper() and state.upper() not in DEFAULT_STATES
+    """Return True iff ``state`` is something other than HEALTHY / UNKNOWN."""
+    del node_kind  # canonical vocabulary is shared across kinds
+    return state.lower() not in _NON_ABNORMAL_STATES
 
 
 def export_abnormal_nodes(
