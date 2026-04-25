@@ -90,8 +90,9 @@ class FaultPropagator:
         def edge_filter(src_id: int, dst_id: int, is_first_hop: bool) -> bool:
             src_states = self._states_for_node(src_id)
             dst_states = self._states_for_node(dst_id)
+            src_labels = self._labels_for_node(src_id)
             return self.rule_matcher.edge_matches_any_rule(
-                src_id, dst_id, self.graph, src_states, dst_states, is_first_hop
+                src_id, dst_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
             )
 
         subgraph_edges = self.topology_explorer.find_reachable_subgraph(injection_node_ids, alarm_nodes, edge_filter)
@@ -169,6 +170,23 @@ class FaultPropagator:
             return set()
         return {w.state for w in tl.windows}
 
+    def _labels_for_node(self, node_id: int) -> frozenset[str]:
+        """Aggregate every specialization label ever observed on the node.
+
+        Phase 4 of #163: rules with non-empty ``required_labels`` gate on
+        these. Aggregating across the whole timeline (rather than picking
+        a specific window) mirrors :meth:`StateTimeline.ever_carries`.
+        """
+        tl = self._timeline_for_node(node_id)
+        if tl is None:
+            return frozenset()
+        labels: set[str] = set()
+        for w in tl.windows:
+            ws = w.evidence.get("specialization_labels")
+            if ws:
+                labels.update(ws)
+        return frozenset(labels)
+
     def _node_start_time(self, node_id: int) -> int | None:
         tl = self._timeline_for_node(node_id)
         if tl is None or not tl.windows:
@@ -189,7 +207,8 @@ class FaultPropagator:
         if len(node_ids) < 2:
             return None
 
-        multi_hop_rule = self.rule_matcher.find_matching_multi_hop_rule(node_ids, self.graph)
+        src_labels = self._labels_for_node(node_ids[0])
+        multi_hop_rule = self.rule_matcher.find_matching_multi_hop_rule(node_ids, self.graph, src_labels=src_labels)
         if multi_hop_rule is not None:
             path = self._verify_multi_hop_path(node_ids, multi_hop_rule)
             if path is not None:
@@ -212,7 +231,8 @@ class FaultPropagator:
                 if i + rule_node_count > len(node_ids):
                     continue
                 sub_path = node_ids[i : i + rule_node_count]
-                if self.rule_matcher.matches_multi_hop_rule(rule, sub_path, self.graph):
+                sub_src_labels = self._labels_for_node(sub_path[0])
+                if self.rule_matcher.matches_multi_hop_rule(rule, sub_path, self.graph, src_labels=sub_src_labels):
                     prev_time = state_start_times[-1] if state_start_times else None
                     verified = self._verify_multi_hop_subpath(
                         sub_path, rule, prev_start_time=prev_time, is_first_hop=(i == 0)

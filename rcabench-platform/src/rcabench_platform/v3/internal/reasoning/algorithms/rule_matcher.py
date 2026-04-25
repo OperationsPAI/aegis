@@ -4,9 +4,17 @@ Rule predicates speak the canonical-state vocabulary defined in
 ``ir/states.py`` (``SLOW``, ``ERRORING``, ``DEGRADED``, ``UNAVAILABLE``,
 ``MISSING``, ``HEALTHY``, ``UNKNOWN``). Specialization labels travel via
 ``Evidence.specialization_labels`` on the timeline and are surfaced
-through ``StateTimeline.labels_at`` for downstream explainers — they do
-not constrain matching here. Augmentation rules (``RuleTier.augmentation``)
-are filtered out by ``get_builtin_rules()`` by default for the same reason.
+through ``StateTimeline.labels_at`` for downstream explainers.
+
+Phase 4 of #163: rules can additionally gate on ``required_labels``. When
+a rule sets ``required_labels`` non-empty, the matcher requires the source
+node's accumulated specialization labels (collected over the timeline via
+``StateTimeline.ever_carries`` semantics) to be a superset of that set
+before matching. The matcher uses ``ever_carries`` rather than
+``labels_at(t)`` because the matcher operates on already-collapsed
+timelines without a pinned matching timestamp — the propagator picks the
+window per rule afterwards. Core rules leave ``required_labels`` empty
+and behave exactly as before.
 """
 
 from __future__ import annotations
@@ -83,10 +91,14 @@ class RuleMatcher:
         rule: PropagationRule,
         topology_path: list[int],
         graph: HyperGraph,
+        *,
+        src_labels: frozenset[str] = frozenset(),
     ) -> bool:
         if not rule.path:
             return False
         if len(topology_path) != len(rule.path) + 1:
+            return False
+        if rule.required_labels and not rule.required_labels.issubset(src_labels):
             return False
 
         for hop_idx, path_hop in enumerate(rule.path):
@@ -118,6 +130,8 @@ class RuleMatcher:
         self,
         topology_path: list[int],
         graph: HyperGraph,
+        *,
+        src_labels: frozenset[str] = frozenset(),
     ) -> PropagationRule | None:
         if len(topology_path) < 2:
             return None
@@ -129,7 +143,7 @@ class RuleMatcher:
                 continue
             if rule.src_kind != src_node.kind:
                 continue
-            if self.matches_multi_hop_rule(rule, topology_path, graph):
+            if self.matches_multi_hop_rule(rule, topology_path, graph, src_labels=src_labels):
                 return rule
         return None
 
@@ -141,6 +155,8 @@ class RuleMatcher:
         src_states: set[str],
         dst_states: set[str],
         is_first_hop: bool = False,
+        *,
+        src_labels: frozenset[str] = frozenset(),
     ) -> list[PropagationRule]:
         src_node = graph.get_node_by_id(src_node_id)
         dst_node = graph.get_node_by_id(dst_node_id)
@@ -154,6 +170,8 @@ class RuleMatcher:
         matching_rules: list[PropagationRule] = []
         rule_key = (src_node.kind, edge_data.kind, direction)
         for rule in self.rule_index.get(rule_key, []):
+            if rule.required_labels and not rule.required_labels.issubset(src_labels):
+                continue
             if self._rule_matches_edge(
                 rule,
                 src_node.kind,
@@ -167,6 +185,8 @@ class RuleMatcher:
 
         for rule in self.rules:
             if not rule.is_multi_hop or not rule.path:
+                continue
+            if rule.required_labels and not rule.required_labels.issubset(src_labels):
                 continue
             for hop_idx, path_hop in enumerate(rule.path):
                 if hop_idx == 0:
@@ -199,6 +219,8 @@ class RuleMatcher:
         src_states: set[str],
         dst_states: set[str],
         is_first_hop: bool = False,
+        *,
+        src_labels: frozenset[str] = frozenset(),
     ) -> bool:
         return (
             len(
@@ -209,6 +231,7 @@ class RuleMatcher:
                     src_states,
                     dst_states,
                     is_first_hop,
+                    src_labels=src_labels,
                 )
             )
             > 0

@@ -14,6 +14,7 @@ from collections.abc import Iterable
 
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext, StateAdapter
 from rcabench_platform.v3.internal.reasoning.ir.adapters.injection import InjectionAdapter
+from rcabench_platform.v3.internal.reasoning.ir.adapters.jvm import JvmAugmenterAdapter
 from rcabench_platform.v3.internal.reasoning.ir.adapters.k8s_metrics import K8sMetricsAdapter
 from rcabench_platform.v3.internal.reasoning.ir.adapters.traces import TraceStateAdapter
 from rcabench_platform.v3.internal.reasoning.ir.inference import InferenceRule, run_fixpoint
@@ -59,6 +60,9 @@ def run_reasoning_ir(
         InjectionAdapter(resolved=resolved, injection_at=injection_at),
         TraceStateAdapter(baseline_traces=baseline_traces, abnormal_traces=abnormal_traces),  # type: ignore[arg-type]
         K8sMetricsAdapter(graph=graph),
+        # Specialization augmenters — safe to wire unconditionally; each one
+        # no-ops on stacks that don't carry the metrics it cares about.
+        JvmAugmenterAdapter(graph=graph),
     ]
     if extra_adapters:
         adapters.extend(extra_adapters)

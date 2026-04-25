@@ -183,6 +183,21 @@ class PropagationRule(BaseModel):
         description="[Single-hop] Optional function to check edge data",
     )
 
+    # Specialization-label gating (Phase 4 of #163)
+    required_labels: frozenset[str] = Field(
+        default_factory=frozenset,
+        description=(
+            "Specialization labels (e.g. ``frequent_gc``, ``oom_killed``) that must "
+            "all be present on the source node's timeline for the rule to fire. "
+            "Empty (default) means the rule is label-agnostic and matches purely on "
+            "canonical state — preserving the behaviour of every core rule. "
+            "Augmenter rules use this to gate on labels emitted by specific augmenter "
+            "adapters (the JVM augmenter emits ``frequent_gc`` / ``high_heap_pressure`` / "
+            "``oom_killed``; only rules listing those labels here will fire when the "
+            "stack carries them, and won't fire on stacks that don't)."
+        ),
+    )
+
     # Rule metadata
     confidence: float = Field(
         default=0.8,
@@ -236,6 +251,20 @@ class PropagationRule(BaseModel):
     def normalize_dst_states(cls, v: list[str]) -> list[str]:
         """Normalize state names to lowercase for consistent matching."""
         return [s.lower() for s in v]
+
+    @field_validator("required_labels", mode="before")
+    @classmethod
+    def coerce_required_labels(cls, v):
+        """Allow JSON arrays / lists / sets to specify ``required_labels``.
+
+        Pydantic accepts ``frozenset`` natively but the JSON loader hands us
+        a ``list``; coerce here so callers don't have to.
+        """
+        if v is None:
+            return frozenset()
+        if isinstance(v, frozenset):
+            return v
+        return frozenset(v)
 
     @field_validator("path", mode="after")
     @classmethod
