@@ -113,6 +113,27 @@ func (g *Gateway) EnsureNamespace(ctx context.Context, name string) (bool, error
 	return true, nil
 }
 
+// NamespaceHasWorkload reports whether the given namespace contains at least
+// one pod (any phase). Used by the submit-time namespace allocator (#166) to
+// distinguish "deployed slot, currently idle" from "registered count slot,
+// no workload" — the latter can't satisfy guided BuildInjection because pod
+// listing would return empty and "app X not found" would surface to the
+// user. Callers treat (false, nil) as "skip this slot, try next".
+func (g *Gateway) NamespaceHasWorkload(ctx context.Context, namespace string) (bool, error) {
+	client := getK8sClient()
+	if client == nil {
+		return false, fmt.Errorf("kubernetes client not available")
+	}
+	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{Limit: 1})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("list pods in %q: %w", namespace, err)
+	}
+	return len(pods.Items) > 0, nil
+}
+
 func (g *Gateway) CheckHealth(ctx context.Context) error {
 	if getK8sRestConfig() == nil {
 		return fmt.Errorf("kubernetes config not available")

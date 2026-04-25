@@ -394,6 +394,17 @@ type SubmitInjectionReq struct {
 	// normal. Use when the caller has already installed the chart out-of-band
 	// (e.g. `aegisctl pedestal chart install` + preflight readiness wait).
 	SkipRestartPedestal bool `json:"skip_restart_pedestal" binding:"omitempty"`
+
+	// AutoAllocate, when true, asks the server to choose a free deployed
+	// namespace from the system's pool for any guided config whose
+	// `namespace` is empty. The chosen namespace is locked at submit time
+	// (see #166) and surfaced in SubmitInjectionResp.AllocatedNamespaces.
+	// Hole-fill only — the allocator does not bootstrap fresh slots; if
+	// every 0..count-1 slot is busy or has no workload, submit fails with
+	// a pool-exhausted error and a hint to use `--install --namespace`
+	// to expand the pool. Configs that already specify a namespace
+	// continue to honor PR #164's hard-constraint path unchanged.
+	AutoAllocate bool `json:"auto_allocate" binding:"omitempty"`
 }
 
 func (req *SubmitInjectionReq) GuidedSpecs() [][]guidedcli.GuidedConfig {
@@ -608,6 +619,12 @@ type SubmitInjectionItem struct {
 	Index   int    `json:"index"` // Index of the batch this injection belongs to
 	TraceID string `json:"trace_id"`
 	TaskID  string `json:"task_id"`
+	// AllocatedNamespace, when non-empty, is the namespace the server picked
+	// for this batch in response to AutoAllocate=true (or that was bumped
+	// in via the explicit-namespace count-bump path). Mirrors what gets
+	// written into RestartRequiredNamespace so callers can confirm which
+	// slot their submit landed on without waiting for the trace log.
+	AllocatedNamespace string `json:"allocated_namespace,omitempty"`
 }
 
 // Structured warnings about duplications and conflicts

@@ -12,6 +12,7 @@ import (
 
 	"aegis/consts"
 	"aegis/dto"
+	"aegis/infra/k8s"
 	loki "aegis/infra/loki"
 	redis "aegis/infra/redis"
 	"aegis/model"
@@ -22,8 +23,42 @@ import (
 	"aegis/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// allocatedSlot pairs the namespace chosen by AllocateNamespaceForRestart
+// with the pre-generated traceID under which the namespace lock was taken.
+// Both flow into the per-batch task built later: namespace into the
+// payload's RestartRequiredNamespace, traceID into task.TraceID.
+type allocatedSlot struct {
+	namespace string
+	traceID   string
+}
+
+// batchNeedsAutoAllocate reports whether at least one config in the batch
+// has an empty namespace and would therefore benefit from server-side
+// allocation. Returns false when every config already names a namespace
+// (caller leaves the explicit-ns path of #164 alone).
+func batchNeedsAutoAllocate(batch []guidedcli.GuidedConfig) bool {
+	for _, cfg := range batch {
+		if strings.TrimSpace(cfg.Namespace) == "" {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultWorkloadProbe is the production WorkloadProbe used by the
+// AutoAllocate submit path. Returns true when the namespace contains at
+// least one pod (any phase). Tests override this seam.
+func defaultWorkloadProbe() WorkloadProbe {
+	gw := k8s.NewGateway(nil)
+	return func(ctx context.Context, namespace string) (bool, error) {
+		return gw.NamespaceHasWorkload(ctx, namespace)
+	}
+}
 
 // ChaosSystemWriter is the narrow contract injection.Service needs from
 // chaossystem to register guided namespaces with the system's namespace
@@ -240,6 +275,38 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 		return nil, fmt.Errorf("no guided specs available for fault injection")
 	}
 
+	// #166: AutoAllocate path — for any batch whose configs leave namespace
+	// empty, pick a free deployed slot from the system's pool *now*, before
+	// BuildInjection's submit-time pod listing runs. The chosen ns is
+	// locked under a pre-generated traceID; the matching task built below
+	// inherits that traceID so RestartPedestal's same-owner re-acquire
+	// finds the lock already held by itself. If allocation fails for any
+	// batch, this short-circuits and the request returns the error — no
+	// rollback of earlier successful allocations in v1; their locks expire
+	// naturally because the corresponding tasks were never submitted.
+	allocations := make(map[int]allocatedSlot, len(guidedSpecs))
+	if req.AutoAllocate {
+		// Sized to comfortably cover restart + injection + a slack buffer.
+		lockEndTime := time.Now().Add(time.Duration(req.Interval+10) * time.Minute)
+		probe := defaultWorkloadProbe()
+		for batchIdx, batch := range guidedSpecs {
+			if !batchNeedsAutoAllocate(batch) {
+				continue
+			}
+			traceID := uuid.NewString()
+			allocatedNs, allocErr := AllocateNamespaceForRestart(ctx, s.redis, pedestalItem.ContainerName, lockEndTime, traceID, probe)
+			if allocErr != nil {
+				return nil, fmt.Errorf("auto-allocate batch %d for system %s: %w (hint: run `aegisctl inject guided --install --namespace %s<N>` to expand the pool)", batchIdx, pedestalItem.ContainerName, allocErr, pedestalItem.ContainerName)
+			}
+			allocations[batchIdx] = allocatedSlot{namespace: allocatedNs, traceID: traceID}
+			for cfgIdx := range guidedSpecs[batchIdx] {
+				if strings.TrimSpace(guidedSpecs[batchIdx][cfgIdx].Namespace) == "" {
+					guidedSpecs[batchIdx][cfgIdx].Namespace = allocatedNs
+				}
+			}
+		}
+	}
+
 	// Break the submit→restart-pedestal chicken-and-egg: on a first run,
 	// the target namespace doesn't exist yet (RestartPedestal hasn't run),
 	// so guidedcli.BuildInjection's pod listing would 500. Pre-create any
@@ -257,6 +324,10 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 		item, warning, err := parseBatchGuidedSpecs(ctx, pedestalItem.ContainerName, i, guidedSpecs[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse guided spec batch %d: %w", i, err)
+		}
+		if alloc, ok := allocations[i]; ok {
+			item.allocatedNamespace = alloc.namespace
+			item.preallocTraceID = alloc.traceID
 		}
 		if warning != "" {
 			parseWarnings = append(parseWarnings, warning)
@@ -358,6 +429,15 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 				consts.TaskExtraInjectionAlgorithms: len(req.Algorithms),
 			},
 		}
+		// #166: AutoAllocate locked the chosen namespace under
+		// item.preallocTraceID at submit time. Pin the task's TraceID to that
+		// value so monitor.AcquireNamespaceForRestart at runtime treats it
+		// as a same-owner re-acquire (idempotent) instead of seeing a
+		// foreign-owner busy lock. Empty preallocTraceID falls through to
+		// SubmitTaskWithDB's normal uuid generation.
+		if item.preallocTraceID != "" {
+			task.TraceID = item.preallocTraceID
+		}
 		task.SetGroupCtx(ctx)
 
 		if err := common.SubmitTaskWithDB(ctx, db, s.redis, task); err != nil {
@@ -365,9 +445,10 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 		}
 
 		injectionItems = append(injectionItems, SubmitInjectionItem{
-			Index:   item.index,
-			TraceID: task.TraceID,
-			TaskID:  task.TaskID,
+			Index:              item.index,
+			TraceID:            task.TraceID,
+			TaskID:             task.TaskID,
+			AllocatedNamespace: item.allocatedNamespace,
 		})
 	}
 
