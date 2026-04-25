@@ -143,6 +143,63 @@ func TestUpdateSystemStatusRejectsDeleteSentinel(t *testing.T) {
 	}
 }
 
+// TestEnsureCountForNamespaceNoBumpWhenInRange covers the idempotent path:
+// a namespace that already falls inside the system's enumerated range
+// should not trigger any etcd write.
+func TestEnsureCountForNamespaceNoBumpWhenInRange(t *testing.T) {
+	service, db, _ := newMetadataService(t)
+	const systemName = "bench-count-noop"
+	cleanup := seedSystemInViper(t, systemName, false)
+	defer cleanup()
+	// Bump count to 5 so namespaces 0..4 are already in-range.
+	viper.Set("injection.system."+systemName+".count", 5)
+
+	anchor := &model.DynamicConfig{
+		Key:          systemKey(systemName, fieldCount),
+		DefaultValue: "5",
+		ValueType:    consts.ConfigValueTypeInt,
+	}
+	if err := db.Create(anchor).Error; err != nil {
+		t.Fatalf("seed anchor: %v", err)
+	}
+
+	bumped, err := service.EnsureCountForNamespace(context.Background(), systemName, systemName+"3")
+	if err != nil {
+		t.Fatalf("EnsureCountForNamespace: %v", err)
+	}
+	if bumped {
+		t.Fatalf("EnsureCountForNamespace: expected no bump for in-range ns, got bumped=true")
+	}
+}
+
+// TestEnsureCountForNamespaceRejectsMismatch covers the safety guard: a
+// namespace that doesn't match the system's NsPattern must not corrupt the
+// count of an unrelated system. See #156's risk surface — silently
+// promoting an arbitrary namespace would be worse than the original bug.
+func TestEnsureCountForNamespaceRejectsMismatch(t *testing.T) {
+	service, db, _ := newMetadataService(t)
+	const systemName = "bench-count-mismatch"
+	cleanup := seedSystemInViper(t, systemName, false)
+	defer cleanup()
+
+	anchor := &model.DynamicConfig{
+		Key:          systemKey(systemName, fieldCount),
+		DefaultValue: "1",
+		ValueType:    consts.ConfigValueTypeInt,
+	}
+	if err := db.Create(anchor).Error; err != nil {
+		t.Fatalf("seed anchor: %v", err)
+	}
+
+	_, err := service.EnsureCountForNamespace(context.Background(), systemName, "totally-unrelated-ns")
+	if err == nil {
+		t.Fatal("EnsureCountForNamespace: expected mismatch error, got nil")
+	}
+	if !errors.Is(err, consts.ErrBadRequest) {
+		t.Errorf("EnsureCountForNamespace: error should wrap ErrBadRequest; got %v", err)
+	}
+}
+
 // TestUpdateSystemStatusRejectsBuiltin pins that builtin systems refuse
 // enable/disable through the generic update endpoint, mirroring the guard in
 // DeleteSystem.

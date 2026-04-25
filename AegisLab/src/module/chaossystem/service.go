@@ -372,6 +372,65 @@ func (s *Service) UpdateSystem(ctx context.Context, id int, req *UpdateChaosSyst
 	return NewChaosSystemResp(updated), nil
 }
 
+// EnsureCountForNamespace bumps `injection.system.<system>.count` so that
+// the requested namespace falls within the system's enumerated range,
+// which is what `config.GetAllNamespaces()` exposes to the namespace
+// monitor's AcquireLock validation. See #156: prior to this hook,
+// `aegisctl inject guided --install --namespace sockshop14` created the
+// workload but left count=1, so a subsequent submit's AcquireLock for
+// `sockshop14` failed with "not found in current configuration" and the
+// runtime silently fell back to the NsPattern pool.
+//
+// Idempotent: returns (false, nil) when the count is already large enough.
+// Validates that the namespace actually matches the system's NsPattern /
+// ExtractPattern before writing — a `sockshop14` request against a `ts`
+// system rejects with an explicit mismatch error rather than corrupting
+// counts.
+func (s *Service) EnsureCountForNamespace(ctx context.Context, systemName, namespace string) (bool, error) {
+	systemName = strings.TrimSpace(systemName)
+	namespace = strings.TrimSpace(namespace)
+	if systemName == "" {
+		return false, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
+	}
+	if namespace == "" {
+		return false, fmt.Errorf("namespace is required: %w", consts.ErrBadRequest)
+	}
+
+	view, err := s.lookupByName(systemName)
+	if err != nil {
+		return false, err
+	}
+
+	rx, err := regexp.Compile(view.Cfg.NsPattern)
+	if err != nil {
+		return false, fmt.Errorf("invalid ns_pattern for system %s: %w", systemName, err)
+	}
+	if !rx.MatchString(namespace) {
+		return false, fmt.Errorf("namespace %q does not match system %s NsPattern %q: %w",
+			namespace, systemName, view.Cfg.NsPattern, consts.ErrBadRequest)
+	}
+
+	idx, err := view.Cfg.ExtractNsNumber(namespace)
+	if err != nil {
+		return false, err
+	}
+	needed := idx + 1
+	if view.Cfg.Count >= needed {
+		return false, nil
+	}
+
+	if err := s.applyChange(ctx, view.Cfg.System, fieldCount, strconv.Itoa(needed)); err != nil {
+		return false, fmt.Errorf("failed to bump count for system %s to %d: %w", systemName, needed, err)
+	}
+	logrus.WithFields(logrus.Fields{
+		"system":    systemName,
+		"namespace": namespace,
+		"old_count": view.Cfg.Count,
+		"new_count": needed,
+	}).Infof("bumped chaos-system count to register namespace")
+	return true, nil
+}
+
 // DeleteSystem marks the system as disabled/deleted by setting its etcd
 // `status` key to CommonDeleted. The consumer watcher sees the transition
 // and unregisters the system from chaos-experiment. Builtin systems cannot

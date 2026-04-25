@@ -6,6 +6,7 @@ var Module = fx.Module("chaossystem",
 	fx.Provide(NewRepository),
 	fx.Provide(NewService),
 	fx.Provide(fx.Annotate(AsReader, fx.As(new(Reader)))),
+	fx.Provide(fx.Annotate(AsWriter, fx.As(new(Writer)))),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),
 	fx.Provide(

@@ -25,25 +25,37 @@ import (
 	"gorm.io/gorm"
 )
 
-type Service struct {
-	repo       *Repository
-	store      *DatapackStore
-	lokiClient *loki.Client
-	containers container.Reader
-	datasets   dataset.Reader
-	labels     label.Writer
-	redis      *redis.Gateway
+// ChaosSystemWriter is the narrow contract injection.Service needs from
+// chaossystem to register guided namespaces with the system's namespace
+// count. Declared here (rather than imported from chaossystem) to avoid
+// the chaossystem→initialization→consumer→execution→injection cycle —
+// `*chaossystem.Service` satisfies this interface structurally and is
+// wired in at fx provide-time via a thin app-level adapter.
+type ChaosSystemWriter interface {
+	EnsureCountForNamespace(ctx context.Context, systemName, namespace string) (bool, error)
 }
 
-func NewService(repo *Repository, store *DatapackStore, lokiClient *loki.Client, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway) *Service {
+type Service struct {
+	repo         *Repository
+	store        *DatapackStore
+	lokiClient   *loki.Client
+	containers   container.Reader
+	datasets     dataset.Reader
+	labels       label.Writer
+	redis        *redis.Gateway
+	chaosSystems ChaosSystemWriter
+}
+
+func NewService(repo *Repository, store *DatapackStore, lokiClient *loki.Client, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter) *Service {
 	return &Service{
-		repo:       repo,
-		store:      store,
-		lokiClient: lokiClient,
-		containers: containers,
-		datasets:   datasets,
-		labels:     labels,
-		redis:      redis,
+		repo:         repo,
+		store:        store,
+		lokiClient:   lokiClient,
+		containers:   containers,
+		datasets:     datasets,
+		labels:       labels,
+		redis:        redis,
+		chaosSystems: chaosSystems,
 	}
 }
 
@@ -234,7 +246,9 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 	// missing namespaces now; RestartPedestal helm-installs into them in a
 	// few seconds. See github issues #91 item 1 and #92 item 1.
 	for _, batch := range guidedSpecs {
-		ensureGuidedNamespaces(ctx, batch)
+		if err := ensureGuidedNamespaces(ctx, pedestalItem.ContainerName, batch, s.chaosSystems); err != nil {
+			return nil, fmt.Errorf("failed to register guided namespaces with chaos-system %s: %w", pedestalItem.ContainerName, err)
+		}
 	}
 
 	processedItems := make([]injectionProcessItem, 0, len(guidedSpecs))
