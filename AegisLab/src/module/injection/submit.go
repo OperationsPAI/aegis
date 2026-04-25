@@ -20,7 +20,19 @@ import (
 // early is harmless. First-run only: existing namespaces are left alone.
 // Errors here are warnings, not fatal — if the cluster genuinely rejects the
 // create, the subsequent BuildInjection will fail and report that instead.
-func ensureGuidedNamespaces(ctx context.Context, configs []guidedcli.GuidedConfig) {
+//
+// Also bumps the system's `Count` (via chaosSystems.EnsureCountForNamespace)
+// so the namespace is registered in `config.GetAllNamespaces()` — without
+// this, AcquireLock would later reject `sockshop14` with "not found in
+// current configuration", which is the deeper root cause of #156:
+// `aegisctl inject guided --install --namespace sockshop14` had been
+// creating the workload at the k8s level but leaving the chaos-system
+// count at 1, so the runtime always fell back to the NsPattern pool
+// (sockshop0). Bumping count here makes any submit path — `--install`,
+// pre-installed, or scripted — register the requested namespace
+// idempotently. A bump failure is fatal: silent count mismatches are
+// exactly what produced the original silent-fallback bug.
+func ensureGuidedNamespaces(ctx context.Context, system string, configs []guidedcli.GuidedConfig, chaosSystems ChaosSystemWriter) error {
 	gw := k8s.NewGateway(nil)
 	seen := make(map[string]struct{}, len(configs))
 	for _, cfg := range configs {
@@ -32,15 +44,32 @@ func ensureGuidedNamespaces(ctx context.Context, configs []guidedcli.GuidedConfi
 			continue
 		}
 		seen[ns] = struct{}{}
+
 		created, err := gw.EnsureNamespace(ctx, ns)
 		if err != nil {
 			logrus.Warnf("submit: could not ensure namespace %q exists (will let BuildInjection surface the real error): %v", ns, err)
-			continue
-		}
-		if created {
+			// Still try to register the count below: even if k8s
+			// EnsureNamespace failed transiently, the user's intent was
+			// clear and a count bump is harmless on its own.
+		} else if created {
 			logrus.Infof("submit: created namespace %q for guided submit (first-run bootstrap)", ns)
 		}
+
+		if chaosSystems == nil {
+			// Tests construct injection.Service with a nil writer; skip
+			// silently rather than panicking. Production wiring (fx) always
+			// supplies the real Writer.
+			continue
+		}
+		bumped, bumpErr := chaosSystems.EnsureCountForNamespace(ctx, system, ns)
+		if bumpErr != nil {
+			return fmt.Errorf("register namespace %q with system %s: %w", ns, system, bumpErr)
+		}
+		if bumped {
+			logrus.Infof("submit: bumped chaos-system %s count to register namespace %q", system, ns)
+		}
 	}
+	return nil
 }
 
 // mergeSpecServicesForDupCheck merges one spec's groundtruth services into

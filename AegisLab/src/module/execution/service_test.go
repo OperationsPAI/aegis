@@ -39,7 +39,7 @@ func newExecutionService(t *testing.T) (*Service, sqlmock.Sqlmock, func()) {
 	containerRepo := container.NewRepository(db)
 	datasetRepo := dataset.NewRepository(db)
 	labelRepo := label.NewRepository(db)
-	injectionService := injection.NewService(injection.NewRepository(db), nil, nil, containerRepo, datasetRepo, labelRepo, nil)
+	injectionService := injection.NewService(injection.NewRepository(db), nil, nil, containerRepo, datasetRepo, labelRepo, nil, nil)
 
 	return NewService(NewRepository(db), redis.NewGateway(nil), containerRepo, injectionService, labelRepo), mock, func() {
 		cleanupRedis()
