@@ -66,7 +66,12 @@ func systemKey(name string, field systemField) string {
 // config_histories. The systems table is gone.
 type Service struct {
 	repo *Repository
-	etcd *etcd.Gateway
+	etcd chaosSystemEtcd
+}
+
+type chaosSystemEtcd interface {
+	Get(ctx context.Context, key string) (string, error)
+	Put(ctx context.Context, key, value string, ttl time.Duration) error
 }
 
 func NewService(repo *Repository, etcdGw *etcd.Gateway) *Service {
@@ -666,6 +671,9 @@ func (s *Service) applyChange(ctx context.Context, system string, field systemFi
 
 	if err := s.publishKey(ctx, key, newValue); err != nil {
 		return err
+	}
+	if err := config.SetViperValue(key, newValue, anchor.ValueType); err != nil {
+		return fmt.Errorf("failed to update local viper cache for %s: %w", key, err)
 	}
 
 	_ = s.repo.WriteHistory(&model.ConfigHistory{

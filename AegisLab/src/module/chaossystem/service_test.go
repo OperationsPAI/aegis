@@ -3,16 +3,36 @@ package chaossystem
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
+	"aegis/config"
 	"aegis/consts"
 	"aegis/model"
 	"aegis/service/common"
 
+	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/spf13/viper"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+type fakeEtcd struct {
+	data map[string]string
+}
+
+func (f *fakeEtcd) Get(_ context.Context, key string) (string, error) {
+	if value, ok := f.data[key]; ok {
+		return value, nil
+	}
+	return "", fmt.Errorf("key not found: %s", key)
+}
+
+func (f *fakeEtcd) Put(_ context.Context, key, value string, _ time.Duration) error {
+	f.data[key] = value
+	return nil
+}
 
 // newMetadataService spins up an in-memory service stripped of the etcd
 // gateway. It is sufficient for exercising the metadata upsert / list flow —
@@ -30,10 +50,10 @@ func newMetadataService(t *testing.T) (*Service, *gorm.DB, *common.DBMetadataSto
 	}
 
 	store := common.NewDBMetadataStore(db)
-	// NewService enforces a non-nil etcd gateway; this test only exercises
-	// metadata upsert / list (no etcd writes), so build the struct directly
-	// rather than spinning up a fake gateway.
-	svc := &Service{repo: NewRepository(db)}
+	svc := &Service{
+		repo: NewRepository(db),
+		etcd: &fakeEtcd{data: map[string]string{}},
+	}
 	return svc, db, store
 }
 
@@ -197,6 +217,68 @@ func TestEnsureCountForNamespaceRejectsMismatch(t *testing.T) {
 	}
 	if !errors.Is(err, consts.ErrBadRequest) {
 		t.Errorf("EnsureCountForNamespace: error should wrap ErrBadRequest; got %v", err)
+	}
+}
+
+// TestEnsureCountForNamespaceKeepsBootstrapIndexMoving reproduces the stale
+// count bug from alloc.go pass 2: each bootstrap allocation computes the
+// candidate namespace from the current config count, then asks
+// EnsureCountForNamespace to extend the pool. The local config must update
+// immediately or every call keeps reusing the same fresh slot until the etcd
+// watcher eventually catches up.
+func TestEnsureCountForNamespaceKeepsBootstrapIndexMoving(t *testing.T) {
+	service, db, _ := newMetadataService(t)
+	const systemName = "sockshop"
+	cleanup := seedSystemInViper(t, systemName, false)
+	defer cleanup()
+
+	anchor := &model.DynamicConfig{
+		Key:          systemKey(systemName, fieldCount),
+		DefaultValue: "1",
+		ValueType:    consts.ConfigValueTypeInt,
+		Scope:        consts.ConfigScopeGlobal,
+	}
+	if err := db.Create(anchor).Error; err != nil {
+		t.Fatalf("seed anchor: %v", err)
+	}
+
+	etcdKey := consts.ConfigEtcdGlobalPrefix + anchor.Key
+	service.etcd.(*fakeEtcd).data[etcdKey] = "1"
+
+	got := make([]string, 0, 3)
+	for i := 0; i < 3; i++ {
+		cfg, ok := config.GetChaosSystemConfigManager().Get(chaos.SystemType(systemName))
+		if !ok {
+			t.Fatalf("system %s not found in config manager", systemName)
+		}
+		ns := fmt.Sprintf("%s%d", systemName, cfg.Count)
+		got = append(got, ns)
+
+		bumped, err := service.EnsureCountForNamespace(context.Background(), systemName, ns)
+		if err != nil {
+			t.Fatalf("EnsureCountForNamespace(%s): %v", ns, err)
+		}
+		if !bumped {
+			t.Fatalf("EnsureCountForNamespace(%s): expected bump", ns)
+		}
+	}
+
+	want := []string{"sockshop1", "sockshop2", "sockshop3"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("bootstrap sequence = %v, want %v", got, want)
+		}
+	}
+
+	cfg, ok := config.GetChaosSystemConfigManager().Get(chaos.SystemType(systemName))
+	if !ok {
+		t.Fatalf("system %s missing after bumps", systemName)
+	}
+	if cfg.Count != 4 {
+		t.Fatalf("final count = %d, want 4", cfg.Count)
+	}
+	if service.etcd.(*fakeEtcd).data[etcdKey] != "4" {
+		t.Fatalf("etcd count = %s, want 4", service.etcd.(*fakeEtcd).data[etcdKey])
 	}
 }
 
