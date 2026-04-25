@@ -20,6 +20,7 @@ type HandlerService interface {
 	ReseedSystems(context.Context, *ReseedSystemReq) (*initialization.ReseedReport, error)
 	ListPrerequisites(context.Context, string) ([]SystemPrerequisiteResp, error)
 	MarkPrerequisite(context.Context, string, int, *MarkPrerequisiteReq) (*SystemPrerequisiteResp, error)
+	ListInjectCandidates(context.Context, string, string) (*InjectCandidatesResp, error)
 }
 
 func AsHandlerService(service *Service) HandlerService {

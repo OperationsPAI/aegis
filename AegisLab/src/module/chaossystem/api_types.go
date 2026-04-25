@@ -184,6 +184,42 @@ type SystemChartResp struct {
 	PedestalTag string         `json:"pedestal_tag"`
 }
 
+// InjectCandidateResp represents a single (app, chaos_type, target) tuple
+// produced by the bulk enumeration endpoint (issue #181). Shape is flat and
+// stable so external callers (Python loops, shell pipelines, the
+// `tools/enumerate.sh` replacement) can consume it without unwrapping a
+// nested envelope.
+//
+// Numerical parameter fields (latency, cpu_load, ...) are intentionally
+// omitted: enumeration only fixes the leaf identity. Callers fill in
+// policy-specific param values before submitting via guidedcli.BuildInjection.
+type InjectCandidateResp struct {
+	System        string `json:"system"`
+	SystemType    string `json:"system_type,omitempty"`
+	Namespace     string `json:"namespace"`
+	App           string `json:"app"`
+	ChaosType     string `json:"chaos_type"`
+	Container     string `json:"container,omitempty"`
+	TargetService string `json:"target_service,omitempty"`
+	Domain        string `json:"domain,omitempty"`
+	Class         string `json:"class,omitempty"`
+	Method        string `json:"method,omitempty"`
+	MutatorConfig string `json:"mutator_config,omitempty"`
+	Route         string `json:"route,omitempty"`
+	HTTPMethod    string `json:"http_method,omitempty"`
+	Database      string `json:"database,omitempty"`
+	Table         string `json:"table,omitempty"`
+	Operation     string `json:"operation,omitempty"`
+}
+
+// InjectCandidatesResp wraps the candidate slice with a count for
+// agent-friendly logs / progress reporting. The candidates field is the
+// payload; count is a derivative for convenience.
+type InjectCandidatesResp struct {
+	Count      int                   `json:"count"`
+	Candidates []InjectCandidateResp `json:"candidates"`
+}
+
 // SystemPrerequisiteResp is one system prerequisite in API responses (issue
 // #115). Spec is the raw JSON payload the seed loader stored; its shape is
 // dictated by Kind (e.g. kind=helm -> {chart,namespace,version}).

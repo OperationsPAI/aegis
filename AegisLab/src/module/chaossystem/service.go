@@ -19,8 +19,14 @@ import (
 	"aegis/service/initialization"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 )
+
+// enumerateCandidatesFn is the indirection used by ListInjectCandidates so
+// tests can inject a fixture without standing up a fake k8s API. Defaults to
+// the real in-process enumerator from chaos-experiment.
+var enumerateCandidatesFn = guidedcli.EnumerateAllCandidates
 
 // systemField is an internal enum of the injection.system.<name>.<field>
 // suffixes we manage. Keeping this tight (instead of free-form map keys)
@@ -578,6 +584,60 @@ func (s *Service) ListPrerequisites(_ context.Context, name string) ([]SystemPre
 		out = append(out, *NewSystemPrerequisiteResp(&rows[i]))
 	}
 	return out, nil
+}
+
+// ListInjectCandidates returns every reachable (app, chaos_type, target)
+// tuple for the given system+namespace, with one entry per leaf in the
+// guided enumeration tree (issue #181). Replaces the previous N-round-trip
+// walk through `aegisctl inject guided` for adversarial / coverage-driven
+// loops that need the full candidate pool up front.
+//
+// Existence of the system is checked before the enumeration so callers get
+// a clean 404 for an unknown short code instead of an opaque "system X is
+// not registered" error coming from chaos-experiment.
+func (s *Service) ListInjectCandidates(ctx context.Context, name, namespace string) (*InjectCandidatesResp, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
+	}
+	namespace = strings.TrimSpace(namespace)
+	if namespace == "" {
+		return nil, fmt.Errorf("namespace is required: %w", consts.ErrBadRequest)
+	}
+	if _, err := s.lookupByName(name); err != nil {
+		return nil, err
+	}
+
+	configs, err := enumerateCandidatesFn(ctx, name, namespace)
+	if err != nil {
+		// k8s/resourcelookup failures bubble up as 500. The CLI surfaces
+		// the wrapped error message so callers see "list pods in
+		// sockshop1: ..." rather than a bare "internal error".
+		return nil, fmt.Errorf("enumerate candidates for %s/%s: %w: %w", name, namespace, err, consts.ErrInternal)
+	}
+
+	out := make([]InjectCandidateResp, 0, len(configs))
+	for _, c := range configs {
+		out = append(out, InjectCandidateResp{
+			System:        c.System,
+			SystemType:    c.SystemType,
+			Namespace:     c.Namespace,
+			App:           c.App,
+			ChaosType:     c.ChaosType,
+			Container:     c.Container,
+			TargetService: c.TargetService,
+			Domain:        c.Domain,
+			Class:         c.Class,
+			Method:        c.Method,
+			MutatorConfig: c.MutatorConfig,
+			Route:         c.Route,
+			HTTPMethod:    c.HTTPMethod,
+			Database:      c.Database,
+			Table:         c.Table,
+			Operation:     c.Operation,
+		})
+	}
+	return &InjectCandidatesResp{Count: len(out), Candidates: out}, nil
 }
 
 // MarkPrerequisite updates the status of one prerequisite. aegisctl is the
