@@ -100,6 +100,12 @@ dev = [ #
     "pyright>=1.1.403",
     "ruff>=0.12.3",
     "pre-commit>=4.5.1",
+    "pytest>=8.3.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "src/rcabench_platform/v3/internal/reasoning/ir_tests",
 ]
 
 [build-system]

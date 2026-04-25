@@ -3767,6 +3767,7 @@ dev = [
     { name = "plotly" },
     { name = "pre-commit" },
     { name = "pyright" },
+    { name = "pytest" },
     { name = "ruff" },
 ]
 
@@ -3828,6 +3829,7 @@ dev = [
     { name = "plotly", specifier = ">=6.2.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pyright", specifier = ">=1.1.403" },
+    { name = "pytest", specifier = ">=8.3.0" },
     { name = "ruff", specifier = ">=0.12.3" },
 ]
 
