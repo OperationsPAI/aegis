@@ -1,177 +1,76 @@
 {
   "$schema": "propagation_rules_schema.json",
-  "description": "Propagation rule definitions - reference for Agent to generate new rules",
-  
+  "description": "Canonical-state propagation rule examples (Phase 2 IR vocabulary)",
+
   "available_node_kinds": [
     "machine", "namespace", "deployment", "replica_set", "stateful_set",
     "daemon_set", "pod", "container", "service", "span",
     "pvc", "pv", "configmap", "secret", "ingress", "endpoints", "function"
   ],
-  
+
   "available_edge_kinds": [
-    "owns", "routes_to", "scales", "manages", "schedules", 
-    "runs", "claims", "binds_to", "calls", "includes", 
+    "owns", "routes_to", "scales", "manages", "schedules",
+    "runs", "claims", "binds_to", "calls", "includes",
     "related_to", "mounts", "exposes", "depends_on", "affects"
   ],
-  
+
   "available_directions": ["forward", "backward"],
-  
+
   "available_states": {
-    "machine": ["UNKNOWN"],
-    "namespace": ["ACTIVE", "UNKNOWN"],
-    "deployment": ["AVAILABLE", "DEGRADED", "FAILED", "UNKNOWN"],
-    "stateful_set": ["READY", "DEGRADED", "FAILED", "UNKNOWN"],
-    "replica_set": ["AVAILABLE", "DEGRADED", "FAILED", "UNKNOWN"],
-    "daemon_set": ["UNKNOWN"],
-    "pod": [
-      "HEALTHY", "KILLED", "PROCESS_PAUSED",
-      "HIGH_CPU", "HIGH_MEMORY", "HIGH_DISK_USAGE", "HIGH_NETWORK_ERRORS", 
-      "HIGH_HTTP_LATENCY", "HIGH_GC_PRESSURE",
-      "DISK_SLOW", "DISK_FAULT", "DISK_CORRUPTION", "DISK_PERMISSION",
-      "NETWORK_DELAY", "NETWORK_LOSS", "NETWORK_DUPLICATION", "NETWORK_CORRUPTION", 
-      "NETWORK_REORDERING", "NETWORK_BANDWIDTH_LIMIT", "NETWORK_PARTITION", "DNS_ERROR",
-      "CLOCK_SKEW", "NO_CPU_AVAILABLE", "NO_MEMORY_AVAILABLE"
-    ],
-    "container": [
-      "HEALTHY", "KILLED", "PROCESS_PAUSED",
-      "HIGH_CPU", "HIGH_MEMORY", "HIGH_DISK_USAGE",
-      "DISK_SLOW", "DISK_FAULT", "DISK_CORRUPTION", "DISK_PERMISSION",
-      "CLOCK_SKEW", "NO_CPU_AVAILABLE", "NO_MEMORY_AVAILABLE"
-    ],
-    "service": ["HEALTHY", "HIGH_ERROR_RATE", "HIGH_LATENCY", "UNAVAILABLE"],
-    "span": [
-      "HEALTHY", "HIGH_P99_LATENCY", "HIGH_AVG_LATENCY", "HIGH_ERROR_RATE",
-      "TIMEOUT", "HIGH_LOG_ERROR", "CONNECTION_RESET", "MALFORMED_RESPONSE"
-    ]
+    "span":      ["unknown", "healthy", "slow", "erroring", "unavailable", "missing"],
+    "service":   ["unknown", "healthy", "slow", "degraded", "erroring", "unavailable"],
+    "pod":       ["unknown", "healthy", "degraded", "restarting", "erroring", "unavailable"],
+    "container": ["unknown", "healthy", "degraded", "erroring", "unavailable"]
   },
 
   "default_states": {
-    "machine": "UNKNOWN",
-    "namespace": "ACTIVE",
-    "deployment": "AVAILABLE",
-    "stateful_set": "READY",
-    "replica_set": "AVAILABLE",
-    "daemon_set": "UNKNOWN",
-    "pod": "HEALTHY",
-    "container": "HEALTHY",
-    "service": "HEALTHY",
-    "span": "HEALTHY"
+    "pod": "healthy",
+    "container": "healthy",
+    "service": "healthy",
+    "span": "healthy"
   },
 
   "rules": [
     {
-      "_comment": "===== Single-hop Rules =====",
-      "_usage": "Use edge_kind + direction for direct neighbor propagation"
-    },
-    {
-      "rule_id": "pod_kill_to_container",
-      "description": "Pod termination causes all containers to be killed",
-      "src_kind": "pod",
-      "src_states": ["KILLED"],
-      "edge_kind": "runs",
-      "direction": "forward",
-      "dst_kind": "container",
-      "possible_dst_states": ["KILLED"],
-      "confidence": 0.95
-    },
-    {
-      "rule_id": "container_high_cpu_to_pod",
-      "description": "Container CPU stress aggregates to pod-level metrics",
-      "src_kind": "container",
-      "src_states": ["HIGH_CPU"],
-      "edge_kind": "runs",
-      "direction": "backward",
-      "dst_kind": "pod",
-      "possible_dst_states": ["HIGH_CPU"],
-      "confidence": 0.85
-    },
-    {
-      "rule_id": "pod_high_cpu_to_container_starvation",
-      "description": "Pod CPU saturation causes resource starvation in sibling containers",
-      "src_kind": "pod",
-      "src_states": ["HIGH_CPU"],
-      "edge_kind": "runs",
-      "direction": "forward",
-      "dst_kind": "container",
-      "possible_dst_states": ["NO_CPU_AVAILABLE"],
-      "confidence": 0.7
-    },
-    {
-      "rule_id": "span_latency_to_caller",
-      "description": "Downstream span latency propagates back to upstream caller spans (callee slow → caller waits)",
+      "rule_id": "span_slow_to_caller",
+      "description": "SLOW callee span propagates SLOW to its caller (callee waits the caller).",
       "src_kind": "span",
-      "src_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY"],
+      "src_states": ["slow"],
       "edge_kind": "calls",
       "direction": "backward",
       "dst_kind": "span",
-      "possible_dst_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY", "TIMEOUT"],
+      "possible_dst_states": ["slow", "erroring"],
       "confidence": 0.8
     },
     {
-      "rule_id": "span_error_to_caller",
-      "description": "Downstream span errors propagate back to upstream caller spans (callee error → caller sees error)",
+      "rule_id": "span_erroring_to_caller",
+      "description": "ERRORING callee span propagates ERRORING to its caller.",
       "src_kind": "span",
-      "src_states": ["HIGH_ERROR_RATE", "TIMEOUT", "CONNECTION_RESET", "MALFORMED_RESPONSE"],
+      "src_states": ["erroring"],
       "edge_kind": "calls",
       "direction": "backward",
       "dst_kind": "span",
-      "possible_dst_states": ["HIGH_ERROR_RATE", "TIMEOUT", "HIGH_LOG_ERROR"],
-      "confidence": 0.8,
-      "edge_condition": {
-        "field": "data.abnormal_error_rate",
-        "operator": ">",
-        "value": 0.05
-      }
+      "possible_dst_states": ["erroring", "slow"],
+      "confidence": 0.8
     },
 
     {
-      "_comment": "===== Multi-hop Rules =====",
-      "_usage": "Use path array for causal chains spanning multiple nodes"
-    },
-    {
-      "rule_id": "pod_network_delay_to_span",
-      "description": "Pod network delay propagates through Service to Span latency",
+      "rule_id": "pod_unavailable_to_span",
+      "description": "Pod UNAVAILABLE -> Service -> Span MISSING/UNAVAILABLE.",
       "src_kind": "pod",
-      "src_states": ["NETWORK_DELAY", "NETWORK_BANDWIDTH_LIMIT"],
+      "src_states": ["unavailable"],
       "path": [
         {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
         {"edge_kind": "includes", "direction": "forward"}
       ],
       "dst_kind": "span",
-      "possible_dst_states": ["HIGH_AVG_LATENCY", "HIGH_P99_LATENCY"],
-      "confidence": 0.85
-    },
-    {
-      "rule_id": "pod_network_loss_to_span",
-      "description": "Pod network packet loss propagates through Service to Span errors",
-      "src_kind": "pod",
-      "src_states": ["NETWORK_LOSS", "NETWORK_CORRUPTION", "NETWORK_PARTITION", "DNS_ERROR"],
-      "path": [
-        {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-        {"edge_kind": "includes", "direction": "forward"}
-      ],
-      "dst_kind": "span",
-      "possible_dst_states": ["HIGH_ERROR_RATE", "TIMEOUT", "CONNECTION_RESET"],
-      "confidence": 0.85
-    },
-    {
-      "rule_id": "container_disk_fault_to_span",
-      "description": "Container disk I/O fault propagates through Pod and Service to Span errors",
-      "src_kind": "container",
-      "src_states": ["DISK_FAULT", "DISK_CORRUPTION"],
-      "path": [
-        {"edge_kind": "runs", "direction": "backward", "intermediate_kind": "pod"},
-        {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-        {"edge_kind": "includes", "direction": "forward"}
-      ],
-      "dst_kind": "span",
-      "possible_dst_states": ["HIGH_ERROR_RATE", "TIMEOUT", "MALFORMED_RESPONSE"],
-      "confidence": 0.75
+      "possible_dst_states": ["missing", "unavailable", "erroring"],
+      "confidence": 0.9
     }
   ],
 
   "edge_condition_operators": [">", "<", ">=", "<=", "==", "!="],
-  
+
   "edge_data_fields": {
     "calls": {
       "description": "Statistics for span-to-span call edges",
@@ -180,15 +79,11 @@
         "baseline_error_count": "Error count (5xx) during baseline period",
         "baseline_error_rate": "Computed: baseline_error_count / baseline_call_count",
         "baseline_avg_latency": "Average latency in seconds (baseline)",
-        "baseline_median_latency": "Median (p50) latency in seconds (baseline)",
-        "baseline_p90_latency": "P90 latency in seconds (baseline)",
         "baseline_p99_latency": "P99 latency in seconds (baseline)",
         "abnormal_call_count": "Total calls during abnormal period",
         "abnormal_error_count": "Error count (5xx) during abnormal period",
         "abnormal_error_rate": "Computed: abnormal_error_count / abnormal_call_count",
         "abnormal_avg_latency": "Average latency in seconds (abnormal)",
-        "abnormal_median_latency": "Median (p50) latency in seconds (abnormal)",
-        "abnormal_p90_latency": "P90 latency in seconds (abnormal)",
         "abnormal_p99_latency": "P99 latency in seconds (abnormal)"
       }
     }
@@ -200,9 +95,6 @@
     "replica_set|stateful_set --manages--> pod": "Controller manages Pods",
     "machine --schedules--> pod": "Node schedules Pod",
     "pod --runs--> container": "Pod runs containers",
-    "pod --claims--> pvc": "Pod claims persistent volume",
-    "pvc --binds_to--> pv": "PVC binds to PV",
-    "container --mounts--> pvc|configmap|secret": "Container mounts volumes",
     "service --routes_to--> pod": "Service routes traffic to Pods",
     "service --includes--> span|function": "Service contains API endpoints",
     "service --exposes--> endpoints": "Service exposes endpoints",

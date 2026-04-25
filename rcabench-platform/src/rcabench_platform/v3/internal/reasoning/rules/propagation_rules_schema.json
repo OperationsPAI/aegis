@@ -86,6 +86,21 @@
       "description": "Propagation direction along the edge"
     },
 
+    "canonical_state": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "healthy",
+        "slow",
+        "degraded",
+        "restarting",
+        "erroring",
+        "unavailable",
+        "missing"
+      ],
+      "description": "Canonical IR state vocabulary (Phase 2)."
+    },
+
     "path_hop": {
       "type": "object",
       "properties": {
@@ -94,8 +109,8 @@
         "intermediate_kind": { "$ref": "#/definitions/node_kind" },
         "intermediate_states": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Allowed states at intermediate node. If specified, the intermediate node must have at least one of these states for the path to be valid. Use ['healthy', 'unknown'] to bypass nodes without detected anomalies."
+          "items": { "$ref": "#/definitions/canonical_state" },
+          "description": "Allowed canonical states at intermediate node."
         },
         "edge_condition": { "$ref": "#/definitions/edge_condition" }
       },
@@ -126,6 +141,17 @@
       "description": "Condition on edge data for rule to apply"
     },
 
+    "first_hop_config": {
+      "type": "object",
+      "properties": {
+        "require_src_states": {"type": "boolean"},
+        "require_dst_states": {"type": "boolean"},
+        "lenient_dst_state_match": {"type": "boolean"}
+      },
+      "additionalProperties": false,
+      "description": "Override first-hop validation behavior."
+    },
+
     "rule": {
       "type": "object",
       "properties": {
@@ -136,6 +162,10 @@
         "_usage": {
           "type": "string",
           "description": "Optional usage hint (ignored)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable rule name (used as dict key when loaded)"
         },
         "rule_id": {
           "type": "string",
@@ -152,9 +182,9 @@
         },
         "src_states": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": { "$ref": "#/definitions/canonical_state" },
           "minItems": 1,
-          "description": "Source states that trigger this propagation"
+          "description": "Canonical source states that trigger this propagation"
         },
         "edge_kind": {
           "$ref": "#/definitions/edge_kind",
@@ -176,9 +206,9 @@
         },
         "possible_dst_states": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": { "$ref": "#/definitions/canonical_state" },
           "minItems": 1,
-          "description": "Possible resulting states in destination node"
+          "description": "Possible canonical resulting states in destination node"
         },
         "edge_condition": {
           "$ref": "#/definitions/edge_condition",
@@ -206,7 +236,8 @@
           "enum": ["builtin", "llm_generated", "manual"],
           "default": "builtin",
           "description": "Origin of this rule"
-        }
+        },
+        "first_hop_config": { "$ref": "#/definitions/first_hop_config" }
       },
       "required": ["rule_id", "description", "src_kind", "src_states", "dst_kind", "possible_dst_states"],
       "oneOf": [
