@@ -83,6 +83,10 @@ type injectSubmitItem struct {
 	Index   int    `json:"index"`
 	TraceID string `json:"trace_id"`
 	TaskID  string `json:"task_id"`
+	// AllocatedNamespace surfaces the server-picked namespace when the
+	// submit was AutoAllocate=true (see #166). Empty for explicit-ns
+	// submits.
+	AllocatedNamespace string `json:"allocated_namespace,omitempty"`
 }
 
 // ContainerRef references a container image with optional overrides. It is
