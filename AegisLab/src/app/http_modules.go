@@ -35,5 +35,8 @@ func ExecutionInjectionOwnerModules() fx.Option {
 }
 
 func ProducerHTTPModules() fx.Option {
-	return fx.Options(producerHTTPModules()...)
+	return fx.Options(
+		fx.Options(producerHTTPModules()...),
+		fx.Provide(chaosSystemWriterAdapter),
+	)
 }
