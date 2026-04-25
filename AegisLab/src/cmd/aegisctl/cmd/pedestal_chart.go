@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -322,7 +323,14 @@ func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chart
 	}
 	c := newClient()
 	var resp client.APIResponse[chartLookupResp]
-	if err := c.Get(fmt.Sprintf("/api/v2/systems/by-name/%s/chart", systemCode), &resp); err != nil {
+	// Pass --version through as a query string so the backend can return
+	// the helm_config_values for that specific container_version (issue
+	// #190). Empty version preserves the old "latest semver" behaviour.
+	chartPath := fmt.Sprintf("/api/v2/systems/by-name/%s/chart", systemCode)
+	if version != "" {
+		chartPath = fmt.Sprintf("%s?version=%s", chartPath, url.QueryEscape(version))
+	}
+	if err := c.Get(chartPath, &resp); err != nil {
 		return chartSource{}, fmt.Errorf("lookup chart for system %q: %w (hint: pass --tgz or --repo/--chart explicitly)", systemCode, err)
 	}
 	backendVersion := version

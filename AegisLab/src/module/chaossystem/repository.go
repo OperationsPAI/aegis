@@ -113,15 +113,22 @@ func (r *Repository) ListSystemMetadata(systemName, metadataType string) ([]mode
 	return metas, nil
 }
 
-// GetPedestalHelmConfigByName returns the HelmConfig for the latest active
-// pedestal ContainerVersion whose Container.Name equals the system short
-// code. The chaossystem module consumes this to expose GET /systems/by-name/
-// :name/chart — clients use it to pull the chart tgz without needing to walk
-// containers → versions → helm_configs themselves.
+// GetPedestalHelmConfigByName returns the HelmConfig for a pedestal
+// ContainerVersion whose Container.Name equals the system short code. When
+// versionName is "" the highest-versioned active container_version wins;
+// when set, the exact match is returned. The chaossystem module consumes
+// this to expose GET /systems/by-name/:name/chart[?version=…] — clients use
+// it to pull the chart tgz without needing to walk containers → versions →
+// helm_configs themselves.
 //
-// Returns (nil, nil) when the system has no pedestal container or no active
-// version — the HTTP layer maps that to a 404.
-func (r *Repository) GetPedestalHelmConfigByName(name string) (*model.HelmConfig, *model.ContainerVersion, error) {
+// The DynamicValues many-to-many is preloaded inline so the caller sees the
+// current parameter_configs.default_value rows for the requested version
+// (issue #190: the endpoint must reflect live helm_config_values, not a
+// cached snapshot).
+//
+// Returns (nil, nil, nil) when the system has no pedestal container, no
+// matching version, or no helm config — the HTTP layer maps that to 404.
+func (r *Repository) GetPedestalHelmConfigByName(name, versionName string) (*model.HelmConfig, *model.ContainerVersion, error) {
 	var container model.Container
 	if err := r.db.Where("name = ? AND type = ? AND status >= 0", name, consts.ContainerTypePedestal).
 		First(&container).Error; err != nil {
@@ -132,9 +139,17 @@ func (r *Repository) GetPedestalHelmConfigByName(name string) (*model.HelmConfig
 	}
 
 	var version model.ContainerVersion
-	if err := r.db.Where("container_id = ? AND status >= 0", container.ID).
-		Order("name_major DESC, name_minor DESC, name_patch DESC, id DESC").
-		First(&version).Error; err != nil {
+	q := r.db.Where("container_id = ? AND status >= 0", container.ID)
+	if versionName != "" {
+		// Exact-version lookup. We match on the user-visible Name column
+		// instead of the (major,minor,patch) triple so callers can't
+		// accidentally collide with a different ContainerVersion that
+		// happens to parse to the same semver triple.
+		q = q.Where("name = ?", versionName)
+	} else {
+		q = q.Order("name_major DESC, name_minor DESC, name_patch DESC, id DESC")
+	}
+	if err := q.First(&version).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil, nil
 		}
