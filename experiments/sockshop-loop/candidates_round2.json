@@ -1,0 +1,140 @@
+{
+  "round": 2,
+  "system": "sockshop",
+  "pedestal": {
+    "name": "sockshop",
+    "tag": "1.1.1"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5,
+    "container": "coherence"
+  },
+  "candidates": [
+    {
+      "id": "r01",
+      "ns": "sockshop0",
+      "app": "orders",
+      "chaos_type": "JVMException",
+      "params": {
+        "class": "com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor",
+        "method": "onOrderCreated",
+        "exception_opt": "random"
+      },
+      "valuation": 7
+    },
+    {
+      "id": "r02",
+      "ns": "sockshop1",
+      "app": "catalog",
+      "chaos_type": "JVMLatency",
+      "params": {
+        "class": "com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository",
+        "method": "loadSocksFromJson",
+        "latency_duration": 500
+      },
+      "valuation": 6
+    },
+    {
+      "id": "r03",
+      "ns": "sockshop2",
+      "app": "carts",
+      "chaos_type": "JVMReturn",
+      "params": {
+        "class": "com.oracle.coherence.examples.sockshop.helidon.carts.Cart",
+        "method": "update",
+        "return_value_opt": "default",
+        "return_type": "string"
+      },
+      "valuation": 5
+    },
+    {
+      "id": "r04",
+      "ns": "sockshop3",
+      "app": "payment",
+      "chaos_type": "JVMCPUStress",
+      "params": {
+        "class": "com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc",
+        "method": "authorize",
+        "cpu_count": 2
+      },
+      "valuation": 5
+    },
+    {
+      "id": "r05",
+      "ns": "sockshop4",
+      "app": "shipping",
+      "chaos_type": "JVMMemoryStress",
+      "params": {
+        "class": "com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource",
+        "method": "ship",
+        "memory_size": 256
+      },
+      "valuation": 5,
+      "duration_override": 5
+    },
+    {
+      "id": "r06",
+      "ns": "sockshop5",
+      "app": "front-end",
+      "chaos_type": "HTTPRequestDelay",
+      "params": {
+        "route": "/cart",
+        "http_method": "DELETE",
+        "target_service": "front-end",
+        "delay_duration": 300
+      },
+      "valuation": 3
+    },
+    {
+      "id": "r07",
+      "ns": "sockshop6",
+      "app": "users",
+      "chaos_type": "HTTPResponseAbort",
+      "params": {
+        "route": "/",
+        "http_method": "GET",
+        "target_service": "front-end"
+      },
+      "valuation": 3
+    },
+    {
+      "id": "r08",
+      "ns": "sockshop7",
+      "app": "catalog",
+      "chaos_type": "NetworkDelay",
+      "params": {
+        "target_service": "front-end",
+        "latency": 300,
+        "jitter": 30,
+        "correlation": 25,
+        "direction": "to"
+      },
+      "valuation": 1
+    },
+    {
+      "id": "r09",
+      "ns": "sockshop8",
+      "app": "users",
+      "chaos_type": "DNSError",
+      "params": {
+        "domain": "front-end"
+      },
+      "valuation": 3
+    },
+    {
+      "id": "r10",
+      "ns": "sockshop9",
+      "app": "front-end",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "valuation": 1,
+      "_note": "retry c01 with longer duration to test if no_anomaly was a duration issue",
+      "duration_override": 10
+    }
+  ]
+}
