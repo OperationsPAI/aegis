@@ -12,6 +12,7 @@ from rcabench_platform.v3.internal.reasoning.ir.adapter import (
 )
 from rcabench_platform.v3.internal.reasoning.ir.evidence import Evidence, EvidenceLevel
 from rcabench_platform.v3.internal.reasoning.ir.inference import InferenceRule, run_fixpoint
+from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.ir.states import (
     ContainerStateIR,
     PodStateIR,
@@ -39,6 +40,7 @@ __all__ = [
     "get_registered_adapters",
     "register_adapter",
     "run_fixpoint",
+    "run_reasoning_ir",
     "severity",
     "synth_timelines",
 ]
