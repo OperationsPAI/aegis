@@ -67,6 +67,11 @@ var (
 	// (in which case the namespace is cleared just for this apply).
 	guidedAutoAllocate bool
 
+	// #166 PR-C: pair with --auto to let the server bootstrap a fresh pool
+	// slot (helm install workload + bump system count) when every existing
+	// slot is occupied. No-op without --auto.
+	guidedAllowBootstrap bool
+
 	// Test seams: replace with fakes in unit tests.
 	guidedInstallerHook chartInstaller
 	guidedPodListerHook PodLister
@@ -311,6 +316,7 @@ func init() {
 	f.IntVar(&guidedInstallReadyTimeoutSec, "install-ready-timeout", 600, "Seconds --install waits for pods in the target namespace to reach Ready before continuing with discovery")
 	f.BoolVar(&guidedSkipRestartPedestal, "skip-restart-pedestal", false, "On --apply, hint the backend's RestartPedestal task to skip the helm install when the release is already healthy (task still runs; only the install step short-circuits)")
 	f.BoolVar(&guidedAutoAllocate, "auto", false, "On --apply, ask the server to pick a free deployed namespace from the system's pool (mutually exclusive with --namespace; allocated namespace surfaces in submit response). See #166.")
+	f.BoolVar(&guidedAllowBootstrap, "allow-bootstrap", false, "Pair with --auto: when no deployed slot is free, let the server bootstrap a fresh slot (helm install + bump system count) instead of failing with pool-exhausted. No-op without --auto. See #166 PR-C.")
 
 	// --apply envelope flags (mirror the injection YAML contract)
 	f.StringVar(&guidedApplyPedestalName, "pedestal-name", "", "Pedestal container name (required with --apply)")
@@ -407,6 +413,9 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	if guidedAutoAllocate {
 		envelope["auto_allocate"] = true
 	}
+	if guidedAllowBootstrap {
+		envelope["allow_bootstrap"] = true
+	}
 	if flagDryRun {
 		output.PrintJSON(map[string]any{
 			"dry_run":    true,
@@ -478,6 +487,9 @@ func submitGuidedApplyWithOptions(projectName string, cfg guidedcli.GuidedConfig
 	}
 	if guidedAutoAllocate {
 		envelope["auto_allocate"] = true
+	}
+	if guidedAllowBootstrap {
+		envelope["allow_bootstrap"] = true
 	}
 
 	c := newClient()
