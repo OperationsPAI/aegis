@@ -28,7 +28,10 @@ hyperdx:
     type: ClusterIP
   deployment:
     image:
-      repository: pair-diag-cn-guangzhou.cr.volces.com/pair/hyperdx
+      # auto-mirrored from docker.io/opspai/hyperdx:2.23.0 (pushed locally;
+      # the pair-diag project does not have 2.23.0 — only old 2.8.0)
+      repository: pair-cn-shanghai.cr.volces.com/opspai/hyperdx
+      tag: "2.23.0"
       pullPolicy: IfNotPresent
     resources:
       requests:
@@ -76,6 +79,13 @@ clickhouse:
   keeper:
     spec:
       replicas: 3
+      # Keeper image: chart default `clickhouse/clickhouse-keeper:latest` is
+      # unreachable from byte-cluster (docker.io egress flake). Pinned to a
+      # specific 25.7 alpine and routed through the volces docker.io mirror.
+      containerTemplate:
+        image:
+          repository: pair-cn-shanghai.cr.volces.com/opspai/clickhouse-keeper
+          tag: "25.7-alpine"
       dataVolumeClaimSpec:
         accessModes:
           - ReadWriteOnce
