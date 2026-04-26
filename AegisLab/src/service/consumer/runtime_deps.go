@@ -20,7 +20,14 @@ type RuntimeDeps struct {
 	// (default 30). See PR #205.
 	NsWarmingRateLimiter *TokenBucketRateLimiter
 	BuildRateLimiter     *TokenBucketRateLimiter
-	AlgorithmRateLimiter *TokenBucketRateLimiter
+	// BuildDatapackRateLimiter caps concurrent BuildDatapack tasks. Each
+	// BuildDatapack Job issues ~30 ClickHouse queries; without this cap
+	// the inject-loop fan-out has overrun ClickHouse's max_concurrent_queries
+	// ceiling. Default 8 is a conservative bound (~240 concurrent CH queries)
+	// that fits inside the bumped 2000 ceiling with plenty of headroom for
+	// other consumers. See also rate_limiting.max_concurrent_build_datapack.
+	BuildDatapackRateLimiter *TokenBucketRateLimiter
+	AlgorithmRateLimiter     *TokenBucketRateLimiter
 	RedisGateway         *redis.Gateway
 	K8sGateway           *k8s.Gateway
 	BuildKitGateway      *buildkit.Gateway

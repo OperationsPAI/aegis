@@ -389,10 +389,26 @@ const (
 	MaxConcurrentRestartPedestal = 2
 	RestartPedestalServiceName   = "restart_pedestal"
 
-	BuildContainerTokenBucket   = "token_bucket:build_container"
-	MaxTokensKeyBuildContainer  = "rate_limiting.max_concurrent_build_container"
+	BuildContainerTokenBucket = "token_bucket:build_container"
+	// MaxTokensKeyBuildContainer reads the same etcd key that the
+	// rate_limiting config handler watches (rate_limiting.max_concurrent_builds).
+	// Earlier this was "rate_limiting.max_concurrent_build_container" which
+	// disagreed with the watched key, so reload would silently no-op against
+	// the operator-set value. The Go symbol stays BuildContainerKey* to keep
+	// the BuildContainer / BuildDatapack / Algo / Restart triples symmetric.
+	MaxTokensKeyBuildContainer  = "rate_limiting.max_concurrent_builds"
 	MaxConcurrentBuildContainer = 3
 	BuildContainerServiceName   = "build_container"
+
+	// BuildDatapack rate limiting. Gates the BuildDatapack task type which
+	// fans out a Kubernetes Job that issues ~30 ClickHouse queries per
+	// invocation; without this cap the autonomous inject-loop has crossed
+	// ClickHouse's max_concurrent_queries=500 default and triggered
+	// "Code 202: Too many simultaneous queries" cascades.
+	BuildDatapackTokenBucket   = "token_bucket:build_datapack"
+	MaxTokensKeyBuildDatapack  = "rate_limiting.max_concurrent_build_datapack"
+	MaxConcurrentBuildDatapack = 8
+	BuildDatapackServiceName   = "build_datapack"
 
 	// Algorithm execution rate limiting
 	AlgoExecutionTokenBucket   = "token_bucket:algo_execution"

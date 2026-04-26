@@ -23,15 +23,16 @@ var Module = fx.Module("controller",
 type Params struct {
 	fx.In
 
-	Controller     *k8s.Controller
-	K8sGateway     *k8s.Gateway
-	RedisGateway   *redis.Gateway
-	DB             *gorm.DB
-	Monitor        consumer.NamespaceMonitor
-	AlgoLimiter    *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
-	BatchManager   *consumer.FaultBatchManager
-	ExecutionOwner consumer.ExecutionOwner
-	InjectionOwner consumer.InjectionOwner
+	Controller           *k8s.Controller
+	K8sGateway           *k8s.Gateway
+	RedisGateway         *redis.Gateway
+	DB                   *gorm.DB
+	Monitor              consumer.NamespaceMonitor
+	AlgoLimiter          *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
+	BuildDatapackLimiter *consumer.TokenBucketRateLimiter `name:"build_datapack_limiter"`
+	BatchManager         *consumer.FaultBatchManager
+	ExecutionOwner       consumer.ExecutionOwner
+	InjectionOwner       consumer.InjectionOwner
 }
 
 type Lifecycle struct {
@@ -56,6 +57,7 @@ func (r *Lifecycle) start(ctx context.Context, cancel context.CancelFunc) error 
 			r.params.DB,
 			r.params.Monitor,
 			r.params.AlgoLimiter,
+			r.params.BuildDatapackLimiter,
 			r.params.K8sGateway,
 			r.params.RedisGateway,
 			r.params.BatchManager,

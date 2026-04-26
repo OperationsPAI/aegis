@@ -226,3 +226,43 @@ func TestChaosSystemReloadDoesNotHitDB(t *testing.T) {
 		t.Fatalf("reconcile: %v", err)
 	}
 }
+
+// TestRateLimitingConfigHandlerCategory pins the consumer-scope category so a
+// future refactor that drops it from RegisterConsumerHandlers' watcher set
+// would break this test rather than silently stop reload from firing.
+func TestRateLimitingConfigHandlerCategory(t *testing.T) {
+	h := newRateLimitingConfigHandler(nil, nil, nil, nil, nil, nil)
+	if got := h.Category(); got != "rate_limiting" {
+		t.Fatalf("Category() = %q, want %q", got, "rate_limiting")
+	}
+	if got := h.Scope(); got != consts.ConfigScopeConsumer {
+		t.Fatalf("Scope() = %v, want %v", got, consts.ConfigScopeConsumer)
+	}
+}
+
+// TestRateLimitingConfigHandlerHandlesBuildDatapackKey covers the new
+// "rate_limiting.max_concurrent_build_datapack" switch case. With a nil
+// limiter the handler must remain a no-op (no panic), and unknown keys
+// must hit the default branch without erroring.
+func TestRateLimitingConfigHandlerHandlesBuildDatapackKey(t *testing.T) {
+	h := newRateLimitingConfigHandler(nil, nil, nil, nil, nil, nil)
+	if err := h.Handle(context.Background(), "rate_limiting.max_concurrent_build_datapack", "8", "12"); err != nil {
+		t.Fatalf("handle build_datapack key: %v", err)
+	}
+	if err := h.Handle(context.Background(), "rate_limiting.unknown_key", "", ""); err != nil {
+		t.Fatalf("handle unknown key (must default-no-op): %v", err)
+	}
+}
+
+// TestRateLimitingConfigKeyAlignsWithBuildContainerConst guards against the
+// historical mismatch between the watched key (max_concurrent_builds) and the
+// const the reload reads (previously max_concurrent_build_container, which
+// was never present in etcd). If they ever drift again, the watcher fires
+// and the reload silently no-ops against a default value.
+func TestRateLimitingConfigKeyAlignsWithBuildContainerConst(t *testing.T) {
+	const watchedKey = "rate_limiting.max_concurrent_builds"
+	if consts.MaxTokensKeyBuildContainer != watchedKey {
+		t.Fatalf("MaxTokensKeyBuildContainer = %q, want %q (must match the key the rate_limiting handler watches)",
+			consts.MaxTokensKeyBuildContainer, watchedKey)
+	}
+}

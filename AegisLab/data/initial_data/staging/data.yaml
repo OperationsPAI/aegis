@@ -859,6 +859,15 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 20
+  - key: rate_limiting.max_concurrent_build_datapack
+    default_value: '8'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Maximum number of concurrent BuildDatapack jobs (caps ClickHouse query fan-out)
+    is_secret: false
+    min_value: 1
+    max_value: 50
   - key: rate_limiting.max_concurrent_restarts
     default_value: '2'
     value_type: 2
