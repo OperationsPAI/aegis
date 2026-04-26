@@ -303,11 +303,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.1
+      - name: 0.1.2
         github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
-          version: 0.1.1
+          version: 0.1.2
           chart_name: teastore
           repo_name: lgu-tea
           repo_url: https://lgu-se-internal.github.io/TeaStore
@@ -344,6 +344,33 @@ containers:
               category: 1
               value_type: 0
               default_value: opentelemetry-kube-stack
+              overridable: true
+            # 0.1.2 makes the busybox image used by jmeter's wait-for-registry
+            # init container configurable (LGU-SE-Internal/TeaStore#8). The Byte
+            # cluster cannot reach docker.io, so default to the volces mirror.
+            - key: jmeter.waitForRegistryImage.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: jmeter.waitForRegistryImage.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: busybox
+              overridable: true
+            - key: jmeter.waitForRegistryImage.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "1.36"
+              overridable: true
+            - key: jmeter.waitForRegistryImage.pullPolicy
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: IfNotPresent
               overridable: true
           status: 1
 datasets:
