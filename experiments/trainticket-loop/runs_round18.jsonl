@@ -1,0 +1,12 @@
+{"ts": "2026-04-25T23:12:50+0100", "candidate_id": "tt205", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777155170}"}
+{"ts": "2026-04-25T23:12:51+0100", "candidate_id": "tt206", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777155171}"}
+{"ts": "2026-04-25T23:12:52+0100", "candidate_id": "tt207", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777155172}"}
+{"ts": "2026-04-25T23:12:53+0100", "candidate_id": "tt208", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777155173}"}
+{"ts": "2026-04-25T23:12:54+0100", "candidate_id": "tt209", "paired_with": [], "error": "{\"code\":400,\"message\":\"Invalid request format: failed to parse GuidedConfig: json: cannot unmarshal string into Go struct field guidedSpecAlias.time_offset of type int\",\"timestamp\":1777155174}"}
+{"ts": "2026-04-25T23:12:55+0100", "candidate_id": "tt210", "paired_with": [], "error": "{\"code\":400,\"message\":\"Invalid request format: failed to parse GuidedConfig: json: cannot unmarshal string into Go struct field guidedSpecAlias.time_offset of type int\",\"timestamp\":1777155175}"}
+{"ts": "2026-04-25T23:12:56+0100", "candidate_id": "tt211", "paired_with": [], "group_id": "53733658-9108-4d56-a360-fc3a4f04c3dd", "trace_id": "d693da9f-6a93-49e1-b71e-1855ea461c7d", "ns": "ts9"}
+{"ts": "2026-04-25T23:13:00+0100", "candidate_id": "tt212", "paired_with": [], "group_id": "62433f18-b04a-40fd-9a19-f2e94ceca673", "trace_id": "02930223-159f-4321-b0fa-0e29de42d375", "ns": "ts10"}
+{"ts": "2026-04-25T23:13:05+0100", "candidate_id": "tt213", "paired_with": [], "group_id": "5c89218d-40c2-4ef2-9a95-20458414843d", "trace_id": "0d46f6b9-d382-47ab-b21d-e81b28f4916e", "ns": "ts11"}
+{"ts": "2026-04-25T23:13:10+0100", "candidate_id": "tt214", "paired_with": [], "group_id": "d453eca6-45f6-46f1-a89b-a0edc99a0aab", "trace_id": "9e6456aa-38ab-4291-831e-b1be226144c0", "ns": "ts13"}
+{"ts": "2026-04-25T23:13:15+0100", "candidate_id": "tt215", "paired_with": [], "group_id": "9786a238-1b38-454f-8a0c-ee80b404fae8", "trace_id": "874b6b3d-0324-47bd-854e-5a81167d33be", "ns": "ts15"}
+{"ts": "2026-04-25T23:13:20+0100", "candidate_id": "tt216", "paired_with": [], "group_id": "42ecbc13-7307-496a-b91f-962643090d5d", "trace_id": "fe6366ac-78da-4f6a-bf23-b51af74c68ef", "ns": "ts16"}

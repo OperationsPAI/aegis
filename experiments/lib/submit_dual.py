@@ -64,7 +64,13 @@ def build_guided_config(cand: dict, defaults: dict, system: str, system_type: st
     # Direct API needs explicit duration; CLI default-fills 5 (chaos-exp resolver
     # success branch). Mirror that here.
     out["duration"] = cand.get("duration_override", 5)
-    container = defaults.get("container")
+    # For resource chaos targeting a non-JVM container, container defaults to
+    # `defaults.container` if set (sockshop=coherence) else the app name (most
+    # k8s services name the container after the app — backend rejects "" with
+    # "container not found; available: <app>"). Per-candidate `container`
+    # override (cand["container"] or params["container"]) takes precedence.
+    container = (cand.get("container") or cand.get("params", {}).get("container")
+                 or defaults.get("container") or cand["app"])
     params = cand.get("params", {})
     ct = cand["chaos_type"]
     # Mirror submit_round*.sh per-chaos_type field placement
@@ -161,6 +167,8 @@ def main():
     ap.add_argument("--token-file", default="~/.aegisctl/config.yaml")
     ap.add_argument("--server", default=DEFAULT_SERVER)
     ap.add_argument("--project", default="pair_diagnosis")
+    ap.add_argument("--submit-sleep", type=float, default=2.0,
+                    help="Sleep between submissions (seconds). Increase to avoid backend Redis allocator race when bursting same-app candidates.")
     args = ap.parse_args()
     rng = random.Random(args.seed)
 
@@ -235,7 +243,7 @@ def main():
                     "ns": ns,
                 }) + "\n")
             runs.flush()
-            time.sleep(2)
+            time.sleep(args.submit_sleep)
 
 
 if __name__ == "__main__":

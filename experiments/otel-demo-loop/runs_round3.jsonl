@@ -1,0 +1,10 @@
+{"ts": "2026-04-25T15:10:24+0100", "candidate_id": "q01", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777126224}"}
+{"ts": "2026-04-25T15:10:26+0100", "candidate_id": "q02", "paired_with": ["q03"], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777126226}"}
+{"ts": "2026-04-25T15:10:26+0100", "candidate_id": "q03", "paired_with": ["q02"], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777126226}"}
+{"ts": "2026-04-25T15:10:29+0100", "candidate_id": "q04", "paired_with": ["q05"], "group_id": "c785e42b-1513-45e1-bba5-6519923a9930", "trace_id": "930b4872-2dcc-4304-962c-c9007aa6a239", "ns": "otel-demo3"}
+{"ts": "2026-04-25T15:10:29+0100", "candidate_id": "q05", "paired_with": ["q04"], "group_id": "c785e42b-1513-45e1-bba5-6519923a9930", "trace_id": "930b4872-2dcc-4304-962c-c9007aa6a239", "ns": "otel-demo3"}
+{"ts": "2026-04-25T15:10:32+0100", "candidate_id": "q06", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777126232}"}
+{"ts": "2026-04-25T15:10:33+0100", "candidate_id": "q07", "paired_with": ["q08"], "error": "{\"code\":400,\"message\":\"Invalid request format: failed to parse GuidedConfig: json: cannot unmarshal string into Go struct field guidedSpecAlias.memory_size of type int\",\"timestamp\":1777126233}"}
+{"ts": "2026-04-25T15:10:33+0100", "candidate_id": "q08", "paired_with": ["q07"], "error": "{\"code\":400,\"message\":\"Invalid request format: failed to parse GuidedConfig: json: cannot unmarshal string into Go struct field guidedSpecAlias.memory_size of type int\",\"timestamp\":1777126233}"}
+{"ts": "2026-04-25T15:10:34+0100", "candidate_id": "q09", "paired_with": ["q10"], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777126234}"}
+{"ts": "2026-04-25T15:10:34+0100", "candidate_id": "q10", "paired_with": ["q09"], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777126234}"}

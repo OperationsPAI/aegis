@@ -1,114 +1,21 @@
 {
   "round": 4,
   "system": "sockshop",
-  "pedestal": {
-    "name": "sockshop",
-    "tag": "1.1.2"
-  },
-  "benchmark": {
-    "name": "clickhouse",
-    "tag": "1.0.0"
-  },
-  "defaults": {
-    "interval": 10,
-    "pre_duration": 5,
-    "container": "coherence"
-  },
+  "pedestal": {"name": "sockshop", "tag": "1.1.2"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5, "container": "coherence"},
   "_strategy": "Round 1+3 = 1/20 result.collection. Hypothesis: detector under-sensitive to soft chaos. Round 4 strategy: heavier-impact chaos types (PodKill > PodFailure, NetworkPartition > NetworkDelay, NetworkLoss=80, big delays) + focus on services in loadgen primary path (carts/catalog/orders).",
+  "_results": "2/10 +1 (u07 catalog/NetworkLoss80→front-end, u08 orders/NetworkDelay2s→front-end), 6/10 -1 (PodKill on carts/catalog/orders/front-end + NetworkPartition + NetworkBandwidth — heavy single-point chaos), 2/10 env-fail (u09 u10 JVMException on coherence container — temurin/JVMChaos not yet plumbed for sockshop). Signal: detector picks up cross-service network impact better than within-pod kills; sockshop stack masks single-pod loss via Coherence cluster failover.",
   "candidates": [
-    {
-      "id": "u01",
-      "app": "carts",
-      "chaos_type": "PodKill",
-      "params": {}
-    },
-    {
-      "id": "u02",
-      "app": "catalog",
-      "chaos_type": "PodKill",
-      "params": {}
-    },
-    {
-      "id": "u03",
-      "app": "orders",
-      "chaos_type": "PodKill",
-      "params": {}
-    },
-    {
-      "id": "u04",
-      "app": "front-end",
-      "chaos_type": "NetworkPartition",
-      "params": {
-        "target_service": "carts",
-        "direction": "both"
-      },
-      "duration_override": 7
-    },
-    {
-      "id": "u05",
-      "app": "front-end",
-      "chaos_type": "PodKill",
-      "params": {}
-    },
-    {
-      "id": "u06",
-      "app": "carts",
-      "chaos_type": "NetworkBandwidth",
-      "params": {
-        "target_service": "front-end",
-        "rate": 1,
-        "limit": 1000,
-        "buffer": 1000,
-        "direction": "to"
-      },
-      "duration_override": 7
-    },
-    {
-      "id": "u07",
-      "app": "catalog",
-      "chaos_type": "NetworkLoss",
-      "params": {
-        "target_service": "front-end",
-        "loss": 80,
-        "correlation": 50,
-        "direction": "to"
-      },
-      "duration_override": 7
-    },
-    {
-      "id": "u08",
-      "app": "orders",
-      "chaos_type": "NetworkDelay",
-      "params": {
-        "target_service": "front-end",
-        "latency": 2000,
-        "jitter": 200,
-        "correlation": 25,
-        "direction": "to"
-      },
-      "duration_override": 7
-    },
-    {
-      "id": "u09",
-      "app": "carts",
-      "chaos_type": "JVMException",
-      "params": {
-        "class": "com.oracle.coherence.examples.sockshop.helidon.carts.Cart",
-        "method": "add",
-        "exception_opt": "random"
-      },
-      "duration_override": 10
-    },
-    {
-      "id": "u10",
-      "app": "catalog",
-      "chaos_type": "JVMException",
-      "params": {
-        "class": "com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource",
-        "method": "getSocks",
-        "exception_opt": "random"
-      },
-      "duration_override": 10
-    }
+    {"id": "u01", "app": "carts",     "chaos_type": "PodKill",          "params": {}, "trace_id": "100e7dfc-fbba-4c9a-a8ab-c48ce3ba6477", "ns": "sockshop0", "terminal": "datapack.no_anomaly",       "reward": -1},
+    {"id": "u02", "app": "catalog",   "chaos_type": "PodKill",          "params": {}, "trace_id": "bb6c4b5d-de79-44c9-aaee-021c490411d3", "ns": "sockshop1", "terminal": "datapack.no_anomaly",       "reward": -1},
+    {"id": "u03", "app": "orders",    "chaos_type": "PodKill",          "params": {}, "trace_id": "6c8bb487-bc2e-4bf4-a44d-34c8f0865bac", "ns": "sockshop2", "terminal": "datapack.no_anomaly",       "reward": -1},
+    {"id": "u04", "app": "front-end", "chaos_type": "NetworkPartition", "params": {"target_service":"carts","direction":"both"}, "duration_override": 7, "trace_id": "125c2d43-e82b-41ed-af91-b1cc0e5a9d93", "ns": "sockshop3", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "u05", "app": "front-end", "chaos_type": "PodKill",          "params": {}, "trace_id": "6a35dd97-9c03-472b-b489-cbdd76d9e921", "ns": "sockshop9", "terminal": "datapack.no_anomaly",       "reward": -1},
+    {"id": "u06", "app": "carts",     "chaos_type": "NetworkBandwidth", "params": {"target_service":"front-end","rate":1,"limit":1000,"buffer":1000,"direction":"to"}, "duration_override": 7, "trace_id": "0dea8c85-4d76-4142-b961-0842cbc61640", "ns": "sockshop4", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "u07", "app": "catalog",   "chaos_type": "NetworkLoss",      "params": {"target_service":"front-end","loss":80,"correlation":50,"direction":"to"}, "duration_override": 7, "trace_id": "9e5c18aa-3365-4204-8b9e-dc7cdd836144", "ns": "sockshop5", "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "u08", "app": "orders",    "chaos_type": "NetworkDelay",     "params": {"target_service":"front-end","latency":2000,"jitter":200,"correlation":25,"direction":"to"}, "duration_override": 7, "trace_id": "7b7be74a-9c4c-4f71-b4ef-8330c0b12b66", "ns": "sockshop6", "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "u09", "app": "carts",     "chaos_type": "JVMException",     "params": {"class":"com.oracle.coherence.examples.sockshop.helidon.carts.Cart","method":"add","exception_opt":"random"}, "duration_override": 10, "trace_id": "c982be8a-037d-4eaa-89b8-78d433018c46", "ns": "sockshop7", "terminal": "fault.injection.failed", "reward": 0, "_note": "JVMChaos exit-101: chaos-mesh-fork:20260425-517f3df may need targeted-pod entrypoint shim; revisit when fork stable"},
+    {"id": "u10", "app": "catalog",   "chaos_type": "JVMException",     "params": {"class":"com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource","method":"getSocks","exception_opt":"random"}, "duration_override": 10, "trace_id": "737f78a0-6dbc-4411-8a49-bd696e87555e", "ns": "sockshop8", "terminal": "fault.injection.failed", "reward": 0, "_note": "Same as u09"}
   ]
 }

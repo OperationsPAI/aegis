@@ -1,0 +1,10 @@
+{"ts": "2026-04-25T16:00:32+0100", "candidate_id": "w01", "paired_with": [], "group_id": "0efe6edb-f0dc-4750-8f75-3a098e3ec73e", "trace_id": "ef9d87eb-ace7-4c1b-ac38-66dcecc807aa", "ns": "sockshop0"}
+{"ts": "2026-04-25T16:00:35+0100", "candidate_id": "w02", "paired_with": [], "group_id": "22f92e0e-c8ab-4c7b-8fa8-c2784b68ccfc", "trace_id": "f0538908-0ece-4dac-846f-24e277fa60e6", "ns": "sockshop1"}
+{"ts": "2026-04-25T16:00:40+0100", "candidate_id": "w03", "paired_with": ["w04"], "group_id": "370a174b-7d79-4aba-9789-6f415778cf7d", "trace_id": "2bae495d-18fc-4a29-8219-794ea0db731a", "ns": "sockshop2"}
+{"ts": "2026-04-25T16:00:40+0100", "candidate_id": "w04", "paired_with": ["w03"], "group_id": "370a174b-7d79-4aba-9789-6f415778cf7d", "trace_id": "2bae495d-18fc-4a29-8219-794ea0db731a", "ns": "sockshop2"}
+{"ts": "2026-04-25T16:00:43+0100", "candidate_id": "w05", "paired_with": [], "group_id": "a7282336-2e28-439c-828a-eacd5bed3461", "trace_id": "37ca7c6a-c5d1-4dd3-8141-a68b105c4495", "ns": "sockshop3"}
+{"ts": "2026-04-25T16:00:47+0100", "candidate_id": "w06", "paired_with": [], "group_id": "701dd3d2-e899-4c3e-9823-4a3dbe65636f", "trace_id": "9198a71b-c496-48b9-ba68-2441f50f6b0d", "ns": "sockshop4"}
+{"ts": "2026-04-25T16:00:51+0100", "candidate_id": "w07", "paired_with": [], "group_id": "3543178f-2279-4af4-9900-975220791b9c", "trace_id": "bef5cc2c-e560-4209-a1ba-39cb228be949", "ns": "sockshop5"}
+{"ts": "2026-04-25T16:00:54+0100", "candidate_id": "w08", "paired_with": [], "group_id": "1e6b1e37-a70d-4f32-84d1-cf3c679806f2", "trace_id": "7391536d-ea0c-46cf-b32f-c18f038bf051", "ns": "sockshop6"}
+{"ts": "2026-04-25T16:00:58+0100", "candidate_id": "w09", "paired_with": [], "group_id": "718eab11-a943-4969-9062-e7fb229b703e", "trace_id": "b885bf6e-801f-421f-adee-666bfecae169", "ns": "sockshop7"}
+{"ts": "2026-04-25T16:01:02+0100", "candidate_id": "w10", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777129262}"}
