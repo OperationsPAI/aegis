@@ -145,7 +145,15 @@ func (g *Gateway) installRelease(ctx context.Context, settings *cli.EnvSettings,
 		installAction := action.NewInstall(actionConfig)
 		installAction.ReleaseName = releaseName
 		installAction.Namespace = namespace
-		installAction.Wait = true
+		// Wait=false: do not block on cluster readiness. The manifest-apply
+		// upper bound stays at `timeout` (5–10 min is fine for the
+		// API-server-side apply itself), but DSB-class charts (TT, hs, sn,
+		// mm — 20–41 services with chained init containers) routinely take
+		// 15–25 min to become Ready cluster-side, which is far longer than
+		// any sane install timeout. Callers that need cluster-readiness
+		// must opt into the workload-level probe via
+		// k8s.Gateway.WaitNamespaceReady after this returns.
+		installAction.Wait = false
 		installAction.Timeout = timeout
 		installAction.CreateNamespace = true
 		installAction.Version = version
