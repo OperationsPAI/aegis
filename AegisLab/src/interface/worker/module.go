@@ -24,18 +24,19 @@ var Module = fx.Module("worker",
 type Params struct {
 	fx.In
 
-	DB             *gorm.DB
-	RedisGateway   *redis.Gateway
-	BuildKit       *buildkit.Gateway
-	Helm           *helm.Gateway
-	K8sGateway     *k8s.Gateway
-	Controller     *k8s.Controller
-	Etcd           *etcd.Gateway
-	Monitor        consumer.NamespaceMonitor
-	RestartLimiter *consumer.TokenBucketRateLimiter `name:"restart_limiter"`
-	WarmingLimiter *consumer.TokenBucketRateLimiter `name:"warming_limiter"`
-	BuildLimiter   *consumer.TokenBucketRateLimiter `name:"build_limiter"`
-	AlgoLimiter    *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
+	DB                   *gorm.DB
+	RedisGateway         *redis.Gateway
+	BuildKit             *buildkit.Gateway
+	Helm                 *helm.Gateway
+	K8sGateway           *k8s.Gateway
+	Controller           *k8s.Controller
+	Etcd                 *etcd.Gateway
+	Monitor              consumer.NamespaceMonitor
+	RestartLimiter       *consumer.TokenBucketRateLimiter `name:"restart_limiter"`
+	WarmingLimiter       *consumer.TokenBucketRateLimiter `name:"warming_limiter"`
+	BuildLimiter         *consumer.TokenBucketRateLimiter `name:"build_limiter"`
+	BuildDatapackLimiter *consumer.TokenBucketRateLimiter `name:"build_datapack_limiter"`
+	AlgoLimiter          *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
 	BatchManager   *consumer.FaultBatchManager
 	ExecutionOwner consumer.ExecutionOwner
 	InjectionOwner consumer.InjectionOwner
@@ -68,6 +69,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		params.RestartLimiter,
 		params.WarmingLimiter,
 		params.BuildLimiter,
+		params.BuildDatapackLimiter,
 		params.AlgoLimiter,
 	); err != nil {
 		return err
@@ -78,20 +80,21 @@ func (r *Lifecycle) start(ctx context.Context) error {
 
 	go consumer.StartScheduler(ctx, params.RedisGateway)
 	go consumer.ConsumeTasks(ctx, consumer.RuntimeDeps{
-		DB:                   params.DB,
-		Monitor:              params.Monitor,
-		RestartRateLimiter:   params.RestartLimiter,
-		NsWarmingRateLimiter: params.WarmingLimiter,
-		BuildRateLimiter:     params.BuildLimiter,
-		AlgorithmRateLimiter: params.AlgoLimiter,
-		RedisGateway:         params.RedisGateway,
-		K8sGateway:           params.K8sGateway,
-		BuildKitGateway:      params.BuildKit,
-		HelmGateway:          params.Helm,
-		FaultBatchManager:    params.BatchManager,
-		ExecutionOwner:       params.ExecutionOwner,
-		InjectionOwner:       params.InjectionOwner,
-		TaskRegistry:         params.TaskRegistry,
+		DB:                       params.DB,
+		Monitor:                  params.Monitor,
+		RestartRateLimiter:       params.RestartLimiter,
+		NsWarmingRateLimiter:     params.WarmingLimiter,
+		BuildRateLimiter:         params.BuildLimiter,
+		BuildDatapackRateLimiter: params.BuildDatapackLimiter,
+		AlgorithmRateLimiter:     params.AlgoLimiter,
+		RedisGateway:             params.RedisGateway,
+		K8sGateway:               params.K8sGateway,
+		BuildKitGateway:          params.BuildKit,
+		HelmGateway:              params.Helm,
+		FaultBatchManager:        params.BatchManager,
+		ExecutionOwner:           params.ExecutionOwner,
+		InjectionOwner:           params.InjectionOwner,
+		TaskRegistry:             params.TaskRegistry,
 	})
 	return nil
 }

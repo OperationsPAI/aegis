@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
+	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 
 	"aegis/config"
@@ -18,6 +20,8 @@ import (
 	"aegis/dto"
 	db "aegis/infra/db"
 	k8s "aegis/infra/k8s"
+	redis "aegis/infra/redis"
+	"aegis/service/common"
 	"aegis/tracing"
 	"aegis/utils"
 )
@@ -59,6 +63,51 @@ func executeBuildDatapackWithDeps(ctx context.Context, task *dto.UnifiedTask, de
 		if k8sGateway == nil {
 			return handleExecutionError(span, logEntry, "k8s gateway not initialized", fmt.Errorf("k8s gateway not initialized"))
 		}
+		redisGateway := deps.RedisGateway
+		if redisGateway == nil {
+			return handleExecutionError(span, logEntry, "redis gateway not initialized", fmt.Errorf("redis gateway not initialized"))
+		}
+
+		// Gate the BuildDatapack fan-out behind a token bucket. Each Job
+		// fires ~30 ClickHouse queries via rcabench-platform's
+		// prepare_inputs.py; without this gate, the autonomous inject-loop
+		// has crossed ClickHouse's max_concurrent_queries ceiling and
+		// triggered "Code 202: Too many simultaneous queries" cascades.
+		// Mirrors the BuildContainer / AlgoExecution guards exactly so
+		// retry / wait / reschedule semantics are uniform across task
+		// types. The token is held for the lifetime of the K8s Job and
+		// released by the job-callback path in k8s_handler.go.
+		rateLimiter := deps.BuildDatapackRateLimiter
+		if rateLimiter == nil {
+			return handleExecutionError(span, logEntry, "build datapack rate limiter not initialized", fmt.Errorf("build datapack rate limiter not initialized"))
+		}
+		acquired, err := acquireBuildDatapackToken(childCtx, rateLimiter, task, logEntry)
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to acquire rate limit token", err)
+		}
+		if !acquired {
+			if err := rescheduleBuildDatapackTask(childCtx, deps.DB, redisGateway, task, "failed to acquire build datapack token within timeout, retrying later"); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		// Job-creation success "transfers ownership" of the token to the
+		// K8s Job; the job-callback path in k8s_handler.go releases it on
+		// success or failure of the Job. Any error path BEFORE the Job is
+		// successfully created must release the token here, otherwise the
+		// bucket slowly leaks on malformed payloads or transient gateway
+		// errors and eventually wedges every BuildDatapack task at "no
+		// token available".
+		jobLaunched := false
+		defer func() {
+			if jobLaunched {
+				return
+			}
+			if releaseErr := rateLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
+				logEntry.WithError(releaseErr).Warn("failed to release build datapack token after pre-launch failure")
+			}
+		}()
 
 		payload, err := parseDatapackPayload(task.Payload)
 		if err != nil {
@@ -93,7 +142,11 @@ func executeBuildDatapackWithDeps(ctx context.Context, task *dto.UnifiedTask, de
 			payload:     payload,
 			dbConfig:    db.NewDatabaseConfig("clickhouse"),
 		}
-		return createDatapackJob(childCtx, k8sGateway, params)
+		if err := createDatapackJob(childCtx, k8sGateway, params); err != nil {
+			return err
+		}
+		jobLaunched = true
+		return nil
 	})
 }
 
@@ -217,4 +270,70 @@ func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *da
 	}
 
 	return jobEnvVars, nil
+}
+
+// acquireBuildDatapackToken runs the standard "acquire-or-wait" two-stage
+// token grab: try AcquireToken first; if the bucket is full, fall through
+// to WaitForToken; if that times out (returns false, nil) the caller is
+// expected to reschedule the task. Pulled out of executeBuildDatapackWithDeps
+// so the surge-cap behavior can be unit tested with a fakeIssuer instead of
+// requiring a live Redis Gateway.
+func acquireBuildDatapackToken(ctx context.Context, issuer tokenIssuer, task *dto.UnifiedTask, logEntry *logrus.Entry) (bool, error) {
+	span := trace.SpanFromContext(ctx)
+	acquired, err := issuer.AcquireToken(ctx, task.TaskID, task.TraceID)
+	if err != nil {
+		return false, err
+	}
+	if acquired {
+		return true, nil
+	}
+	span.AddEvent("no token available, waiting")
+	logEntry.Info("No build datapack token available, waiting...")
+	acquired, err = issuer.WaitForToken(ctx, task.TaskID, task.TraceID)
+	if err != nil {
+		return false, err
+	}
+	return acquired, nil
+}
+
+// rescheduleBuildDatapackTask reschedules a BuildDatapack task with a random
+// delay between 1 and 5 minutes when the rate-limit token wait timed out.
+// Mirrors rescheduleContainerBuildingTask / rescheduleAlgoExecutionTask so
+// the three task types behave consistently under sustained load.
+func rescheduleBuildDatapackTask(ctx context.Context, dbConn *gorm.DB, redisGateway *redis.Gateway, task *dto.UnifiedTask, reason string) error {
+	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
+		span := trace.SpanFromContext(childCtx)
+
+		randomDelayMinutes := minDelayMinutes + rand.Intn(maxDelayMinutes-minDelayMinutes+1)
+		executeTime := time.Now().Add(time.Duration(randomDelayMinutes) * time.Minute)
+
+		span.AddEvent(fmt.Sprintf("rescheduling build datapack task: %s", reason))
+		logrus.WithFields(logrus.Fields{
+			"task_id":     task.TaskID,
+			"trace_id":    task.TraceID,
+			"delay_mins":  randomDelayMinutes,
+			"retry_count": task.ReStartNum + 1,
+		}).Warnf("%s: scheduled for %s", reason, executeTime.Format(time.DateTime))
+
+		tracing.SetSpanAttribute(childCtx, consts.TaskStateKey, consts.GetTaskStateName(consts.TaskRescheduled))
+
+		updateTaskState(childCtx,
+			newTaskStateUpdate(
+				task.TraceID,
+				task.TaskID,
+				consts.TaskTypeBuildDatapack,
+				consts.TaskRescheduled,
+				reason,
+			).withEvent(consts.EventNoTokenAvailable, executeTime.String()).withDB(dbConn).withRedis(redisGateway),
+		)
+
+		task.Reschedule(executeTime)
+		if err := common.SubmitTaskWithDB(childCtx, dbConn, redisGateway, task); err != nil {
+			span.RecordError(err)
+			span.AddEvent("failed to submit rescheduled task")
+			return fmt.Errorf("failed to submit rescheduled build datapack task: %w", err)
+		}
+
+		return nil
+	})
 }

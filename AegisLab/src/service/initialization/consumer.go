@@ -34,6 +34,7 @@ func InitializeConsumer(
 	restartLimiter *consumer.TokenBucketRateLimiter,
 	warmingLimiter *consumer.TokenBucketRateLimiter,
 	buildLimiter *consumer.TokenBucketRateLimiter,
+	buildDatapackLimiter *consumer.TokenBucketRateLimiter,
 	algoLimiter *consumer.TokenBucketRateLimiter,
 ) error {
 	consumerData, err := newConfigDataWithDB(db, consts.ConfigScopeConsumer)
@@ -60,7 +61,7 @@ func InitializeConsumer(
 	}
 
 	common.RegisterGlobalHandlers(publisher)
-	consumer.RegisterConsumerHandlers(controller, monitor, publisher, restartLimiter, warmingLimiter, buildLimiter, algoLimiter)
+	consumer.RegisterConsumerHandlers(controller, monitor, publisher, restartLimiter, warmingLimiter, buildLimiter, buildDatapackLimiter, algoLimiter)
 	if err := activateConfigScope(consumerData.scope, listener); err != nil {
 		return err
 	}

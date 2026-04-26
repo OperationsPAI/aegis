@@ -196,6 +196,22 @@ func NewBuildContainerRateLimiter(gateway *redis.Gateway) *TokenBucketRateLimite
 	})
 }
 
+// NewBuildDatapackRateLimiter builds the limiter that gates BuildDatapack
+// tasks. Each BuildDatapack run launches a Kubernetes Job that issues ~30
+// ClickHouse queries via rcabench-platform's prepare_inputs.py; without
+// this cap the autonomous inject-loop fans out enough jobs at once to
+// cross ClickHouse's `max_concurrent_queries` ceiling and trigger
+// "Code 202: Too many simultaneous queries" cascades.
+func NewBuildDatapackRateLimiter(gateway *redis.Gateway) *TokenBucketRateLimiter {
+	return newTokenBucketRateLimiter(gateway, RateLimiterConfig{
+		TokenBucketKey:   consts.BuildDatapackTokenBucket,
+		MaxTokensKey:     consts.MaxTokensKeyBuildDatapack,
+		DefaultMaxTokens: consts.MaxConcurrentBuildDatapack,
+		DefaultTimeout:   consts.TokenWaitTimeout,
+		ServiceName:      consts.BuildDatapackServiceName,
+	})
+}
+
 func NewAlgoExecutionRateLimiter(gateway *redis.Gateway) *TokenBucketRateLimiter {
 	return newTokenBucketRateLimiter(gateway, RateLimiterConfig{
 		TokenBucketKey:   consts.AlgoExecutionTokenBucket,

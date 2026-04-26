@@ -127,24 +127,26 @@ type jobLabels struct {
 }
 
 type k8sHandler struct {
-	db           *gorm.DB
-	store        *stateStore
-	monitor      NamespaceMonitor
-	algoLimiter  *TokenBucketRateLimiter
-	k8sGateway   *k8s.Gateway
-	redisGateway *redis.Gateway
-	batchManager *FaultBatchManager
+	db                   *gorm.DB
+	store                *stateStore
+	monitor              NamespaceMonitor
+	algoLimiter          *TokenBucketRateLimiter
+	buildDatapackLimiter *TokenBucketRateLimiter
+	k8sGateway           *k8s.Gateway
+	redisGateway         *redis.Gateway
+	batchManager         *FaultBatchManager
 }
 
-func NewHandler(db *gorm.DB, monitor NamespaceMonitor, algoLimiter *TokenBucketRateLimiter, k8sGateway *k8s.Gateway, redisGateway *redis.Gateway, batchManager *FaultBatchManager, execution ExecutionOwner, injection InjectionOwner) *k8sHandler {
+func NewHandler(db *gorm.DB, monitor NamespaceMonitor, algoLimiter *TokenBucketRateLimiter, buildDatapackLimiter *TokenBucketRateLimiter, k8sGateway *k8s.Gateway, redisGateway *redis.Gateway, batchManager *FaultBatchManager, execution ExecutionOwner, injection InjectionOwner) *k8sHandler {
 	return &k8sHandler{
-		db:           db,
-		store:        newStateStore(execution, injection),
-		monitor:      monitor,
-		algoLimiter:  algoLimiter,
-		k8sGateway:   k8sGateway,
-		redisGateway: redisGateway,
-		batchManager: batchManager,
+		db:                   db,
+		store:                newStateStore(execution, injection),
+		monitor:              monitor,
+		algoLimiter:          algoLimiter,
+		buildDatapackLimiter: buildDatapackLimiter,
+		k8sGateway:           k8sGateway,
+		redisGateway:         redisGateway,
+		batchManager:         batchManager,
 	}
 }
 
@@ -473,6 +475,20 @@ func (h *k8sHandler) HandleJobFailed(job *batchv1.Job, annotations map[string]st
 	var payload any
 	switch parsedLabels.taskType {
 	case consts.TaskTypeBuildDatapack:
+		// Release the BuildDatapack token first so a flood of failures
+		// does not wedge the bucket. Release-on-failure mirrors the
+		// algorithm path below.
+		if rateLimiter := h.buildDatapackLimiter; rateLimiter != nil {
+			if releaseErr := rateLimiter.ReleaseToken(taskCtx, parsedLabels.taskID, parsedLabels.traceID); releaseErr != nil {
+				errCtx.Warn(nil, "failed to release build datapack token on job failure", releaseErr)
+			} else {
+				logEntry.Info("successfully released build datapack token on job failure")
+				taskSpan.AddEvent("successfully released build datapack token on job failure")
+			}
+		} else {
+			errCtx.Warn(nil, "build datapack rate limiter not initialized on job failure", fmt.Errorf("build datapack rate limiter not initialized"))
+		}
+
 		logEntry.Error("datapack build failed")
 		taskSpan.AddEvent("datapack build failed")
 
@@ -583,6 +599,20 @@ func (h *k8sHandler) HandleJobSucceeded(job *batchv1.Job, annotations map[string
 
 	switch parsedLabels.taskType {
 	case consts.TaskTypeBuildDatapack:
+		// Release the BuildDatapack token now that the job has finished;
+		// holding it any longer would slow-leak the bucket. Mirrors the
+		// release-on-success of the algorithm path below.
+		if rateLimiter := h.buildDatapackLimiter; rateLimiter != nil {
+			if releaseErr := rateLimiter.ReleaseToken(taskCtx, parsedLabels.taskID, parsedLabels.traceID); releaseErr != nil {
+				errCtx.Warn(nil, "failed to release build datapack token on job success", releaseErr)
+			} else {
+				logEntry.Info("successfully released build datapack token on job success")
+				taskSpan.AddEvent("successfully released build datapack token on job success")
+			}
+		} else {
+			errCtx.Warn(nil, "build datapack rate limiter not initialized on job success", fmt.Errorf("build datapack rate limiter not initialized"))
+		}
+
 		logEntry.Info("datapack build successfully")
 		taskSpan.AddEvent("datapack build successfully")
 

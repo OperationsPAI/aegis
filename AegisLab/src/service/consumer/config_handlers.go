@@ -28,6 +28,7 @@ func RegisterConsumerHandlers(
 	restartLimiter *TokenBucketRateLimiter,
 	warmingLimiter *TokenBucketRateLimiter,
 	buildLimiter *TokenBucketRateLimiter,
+	buildDatapackLimiter *TokenBucketRateLimiter,
 	algoLimiter *TokenBucketRateLimiter,
 ) {
 	// Wire the controller as the monitor's NamespaceActivator so a successful
@@ -48,6 +49,7 @@ func RegisterConsumerHandlers(
 		restartLimiter,
 		warmingLimiter,
 		buildLimiter,
+		buildDatapackLimiter,
 		algoLimiter,
 	))
 	consumerScope := consts.ConfigScopeConsumer
@@ -307,11 +309,12 @@ func (h *chaosSystemHandler) refreshNamespaces() error {
 // =====================================================================
 
 type rateLimitingConfigHandler struct {
-	publisher      common.ConfigPublisher
-	restartLimiter *TokenBucketRateLimiter
-	warmingLimiter *TokenBucketRateLimiter
-	buildLimiter   *TokenBucketRateLimiter
-	algoLimiter    *TokenBucketRateLimiter
+	publisher            common.ConfigPublisher
+	restartLimiter       *TokenBucketRateLimiter
+	warmingLimiter       *TokenBucketRateLimiter
+	buildLimiter         *TokenBucketRateLimiter
+	buildDatapackLimiter *TokenBucketRateLimiter
+	algoLimiter          *TokenBucketRateLimiter
 }
 
 func newRateLimitingConfigHandler(
@@ -319,14 +322,16 @@ func newRateLimitingConfigHandler(
 	restartLimiter *TokenBucketRateLimiter,
 	warmingLimiter *TokenBucketRateLimiter,
 	buildLimiter *TokenBucketRateLimiter,
+	buildDatapackLimiter *TokenBucketRateLimiter,
 	algoLimiter *TokenBucketRateLimiter,
 ) *rateLimitingConfigHandler {
 	return &rateLimitingConfigHandler{
-		publisher:      publisher,
-		restartLimiter: restartLimiter,
-		warmingLimiter: warmingLimiter,
-		buildLimiter:   buildLimiter,
-		algoLimiter:    algoLimiter,
+		publisher:            publisher,
+		restartLimiter:       restartLimiter,
+		warmingLimiter:       warmingLimiter,
+		buildLimiter:         buildLimiter,
+		buildDatapackLimiter: buildDatapackLimiter,
+		algoLimiter:          algoLimiter,
 	}
 }
 
@@ -343,10 +348,21 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 
 		switch key {
 		case "rate_limiting.max_concurrent_builds":
+			// consts.MaxTokensKeyBuildContainer now points at the same
+			// "rate_limiting.max_concurrent_builds" key the watcher fires
+			// on; previously they disagreed and the operator-set value was
+			// silently ignored on reload.
 			if h.buildLimiter != nil {
 				maxTokens := config.GetInt(consts.MaxTokensKeyBuildContainer)
 				_, currentTimeout := h.buildLimiter.GetConfig()
 				h.buildLimiter.UpdateConfig(maxTokens, currentTimeout)
+			}
+
+		case "rate_limiting.max_concurrent_build_datapack":
+			if h.buildDatapackLimiter != nil {
+				maxTokens := config.GetInt(consts.MaxTokensKeyBuildDatapack)
+				_, currentTimeout := h.buildDatapackLimiter.GetConfig()
+				h.buildDatapackLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
 
 		case "rate_limiting.max_concurrent_restarts":
@@ -385,6 +401,10 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 			if h.buildLimiter != nil {
 				maxTokens, _ := h.buildLimiter.GetConfig()
 				h.buildLimiter.UpdateConfig(maxTokens, timeout)
+			}
+			if h.buildDatapackLimiter != nil {
+				maxTokens, _ := h.buildDatapackLimiter.GetConfig()
+				h.buildDatapackLimiter.UpdateConfig(maxTokens, timeout)
 			}
 			if h.algoLimiter != nil {
 				maxTokens, _ := h.algoLimiter.GetConfig()
