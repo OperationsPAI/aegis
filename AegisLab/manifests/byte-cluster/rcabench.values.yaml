@@ -73,7 +73,14 @@ configmap:
       busybox_image: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox:1.35
   database:
     clickhouse:
-      host: clickstack-clickhouse.monitoring.svc.cluster.local
+      # Operator-managed ClickStack cluster (chart 2.x). The chart helper
+      # `clickstack.clickhouse.svc` renders the headless Service name
+      # `<release>-clickhouse-clickhouse-headless`; with release name
+      # `clickstack` that's `clickstack-clickhouse-clickhouse-headless`.
+      # ClickHouse client load-balances across pods returned by the
+      # headless DNS lookup, so this works for a 2-replica cluster without
+      # any extra Service.
+      host: clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local
       port: "8123"
       user: default
       password: ""

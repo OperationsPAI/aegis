@@ -444,7 +444,11 @@ dynamic_configs:
     description: Enable or disable debugging features
     is_secret: false
   - key: database.clickhouse.host
-    default_value: clickstack-clickhouse.monitoring.svc.cluster.local
+    # Operator-managed ClickStack headless Service (chart 2.x). With release
+    # name `clickstack` the helper `clickstack.clickhouse.svc` renders
+    # `clickstack-clickhouse-clickhouse-headless`. The ClickHouse client
+    # load-balances over the pods returned by the headless DNS lookup.
+    default_value: clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local
     value_type: 0
     scope: 1
     category: database.clickhouse

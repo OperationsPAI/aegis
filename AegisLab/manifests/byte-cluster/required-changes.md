@@ -13,7 +13,7 @@ This directory is the ByteDance/Volcengine deployment pack derived from the repo
   - this pack ships patched copies under `initial-data/` so benchmark/runtime jobs and system chart installs resolve from `pair-cn-shanghai.cr.volces.com/opspai/*`
 - Backend config:
   - the Helm chart did not previously emit a `[database.clickhouse]` block even though datapack and `aegisctl cluster preflight` need it
-  - this pack adds chart support for ClickHouse connection settings and points them at `clickstack-clickhouse.monitoring.svc.cluster.local:8123` / database `otel`
+  - this pack adds chart support for ClickHouse connection settings and points them at the operator-managed headless Service `clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123` / database `otel` (see step 2 in `README.md` and `AegisLab/vendor/clickstack-chart/SOURCE.txt`)
 - Image pull secrets:
   - the Helm chart service account did not previously support `imagePullSecrets`
   - this pack adds that support, but the current Byte-cluster values do not require an image pull Secret because both `pair/*` and `pair-cn-shanghai.cr.volces.com/opspai/*` are expected to be directly reachable
@@ -32,7 +32,7 @@ This directory is the ByteDance/Volcengine deployment pack derived from the repo
 
 - `README.md`: deployment order and smoke-test commands
 - `chaos-mesh.values.yaml`: Chaos Mesh values for containerd-based clusters
-- `clickstack.values.yaml`: ClickStack values for the shared ClickHouse backend
+- `clickstack.values.yaml`: ClickStack values for the shared ClickHouse backend (operator-managed cluster from the vendored unreleased chart at `AegisLab/vendor/clickstack-chart`)
 - `otel-kube-stack.values.yaml`: trimmed OTel Kube Stack based on the kind variant, with collector HPA
 - `daemon-scrape-configs.yaml`: daemon collector scrape config aligned with the kind variant
 - `rcabench.values.yaml`: AegisLab backend/runtime values for Byte cluster

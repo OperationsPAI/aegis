@@ -311,7 +311,14 @@ collectors:
                 - from: connection
       exporters:
         clickhouse:
-          endpoint: tcp://clickstack-clickhouse.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
+          # Operator-managed ClickStack cluster headless Service. With release
+          # name `clickstack` the chart helper `clickstack.clickhouse.svc`
+          # renders `clickstack-clickhouse-clickhouse-headless`; the
+          # `monitoring.svc.cluster.local` suffix is the namespace + cluster
+          # domain. The exporter deliberately keeps `username=default` to
+          # avoid coupling the OTel pipeline to the otelcollector user
+          # password (which is now templated through hyperdx.secrets).
+          endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
           ttl: 72h
           logs_table_name: otel_logs
@@ -377,7 +384,14 @@ collectors:
     config:
       exporters:
         clickhouse:
-          endpoint: tcp://clickstack-clickhouse.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
+          # Operator-managed ClickStack cluster headless Service. With release
+          # name `clickstack` the chart helper `clickstack.clickhouse.svc`
+          # renders `clickstack-clickhouse-clickhouse-headless`; the
+          # `monitoring.svc.cluster.local` suffix is the namespace + cluster
+          # domain. The exporter deliberately keeps `username=default` to
+          # avoid coupling the OTel pipeline to the otelcollector user
+          # password (which is now templated through hyperdx.secrets).
+          endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
           ttl: 72h
           logs_table_name: otel_logs

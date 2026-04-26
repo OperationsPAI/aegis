@@ -1,0 +1,56 @@
+# Vendored ClickStack Helm chart
+
+Upstream:        https://github.com/ClickHouse/ClickStack-helm-charts
+Path in upstream: charts/clickstack
+Pinned commit:   a7862878b89aa30d459fbda602087cb76defd33a
+Branch:          main (at the time of vendoring)
+Chart name:      clickstack
+Chart version:   2.1.1
+App version:     2.23.0
+Vendored on:     2026-04-26
+
+## Why we vendor
+
+The released `clickstack/clickstack` chart maxes out at `1.1.1` (plain
+Deployment, single ClickHouse instance, no replication, no HPA). The `main`
+branch was overhauled to use the ClickHouse operator (CRDs `ClickHouseCluster`
+and `KeeperCluster`) and adds HPA support for the HyperDX app. The
+byte-cluster needs all of that, but `1.1.1 -> 2.x` is unreleased upstream, so
+we snapshot the unreleased chart here and pin the commit instead of depending
+on a fluid upstream `main`.
+
+## How to refresh
+
+```bash
+git clone --depth 1 -b main https://github.com/ClickHouse/ClickStack-helm-charts /tmp/clickstack-helm-charts
+cd /tmp/clickstack-helm-charts && git rev-parse HEAD   # capture new commit
+rsync -a --delete /tmp/clickstack-helm-charts/charts/clickstack/ \
+                  AegisLab/vendor/clickstack-chart/ \
+                  --exclude SOURCE.txt
+# Edit AegisLab/vendor/clickstack-chart/SOURCE.txt to bump the pinned commit.
+helm template clickstack AegisLab/vendor/clickstack-chart \
+  -n monitoring -f AegisLab/manifests/byte-cluster/clickstack.values.yaml \
+  > /tmp/rendered.yaml
+# Eyeball the diff vs. the previous render before committing.
+```
+
+## Operator dependency
+
+The chart renders `ClickHouseCluster` and `KeeperCluster` CRs (apiVersion
+`clickhouse.com/v1alpha1`), so a ClickHouse operator that owns those CRDs
+must already be installed in the cluster. On the byte cluster, the
+`clickstack-operators-clickhouse-operator-controller` Deployment is already
+running in the `default` namespace and was reused for this migration.
+
+The chart also depends on the OpenTelemetry collector subchart
+(`opentelemetry-collector ~0.146.0`); we keep `otel-collector.enabled: false`
+in our values because aegis ships its own OTel kube stack at the cluster
+level — the embedded collector would duplicate the data plane.
+
+## What is NOT vendored
+
+The `Chart.lock` file references an `opentelemetry-collector` dependency at
+version `0.146.1`. We do not pull or commit the dependency tarball under
+`charts/` because we disable that subchart at install time
+(`otel-collector.enabled: false`). If the subchart is ever re-enabled,
+`helm dependency build AegisLab/vendor/clickstack-chart` must be run first.
