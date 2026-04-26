@@ -101,6 +101,14 @@ func (g *Gateway) DeleteChaosCRDsByLabel(ctx context.Context, labelKey, labelVal
 	return DeleteChaosCRDsByLabel(ctx, chaosGVRs, labelKey, labelValue)
 }
 
+// CleanupNamespaceChaosResources reaps zombie chaos-mesh.org CRs in a single
+// namespace before a helm restart. Best-effort; see
+// CleanupNamespaceChaosResources for semantics. Callers should NOT fail the
+// task on returned warnings — chaos-CR cleanup is advisory.
+func (g *Gateway) CleanupNamespaceChaosResources(ctx context.Context, namespace string) (map[string]int, []error) {
+	return CleanupNamespaceChaosResources(ctx, namespace)
+}
+
 // EnsureNamespace creates the namespace if it doesn't exist. Returns
 // (created, err). Harmless on existing namespaces — AlreadyExists is treated
 // as success. Breaks the submit→restart-pedestal chicken-and-egg: a first-run
