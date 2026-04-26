@@ -87,3 +87,33 @@ def severity(state: str) -> int:
     severity.
     """
     return _SEVERITY.get(state, 0)
+
+
+_INTRA_TIER_PRECEDENCE: dict[str, int] = {
+    # tier 5
+    "unavailable": 1,
+    "missing": 0,
+    # tier 4
+    "erroring": 1,
+    "silent": 0,
+    # tier 3
+    "restarting": 1,
+    "degraded": 0,
+    # tier 0/1/2 have only one canonical state — precedence is moot.
+}
+
+
+def intra_tier_precedence(state: str) -> int:
+    """Return the intra-tier precedence rank for a state name.
+
+    Per ``docs/reasoning-feature-taxonomy.md`` §7.1, when two adapters emit
+    transitions at the same ``(entity, time)`` and their target states share
+    a severity tier, the tie must NOT be broken by stream order. Direct
+    observation of failure (``UNAVAILABLE`` k8s ready=false, ``ERRORING``
+    span 5xx/exception, ``RESTARTING`` pod cycling) outranks states inferred
+    from absence/pressure (``MISSING`` no-observation, ``SILENT`` rate-drop,
+    ``DEGRADED`` capacity pressure). This preserves the Class C verification
+    chain ``service.erroring → span.erroring → caller.erroring`` when a
+    fault produces both an ERRORING and a SILENT signal simultaneously.
+    """
+    return _INTRA_TIER_PRECEDENCE.get(state, 0)

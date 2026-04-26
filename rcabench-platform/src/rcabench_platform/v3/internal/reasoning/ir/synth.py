@@ -23,7 +23,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 from rcabench_platform.v3.internal.reasoning.ir.evidence import Evidence, EvidenceLevel
-from rcabench_platform.v3.internal.reasoning.ir.states import severity
+from rcabench_platform.v3.internal.reasoning.ir.states import intra_tier_precedence, severity
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline, TimelineWindow
 from rcabench_platform.v3.internal.reasoning.ir.transition import Transition
 from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
@@ -41,8 +41,39 @@ def _merge_evidence(primary: Evidence, extra: Evidence) -> Evidence:
     return merged
 
 
+def _shadow_loser(winner_evidence: Evidence, loser: Transition) -> Evidence:
+    """Demote ``loser`` into the winner's ``shadowed`` list; carry its labels.
+
+    Per methodology §7.1: specialization labels (Class F) live on a separate
+    axis from canonical states and survive precedence loss — the labels of a
+    demoted state are unioned into the winner's ``specialization_labels``.
+    The rest of the loser's evidence is appended to ``shadowed`` so rules can
+    still see the lower-precedence signal was observed.
+    """
+    merged: Evidence = dict(winner_evidence)  # type: ignore[assignment]
+    loser_labels = loser.evidence.get("specialization_labels")
+    if loser_labels:
+        existing = merged.get("specialization_labels", frozenset())
+        merged["specialization_labels"] = frozenset(existing) | frozenset(loser_labels)
+    existing_shadow = merged.get("shadowed", ())
+    merged["shadowed"] = tuple(existing_shadow) + ((loser.to_state, loser.evidence),)
+    return merged
+
+
+def _rank(state: str) -> tuple[int, int]:
+    return (severity(state), intra_tier_precedence(state))
+
+
 def _collapse_simultaneous(group: list[Transition]) -> Transition:
-    """Reduce same-(node, at) transitions to a single winning Transition."""
+    """Reduce same-(node, at) transitions to a single winning Transition.
+
+    Tie-breaking lexicographically on ``(severity, intra_tier_precedence)``:
+    higher severity tier wins outright; intra-tier ties resolve by direct-
+    observation precedence (see ``states.intra_tier_precedence`` and
+    ``docs/reasoning-feature-taxonomy.md`` §7.1). Demoted states are
+    recorded under ``evidence['shadowed']`` so the lower-precedence signal
+    is not silently lost.
+    """
     winner = group[0]
     for t in group[1:]:
         if t.to_state == winner.to_state:
@@ -57,8 +88,29 @@ def _collapse_simultaneous(group: list[Transition]) -> Transition:
                 evidence=_merge_evidence(winner.evidence, t.evidence),
             )
             continue
-        if severity(t.to_state) > severity(winner.to_state):
-            winner = t
+        if _rank(t.to_state) > _rank(winner.to_state):
+            new_evidence = _shadow_loser(t.evidence, winner)
+            winner = Transition(
+                node_key=t.node_key,
+                kind=t.kind,
+                at=t.at,
+                from_state=t.from_state,
+                to_state=t.to_state,
+                trigger=t.trigger,
+                level=t.level,
+                evidence=new_evidence,
+            )
+        else:
+            winner = Transition(
+                node_key=winner.node_key,
+                kind=winner.kind,
+                at=winner.at,
+                from_state=winner.from_state,
+                to_state=winner.to_state,
+                trigger=winner.trigger,
+                level=winner.level,
+                evidence=_shadow_loser(winner.evidence, t),
+            )
     return winner
 
 

@@ -44,3 +44,9 @@ class Evidence(TypedDict, total=False):
     observed: NotRequired[float]
     threshold: NotRequired[float]
     specialization_labels: NotRequired[frozenset[str]]
+    # Demoted same-(entity, time) transitions whose ``to_state`` lost the
+    # intra-tier precedence tie-break (see ``states.intra_tier_precedence``
+    # and ``docs/reasoning-feature-taxonomy.md`` §7.1). Each entry is a
+    # ``(loser_to_state, loser_evidence)`` pair so downstream rules can still
+    # see that the lower-precedence signal was observed.
+    shadowed: NotRequired[tuple[tuple[str, "Evidence"], ...]]
