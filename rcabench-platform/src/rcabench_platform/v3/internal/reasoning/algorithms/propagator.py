@@ -95,19 +95,6 @@ class FaultPropagator:
                 src_id, dst_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
             )
 
-        # Reverse-orientation filter for the backward reach pass: an edge
-        # (a, b) participates in backward reach from b iff (b → a) matches
-        # some rule's forward propagation direction. Without this swap,
-        # backward BFS rejects edges that do propagate (in rule direction)
-        # but whose graph orientation runs counter to the rule.
-        def backward_edge_filter(src_id: int, dst_id: int, is_first_hop: bool) -> bool:
-            src_states = self._states_for_node(dst_id)
-            dst_states = self._states_for_node(src_id)
-            src_labels = self._labels_for_node(dst_id)
-            return self.rule_matcher.edge_matches_any_rule(
-                dst_id, src_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
-            )
-
         # §7.6 step 6 + §13.2 step 2.6 — bidirectional corridor + activity filter.
         # corridor       = Reach_forward(injection_set, max_hops_fwd)
         #                ∩ Reach_backward(alarm_set,    max_hops_bwd)
@@ -119,10 +106,40 @@ class FaultPropagator:
         # we reuse ``find_reachable_subgraph`` (neighbor-based, both edge
         # directions, edge_filter applied) for both passes — matching how
         # the propagator already enumerates walkable subgraphs.
+        injection_set = set(injection_node_ids)
+
+        # Reverse-orientation filter for the backward reach pass: an edge
+        # (a, b) participates in backward reach from b iff (b → a) matches
+        # some rule's forward propagation direction. Critically, we must
+        # also reproduce the forward filter's first_hop_config semantics on
+        # the injection end of the chain — without this, backward BFS
+        # rejects rule-less first edges that forward admits.
+        #
+        # In rcabench, ``container`` kind's ``DEFAULT_FIRST_HOP_CONFIGS``
+        # has ``require_src_states=False`` so a Class C JVMException
+        # injection (container.erroring, no matching rule for
+        # container.erroring → anything) still crosses the first edge
+        # forward. The methodology-aligned refactor exposed this
+        # asymmetry: backward without the equivalent relaxation cannot
+        # walk back into the injection container from its pod, so the
+        # corridor breaks for these cases.
+        #
+        # The fix sets ``is_first_hop=True`` on the swapped rule check
+        # iff ``dst_id`` (the neighbor we're stepping toward in backward
+        # BFS, which becomes the SRC of the forward-propagation rule)
+        # is in the original ``injection_set``.
+        def backward_edge_filter(src_id: int, dst_id: int, is_first_hop_unused: bool) -> bool:
+            src_states = self._states_for_node(dst_id)
+            dst_states = self._states_for_node(src_id)
+            src_labels = self._labels_for_node(dst_id)
+            is_first_hop = dst_id in injection_set
+            return self.rule_matcher.edge_matches_any_rule(
+                dst_id, src_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
+            )
+
         forward_edges = self.topology_explorer.find_reachable_subgraph(
             injection_node_ids, alarm_nodes, edge_filter
         )
-        injection_set = set(injection_node_ids)
         forward_visited: set[int] = set(injection_set)
         for s, d in forward_edges:
             forward_visited.add(s)

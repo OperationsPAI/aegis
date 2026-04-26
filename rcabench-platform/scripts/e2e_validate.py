@@ -52,7 +52,7 @@ def _run_one(case_dir: Path) -> dict[str, Any]:
     try:
         result = run_single_case(
             case_dir,
-            max_hops=30,
+            max_hops=15,
             return_graph=False,
             injection_data=injection_data,
         )

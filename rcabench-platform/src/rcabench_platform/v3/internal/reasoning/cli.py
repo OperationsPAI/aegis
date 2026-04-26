@@ -864,7 +864,7 @@ def _log_batch_summary(stats: dict[str, int], total_time: float) -> None:
 @app.command("run")
 def run(
     data_dir: str = typer.Option(..., help="Directory containing parquet data files"),
-    max_hops: int = typer.Option(20, help="Maximum propagation hops"),
+    max_hops: int = typer.Option(15, help="Maximum propagation hops"),
 ) -> int:
     """Run fault propagation analysis for a single case."""
     setup_logging(verbose=True)
@@ -928,7 +928,7 @@ def batch(
     ),
     max_cases: int = typer.Option(0, help="Maximum number of cases to run (0 = all)"),
     max_workers: int = typer.Option(12, help="Maximum number of parallel workers"),
-    max_hops: int = typer.Option(30, help="Maximum propagation hops"),
+    max_hops: int = typer.Option(15, help="Maximum propagation hops"),
     force: bool = typer.Option(False, "--force", help="Force reprocess all cases"),
     retry_no_paths: bool = typer.Option(False, "--retry-no-paths", help="Only retry no_paths cases"),
 ) -> int:

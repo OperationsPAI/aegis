@@ -19,10 +19,17 @@ from rcabench_platform.v3.internal.reasoning.models.graph import HyperGraph
 logger = logging.getLogger(__name__)
 
 # Maximum times a single node can appear in a path.
-# Set to 2 to support diamond-shaped paths like:
-#   span -> service -> pod -> service -> span
-#   span -> service -> pod -> container -> pod -> service -> span
-DEFAULT_MAX_NODE_VISITS = 2
+#
+# Occam's razor: a diamond like ``A_span -> service -> B_span -> service ->
+# C_span`` is structurally the same propagation chain as ``A -> B -> C`` at
+# the service level, just padded by re-entering the shared service /
+# pod / container infra node. Allowing visits=2 produces 16k+ span-level
+# permutations of the same logical service chain (verified empirically on
+# Class C train-service-exception: 99994 paths collapse to ~6 distinct
+# (src, alarm) endpoint pairs and well under 100 distinct service
+# sequences). visits=1 keeps each node once per path so the simpler
+# representation always wins.
+DEFAULT_MAX_NODE_VISITS = 1
 
 # Safety net for path enumeration (§7.6 step 8). After corridor pruning a
 # real benchmark case (~300 nodes, ~800 edges) yields far fewer than this;
