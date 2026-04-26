@@ -22,6 +22,16 @@ Execution is two-phase:
 The structural pass is the only place where containment-driven state is
 expressed at the IR layer; rule matching and propagation continue to run
 unchanged downstream of synth.
+
+``TraceVolumeAdapter`` is a Class E (traffic isolation) observation
+adapter — see methodology §3.E and §11.2. It is wired conditionally on
+``abnormal_window_end``: when the caller supplies a valid abnormal
+window, the adapter is appended to the standard observation set and may
+emit ``service.silent`` transitions for services whose abnormal-window
+span rate falls below the per-(svc, case) calibrated lower-tail
+threshold. When ``abnormal_window_end`` is ``None`` (e.g. legacy tests
+that have no notion of an end timestamp), the adapter is silently
+skipped to preserve backward compatibility.
 """
 
 from __future__ import annotations
@@ -35,6 +45,7 @@ from rcabench_platform.v3.internal.reasoning.ir.adapters.k8s_metrics import K8sM
 from rcabench_platform.v3.internal.reasoning.ir.adapters.structural_inheritance import (
     StructuralInheritanceAdapter,
 )
+from rcabench_platform.v3.internal.reasoning.ir.adapters.trace_volume import TraceVolumeAdapter
 from rcabench_platform.v3.internal.reasoning.ir.adapters.traces import TraceStateAdapter
 from rcabench_platform.v3.internal.reasoning.ir.inference import InferenceRule, run_fixpoint
 from rcabench_platform.v3.internal.reasoning.ir.synth import synth_timelines
@@ -56,6 +67,9 @@ def run_reasoning_ir(
     inference_rules: list[InferenceRule] | None = None,
     observation_start: int | None = None,
     observation_end: int | None = None,
+    abnormal_window_end: int | None = None,
+    trace_volume_alpha: float = 0.01,
+    trace_volume_rng_seed: int | None = None,
 ) -> dict[str, StateTimeline]:
     """Build canonical ``StateTimeline``s for every node observed by any adapter.
 
@@ -74,6 +88,18 @@ def run_reasoning_ir(
             is empty (no rules).
         observation_start / observation_end: pinned observation bounds
             forwarded to ``synth_timelines``.
+        abnormal_window_end: unix-seconds end of the abnormal observation
+            window. Required for ``TraceVolumeAdapter`` (Class E silent
+            detection); if ``None`` or not strictly greater than
+            ``injection_at``, the adapter is skipped (no exception, no
+            fake bound) — this preserves backward compatibility for
+            callers/tests that have no notion of a window end.
+        trace_volume_alpha: per-(svc, case) false-positive budget for the
+            ``TraceVolumeAdapter`` calibrator per §11.2. Defaults to
+            ``0.01`` (the §11.4 baseline).
+        trace_volume_rng_seed: forwarded to ``TraceVolumeAdapter`` for
+            test reproducibility; production runs should leave this at
+            ``None`` so the bootstrap draws fresh randomness.
     """
     observation_adapters: list[StateAdapter] = [
         InjectionAdapter(resolved=resolved, injection_at=injection_at),
@@ -83,6 +109,17 @@ def run_reasoning_ir(
         # no-ops on stacks that don't carry the metrics it cares about.
         JvmAugmenterAdapter(graph=graph),
     ]
+    if abnormal_window_end is not None and abnormal_window_end > injection_at:
+        observation_adapters.append(
+            TraceVolumeAdapter(
+                baseline_traces=baseline_traces,  # type: ignore[arg-type]
+                abnormal_traces=abnormal_traces,  # type: ignore[arg-type]
+                abnormal_window_start=injection_at,
+                abnormal_window_end=abnormal_window_end,
+                alpha=trace_volume_alpha,
+                rng_seed=trace_volume_rng_seed,
+            )
+        )
     if extra_adapters:
         observation_adapters.extend(extra_adapters)
 

@@ -372,6 +372,30 @@ def _earliest_abnormal_seconds(abnormal_traces: pl.DataFrame) -> int:
     return int(raw)  # type: ignore[arg-type]
 
 
+def _latest_abnormal_seconds(abnormal_traces: pl.DataFrame) -> int:
+    """Latest abnormal-trace timestamp normalized to unix seconds.
+
+    Mirrors ``ir/adapters/traces.py::_ts_seconds`` so the abnormal-window
+    end used by ``TraceVolumeAdapter`` lands on the same time axis as the
+    InjectionAdapter seed regardless of how parquet stores ``time``
+    (Datetime[ns]/[us]/[ms], or int nanos/micros/secs).
+    """
+    if abnormal_traces.height == 0 or "time" not in abnormal_traces.columns:
+        return 0
+    raw = abnormal_traces["time"].max()
+    if raw is None:
+        return 0
+    if isinstance(raw, datetime):
+        return int(raw.timestamp())
+    if isinstance(raw, int):
+        if raw > 10**14:
+            return raw // 1_000_000_000
+        if raw > 10**11:
+            return raw // 1_000
+        return raw
+    return int(raw)  # type: ignore[arg-type]
+
+
 def run_single_case(
     data_dir: Path,
     max_hops: int,
@@ -442,6 +466,7 @@ def run_single_case(
         baseline_traces = loader.load_traces("normal")
         abnormal_traces = loader.load_traces("abnormal")
         injection_at = _earliest_abnormal_seconds(abnormal_traces)
+        abnormal_window_end = _latest_abnormal_seconds(abnormal_traces)
         ctx = AdapterContext(datapack_dir=data_dir, case_name=case_name)
         timelines = run_reasoning_ir(
             graph=graph,
@@ -450,8 +475,12 @@ def run_single_case(
             injection_at=injection_at,
             baseline_traces=baseline_traces,
             abnormal_traces=abnormal_traces,
+            abnormal_window_end=abnormal_window_end,
         )
-        logger.info(f"[{case_name}] IR pipeline: {len(timelines)} node timelines")
+        logger.info(
+            f"[{case_name}] IR pipeline: {len(timelines)} node timelines "
+            f"(trace_volume window={injection_at}..{abnormal_window_end})"
+        )
 
         # Add inferred call-graph edges for trace-blind dependencies (e.g.
         # Spring auth filters that fire before any controller span). This is
