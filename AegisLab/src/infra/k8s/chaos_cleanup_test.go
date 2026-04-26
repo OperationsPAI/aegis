@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -257,3 +258,147 @@ func TestCleanupNamespaceChaosResources_NoChaosMeshInstalled(t *testing.T) {
 	}
 }
 
+// installFinalizerReaddReactor wires a fake-client reactor pair that
+// simulates chaos-controller-manager racing against our cleanup:
+//
+//   - Patch (strip-finalizers) is allowed to fall through to the tracker so
+//     the next iteration's GET sees the finalizer-free state — but the
+//     reactor counts patch calls so the test can assert how many strip
+//     attempts ran.
+//   - Delete is intercepted: while `attemptsToBlock` deletes remain, the
+//     reactor swallows the delete and re-adds `chaos-mesh/records` to the
+//     tracked object (mimicking the controller winning the race). Once the
+//     budget is exhausted, deletes fall through normally and the resource
+//     finally goes away. If `attemptsToBlock` is large enough the resource
+//     stays a zombie forever — that's the give-up scenario.
+func installFinalizerReaddReactor(
+	t *testing.T,
+	fake *dynamicfake.FakeDynamicClient,
+	gvr schema.GroupVersionResource,
+	namespace, name string,
+	attemptsToBlock int,
+) (patchCount, deleteCount *int) {
+	t.Helper()
+	var mu sync.Mutex
+	pc, dc := 0, 0
+	patchCount = &pc
+	deleteCount = &dc
+
+	fake.PrependReactor("patch", gvr.Resource, func(action clienttesting.Action) (bool, runtime.Object, error) {
+		mu.Lock()
+		pc++
+		mu.Unlock()
+		// Fall through so the tracker actually clears the finalizers.
+		return false, nil, nil
+	})
+
+	fake.PrependReactor("delete", gvr.Resource, func(action clienttesting.Action) (bool, runtime.Object, error) {
+		mu.Lock()
+		dc++
+		blocked := dc <= attemptsToBlock
+		mu.Unlock()
+		if !blocked {
+			return false, nil, nil // let the tracker actually delete.
+		}
+		// Simulate "delete didn't take + controller re-adds finalizer": fetch
+		// the live object from the tracker and re-stamp the finalizer.
+		obj, err := fake.Tracker().Get(gvr, namespace, name)
+		if err != nil {
+			return false, nil, nil
+		}
+		u, ok := obj.(*unstructured.Unstructured)
+		if !ok {
+			return true, nil, nil
+		}
+		u.SetFinalizers([]string{"chaos-mesh/records"})
+		if err := fake.Tracker().Update(gvr, u, namespace); err != nil {
+			t.Logf("re-add finalizer update failed: %v", err)
+		}
+		return true, nil, nil // swallow the delete: zombie remains.
+	})
+	return patchCount, deleteCount
+}
+
+func TestCleanupNamespaceChaosResources_RetriesOnFinalizerReadd(t *testing.T) {
+	// First strip+delete loses the race (controller re-adds the finalizer
+	// and the delete doesn't take). Second iteration's strip+delete wins
+	// because the reactor exhausts its block budget. Final state: zombie
+	// gone, no warnings surfaced to the caller.
+	ctx := context.Background()
+
+	zombie := newChaosCR("httpchaos", "otel-demo1", "stuck-http-1", []string{"chaos-mesh/records"})
+	dyn := newFakeDynamicClient(t, zombie)
+	fake := dyn.(*dynamicfake.FakeDynamicClient)
+
+	gvr := chaosGVR("httpchaos")
+	patchCount, deleteCount := installFinalizerReaddReactor(t, fake, gvr, "otel-demo1", "stuck-http-1", 1)
+
+	lister := &stubLister{gvrs: []schema.GroupVersionResource{gvr}}
+	summary, warnings := cleanupNamespaceChaosResourcesWith(ctx, lister, dyn, "otel-demo1")
+
+	if len(warnings) != 0 {
+		t.Fatalf("expected no caller-visible warnings on eventual success, got %v", warnings)
+	}
+	if got := summary["httpchaos"]; got != 1 {
+		t.Errorf("httpchaos reap count: got %d, want 1", got)
+	}
+
+	if *patchCount != 2 {
+		t.Errorf("expected 2 strip-finalizer patches (1 per attempt up to success), got %d", *patchCount)
+	}
+	if *deleteCount != 2 {
+		t.Errorf("expected 2 delete calls (1st blocked, 2nd succeeds), got %d", *deleteCount)
+	}
+
+	left, err := dyn.Resource(gvr).Namespace("otel-demo1").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("post-cleanup list: %v", err)
+	}
+	if len(left.Items) != 0 {
+		t.Errorf("expected 0 surviving httpchaos after retry, got %d", len(left.Items))
+	}
+}
+
+func TestCleanupNamespaceChaosResources_GivesUpAfterMaxAttempts(t *testing.T) {
+	// Controller always wins: every delete attempt is swallowed and the
+	// finalizer re-added. After chaosCleanupMaxAttempts the cleanup must
+	// log a warn and return — best-effort semantic. Caller still sees a
+	// successful summary entry (we did process the CR) but no error
+	// warnings, because helm restart MUST proceed even when chaos-mesh is
+	// stuck.
+	ctx := context.Background()
+
+	zombie := newChaosCR("httpchaos", "otel-demo1", "stuck-http-1", []string{"chaos-mesh/records"})
+	dyn := newFakeDynamicClient(t, zombie)
+	fake := dyn.(*dynamicfake.FakeDynamicClient)
+
+	gvr := chaosGVR("httpchaos")
+	// Block more attempts than we'll ever make so the controller "always wins".
+	patchCount, deleteCount := installFinalizerReaddReactor(t, fake, gvr, "otel-demo1", "stuck-http-1", chaosCleanupMaxAttempts+10)
+
+	lister := &stubLister{gvrs: []schema.GroupVersionResource{gvr}}
+	summary, warnings := cleanupNamespaceChaosResourcesWith(ctx, lister, dyn, "otel-demo1")
+
+	if len(warnings) != 0 {
+		t.Errorf("best-effort cleanup must not surface warnings to the caller after give-up, got %v", warnings)
+	}
+	if got := summary["httpchaos"]; got != 1 {
+		t.Errorf("httpchaos reap count (CR was processed even if zombie remains): got %d, want 1", got)
+	}
+
+	if *patchCount != chaosCleanupMaxAttempts {
+		t.Errorf("expected %d strip-finalizer patches (one per attempt), got %d", chaosCleanupMaxAttempts, *patchCount)
+	}
+	if *deleteCount != chaosCleanupMaxAttempts {
+		t.Errorf("expected %d delete calls (one per attempt), got %d", chaosCleanupMaxAttempts, *deleteCount)
+	}
+
+	// Zombie should still be present — the give-up path doesn't lie about it.
+	survivor, err := dyn.Resource(gvr).Namespace("otel-demo1").Get(ctx, "stuck-http-1", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("expected zombie to remain after give-up, got Get err: %v", err)
+	}
+	if survivor.GetName() != "stuck-http-1" {
+		t.Fatalf("unexpected survivor name: %s", survivor.GetName())
+	}
+}

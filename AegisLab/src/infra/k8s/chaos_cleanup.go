@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +21,18 @@ import (
 // when stripping finalizers — we must NEVER patch a resource outside this
 // group.
 const ChaosMeshAPIGroup = "chaos-mesh.org"
+
+// chaos-controller-manager reconciles every ~12s and re-adds the
+// `chaos-mesh/records` finalizer; a single strip+delete pass can lose that
+// race when there are many zombies (observed on byte-cluster with 367 stuck
+// HTTPChaos from old regression runs). Retry the per-CR cleanup a few times
+// to give the strip+delete a fighting chance against a hot reconciler.
+//
+// These knobs are deliberately internal — bumping them is a one-line edit.
+const (
+	chaosCleanupMaxAttempts = 3
+	chaosCleanupRetryDelay  = 200 * time.Millisecond
+)
 
 // chaosResourceLister abstracts the discovery surface so unit tests can stub
 // the namespaced GVR list without standing up an apiserver.
@@ -180,7 +193,7 @@ func cleanupNamespaceChaosResourcesWith(
 
 		for idx := range list.Items {
 			item := list.Items[idx]
-			if err := stripFinalizersAndDelete(ctx, dyn, gvr, namespace, item.GetName(), item.GetFinalizers()); err != nil {
+			if err := cleanupChaosInstanceWithRetry(ctx, dyn, gvr, namespace, item.GetName(), item.GetFinalizers()); err != nil {
 				warnings = append(warnings, fmt.Errorf("clean %s/%s/%s: %w", gvr.Resource, namespace, item.GetName(), err))
 				continue
 			}
@@ -188,6 +201,59 @@ func cleanupNamespaceChaosResourcesWith(
 		}
 	}
 	return summary, warnings
+}
+
+// cleanupChaosInstanceWithRetry runs strip-finalizers + delete in a short
+// retry loop, re-checking via GET each iteration. Necessary because
+// chaos-controller-manager reconciles ~every 12s and re-adds
+// `chaos-mesh/records` to live CRs; a single pass loses that race when
+// many zombies are queued. Best-effort: after maxAttempts we log a warn and
+// move on rather than blocking the caller (helm restart MUST proceed).
+//
+// The retry is scoped to a single CR — the outer GVR/instance loop is
+// unchanged. The chaos-mesh.org guard inside stripFinalizersAndDelete still
+// fires every iteration as a defense-in-depth check.
+func cleanupChaosInstanceWithRetry(
+	ctx context.Context,
+	dyn dynamic.Interface,
+	gvr schema.GroupVersionResource,
+	namespace, name string,
+	initialFinalizers []string,
+) error {
+	if gvr.Group != ChaosMeshAPIGroup {
+		return fmt.Errorf("cleanupChaosInstanceWithRetry: refusing GVR outside %s: %s", ChaosMeshAPIGroup, gvr.String())
+	}
+
+	finalizers := initialFinalizers
+	for attempt := 0; attempt < chaosCleanupMaxAttempts; attempt++ {
+		if err := stripFinalizersAndDelete(ctx, dyn, gvr, namespace, name, finalizers); err != nil {
+			// Best-effort: log and keep iterating — apiserver hiccups, racing
+			// reconciler patches, etc. are exactly what the retry is for.
+			logrus.WithError(err).Warnf("chaos-cleanup: %s/%s/%s attempt %d/%d failed",
+				gvr.Resource, namespace, name, attempt+1, chaosCleanupMaxAttempts)
+		}
+
+		got, getErr := dyn.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if getErr != nil {
+			if k8serrors.IsNotFound(getErr) {
+				return nil
+			}
+			logrus.WithError(getErr).Warnf("chaos-cleanup: %s/%s/%s post-delete GET failed (attempt %d/%d)",
+				gvr.Resource, namespace, name, attempt+1, chaosCleanupMaxAttempts)
+		} else {
+			// Still alive — controller almost certainly re-added the
+			// finalizer. Refresh the slice for the next strip pass.
+			finalizers = got.GetFinalizers()
+		}
+
+		if attempt == chaosCleanupMaxAttempts-1 {
+			logrus.Warnf("chaos-cleanup: giving up on %s/%s/%s after %d attempts (zombie remains; controller-manager re-adding finalizers?)",
+				gvr.Resource, namespace, name, chaosCleanupMaxAttempts)
+			return nil
+		}
+		time.Sleep(chaosCleanupRetryDelay)
+	}
+	return nil
 }
 
 // stripFinalizersAndDelete patches finalizers to [] (only when non-empty —
