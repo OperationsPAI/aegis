@@ -1,5 +1,6 @@
 import logging
 import re
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -150,6 +151,10 @@ LOADGEN_LIKE_SERVICES: set[str] = {
     "k6",
 }
 
+# Methodology-spec name (§7.1) for the same set; provided as an alias so future
+# PRs can refer to LOADGEN_SERVICES without renaming.
+LOADGEN_SERVICES: set[str] = LOADGEN_LIKE_SERVICES
+
 # Frontend aggregators + loadgens. Used when multiple services share the same span_name
 # to prefer the backend service that owns the URL path rather than the caller.
 CALLER_LIKE_SERVICES: set[str] = LOADGEN_LIKE_SERVICES | {
@@ -161,6 +166,69 @@ CALLER_LIKE_SERVICES: set[str] = LOADGEN_LIKE_SERVICES | {
 
 def _is_caller_like(service_name: str) -> bool:
     return service_name.lower() in CALLER_LIKE_SERVICES
+
+
+def is_root_server_row(span: Mapping[str, Any], trace_index: dict[tuple[str, str], dict]) -> bool:
+    """Methodology §7.1 ``is_root_server`` predicate, implemented as a
+    Python function over a span-row dict.
+
+    A span is a root Server iff:
+      * its kind is ``Server``,
+      * its owner service is NOT in ``LOADGEN_SERVICES``, and
+      * its parent (looked up via ``(trace_id, parent_span_id) -> span``)
+        is either missing (true root) or NOT itself ``Server``-kind.
+
+    The "parent not Server-kind" rule is broader than the spec's "parent
+    in LOADGEN_SERVICES" clause and subsumes it: a loadgen Client parent
+    is non-Server, so it always passes; a Server-kind parent (whether
+    loadgen or not) is always rejected.
+    """
+    if span.get("attr.span_kind") != "Server":
+        return False
+    service = span.get("service_name") or ""
+    if service.lower() in LOADGEN_SERVICES:
+        return False
+    parent_span_id = span.get("parent_span_id") or ""
+    if not parent_span_id:
+        return True
+    trace_id = span.get("trace_id") or ""
+    parent = trace_index.get((trace_id, parent_span_id))
+    if parent is None:
+        return True
+    return parent.get("attr.span_kind") != "Server"
+
+
+def filter_root_server_spans(df: pl.DataFrame) -> pl.DataFrame:
+    """Keep only the topmost Server-kind span per trace (methodology §7.1).
+
+    Implements the ``is_root_server`` predicate as a polars anti-join:
+    a Server-kind span is kept iff its parent (matched on
+    ``(trace_id, parent_span_id) -> span_id``) is empty / missing OR its
+    parent is NOT itself ``Server``-kind. Services in
+    ``LOADGEN_LIKE_SERVICES`` are always excluded.
+    """
+    loadgens = list(LOADGEN_LIKE_SERVICES)
+    server_df = df.filter(
+        (pl.col("attr.span_kind") == "Server") & (~pl.col("service_name").str.to_lowercase().is_in(loadgens))
+    )
+    if len(server_df) == 0:
+        return server_df
+
+    # Build a (trace_id, span_id) -> attr.span_kind lookup for ALL spans in
+    # the input df (parents may be Client/Internal/etc., not just Server).
+    parent_kinds = df.select(
+        pl.col("trace_id"),
+        pl.col("span_id").alias("parent_span_id"),
+        pl.col("attr.span_kind").alias("parent_span_kind"),
+    )
+
+    joined = server_df.join(parent_kinds, on=["trace_id", "parent_span_id"], how="left")
+
+    # Keep rows where the parent lookup missed (true root or out-of-trace
+    # parent) OR where the parent's kind is not Server.
+    return joined.filter(
+        pl.col("parent_span_kind").is_null() | (pl.col("parent_span_kind") != "Server")
+    ).drop("parent_span_kind")
 
 
 def _ts_to_int_seconds(values) -> np.ndarray:
@@ -488,17 +556,14 @@ class ParquetDataLoader:
         baseline_traces = self.load_traces("normal")
         abnormal_traces = self.load_traces("abnormal")
 
-        loadgens = list(LOADGEN_LIKE_SERVICES)
-
         def filter_root_spans(df: pl.DataFrame) -> pl.DataFrame:
-            # Backend "root" = first server-side span the request hits, regardless of whether
-            # an instrumented loadgen produced an outer client/root span above it. Using
-            # parent_span_id=="" alone breaks on TrainTicket-style data where 100% of true
-            # roots belong to the loadgenerator and the actual frontend (ts-ui-dashboard)
-            # only ever appears as a Server-kind child.
-            return df.filter(
-                (pl.col("attr.span_kind") == "Server") & (~pl.col("service_name").str.to_lowercase().is_in(loadgens))
-            )
+            # Methodology §7.1: ``alarm_set`` is the set of *topmost* Server-kind
+            # nodes per trace — a Server span whose parent (in the same trace)
+            # is NOT itself Server-kind. Plain ``parent_span_id == ""`` breaks
+            # on TrainTicket-style data where the loadgenerator emits the only
+            # true root, and naive ``span_kind == Server`` re-inflates the alarm
+            # set to every Server span across the call tree.
+            return filter_root_server_spans(df)
 
         baseline_root = filter_root_spans(baseline_traces)
         abnormal_root = filter_root_spans(abnormal_traces)
