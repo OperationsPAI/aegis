@@ -237,16 +237,33 @@ class FaultPropagator:
 
     def _compute_deviating_set(self) -> set[int]:
         """Nodes whose timeline has ever been in a non-{HEALTHY, UNKNOWN}
-        state during the abnormal window.
+        state during the abnormal window, OR whose kind is a structural
+        k8s infra connector (pod / replica_set / deployment).
 
         Per §7.4, used by the activity filter in
         :meth:`propagate_from_injection` to restrict path search to nodes
-        that actually exhibit anomalous behavior. Mirrors the idiomatic
-        per-node lookup used by :meth:`_states_for_node`.
+        that actually exhibit anomalous behavior. The methodology's
+        argument for dropping HEALTHY middlemen ("propagation rules never
+        have HEALTHY as src_state") holds for request-layer kinds
+        (service / span) but not for structural connectors: e.g.
+        StructuralInheritanceAdapter shortcuts container.degraded →
+        service.degraded, leaving the intervening pod with an empty
+        timeline. The pod is still the necessary topological hop between
+        container and service. Treating pod / replica_set / deployment as
+        always-relevant matches the §7.4 invariant 1 spirit ("node
+        completeness — service / pod / container nodes are extracted from
+        the union of k8s + traces") — they exist in the graph because
+        they are part of the cascade structure, not because traces saw
+        them.
         """
+        structural_kinds = {PlaceKind.pod, PlaceKind.replica_set, PlaceKind.deployment}
         deviating: set[int] = set()
         nominal = {"healthy", "unknown"}
         for node_id in self.graph._graph.nodes:
+            node = self.graph.get_node_by_id(node_id)
+            if node is not None and node.kind in structural_kinds:
+                deviating.add(node_id)
+                continue
             tl = self._timeline_for_node(node_id)
             if tl is None:
                 continue
