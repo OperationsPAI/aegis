@@ -128,6 +128,92 @@ class TopologyExplorer:
         )
         return list(edges)
 
+    def compute_corridor(
+        self,
+        injection_node_ids: list[int],
+        alarm_node_ids: set[int],
+        max_hops_fwd: int | None = None,
+        max_hops_bwd: int | None = None,
+        edge_filter: Callable[[int, int, bool], bool] | None = None,
+    ) -> set[int]:
+        """Bidirectional BFS corridor per §7.4.
+
+        corridor = Reach_forward(injection_set, max_hops_fwd)
+                 ∩ Reach_backward(alarm_set,    max_hops_bwd)
+
+        The forward-only ``find_reachable_subgraph`` over-includes services
+        reachable from the injection but unable to reach any alarm — those
+        wander into dead-end branches during downstream DFS. Intersecting
+        with the backward reach from the alarm set keeps only nodes that
+        can actually sit on an injection→alarm path within the hop budget.
+
+        Args:
+            injection_node_ids: Starting node IDs for the forward pass.
+            alarm_node_ids: Target alarm node IDs for the backward pass.
+            max_hops_fwd: Forward BFS hop budget (defaults to ``self.max_hops``).
+            max_hops_bwd: Backward BFS hop budget (defaults to ``self.max_hops``).
+            edge_filter: Optional ``(src_id, dst_id, is_first_hop) -> bool``
+                applied to both passes. ``is_first_hop`` is computed against
+                ``injection_set`` for forward and against ``alarm_set`` for
+                backward — callers that need direction-specific filtering
+                should pass a filter that ignores the flag.
+
+        Returns:
+            Set of node IDs in the corridor (the intersection). Empty when
+            either ``injection_node_ids`` or ``alarm_node_ids`` is empty.
+        """
+        if not injection_node_ids or not alarm_node_ids:
+            return set()
+
+        start_time = time.time()
+
+        max_hops_fwd = self.max_hops if max_hops_fwd is None else max_hops_fwd
+        max_hops_bwd = self.max_hops if max_hops_bwd is None else max_hops_bwd
+
+        injection_set = set(injection_node_ids)
+
+        # Forward BFS: traverse out_edges from injection nodes.
+        forward_visited: set[int] = set(injection_set)
+        forward_queue: deque[tuple[int, int]] = deque((nid, 0) for nid in injection_set)
+        while forward_queue:
+            current_node_id, dist = forward_queue.popleft()
+            if dist >= max_hops_fwd:
+                continue
+            is_first_hop = current_node_id in injection_set
+            for _, dst_id, _ in self.graph._graph.out_edges(current_node_id, keys=True):  # type: ignore[call-arg]
+                if edge_filter is not None and not edge_filter(current_node_id, dst_id, is_first_hop):
+                    continue
+                if dst_id not in forward_visited:
+                    forward_visited.add(dst_id)
+                    forward_queue.append((dst_id, dist + 1))
+
+        # Backward BFS: traverse in_edges (predecessors) from alarm nodes.
+        backward_visited: set[int] = set(alarm_node_ids)
+        backward_queue: deque[tuple[int, int]] = deque((nid, 0) for nid in alarm_node_ids)
+        while backward_queue:
+            current_node_id, dist = backward_queue.popleft()
+            if dist >= max_hops_bwd:
+                continue
+            is_first_hop = current_node_id in alarm_node_ids
+            for src_id, _, _ in self.graph._graph.in_edges(current_node_id, keys=True):  # type: ignore[call-arg]
+                # For backward traversal the edge goes src_id -> current_node_id.
+                # Pass it to the filter in its natural (src, dst) orientation.
+                if edge_filter is not None and not edge_filter(src_id, current_node_id, is_first_hop):
+                    continue
+                if src_id not in backward_visited:
+                    backward_visited.add(src_id)
+                    backward_queue.append((src_id, dist + 1))
+
+        corridor = forward_visited & backward_visited
+        elapsed_time = time.time() - start_time
+        logger.debug(
+            f"    [DEBUG] Corridor: {len(corridor)} nodes "
+            f"(fwd={len(forward_visited)}, bwd={len(backward_visited)}, "
+            f"max_hops_fwd={max_hops_fwd}, max_hops_bwd={max_hops_bwd}), "
+            f"time: {elapsed_time:.3f}s"
+        )
+        return corridor
+
     def extract_paths(
         self,
         edges: list[tuple[int, int]],
