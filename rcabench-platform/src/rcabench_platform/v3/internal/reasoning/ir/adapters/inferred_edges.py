@@ -72,6 +72,15 @@ _GATING_SERVICE_HINTS: tuple[str, ...] = (
 # States that mark an injection container/pod as "dead infra" (Scenario A).
 _DEAD_INFRA_STATES: frozenset[str] = frozenset({"unavailable"})
 
+# Anomalous span states that mark consumers worth bridging from a dead-infra
+# injection (Scenario A). Excludes ``healthy`` (uninteresting) and
+# ``unknown`` (no observation). Includes the canonical request-layer
+# anomalous palette so downstream rules (``span_*_to_caller``,
+# ``service_to_span``) admit the consumer's chain.
+_SCENARIO_A_TARGET_SPAN_STATES: frozenset[str] = frozenset(
+    {"missing", "slow", "erroring", "unavailable", "silent"}
+)
+
 # States that mark a gating service as having failed (Scenario E source).
 _GATING_FAILURE_STATES: frozenset[str] = frozenset({"erroring", "silent"})
 
@@ -209,45 +218,69 @@ def _add_inferred_edge(
 
 
 def _scenario_a_consumer_services(graph: HyperGraph, dead_node: Node) -> list[Node]:
-    """Find services that physically consume a dead pod or container.
+    """Find services that consume the dead pod/container via baseline trace
+    call relationships.
 
-    For a dead **pod**: walk ``in_edges`` filtered by ``routes_to`` — the
-    predecessors are the consuming services.
-    For a dead **container**: walk ``in_edges`` filtered by ``runs`` to
-    find the owning pod, then recurse into the pod case.
+    The methodology spec for Scenario A targets read literally as
+    "services with routes_to to the dead pod" — that resolves only to the
+    pod's *owner* service (a self-loop within the dead infra). The intent
+    documented in the same paragraph is "services that depend on this
+    pod" — i.e. consumers in the request-flow sense, derivable from
+    baseline trace ``calls`` edges (per §7.4 invariant 2: baseline edges
+    are preserved in the merged graph even when the abnormal window
+    drops them).
+
+    Walk: dead → owner service → ``includes`` → owner spans →
+    ``in_edges`` calls → caller spans → ``in_edges`` includes → caller
+    services. Distinct caller services minus the owner itself are the
+    consumers.
     """
     assert dead_node.id is not None
     g = graph._graph
-    consumers: list[Node] = []
-    seen_service_ids: set[int] = set()
 
+    # Step 1: resolve dead_node to its owner service.
     if dead_node.kind == PlaceKind.pod:
-        for src_id, _dst_id, edge_key in g.in_edges(dead_node.id, keys=True):  # type: ignore[call-arg]
-            if edge_key != DepKind.routes_to:
-                continue
-            if src_id in seen_service_ids:
-                continue
-            candidate = graph.get_node_by_id(src_id)
-            if candidate.kind != PlaceKind.service:
-                continue
-            seen_service_ids.add(src_id)
-            consumers.append(candidate)
+        owner = _service_of_pod(graph, dead_node.id)
     elif dead_node.kind == PlaceKind.container:
-        for pod_src_id, _dst_id, edge_key in g.in_edges(dead_node.id, keys=True):  # type: ignore[call-arg]
-            if edge_key != DepKind.runs:
+        owner = _service_of_container(graph, dead_node.id)
+    else:
+        return []
+    if owner is None or owner.id is None:
+        return []
+
+    # Step 2: collect owner's spans (service --includes--> span).
+    owner_span_ids: list[int] = []
+    for _src, dst_id, edge_key in g.out_edges(owner.id, keys=True):  # type: ignore[call-arg]
+        if edge_key == DepKind.includes:
+            dst_node = graph.get_node_by_id(dst_id)
+            if dst_node is not None and dst_node.kind == PlaceKind.span:
+                owner_span_ids.append(dst_id)
+    if not owner_span_ids:
+        return []
+
+    # Step 3: walk back from owner spans through ``calls`` to find caller
+    # spans, then up via ``includes`` to find caller services.
+    consumers: list[Node] = []
+    seen: set[int] = {owner.id}
+    for owner_span_id in owner_span_ids:
+        for caller_span_id, _dst_id, edge_key in g.in_edges(owner_span_id, keys=True):  # type: ignore[call-arg]
+            if edge_key != DepKind.calls:
                 continue
-            pod_node = graph.get_node_by_id(pod_src_id)
-            if pod_node.kind != PlaceKind.pod:
-                continue
-            for svc_id, _pod_id, svc_edge_key in g.in_edges(pod_src_id, keys=True):  # type: ignore[call-arg]
-                if svc_edge_key != DepKind.routes_to:
+            for caller_svc_id, _span_id, includes_key in g.in_edges(caller_span_id, keys=True):  # type: ignore[call-arg]
+                if includes_key != DepKind.includes:
                     continue
-                if svc_id in seen_service_ids:
+                if caller_svc_id in seen:
                     continue
-                candidate = graph.get_node_by_id(svc_id)
-                if candidate.kind != PlaceKind.service:
+                candidate = graph.get_node_by_id(caller_svc_id)
+                if candidate is None or candidate.kind != PlaceKind.service:
                     continue
-                seen_service_ids.add(svc_id)
+                # Skip loadgen-side callers — they're synthetic traffic, not
+                # consumer services of the dead infra.
+                if candidate.self_name.lower() in {
+                    "loadgenerator", "load-generator", "locust", "wrk2", "dsb-wrk2", "k6",
+                }:
+                    continue
+                seen.add(caller_svc_id)
                 consumers.append(candidate)
     return consumers
 
@@ -259,6 +292,21 @@ def _apply_scenario_a(
 ) -> int:
     """Emit Scenario A inferred edges for one injection node, if applicable.
 
+    Edge shape: ``service|owner --includes--> span|consumer_anomalous_span``.
+    The owner service inherits ``unavailable`` from the dead container/pod
+    (see ``StructuralInheritanceAdapter``), and the existing
+    ``service_to_span`` rule (src_states includes ``unavailable``,
+    dst_states includes ``missing/slow/erroring/unavailable``) admits this
+    edge during BFS — so the propagator can reach consumer alarms even
+    though no real ``calls`` edge from consumer to the dead infra exists
+    (the dead service emits no abnormal-window spans).
+
+    Targets are consumer services' spans whose timeline shows a non-nominal
+    state during the abnormal window. Restricting to anomalous spans keeps
+    the inferred fan-out bounded — a typical TT case has ~10 consumer
+    spans with anomalous state per dead infra, vs. 100s of consumer spans
+    in total.
+
     Returns the number of edges added.
     """
     if injection_node.kind not in (PlaceKind.pod, PlaceKind.container):
@@ -266,21 +314,44 @@ def _apply_scenario_a(
     if not _timeline_ever_in(timelines, injection_node.uniq_name, _DEAD_INFRA_STATES):
         return 0
 
+    # Resolve dead container/pod to its owner service.
+    if injection_node.kind == PlaceKind.pod:
+        owner = _service_of_pod(graph, injection_node.id)
+    else:
+        owner = _service_of_container(graph, injection_node.id)
+    if owner is None or owner.id is None:
+        return 0
+
     consumers = _scenario_a_consumer_services(graph, injection_node)
+    if not consumers:
+        return 0
+
+    g = graph._graph
     edges_added = 0
     for consumer in consumers:
-        if _add_inferred_edge(
-            graph,
-            src_node=injection_node,
-            dst_node=consumer,
-            kind="depends_on_dead_infra",
-        ):
-            edges_added += 1
-            logger.info(
-                "inferred edge added (Scenario A): %s -> %s [depends_on_dead_infra]",
-                injection_node.uniq_name,
-                consumer.uniq_name,
-            )
+        if consumer.id is None:
+            continue
+        # Iterate consumer's spans and only emit edges to anomalous ones.
+        for _src, span_id, edge_key in g.out_edges(consumer.id, keys=True):  # type: ignore[call-arg]
+            if edge_key != DepKind.includes:
+                continue
+            span_node = graph.get_node_by_id(span_id)
+            if span_node is None or span_node.kind != PlaceKind.span:
+                continue
+            if not _timeline_ever_in(timelines, span_node.uniq_name, _SCENARIO_A_TARGET_SPAN_STATES):
+                continue
+            if _add_inferred_edge(
+                graph,
+                src_node=owner,
+                dst_node=span_node,
+                kind="depends_on_dead_infra",
+            ):
+                edges_added += 1
+                logger.info(
+                    "inferred edge added (Scenario A): %s -> %s [depends_on_dead_infra]",
+                    owner.uniq_name,
+                    span_node.uniq_name,
+                )
     return edges_added
 
 

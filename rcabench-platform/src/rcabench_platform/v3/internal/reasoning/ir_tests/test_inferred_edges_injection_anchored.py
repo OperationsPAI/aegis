@@ -64,25 +64,41 @@ def _timeline(node_key: str, kind: PlaceKind, windows: list[tuple[int, int, str]
 # --------------------------------------------------------------------------- #
 
 
-def test_scenario_a_positive_dead_pod_emits_edge_to_consumer_service() -> None:
-    """Dead injection pod with a consumer service yields one inferred edge."""
+def test_scenario_a_positive_dead_pod_emits_edge_to_consumer_anomalous_span() -> None:
+    """Dead injection pod with a consumer service whose span is anomalous
+    yields one inferred ``service|owner --includes--> span|consumer_anomalous``
+    edge — bridging dead-infra state to its consumer alarms via the
+    existing ``service_to_span`` rule (src_states includes ``unavailable``).
+    """
     g = HyperGraph()
-    svc = _add_node(g, PlaceKind.service, "payment")
+    # Owner side: service -> pod, service -> span (the dead svc's API).
+    owner = _add_node(g, PlaceKind.service, "payment")
     pod = _add_node(g, PlaceKind.pod, "payment-0")
-    _add_edge(g, svc, pod, DepKind.routes_to)
+    owner_span = _add_node(g, PlaceKind.span, "payment::POST /pay")
+    _add_edge(g, owner, pod, DepKind.routes_to)
+    _add_edge(g, owner, owner_span, DepKind.includes)
+    # Consumer side: caller_svc -> caller_span -> calls -> owner_span.
+    caller_svc = _add_node(g, PlaceKind.service, "checkout")
+    caller_span = _add_node(g, PlaceKind.span, "checkout::POST /buy")
+    _add_edge(g, caller_svc, caller_span, DepKind.includes)
+    _add_edge(g, caller_span, owner_span, DepKind.calls)
 
     timelines = {
         "pod|payment-0": _timeline("pod|payment-0", PlaceKind.pod, [(1000, 1050, "unavailable")]),
+        # Caller span is anomalous in the abnormal window.
+        "span|checkout::POST /buy": _timeline(
+            "span|checkout::POST /buy", PlaceKind.span, [(1000, 1050, "missing")]
+        ),
     }
     assert pod.id is not None
     n_added = enrich_with_inferred_edges(g, timelines, [pod.id])
 
     assert n_added == 1
-    assert svc.id is not None
-    assert g._graph.has_edge(pod.id, svc.id, DepKind.includes)
+    assert owner.id is not None and caller_span.id is not None
+    assert g._graph.has_edge(owner.id, caller_span.id, DepKind.includes)
 
     metadata_store = g.data["inferred_edges"]
-    metadata = metadata_store[(pod.id, svc.id)]
+    metadata = metadata_store[(owner.id, caller_span.id)]
     assert isinstance(metadata, InferredEdgeMetadata)
     assert metadata.inferred is True
     assert metadata.kind == "depends_on_dead_infra"
