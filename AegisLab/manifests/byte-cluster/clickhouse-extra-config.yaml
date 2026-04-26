@@ -1,0 +1,44 @@
+# ClickHouse extra config dropped into /etc/clickhouse-server/config.d/.
+# ClickHouse auto-merges every *.xml under config.d/ into the main config,
+# so this file overrides whatever clickstack/clickstack v1.1.1 templates in
+# its bundled config.xml without requiring us to fork the chart.
+#
+# Why we need this:
+#   The chart hardcodes <max_concurrent_queries>100</max_concurrent_queries>
+#   and exposes no values key to override the contents of config.xml.
+#   The autonomous inject-loop fans out ~30 BuildDatapack jobs at once;
+#   each fires ~30 ClickHouse queries through rcabench-platform's
+#   prepare_inputs.py, so we routinely cross 500 simultaneous queries and
+#   ClickHouse rejects them with `Code 202: Too many simultaneous queries.`
+#
+# Apply alongside the helm install / upgrade — see the byte-cluster README
+# step "## 2. Install ClickStack / ClickHouse" for the kubectl patch that
+# mounts this ConfigMap into the chart-managed Deployment. The patch is
+# kept idempotent so re-runs are safe; helm upgrade will not revert the
+# ConfigMap (it is not part of the chart) but WILL revert the Deployment
+# patch — re-apply after every helm upgrade.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickstack-clickhouse-extra-config
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: clickstack
+    app.kubernetes.io/component: clickhouse-extra-config
+data:
+  90-limits.xml: |
+    <clickhouse>
+        <!--
+          Concurrency caps tuned for the autonomous inject-loop at the byte
+          cluster: ~30 BuildDatapack jobs * ~30 queries each = ~900 in flight.
+          The chart default of 100 / 0 makes ClickHouse reject the surge with
+          "Code 202: Too many simultaneous queries. Maximum: 500".
+        -->
+        <max_concurrent_queries>2000</max_concurrent_queries>
+        <max_concurrent_select_queries>1500</max_concurrent_select_queries>
+        <!--
+          Allow ClickHouse to use up to 2x logical cores for query threads;
+          default is 1x which leaves the box idle while queries queue.
+        -->
+        <concurrent_threads_soft_limit_ratio_to_cores>2</concurrent_threads_soft_limit_ratio_to_cores>
+    </clickhouse>

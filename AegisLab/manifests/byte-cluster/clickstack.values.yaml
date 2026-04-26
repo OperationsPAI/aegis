@@ -17,6 +17,18 @@ clickhouse:
       otelUserPassword: otelcollectorpass
   service:
     type: ClusterIP
+  # Headroom for the autonomous inject-loop. ~30 BuildDatapack jobs can fan out
+  # ~30 ClickHouse queries each (rcabench-platform's prepare_inputs.py); the
+  # default 2/8 GiB envelope gets OOM-killed. The chart-side query-limit bump
+  # to max_concurrent_queries=2000 lives in clickhouse-extra-config.yaml — see
+  # README step "## 2. Install ClickStack / ClickHouse".
+  resources:
+    requests:
+      cpu: "2"
+      memory: "8Gi"
+    limits:
+      cpu: "8"
+      memory: "16Gi"
 
 mongodb:
   enabled: false
