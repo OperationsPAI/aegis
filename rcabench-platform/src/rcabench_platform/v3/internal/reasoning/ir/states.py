@@ -1,15 +1,21 @@
 """Per-PlaceKind IR state enums.
 
 Each kind declares its own StrEnum. A common pivot vocabulary
-(``UNKNOWN`` / ``HEALTHY`` / ``SLOW`` / ``ERRORING`` / ``UNAVAILABLE``) is
-shared across kinds where semantics apply; kind-specific states
-(``MISSING`` for span, ``DEGRADED`` for pod/container, ``RESTARTING`` for pod)
-are kept local.
+(``UNKNOWN`` / ``HEALTHY`` / ``SLOW`` / ``ERRORING`` / ``UNAVAILABLE`` /
+``SILENT``) is shared across kinds where semantics apply; kind-specific
+states (``MISSING`` for span, ``DEGRADED`` for pod/container,
+``RESTARTING`` for pod) are kept local. ``SILENT`` (Class E — traffic
+isolation: entity is alive but the expected request flow has dropped to
+near zero) applies only to request-layer kinds (span, service); pod and
+container have no flow concept and therefore do not carry SILENT.
 
 Severity ordering used by synth's multi-adapter merge:
-    UNKNOWN < HEALTHY < SLOW < DEGRADED < ERRORING < {UNAVAILABLE, MISSING}
+    UNKNOWN < HEALTHY < SLOW < {DEGRADED, RESTARTING} < {ERRORING, SILENT} < {UNAVAILABLE, MISSING}
 Ties inside the top tier are broken by earliest transition timestamp (handled
 in ``synth``; not expressed here).
+
+See ``docs/reasoning-feature-taxonomy.md`` §11.1 for the tier admission
+rule that pins SILENT at tier 4.
 
 Phase 1 keeps the vocabulary minimal — additions (e.g. ``RESTARTING``)
 should land when the concrete adapter that emits them is written, not
@@ -30,6 +36,7 @@ class SpanStateIR(StrEnum):
     ERRORING = auto()
     UNAVAILABLE = auto()
     MISSING = auto()
+    SILENT = auto()
 
 
 class ServiceStateIR(StrEnum):
@@ -39,6 +46,7 @@ class ServiceStateIR(StrEnum):
     DEGRADED = auto()
     ERRORING = auto()
     UNAVAILABLE = auto()
+    SILENT = auto()
 
 
 class PodStateIR(StrEnum):
@@ -65,6 +73,7 @@ _SEVERITY: dict[str, int] = {
     "degraded": 3,
     "restarting": 3,
     "erroring": 4,
+    "silent": 4,
     "unavailable": 5,
     "missing": 5,
 }
