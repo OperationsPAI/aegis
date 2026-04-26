@@ -8,6 +8,7 @@ import (
 	"aegis/dto"
 	"aegis/middleware"
 	"aegis/model"
+	"aegis/service/initialization"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -142,6 +143,89 @@ func (h *Handler) VerifyPedestalHelmConfig(c *gin.Context) {
 		resp.Checks[i] = PedestalHelmVerifyCheck{Name: chk.Name, OK: chk.OK, Detail: chk.Detail}
 	}
 	dto.SuccessResponse(c, resp)
+}
+
+// ReseedPedestalHelmConfig hot-reseeds the helm_configs row + linked
+// parameter_configs / helm_config_values for a single container_version
+// from the seed YAML. Closes #201: lets operators propagate a chart-version
+// bump (and any new overridable values) to a running cluster without raw
+// SQL.
+//
+//	@Summary		Reseed pedestal helm config from data.yaml
+//	@Description	Reconcile the helm_configs row and its linked parameter_configs / helm_config_values for a pedestal container version against the seed YAML. Defaults to dry-run unless apply=true. Idempotent: a re-run with no upstream change yields zero applied actions.
+//	@Tags			Pedestal
+//	@ID				reseed_pedestal_helm_config
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			container_version_id	path	int						true	"Container version ID"
+//	@Param			request					body	ReseedHelmConfigReq		false	"Reseed request"
+//	@Success		200	{object}	dto.GenericResponse[ReseedHelmConfigResp]
+//	@Router			/api/v2/pedestal/helm/{container_version_id}/reseed [post]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) ReseedPedestalHelmConfig(c *gin.Context) {
+	if _, ok := middleware.GetCurrentUserID(c); !ok {
+		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+	versionID, ok := parseVersionID(c)
+	if !ok {
+		return
+	}
+	// Body is optional — an empty POST runs a dry-run with the server-side
+	// default seed path. We tolerate "EOF" for an empty body.
+	var req ReseedHelmConfigReq
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
+			return
+		}
+	}
+	report, err := h.service.ReseedHelmConfig(c.Request.Context(), ReseedHelmConfigInput{
+		ContainerVersionID: versionID,
+		Env:                req.Env,
+		DataPath:           req.DataPath,
+		Apply:              req.Apply,
+		Prune:              req.Prune,
+	})
+	if err != nil {
+		// Map gorm.ErrRecordNotFound to 404 — caller asked for a version_id
+		// that doesn't exist.
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			dto.ErrorResponse(c, http.StatusNotFound, "Container version not found: "+err.Error())
+			return
+		}
+		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to reseed helm config: "+err.Error())
+		return
+	}
+	dto.SuccessResponse(c, toReseedResp(report))
+}
+
+// toReseedResp adapts the internal initialization.ReseedReport to the public
+// API DTO so the report shape stays stable for SDK consumers even if internal
+// fields drift.
+func toReseedResp(r *initialization.ReseedReport) ReseedHelmConfigResp {
+	if r == nil {
+		return ReseedHelmConfigResp{}
+	}
+	out := ReseedHelmConfigResp{
+		DryRun:       r.DryRun,
+		SystemFilter: r.SystemFilter,
+		SeedPath:     r.SeedPath,
+		Actions:      make([]ReseedActionResp, 0, len(r.Actions)),
+	}
+	for _, a := range r.Actions {
+		out.Actions = append(out.Actions, ReseedActionResp{
+			Layer:    a.Layer,
+			System:   a.System,
+			Key:      a.Key,
+			OldValue: a.OldValue,
+			NewValue: a.NewValue,
+			Note:     a.Note,
+			Applied:  a.Applied,
+		})
+	}
+	return out
 }
 
 func parseVersionID(c *gin.Context) (int, bool) {
