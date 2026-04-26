@@ -1,0 +1,65 @@
+{{- if .Values.microservices.apiGateway.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-api-gateway
+  labels:
+    app: {{ .Release.Name }}-api-gateway
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-api-gateway
+  minReplicas: {{ .Values.microservices.apiGateway.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.microservices.apiGateway.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.microservices.apiGateway.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.microservices.apiGateway.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.microservices.apiGateway.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.microservices.apiGateway.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- if .Values.microservices.runtimeWorkerService.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-runtime-worker-service
+  labels:
+    app: {{ .Release.Name }}-runtime-worker-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-runtime-worker-service
+  minReplicas: {{ .Values.microservices.runtimeWorkerService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.microservices.runtimeWorkerService.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.microservices.runtimeWorkerService.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.microservices.runtimeWorkerService.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.microservices.runtimeWorkerService.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.microservices.runtimeWorkerService.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

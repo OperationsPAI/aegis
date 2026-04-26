@@ -214,9 +214,28 @@ microservices:
     httpPort: 8082
     # Port for the runtime-intake gRPC server (runtime-worker -> api-gateway).
     intakeGrpcPort: 9096
+    # Pod resource requests/limits. HPA targetCPUUtilizationPercentage requires
+    # `requests.cpu` to be set; leave `resources: {}` to omit the block entirely.
+    resources: {}
+    # Horizontal Pod Autoscaler. Disabled by default; when enabled the chart
+    # emits an autoscaling/v2 HPA targeting this deployment. Requires
+    # metrics-server (or equivalent metrics.k8s.io provider) in the cluster.
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 0
   runtimeWorkerService:
     replicaCount: 1
     grpcPort: 9094
+    resources: {}
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 0
 
 persistence:
   # Global storage type setting - applies to containers, logs, and juicefs sections

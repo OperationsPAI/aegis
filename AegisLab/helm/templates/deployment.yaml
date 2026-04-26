@@ -110,6 +110,10 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
+          {{- with .Values.microservices.apiGateway.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: config
               mountPath: /etc/rcabench/config.prod.toml
@@ -246,6 +250,10 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
+          {{- with .Values.microservices.runtimeWorkerService.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: config
               mountPath: /etc/rcabench/config.prod.toml
