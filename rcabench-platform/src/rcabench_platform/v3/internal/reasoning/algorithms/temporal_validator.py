@@ -3,13 +3,26 @@
 Given the per-node ``StateTimeline``s produced by the IR pipeline, find
 the ``TimelineWindow`` that activates a given node at-or-after a cause's
 start time. Used by the propagator when verifying multi-hop paths.
+
+Per §7.5 of ``docs/reasoning-feature-taxonomy.md``, edge admission uses
+a measurement-noise-tolerant predicate::
+
+    onset(B) >= onset(A) - epsilon_eff(s_A, s_B, edge_kind)
+
+where ``epsilon_eff`` comes from ``policy.epsilon_eff_seconds``. The
+``find_admissible_window`` and ``onset_for_rule`` helpers below implement
+this predicate; the original ``find_causal_window`` is kept for callers
+that don't yet have the src_state / edge_kind needed to compute
+``epsilon_eff``.
 """
 
 from __future__ import annotations
 
 import bisect
 
+from rcabench_platform.v3.internal.reasoning.algorithms.policy import epsilon_eff_seconds
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline, TimelineWindow
+from rcabench_platform.v3.internal.reasoning.models.graph import DepKind
 
 
 class TemporalValidator:
@@ -33,6 +46,52 @@ class TemporalValidator:
         if required_states is not None:
             return self._find_matching_window(tl.windows, min_start_time, required_states)
         return self._find_causal_window(tl.windows, min_start_time)
+
+    def find_admissible_window(
+        self,
+        node_key: str,
+        src_onset: int,
+        edge_kind: DepKind,
+        src_state: str,
+        dst_states: set[str],
+    ) -> TimelineWindow | None:
+        """Earliest TimelineWindow whose state is in ``dst_states`` and whose
+        start respects the §7.5 tolerant lower bound::
+
+            window.start >= src_onset - epsilon_eff(src_state, window.state, edge_kind)
+
+        ``epsilon_eff`` is computed per candidate window because each dst
+        state can carry its own ``onset_resolution`` (per §12.4). Returns
+        ``None`` if no such window exists.
+        """
+        tl = self._timelines.get(node_key)
+        if tl is None or not tl.windows or not dst_states:
+            return None
+        for w in tl.windows:
+            if w.state not in dst_states:
+                continue
+            eps = epsilon_eff_seconds(src_state, w.state, edge_kind)
+            if w.start >= src_onset - eps:
+                return w
+        return None
+
+    def onset_for_rule(self, node_key: str, src_states: set[str]) -> int | None:
+        """Earliest TimelineWindow start whose state is in ``src_states``.
+
+        Per §7.5, when a rule R fires on entity E with ``R.src_states = S``,
+        the rule's source onset is the EARLIEST transition into any state
+        in S — not the most-recent. Anchoring on ERRORING (the primary
+        failure caused by ``do(fault)``) avoids the temporal gate rejecting
+        otherwise-valid chains because the source onset has slipped past
+        the downstream onset (e.g. ERRORING -> SILENT drift).
+        """
+        tl = self._timelines.get(node_key)
+        if tl is None or not tl.windows or not src_states:
+            return None
+        for w in tl.windows:
+            if w.state in src_states:
+                return w.start
+        return None
 
     @staticmethod
     def _find_causal_window(windows: tuple[TimelineWindow, ...], min_start_time: int) -> TimelineWindow | None:
