@@ -12,6 +12,7 @@ import (
 
 	chaosCli "github.com/OperationsPAI/chaos-experiment/client"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -217,6 +218,164 @@ func (g *Gateway) WaitForNamespacePodsReady(ctx context.Context, namespace strin
 		case <-ticker.C:
 		}
 	}
+}
+
+// WaitNamespaceReady blocks until every workload (Deployment, StatefulSet,
+// DaemonSet) in the namespace reports availableReplicas >= replicas AND no Job
+// is in a Failed condition, OR until the timeout elapses. This is the
+// workload-level (controller-level) readiness probe used by RestartPedestal
+// after a non-blocking helm install (Wait=false) — it is more tolerant than
+// `WaitForNamespacePodsReady` because:
+//
+//   - Pods that crash/restart while their init-container chain catches up
+//     don't trip the gate as long as the parent controller eventually
+//     reaches `availableReplicas == replicas`.
+//   - Jobs that complete fast (loadgen Jobs that run their workload and exit
+//     0) count as ready.
+//   - StatefulSets coming up sequentially are tolerated because we only
+//     require the final `availableReplicas` count, not "all pods ready right
+//     now".
+//
+// A namespace with zero workloads is considered ready (no work to wait on).
+// Logging is one-shot at start, one-shot on success, and one-shot on
+// timeout — never per-poll.
+func (g *Gateway) WaitNamespaceReady(ctx context.Context, namespace string, timeout time.Duration) error {
+	client, err := getK8sClient()
+	if err != nil {
+		return k8sClientNotAvailableErr(err)
+	}
+	if timeout <= 0 {
+		timeout = 15 * time.Minute
+	}
+
+	start := time.Now()
+	logrus.Infof("waiting for namespace %s to become ready, timeout %s", namespace, timeout)
+
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	var lastSummary string
+	for {
+		ready, summary, err := checkNamespaceWorkloadsReady(waitCtx, client, namespace)
+		if err != nil {
+			return fmt.Errorf("readiness probe error in namespace %q: %w", namespace, err)
+		}
+		lastSummary = summary
+		if ready {
+			logrus.Infof("namespace %s ready in %s", namespace, time.Since(start).Round(time.Second))
+			return nil
+		}
+
+		select {
+		case <-waitCtx.Done():
+			elapsed := time.Since(start).Round(time.Second)
+			logrus.Warnf("namespace %s readiness timeout after %s: %s", namespace, elapsed, lastSummary)
+			return fmt.Errorf("namespace %q not ready after %s: %s", namespace, elapsed, lastSummary)
+		case <-ticker.C:
+		}
+	}
+}
+
+// checkNamespaceWorkloadsReady performs one-shot readiness evaluation of
+// every Deployment / StatefulSet / DaemonSet / Job in the namespace. Returns
+// (ready, human-summary, error). A list-API failure is fatal; per-workload
+// not-ready states are accumulated into the summary so the caller can log
+// the stuck list on timeout.
+func checkNamespaceWorkloadsReady(ctx context.Context, client kubernetes.Interface, namespace string) (bool, string, error) {
+	deployments, err := client.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("list deployments: %w", err)
+	}
+	statefulSets, err := client.AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("list statefulsets: %w", err)
+	}
+	daemonSets, err := client.AppsV1().DaemonSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("list daemonsets: %w", err)
+	}
+	jobs, err := client.BatchV1().Jobs(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("list jobs: %w", err)
+	}
+	ready, summary := evaluateNamespaceWorkloadsReady(deployments.Items, statefulSets.Items, daemonSets.Items, jobs.Items)
+	return ready, summary, nil
+}
+
+// evaluateNamespaceWorkloadsReady is the pure-function core of the
+// namespace-ready check, kept separate so it can be unit-tested without a
+// kubernetes API. Treats zero workloads as ready (defensive: a "supposed to
+// be empty" namespace shouldn't block forever).
+func evaluateNamespaceWorkloadsReady(
+	deployments []appsv1.Deployment,
+	statefulSets []appsv1.StatefulSet,
+	daemonSets []appsv1.DaemonSet,
+	jobs []batchv1.Job,
+) (bool, string) {
+	stuck := make([]string, 0)
+
+	for _, d := range deployments {
+		desired := int32(1)
+		if d.Spec.Replicas != nil {
+			desired = *d.Spec.Replicas
+		}
+		if d.Status.AvailableReplicas < desired {
+			stuck = append(stuck, fmt.Sprintf("deployment/%s (%d/%d available)", d.Name, d.Status.AvailableReplicas, desired))
+		}
+	}
+	for _, s := range statefulSets {
+		desired := int32(1)
+		if s.Spec.Replicas != nil {
+			desired = *s.Spec.Replicas
+		}
+		// StatefulSet uses ReadyReplicas; AvailableReplicas exists since
+		// k8s 1.22 but ReadyReplicas is the historical contract.
+		ready := s.Status.ReadyReplicas
+		if s.Status.AvailableReplicas > ready {
+			ready = s.Status.AvailableReplicas
+		}
+		if ready < desired {
+			stuck = append(stuck, fmt.Sprintf("statefulset/%s (%d/%d ready)", s.Name, ready, desired))
+		}
+	}
+	for _, ds := range daemonSets {
+		desired := ds.Status.DesiredNumberScheduled
+		if ds.Status.NumberAvailable < desired {
+			stuck = append(stuck, fmt.Sprintf("daemonset/%s (%d/%d available)", ds.Name, ds.Status.NumberAvailable, desired))
+		}
+	}
+	for _, j := range jobs {
+		// A Job is "ready" if it has completed (Succeeded) or is still
+		// running. A Failed Job blocks readiness — that's a genuine error
+		// the operator wants to know about.
+		if isJobFailed(j) {
+			stuck = append(stuck, fmt.Sprintf("job/%s (failed)", j.Name))
+		}
+	}
+
+	totalWorkloads := len(deployments) + len(statefulSets) + len(daemonSets) + len(jobs)
+	if totalWorkloads == 0 {
+		// Defensive: an empty namespace is trivially ready. RestartPedestal's
+		// flow won't hit this (helm install creates workloads), but keeping
+		// the check explicit avoids a spurious timeout.
+		return true, "no workloads in namespace"
+	}
+	if len(stuck) == 0 {
+		return true, fmt.Sprintf("all %d workloads ready", totalWorkloads)
+	}
+	return false, fmt.Sprintf("%d/%d workloads not ready: %v", len(stuck), totalWorkloads, stuck)
+}
+
+func isJobFailed(j batchv1.Job) bool {
+	for _, c := range j.Status.Conditions {
+		if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 func evaluateNamespacePodReadiness(pods []corev1.Pod) (bool, string) {

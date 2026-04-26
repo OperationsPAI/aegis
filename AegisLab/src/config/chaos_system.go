@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"time"
 
 	"aegis/consts"
 
@@ -12,6 +13,13 @@ import (
 
 const (
 	ConfigKeyChaosSystem = "injection.system"
+	// DefaultReadinessTimeoutSeconds is applied when the per-system override
+	// (`injection.system.<sys>.readiness_timeout_seconds`) is unset or
+	// non-positive. 900s = 15 min; long enough for the larger built-in
+	// systems (sockshop / otel-demo / TrainTicket) to come up on a cold
+	// kind cluster, short enough to fail loudly on a genuinely broken
+	// install.
+	DefaultReadinessTimeoutSeconds = 900
 )
 
 // ChaosSystemConfig is the aggregate of every injection.system.<name>.* key in
@@ -26,6 +34,26 @@ type ChaosSystemConfig struct {
 	AppLabelKey    string            `mapstructure:"app_label_key"`
 	IsBuiltin      bool              `mapstructure:"is_builtin"`
 	Status         consts.StatusType `mapstructure:"status"`
+	// ReadinessTimeoutSeconds caps the post-install workload-readiness probe
+	// in RestartPedestal. DSB systems (HotelReservation, SocialNetwork,
+	// MediaMicroservices, TrainTicket) chain init containers across 20–41
+	// services and routinely need 15–25 min on cold clusters; the previous
+	// hard-coded 5 min Helm wait timed out and tripped restart.pedestal.failed.
+	// Per-system override via etcd key
+	// `injection.system.<sys>.readiness_timeout_seconds`. Zero / unset falls
+	// back to DefaultReadinessTimeoutSeconds (900 = 15 min).
+	ReadinessTimeoutSeconds int `mapstructure:"readiness_timeout_seconds"`
+}
+
+// ReadinessTimeout returns the workload-readiness probe timeout for this
+// system, falling back to DefaultReadinessTimeoutSeconds when the per-system
+// override is unset or non-positive.
+func (s *ChaosSystemConfig) ReadinessTimeout() time.Duration {
+	secs := s.ReadinessTimeoutSeconds
+	if secs <= 0 {
+		secs = DefaultReadinessTimeoutSeconds
+	}
+	return time.Duration(secs) * time.Second
 }
 
 // chaosSystemConfigManager is now a stateless façade over Viper — every call

@@ -60,6 +60,10 @@ func helmInstallTimeouts() (time.Duration, time.Duration) {
 	return overall, wait
 }
 
+// restartWorkloadReadyTimeout is the legacy fallback timeout for the
+// pod-level wait (see waitForPedestalWorkloadReady). Preserved so existing
+// `restart_pedestal.workload_ready_timeout_seconds` overrides keep working
+// in the rare case where the per-system readiness probe is bypassed.
 func restartWorkloadReadyTimeout() time.Duration {
 	timeout := 600 * time.Second
 	if v := config.GetInt("restart_pedestal.workload_ready_timeout_seconds"); v > 0 {
@@ -106,10 +110,35 @@ func extractPreDuration(injectPayload map[string]any) time.Duration {
 	return 0
 }
 
-func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, namespace string) (time.Time, error) {
+// waitForPedestalWorkloadReady gates RestartPedestal on the helm-installed
+// chart actually being Ready cluster-side. Two-phase:
+//
+//  1. Workload-level probe (Deployments/StatefulSets/DaemonSets/Jobs) with
+//     the per-system `readiness_timeout_seconds` from chaos-system config —
+//     defaults to 15 min, DSB systems (TT, hs, sn, mm) typically bump to
+//     20–25 min. This is the long-running phase that previously was
+//     compressed into the helm `Wait=true` 5-min timeout and reliably
+//     failed restart.pedestal on cold clusters.
+//
+//  2. Pod-level Ready check with the legacy
+//     `restart_pedestal.workload_ready_timeout_seconds` knob (default 10
+//     min). Defense-in-depth: catches edge cases where a controller reports
+//     `availableReplicas == replicas` momentarily but a pod flaps right
+//     after.
+//
+// Followed by the post-ready soak, used to ensure the inject window doesn't
+// fire mid-warmup.
+func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, namespace string, readinessTimeout time.Duration) (time.Time, error) {
 	if gateway == nil {
 		logrus.Warnf("k8s gateway is nil; skipping workload-ready wait for namespace %q", namespace)
 		return time.Now(), nil
+	}
+
+	if readinessTimeout <= 0 {
+		readinessTimeout = time.Duration(config.DefaultReadinessTimeoutSeconds) * time.Second
+	}
+	if err := gateway.WaitNamespaceReady(ctx, namespace, readinessTimeout); err != nil {
+		return time.Time{}, err
 	}
 
 	timeout := restartWorkloadReadyTimeout()
@@ -367,9 +396,21 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			}
 		}
 
-		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace)
+		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace, cfg.ReadinessTimeout())
 		if err != nil {
 			toReleased = true
+			// Surface the failure as a restart.pedestal.failed trace event so
+			// the operator can see the stuck-resource list rather than
+			// silently rolling forward into a doomed inject. Per-system
+			// `readiness_timeout_seconds` (default 900) controls how long we
+			// wait — DSB systems should bump this to 1200–1500 to absorb
+			// their cold-start init-container chains.
+			publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
+				TaskID:    task.TaskID,
+				TaskType:  consts.TaskTypeRestartPedestal,
+				EventName: consts.EventRestartPedestalFailed,
+				Payload:   err.Error(),
+			})
 			return handleExecutionError(span, logEntry, "workload readiness/warmup wait failed", err)
 		}
 		adjustedInjectTime := adjustInjectTimeAfterWarmup(injectTime, warmupReadyAt, payload.injectPayload)
