@@ -487,7 +487,7 @@ def run_single_case(
         # NOT a StateAdapter — it mutates graph topology after the IR
         # pipeline has settled, so the propagator sees the new edges
         # naturally on construction. See ir/adapters/inferred_edges.py.
-        n_inferred = enrich_with_inferred_edges(graph, timelines)
+        n_inferred = enrich_with_inferred_edges(graph, timelines, physical_node_ids)
         logger.info(f"[{case_name}] inferred edges: {n_inferred}")
 
         # Per-system log-evidence adapters: scan application logs for
