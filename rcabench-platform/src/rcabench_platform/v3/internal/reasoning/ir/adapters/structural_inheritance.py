@@ -13,14 +13,17 @@ timeline at all, and downstream rules (``container_unavailable_to_span``,
 states are empty.
 
 This adapter expresses the structural invariant *if your container/pod/service
-is unavailable, the spans it would serve cannot be served either* directly at
-the IR layer, before the propagator runs. It walks the containment hierarchy
-implied by graph edges (``runs``, ``routes_to``, ``includes``) and emits
-``EvidenceLevel.inferred`` ``Transition`` events for the derived nodes that
-are weaker (or equal) in severity than what the upstream adapters already
-established. It only inherits the **availability** axis (``unavailable`` /
-``degraded``) — slow / erroring are causal claims that the propagator + rules
-should derive, not structural inheritance.
+is unavailable (or silent at the request layer), the spans it would serve
+cannot be served either* directly at the IR layer, before the propagator
+runs. It walks the containment hierarchy implied by graph edges (``runs``,
+``routes_to``, ``includes``) and emits ``EvidenceLevel.inferred``
+``Transition`` events for the derived nodes that are weaker (or equal) in
+severity than what the upstream adapters already established. It inherits
+the **availability** axis (``unavailable`` / ``degraded``) and — for
+``service`` only — the Class E **silent** signal down to spans (mirror of
+the unavailable→missing rule; pod/container do not carry SILENT per
+taxonomy §11.1). Slow / erroring are causal claims that the propagator +
+rules should derive, not structural inheritance.
 
 The adapter is a regular ``StateAdapter`` but takes ``prior_timelines`` at
 construction so it can avoid emitting transitions that would be redundant
@@ -42,13 +45,17 @@ from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperG
 
 # Infrastructure-level states that trigger structural inheritance. Slow / erroring
 # are intentionally excluded — those are causal claims that should flow through
-# the propagator and rule matcher, not through containment.
-_INHERIT_SOURCE_STATES = frozenset({"unavailable", "degraded"})
+# the propagator and rule matcher, not through containment. ``silent`` is included
+# because a service with no observable request flow cannot carry observed traces
+# on its spans either; per §11.1 only request-layer kinds (service, span) carry
+# SILENT, so this only fires for ``source_kind == service``.
+_INHERIT_SOURCE_STATES = frozenset({"unavailable", "degraded", "silent"})
 
 # Severity ranks for the availability axis only. Mirrors the canonical severity
-# table in ir/states.py but kept local so this adapter does not couple to states
-# the propagator might reorder later. ``missing`` and ``unavailable`` tie at the
-# top — both mean "the node is gone".
+# table in ir/states.py (silent ties with erroring at tier 4 per §11.1). Kept
+# local so this adapter does not couple to states the propagator might reorder
+# later. ``missing`` and ``unavailable`` tie at the top — both mean "the node
+# is gone".
 _AVAILABILITY_SEVERITY: dict[str, int] = {
     "unknown": 0,
     "healthy": 1,
@@ -56,6 +63,7 @@ _AVAILABILITY_SEVERITY: dict[str, int] = {
     "degraded": 3,
     "restarting": 3,
     "erroring": 4,
+    "silent": 4,
     "unavailable": 5,
     "missing": 5,
 }
@@ -88,6 +96,10 @@ class StructuralInheritanceAdapter:
                                 -> every ``span|service::*``: ``missing``
     - ``pod.degraded``          -> ``service.degraded``
     - ``service.unavailable``   -> every ``span|service::*``: ``missing``
+    - ``service.silent``        -> every ``span|service::*``: ``silent``
+                                (Class E mirror of the unavailable→missing rule;
+                                spans of a silent service cannot carry observed
+                                traces in this case.)
     """
 
     name = "structural_inheritance"
@@ -139,6 +151,14 @@ class StructuralInheritanceAdapter:
         elif source_kind == PlaceKind.service:
             if source_state == "unavailable":
                 yield from self._propagate_to_spans(source_node_key, source_state, at, derived_last)
+            elif source_state == "silent":
+                yield from self._propagate_to_spans(
+                    source_node_key,
+                    source_state,
+                    at,
+                    derived_last,
+                    derived_span_state="silent",
+                )
 
     def _from_container(
         self,
@@ -265,6 +285,7 @@ class StructuralInheritanceAdapter:
         derived_last: dict[str, str],
         *,
         source_node_key_override: str | None = None,
+        derived_span_state: str = "missing",
     ) -> Iterable[Transition]:
         service_node = self._graph.get_node_by_name(service_key)
         if service_node is None or service_node.id is None:
@@ -279,7 +300,7 @@ class StructuralInheritanceAdapter:
             yield from self._maybe_emit(
                 derived_node_key=span_node.uniq_name,
                 derived_kind=PlaceKind.span,
-                derived_state="missing",
+                derived_state=derived_span_state,
                 at=at,
                 source_node_key=source_for_evidence,
                 source_state=source_state,
