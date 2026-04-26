@@ -10,9 +10,15 @@ import (
 )
 
 type RuntimeDeps struct {
-	DB                   *gorm.DB
-	Monitor              NamespaceMonitor
-	RestartRateLimiter   *TokenBucketRateLimiter
+	DB                 *gorm.DB
+	Monitor            NamespaceMonitor
+	RestartRateLimiter *TokenBucketRateLimiter
+	// NsWarmingRateLimiter gates the post-helm-apply workload-readiness
+	// probe in RestartPedestal. Decoupled from RestartRateLimiter so the
+	// "API server hammer" bound stays small (default 5) while the
+	// "namespaces cold-starting in parallel" bound can be much larger
+	// (default 30). See PR #205.
+	NsWarmingRateLimiter *TokenBucketRateLimiter
 	BuildRateLimiter     *TokenBucketRateLimiter
 	AlgorithmRateLimiter *TokenBucketRateLimiter
 	RedisGateway         *redis.Gateway

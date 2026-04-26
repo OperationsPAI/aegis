@@ -26,6 +26,7 @@ func RegisterConsumerHandlers(
 	monitor NamespaceMonitor,
 	publisher common.ConfigPublisher,
 	restartLimiter *TokenBucketRateLimiter,
+	warmingLimiter *TokenBucketRateLimiter,
 	buildLimiter *TokenBucketRateLimiter,
 	algoLimiter *TokenBucketRateLimiter,
 ) {
@@ -45,6 +46,7 @@ func RegisterConsumerHandlers(
 	common.RegisterHandler(newRateLimitingConfigHandler(
 		publisher,
 		restartLimiter,
+		warmingLimiter,
 		buildLimiter,
 		algoLimiter,
 	))
@@ -307,6 +309,7 @@ func (h *chaosSystemHandler) refreshNamespaces() error {
 type rateLimitingConfigHandler struct {
 	publisher      common.ConfigPublisher
 	restartLimiter *TokenBucketRateLimiter
+	warmingLimiter *TokenBucketRateLimiter
 	buildLimiter   *TokenBucketRateLimiter
 	algoLimiter    *TokenBucketRateLimiter
 }
@@ -314,12 +317,14 @@ type rateLimitingConfigHandler struct {
 func newRateLimitingConfigHandler(
 	publisher common.ConfigPublisher,
 	restartLimiter *TokenBucketRateLimiter,
+	warmingLimiter *TokenBucketRateLimiter,
 	buildLimiter *TokenBucketRateLimiter,
 	algoLimiter *TokenBucketRateLimiter,
 ) *rateLimitingConfigHandler {
 	return &rateLimitingConfigHandler{
 		publisher:      publisher,
 		restartLimiter: restartLimiter,
+		warmingLimiter: warmingLimiter,
 		buildLimiter:   buildLimiter,
 		algoLimiter:    algoLimiter,
 	}
@@ -351,6 +356,13 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 				h.restartLimiter.UpdateConfig(maxTokens, currentTimeout)
 			}
 
+		case "rate_limiting.max_concurrent_ns_warming":
+			if h.warmingLimiter != nil {
+				maxTokens := config.GetInt(consts.MaxTokensKeyNamespaceWarming)
+				_, currentTimeout := h.warmingLimiter.GetConfig()
+				h.warmingLimiter.UpdateConfig(maxTokens, currentTimeout)
+			}
+
 		case "rate_limiting.max_concurrent_algo_execution":
 			if h.algoLimiter != nil {
 				maxTokens := config.GetInt(consts.MaxTokensKeyAlgoExecution)
@@ -365,6 +377,10 @@ func (h *rateLimitingConfigHandler) Handle(ctx context.Context, key, oldValue, n
 			if h.restartLimiter != nil {
 				maxTokens, _ := h.restartLimiter.GetConfig()
 				h.restartLimiter.UpdateConfig(maxTokens, timeout)
+			}
+			if h.warmingLimiter != nil {
+				maxTokens, _ := h.warmingLimiter.GetConfig()
+				h.warmingLimiter.UpdateConfig(maxTokens, timeout)
 			}
 			if h.buildLimiter != nil {
 				maxTokens, _ := h.buildLimiter.GetConfig()

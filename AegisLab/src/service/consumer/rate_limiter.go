@@ -206,6 +206,28 @@ func NewAlgoExecutionRateLimiter(gateway *redis.Gateway) *TokenBucketRateLimiter
 	})
 }
 
+// NewNamespaceWarmingRateLimiter builds the limiter that gates the
+// post-install workload-readiness probe in RestartPedestal. The bound is
+// "how many namespaces can be cold-starting workloads at once", which
+// scales with cluster capacity and is independent of how fast we can
+// hammer Helm against the API server (that's what RestartPedestal limits).
+//
+// DefaultTimeout is intentionally long (matches the default readiness
+// timeout) so a campaign with more concurrent rounds than warming slots
+// queues for a slot rather than fails. Operators tune via etcd:
+//
+//	rate_limiting.max_concurrent_ns_warming   (capacity, default 30)
+//	rate_limiting.token_wait_timeout           (wait, default 900s for warming)
+func NewNamespaceWarmingRateLimiter(gateway *redis.Gateway) *TokenBucketRateLimiter {
+	return newTokenBucketRateLimiter(gateway, RateLimiterConfig{
+		TokenBucketKey:   consts.NamespaceWarmingTokenBucket,
+		MaxTokensKey:     consts.MaxTokensKeyNamespaceWarming,
+		DefaultMaxTokens: consts.MaxConcurrentNamespaceWarming,
+		DefaultTimeout:   config.DefaultReadinessTimeoutSeconds,
+		ServiceName:      consts.NamespaceWarmingServiceName,
+	})
+}
+
 // newTokenBucketRateLimiter creates a new token bucket rate limiter
 func newTokenBucketRateLimiter(gateway *redis.Gateway, cfg RateLimiterConfig) *TokenBucketRateLimiter {
 	maxTokens := config.GetInt(cfg.MaxTokensKey)
