@@ -10,6 +10,11 @@ import polars as pl
 
 from ..algorithms.baseline_detector import get_adaptive_threshold
 from ..models.graph import CallsEdgeData, DepKind, Edge, HyperGraph, Node, PlaceKind
+from .trace_truncation import (
+    TruncationAlarmInfo,
+    build_baseline_profile,
+    detect_truncated_endpoints,
+)
 from .utils import fmap_threadpool, timeit
 
 logger = logging.getLogger(__name__)
@@ -330,6 +335,10 @@ class ParquetDataLoader:
         self._abnormal_traces: pl.DataFrame | None = None
         self._baseline_logs: pl.DataFrame | None = None
         self._abnormal_logs: pl.DataFrame | None = None
+
+        # Sidecar from identify_alarm_nodes_v2's structural-truncation pass.
+        # Populated lazily; consumers fetch via get_truncation_alarms().
+        self._truncation_alarms: dict[str, "TruncationAlarmInfo"] = {}
 
     @staticmethod
     def normalize_span_name(span_name: str) -> str:
@@ -660,13 +669,38 @@ class ParquetDataLoader:
                     logger.debug(f"Alarm: {full_span_name} missing in abnormal period (baseline had {b_count} calls)")
                     alarm_spans.add(full_span_name)
 
+        # Structural-truncation pass: surface endpoints whose abnormal traces
+        # collapse to a 2-span loadgen→frontend skeleton (silent-injection
+        # cases — no descendant carries an error attribute, so latency /
+        # error / missing-span detectors all miss them). See
+        # ``loaders/trace_truncation.py`` for the full design.
+        try:
+            baseline_profile = build_baseline_profile(baseline_traces)
+            truncation_alarms = detect_truncated_endpoints(abnormal_traces, baseline_profile)
+        except Exception as exc:  # defensive: never let the structural pass break alarm detection
+            logger.warning(f"identify_alarm_nodes_v2: truncation pass failed ({exc}); skipping")
+            truncation_alarms = {}
+
+        new_truncation_endpoints = set(truncation_alarms.keys()) - alarm_spans
+        alarm_spans.update(truncation_alarms.keys())
+        self._truncation_alarms = truncation_alarms
+
         logger.info(
             f"identify_alarm_nodes_v2: detected {len(alarm_spans)} alarm spans "
-            f"(including {len(missing_spans & alarm_spans)} missing spans) "
+            f"(including {len(missing_spans & alarm_spans)} missing spans, "
+            f"{len(truncation_alarms)} truncation endpoints; "
+            f"{len(new_truncation_endpoints)} added by truncation pass) "
             f"from {len(comparison)} backend root span types"
         )
 
         return alarm_spans
+
+    def get_truncation_alarms(self) -> dict[str, TruncationAlarmInfo]:
+        """Return the per-endpoint truncation sidecar populated by the
+        most recent ``identify_alarm_nodes_v2`` call. Empty if that
+        method has not yet run on this loader instance.
+        """
+        return dict(self._truncation_alarms)
 
     def _aggregate_root_span_metrics(self, df: pl.DataFrame) -> pl.DataFrame:
         """Aggregate metrics for root spans grouped by service_name and span_name.
