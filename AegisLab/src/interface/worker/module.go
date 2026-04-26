@@ -33,6 +33,7 @@ type Params struct {
 	Etcd           *etcd.Gateway
 	Monitor        consumer.NamespaceMonitor
 	RestartLimiter *consumer.TokenBucketRateLimiter `name:"restart_limiter"`
+	WarmingLimiter *consumer.TokenBucketRateLimiter `name:"warming_limiter"`
 	BuildLimiter   *consumer.TokenBucketRateLimiter `name:"build_limiter"`
 	AlgoLimiter    *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
 	BatchManager   *consumer.FaultBatchManager
@@ -65,6 +66,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		params.Etcd,
 		commonservice.NewConfigUpdateListener(ctx, params.DB, params.Etcd),
 		params.RestartLimiter,
+		params.WarmingLimiter,
 		params.BuildLimiter,
 		params.AlgoLimiter,
 	); err != nil {
@@ -79,6 +81,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		DB:                   params.DB,
 		Monitor:              params.Monitor,
 		RestartRateLimiter:   params.RestartLimiter,
+		NsWarmingRateLimiter: params.WarmingLimiter,
 		BuildRateLimiter:     params.BuildLimiter,
 		AlgorithmRateLimiter: params.AlgoLimiter,
 		RedisGateway:         params.RedisGateway,

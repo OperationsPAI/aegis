@@ -33,9 +33,10 @@ func NewService(redis *redisinfra.Gateway, db *gorm.DB) *Service {
 
 func knownBuckets() map[string]int {
 	return map[string]int{
-		consts.RestartPedestalTokenBucket: consts.MaxConcurrentRestartPedestal,
-		consts.BuildContainerTokenBucket:  consts.MaxConcurrentBuildContainer,
-		consts.AlgoExecutionTokenBucket:   consts.MaxConcurrentAlgoExecution,
+		consts.RestartPedestalTokenBucket:   consts.MaxConcurrentRestartPedestal,
+		consts.NamespaceWarmingTokenBucket:  consts.MaxConcurrentNamespaceWarming,
+		consts.BuildContainerTokenBucket:    consts.MaxConcurrentBuildContainer,
+		consts.AlgoExecutionTokenBucket:     consts.MaxConcurrentAlgoExecution,
 	}
 }
 

@@ -183,6 +183,45 @@ type restartPayload struct {
 	requiredNamespace string
 }
 
+// tokenIssuer is the minimum surface of TokenBucketRateLimiter that
+// executeRestartPedestal touches. Pulled out as an interface so the
+// two-stage rate-limit flow (restart token -> warming token) can be unit
+// tested with a fake.
+type tokenIssuer interface {
+	AcquireToken(ctx context.Context, taskID, traceID string) (bool, error)
+	WaitForToken(ctx context.Context, taskID, traceID string) (bool, error)
+	ReleaseToken(ctx context.Context, taskID, traceID string) error
+}
+
+// acquiredTokens tracks which of the two rate-limit tokens (restart-pedestal
+// and namespace-warming) are currently held by this task. The deferred
+// release path uses it to release exactly the tokens that were actually
+// acquired — never double-releasing, never leaking. See PR #205 reviewer
+// feedback: the previous single-bool design conflated the two pools and
+// gated the entire campaign on the small (max=5) restart bound.
+type acquiredTokens struct {
+	restart bool
+	warming bool
+}
+
+// release frees whichever of the two tokens are still held. Errors are
+// logged at error level but do not propagate — the caller has already
+// returned its primary error / success status.
+func (a *acquiredTokens) release(ctx context.Context, restart, warming tokenIssuer, taskID, traceID string, logEntry *logrus.Entry) {
+	if a.restart && restart != nil {
+		if err := restart.ReleaseToken(ctx, taskID, traceID); err != nil {
+			logEntry.Errorf("failed to release restart pedestal token: %v", err)
+		}
+		a.restart = false
+	}
+	if a.warming && warming != nil {
+		if err := warming.ReleaseToken(ctx, taskID, traceID); err != nil {
+			logEntry.Errorf("failed to release namespace warming token: %v", err)
+		}
+		a.warming = false
+	}
+}
+
 // executeRestartPedestal handles the execution of a restart pedestal task
 func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDeps) error {
 	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
@@ -201,11 +240,23 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			return handleExecutionError(span, logEntry, "redis gateway not initialized", fmt.Errorf("redis gateway not initialized"))
 		}
 
-		rateLimiter := deps.RestartRateLimiter
-		if rateLimiter == nil {
+		restartLimiter := deps.RestartRateLimiter
+		if restartLimiter == nil {
 			return handleExecutionError(span, logEntry, "restart pedestal rate limiter not initialized", errors.New("restart pedestal rate limiter not initialized"))
 		}
-		acquired, err := rateLimiter.AcquireToken(childCtx, task.TaskID, task.TraceID)
+		warmingLimiter := deps.NsWarmingRateLimiter
+		if warmingLimiter == nil {
+			return handleExecutionError(span, logEntry, "namespace warming rate limiter not initialized", errors.New("namespace warming rate limiter not initialized"))
+		}
+
+		// tokens tracks which of the two rate-limit tokens (restart-pedestal,
+		// namespace-warming) are currently held by this task. The deferred
+		// block at the bottom of this function uses tokens.release to free
+		// exactly the tokens that were acquired — never double-releasing,
+		// never leaking. See PR #205 reviewer feedback.
+		var tokens acquiredTokens
+
+		acquired, err := restartLimiter.AcquireToken(childCtx, task.TaskID, task.TraceID)
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to acquire rate limit token", err)
 		}
@@ -214,7 +265,7 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			span.AddEvent("no token available, waiting")
 			logEntry.Warn("No restart pedestal token available, waiting...")
 
-			acquired, err = rateLimiter.WaitForToken(childCtx, task.TaskID, task.TraceID)
+			acquired, err = restartLimiter.WaitForToken(childCtx, task.TaskID, task.TraceID)
 			if err != nil {
 				return handleExecutionError(span, logEntry, "failed to wait for token", err)
 			}
@@ -226,6 +277,7 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 				return nil
 			}
 		}
+		tokens.restart = true
 
 		payload, err := parseRestartPayload(task.Payload)
 		if err != nil {
@@ -251,11 +303,7 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 
 		var namespace string
 		defer func() {
-			if acquired {
-				if releaseErr := rateLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
-					logEntry.Errorf("failed to release restart pedestal token: %v", releaseErr)
-				}
-			}
+			tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
 			if toReleased && namespace != "" {
 				if err := monitor.ReleaseLock(childCtx, namespace, task.TraceID); err != nil {
 					if err := handleExecutionError(span, logEntry, fmt.Sprintf("failed to release lock for namespace %s", namespace), err); err != nil {
@@ -295,10 +343,10 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			}
 
 			if lockErr := monitor.AcquireNamespaceForRestart(payload.requiredNamespace, lockEndTime, task.TraceID); lockErr != nil {
-				if releaseErr := rateLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
-					logEntry.Errorf("failed to release restart pedestal token after required-namespace lock failure: %v", releaseErr)
-				}
-				acquired = false
+				// Release the restart token immediately so we don't pin a
+				// scarce slot waiting for reschedule. tokens.release is a
+				// no-op for any token that was already released.
+				tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
 				reason := fmt.Sprintf("failed to acquire lock for required namespace %s: %v, retrying", payload.requiredNamespace, lockErr)
 				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, reason); err != nil {
 					return err
@@ -309,12 +357,9 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		} else {
 			namespace = monitor.GetNamespaceToRestart(lockEndTime, cfg.NsPattern, task.TraceID)
 			if namespace == "" {
-				// Failed to acquire namespace lock, immediately release rate limit token
-				if releaseErr := rateLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
-					logEntry.Errorf("failed to release restart pedestal token after namespace lock failure: %v", releaseErr)
-				}
-
-				acquired = false
+				// Failed to acquire namespace lock, immediately release rate
+				// limit token so a stuck reschedule loop doesn't pin slots.
+				tokens.release(childCtx, restartLimiter, warmingLimiter, task.TaskID, task.TraceID, logEntry)
 				if err := rescheduleRestartPedestalTask(childCtx, deps.DB, redisGateway, task, "failed to acquire lock for namespace, retrying"); err != nil {
 					return err
 				}
@@ -385,6 +430,9 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		if !skippedInstall {
 			if err := installPedestal(childCtx, helmGateway, namespace, index, payload.pedestal.Extra); err != nil {
 				toReleased = true
+				// helm-apply failed: keep the restart token until the deferred
+				// release fires. We never acquired a warming token, so there's
+				// nothing to leak on the warming pool.
 				publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
 					TaskID:    task.TaskID,
 					TaskType:  consts.TaskTypeRestartPedestal,
@@ -395,6 +443,52 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to install pedestal of system %s", system), err)
 			}
 		}
+
+		// Two-stage rate limit: helm-apply is done (or skipped), so release
+		// the small `restart_pedestal` token (default cap = 5, sized for
+		// "API server hammer"). Then acquire a slot from the larger
+		// `namespace_warming` pool (default cap = 30) to gate the long
+		// readiness probe. This decouples "how many helm operations can
+		// run at once" from "how many namespaces can be cold-starting in
+		// parallel" — a campaign with 30 concurrent rounds no longer
+		// queues behind 5 helm slots throughout 15+ min of warming.
+		// See PR #205 reviewer feedback.
+		logEntry.Info("restart-pedestal helm-apply complete, releasing restart token, acquiring warming token")
+		// Clear the flag BEFORE the release call so a deferred fire under
+		// any error / panic path doesn't try to release the same token
+		// twice.
+		tokens.restart = false
+		if releaseErr := restartLimiter.ReleaseToken(childCtx, task.TaskID, task.TraceID); releaseErr != nil {
+			logEntry.Errorf("failed to release restart pedestal token after helm-apply: %v", releaseErr)
+		}
+
+		warmingAcquired, err := warmingLimiter.AcquireToken(childCtx, task.TaskID, task.TraceID)
+		if err != nil {
+			toReleased = true
+			return handleExecutionError(span, logEntry, "failed to acquire namespace warming token", err)
+		}
+		if !warmingAcquired {
+			span.AddEvent("no warming token available, waiting")
+			logEntry.Warn("No namespace warming token available, waiting...")
+			warmingAcquired, err = warmingLimiter.WaitForToken(childCtx, task.TaskID, task.TraceID)
+			if err != nil {
+				toReleased = true
+				return handleExecutionError(span, logEntry, "failed to wait for namespace warming token", err)
+			}
+			if !warmingAcquired {
+				toReleased = true
+				err := fmt.Errorf("namespace warming pool full, all slots busy")
+				publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
+					TaskID:    task.TaskID,
+					TaskType:  consts.TaskTypeRestartPedestal,
+					EventName: consts.EventRestartPedestalFailed,
+					Payload:   err.Error(),
+				})
+				return handleExecutionError(span, logEntry, "namespace warming pool exhausted", err)
+			}
+		}
+		tokens.warming = true
+		logEntry.Infof("acquired warming token for ns %s", namespace)
 
 		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace, cfg.ReadinessTimeout())
 		if err != nil {

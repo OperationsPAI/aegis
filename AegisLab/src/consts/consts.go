@@ -399,6 +399,17 @@ const (
 	MaxTokensKeyAlgoExecution  = "rate_limiting.max_concurrent_algo_execution"
 	MaxConcurrentAlgoExecution = 5
 	AlgoExecutionServiceName   = "algo_execution"
+
+	// Namespace warming rate limiting. Decoupled from RestartPedestal so the
+	// "max concurrent helm-installs hammering the API server" bound stays
+	// small (typically 5) while "max namespaces simultaneously cold-starting
+	// workloads" can be much larger (default 30). Held during the
+	// post-install WaitNamespaceReady probe; released when the readiness
+	// probe returns or times out. See PR #205.
+	NamespaceWarmingTokenBucket   = "token_bucket:namespace_warming"
+	MaxTokensKeyNamespaceWarming  = "rate_limiting.max_concurrent_ns_warming"
+	MaxConcurrentNamespaceWarming = 30
+	NamespaceWarmingServiceName   = "namespace_warming"
 )
 
 type EventType string

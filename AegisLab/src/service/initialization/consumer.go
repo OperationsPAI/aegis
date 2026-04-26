@@ -32,6 +32,7 @@ func InitializeConsumer(
 	etcdGw *etcd.Gateway,
 	listener *common.ConfigUpdateListener,
 	restartLimiter *consumer.TokenBucketRateLimiter,
+	warmingLimiter *consumer.TokenBucketRateLimiter,
 	buildLimiter *consumer.TokenBucketRateLimiter,
 	algoLimiter *consumer.TokenBucketRateLimiter,
 ) error {
@@ -59,7 +60,7 @@ func InitializeConsumer(
 	}
 
 	common.RegisterGlobalHandlers(publisher)
-	consumer.RegisterConsumerHandlers(controller, monitor, publisher, restartLimiter, buildLimiter, algoLimiter)
+	consumer.RegisterConsumerHandlers(controller, monitor, publisher, restartLimiter, warmingLimiter, buildLimiter, algoLimiter)
 	if err := activateConfigScope(consumerData.scope, listener); err != nil {
 		return err
 	}
