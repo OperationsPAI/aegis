@@ -57,6 +57,39 @@ kubectl get crd | grep chaos-mesh
 helm upgrade --install clickstack clickstack/clickstack   --namespace monitoring   --create-namespace   -f AegisLab/manifests/byte-cluster/clickstack.values.yaml   --wait --timeout 10m
 ```
 
+Apply the ClickHouse extra-config ConfigMap and patch the chart-managed
+Deployment to mount it under `/etc/clickhouse-server/config.d/`. ClickHouse
+auto-merges every `*.xml` under `config.d/`, so this lifts
+`max_concurrent_queries` from the chart's hardcoded `100` to `2000` (the
+autonomous inject-loop fans out ~30 BuildDatapack jobs * ~30 queries each
+and otherwise hits `Code 202: Too many simultaneous queries`):
+
+```bash
+kubectl apply -f AegisLab/manifests/byte-cluster/clickhouse-extra-config.yaml
+
+kubectl -n monitoring patch deploy clickstack-clickhouse --type=json -p='[
+  {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"extra-config","configMap":{"name":"clickstack-clickhouse-extra-config"}}},
+  {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"extra-config","mountPath":"/etc/clickhouse-server/config.d/90-limits.xml","subPath":"90-limits.xml"}}
+]'
+
+kubectl -n monitoring rollout status deploy/clickstack-clickhouse --timeout=5m
+```
+
+Verify the limit is live:
+
+```bash
+kubectl -n monitoring exec deploy/clickstack-clickhouse -- \
+  clickhouse-client --query "SELECT name, value FROM system.server_settings WHERE name='max_concurrent_queries'"
+```
+
+Expected: `max_concurrent_queries\t2000`.
+
+NOTE: `helm upgrade` will revert the Deployment patch (the volume/volumeMount
+additions). Re-run the `kubectl patch` block after every helm upgrade. The
+ConfigMap itself is independent of the chart and is not affected. See
+`AegisLab/manifests/byte-cluster/clickhouse-extra-config.yaml` for the
+header explaining why the chart cannot host these settings directly.
+
 Verify:
 
 ```bash
