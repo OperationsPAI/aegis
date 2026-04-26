@@ -12,10 +12,18 @@ spec:
         - name: clickhouse-client
           image: pair-diag-cn-guangzhou.cr.volces.com/pair/clickhouse-server:25.7-alpine
           imagePullPolicy: IfNotPresent
+          # Service name on the operator-managed ClickHouse cluster: the
+          # headless Service is `<release>-clickhouse-clickhouse-headless`
+          # (chart helper `clickstack.clickhouse.svc`). With release name
+          # `clickstack` that resolves to
+          # `clickstack-clickhouse-clickhouse-headless`. Using the headless
+          # Service is fine for one-shot DDL — DNS round-robins across the
+          # replica pods and the CREATE DATABASE statement is replicated by
+          # the operator-managed cluster anyway.
           command:
             - /bin/sh
             - -c
             - |
               clickhouse-client \
-                --host clickstack-clickhouse \
+                --host clickstack-clickhouse-clickhouse-headless \
                 --query "CREATE DATABASE IF NOT EXISTS otel"

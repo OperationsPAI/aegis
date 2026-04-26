@@ -26,9 +26,12 @@ kubectl get nodes
 kubectl get sc
 kubectl get --raw /apis/metrics.k8s.io/v1beta1/nodes | head
 helm repo add chaos-mesh https://charts.chaos-mesh.org --force-update
-helm repo add clickstack https://hyperdxio.github.io/helm-charts --force-update
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update
 helm repo update
+# NB: ClickStack is no longer pulled from a remote repo. We vendor the
+# unreleased main-branch chart under AegisLab/vendor/clickstack-chart and
+# install from the local path — see step "## 2. Install ClickStack /
+# ClickHouse" below.
 ```
 
 Create namespaces used by the stack:
@@ -53,50 +56,138 @@ kubectl get crd | grep chaos-mesh
 
 ## 2. Install ClickStack / ClickHouse
 
+ClickStack is now installed from the **vendored unreleased chart** at
+`AegisLab/vendor/clickstack-chart` (upstream main branch, pinned commit
+documented in `AegisLab/vendor/clickstack-chart/SOURCE.txt`). The vendored
+chart uses the ClickHouse operator (`ClickHouseCluster` and `KeeperCluster`
+CRDs) instead of a plain Deployment. This gives us:
+
+- 2 ClickHouse replicas with `ReplicatedMergeTree` semantics under a 3-pod
+  Keeper quorum — closes the HA gap tracked in #208.
+- HPA on the HyperDX app — first-class chart support, no longer requires
+  out-of-band manifests.
+- A first-class `clickhouse.cluster.spec.settings.extraConfig` knob, so the
+  `max_concurrent_queries` / `max_concurrent_select_queries` overrides
+  previously injected via the sibling `clickhouse-extra-config.yaml`
+  ConfigMap (PR #206) are now part of the chart values. The ConfigMap +
+  `kubectl patch` workaround is removed in this PR.
+
+### 2.1 Operator prerequisite (one-time per cluster)
+
+The chart renders `clickhouse.com/v1alpha1` CRs and requires a ClickHouse
+operator that owns those CRDs to be installed cluster-wide. On the byte
+cluster the `clickstack-operators-clickhouse-operator-controller` Deployment
+is already running in the `default` namespace — verify before continuing:
+
 ```bash
-helm upgrade --install clickstack clickstack/clickstack   --namespace monitoring   --create-namespace   -f AegisLab/manifests/byte-cluster/clickstack.values.yaml   --wait --timeout 10m
+kubectl get deploy -n default clickstack-operators-clickhouse-operator-controller
+kubectl get crd clickhouseclusters.clickhouse.com keeperclusters.clickhouse.com
 ```
 
-Apply the ClickHouse extra-config ConfigMap and patch the chart-managed
-Deployment to mount it under `/etc/clickhouse-server/config.d/`. ClickHouse
-auto-merges every `*.xml` under `config.d/`, so this lifts
-`max_concurrent_queries` from the chart's hardcoded `100` to `2000` (the
-autonomous inject-loop fans out ~30 BuildDatapack jobs * ~30 queries each
-and otherwise hits `Code 202: Too many simultaneous queries`):
+If the operator is missing on a fresh cluster, install it via the upstream
+operator chart (out of scope for this pack).
+
+### 2.2 Migration from the legacy clickstack 1.1.1 release
+
+> **Destructive — existing OTel data in ClickHouse will be lost.** This
+> migration deletes the old plain-Deployment ClickHouse pod and its PVC.
+> The user has explicitly approved this trade-off; do not re-run on a
+> cluster whose OTel data must be preserved.
 
 ```bash
-kubectl apply -f AegisLab/manifests/byte-cluster/clickhouse-extra-config.yaml
+# Drop the old release. The 1.1.1 chart owns a Deployment named
+# `clickstack-clickhouse` and a Service `clickstack-clickhouse`; helm
+# uninstall removes both.
+helm uninstall clickstack -n monitoring
 
-kubectl -n monitoring patch deploy clickstack-clickhouse --type=json -p='[
-  {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"extra-config","configMap":{"name":"clickstack-clickhouse-extra-config"}}},
-  {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"extra-config","mountPath":"/etc/clickhouse-server/config.d/90-limits.xml","subPath":"90-limits.xml"}}
-]'
+# The 1.1.1 release ran with `global.keepPVC: false` so the PVC is normally
+# garbage-collected. If the PVC still exists, delete it before installing
+# the new chart so the operator allocates fresh per-replica volumes:
+kubectl get pvc -n monitoring | grep clickstack-clickhouse || true
+kubectl delete pvc -n monitoring -l app.kubernetes.io/name=clickstack 2>/dev/null || true
 
-kubectl -n monitoring rollout status deploy/clickstack-clickhouse --timeout=5m
+# Drop the sibling extra-config ConfigMap from the PR #206 workaround. It
+# is no longer referenced by anything — the new chart's spec.settings
+# carries those values now.
+kubectl delete configmap -n monitoring clickstack-clickhouse-extra-config --ignore-not-found
+
+# The new chart creates Services with different names (see step 2.4).
+# Delete the leftover legacy Service if helm uninstall did not remove it.
+kubectl delete svc -n monitoring clickstack-clickhouse --ignore-not-found
 ```
 
-Verify the limit is live:
+### 2.3 Install the new operator-managed release
 
 ```bash
-kubectl -n monitoring exec deploy/clickstack-clickhouse -- \
-  clickhouse-client --query "SELECT name, value FROM system.server_settings WHERE name='max_concurrent_queries'"
+helm upgrade --install clickstack ./AegisLab/vendor/clickstack-chart \
+  --namespace monitoring --create-namespace \
+  -f AegisLab/manifests/byte-cluster/clickstack.values.yaml \
+  --wait --timeout 15m
 ```
 
-Expected: `max_concurrent_queries\t2000`.
-
-NOTE: `helm upgrade` will revert the Deployment patch (the volume/volumeMount
-additions). Re-run the `kubectl patch` block after every helm upgrade. The
-ConfigMap itself is independent of the chart and is not affected. See
-`AegisLab/manifests/byte-cluster/clickhouse-extra-config.yaml` for the
-header explaining why the chart cannot host these settings directly.
-
-Verify:
+Verify the CRs are healthy and the operator has created the pods:
 
 ```bash
-kubectl get pods -n monitoring
-kubectl get svc -n monitoring clickstack-clickhouse
+kubectl get clickhousecluster -n monitoring clickstack-clickhouse
+kubectl get keepercluster      -n monitoring clickstack-clickhouse-keeper
+kubectl get pods -n monitoring -l app.kubernetes.io/instance=clickstack
+```
+
+Expected:
+- `ClickHouseCluster/clickstack-clickhouse` shows `Status=Completed`
+- `KeeperCluster/clickstack-clickhouse-keeper` shows 3 ready replicas
+- 2 ClickHouse server pods + 3 Keeper pods all `Running`
+- HyperDX HPA exists at minReplicas=2:
+  ```bash
+  kubectl get hpa -n monitoring clickstack-app
+  ```
+
+### 2.4 Service-name reference
+
+The operator creates a headless Service per cluster, named
+`<release>-clickhouse-clickhouse-headless`. With release name `clickstack`
+that's `clickstack-clickhouse-clickhouse-headless`. Everything that
+previously dialled `clickstack-clickhouse.monitoring.svc.cluster.local` now
+dials `clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local`
+— this PR updates:
+
+- `AegisLab/manifests/byte-cluster/otel-kube-stack.values.yaml` — both
+  collector ClickHouse exporters
+- `AegisLab/manifests/byte-cluster/clickhouse-init-job.yaml` — the bootstrap
+  `CREATE DATABASE otel` job
+- `AegisLab/manifests/byte-cluster/rcabench.values.yaml` — the rcabench
+  backend's `database.clickhouse.host` config
+- `AegisLab/manifests/byte-cluster/initial-data/data.yaml` — the etcd
+  dynamic-config seed `database.clickhouse.host`
+
+If anything else is still pointing at the legacy name, search for it:
+
+```bash
+grep -rn "clickstack-clickhouse\." AegisLab/manifests AegisLab/data 2>/dev/null
+```
+
+### 2.5 Bootstrap the OTel database
+
+```bash
 kubectl apply -f AegisLab/manifests/byte-cluster/clickhouse-init-job.yaml
 kubectl wait --for=condition=complete job/clickstack-init-otel-db -n monitoring --timeout=5m
+```
+
+### 2.6 Verify the concurrency overrides landed via the operator
+
+```bash
+kubectl -n monitoring exec sts/chi-clickstack-clickhouse-cluster-0 -c clickhouse -- \
+  clickhouse-client --query "SELECT name, value FROM system.server_settings WHERE name IN ('max_concurrent_queries','max_concurrent_select_queries')"
+```
+
+Expected: `max_concurrent_queries\t2000` and `max_concurrent_select_queries\t1500`.
+The actual StatefulSet name depends on the operator's naming scheme; if
+the command above does not match, fall back to:
+
+```bash
+POD=$(kubectl -n monitoring get pod -l clickhouse.com/app=clickhouse-server -o jsonpath='{.items[0].metadata.name}')
+kubectl -n monitoring exec "$POD" -c clickhouse -- \
+  clickhouse-client --query "SELECT name, value FROM system.server_settings WHERE name LIKE 'max_concurrent_%'"
 ```
 
 ## 3. Install the trimmed OTel Kube Stack
@@ -315,7 +406,10 @@ Cluster-side checks:
 ```bash
 kubectl get networkchaos -A
 kubectl get hpa -n monitoring
-kubectl -n monitoring exec deploy/clickstack-clickhouse -- clickhouse-client --query "SHOW TABLES FROM otel LIKE 'otel_%'"
+# With the operator-managed cluster, exec into one of the ClickHouse pods
+# directly (the legacy `deploy/clickstack-clickhouse` is gone post-migration):
+POD=$(kubectl -n monitoring get pod -l clickhouse.com/app=clickhouse-server -o jsonpath='{.items[0].metadata.name}')
+kubectl -n monitoring exec "$POD" -c clickhouse -- clickhouse-client --query "SHOW TABLES FROM otel LIKE 'otel_%'"
 ```
 
 - `--skip-preflight` is currently needed on this Byte cluster even when the target namespace already has matching pods

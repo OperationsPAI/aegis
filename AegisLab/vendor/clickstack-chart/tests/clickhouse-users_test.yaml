@@ -1,0 +1,34 @@
+suite: Test ClickHouse Users Configuration
+templates:
+  - clickhouse/cluster.yaml
+
+tests:
+  - it: should include app user in extraUsersConfig
+    asserts:
+      - isNotNull:
+          path: spec.settings.extraUsersConfig.users.app
+      - equal:
+          path: spec.settings.extraUsersConfig.users.app.profile
+          value: default
+
+  - it: should include otelcollector user in extraUsersConfig
+    asserts:
+      - isNotNull:
+          path: spec.settings.extraUsersConfig.users.otelcollector
+      - equal:
+          path: spec.settings.extraUsersConfig.users.otelcollector.profile
+          value: default
+
+  - it: should resolve password template expressions from hyperdx.secrets
+    set:
+      hyperdx:
+        secrets:
+          CLICKHOUSE_APP_PASSWORD: "test-app-pass"
+          CLICKHOUSE_PASSWORD: "test-otel-pass"
+    asserts:
+      - equal:
+          path: spec.settings.extraUsersConfig.users.app.password
+          value: "test-app-pass"
+      - equal:
+          path: spec.settings.extraUsersConfig.users.otelcollector.password
+          value: "test-otel-pass"

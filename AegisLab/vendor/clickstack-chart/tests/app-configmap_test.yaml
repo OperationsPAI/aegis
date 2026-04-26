@@ -1,0 +1,59 @@
+suite: Test ClickStack ConfigMap
+templates:
+  - hyperdx/configmap.yaml
+tests:
+  - it: should render clickstack-config ConfigMap with default values
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: clickstack-config
+      - equal:
+          path: data.HYPERDX_LOG_LEVEL
+          value: "info"
+      - equal:
+          path: data.USAGE_STATS_ENABLED
+          value: "true"
+      - equal:
+          path: data.RUN_SCHEDULED_TASKS_EXTERNALLY
+          value: "false"
+      - matchRegex:
+          path: data.MONGO_URI
+          pattern: mongodb://hyperdx:.*@.*-mongodb-svc:27017/hyperdx
+      - matchRegex:
+          path: data.CLICKHOUSE_ENDPOINT
+          pattern: "tcp://.*-clickhouse-clickhouse-headless:9000"
+      - matchRegex:
+          path: data.OPAMP_SERVER_URL
+          pattern: "http://.*-app:4320"
+
+  - it: should render user-provided config values
+    set:
+      hyperdx:
+        config:
+          HYPERDX_LOG_LEVEL: "debug"
+          CUSTOM_VAR: "custom-value"
+    asserts:
+      - equal:
+          path: data.HYPERDX_LOG_LEVEL
+          value: "debug"
+      - equal:
+          path: data.CUSTOM_VAR
+          value: "custom-value"
+
+  - it: should render FRONTEND_URL from config override
+    set:
+      hyperdx:
+        config:
+          FRONTEND_URL: "https://my-domain.com"
+    asserts:
+      - equal:
+          path: data.FRONTEND_URL
+          value: "https://my-domain.com"
+
+  - it: should render OTEL_EXPORTER_OTLP_ENDPOINT
+    asserts:
+      - matchRegex:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+          pattern: "http://.*-otel-collector:4318"

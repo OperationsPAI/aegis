@@ -1,0 +1,47 @@
+suite: Test Persistence Settings
+templates:
+  - mongodb/community.yaml
+
+tests:
+  - it: should pass statefulSet volumeClaimTemplates through from spec
+    set:
+      mongodb:
+        spec:
+          members: 1
+          type: ReplicaSet
+          version: "5.0.32"
+          security:
+            authentication:
+              modes: ["SCRAM"]
+          users:
+            - name: hyperdx
+              db: hyperdx
+              passwordSecretRef:
+                name: test-password
+              roles:
+                - name: dbOwner
+                  db: hyperdx
+              scramCredentialsSecretName: test-scram
+          statefulSet:
+            spec:
+              volumeClaimTemplates:
+                - metadata:
+                    name: data-volume
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    storageClassName: "fast-ssd"
+                    resources:
+                      requests:
+                        storage: 20Gi
+    asserts:
+      - equal:
+          path: spec.statefulSet.spec.volumeClaimTemplates[0].spec.storageClassName
+          value: "fast-ssd"
+      - equal:
+          path: spec.statefulSet.spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 20Gi
+
+  - it: should not include statefulSet when not specified in spec
+    asserts:
+      - isNull:
+          path: spec.statefulSet
