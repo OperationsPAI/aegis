@@ -671,3 +671,333 @@ dynamic_configs:
 		t.Fatalf("hr row mutated despite --name=ts filter: %q", hr.DefaultValue)
 	}
 }
+
+// TestReseedHelmConfigForVersionUpsertsChartFields covers the issue #201
+// path: a data.yaml chart-level bump on the SAME container_version_id is
+// applied in place. New parameter_configs + helm_config_values are added.
+// This is what the byte-cluster operator was forced to do via raw SQL.
+func TestReseedHelmConfigForVersionUpsertsChartFields(t *testing.T) {
+	db := newReseedTestDB(t)
+	if err := db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`).Error; err != nil {
+		t.Fatalf("seed container: %v", err)
+	}
+	if err := db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.1', 1, 0, 1)`).Error; err != nil {
+		t.Fatalf("seed version: %v", err)
+	}
+	if err := db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.1', 62, 'https://lgu-se-internal.github.io/TeaStore', 'lgu-tea')`).Error; err != nil {
+		t.Fatalf("seed helm: %v", err)
+	}
+
+	seed := writeSeedFile(t, `
+containers:
+  - type: 2
+    name: tea
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.1
+        helm_config:
+          version: 0.1.2
+          chart_name: teastore
+          repo_name: lgu-tea
+          repo_url: https://lgu-se-internal.github.io/TeaStore
+          values:
+            - key: jmeter.waitForRegistryImage.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: jmeter.waitForRegistryImage.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: busybox
+              overridable: true
+            - key: jmeter.waitForRegistryImage.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "1.36"
+              overridable: true
+            - key: jmeter.waitForRegistryImage.pullPolicy
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: IfNotPresent
+              overridable: true
+`)
+
+	// Dry-run first.
+	dry, err := ReseedHelmConfigForVersion(context.Background(), db, ReseedHelmConfigForVersionRequest{
+		DataPath:           seed,
+		ContainerVersionID: 62,
+		DryRun:             true,
+	})
+	if err != nil {
+		t.Fatalf("dry-run reseed: %v", err)
+	}
+	if !dry.DryRun {
+		t.Fatalf("dry-run flag lost: %+v", dry)
+	}
+	if len(dry.Actions) == 0 {
+		t.Fatalf("expected planned actions for dry-run, got none")
+	}
+	for _, a := range dry.Actions {
+		if a.Applied {
+			t.Fatalf("dry-run produced applied action: %+v", a)
+		}
+	}
+	// DB should be untouched after dry-run.
+	var stillOld struct{ Version string }
+	db.Raw(`SELECT version FROM helm_configs WHERE id = 90`).Scan(&stillOld)
+	if stillOld.Version != "0.1.1" {
+		t.Fatalf("dry-run mutated DB version: %q", stillOld.Version)
+	}
+
+	// Apply.
+	report, err := ReseedHelmConfigForVersion(context.Background(), db, ReseedHelmConfigForVersionRequest{
+		DataPath:           seed,
+		ContainerVersionID: 62,
+	})
+	if err != nil {
+		t.Fatalf("apply reseed: %v", err)
+	}
+
+	// helm_configs.version is bumped.
+	var got struct {
+		ChartName string
+		Version   string
+	}
+	db.Raw(`SELECT chart_name, version FROM helm_configs WHERE id = 90`).Scan(&got)
+	if got.Version != "0.1.2" {
+		t.Fatalf("version not bumped: %+v", got)
+	}
+
+	// All 4 jmeter values are linked.
+	var linked []struct{ Key string }
+	if err := db.Raw(`
+		SELECT pc.config_key AS key
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		WHERE hcv.helm_config_id = 90
+		ORDER BY pc.config_key
+	`).Scan(&linked).Error; err != nil {
+		t.Fatalf("list linked: %v", err)
+	}
+	if len(linked) != 4 {
+		t.Fatalf("expected 4 linked values, got %d (%+v)", len(linked), linked)
+	}
+	if linked[0].Key != "jmeter.waitForRegistryImage.pullPolicy" {
+		t.Fatalf("unexpected first key: %s", linked[0].Key)
+	}
+
+	// At least one applied helm_configs action.
+	driftApplied := false
+	for _, a := range report.Actions {
+		if a.Layer == "helm_configs" && a.Applied && a.Note != "" {
+			driftApplied = true
+		}
+	}
+	if !driftApplied {
+		t.Fatalf("expected applied helm_configs drift action, got %+v", report.Actions)
+	}
+
+	// Idempotence.
+	r2, err := ReseedHelmConfigForVersion(context.Background(), db, ReseedHelmConfigForVersionRequest{
+		DataPath:           seed,
+		ContainerVersionID: 62,
+	})
+	if err != nil {
+		t.Fatalf("second reseed: %v", err)
+	}
+	if len(r2.Actions) != 0 {
+		t.Fatalf("expected idempotent rerun, got %+v", r2.Actions)
+	}
+}
+
+// TestReseedHelmConfigForVersionPreservesDefaultValueDrift pins the
+// constraint from issue #201: when the seed default differs from an
+// existing parameter_configs.default_value, NEVER overwrite — log + report.
+func TestReseedHelmConfigForVersionPreservesDefaultValueDrift(t *testing.T) {
+	db := newReseedTestDB(t)
+	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`).Error
+	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`).Error
+	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`).Error
+
+	manuallyEdited := "operator-mirrored.example.com/busybox"
+	cfg := &model.ParameterConfig{
+		Key:          "jmeter.waitForRegistryImage.repository",
+		Type:         consts.ParameterTypeFixed,
+		Category:     consts.ParameterCategoryHelmValues,
+		ValueType:    consts.ValueDataTypeString,
+		DefaultValue: &manuallyEdited,
+		Required:     false,
+		Overridable:  true,
+	}
+	if err := db.Create(cfg).Error; err != nil {
+		t.Fatalf("seed pre-existing param: %v", err)
+	}
+	if err := db.Create(&model.HelmConfigValue{HelmConfigID: 90, ParameterConfigID: cfg.ID}).Error; err != nil {
+		t.Fatalf("link pre-existing value: %v", err)
+	}
+
+	seed := writeSeedFile(t, `
+containers:
+  - type: 2
+    name: tea
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.2
+        helm_config:
+          version: 0.1.2
+          chart_name: teastore
+          repo_name: lgu-tea
+          repo_url: https://x
+          values:
+            - key: jmeter.waitForRegistryImage.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: busybox
+              overridable: true
+`)
+
+	report, err := ReseedHelmConfigForVersion(context.Background(), db, ReseedHelmConfigForVersionRequest{
+		DataPath:           seed,
+		ContainerVersionID: 62,
+	})
+	if err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	// DB is unchanged: the manually-edited default_value wins.
+	var got model.ParameterConfig
+	if err := db.Where("config_key = ? AND category = ?", "jmeter.waitForRegistryImage.repository", consts.ParameterCategoryHelmValues).First(&got).Error; err != nil {
+		t.Fatalf("look up param: %v", err)
+	}
+	if got.DefaultValue == nil || *got.DefaultValue != manuallyEdited {
+		t.Fatalf("default_value clobbered: got=%v want=%q", got.DefaultValue, manuallyEdited)
+	}
+
+	// And the report surfaces a preserved-drift action with Applied=false.
+	preserved := false
+	for _, a := range report.Actions {
+		if a.Layer == "parameter_configs" && a.Key == "tea@0.1.2:jmeter.waitForRegistryImage.repository" && !a.Applied {
+			preserved = true
+		}
+	}
+	if !preserved {
+		t.Fatalf("expected preserved-drift action, got %+v", report.Actions)
+	}
+}
+
+// TestReseedHelmConfigForVersionPruneDeletesMissingLinks verifies that
+// --prune removes helm_config_values links for keys that disappeared from
+// the seed YAML. The parameter_configs row is intentionally NOT deleted.
+func TestReseedHelmConfigForVersionPruneDeletesMissingLinks(t *testing.T) {
+	db := newReseedTestDB(t)
+	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`).Error
+	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`).Error
+	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`).Error
+
+	staleVal := "deprecated"
+	stale := &model.ParameterConfig{
+		Key:          "stale.removed.key",
+		Type:         consts.ParameterTypeFixed,
+		Category:     consts.ParameterCategoryHelmValues,
+		ValueType:    consts.ValueDataTypeString,
+		DefaultValue: &staleVal,
+		Overridable:  true,
+	}
+	if err := db.Create(stale).Error; err != nil {
+		t.Fatalf("seed stale param: %v", err)
+	}
+	if err := db.Create(&model.HelmConfigValue{HelmConfigID: 90, ParameterConfigID: stale.ID}).Error; err != nil {
+		t.Fatalf("link stale: %v", err)
+	}
+
+	seed := writeSeedFile(t, `
+containers:
+  - type: 2
+    name: tea
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.2
+        helm_config:
+          version: 0.1.2
+          chart_name: teastore
+          repo_name: lgu-tea
+          repo_url: https://x
+          values:
+            - key: kept.key
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: alive
+              overridable: true
+`)
+
+	// Without --prune, stale link survives.
+	if _, err := ReseedHelmConfigForVersion(context.Background(), db, ReseedHelmConfigForVersionRequest{
+		DataPath:           seed,
+		ContainerVersionID: 62,
+	}); err != nil {
+		t.Fatalf("reseed (no prune): %v", err)
+	}
+	var stillLinked int64
+	db.Raw(`SELECT COUNT(*) FROM helm_config_values WHERE helm_config_id = 90 AND parameter_config_id = ?`, stale.ID).Scan(&stillLinked)
+	if stillLinked != 1 {
+		t.Fatalf("stale link removed without --prune: count=%d", stillLinked)
+	}
+
+	// With --prune, the stale link is gone.
+	report, err := ReseedHelmConfigForVersion(context.Background(), db, ReseedHelmConfigForVersionRequest{
+		DataPath:           seed,
+		ContainerVersionID: 62,
+		Prune:              true,
+	})
+	if err != nil {
+		t.Fatalf("reseed (prune): %v", err)
+	}
+	var afterPrune int64
+	db.Raw(`SELECT COUNT(*) FROM helm_config_values WHERE helm_config_id = 90 AND parameter_config_id = ?`, stale.ID).Scan(&afterPrune)
+	if afterPrune != 0 {
+		t.Fatalf("stale link still present after --prune: count=%d", afterPrune)
+	}
+
+	// parameter_configs row itself stays — it might be referenced elsewhere.
+	var paramStill int64
+	db.Raw(`SELECT COUNT(*) FROM parameter_configs WHERE id = ?`, stale.ID).Scan(&paramStill)
+	if paramStill != 1 {
+		t.Fatalf("parameter_configs row deleted by prune; should be left alone (count=%d)", paramStill)
+	}
+
+	pruneApplied := false
+	for _, a := range report.Actions {
+		if a.Layer == "helm_config_values" && a.Note != "" && a.Applied && a.Key == "tea@0.1.2:stale.removed.key" {
+			pruneApplied = true
+		}
+	}
+	if !pruneApplied {
+		t.Fatalf("expected applied prune action, got %+v", report.Actions)
+	}
+}
+
+// TestReseedHelmConfigForVersionMissingVersion verifies the not-found path:
+// an unknown container_version_id surfaces gorm.ErrRecordNotFound so the
+// HTTP handler can map it to 404.
+func TestReseedHelmConfigForVersionMissingVersion(t *testing.T) {
+	db := newReseedTestDB(t)
+	seed := writeSeedFile(t, `containers: []
+`)
+	_, err := ReseedHelmConfigForVersion(context.Background(), db, ReseedHelmConfigForVersionRequest{
+		DataPath:           seed,
+		ContainerVersionID: 9999,
+	})
+	if err == nil {
+		t.Fatalf("expected error for missing version_id, got nil")
+	}
+}

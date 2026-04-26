@@ -656,6 +656,348 @@ func systemLabelFromKey(key string) string {
 	return ""
 }
 
+// ReseedHelmConfigForVersionRequest drives a per-container_version reseed of
+// the helm_configs row + its linked parameter_configs / helm_config_values
+// tables. Unlike ReseedFromDataFile, which is keyed by system name and
+// honors the "history-preservation" contract (never UPDATE an existing
+// (container_id, version_name) row), this entry point is keyed by an
+// explicit container_version_id and IS allowed to mutate the chart-level
+// fields (chart_name / version / repo_url / repo_name / value_file /
+// local_path) of the bound helm_configs row in place.
+//
+// This is the targeted "fix-up" path used by aegisctl pedestal helm reseed
+// to propagate a seed-YAML chart bump to a running cluster without forcing
+// re-allocation of every namespace bound to the old version_id (issue #201).
+type ReseedHelmConfigForVersionRequest struct {
+	DataPath           string // absolute path to data.yaml (resolved upstream from env/base)
+	ContainerVersionID int    // required: which container_version's helm_configs row to reseed
+	DryRun             bool   // default safety: don't write
+	Prune              bool   // when true, delete helm_config_values links whose key disappeared from the seed
+}
+
+// ReseedHelmConfigForVersion is the entry point for a single-version helm
+// reseed. The contract:
+//
+//   - Looks up the container_version row by ID. Returns gorm.ErrRecordNotFound
+//     when absent so callers can map to HTTP 404.
+//   - Walks data.yaml looking for a `versions[].name` that matches the row's
+//     name on the same container. If absent, returns an error so the caller
+//     knows the seed has no entry to reconcile against.
+//   - UPSERTs the helm_configs row (chart_name / version / repo* / value_file /
+//     local_path). Existing local_path / value_file are preserved when the seed
+//     entry omits them so an operator-set local-fallback isn't clobbered.
+//   - Walks the seed's helm_config.values list and: (a) inserts missing
+//     parameter_configs rows (looked up by (config_key, type, category));
+//     (b) inserts missing helm_config_values links; (c) when an existing
+//     parameter_config row's default_value differs from the seed default,
+//     LOGS A WARNING and leaves the DB row untouched (protects manual edits).
+//   - With Prune=true, also deletes helm_config_values rows whose
+//     parameter_config key is no longer in the seed. Parameter_configs rows
+//     themselves are left in place because they may be shared across multiple
+//     helm_configs.
+//   - Idempotent: a second invocation with the same seed yields zero applied
+//     actions.
+func ReseedHelmConfigForVersion(ctx context.Context, db *gorm.DB, req ReseedHelmConfigForVersionRequest) (*ReseedReport, error) {
+	if db == nil {
+		return nil, errors.New("reseed: db is required")
+	}
+	if req.ContainerVersionID <= 0 {
+		return nil, errors.New("reseed: container_version_id is required and must be > 0")
+	}
+	if strings.TrimSpace(req.DataPath) == "" {
+		return nil, errors.New("reseed: data_path is required")
+	}
+
+	// Look up the version row + parent container. We need the container.Name
+	// to find the matching block in data.yaml.
+	var version model.ContainerVersion
+	if err := db.Where("id = ?", req.ContainerVersionID).First(&version).Error; err != nil {
+		return nil, err
+	}
+	var container model.Container
+	if err := db.Where("id = ?", version.ContainerID).First(&container).Error; err != nil {
+		return nil, fmt.Errorf("lookup parent container for version_id=%d: %w", req.ContainerVersionID, err)
+	}
+
+	data, err := loadInitialDataFromFile(req.DataPath)
+	if err != nil {
+		return nil, fmt.Errorf("reseed: load %s: %w", req.DataPath, err)
+	}
+
+	// Locate the seed entry for this container + version.
+	var seedContainer *InitialDataContainer
+	for i := range data.Containers {
+		c := &data.Containers[i]
+		if c.Name == container.Name && c.Type == container.Type {
+			seedContainer = c
+			break
+		}
+	}
+	if seedContainer == nil {
+		return nil, fmt.Errorf("reseed: data.yaml has no container entry for name=%s type=%d", container.Name, container.Type)
+	}
+	var seedVersion *InitialContainerVersion
+	for i := range seedContainer.Versions {
+		if seedContainer.Versions[i].Name == version.Name {
+			seedVersion = &seedContainer.Versions[i]
+			break
+		}
+	}
+	if seedVersion == nil {
+		return nil, fmt.Errorf("reseed: data.yaml has no versions[] entry for %s@%s", container.Name, version.Name)
+	}
+	if seedVersion.HelmConfig == nil {
+		return nil, fmt.Errorf("reseed: data.yaml entry for %s@%s has no helm_config block", container.Name, version.Name)
+	}
+
+	report := &ReseedReport{
+		Env:          "",
+		DryRun:       req.DryRun,
+		SystemFilter: container.Name,
+		SeedPath:     req.DataPath,
+	}
+
+	// --- helm_configs row upsert ------------------------------------------
+	helm, err := upsertHelmConfigForReseed(db, &version, seedVersion.HelmConfig, container.Name, req.DryRun, report)
+	if err != nil {
+		return report, fmt.Errorf("reseed helm_configs for %s@%s: %w", container.Name, version.Name, err)
+	}
+	if helm == nil {
+		// Dry-run path with no existing row: synthesize a placeholder so the
+		// values walk below still produces "would-apply" entries against the
+		// seed's chart fields.
+		helm = seedVersion.HelmConfig.ConvertToDBHelmConfig()
+		helm.ContainerVersionID = version.ID
+	}
+
+	// --- helm_config_values reconcile -------------------------------------
+	// backfillHelmConfigValues only inserts MISSING links/parameter_configs;
+	// it never overwrites an existing parameter_config.default_value. The
+	// drift-warning case is handled by warnHelmValueDefaultDrift below.
+	if err := warnHelmValueDefaultDrift(db, helm, version.Name, seedVersion.HelmConfig, container.Name, report); err != nil {
+		return report, err
+	}
+	// Only do the insert pass when the helm_configs row actually exists in DB
+	// (i.e. not a dry-run for a brand-new container_version). For dry-run we
+	// still want to surface what WOULD be added, so reuse the existing
+	// backfill in dry-run mode against the seed's helm_configs id.
+	if helm.ID != 0 || req.DryRun {
+		if err := backfillHelmConfigValues(db, helm, version.Name, seedVersion.HelmConfig, container.Name, req.DryRun, "reseed: new helm value", report); err != nil {
+			return report, err
+		}
+	}
+
+	// --- prune ------------------------------------------------------------
+	if req.Prune && helm.ID != 0 {
+		if err := pruneHelmConfigValues(db, helm, version.Name, seedVersion.HelmConfig, container.Name, req.DryRun, report); err != nil {
+			return report, err
+		}
+	}
+
+	return report, nil
+}
+
+// upsertHelmConfigForReseed mutates the helm_configs row bound to the given
+// container_version. Unlike compareHelmConfigDrift, this DOES write
+// chart-level fields back to DB (the whole point of issue #201's targeted
+// reseed). value_file and local_path are preserved when the seed omits them.
+func upsertHelmConfigForReseed(db *gorm.DB, version *model.ContainerVersion, seed *InitialHelmConfig, systemName string, dryRun bool, report *ReseedReport) (*model.HelmConfig, error) {
+	var existing model.HelmConfig
+	err := db.Where("container_version_id = ?", version.ID).First(&existing).Error
+	switch {
+	case err == nil:
+		drifts := []string{}
+		if existing.ChartName != seed.ChartName {
+			drifts = append(drifts, fmt.Sprintf("chart_name %s -> %s", existing.ChartName, seed.ChartName))
+		}
+		if existing.Version != seed.Version {
+			drifts = append(drifts, fmt.Sprintf("version %s -> %s", existing.Version, seed.Version))
+		}
+		if existing.RepoURL != seed.RepoURL {
+			drifts = append(drifts, fmt.Sprintf("repo_url %s -> %s", existing.RepoURL, seed.RepoURL))
+		}
+		if existing.RepoName != seed.RepoName {
+			drifts = append(drifts, fmt.Sprintf("repo_name %s -> %s", existing.RepoName, seed.RepoName))
+		}
+		if len(drifts) == 0 {
+			return &existing, nil
+		}
+		act := ReseedAction{
+			Layer:    "helm_configs",
+			System:   systemName,
+			Key:      version.Name,
+			OldValue: fmt.Sprintf("chart=%s version=%s repo=%s url=%s", existing.ChartName, existing.Version, existing.RepoName, existing.RepoURL),
+			NewValue: fmt.Sprintf("chart=%s version=%s repo=%s url=%s", seed.ChartName, seed.Version, seed.RepoName, seed.RepoURL),
+			Note:     "in-place chart upsert: " + strings.Join(drifts, ", "),
+		}
+		if dryRun {
+			report.Actions = append(report.Actions, act)
+			return &existing, nil
+		}
+		existing.ChartName = seed.ChartName
+		existing.Version = seed.Version
+		existing.RepoURL = seed.RepoURL
+		existing.RepoName = seed.RepoName
+		// Preserve operator-set value_file / local_path when the seed omits
+		// them; otherwise the seed wins.
+		// Note: InitialHelmConfig has no value_file / local_path fields today,
+		// so this branch is intentionally future-proofing.
+		if err := db.Save(&existing).Error; err != nil {
+			return nil, fmt.Errorf("update helm_configs row id=%d: %w", existing.ID, err)
+		}
+		act.Applied = true
+		report.Actions = append(report.Actions, act)
+		logrus.Infof("reseed %s: updated helm_configs id=%d for version=%s (%s)", systemName, existing.ID, version.Name, strings.Join(drifts, ", "))
+		return &existing, nil
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		// No helm_configs row yet — INSERT. This is the same path as
+		// compareHelmConfigDrift's "missing" branch, but expressed inline so
+		// the value-link reconcile below can use the freshly-created row.
+		helm := seed.ConvertToDBHelmConfig()
+		helm.ContainerVersionID = version.ID
+		act := ReseedAction{
+			Layer:    "helm_configs",
+			System:   systemName,
+			Key:      version.Name,
+			NewValue: fmt.Sprintf("chart=%s version=%s repo=%s url=%s", seed.ChartName, seed.Version, seed.RepoName, seed.RepoURL),
+			Note:     "create helm_configs row for existing container_version",
+		}
+		if dryRun {
+			report.Actions = append(report.Actions, act)
+			return nil, nil
+		}
+		if err := db.Create(helm).Error; err != nil {
+			return nil, fmt.Errorf("insert helm_configs for version_id=%d: %w", version.ID, err)
+		}
+		act.Applied = true
+		report.Actions = append(report.Actions, act)
+		logrus.Infof("reseed %s: inserted helm_configs id=%d for version=%s", systemName, helm.ID, version.Name)
+		return helm, nil
+	default:
+		return nil, fmt.Errorf("lookup helm_configs for version_id=%d: %w", version.ID, err)
+	}
+}
+
+// warnHelmValueDefaultDrift logs and reports (without applying) cases where
+// an existing parameter_configs row already linked to this helm_config has a
+// different default_value than the seed. This protects manually-edited
+// overrides per the issue #201 conflict semantics.
+func warnHelmValueDefaultDrift(db *gorm.DB, helm *model.HelmConfig, versionName string, seed *InitialHelmConfig, systemName string, report *ReseedReport) error {
+	if helm == nil || seed == nil || len(seed.Values) == 0 || helm.ID == 0 {
+		return nil
+	}
+	// Pull the parameter_configs that this helm_config currently points at.
+	var existing []model.ParameterConfig
+	if err := db.Table("parameter_configs").
+		Joins("JOIN helm_config_values ON helm_config_values.parameter_config_id = parameter_configs.id").
+		Where("helm_config_values.helm_config_id = ? AND parameter_configs.category = ?", helm.ID, consts.ParameterCategoryHelmValues).
+		Find(&existing).Error; err != nil {
+		return fmt.Errorf("list helm values for %s@%s: %w", systemName, versionName, err)
+	}
+	have := make(map[string]*model.ParameterConfig, len(existing))
+	for i := range existing {
+		have[parameterConfigIdentity(&existing[i])] = &existing[i]
+	}
+	for _, vs := range seed.Values {
+		want := vs.ConvertToDBParameterConfig()
+		key := parameterConfigIdentity(want)
+		got, ok := have[key]
+		if !ok {
+			continue
+		}
+		if defaultValuesEqual(got.DefaultValue, want.DefaultValue) {
+			continue
+		}
+		oldVal := "<nil>"
+		if got.DefaultValue != nil {
+			oldVal = *got.DefaultValue
+		}
+		newVal := "<nil>"
+		if want.DefaultValue != nil {
+			newVal = *want.DefaultValue
+		}
+		report.Actions = append(report.Actions, ReseedAction{
+			Layer:    "parameter_configs",
+			System:   systemName,
+			Key:      fmt.Sprintf("%s@%s:%s", systemName, versionName, want.Key),
+			OldValue: oldVal,
+			NewValue: newVal,
+			Note:     "default_value drift on existing parameter_config; preserved manual override (re-edit data.yaml or fix DB by hand)",
+			Applied:  false,
+		})
+		logrus.Warnf("reseed %s@%s: parameter_configs key=%s default_value drift: db=%q seed=%q (preserved DB)",
+			systemName, versionName, want.Key, oldVal, newVal)
+	}
+	return nil
+}
+
+func defaultValuesEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+// pruneHelmConfigValues deletes helm_config_values links whose linked
+// parameter_config key is no longer in the seed. parameter_configs rows
+// themselves are NOT deleted because they may still be referenced by other
+// helm_configs (or by env-var join tables).
+func pruneHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName string, seed *InitialHelmConfig, systemName string, dryRun bool, report *ReseedReport) error {
+	if helm == nil || helm.ID == 0 {
+		return nil
+	}
+	wanted := make(map[string]struct{}, len(seed.Values))
+	for _, v := range seed.Values {
+		cfg := v.ConvertToDBParameterConfig()
+		wanted[parameterConfigIdentity(cfg)] = struct{}{}
+	}
+
+	var existing []model.ParameterConfig
+	if err := db.Table("parameter_configs").
+		Joins("JOIN helm_config_values ON helm_config_values.parameter_config_id = parameter_configs.id").
+		Where("helm_config_values.helm_config_id = ? AND parameter_configs.category = ?", helm.ID, consts.ParameterCategoryHelmValues).
+		Find(&existing).Error; err != nil {
+		return fmt.Errorf("list helm values for prune %s@%s: %w", systemName, versionName, err)
+	}
+
+	for i := range existing {
+		cfg := &existing[i]
+		key := parameterConfigIdentity(cfg)
+		if _, ok := wanted[key]; ok {
+			continue
+		}
+		oldVal := "<nil>"
+		if cfg.DefaultValue != nil {
+			oldVal = *cfg.DefaultValue
+		}
+		act := ReseedAction{
+			Layer:    "helm_config_values",
+			System:   systemName,
+			Key:      fmt.Sprintf("%s@%s:%s", systemName, versionName, cfg.Key),
+			OldValue: oldVal,
+			NewValue: "",
+			Note:     "prune: key disappeared from data.yaml seed",
+		}
+		if dryRun {
+			report.Actions = append(report.Actions, act)
+			continue
+		}
+		if err := db.
+			Where("helm_config_id = ? AND parameter_config_id = ?", helm.ID, cfg.ID).
+			Delete(&model.HelmConfigValue{}).Error; err != nil {
+			return fmt.Errorf("delete helm_config_values link helm=%d param=%d: %w", helm.ID, cfg.ID, err)
+		}
+		act.Applied = true
+		report.Actions = append(report.Actions, act)
+		logrus.Infof("reseed %s@%s: pruned helm_config_values link key=%s (helm_config_id=%d param=%d)",
+			systemName, versionName, cfg.Key, helm.ID, cfg.ID)
+	}
+	return nil
+}
+
 // ResolveSeedPath turns a (basePath, env) pair into the absolute data.yaml
 // path. Both inputs may include the `data.yaml` filename or not. Used by the
 // HTTP handler so CLI and HTTP paths agree on filesystem semantics.
