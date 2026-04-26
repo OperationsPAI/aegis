@@ -185,15 +185,17 @@ def test_topmost_server_only_when_all_anomalous() -> None:
     assert len(alarms) == 1, alarms
 
 
-def test_loadgen_server_excluded_even_at_topmost() -> None:
-    """If a loadgen service emits a Server-kind span at the top of a trace
-    (its parent is empty), the loadgen exclusion still removes it.
+def test_loadgen_parent_excluded_svc_below_kept() -> None:
+    """When ``loadgenerator`` is the immediate parent of a non-loadgen span,
+    the non-loadgen child IS the topmost-non-loadgen span and must be kept.
 
-    Construct a trace where ``loadgenerator`` emits a Server-kind root
-    (parent_span_id == "") and ``svc-a`` is nested under it. The corrected
-    filter should keep neither: loadgenerator is excluded by the loadgen
-    list, and svc-a is excluded because its parent (loadgenerator) IS a
-    Server-kind span."""
+    The methodology is kind-agnostic: ``span_kind`` is unreliable across
+    instrumentation, so the alarm-root predicate is purely
+    "owner is non-loadgen AND parent is loadgen-or-missing." Loadgen's
+    own span is always excluded by the loadgen list; its child is the
+    user-perceptible boundary regardless of how loadgen happens to be
+    labelled.
+    """
     base_rows: list[dict[str, Any]] = []
     abn_rows: list[dict[str, Any]] = []
     for i in range(15):
@@ -204,7 +206,7 @@ def test_loadgen_server_excluded_even_at_topmost() -> None:
                     "span_id": f"{tid_prefix}-{i}-load",
                     "parent_span_id": "",
                     "span_name": "loadgen entry",
-                    "attr.span_kind": "Server",
+                    "attr.span_kind": "Server",  # kind label is irrelevant
                     "service_name": "loadgenerator",
                     "duration": 1_000_000,
                     "attr.http.response.status_code": 200,
@@ -227,9 +229,9 @@ def test_loadgen_server_excluded_even_at_topmost() -> None:
 
     loader = _StubLoader(_make_trace_df(base_rows), _make_trace_df(abn_rows))
     alarms = loader.identify_alarm_nodes_v2()
-    # svc-a is nested under a Server-kind span (loadgen's Server) → filtered
-    # out. loadgenerator is excluded by the loadgen rule.
-    assert alarms == set(), alarms
+    # svc-a is the topmost non-loadgen span; its 50× latency increase makes
+    # it an alarm. loadgenerator is excluded by the loadgen list.
+    assert "svc-a::GET /a" in alarms, alarms
 
 
 def test_root_with_empty_parent_passes_filter() -> None:

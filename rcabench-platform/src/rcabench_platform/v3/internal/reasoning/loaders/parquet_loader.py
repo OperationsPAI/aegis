@@ -168,23 +168,24 @@ def _is_caller_like(service_name: str) -> bool:
     return service_name.lower() in CALLER_LIKE_SERVICES
 
 
-def is_root_server_row(span: Mapping[str, Any], trace_index: dict[tuple[str, str], dict]) -> bool:
-    """Methodology §7.1 ``is_root_server`` predicate, implemented as a
-    Python function over a span-row dict.
+def is_root_alarm_candidate_row(span: Mapping[str, Any], trace_index: dict[tuple[str, str], dict]) -> bool:
+    """§7.1 alarm-root predicate, kind-agnostic.
 
-    A span is a root Server iff:
-      * its kind is ``Server``,
-      * its owner service is NOT in ``LOADGEN_SERVICES``, and
+    A span is a root alarm candidate iff:
+      * its owner service is NOT in ``LOADGEN_SERVICES``, AND
       * its parent (looked up via ``(trace_id, parent_span_id) -> span``)
-        is either missing (true root) or NOT itself ``Server``-kind.
+        is missing (true root) OR is owned by a ``LOADGEN_SERVICES`` service.
 
-    The "parent not Server-kind" rule is broader than the spec's "parent
-    in LOADGEN_SERVICES" clause and subsumes it: a loadgen Client parent
-    is non-Server, so it always passes; a Server-kind parent (whether
-    loadgen or not) is always rejected.
+    ``span_kind`` is intentionally NOT consulted: instrumentation across
+    services labels Server / Client / Internal inconsistently and the
+    label is not load-bearing for alarm detection. The topmost
+    non-loadgen span per trace IS the request entry point regardless of
+    how its kind happens to be reported.
+
+    This generalises the methodology spec's ``parent ∈ LOADGEN_SERVICES``
+    clause: ``parent is missing`` covers true trace roots in non-
+    loadgen-bracketed traces.
     """
-    if span.get("attr.span_kind") != "Server":
-        return False
     service = span.get("service_name") or ""
     if service.lower() in LOADGEN_SERVICES:
         return False
@@ -195,40 +196,51 @@ def is_root_server_row(span: Mapping[str, Any], trace_index: dict[tuple[str, str
     parent = trace_index.get((trace_id, parent_span_id))
     if parent is None:
         return True
-    return parent.get("attr.span_kind") != "Server"
+    parent_service = (parent.get("service_name") or "").lower()
+    return parent_service in LOADGEN_SERVICES
 
 
-def filter_root_server_spans(df: pl.DataFrame) -> pl.DataFrame:
-    """Keep only the topmost Server-kind span per trace (methodology §7.1).
+# Backwards-compatibility alias — older imports reference this name.
+is_root_server_row = is_root_alarm_candidate_row
 
-    Implements the ``is_root_server`` predicate as a polars anti-join:
-    a Server-kind span is kept iff its parent (matched on
-    ``(trace_id, parent_span_id) -> span_id``) is empty / missing OR its
-    parent is NOT itself ``Server``-kind. Services in
-    ``LOADGEN_LIKE_SERVICES`` are always excluded.
+
+def filter_root_alarm_candidate_spans(df: pl.DataFrame) -> pl.DataFrame:
+    """Keep the topmost non-loadgen span per trace (§7.1, kind-agnostic).
+
+    Polars implementation of :func:`is_root_alarm_candidate_row`: drop
+    spans whose service is in ``LOADGEN_SERVICES``, then anti-join on
+    parent owner (parent is missing OR parent service is in
+    ``LOADGEN_SERVICES``).
+
+    ``span_kind`` is intentionally NOT used to gate alarm candidacy —
+    instrumentation across services applies the kind label
+    inconsistently, so gating on Server kind drops legitimate alarm
+    boundaries (e.g. a service that emits its entry handler as
+    ``Internal`` rather than ``Server``).
     """
     loadgens = list(LOADGEN_LIKE_SERVICES)
-    server_df = df.filter(
-        (pl.col("attr.span_kind") == "Server") & (~pl.col("service_name").str.to_lowercase().is_in(loadgens))
-    )
-    if len(server_df) == 0:
-        return server_df
+    non_loadgen = df.filter(~pl.col("service_name").str.to_lowercase().is_in(loadgens))
+    if len(non_loadgen) == 0:
+        return non_loadgen
 
-    # Build a (trace_id, span_id) -> attr.span_kind lookup for ALL spans in
-    # the input df (parents may be Client/Internal/etc., not just Server).
-    parent_kinds = df.select(
+    # Build (trace_id, span_id) -> service_name lookup over ALL spans so we
+    # can decide whether each non-loadgen candidate's parent is loadgen-owned.
+    parent_services = df.select(
         pl.col("trace_id"),
         pl.col("span_id").alias("parent_span_id"),
-        pl.col("attr.span_kind").alias("parent_span_kind"),
+        pl.col("service_name").alias("parent_service_name"),
     )
 
-    joined = server_df.join(parent_kinds, on=["trace_id", "parent_span_id"], how="left")
+    joined = non_loadgen.join(parent_services, on=["trace_id", "parent_span_id"], how="left")
 
-    # Keep rows where the parent lookup missed (true root or out-of-trace
-    # parent) OR where the parent's kind is not Server.
     return joined.filter(
-        pl.col("parent_span_kind").is_null() | (pl.col("parent_span_kind") != "Server")
-    ).drop("parent_span_kind")
+        pl.col("parent_service_name").is_null()
+        | pl.col("parent_service_name").str.to_lowercase().is_in(loadgens)
+    ).drop("parent_service_name")
+
+
+# Backwards-compatibility alias — older callers reference this name.
+filter_root_server_spans = filter_root_alarm_candidate_spans
 
 
 def _ts_to_int_seconds(values) -> np.ndarray:
