@@ -95,7 +95,55 @@ class FaultPropagator:
                 src_id, dst_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
             )
 
-        subgraph_edges = self.topology_explorer.find_reachable_subgraph(injection_node_ids, alarm_nodes, edge_filter)
+        # Reverse-orientation filter for the backward reach pass: an edge
+        # (a, b) participates in backward reach from b iff (b → a) matches
+        # some rule's forward propagation direction. Without this swap,
+        # backward BFS rejects edges that do propagate (in rule direction)
+        # but whose graph orientation runs counter to the rule.
+        def backward_edge_filter(src_id: int, dst_id: int, is_first_hop: bool) -> bool:
+            src_states = self._states_for_node(dst_id)
+            dst_states = self._states_for_node(src_id)
+            src_labels = self._labels_for_node(dst_id)
+            return self.rule_matcher.edge_matches_any_rule(
+                dst_id, src_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
+            )
+
+        # §7.6 step 6 + §13.2 step 2.6 — bidirectional corridor + activity filter.
+        # corridor       = Reach_forward(injection_set, max_hops_fwd)
+        #                ∩ Reach_backward(alarm_set,    max_hops_bwd)
+        # relevant_nodes = corridor ∩ (deviating_set ∪ injection_set)
+        #
+        # ``compute_corridor`` walks pure out_edges/in_edges, which assumes
+        # propagation direction == graph edge direction. rcabench's ``calls``
+        # edges go caller→callee while propagation flows callee→caller, so
+        # we reuse ``find_reachable_subgraph`` (neighbor-based, both edge
+        # directions, edge_filter applied) for both passes — matching how
+        # the propagator already enumerates walkable subgraphs.
+        forward_edges = self.topology_explorer.find_reachable_subgraph(
+            injection_node_ids, alarm_nodes, edge_filter
+        )
+        injection_set = set(injection_node_ids)
+        forward_visited: set[int] = set(injection_set)
+        for s, d in forward_edges:
+            forward_visited.add(s)
+            forward_visited.add(d)
+
+        backward_edges = self.topology_explorer.find_reachable_subgraph(
+            list(alarm_nodes), set(injection_set), backward_edge_filter
+        )
+        backward_visited: set[int] = set(alarm_nodes)
+        for s, d in backward_edges:
+            backward_visited.add(s)
+            backward_visited.add(d)
+
+        corridor = forward_visited & backward_visited
+        deviating_set = self._compute_deviating_set()
+        relevant_nodes = corridor & (deviating_set | injection_set)
+
+        subgraph_edges = [
+            (s, d) for s, d in forward_edges
+            if s in relevant_nodes and d in relevant_nodes
+        ]
         warnings: list[str] = []
 
         if not subgraph_edges:
@@ -169,6 +217,27 @@ class FaultPropagator:
         if tl is None:
             return set()
         return {w.state for w in tl.windows}
+
+    def _compute_deviating_set(self) -> set[int]:
+        """Nodes whose timeline has ever been in a non-{HEALTHY, UNKNOWN}
+        state during the abnormal window.
+
+        Per §7.4, used by the activity filter in
+        :meth:`propagate_from_injection` to restrict path search to nodes
+        that actually exhibit anomalous behavior. Mirrors the idiomatic
+        per-node lookup used by :meth:`_states_for_node`.
+        """
+        deviating: set[int] = set()
+        nominal = {"healthy", "unknown"}
+        for node_id in self.graph._graph.nodes:
+            tl = self._timeline_for_node(node_id)
+            if tl is None:
+                continue
+            for window in tl.windows:
+                if window.state not in nominal:
+                    deviating.add(node_id)
+                    break
+        return deviating
 
     def _labels_for_node(self, node_id: int) -> frozenset[str]:
         """Aggregate every specialization label ever observed on the node.

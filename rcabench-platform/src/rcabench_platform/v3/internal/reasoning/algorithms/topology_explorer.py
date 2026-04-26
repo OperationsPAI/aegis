@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 #   span -> service -> pod -> container -> pod -> service -> span
 DEFAULT_MAX_NODE_VISITS = 2
 
+# Safety net for path enumeration (§7.6 step 8). After corridor pruning a
+# real benchmark case (~300 nodes, ~800 edges) yields far fewer than this;
+# the cap exists only to bound pathological topologies.
+DEFAULT_MAX_PATHS: int = 100_000
+
 
 class TopologyExplorer:
     """Explores graph topology using BFS/DFS for fault propagation analysis.
@@ -38,6 +43,7 @@ class TopologyExplorer:
         graph: HyperGraph,
         max_hops: int = 5,
         max_node_visits: int = DEFAULT_MAX_NODE_VISITS,
+        max_paths: int = DEFAULT_MAX_PATHS,
     ):
         """Initialize the topology explorer.
 
@@ -47,10 +53,17 @@ class TopologyExplorer:
             max_node_visits: Maximum times a node can appear in a path (default 2).
                             Set to 2 to support diamond-shaped paths like
                             span -> service -> pod -> service -> span.
+            max_paths: Safety-net cap on the number of admissible paths
+                       returned by :meth:`extract_paths` (§7.6 step 8). DFS
+                       short-circuits once this cap is hit and emits a
+                       warning. Methodology treats this purely as a guard
+                       against pathological topologies; with corridor
+                       pruning real cases stay well under the default.
         """
         self.graph = graph
         self.max_hops = max_hops
         self.max_node_visits = max_node_visits
+        self.max_paths = max_paths
 
     def get_neighbors(self, node_id: int) -> list[int]:
         """Get all neighbors (forward and backward) for a node.
@@ -220,19 +233,32 @@ class TopologyExplorer:
         injection_node_ids: list[int],
         alarm_nodes: set[int],
     ) -> list[list[int]]:
-        """Extract all paths from injection nodes to alarm nodes in the subgraph.
+        """Extract the SET of admissible paths from injection to alarm nodes.
 
-        Uses DFS to find all paths from any injection node to any alarm node.
-        Allows a node to be visited up to max_node_visits times to support
-        diamond-shaped paths (e.g., span -> service -> pod -> service -> span).
+        Per §7.6 step 9 the output is a set of admissible paths — no chain
+        confidence scoring, no ranking. Uses DFS to enumerate all paths
+        from any injection node to any alarm node within the subgraph.
+        Paths terminate strictly at alarm nodes. A node may appear up to
+        ``max_node_visits`` times to support diamond shapes (e.g.
+        ``span -> service -> pod -> service -> span``).
+
+        DFS short-circuits once ``self.max_paths`` admissible paths have
+        been collected (§7.6 step 8 safety net) and logs a warning. With
+        the corridor + activity filter applied upstream, real cases stay
+        well under the default cap.
+
+        Each path is unique by construction: the per-node visit-count cap
+        prevents revisiting beyond ``max_node_visits``, and the DFS only
+        records a path once each time it touches an alarm node.
 
         Args:
-            edges: List of (src_id, dst_id) tuples from find_reachable_subgraph
-            injection_node_ids: Starting node IDs
-            alarm_nodes: Target alarm node IDs
+            edges: List of (src_id, dst_id) tuples from
+                ``find_reachable_subgraph`` (post corridor pruning).
+            injection_node_ids: Starting node IDs.
+            alarm_nodes: Target alarm node IDs (DFS termination).
 
         Returns:
-            List of paths, where each path is a list of node IDs
+            List of unique admissible paths, each a list of node IDs.
         """
         if not edges:
             return []
@@ -249,9 +275,14 @@ class TopologyExplorer:
         injection_set = set(injection_node_ids)
         paths: list[list[int]] = []
         max_visits = self.max_node_visits
+        max_paths = self.max_paths
 
         # DFS from each injection node
         def dfs(node_id: int, path: list[int], visit_counts: Counter[int]) -> None:
+            # Safety-net short-circuit at the start of each recursive frame.
+            if len(paths) >= max_paths:
+                return
+
             if node_id in reachable_alarms and node_id not in injection_set:
                 paths.append(path.copy())
                 # Continue to find longer paths through this alarm
@@ -260,6 +291,10 @@ class TopologyExplorer:
                 return
 
             for neighbor_id in adj.get(node_id, []):
+                # Safety-net short-circuit inside the neighbor loop too —
+                # avoids wasted recursion once the cap has fired.
+                if len(paths) >= max_paths:
+                    return
                 # Allow visiting a node up to max_node_visits times
                 if visit_counts[neighbor_id] < max_visits:
                     path.append(neighbor_id)
@@ -272,5 +307,13 @@ class TopologyExplorer:
             if injection_id in all_nodes:
                 initial_counts: Counter[int] = Counter({injection_id: 1})
                 dfs(injection_id, [injection_id], initial_counts)
+
+        if len(paths) >= max_paths:
+            logger.warning(
+                "    [WARNING] extract_paths hit max_paths=%d safety cap; "
+                "truncating output. Consider tightening the corridor "
+                "(reduce max_hops) if this fires on real data.",
+                max_paths,
+            )
 
         return paths
