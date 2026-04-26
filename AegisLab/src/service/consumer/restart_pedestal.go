@@ -325,6 +325,15 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			return handleExecutionError(span, logEntry, "missing extra info in pedestal item", fmt.Errorf("missing extra info in pedestal item"))
 		}
 
+		// Best-effort: reap any zombie chaos-mesh.org CRs left behind in this
+		// namespace by an earlier round (e.g. an HTTPChaos whose finalizer
+		// can't complete because PodHttpChaos was never created — common when
+		// the targeted pod was helm-uninstalled before duration expired).
+		// Stripping finalizers + force-delete here gives the next round a
+		// clean slate. Any failure is logged and ignored — chaos-CR cleanup
+		// MUST NOT block the helm restart.
+		reapNamespaceChaosResources(childCtx, deps.K8sGateway, namespace, logEntry)
+
 		// Skip the helm install when the caller has pre-installed the chart
 		// out-of-band (e.g. `aegisctl pedestal chart install` +
 		// wait-for-ready) and the release is already deployed. Namespace
@@ -616,4 +625,22 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 
 		return fmt.Errorf("no chart source configured (neither remote nor local)")
 	})
+}
+
+// reapNamespaceChaosResources is the best-effort wrapper around the k8s
+// gateway's namespace-scoped chaos cleanup. Wrapped here (instead of called
+// inline in executeRestartPedestal) so the call site stays readable and so
+// every error path lands on a single Warn — never a task failure.
+func reapNamespaceChaosResources(ctx context.Context, gateway *k8s.Gateway, namespace string, logEntry *logrus.Entry) {
+	if gateway == nil {
+		logEntry.Debugf("k8s gateway nil; skipping chaos-CR cleanup for namespace %q", namespace)
+		return
+	}
+	summary, warnings := gateway.CleanupNamespaceChaosResources(ctx, namespace)
+	if line := k8s.SummarizeChaosCleanup(summary); line != "" {
+		logEntry.Infof("chaos cleanup before helm restart: cleaned %s in %s", line, namespace)
+	}
+	for _, w := range warnings {
+		logEntry.Warnf("chaos cleanup warning in %s: %v", namespace, w)
+	}
 }
