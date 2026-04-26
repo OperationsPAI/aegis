@@ -96,7 +96,8 @@
         "restarting",
         "erroring",
         "unavailable",
-        "missing"
+        "missing",
+        "silent"
       ],
       "description": "Canonical IR state vocabulary (Phase 2)."
     },

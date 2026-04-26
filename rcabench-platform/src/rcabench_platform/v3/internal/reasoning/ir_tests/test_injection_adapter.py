@@ -162,16 +162,18 @@ def test_network_loss_degraded() -> None:
     assert events[0].to_state == "degraded"
 
 
-def test_network_partition_unavailable() -> None:
+def test_network_partition_silent() -> None:
+    # Class E (§3.E): inbound flow silenced by full split.
     r = _resolve(["service|ts-order"], "service", "network", "network", "NetworkPartition")
     events = _emit_single(r)
-    assert events[0].to_state == "unavailable"
+    assert events[0].to_state == "silent"
 
 
-def test_dns_erroring() -> None:
+def test_dns_silent() -> None:
+    # Class E (§3.E): outbound flow silenced when name resolution fails.
     r = _resolve(["service|ts-order"], "service", "dns", "dns", "DNSError")
     events = _emit_single(r)
-    assert events[0].to_state == "erroring"
+    assert events[0].to_state == "silent"
 
 
 def test_time_skew_degraded() -> None:
