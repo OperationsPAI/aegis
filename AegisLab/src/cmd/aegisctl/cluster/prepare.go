@@ -171,9 +171,11 @@ func LocalE2EEtcdActions() []PrepareAction {
 		"/rcabench/config/consumer/injection.system.otel-demo.extract_pattern":  `^(otel-demo)(\d+)$`,
 		"/rcabench/config/consumer/rate_limiting.max_concurrent_restarts":       "5",
 		"/rcabench/config/consumer/rate_limiting.max_concurrent_builds":         "3",
-		"/rcabench/config/consumer/rate_limiting.max_concurrent_build_datapack": "8",
-		"/rcabench/config/consumer/rate_limiting.max_concurrent_algo_execution": "5",
-		"/rcabench/config/consumer/rate_limiting.token_wait_timeout":            "10",
+		"/rcabench/config/consumer/rate_limiting.max_concurrent_build_datapack":              "8",
+		"/rcabench/config/consumer/rate_limiting.build_datapack_freshness_watermark_seconds": "30",
+		"/rcabench/config/consumer/rate_limiting.build_datapack_freshness_max_wait_seconds":  "300",
+		"/rcabench/config/consumer/rate_limiting.max_concurrent_algo_execution":              "5",
+		"/rcabench/config/consumer/rate_limiting.token_wait_timeout":                         "10",
 	}
 	ordered := make([]string, 0, len(keys))
 	for key := range keys {

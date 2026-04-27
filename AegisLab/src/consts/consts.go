@@ -410,6 +410,17 @@ const (
 	MaxConcurrentBuildDatapack = 8
 	BuildDatapackServiceName   = "build_datapack"
 
+	// BuildDatapack ClickHouse freshness pre-flight (issue #210). The
+	// executor blocks the K8s Job submission until otel.otel_traces has
+	// rows with Timestamp >= (abnormal_end - watermark) for the target
+	// service.namespace, or the bounded retry budget is exhausted. The
+	// two keys are read on every probe via config.GetInt so a runtime
+	// `aegisctl etcd put` applies without a backend rebuild.
+	MaxTokensKeyBuildDatapackFreshnessWatermark    = "rate_limiting.build_datapack_freshness_watermark_seconds"
+	MaxTokensKeyBuildDatapackFreshnessMaxWait      = "rate_limiting.build_datapack_freshness_max_wait_seconds"
+	DefaultBuildDatapackFreshnessWatermarkSeconds  = 30
+	DefaultBuildDatapackFreshnessMaxWaitSeconds    = 300
+
 	// Algorithm execution rate limiting
 	AlgoExecutionTokenBucket   = "token_bucket:algo_execution"
 	MaxTokensKeyAlgoExecution  = "rate_limiting.max_concurrent_algo_execution"

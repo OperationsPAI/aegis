@@ -114,6 +114,26 @@ func executeBuildDatapackWithDeps(ctx context.Context, task *dto.UnifiedTask, de
 			return handleExecutionError(span, logEntry, "failed to parse datapack payload", err)
 		}
 
+		// Pre-flight: block job submission until ClickHouse has spans
+		// freshly ingested for the abnormal time window. Closes the race
+		// in issue #210: prepare_inputs.py used to query CH for spans in
+		// [abnormal_start, abnormal_end] and, under cluster load with the
+		// OTel exporter retry queue lagging, get back zero rows -> empty
+		// abnormal_traces.parquet -> ValueError -> datapack.build.failed.
+		// On bounded-wait timeout we reschedule (retryable) instead of
+		// hard-failing; persistent CH errors propagate as task errors.
+		watermark, maxWait := freshnessParamsFromConfig()
+		nsForFreshness := extractNamespaceFromBenchmarkEnv(payload.benchmark.EnvVars)
+		if err := waitForCHFreshness(childCtx, deps.FreshnessProbe, nsForFreshness, payload.datapack.EndTime, watermark, maxWait, logEntry); err != nil {
+			if errorsIsFreshnessTimeout(err) {
+				if rerr := rescheduleBuildDatapackTask(childCtx, deps.DB, redisGateway, task, "datapack-build deferred: ClickHouse not fresh enough yet (issue #210)"); rerr != nil {
+					return rerr
+				}
+				return nil
+			}
+			return handleExecutionError(span, logEntry, "datapack-build aborted: CH freshness probe failed", err)
+		}
+
 		annotations, err := task.GetAnnotations(childCtx)
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to get annotations", err)

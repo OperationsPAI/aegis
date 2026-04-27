@@ -896,6 +896,24 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 50
+  - key: rate_limiting.build_datapack_freshness_watermark_seconds
+    default_value: '30'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: BuildDatapack waits until otel.otel_traces has rows with Timestamp >= (abnormal_end - watermark) before launching the K8s Job; closes the OTel ingestion-lag race in issue #210
+    is_secret: false
+    min_value: 0
+    max_value: 600
+  - key: rate_limiting.build_datapack_freshness_max_wait_seconds
+    default_value: '300'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Hard upper bound on how long the BuildDatapack pre-flight will wait for ClickHouse freshness before rescheduling the task (issue #210)
+    is_secret: false
+    min_value: 30
+    max_value: 1800
   - key: rate_limiting.max_concurrent_restarts
     default_value: '5'
     value_type: 2
