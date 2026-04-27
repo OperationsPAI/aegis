@@ -95,6 +95,14 @@ func newProjectScopedResolver() (*client.Resolver, error) {
 	return r, nil
 }
 
+func resolveInjectionID(arg string) (int, error) {
+	r, err := newProjectScopedResolver()
+	if err != nil {
+		return 0, err
+	}
+	return r.InjectionID(arg)
+}
+
 // ---------- inject root ----------
 
 var injectCmd = &cobra.Command{
