@@ -1,0 +1,25 @@
+{
+  "round": 16,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R15: 5/8 done +1 = 62%. NEW WINNERS: assurance.findAssuranceById. Cancel.cancelOrder flipped (R3 -1 → R15 +1). payment.pay R2 winner re-confirmed at duration 7. R16 strategy: (1) Final JVMException sweep on remaining methods (UserServiceImpl methods, basic.queryTrainTypeByName, food.findAllFoodOrder retry duration variations). (2) Try chaos types not yet tested on TT: HTTPRequest/Response chaos on internal API gateway routes, NetworkPartition direction:from. (3) PodKill (vs PodFailure) on top winners. (4) CPUStress as control.",
+  "_jvm_classes_source":"FudanSELab/train-ticket@main 2026-04-25",
+  "_results": "4/6 done +1 = 67%: tt181 user.updateUser (NEW WINNER), tt183 contacts.findContactsByAccountId dur=7 (R3 winner re-confirmed), tt188 station/PodKill (NEW — PodKill works on TT!), tt189 route/PodKill. 2/6 -1: tt182 user.deleteUser, tt186 travel/PodKill. 4 still running (3 PodKill: payment/order/basic, 1 config dur=9). 2 submit-fail: tt190/tt191 CPUStress (likely bootstrap-empty ts15).",
+  "candidates": [
+    {"id": "tt181","app": "ts-user-service",       "chaos_type": "JVMException","params": {"class":"user.service.impl.UserServiceImpl","method":"updateUser","exception_opt":"random"}, "duration_override": 5, "trace_id": "f29e6320-4292-4964-8e3f-49740465ec0c", "ns": "ts5", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER user.updateUser"},
+    {"id": "tt182","app": "ts-user-service",       "chaos_type": "JVMException","params": {"class":"user.service.impl.UserServiceImpl","method":"deleteUser","exception_opt":"random"}, "duration_override": 5, "trace_id": "d41aa336-7127-48a6-b6f2-11d5626d59b1", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt183","app": "ts-contacts-service",   "chaos_type": "JVMException","params": {"class":"contacts.service.ContactsServiceImpl","method":"findContactsByAccountId","exception_opt":"random"}, "duration_override": 7, "trace_id": "d51096df-8723-4ff8-916c-c004b4767de0", "ns": "ts7", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"R3 winner re-confirmed"},
+    {"id": "tt184","app": "ts-payment-service",    "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "63f90861-f5b4-4a20-ba0c-0cebf84f264e", "ns": "ts8", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER payment/PodKill"},
+    {"id": "tt185","app": "ts-order-service",      "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "b29de314-e560-465e-ab1a-871cf4792917", "ns": "ts9", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER order/PodKill"},
+    {"id": "tt186","app": "ts-travel-service",     "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "d42ff221-ffdc-4bc2-b9a3-347aceb19461", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt187","app": "ts-basic-service",      "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "be28f4b4-111e-4652-95a8-83a7ff316bde", "ns": "ts11", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER basic/PodKill"},
+    {"id": "tt188","app": "ts-station-service",    "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "49bdda58-ec53-483b-8d5d-03a55bc11d38", "ns": "ts13", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER station/PodKill"},
+    {"id": "tt189","app": "ts-route-service",      "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "153a99a7-7de2-43a7-96c1-49a8cfc6fec9", "ns": "ts16", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER route/PodKill"},
+    {"id": "tt190","app": "ts-payment-service",    "chaos_type": "CPUStress",   "params": {"cpu_load":80,"cpu_worker":2}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"likely ts15 bootstrap-empty"},
+    {"id": "tt191","app": "ts-order-service",      "chaos_type": "CPUStress",   "params": {"cpu_load":80,"cpu_worker":2}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "tt192","app": "ts-config-service",     "chaos_type": "PodFailure", "params": {}, "duration_override": 9, "trace_id": "0abd3432-d8eb-4d42-9fb2-2664b6ae3be1", "ns": "ts19", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"5TH CONFIRMATION — config-service most-stable TT signal"}
+  ]
+}

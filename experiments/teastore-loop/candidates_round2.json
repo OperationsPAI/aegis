@@ -1,0 +1,19 @@
+{
+  "round": 2,
+  "system": "tea",
+  "system_type": "tea",
+  "pedestal": {"name": "teastore", "tag": "1.4.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "First round on chart 0.1.3 with per-component app=teastore-X labels (PR LGU#9 merged + aegis seed bumped). Test all 7 services with PodFailure + 1 PodKill on webui to baseline.",
+  "candidates": [
+    {"id": "te2_01", "app": "teastore-webui",       "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "te2_02", "app": "teastore-persistence", "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "te2_03", "app": "teastore-auth",        "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "te2_04", "app": "teastore-recommender", "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "te2_05", "app": "teastore-image",       "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "te2_06", "app": "teastore-registry",    "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "te2_07", "app": "teastore-db",          "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "te2_08", "app": "teastore-webui",       "chaos_type": "PodKill",    "params": {}, "duration_override": 6}
+  ]
+}

@@ -1,0 +1,10 @@
+{"ts": "2026-04-25T17:18:46+0100", "candidate_id": "u01", "paired_with": [], "group_id": "9d2f1746-91d2-4ab0-b5e2-6eef36469f51", "trace_id": "3617fc8c-a20b-4d99-91d4-fa6499c50b73", "ns": "otel-demo1"}
+{"ts": "2026-04-25T17:18:49+0100", "candidate_id": "u02", "paired_with": [], "group_id": "6c8ffdf8-e7f0-4a4e-9202-3fb1c6afe550", "trace_id": "9b5c6e98-b369-4cfd-9563-a481f96b24b2", "ns": "otel-demo2"}
+{"ts": "2026-04-25T17:18:53+0100", "candidate_id": "u03", "paired_with": ["u04"], "group_id": "2826086d-4597-42b9-91d9-fbc652b95e84", "trace_id": "4eaf32bc-0d4d-40ef-943a-5f4c71e52a38", "ns": "otel-demo3"}
+{"ts": "2026-04-25T17:18:53+0100", "candidate_id": "u04", "paired_with": ["u03"], "group_id": "2826086d-4597-42b9-91d9-fbc652b95e84", "trace_id": "4eaf32bc-0d4d-40ef-943a-5f4c71e52a38", "ns": "otel-demo3"}
+{"ts": "2026-04-25T17:18:57+0100", "candidate_id": "u05", "paired_with": [], "group_id": "382b922a-c293-41bc-a290-fa75f2aaf0d9", "trace_id": "d1495a6f-97d7-44f1-9080-44d2608dffd2", "ns": "otel-demo4"}
+{"ts": "2026-04-25T17:19:01+0100", "candidate_id": "u06", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777133941}"}
+{"ts": "2026-04-25T17:19:03+0100", "candidate_id": "u07", "paired_with": [], "group_id": "440d832a-71b2-42df-ba4c-87edda57bbaa", "trace_id": "97491eb2-d7c5-49f3-8c63-079ab6b282f7", "ns": "otel-demo6"}
+{"ts": "2026-04-25T17:19:06+0100", "candidate_id": "u08", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777133946}"}
+{"ts": "2026-04-25T17:19:09+0100", "candidate_id": "u09", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777133948}"}
+{"ts": "2026-04-25T17:19:10+0100", "candidate_id": "u10", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777133950}"}

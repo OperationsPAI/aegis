@@ -1,0 +1,12 @@
+{
+  "round": 99,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "TT HTTPChaos probe v2 - after killing the pod that had stuck tproxy from previous run.",
+  "candidates": [
+    {"id": "tth3", "app": "ts-travel-service", "chaos_type": "HTTPRequestDelay", "params": {"route":"/api/v1/basicservice/basic/travels","http_method":"POST","target_service":"ts-travel-service","delay_duration":2000}, "duration_override": 5}
+  ]
+}

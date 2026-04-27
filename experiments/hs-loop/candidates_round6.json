@@ -1,0 +1,13 @@
+{
+  "round": 6, "system": "hs", "system_type": "hs",
+  "pedestal": {"name": "hs", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Retry post-CH-drain.",
+  "candidates": [
+    {"id": "h6_01", "app": "frontend",       "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "h6_02", "app": "search",         "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "h6_03", "app": "geo",            "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "h6_04", "app": "rate",           "chaos_type": "PodFailure", "params": {}, "duration_override": 9}
+  ]
+}

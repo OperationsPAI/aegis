@@ -1,0 +1,21 @@
+{
+  "round": 1,
+  "system": "hs",
+  "system_type": "hs",
+  "pedestal": {"name": "hs", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "HotelReservation R1: PodFailure sweep on key business services. DSB Go stack. Loadgen 'load-generator' visible — running. Mix in some Network chaos.",
+  "candidates": [
+    {"id": "h01", "app": "frontend",       "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h02", "app": "search",         "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h03", "app": "geo",            "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h04", "app": "rate",           "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h05", "app": "profile",        "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h06", "app": "recommendation", "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h07", "app": "reservation",    "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h08", "app": "user",           "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h09", "app": "attractions",    "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h10", "app": "frontend",       "chaos_type": "PodKill",    "params": {}, "duration_override": 5}
+  ]
+}

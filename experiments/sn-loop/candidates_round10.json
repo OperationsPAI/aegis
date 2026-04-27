@@ -1,0 +1,12 @@
+{
+  "round": 10, "system": "sn", "system_type": "sn",
+  "pedestal": {"name": "sn", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Try CPU/Memory stress to force detector signal.",
+  "candidates": [
+    {"id": "n10_01", "app": "nginx-thrift",        "chaos_type": "CPUStress",     "params": {"cpu_load":90,"cpu_worker":4}, "duration_override": 12},
+    {"id": "n10_02", "app": "user-service",        "chaos_type": "MemoryStress",  "params": {"memory_size":256,"mem_worker":2,"mem_type":"ram"}, "duration_override": 12},
+    {"id": "n10_03", "app": "post-storage-service","chaos_type": "PodFailure",    "params": {}, "duration_override": 18}
+  ]
+}

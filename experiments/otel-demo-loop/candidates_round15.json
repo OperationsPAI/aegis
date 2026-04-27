@@ -1,0 +1,22 @@
+{
+  "round": 15,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R14: 2/8 valid +1. NetworkPartition recommendation→flagd direction:to is back. R15 strategy: (1) Replicate c04 winner with varied params/durations. (2) Test other Network targets: cart→flagd, checkout→flagd. (3) NetworkLoss low-magnitude (40%) — original R1 winner (loss=30%) was 30%, may be a low-loss-only signal. (4) Drop accounting/postgresql Network (build-fails 2x).",
+  "_results": "0/8 valid +1, 7/8 -1, 1/8 env-fail (d02 datapack build failed). **R14 c04 winner did NOT repeat (d01 same params -1). d05 R1 exact-replay (ad/NetworkLoss30 flagd) did NOT repeat. Conclusion: otel-demo detector is essentially a stochastic coin flip ~10-20% per attempt for any chaos type. Not param-deterministic. **Real recommendation**: stop chasing winners; the otel-demo detector is unreliable.",
+  "candidates": [
+    {"id": "d01", "app": "recommendation", "chaos_type": "NetworkPartition", "params": {"target_service":"flagd","direction":"to"}, "duration_override": 5, "_note":"R14 winner re-test", "trace_id": "ff99838a-40d3-4bdf-81ad-d01b93279f2f", "ns": "otel-demo1", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"R14 winner did NOT repeat at same duration"},
+    {"id": "d02", "app": "recommendation", "chaos_type": "NetworkPartition", "params": {"target_service":"flagd","direction":"to"}, "duration_override": 7, "trace_id": "ffc0b429-82d1-437a-8b93-171b04066dec", "ns": "otel-demo2", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "d03", "app": "cart",           "chaos_type": "NetworkPartition", "params": {"target_service":"flagd","direction":"to"}, "duration_override": 5, "trace_id": "614ce884-4835-4e7d-9632-545036127bae", "ns": "otel-demo3", "terminal": "TBD", "reward": null},
+    {"id": "d04", "app": "checkout",       "chaos_type": "NetworkPartition", "params": {"target_service":"flagd","direction":"to"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "d05", "app": "ad",             "chaos_type": "NetworkLoss",      "params": {"target_service":"flagd","loss":30,"correlation":25,"direction":"to"}, "duration_override": 5, "_note":"R1 original winner — exact replay", "trace_id": "c8f6ec22-d59f-41e8-8a1c-59de16447c36", "ns": "otel-demo5", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"R1 EXACT REPLAY FAILED — confirms detector is stochastic, not param-deterministic"},
+    {"id": "d06", "app": "ad",             "chaos_type": "NetworkLoss",      "params": {"target_service":"flagd","loss":40,"correlation":30,"direction":"to"}, "duration_override": 6, "trace_id": "2772a34b-6149-47a0-9ed9-6f51fed1bce6", "ns": "otel-demo6", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "d07", "app": "ad",             "chaos_type": "NetworkLoss",      "params": {"target_service":"flagd","loss":50,"correlation":50,"direction":"to"}, "duration_override": 7, "trace_id": "31ec9961-4e37-49a8-b03f-550e011996e1", "ns": "otel-demo7", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "d08", "app": "image-provider", "chaos_type": "PodFailure",       "params": {}, "duration_override": 11, "trace_id": "d355b795-5fde-4654-94a1-c9f5ee1881e9", "ns": "otel-demo8", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "d09", "app": "currency",       "chaos_type": "PodFailure",       "params": {}, "duration_override": 11, "trace_id": "196b2dbd-3dd8-4237-9083-15b4fe2bcfde", "ns": "otel-demo9", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "d10", "app": "frontend",       "chaos_type": "NetworkLoss",      "params": {"target_service":"checkout","loss":80,"correlation":50,"direction":"to"}, "duration_override": 5, "trace_id": "1e971037-453a-45c7-811f-aac7d2a1d744", "ns": "otel-demo10", "terminal": "datapack.no_anomaly", "reward": -1}
+  ]
+}

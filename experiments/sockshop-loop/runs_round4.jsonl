@@ -1,0 +1,10 @@
+{"ts":"2026-04-25T14:24:29+01:00","candidate_id":"u01","group_id":"dc644afb-05db-4ad5-a868-2c73d3fec6cb","trace_id":"100e7dfc-fbba-4c9a-a8ab-c48ce3ba6477","ns":"sockshop0"}
+{"ts":"2026-04-25T14:24:35+01:00","candidate_id":"u02","group_id":"78acffd9-82c1-4739-ab03-369a398c8600","trace_id":"bb6c4b5d-de79-44c9-aaee-021c490411d3","ns":"sockshop1"}
+{"ts":"2026-04-25T14:24:40+01:00","candidate_id":"u03","group_id":"fb77dbb3-e9d6-4aa8-9382-aed7c77154b6","trace_id":"6c8bb487-bc2e-4bf4-a44d-34c8f0865bac","ns":"sockshop2"}
+{"ts":"2026-04-25T14:24:42+01:00","candidate_id":"u04","group_id":"4c103d7e-6fa5-4f67-bcb9-003d2837664c","trace_id":"125c2d43-e82b-41ed-af91-b1cc0e5a9d93","ns":"sockshop3"}
+{"ts":"2026-04-25T14:24:46+01:00","candidate_id":"u06","group_id":"dc84575c-0b68-46e6-8e87-9a10d3b46ef2","trace_id":"0dea8c85-4d76-4142-b961-0842cbc61640","ns":"sockshop4"}
+{"ts":"2026-04-25T14:24:48+01:00","candidate_id":"u07","group_id":"776a2289-ac63-4de0-93c4-79b9a36f3b4a","trace_id":"9e5c18aa-3365-4204-8b9e-dc7cdd836144","ns":"sockshop5"}
+{"ts":"2026-04-25T14:24:50+01:00","candidate_id":"u08","group_id":"ea26eda1-18f5-4d75-b363-7b10334c64b3","trace_id":"7b7be74a-9c4c-4f71-b4ef-8330c0b12b66","ns":"sockshop6"}
+{"ts":"2026-04-25T14:24:56+01:00","candidate_id":"u09","group_id":"587753ce-4c6b-4df0-a15c-c3bbb683e0f5","trace_id":"c982be8a-037d-4eaa-89b8-78d433018c46","ns":"sockshop7"}
+{"ts":"2026-04-25T14:24:59+01:00","candidate_id":"u10","group_id":"ec71a6e7-c7f5-42cf-9859-e14a39b4bcea","trace_id":"737f78a0-6dbc-4411-8a49-bd696e87555e","ns":"sockshop8"}
+{"ts":"2026-04-25T14:25:22+01:00","candidate_id":"u05","trace_id":"6a35dd97-9c03-472b-b489-cbdd76d9e921","ns":"sockshop9"}

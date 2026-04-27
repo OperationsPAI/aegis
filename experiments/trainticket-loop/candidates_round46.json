@@ -1,0 +1,12 @@
+{
+  "round": 46, "system": "ts", "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Continue.",
+  "candidates": [
+    {"id": "tt46_01","app": "ts-station-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 12},
+    {"id": "tt46_02","app": "ts-route-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 11},
+    {"id": "tt46_03","app": "ts-cancel-service",       "chaos_type": "JVMException","params": {"class":"cancel.service.CancelServiceImpl","method":"cancelOrder","exception_opt":"random"}, "duration_override": 12}
+  ]
+}

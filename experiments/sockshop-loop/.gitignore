@@ -1,0 +1,7 @@
+# Local clone of upstream benchmark source repos used for candidate
+# valuation. Re-cloned on demand; should not be committed.
+cache/
+
+# Per-submission stderr captures. Useful while debugging a specific
+# failing call but not worth git history.
+logs/

@@ -1,0 +1,4 @@
+{"ts": "2026-04-26T21:49:25+0100", "candidate_id": "tt40_01", "paired_with": [], "group_id": "b8999d6e-9b3d-4ffe-805d-052d16ec2b16", "trace_id": "bf79f0cc-8c5f-4936-99fd-116462ad141a", "ns": "ts5"}
+{"ts": "2026-04-26T21:49:30+0100", "candidate_id": "tt40_02", "paired_with": [], "group_id": "6730a810-a975-48d6-9b74-7b99fc5553c1", "trace_id": "33977fec-a453-4692-94e9-d74ac71aa8e0", "ns": "ts6"}
+{"ts": "2026-04-26T21:49:40+0100", "candidate_id": "tt40_03", "paired_with": [], "group_id": "d1ebcd08-8ffc-4a75-8290-79f7de5b204f", "trace_id": "ca15d628-b0f0-4cb1-8241-ee1de256b1c9", "ns": "ts7"}
+{"ts": "2026-04-26T21:49:49+0100", "candidate_id": "tt40_04", "paired_with": [], "group_id": "c4942187-ccbc-4174-8f6d-dca4025340e3", "trace_id": "d5be111d-5e96-4026-8ca6-86b5ffbd9c05", "ns": "ts8"}

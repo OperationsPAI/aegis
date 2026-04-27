@@ -1,0 +1,29 @@
+{
+  "round": 1,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Round 1 on TrainTicket: 41 services, 31297 candidates. Loadgen at OperationsPAI/loadgenerator@d1e5f07. K=12 candidates with 30% pair probability per submit_dual.py — expect ~3 pairs / ~6 singles → ~9 traces. Single fault round to validate TT infra; from R2 add anti-detector / valuation.",
+  "_results": "10 traces in flight (after retry of tt03/tt05 due to redis txn race). 5/12 candidates +1 (4 traces): tt06+tt07 PAIRED user/PodFailure×station/PodFailure ts5 (both inherit), tt08 route/PodFailure ts6, tt11 contacts/PodFailure ts9, tt04 payment/PodKill ts13. 4/12 -1: tt09 cancel/PodFailure ts7, tt12 food/PodFailure ts10, tt03 travel/PodKill ts15, tt05 basic/PodKill ts16. 3/12 env-fail: tt10 assurance/PodFailure ts8 RestartPedestal failed (pedestal restart timeout — TT 41-svc cold start >5min), tt01+tt02 PAIRED auth/PodKill×order/PodKill ts11 BuildDatapack failed (datapack-build OOM or stale collector for paired chaos? need investigation). Signal: PodFailure 5s on TT business services lights detector reliably (5/8 traces with reward != -1 are PodFailure); TT detector more sensitive than sockshop's. Next: JVM exceptions on hot Java methods + multi-step business chaos.",
+  "_known_issues": {
+    "ts8_restart_failed": "RestartPedestal Error on ts8: TT pedestal cold-start has 41 deployments to wait on; Helm post-install timeout may be too short for fresh ns. Investigate operator restart-pedestal timeout (default 300s) vs TT readiness time (~5-7min cold).",
+    "ts11_pair_datapack_failed": "tt01+tt02 paired auth+order PodKill: BuildDatapack errored. Likely (1) parquet writer hit error on simultaneous chaos windows confusing query-range, or (2) cluster pressure. Check datapack-builder logs for ts11.",
+    "redis_txn_race": "Initial submit of tt03/tt05 returned 500 'redis transaction failed' (PR #192 lua compare-and-del race when bursting submits). Retry with 5s delay succeeds. Workaround: submit_dual.py adds time.sleep(2) but bursts of 12 hit window; consider increasing inter-submit sleep to 5s for K>10."
+  },
+  "candidates": [
+    {"id": "tt01", "app": "ts-auth-service",     "chaos_type": "PodKill",    "params": {}, "paired_with":["tt02"], "trace_id": "14d110d3-4494-4b8d-b71b-7fc3b04248f9", "ns": "ts11", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "tt02", "app": "ts-order-service",    "chaos_type": "PodKill",    "params": {}, "paired_with":["tt01"], "trace_id": "14d110d3-4494-4b8d-b71b-7fc3b04248f9", "ns": "ts11", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "tt03", "app": "ts-travel-service",   "chaos_type": "PodKill",    "params": {}, "trace_id": "f273853d-1368-4ed1-ad59-53e866967f6c", "ns": "ts15", "terminal": "datapack.no_anomaly",       "reward": -1},
+    {"id": "tt04", "app": "ts-payment-service",  "chaos_type": "PodKill",    "params": {}, "trace_id": "0307101b-743b-4411-baea-88f46f449215", "ns": "ts13", "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "tt05", "app": "ts-basic-service",    "chaos_type": "PodKill",    "params": {}, "trace_id": "f1b6687b-9009-4c29-a07d-655756bc5fc6", "ns": "ts16", "terminal": "datapack.no_anomaly",       "reward": -1},
+    {"id": "tt06", "app": "ts-user-service",     "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "paired_with":["tt07"], "trace_id": "acb7d56f-dbbf-4662-b782-560382df7d10", "ns": "ts5", "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "tt07", "app": "ts-station-service",  "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "paired_with":["tt06"], "trace_id": "acb7d56f-dbbf-4662-b782-560382df7d10", "ns": "ts5", "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "tt08", "app": "ts-route-service",    "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "62bcc1f8-0f1b-4676-835e-83066bd783c9", "ns": "ts6",  "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "tt09", "app": "ts-cancel-service",   "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "e914d02a-0ca6-46f5-bbf1-00637c1f0ef4", "ns": "ts7",  "terminal": "datapack.no_anomaly",        "reward": -1},
+    {"id": "tt10", "app": "ts-assurance-service","chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "d6f74afd-87dc-4b49-832c-8931566f973f", "ns": "ts8",  "terminal": "restart.pedestal.failed",    "reward": 0},
+    {"id": "tt11", "app": "ts-contacts-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "34d8122c-e850-4643-9a3d-f3239b221420", "ns": "ts9",  "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "tt12", "app": "ts-food-service",     "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "94a78d6a-df3a-4d04-9e58-2f6af988150e", "ns": "ts10", "terminal": "datapack.no_anomaly",        "reward": -1}
+  ]
+}

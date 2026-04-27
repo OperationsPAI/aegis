@@ -1,0 +1,12 @@
+{"ts": "2026-04-26T09:17:07+0100", "candidate_id": "tt277", "paired_with": [], "group_id": "abd08def-7360-4764-b139-6f63684dd879", "trace_id": "affb6769-3bc6-4e23-b6f6-8fdd8c08e103", "ns": "ts5"}
+{"ts": "2026-04-26T09:17:12+0100", "candidate_id": "tt278", "paired_with": [], "group_id": "89ffd02a-046c-4c51-83ec-9d3f545332c6", "trace_id": "87ce8a0a-5319-4162-af53-86e4ead0f725", "ns": "ts6"}
+{"ts": "2026-04-26T09:17:17+0100", "candidate_id": "tt279", "paired_with": [], "group_id": "f31fbcf3-11a4-43e1-af84-d31d63a04282", "trace_id": "e1043195-6465-4541-9c26-023003daa820", "ns": "ts7"}
+{"ts": "2026-04-26T09:17:22+0100", "candidate_id": "tt280", "paired_with": [], "group_id": "f1dd4bf5-5e98-45c8-8dc0-f5974cb6cec8", "trace_id": "a5d19b6e-c536-4f2f-8a7b-b1e1df905386", "ns": "ts8"}
+{"ts": "2026-04-26T09:17:28+0100", "candidate_id": "tt281", "paired_with": [], "group_id": "866490cd-ff34-47a7-8f6e-55e4f4f90e3c", "trace_id": "7eaf884c-4697-422e-9b30-c9e679e2bcb8", "ns": "ts9"}
+{"ts": "2026-04-26T09:17:33+0100", "candidate_id": "tt282", "paired_with": [], "group_id": "53a4ec20-f121-44bd-b7bc-65a8e5ebfecb", "trace_id": "023393a6-908b-42fe-840a-fbef87ff2246", "ns": "ts10"}
+{"ts": "2026-04-26T09:17:39+0100", "candidate_id": "tt283", "paired_with": [], "group_id": "adccc6eb-cb17-451a-bf21-28d98107649c", "trace_id": "28b000df-353a-4773-8ec3-4f2824537c06", "ns": "ts11"}
+{"ts": "2026-04-26T09:17:46+0100", "candidate_id": "tt284", "paired_with": [], "group_id": "98b6b67b-85f5-4fb3-81c9-424cb280ac16", "trace_id": null, "ns": null}
+{"ts": "2026-04-26T09:17:51+0100", "candidate_id": "tt285", "paired_with": [], "group_id": "bb2a4c03-442c-4cb9-83dd-48327364715f", "trace_id": "84bf3e24-399a-4d08-b573-deec1accfb7b", "ns": "ts15"}
+{"ts": "2026-04-26T09:17:56+0100", "candidate_id": "tt286", "paired_with": [], "group_id": "12204b1e-f4b1-4439-b4d9-cbcfb8c78ce1", "trace_id": "e7ea6ad6-12d4-4e59-b952-d9d75f500a4d", "ns": "ts16"}
+{"ts": "2026-04-26T09:18:01+0100", "candidate_id": "tt287", "paired_with": [], "group_id": "44744bca-6c00-45d8-b7ae-66538ae9307e", "trace_id": "61a1589b-097f-46f5-9655-089a97c856c2", "ns": "ts17"}
+{"ts": "2026-04-26T09:18:06+0100", "candidate_id": "tt288", "paired_with": [], "group_id": "a4f9dc7f-319d-4ae3-80ff-76a98d7eb3aa", "trace_id": "610c1ebf-b4ec-4b43-bfb4-92445462c933", "ns": "ts18"}

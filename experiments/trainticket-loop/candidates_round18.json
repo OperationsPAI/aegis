@@ -1,0 +1,25 @@
+{
+  "round": 18,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R17: 1/3 valid +1 (33%, lower hit rate). user.saveUser NEW WINNER. R12 winner payment.initPayment regressed. R18 strategy: (1) HTTPRequestAbort/HTTPResponseDelay on TT (Spring REST endpoints — gateway routes /api/v1/users, /api/v1/orders, /api/v1/payment, /api/v1/travel). (2) NetworkBandwidth chaos (untested on TT). (3) Last few JVMException methods. (4) TimeSkew chaos as different signal type.",
+  "_jvm_classes_source":"FudanSELab/train-ticket@main 2026-04-25",
+  "_results": "0/2 done valid +1, 2/2 -1: tt211 config/PodKill (config previously +1 with PodFailure 5x, but -1 with PodKill — restart-on-kill recovers faster than PodFailure), tt214 route-plan/PodKill (R13 winner regressed). 2/6 env-fail: tt212 train-food fault.injection.failed, tt215 admin-route datapack.build.failed. 2 still running. Submit fails recap: HTTP routes need explicit catalog (gateway not registered), NetworkBandwidth pair-not-observed, TimeSkew time_offset is int seconds.",
+  "candidates": [
+    {"id": "tt205","app": "ts-gateway-service",    "chaos_type": "HTTPResponseDelay","params": {"route":"/api/v1/orderservice/order","http_method":"POST","target_service":"ts-gateway-service","delay_duration":3000}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "tt206","app": "ts-gateway-service",    "chaos_type": "HTTPRequestAbort", "params": {"route":"/api/v1/userservice/users","http_method":"GET","target_service":"ts-gateway-service"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "tt207","app": "ts-payment-service",    "chaos_type": "NetworkBandwidth","params": {"target_service":"ts-order-service","rate":1,"limit":1000,"buffer":1000,"direction":"to"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "tt208","app": "ts-order-service",      "chaos_type": "NetworkBandwidth","params": {"target_service":"ts-payment-service","rate":1,"limit":1000,"buffer":1000,"direction":"to"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "tt209","app": "ts-payment-service",    "chaos_type": "TimeSkew",        "params": {"time_offset":"+1h"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.400", "reward": 0, "_failure":"time_offset is int seconds"},
+    {"id": "tt210","app": "ts-order-service",      "chaos_type": "TimeSkew",        "params": {"time_offset":"+30m"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.400", "reward": 0},
+    {"id": "tt211","app": "ts-config-service",     "chaos_type": "PodKill",         "params": {}, "duration_override": 5, "_note":"Try PodKill on top winner", "trace_id": "d693da9f-6a93-49e1-b71e-1855ea461c7d", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"config/PodKill -1 (vs PodFailure 5x +1) — kill restarts pod fast"},
+    {"id": "tt212","app": "ts-train-food-service", "chaos_type": "PodKill",         "params": {}, "duration_override": 5, "trace_id": "02930223-159f-4321-b0fa-0e29de42d375", "terminal": "fault.injection.failed", "reward": 0},
+    {"id": "tt213","app": "ts-execute-service",    "chaos_type": "PodKill",         "params": {}, "duration_override": 5, "trace_id": "0d46f6b9-d382-47ab-b21d-e81b28f4916e", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "tt214","app": "ts-route-plan-service", "chaos_type": "PodKill",         "params": {}, "duration_override": 5, "trace_id": "9e6456aa-38ab-4291-831e-b1be226144c0", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt215","app": "ts-admin-route-service","chaos_type": "PodKill",         "params": {}, "duration_override": 5, "trace_id": "874b6b3d-0324-47bd-854e-5a81167d33be", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "tt216","app": "ts-admin-basic-info-service","chaos_type": "PodKill",    "params": {}, "duration_override": 5, "trace_id": "fe6366ac-78da-4f6a-bf23-b51af74c68ef", "ns": "ts16", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"R9 winner stable even with PodKill"}
+  ]
+}

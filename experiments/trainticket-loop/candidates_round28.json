@@ -1,0 +1,20 @@
+{
+  "round": 28,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R27 confirmed CH bump works (no Code 202). New blocker: detector finds 0 anomaly in JVMException's quiet failure mode. R28 pivot: replace R27 failed JVMExceptions with PodKill on the same services + longer dur (10+ for restart-cycle visibility). Stick with PaymentServiceImpl.initPayment (R27 JVMException winner) at varied dur for stability. Add ts-train PodFailure dur=10 (R27 fail was dur=8 - bump dur).",
+  "_jvm_classes_source":"OperationsPAI/train-ticket@main 2026-04-26",
+  "candidates": [
+    {"id": "tt307","app": "ts-payment-service",      "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"initPayment","exception_opt":"random"}, "duration_override": 8, "_note":"R27 dur=7 NEW winner; vary dur for stability"},
+    {"id": "tt308","app": "ts-train-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 10, "_note":"R27 dur=8 fail; longer dur"},
+    {"id": "tt309","app": "ts-order-service",        "chaos_type": "PodKill",    "params": {}, "duration_override": 8, "_note":"R27 JVMException fail; pivot PodKill"},
+    {"id": "tt310","app": "ts-cancel-service",       "chaos_type": "PodKill",    "params": {}, "duration_override": 8, "_note":"R27 JVMException fail; pivot PodKill"},
+    {"id": "tt311","app": "ts-food-service",         "chaos_type": "PodKill",    "params": {}, "duration_override": 8, "_note":"R27 JVMException fail; pivot PodKill"},
+    {"id": "tt312","app": "ts-station-service",      "chaos_type": "PodKill",    "params": {}, "duration_override": 8, "_note":"R27 JVMException fail; pivot PodKill"},
+    {"id": "tt313","app": "ts-config-service",       "chaos_type": "PodFailure", "params": {}, "duration_override": 10, "_note":"11th confirmation; vary dur"},
+    {"id": "tt314","app": "ts-payment-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 9, "_note":"R23/R24/R25 winner stability"}
+  ]
+}

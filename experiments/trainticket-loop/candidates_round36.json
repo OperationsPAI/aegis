@@ -1,0 +1,14 @@
+{
+  "round": 36, "system": "ts", "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Sweep more services + JVM hooks.",
+  "candidates": [
+    {"id": "tt36_01","app": "ts-payment-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 12},
+    {"id": "tt36_02","app": "ts-order-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 12},
+    {"id": "tt36_03","app": "ts-travel-service",       "chaos_type": "PodFailure", "params": {}, "duration_override": 11},
+    {"id": "tt36_04","app": "ts-food-service",         "chaos_type": "JVMException","params": {"class":"foodsearch.service.FoodServiceImpl","method":"getAllFood","exception_opt":"random"}, "duration_override": 10},
+    {"id": "tt36_05","app": "ts-station-service",      "chaos_type": "JVMException","params": {"class":"fdse.microservice.service.StationServiceImpl","method":"exist","exception_opt":"random"}, "duration_override": 10}
+  ]
+}

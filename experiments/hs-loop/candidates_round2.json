@@ -1,0 +1,21 @@
+{
+  "round": 2,
+  "system": "hs",
+  "system_type": "hs",
+  "pedestal": {"name": "hs", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "HS R2 post-fixes: backend loop-20260426a should let DSB cold-start finish (helm async readiness 15min). R1 mostly env-failed due to 5min helm wait timeout. Same 10 candidates retry.",
+  "candidates": [
+    {"id": "h2_01", "app": "frontend",       "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_02", "app": "search",         "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_03", "app": "geo",            "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_04", "app": "rate",           "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_05", "app": "profile",        "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_06", "app": "recommendation", "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_07", "app": "reservation",    "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_08", "app": "user",           "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_09", "app": "attractions",    "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "h2_10", "app": "frontend",       "chaos_type": "PodKill",    "params": {}, "duration_override": 5}
+  ]
+}

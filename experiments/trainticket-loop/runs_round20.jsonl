@@ -1,0 +1,12 @@
+{"ts": "2026-04-25T23:54:39+0100", "candidate_id": "tt229", "paired_with": [], "group_id": "06c16377-ec89-4c8c-9e5f-44212444484a", "trace_id": "8e70d07a-9c2a-45ef-a364-07e0486f0bc5", "ns": "ts5"}
+{"ts": "2026-04-25T23:54:44+0100", "candidate_id": "tt230", "paired_with": [], "group_id": "8fa88197-1bba-4d26-b75a-055db770a3e7", "trace_id": "0b3c6c01-53ae-43c7-aeec-3b7cd30b8074", "ns": "ts6"}
+{"ts": "2026-04-25T23:54:49+0100", "candidate_id": "tt231", "paired_with": [], "group_id": "27f334bd-2e0d-426b-b62e-0d49b1f6121e", "trace_id": "7b4956bc-bdc1-468f-9ddd-c4e70c87c8e4", "ns": "ts8"}
+{"ts": "2026-04-25T23:54:54+0100", "candidate_id": "tt232", "paired_with": [], "group_id": "d971ac1d-a9a3-4eba-a61f-7c7196f5d154", "trace_id": "f33c910a-bd71-461f-8ac0-de35036c5090", "ns": "ts9"}
+{"ts": "2026-04-25T23:54:59+0100", "candidate_id": "tt233", "paired_with": [], "group_id": "b478fe1b-25c2-4237-8fa0-2c6d5954a985", "trace_id": "57860b9d-8d2f-47d2-a8d1-15b2ebe410f8", "ns": "ts13"}
+{"ts": "2026-04-25T23:55:04+0100", "candidate_id": "tt234", "paired_with": [], "group_id": "763be3f9-f0e4-4a35-8dfb-ef2e00b480e5", "trace_id": "52be1c94-c5f8-4652-9ac0-ffa136ceb0d0", "ns": "ts15"}
+{"ts": "2026-04-25T23:55:09+0100", "candidate_id": "tt235", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777157708}"}
+{"ts": "2026-04-25T23:55:10+0100", "candidate_id": "tt236", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777157710}"}
+{"ts": "2026-04-25T23:55:12+0100", "candidate_id": "tt237", "paired_with": [], "group_id": "07005764-3134-459b-ac12-84e9d9f84613", "trace_id": "6897d3ef-a691-44fc-92b0-5d0537c4b357", "ns": "ts18"}
+{"ts": "2026-04-25T23:55:17+0100", "candidate_id": "tt238", "paired_with": [], "group_id": "ebdd8075-b233-4cc7-9af9-22868d029ad4", "trace_id": "1c83f419-425a-4e4d-96ef-c4f8d713ee7e", "ns": "ts19"}
+{"ts": "2026-04-25T23:55:22+0100", "candidate_id": "tt239", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777157722}"}
+{"ts": "2026-04-25T23:55:22+0100", "candidate_id": "tt240", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777157722}"}

@@ -1,0 +1,22 @@
+{
+  "round": 7,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R6: 1/5 valid +1 (currency solo - new winner). Pair pattern weakening: R5 frontend+checkout pair +1; R6 payment+ad pair -1. Hypothesis: detector signal correlates with specific pod-level loadgen contention rather than topology. R7 strategy: (1) Re-test currency multiple times. (2) Extend solo PodFailure sweep on remaining services (cart, accounting, fraud-detection, image-provider, kafka if exists). (3) Fix product-catalog name. (4) Try heavy NetworkLoss accounting→postgresql AGAIN (R2 winner) — single chaos no-pair-issue.",
+  "_results": "4/10 +1: v01 currency solo (CONFIRMED stable winner), v05+v06 fraud-detection+image-provider PAIR (NEW WINNER), v07 product-catalog solo (NEW WINNER, kebab-case fix worked). 5/10 -1: v02+v03 currency+cart PAIR (PAIRING regressed currency), v04 accounting solo, v08+v09 quote+accounting/NetworkLoss postgresql PAIR (R2 winner FAILED to repeat 2x), v10 email solo. Confirmed services on otel-demo primary path: **currency, product-catalog, fraud-detection×image-provider PAIR** are reliable +1; ad/checkout/frontend/payment/email/quote/cart/accounting are -1 or unstable.",
+  "candidates": [
+    {"id": "v01", "app": "currency",       "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "_note":"Re-validate R6 winner", "trace_id": "eb607c49-e286-48de-b03f-67fd582908b4", "ns": "otel-demo1", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"CONFIRMED stable winner"},
+    {"id": "v02", "app": "currency",       "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "_note":"Stability check 2", "paired_with":["v03"], "trace_id": "5cb76c38-0069-4ffe-b053-a25cd61aa0e2", "ns": "otel-demo2", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"PAIRING regressed currency signal"},
+    {"id": "v03", "app": "cart",           "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "paired_with":["v02"], "trace_id": "5cb76c38-0069-4ffe-b053-a25cd61aa0e2", "ns": "otel-demo2", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "v04", "app": "accounting",     "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "cfdb5a68-e9d5-49be-b516-d7f987d7c594", "ns": "otel-demo3", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "v05", "app": "fraud-detection","chaos_type": "PodFailure", "params": {}, "duration_override": 5, "paired_with":["v06"], "trace_id": "d3ffb65a-94e9-4a5d-b563-522b3c79fc95", "ns": "otel-demo4", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"PAIR with image-provider WINS"},
+    {"id": "v06", "app": "image-provider", "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "paired_with":["v05"], "trace_id": "d3ffb65a-94e9-4a5d-b563-522b3c79fc95", "ns": "otel-demo4", "terminal": "datapack.result.collection", "reward": 1},
+    {"id": "v07", "app": "product-catalog","chaos_type": "PodFailure", "params": {}, "duration_override": 5, "_note":"Fixed kebab-case from R6 fail", "trace_id": "b24b191e-1bda-4efc-b56d-7ab02c05800c", "ns": "otel-demo5", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER product-catalog (was wrong name in R6)"},
+    {"id": "v08", "app": "quote",          "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "paired_with":["v09"], "trace_id": "55fab867-5a1e-4bf4-810d-0e554f00df7a", "ns": "otel-demo6", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "v09", "app": "accounting",     "chaos_type": "NetworkLoss","params": {"target_service":"postgresql","loss":80,"correlation":50,"direction":"to"}, "duration_override": 5, "_note":"R2 winner re-check", "paired_with":["v08"], "trace_id": "55fab867-5a1e-4bf4-810d-0e554f00df7a", "ns": "otel-demo6", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"R2 winner FAILED to repeat 2x — flaky"},
+    {"id": "v10", "app": "email",          "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "f9392688-bd95-4c8a-8d26-55024a040a08", "ns": "otel-demo7", "terminal": "datapack.no_anomaly", "reward": -1}
+  ]
+}

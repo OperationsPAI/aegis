@@ -1,0 +1,10 @@
+02c01279-3bc9-4f7d-a867-ad519d8698d8	Completed	datapack.result.collection
+1f2d8389-13c0-47c1-9048-49e13841e8de	Running	datapack.build.started
+4184ce41-3f0e-499a-a23a-fa72434fe53c	Failed	datapack.build.failed
+63f1a509-88c3-49ad-8a73-d1d7211f7c1b	Running	fault.injection.started
+a2b97522-bcee-40a4-b4c9-a937b39807e8	Completed	datapack.no_anomaly
+a3abcddf-ac70-484d-aa62-76c55c7d1ce9	Failed	fault.injection.failed
+b3455e71-cd9c-483e-b732-6af1faf1473e	Completed	datapack.no_anomaly
+bc2ebeab-22d4-4bd9-b24f-a4c3a3571370	Completed	datapack.no_anomaly
+ea50180e-9c7f-4984-b766-00e507e5c32f	Failed	datapack.build.failed
+f9522cf1-a3d6-48f2-a594-81f33a108e80	Completed	datapack.result.collection

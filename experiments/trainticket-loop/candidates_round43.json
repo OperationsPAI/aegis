@@ -1,0 +1,13 @@
+{
+  "round": 43, "system": "ts", "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Continue.",
+  "candidates": [
+    {"id": "tt43_01","app": "ts-station-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "tt43_02","app": "ts-train-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 14},
+    {"id": "tt43_03","app": "ts-route-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 12},
+    {"id": "tt43_04","app": "ts-payment-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 10}
+  ]
+}

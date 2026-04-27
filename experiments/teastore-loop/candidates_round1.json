@@ -1,0 +1,19 @@
+{
+  "round": 1,
+  "system": "tea",
+  "system_type": "tea",
+  "pedestal": {"name": "teastore", "tag": "1.4.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "TeaStore R1 post-fixes: chart 0.1.3 with per-service app=teastore-{component} + jmeter busybox volces mirror; backend loop-20260426a (helm async readiness, CRD cleanup, reseed CLI). Test 8 services × PodFailure 5min as broad baseline. No HTTPChaos (IPVLAN ban).",
+  "candidates": [
+    {"id": "te1", "app": "teastore-webui",       "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "te2", "app": "teastore-persistence", "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "te3", "app": "teastore-auth",        "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "te4", "app": "teastore-recommender", "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "te5", "app": "teastore-image",       "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "te6", "app": "teastore-registry",    "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "te7", "app": "teastore-db",          "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "te8", "app": "teastore-webui",       "chaos_type": "PodKill",    "params": {}, "duration_override": 5}
+  ]
+}

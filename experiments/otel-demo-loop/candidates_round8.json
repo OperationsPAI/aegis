@@ -1,0 +1,22 @@
+{
+  "round": 8,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R7: 3 confirmed solo +1 (currency, product-catalog, fraud-detection×image-provider PAIR). R8 strategy: (1) Validate currency + product-catalog stability with multiple repeats. (2) Drop weak solos (frontend/checkout/email/cart/quote/accounting/payment/ad solo all -1). (3) Try kafka if exists. (4) Heavier chaos (NetworkLoss80 outbound) on confirmed winners to test signal vs chaos magnitude. (5) Deep-dive a R6 winner (currency) with JVMException since it's likely Java.",
+  "_results": "1/4 valid +1: w10 currency solo (3rd consecutive confirmed). 3/4 -1: w01+w02 currency+product-catalog PAIR (PAIRING destroys both signals), w03 fraud-detection solo (was +1 only when paired with image-provider in R7), w04 image-provider solo (same — only +1 when paired). 5 submit fails: NetworkLoss to frontend pair-not-observed, wrong app names (kafka/valkey-cart/loadgenerator). **Final otel-demo signal map**: currency solo = stable +1; everything else flaky/-1. Pairing currency dilutes signal. fraud-detection×image-provider ONLY fires as a pair (not individually), suggesting an emergent cascade.",
+  "candidates": [
+    {"id": "w01", "app": "currency",       "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "_note":"3rd stability check", "paired_with":["w02"], "trace_id": "375532b4-d0e9-421a-a654-ac4140f37b0f", "ns": "otel-demo1", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"PAIRING with product-catalog killed currency signal"},
+    {"id": "w02", "app": "product-catalog","chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "_note":"2nd stability check", "paired_with":["w01"], "trace_id": "375532b4-d0e9-421a-a654-ac4140f37b0f", "ns": "otel-demo1", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "w03", "app": "fraud-detection","chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "_note":"Solo (was paired in R7) - control", "trace_id": "63040ed3-f827-47e6-8fdb-7e78a21c21cf", "ns": "otel-demo2", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"R7 pair winner does NOT fire solo — it's emergent"},
+    {"id": "w04", "app": "image-provider", "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "_note":"Solo (was paired in R7) - control", "trace_id": "e0a71002-7d95-441d-b60f-2549079edd7c", "ns": "otel-demo3", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "w05", "app": "currency",       "chaos_type": "NetworkLoss", "params": {"target_service":"frontend","loss":80,"correlation":50,"direction":"to"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"pair currency→frontend not observed"},
+    {"id": "w06", "app": "product-catalog","chaos_type": "NetworkLoss", "params": {"target_service":"frontend","loss":80,"correlation":50,"direction":"to"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "w07", "app": "kafka",          "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"app 'kafka' not found"},
+    {"id": "w08", "app": "valkey-cart",    "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"app 'valkey-cart' wrong"},
+    {"id": "w09", "app": "loadgenerator",  "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"loadgenerator pod outside otel-demo ns?"},
+    {"id": "w10", "app": "currency",       "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "_note":"4th stability check", "trace_id": "1b4117dd-9de7-4a97-8cd7-da194f95495f", "ns": "otel-demo9", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"3rd CONFIRMED stable: currency solo PodFailure"}
+  ]
+}

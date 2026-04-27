@@ -1,0 +1,15 @@
+{
+  "round": 3,
+  "system": "teastore",
+  "system_type": "teastore",
+  "pedestal": {"name": "teastore", "tag": "1.4.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Retry R2 after CH host fix. R2 8/8 fault.injection.failed (pre-fix). Test 4 services to validate per-component label injection works.",
+  "candidates": [
+    {"id": "te3_01", "app": "teastore-webui",       "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "te3_02", "app": "teastore-persistence", "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "te3_03", "app": "teastore-image",       "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "te3_04", "app": "teastore-db",          "chaos_type": "PodFailure", "params": {}, "duration_override": 7}
+  ]
+}

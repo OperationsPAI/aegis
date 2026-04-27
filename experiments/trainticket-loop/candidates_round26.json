@@ -1,0 +1,16 @@
+{
+  "round": 26,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R25 6 candidates still tripped CH overload (3/6 datapack.build.failed). Until ClickHouse bump PR lands (codex agent in flight), keep batches small: 4 candidates @ slow pace. Retry the 3 R25 env-failed JVMException + 1 winner re-confirmation. Heavy slow submit_sleep to give CH room.",
+  "_jvm_classes_source":"OperationsPAI/train-ticket@main 2026-04-26 (this is the deployed fork; classes verified identical to upstream FudanSELab — no rename divergence)",
+  "candidates": [
+    {"id": "tt295","app": "ts-config-service",       "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "_note":"10th confirmation tt277 baseline"},
+    {"id": "tt296","app": "ts-payment-service",      "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"initPayment","exception_opt":"random"}, "duration_override": 7, "_note":"R25 datapack-build fail; retry"},
+    {"id": "tt297","app": "ts-cancel-service",       "chaos_type": "JVMException","params": {"class":"cancel.service.CancelServiceImpl","method":"cancelOrder","exception_opt":"random"}, "duration_override": 7, "_note":"R25 datapack-build fail; retry"},
+    {"id": "tt298","app": "ts-order-service",        "chaos_type": "JVMException","params": {"class":"order.service.OrderServiceImpl","method":"saveChanges","exception_opt":"random"}, "duration_override": 7, "_note":"R25 datapack-build fail; retry"}
+  ]
+}

@@ -1,0 +1,4 @@
+{"ts": "2026-04-26T01:44:25+0100", "candidate_id": "te04", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777164265}"}
+{"ts": "2026-04-26T01:46:00+0100", "candidate_id": "te04", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777164360}"}
+{"ts": "2026-04-26T01:46:00+0100", "candidate_id": "te05", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777164360}"}
+{"ts": "2026-04-26T01:46:01+0100", "candidate_id": "te06", "paired_with": [], "group_id": "b25d4e4f-9008-446e-bd06-5430b152d111", "trace_id": "6760637f-25db-4ea7-a42b-f633e62bd4e3", "ns": "tea4"}

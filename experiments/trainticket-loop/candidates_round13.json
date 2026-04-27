@@ -1,0 +1,25 @@
+{
+  "round": 13,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R12: 5/9 valid +1 = 56%. NEW WINNERS: order-other, payment.initPayment, order.getSoldTickets. train-food 3rd consecutive. R13 strategy: (1) JVMException sweep on order.findOrderById/saveChanges other methods, payment.pay/addMoney. (2) Continue exploring: ts-train-service, ts-seat-service solo. (3) JVM on auth.UserDetailsServiceImpl methods, security/SecurityServiceImpl.",
+  "_jvm_classes_source":"FudanSELab/train-ticket@main 2026-04-25",
+  "_results": "5/9 done +1: tt145 train (NEW WINNER), tt146 seat (NEW WINNER), tt147 route-plan (NEW WINNER, was running in R10), tt148 order.create dur=7 (R2 winner re-confirmed), tt149 order.saveChanges dur=6 (R5 winner re-confirmed). 3/9 -1: tt151 payment.addMoney, tt152 basic.queryForTravel (R4 winner regressed), tt154 station.create (R2 winner regressed). 2/9 env-fail: tt150 payment.pay datapack.build.failed, tt153 route.getRouteByStartAndEnd fault.injection.failed. 2 still running (tt155 contacts, tt156 admin-basic-info).",
+  "candidates": [
+    {"id": "tt145","app": "ts-train-service",     "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "560de914-3519-4a40-8915-1cca8d8463d5", "ns": "ts5", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER train"},
+    {"id": "tt146","app": "ts-seat-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "035989e9-6c78-42be-9640-1b9f4be4e784", "ns": "ts6", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER seat"},
+    {"id": "tt147","app": "ts-route-plan-service","chaos_type": "PodFailure", "params": {}, "duration_override": 5, "trace_id": "34065320-ca81-4ea7-8fcd-0ae1cf41831c", "ns": "ts7", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER route-plan"},
+    {"id": "tt148","app": "ts-order-service",     "chaos_type": "JVMException","params": {"class":"order.service.OrderServiceImpl","method":"create","exception_opt":"random"}, "duration_override": 7, "trace_id": "94d6a6d1-b09d-4d33-a7f5-9d4d0a607f14", "ns": "ts8", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"R2/R7 winner re-confirmed"},
+    {"id": "tt149","app": "ts-order-service",     "chaos_type": "JVMException","params": {"class":"order.service.OrderServiceImpl","method":"saveChanges","exception_opt":"random"}, "duration_override": 6, "trace_id": "a1eb7322-0bbb-4034-b858-0efbc23b77cd", "ns": "ts9", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"R5 winner re-confirmed"},
+    {"id": "tt150","app": "ts-payment-service",   "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"pay","exception_opt":"random"}, "duration_override": 6, "trace_id": "b323f51d-4330-44ec-9c78-799cc17728ca", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "tt151","app": "ts-payment-service",   "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"addMoney","exception_opt":"random"}, "duration_override": 6, "trace_id": "cfde5bcf-60e3-4058-a159-3e8794e9e79c", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt152","app": "ts-basic-service",     "chaos_type": "JVMException","params": {"class":"fdse.microservice.service.BasicServiceImpl","method":"queryForTravel","exception_opt":"random"}, "duration_override": 7, "trace_id": "34c65b2d-f71d-4d68-a37e-119817544ec8", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"R4 winner regressed"},
+    {"id": "tt153","app": "ts-route-service",     "chaos_type": "JVMException","params": {"class":"route.service.RouteServiceImpl","method":"getRouteByStartAndEnd","exception_opt":"random"}, "duration_override": 7, "trace_id": "40f7b6b1-971f-42e7-82c7-4ea4091ce912", "terminal": "fault.injection.failed", "reward": 0},
+    {"id": "tt154","app": "ts-station-service",   "chaos_type": "JVMException","params": {"class":"fdse.microservice.service.StationServiceImpl","method":"create","exception_opt":"random"}, "duration_override": 7, "trace_id": "f37273b6-5e26-4175-8a2e-a77ccfd458e8", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt155","app": "ts-contacts-service",  "chaos_type": "JVMException","params": {"class":"contacts.service.ContactsServiceImpl","method":"createContacts","exception_opt":"random"}, "duration_override": 6, "trace_id": "6f94b981-02c7-4844-93eb-6ee05745696d", "terminal": "TBD", "reward": null},
+    {"id": "tt156","app": "ts-admin-basic-info-service","chaos_type": "PodFailure", "params": {}, "duration_override": 6, "trace_id": "328730f3-b82a-48af-8aa3-92bdd39e2ead", "terminal": "TBD", "reward": null}
+  ]
+}
