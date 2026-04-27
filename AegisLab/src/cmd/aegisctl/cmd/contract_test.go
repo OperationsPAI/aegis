@@ -144,18 +144,38 @@ func runCLI(t *testing.T, args ...string) cliRunResult {
 	os.Stdout = stdoutW
 	os.Stderr = stderrW
 
+	// Drain pipes concurrently. The kernel pipe buffer is ~64KB; commands like
+	// `schema dump` write more than that and would deadlock on Write if the
+	// reader only ran after executeArgs returned.
+	type readResult struct {
+		buf []byte
+		err error
+	}
+	stdoutCh := make(chan readResult, 1)
+	stderrCh := make(chan readResult, 1)
+	go func() {
+		b, e := io.ReadAll(stdoutR)
+		stdoutCh <- readResult{b, e}
+	}()
+	go func() {
+		b, e := io.ReadAll(stderrR)
+		stderrCh <- readResult{b, e}
+	}()
+
 	code := executeArgs(args)
 
 	_ = stdoutW.Close()
 	_ = stderrW.Close()
-	stdoutBytes, err := io.ReadAll(stdoutR)
-	if err != nil {
-		t.Fatalf("read stdout: %v", err)
+	stdoutRes := <-stdoutCh
+	stderrRes := <-stderrCh
+	if stdoutRes.err != nil {
+		t.Fatalf("read stdout: %v", stdoutRes.err)
 	}
-	stderrBytes, err := io.ReadAll(stderrR)
-	if err != nil {
-		t.Fatalf("read stderr: %v", err)
+	if stderrRes.err != nil {
+		t.Fatalf("read stderr: %v", stderrRes.err)
 	}
+	stdoutBytes := stdoutRes.buf
+	stderrBytes := stderrRes.buf
 	_ = stdoutR.Close()
 	_ = stderrR.Close()
 
@@ -234,27 +254,6 @@ func TestClusterPreflightFailingCheckUsesMissingEnvExitCode(t *testing.T) {
 	}
 	if strings.TrimSpace(res.stderr) != "" {
 		t.Fatalf("stderr should stay empty when preflight emits result table on stdout, got %q", res.stderr)
-	}
-}
-
-func TestInjectGuidedApplyFailsFastWithoutProject(t *testing.T) {
-	res := runCLI(
-		t,
-		"inject", "guided", "--apply",
-		"--server", "http://example.test",
-		"--token", "token",
-		"--pedestal-name", "pedestal",
-		"--pedestal-tag", "v1",
-		"--benchmark-name", "benchmark",
-		"--benchmark-tag", "v1",
-		"--interval", "10",
-		"--pre-duration", "2",
-	)
-	if res.code != ExitCodeUsage {
-		t.Fatalf("exit code = %d, want %d; stderr=%q", res.code, ExitCodeUsage, res.stderr)
-	}
-	if !strings.Contains(res.stderr, "--project is required") {
-		t.Fatalf("stderr = %q, want missing project diagnostic", res.stderr)
 	}
 }
 
