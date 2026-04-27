@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 
 	"aegis/cmd/aegisctl/config"
 	"aegis/cmd/aegisctl/output"
@@ -79,7 +81,8 @@ QUICK START:
   aegisctl execute list --project pair_diagnosis
 
 OUTPUT:
-  All commands support --output json (or -o json) for machine-parseable output.
+  All commands support --output table|json|ndjson (or -o) for machine output.
+  --output table remains human-friendly and writes to stdout.
   Table output goes to stdout; informational messages go to stderr.
   Use --quiet (-q) to suppress informational messages.
   Use --non-interactive to lock automation-facing commands into fail-fast,
@@ -94,7 +97,7 @@ ENVIRONMENT VARIABLES:
   AEGIS_PASSWORD    - Password for 'aegisctl auth login'
   AEGIS_PASSWORD_FILE - File containing the password for 'aegisctl auth login'
   AEGIS_PROJECT     - Default project name (overridden by --project flag)
-  AEGIS_OUTPUT      - Output format: table|json (overridden by --output flag)
+  AEGIS_OUTPUT      - Output format: table|json|ndjson (overridden by --output flag)
   AEGIS_TIMEOUT     - Request timeout in seconds (overridden by --request-timeout flag)
   AEGIS_NON_INTERACTIVE - Set true/1 to disable prompts and require explicit input
 
@@ -185,6 +188,10 @@ NAMING CONVENTION:
 		// Forward quiet flag into the output package.
 		output.Quiet = flagQuiet
 
+		if err := validateOutputFormat(cmd); err != nil {
+			return err
+		}
+
 		// Reject --dry-run on commands that don't implement it. We do this
 		// after the resolution logic so env-expansion still runs, but before
 		// any RunE executes — otherwise users get a silently-ignored flag.
@@ -197,6 +204,61 @@ NAMING CONVENTION:
 
 		return nil
 	},
+}
+
+const outputFormatAllowlistAnnotation = "allowed-output-formats"
+
+func registerOutputFormats(cmd *cobra.Command, extras ...output.OutputFormat) {
+	if cmd == nil || len(extras) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, len(extras))
+	for _, extra := range extras {
+		seen[strings.ToLower(string(extra))] = struct{}{}
+	}
+	values := make([]string, 0, len(seen))
+	for v := range seen {
+		values = append(values, v)
+	}
+	sort.Strings(values)
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
+	}
+	cmd.Annotations[outputFormatAllowlistAnnotation] = strings.Join(values, ",")
+}
+
+func validateOutputFormat(cmd *cobra.Command) error {
+	allowed := map[string]struct{}{
+		string(output.FormatTable):  {},
+		string(output.FormatJSON):   {},
+		string(output.FormatNDJSON): {},
+	}
+	for _, v := range strings.Split(getAnnotatedOutputFormats(cmd), ",") {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		allowed[strings.ToLower(v)] = struct{}{}
+	}
+	if _, ok := allowed[strings.ToLower(flagOutput)]; ok {
+		return nil
+	}
+	return usageErrorf("invalid --output %q; expected %s", flagOutput, formatCSV(allowed))
+}
+
+func getAnnotatedOutputFormats(cmd *cobra.Command) string {
+	if cmd == nil || cmd.Annotations == nil {
+		return ""
+	}
+	return cmd.Annotations[outputFormatAllowlistAnnotation]
+}
+
+func formatCSV(values map[string]struct{}) string {
+	parts := make([]string, 0, len(values))
+	for v := range values {
+		parts = append(parts, v)
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ",")
 }
 
 func init() {

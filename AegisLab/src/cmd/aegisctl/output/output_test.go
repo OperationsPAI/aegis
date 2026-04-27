@@ -34,6 +34,9 @@ func TestOutputFormat_Constants(t *testing.T) {
 	if FormatJSON != "json" {
 		t.Errorf("FormatJSON = %q, want %q", FormatJSON, "json")
 	}
+	if FormatNDJSON != "ndjson" {
+		t.Errorf("FormatNDJSON = %q, want %q", FormatNDJSON, "ndjson")
+	}
 }
 
 func TestOutputFormat_Conversion(t *testing.T) {
@@ -42,6 +45,9 @@ func TestOutputFormat_Conversion(t *testing.T) {
 	}
 	if OutputFormat("table") == FormatJSON {
 		t.Errorf("OutputFormat(\"table\") should not equal FormatJSON")
+	}
+	if OutputFormat("ndjson") != FormatNDJSON {
+		t.Errorf("OutputFormat(\"ndjson\") != FormatNDJSON")
 	}
 }
 
@@ -150,6 +156,50 @@ func TestPrintJSON_NilAndEmpty(t *testing.T) {
 			t.Errorf("PrintJSON(empty slice) = %q, want %q", trimmed, "[]")
 		}
 	})
+}
+
+func TestPrintNDJSON(t *testing.T) {
+	got := captureStdout(func() {
+		if err := PrintNDJSON([]map[string]string{
+			{"name": "one"},
+			{"name": "two"},
+		}); err != nil {
+			t.Fatalf("PrintNDJSON returned error: %v", err)
+		}
+	})
+	lines := strings.Split(strings.TrimSpace(got), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d; got: %q", len(lines), got)
+	}
+	for _, line := range lines {
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(line), &payload); err != nil {
+			t.Fatalf("line is not json: %v; line=%q", err, line)
+		}
+	}
+}
+
+func TestPrintMetaJSON(t *testing.T) {
+	got := captureStderr(func() {
+		if err := PrintMetaJSON(map[string]any{"page": 1, "total": 2}); err != nil {
+			t.Fatalf("PrintMetaJSON returned error: %v", err)
+		}
+	})
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimSpace(got)), &payload); err != nil {
+		t.Fatalf("metadata output is not json: %v; output=%q", err, got)
+	}
+	meta, ok := payload["_meta"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing _meta envelope: %q", got)
+	}
+	if gotPage, ok := meta["page"].(float64); !ok || int(gotPage) != 1 {
+		t.Fatalf("meta page = %v (ok=%v), want 1", meta["page"], ok)
+	}
+	if gotTotal, ok := meta["total"].(float64); !ok || int(gotTotal) != 2 {
+		t.Fatalf("meta total = %v (ok=%v), want 2", meta["total"], ok)
+	}
 }
 
 func TestPrintTable(t *testing.T) {
