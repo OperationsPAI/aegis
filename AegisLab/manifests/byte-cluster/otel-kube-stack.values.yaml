@@ -350,8 +350,11 @@ collectors:
     enabled: true
     replicas: 6
     autoscaler:
+      # Bumped maxReplicas 18 → 40 because under teastore firehose load the
+      # HPA pegged at 18 with memory at 170 %/60 %. With each replica at 8Gi
+      # mem limit we have headroom to scale up further before node pressure.
       minReplicas: 6
-      maxReplicas: 18
+      maxReplicas: 40
       targetCPUUtilization: 55
       targetMemoryUtilization: 60
     podDisruptionBudget:
