@@ -254,15 +254,17 @@ var traceGetCmd = &cobra.Command{
 	Short: "Show detailed trace information",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("trace get", "trace get <trace-id>", args, stdinOptions{
-			enabled: traceGetStdin,
-			field:   traceGetStdinField,
+			enabled:  traceGetStdin,
+			field:    traceGetStdinField,
+			failFast: traceGetStdinFailFast,
 		}, runTraceGet)
 	},
 }
 
 var (
-	traceGetStdin      bool
-	traceGetStdinField string
+	traceGetStdin         bool
+	traceGetStdinField    string
+	traceGetStdinFailFast bool
 )
 
 func runTraceGet(traceID string) error {
@@ -324,15 +326,17 @@ var traceWatchCmd = &cobra.Command{
 	Short: "Watch trace events via SSE stream",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("trace watch", "trace watch <trace-id>", args, stdinOptions{
-			enabled: traceWatchStdin,
-			field:   traceWatchStdinField,
+			enabled:  traceWatchStdin,
+			field:    traceWatchStdinField,
+			failFast: traceWatchStdinFailFast,
 		}, runTraceWatch)
 	},
 }
 
 var (
-	traceWatchStdin      bool
-	traceWatchStdinField string
+	traceWatchStdin         bool
+	traceWatchStdinField    string
+	traceWatchStdinFailFast bool
 )
 
 func runTraceWatch(traceID string) error {
@@ -530,8 +534,8 @@ func init() {
 			"Valid: id,type,state,status,project,project_id,group_id,last_event,final_event,created_at,start_time,end_time,leaf_num")
 
 	traceCancelCmd.Flags().BoolVarP(&traceCancelForce, "force", "f", false, "Skip confirmation prompt")
-	addStdinFlags(traceGetCmd, &traceGetStdin, &traceGetStdinField)
-	addStdinFlags(traceWatchCmd, &traceWatchStdin, &traceWatchStdinField)
+	addStdinFlags(traceGetCmd, &traceGetStdin, &traceGetStdinField, &traceGetStdinFailFast)
+	addStdinFlags(traceWatchCmd, &traceWatchStdin, &traceWatchStdinField, &traceWatchStdinFailFast)
 
 	traceCmd.AddCommand(traceListCmd)
 	traceCmd.AddCommand(traceGetCmd)

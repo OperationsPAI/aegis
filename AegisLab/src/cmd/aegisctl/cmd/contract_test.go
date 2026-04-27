@@ -86,20 +86,28 @@ func resetCLIState() {
 
 	injectGetStdin = false
 	injectGetStdinField = ""
+	injectGetStdinFailFast = false
 	injectFilesStdin = false
 	injectFilesStdinField = ""
+	injectFilesStdinFailFast = false
 	injectDownloadStdin = false
 	injectDownloadStdinField = ""
+	injectDownloadStdinFailFast = false
 
 	taskGetStdin = false
 	taskGetStdinField = ""
+	taskGetStdinFailFast = false
 	taskLogsStdin = false
 	taskLogsStdinField = ""
+	taskLogsStdinFailFast = false
 
 	traceGetStdin = false
 	traceGetStdinField = ""
+	traceGetStdinFailFast = false
 	traceWatchStdin = false
 	traceWatchStdinField = ""
+	traceWatchStdinFailFast = false
+	waitStdinFailFast = false
 
 	resetCommandFlags(rootCmd)
 }

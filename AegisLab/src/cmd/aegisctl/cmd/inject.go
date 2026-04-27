@@ -210,15 +210,17 @@ var injectGetCmd = &cobra.Command{
 	Short: "Get detailed info about an injection",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("inject get", "inject get <name>", args, stdinOptions{
-			enabled: injectGetStdin,
-			field:   injectGetStdinField,
+			enabled:  injectGetStdin,
+			field:    injectGetStdinField,
+			failFast: injectGetStdinFailFast,
 		}, runInjectGet)
 	},
 }
 
 var (
-	injectGetStdin      bool
-	injectGetStdinField string
+	injectGetStdin         bool
+	injectGetStdinField    string
+	injectGetStdinFailFast bool
 )
 
 func runInjectGet(name string) error {
@@ -358,15 +360,17 @@ var injectFilesCmd = &cobra.Command{
 	Short: "List files produced by an injection",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("inject files", "inject files <name>", args, stdinOptions{
-			enabled: injectFilesStdin,
-			field:   injectFilesStdinField,
+			enabled:  injectFilesStdin,
+			field:    injectFilesStdinField,
+			failFast: injectFilesStdinFailFast,
 		}, runInjectFiles)
 	},
 }
 
 var (
-	injectFilesStdin      bool
-	injectFilesStdinField string
+	injectFilesStdin         bool
+	injectFilesStdinField    string
+	injectFilesStdinFailFast bool
 )
 
 func runInjectFiles(name string) error {
@@ -408,13 +412,14 @@ func runInjectFiles(name string) error {
 // ---------- inject download ----------
 
 var (
-	injectDownloadOutput   string
-	injectDownloadDir      string
-	injectDownloadInclude  string
-	injectDownloadFilePar  int
-	injectDownloadTimeout  int
-	injectDownloadStdin    bool
-	injectDownloadStdinField string
+	injectDownloadOutput        string
+	injectDownloadDir           string
+	injectDownloadInclude       string
+	injectDownloadFilePar       int
+	injectDownloadTimeout       int
+	injectDownloadStdin         bool
+	injectDownloadStdinField    string
+	injectDownloadStdinFailFast bool
 )
 
 const (
@@ -609,8 +614,9 @@ subset of the datapack to fetch.`,
 			return usageErrorf("--stdin requires --output-dir; --output-file only supports a single positional target")
 		}
 		return runStdinItems("inject download", "inject download <name>", args, stdinOptions{
-			enabled: injectDownloadStdin,
-			field:   injectDownloadStdinField,
+			enabled:  injectDownloadStdin,
+			field:    injectDownloadStdinField,
+			failFast: injectDownloadStdinFailFast,
 		}, runInjectDownload)
 	},
 }
@@ -923,9 +929,9 @@ func init() {
 	injectDownloadCmd.Flags().StringVar(&injectDownloadInclude, "include", "converted", "Which subset to download when using --output-dir: "+injectIncludeFlagHelp())
 	injectDownloadCmd.Flags().IntVar(&injectDownloadFilePar, "parallel-files", 4, "Concurrent file downloads when using --output-dir")
 	injectDownloadCmd.Flags().IntVar(&injectDownloadTimeout, "request-timeout-override", 0, "Per-request HTTP timeout in seconds (0 = use global --request-timeout)")
-	addStdinFlags(injectGetCmd, &injectGetStdin, &injectGetStdinField)
-	addStdinFlags(injectFilesCmd, &injectFilesStdin, &injectFilesStdinField)
-	addStdinFlags(injectDownloadCmd, &injectDownloadStdin, &injectDownloadStdinField)
+	addStdinFlags(injectGetCmd, &injectGetStdin, &injectGetStdinField, &injectGetStdinFailFast)
+	addStdinFlags(injectFilesCmd, &injectFilesStdin, &injectFilesStdinField, &injectFilesStdinFailFast)
+	addStdinFlags(injectDownloadCmd, &injectDownloadStdin, &injectDownloadStdinField, &injectDownloadStdinFailFast)
 
 	injectDownloadBatchCmd.Flags().StringVar(&injectBatchOutputDir, "output-dir", "", "Required: directory under which each pack is extracted as <output-dir>/<name>/")
 	injectDownloadBatchCmd.Flags().StringVar(&injectBatchInclude, "include", "converted", "Which subset to download per pack: "+injectIncludeFlagHelp())

@@ -187,15 +187,17 @@ var taskGetCmd = &cobra.Command{
 	Short: "Show detailed task information",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("task get", "task get <task-id>", args, stdinOptions{
-			enabled: taskGetStdin,
-			field:   taskGetStdinField,
+			enabled:  taskGetStdin,
+			field:    taskGetStdinField,
+			failFast: taskGetStdinFailFast,
 		}, runTaskGet)
 	},
 }
 
 var (
-	taskGetStdin      bool
-	taskGetStdinField string
+	taskGetStdin         bool
+	taskGetStdinField    string
+	taskGetStdinFailFast bool
 )
 
 func runTaskGet(taskID string) error {
@@ -228,15 +230,17 @@ var taskLogsCmd = &cobra.Command{
 	Short: "Stream task logs via WebSocket",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("task logs", "task logs <task-id>", args, stdinOptions{
-			enabled: taskLogsStdin,
-			field:   taskLogsStdinField,
+			enabled:  taskLogsStdin,
+			field:    taskLogsStdinField,
+			failFast: taskLogsStdinFailFast,
 		}, runTaskLogs)
 	},
 }
 
 var (
-	taskLogsStdin      bool
-	taskLogsStdinField string
+	taskLogsStdin         bool
+	taskLogsStdinField    string
+	taskLogsStdinFailFast bool
 )
 
 func runTaskLogs(taskID string) error {
@@ -340,8 +344,8 @@ func init() {
 	taskListCmd.Flags().BoolVar(&taskListOverdue, "overdue", false, "Show only Pending tasks whose execute_time has passed (WAIT < 0)")
 
 	taskLogsCmd.Flags().BoolVarP(&taskLogsFollow, "follow", "f", false, "Follow log output")
-	addStdinFlags(taskGetCmd, &taskGetStdin, &taskGetStdinField)
-	addStdinFlags(taskLogsCmd, &taskLogsStdin, &taskLogsStdinField)
+	addStdinFlags(taskGetCmd, &taskGetStdin, &taskGetStdinField, &taskGetStdinFailFast)
+	addStdinFlags(taskLogsCmd, &taskLogsStdin, &taskLogsStdinField, &taskLogsStdinFailFast)
 
 	taskCmd.AddCommand(taskListCmd)
 	taskCmd.AddCommand(taskGetCmd)

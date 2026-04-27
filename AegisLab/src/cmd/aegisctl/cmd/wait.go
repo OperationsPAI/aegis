@@ -11,10 +11,11 @@ import (
 )
 
 var (
-	waitTimeout    int
-	waitInterval   int
-	waitStdin      bool
-	waitStdinField string
+	waitTimeout       int
+	waitInterval      int
+	waitStdin         bool
+	waitStdinField    string
+	waitStdinFailFast bool
 )
 
 var (
@@ -51,8 +52,9 @@ EXAMPLES:
     jq -r '.items[0].trace_id' | xargs aegisctl wait`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("wait", "wait <trace-id|task-id>", args, stdinOptions{
-			enabled: waitStdin,
-			field:   waitStdinField,
+			enabled:  waitStdin,
+			field:    waitStdinField,
+			failFast: waitStdinFailFast,
 		}, runWait)
 	},
 }
@@ -174,5 +176,5 @@ func isTerminal(resourceType, state string) bool {
 func init() {
 	waitCmd.Flags().IntVar(&waitTimeout, "timeout", 600, "Maximum time to wait in seconds")
 	waitCmd.Flags().IntVar(&waitInterval, "interval", 5, "Poll interval in seconds")
-	addStdinFlags(waitCmd, &waitStdin, &waitStdinField)
+	addStdinFlags(waitCmd, &waitStdin, &waitStdinField, &waitStdinFailFast)
 }
