@@ -234,11 +234,7 @@ var (
 )
 
 func runInjectGet(name string) error {
-		r, err := newProjectScopedResolver()
-		if err != nil {
-			return err
-		}
-		id, err := r.InjectionID(name)
+		id, err := resolveInjectionID(name)
 		if err != nil {
 			return err
 		}
@@ -384,11 +380,7 @@ var (
 )
 
 func runInjectFiles(name string) error {
-		r, err := newProjectScopedResolver()
-		if err != nil {
-			return err
-		}
-		id, err := r.InjectionID(name)
+		id, err := resolveInjectionID(name)
 		if err != nil {
 			return err
 		}
@@ -644,11 +636,7 @@ func runInjectDownload(name string) error {
 			return err
 		}
 
-		r, err := newProjectScopedResolver()
-		if err != nil {
-			return err
-		}
-		id, err := r.InjectionID(name)
+		id, err := resolveInjectionID(name)
 		if err != nil {
 			return err
 		}

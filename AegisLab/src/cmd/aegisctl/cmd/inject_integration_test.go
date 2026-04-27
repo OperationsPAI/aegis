@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"sync/atomic"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -74,8 +74,12 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "ok",
-				"data": []map[string]any{
-					{"path": "raw/demo.log", "size": "10", "type": "raw"},
+				"data": map[string]any{
+					"files": []map[string]any{
+						{"name": "demo.log", "path": "raw/demo.log", "size": "10 B"},
+					},
+					"file_count": 1,
+					"dir_count":  0,
 				},
 			})
 		case http.MethodGet + " /api/v2/injections/744/download":
@@ -98,6 +102,7 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 	commonArgs := []string{
 		"--server", server.URL, "--token", "token", "--project", projectName, "--output", "json",
 	}
+	idArgs := []string{"--server", server.URL, "--token", "token", "--output", "json"}
 
 	getByName := runCLI(t, append([]string{"inject", "get", injectionName}, commonArgs...)...)
 	if getByName.code != ExitCodeSuccess {
@@ -111,7 +116,7 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 		t.Fatalf("id by name = %v, want %d", namePayload["id"], injectionID)
 	}
 
-	getByID := runCLI(t, append([]string{"inject", "get", "744"}, commonArgs...)...)
+	getByID := runCLI(t, append([]string{"inject", "get", "744"}, idArgs...)...)
 	if getByID.code != ExitCodeSuccess {
 		t.Fatalf("inject get by id = %d, want %d; stderr=%q stdout=%q", getByID.code, ExitCodeSuccess, getByID.stderr, getByID.stdout)
 	}
@@ -120,18 +125,22 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 	if files.code != ExitCodeSuccess {
 		t.Fatalf("inject files = %d, want %d; stderr=%q stdout=%q", files.code, ExitCodeSuccess, files.stderr, files.stdout)
 	}
-	var filesPayload []map[string]any
+	var filesPayload map[string]any
 	if err := json.Unmarshal([]byte(files.stdout), &filesPayload); err != nil {
 		t.Fatalf("invalid JSON from inject files: %v; stdout=%q", err, files.stdout)
 	}
-	if len(filesPayload) != 1 {
-		t.Fatalf("inject files length=%d, want 1", len(filesPayload))
+	filesList, ok := filesPayload["files"].([]any)
+	if !ok || len(filesList) != 1 {
+		t.Fatalf("inject files should contain one file; payload=%v", filesPayload)
+	}
+	if got, _ := filesPayload["file_count"].(float64); int(got) != 1 {
+		t.Fatalf("inject files file_count=%v, want 1", filesPayload["file_count"])
 	}
 
 	successPath := filepath.Join(t.TempDir(), "download-success.tar.gz")
 	success := runCLI(t, append([]string{
 		"inject", "download", "744", "--output-file", successPath, "--output", "json",
-	}, commonArgs[:len(commonArgs)-2]...)...)
+	}, idArgs[:len(idArgs)-2]...)...)
 	if success.code != ExitCodeSuccess {
 		t.Fatalf("inject download success = %d, want %d; stderr=%q stdout=%q", success.code, ExitCodeSuccess, success.stderr, success.stdout)
 	}

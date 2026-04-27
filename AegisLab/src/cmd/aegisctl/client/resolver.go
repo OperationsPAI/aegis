@@ -194,14 +194,14 @@ func (r *Resolver) ProjectID(name string) (int, error) {
 // under a project, so the caller must resolve a project first via
 // SetProjectScope before calling this.
 func (r *Resolver) InjectionID(name string) (int, error) {
-	if r.projectID == 0 {
-		return 0, fmt.Errorf("resolve injection %q: project scope not set (call SetProjectScope or pass --project)", name)
-	}
 	if id, err := strconv.Atoi(name); err == nil && id > 0 {
 		return id, nil
 	}
+	if r.projectID == 0 {
+		return 0, fmt.Errorf("resolve injection %q: project scope not set (call SetProjectScope or pass --project)", name)
+	}
 
-	cacheKey := "injection:" + name
+	cacheKey := fmt.Sprintf("injection:%d:%s", r.projectID, name)
 	if id, ok := r.cache[cacheKey]; ok {
 		return id, nil
 	}
