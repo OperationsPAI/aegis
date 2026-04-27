@@ -28,6 +28,7 @@ func resetCLIState() {
 	flagOutput = ""
 	flagRequestTimeout = 0
 	flagQuiet = false
+	flagVersion = false
 	flagNonInteractive = false
 	flagDryRun = false
 	output.Quiet = false
