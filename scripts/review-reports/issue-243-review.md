@@ -1,165 +1,154 @@
 # Review for issue #243 — PR #263
 
 ## Cascade preconditions
+Verification command for submodule pointer changes:
+
+`git diff --raw origin/main...HEAD | awk '$1 ~ /^:/ && $6 ~ /^160000/ {print $0}'`
+
+Exit: 0
+
+Stdout (first 20 lines):
+```text
+
+```
+
+No submodule pointers are bumped by `origin/workbuddy/issue-243` relative to `origin/main`, so there are no submodule remote-branch / SHA-match / fast-forward checks to run for this PR.
+
 | submodule | remote branch | SHA match | FF-able |
 |-----------|---------------|-----------|---------|
-| (none) | no submodule pointers changed between `origin/main` and `origin/workbuddy/issue-243` | n/a | n/a |
-
-Checked with `git submodule status --recursive` (stdout empty, exit 0) and `git diff --raw origin/main origin/workbuddy/issue-243` (no `160000` gitlink entries).
+| (none) | n/a | n/a | n/a |
 
 ## Per-AC verdicts
-### AC1: "`aegisctl version` 命令存在，输出至少包含：版本号（git describe / tag）、git commit SHA、build time（UTC ISO8601）、最低支持的 server API minor 版本。"
+### AC 1: "`aegisctl version` 命令存在，输出至少包含：版本号（git describe / tag）、git commit SHA、build time（UTC ISO8601）、最低支持的 server API minor 版本。"
 **verdict**: PASS
-**command**: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243-ac1 >/dev/null && /tmp/aegisctl-243-ac1 version`
+**command**: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243-ac1 >/tmp/issue243-ac1-build.log && out=$(/tmp/aegisctl-243-ac1 version) && printf '%s\n' "$out" && python - <<'PY' "$out" ... PY`
 **exit**: 0
 **stdout** (first 20 lines):
-```
-version: release-platform/v0.4.22-77-g2973059
-commit: 2973059
-build_time: 2026-04-27T09:19:06Z
+```text
+version: release-platform/v0.4.22-79-gcb8bd89
+commit: cb8bd89
+build_time: 2026-04-27T09:39:06Z
 min_server_api: 2
+CHECK: plain output contains 4 required fields and UTC ISO8601 build_time
 ```
 
-### AC2: "`aegisctl --version` 作为同效 alias，输出与 `version` 一致。"
+### AC 2: "`aegisctl --version` 作为同效 alias，输出与 `version` 一致。"
 **verdict**: PASS
-**command**: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243-ac2 >/dev/null && v1=$(/tmp/aegisctl-243-ac2 version -o json) && v2=$(/tmp/aegisctl-243-ac2 --version -o json) && printf "version=%s\nflag=%s\n" "$v1" "$v2" && test "$v1" = "$v2"`
+**command**: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243-ac2 >/tmp/issue243-ac2-build.log && v=$(/tmp/aegisctl-243-ac2 version -o json) && a=$(/tmp/aegisctl-243-ac2 --version -o json) && printf 'version=%s\n' "$v" && printf -- '--version=%s\n' "$a" && python - <<'PY' "$v" "$a" ... PY`
 **exit**: 0
 **stdout** (first 20 lines):
-```
+```text
 version={
-  "version": "release-platform/v0.4.22-77-g2973059",
-  "commit": "2973059",
-  "build_time": "2026-04-27T09:19:08Z",
+  "version": "release-platform/v0.4.22-79-gcb8bd89",
+  "commit": "cb8bd89",
+  "build_time": "2026-04-27T09:39:15Z",
   "min_server_api": "2"
 }
-flag={
-  "version": "release-platform/v0.4.22-77-g2973059",
-  "commit": "2973059",
-  "build_time": "2026-04-27T09:19:08Z",
+--version={
+  "version": "release-platform/v0.4.22-79-gcb8bd89",
+  "commit": "cb8bd89",
+  "build_time": "2026-04-27T09:39:15Z",
   "min_server_api": "2"
 }
+CHECK: outputs are identical
 ```
 
-### AC3: "这些字段通过 `-ldflags "-X ..."` 在 `make` / `go build` 注入；构建脚本对应更新。"
+### AC 3: "这些字段通过 `-ldflags \"-X ...\"` 在 `make` / `go build` 注入；构建脚本对应更新。"
 **verdict**: PASS
-**command**: `cd AegisLab && rg -n "build-aegisctl|ldflags|cmd\.version|cmd\.commit|cmd\.buildTime|minServerAPIVersion" justfile`
+**command**: `python - <<'PY' ... PY && cd AegisLab && just build-aegisctl /tmp/aegisctl-243-ac3 >/tmp/issue243-ac3-build.log && /tmp/aegisctl-243-ac3 version -o json`
 **exit**: 0
 **stdout** (first 20 lines):
-```
-193:build-aegisctl output="/tmp/aegisctl":
-200:    ldflags=(
-201:      "-X aegis/cmd/aegisctl/cmd.version=${version}"
-202:      "-X aegis/cmd/aegisctl/cmd.commit=${commit}"
-203:      "-X aegis/cmd/aegisctl/cmd.buildTime=${build_time}"
-204:      "-X aegis/cmd/aegisctl/cmd.minServerAPIVersion=2"
-206:    cd {{src_dir}} && go build -ldflags "${ldflags[*]}" -o {{output}} ./cmd/aegisctl
+```text
+CHECK: justfile contains all 4 ldflags injections
+{
+  "version": "release-platform/v0.4.22-79-gcb8bd89",
+  "commit": "cb8bd89",
+  "build_time": "2026-04-27T09:39:26Z",
+  "min_server_api": "2"
+}
 ```
 
-### AC4: "`-o json` 时输出 JSON：`{"version":"...","commit":"...","build_time":"...","min_server_api":"..."}`。"
+### AC 4: "`-o json` 时输出 JSON：`{"version":"...","commit":"...","build_time":"...","min_server_api":"..."}`。"
 **verdict**: PASS
-**command**: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243-ac4 >/dev/null && json=$(/tmp/aegisctl-243-ac4 version -o json) && printf '%s\n' "$json" && python - <<'PYCHECK' "$json"
-import json, sys
-payload=json.loads(sys.argv[1])
-assert set(payload)=={'version','commit','build_time','min_server_api'}
-assert all(isinstance(payload[k], str) and payload[k].strip() for k in payload)
-print('json-shape-ok')
-PYCHECK`
+**command**: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243-ac4 >/tmp/issue243-ac4-build.log && out=$(/tmp/aegisctl-243-ac4 version -o json) && printf '%s\n' "$out" && python - <<'PY' "$out" ... PY`
 **exit**: 0
 **stdout** (first 20 lines):
-```
+```text
 {
-  "version": "release-platform/v0.4.22-77-g2973059",
-  "commit": "2973059",
-  "build_time": "2026-04-27T09:19:10Z",
+  "version": "release-platform/v0.4.22-79-gcb8bd89",
+  "commit": "cb8bd89",
+  "build_time": "2026-04-27T09:39:35Z",
   "min_server_api": "2"
 }
-json-shape-ok
+CHECK: JSON keys exactly match required schema
 ```
 
-### AC5: "一个 integration test（仅一个）：跑 `aegisctl version -o json`，断言四个字段都非空。"
-**verdict**: FAIL
-**command**: `cd AegisLab && rg -n "func TestVersionJSONIncludesRequiredFields|runCLI\(|executeArgs\(|exec\.Command" src/cmd/aegisctl/cmd/version_test.go src/cmd/aegisctl/cmd/contract_test.go`
+### AC 5: "一个 integration test（仅一个）：跑 `aegisctl version -o json`，断言四个字段都非空。"
+**verdict**: PASS
+**command**: `printf 'Test definitions in version_test.go:\n' && rg -n '^func Test' AegisLab/src/cmd/aegisctl/cmd/version_test.go && printf '\nBinary execution lines:\n' && rg -n 'exec\\.Command\\(|runBuiltAegisctl\\(' AegisLab/src/cmd/aegisctl/cmd/version_test.go && cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestVersionJSONIncludesRequiredFields -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
-```
-src/cmd/aegisctl/cmd/contract_test.go:103:func runCLI(t *testing.T, args ...string) cliRunResult {
-src/cmd/aegisctl/cmd/contract_test.go:166:	code := executeArgs(args)
-src/cmd/aegisctl/cmd/contract_test.go:221:	res := runCLI(t, "auth", "login", "--server", "http://example.test", "--key-id", "pk_test")
-src/cmd/aegisctl/cmd/contract_test.go:234:	res := runCLI(t, "cluster", "preflight", "--check", "does-not-exist")
-src/cmd/aegisctl/cmd/contract_test.go:249:	res := runCLI(t, "cluster", "preflight", "--config", cfgPath, "--check", "db.mysql")
-src/cmd/aegisctl/cmd/contract_test.go:275:	res := runCLI(t, "wait", "trace-1", "--server", "http://example.test", "--token", "token", "--output", "json", "--interval", "0", "--timeout", "1")
-src/cmd/aegisctl/cmd/contract_test.go:292:	res := runCLI(t, "trace", "get", "trace-1", "--server", "http://example.test")
-src/cmd/aegisctl/cmd/version_test.go:9:func TestVersionJSONIncludesRequiredFields(t *testing.T) {
-src/cmd/aegisctl/cmd/version_test.go:28:		res := runCLI(t, "version", "--output", "json")
-src/cmd/aegisctl/cmd/version_test.go:52:		resVersion := runCLI(t, "version", "-o", "json")
-src/cmd/aegisctl/cmd/version_test.go:53:		resFlag := runCLI(t, "--version", "--output", "json")
-src/cmd/aegisctl/cmd/version_test.go:67:		res := runCLI(t, "version", "--output")
-```
-**notes**: The only added test calls `runCLI()` and `executeArgs()` in-process instead of invoking a built `aegisctl` binary. See `AegisLab/src/cmd/aegisctl/cmd/version_test.go:28`, `AegisLab/src/cmd/aegisctl/cmd/version_test.go:52`, `AegisLab/src/cmd/aegisctl/cmd/version_test.go:67`, `AegisLab/src/cmd/aegisctl/cmd/contract_test.go:103`, and `AegisLab/src/cmd/aegisctl/cmd/contract_test.go:166`.
+```text
+Test definitions in version_test.go:
+12:func TestVersionJSONIncludesRequiredFields(t *testing.T) {
 
-### PLAN1: "Plan step 1 verify: `cd AegisLab && go test ./src/cmd/aegisctl/cmd -run TestVersionCommandPayload -count=1`"
+Binary execution lines:
+16:	build := exec.Command(
+35:		stdout, stderr, err := runBuiltAegisctl(t, binPath, "version", "-o", "json")
+53:		versionStdout, versionStderr, err := runBuiltAegisctl(t, binPath, "version", "-o", "json")
+58:		flagStdout, flagStderr, err := runBuiltAegisctl(t, binPath, "--version", "-o", "json")
+69:		_, stderr, err := runBuiltAegisctl(t, binPath, "version", "--output")
+97:func runBuiltAegisctl(t *testing.T, binPath string, args ...string) (string, string, error) {
+100:	cmd := exec.Command(binPath, args...)
+ok  	aegis/cmd/aegisctl/cmd	2.023s
+```
+
+### Plan 1: "Implement / verify `aegisctl version` payload path and `--version` alias inside `AegisLab/src/cmd/aegisctl/cmd`; verify: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run 'TestVersion(CommandPayload|Alias)$' -count=1`"
 **verdict**: FAIL
-**command**: `cd AegisLab && go test ./src/cmd/aegisctl/cmd -run TestVersionCommandPayload -count=1`
-**exit**: 1
-**stdout** (first 20 lines):
-```
-
-```
-**stderr** (first 20 lines, if nonzero):
-```
-go: cannot find main module, but found .git/config in /home/ddq/AoyangSpace/aegis
-	to create a module there, run:
-	cd ../../../.. && go mod init
-```
-
-### PLAN2: "Plan step 2 verify: `cd AegisLab && go test ./src/cmd/aegisctl/cmd -run TestVersionAlias -count=1`"
-**verdict**: FAIL
-**command**: `cd AegisLab && go test ./src/cmd/aegisctl/cmd -run TestVersionAlias -count=1`
-**exit**: 1
-**stdout** (first 20 lines):
-```
-
-```
-**stderr** (first 20 lines, if nonzero):
-```
-go: cannot find main module, but found .git/config in /home/ddq/AoyangSpace/aegis
-	to create a module there, run:
-	cd ../../../.. && go mod init
-```
-
-### PLAN3: "Plan step 3 verify: `cd AegisLab && just build-aegisctl output=/tmp/aegisctl && /tmp/aegisctl version -o json`"
-**verdict**: FAIL
-**command**: `cd AegisLab && just build-aegisctl output=/tmp/aegisctl && /tmp/aegisctl version -o json`
+**command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run 'TestVersion(CommandPayload|Alias)$' -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
+```text
+ok  	aegis/cmd/aegisctl/cmd	0.017s [no tests to run]
 ```
-[1;34m🔨 Building aegisctl...[0m
-[1;32m✅ aegisctl built: output=/tmp/aegisctl[0m
+
+The command exits successfully, but it does not execute any tests, so it does not verify the plan item it was attached to.
+
+### Plan 2: "Wire build metadata injection via `-ldflags` in `AegisLab/justfile` and verify a freshly built binary emits the required fields; verify: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243 && /tmp/aegisctl-243 version -o json`"
+**verdict**: PASS
+**command**: `cd AegisLab && just build-aegisctl /tmp/aegisctl-243 && /tmp/aegisctl-243 version -o json`
+**exit**: 0
+**stdout** (first 20 lines):
+```text
+\u001b[1;34m🔨 Building aegisctl...\u001b[0m
+\u001b[1;32m✅ aegisctl built: /tmp/aegisctl-243\u001b[0m
 {
-  "version": "release-platform/v0.4.22-77-g2973059",
-  "commit": "2973059",
-  "build_time": "2026-04-27T09:13:07Z",
+  "version": "release-platform/v0.4.22-79-gcb8bd89",
+  "commit": "cb8bd89",
+  "build_time": "2026-04-27T09:40:01Z",
   "min_server_api": "2"
 }
 ```
-**notes**: The command reported `build_time` `2026-04-27T09:13:07Z`, but `AegisLab/justfile:199` rebuilds with the current UTC time on every invocation. The reused timestamp shows this command executed a stale `/tmp/aegisctl` instead of the binary supposedly rebuilt by the `just` call.
 
-### PLAN4: "Plan step 4 verify: `cd AegisLab && go test ./src/cmd/aegisctl/cmd -run TestVersionJSONIncludesRequiredFields -count=1`"
-**verdict**: FAIL
-**command**: `cd AegisLab && go test ./src/cmd/aegisctl/cmd -run TestVersionJSONIncludesRequiredFields -count=1`
-**exit**: 1
+### Plan 3: "Replace the existing version coverage with one real-binary integration test that runs `aegisctl version -o json` and checks the four required fields plus a meaningful failure path; verify: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestVersionJSONIncludesRequiredFields -count=1`"
+**verdict**: PASS
+**command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestVersionJSONIncludesRequiredFields -count=1`
+**exit**: 0
 **stdout** (first 20 lines):
+```text
+ok  	aegis/cmd/aegisctl/cmd	2.124s
 ```
 
-```
-**stderr** (first 20 lines, if nonzero):
-```
-go: cannot find main module, but found .git/config in /home/ddq/AoyangSpace/aegis
-	to create a module there, run:
-	cd ../../../.. && go mod init
+### Plan 4: "Update the parent repo submodule pointer / PR metadata and verify the parent diff is clean for issue #243; verify: `git status --short && git diff --submodule=log --stat`"
+**verdict**: PASS
+**command**: `git status --short && printf -- '---\n' && git diff --submodule=log --stat`
+**exit**: 0
+**stdout** (first 20 lines):
+```text
+---
 ```
 
 ## Overall
-- PASS: 4 / 9
-- FAIL: AC5, PLAN1, PLAN2, PLAN3, PLAN4
+- PASS: 8 / 9
+- FAIL: Plan 1 verify command (`go test -run 'TestVersion(CommandPayload|Alias)$'`) matches no tests, so the plan claim is not actually verified.
 - UNVERIFIABLE: none
