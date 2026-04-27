@@ -55,6 +55,14 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 					"state": "build_success",
 				},
 			})
+		case http.MethodGet + " /api/v2/injections/744/files":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    200,
+				"message": "ok",
+				"data": []map[string]any{
+					{"path": "raw/demo.log", "size": "10", "type": "raw"},
+				},
+			})
 		case http.MethodGet + " /api/v2/injections/744/download":
 			// Intentionally signal a shorter body than declared to mimic a broken
 			// transport and exercise partial-output cleanup logic.
@@ -87,6 +95,18 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 	getByID := runCLI(t, append([]string{"inject", "get", "744"}, commonArgs...)...)
 	if getByID.code != ExitCodeSuccess {
 		t.Fatalf("inject get by id = %d, want %d; stderr=%q stdout=%q", getByID.code, ExitCodeSuccess, getByID.stderr, getByID.stdout)
+	}
+
+	files := runCLI(t, append([]string{"inject", "files", injectionName, "--output", "json"}, commonArgs...)...)
+	if files.code != ExitCodeSuccess {
+		t.Fatalf("inject files = %d, want %d; stderr=%q stdout=%q", files.code, ExitCodeSuccess, files.stderr, files.stdout)
+	}
+	var filesPayload []map[string]any
+	if err := json.Unmarshal([]byte(files.stdout), &filesPayload); err != nil {
+		t.Fatalf("invalid JSON from inject files: %v; stdout=%q", err, files.stdout)
+	}
+	if len(filesPayload) != 1 {
+		t.Fatalf("inject files length=%d, want 1", len(filesPayload))
 	}
 
 	outputPath := filepath.Join(t.TempDir(), "download.tar.gz")
