@@ -52,21 +52,6 @@ type rlGCResp struct {
 	TouchedBuckets int `json:"touched_buckets"`
 }
 
-const (
-	ansiRed   = "\x1b[31m"
-	ansiReset = "\x1b[0m"
-)
-
-func useColor() bool {
-	if os.Getenv("NO_COLOR") != "" {
-		return false
-	}
-	if fi, err := os.Stdout.Stat(); err == nil {
-		return (fi.Mode() & os.ModeCharDevice) != 0
-	}
-	return false
-}
-
 var rateLimiterStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "List token-bucket rate limiters, their holders, and DB state",
@@ -80,19 +65,17 @@ var rateLimiterStatusCmd = &cobra.Command{
 			output.PrintJSON(resp.Data)
 			return nil
 		}
-		color := useColor()
+		color := output.IsStdoutColor()
 		headers := []string{"BUCKET", "HELD/CAP", "HOLDERS"}
 		var rows [][]string
 		for _, item := range resp.Data.Items {
 			var parts []string
 			for _, h := range item.Holders {
 				s := fmt.Sprintf("%s[%s]", h.TaskID, h.TaskState)
-				if h.IsTerminal {
-					if color {
-						s = ansiRed + s + " (LEAKED)" + ansiReset
-					} else {
-						s = s + " (LEAKED)"
-					}
+				if h.IsTerminal && color {
+					s = output.ColorRed(os.Stdout, s+" (LEAKED)")
+				} else if h.IsTerminal {
+					s = s + " (LEAKED)"
 				}
 				parts = append(parts, s)
 			}

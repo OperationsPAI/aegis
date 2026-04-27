@@ -45,6 +45,29 @@ func TestOutputFormat_Conversion(t *testing.T) {
 	}
 }
 
+func TestOutputNoColorRespectsNoColorEnv(t *testing.T) {
+	oldTerminal := isTerminal
+	isTerminal = func(_ int) bool { return true }
+	defer func() {
+		isTerminal = oldTerminal
+	}()
+
+	previous, hadPrevious := os.LookupEnv("NO_COLOR")
+	if hadPrevious {
+		defer os.Setenv("NO_COLOR", previous)
+	} else {
+		defer os.Unsetenv("NO_COLOR")
+	}
+	if err := os.Setenv("NO_COLOR", "1"); err != nil {
+		t.Fatalf("set NO_COLOR: %v", err)
+	}
+
+	SetNoColor(false)
+	if IsStdoutColor() {
+		t.Fatalf("NO_COLOR should disable stdout ANSI")
+	}
+}
+
 func TestPrintInfo_Normal(t *testing.T) {
 	Quiet = false
 	got := captureStderr(func() {

@@ -19,6 +19,7 @@ var (
 	flagOutput         string
 	flagRequestTimeout int
 	flagQuiet          bool
+	flagNoColor        bool
 	flagNonInteractive bool
 	flagDryRun         bool
 
@@ -165,6 +166,9 @@ NAMING CONVENTION:
 			}
 		}
 
+		// Respect --no-color and NO_COLOR for all colorized output.
+		output.SetNoColor(flagNoColor || os.Getenv("NO_COLOR") != "")
+
 		// Forward quiet flag into the output package.
 		output.Quiet = flagQuiet
 
@@ -189,6 +193,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table|json (env: AEGIS_OUTPUT)")
 	rootCmd.PersistentFlags().IntVar(&flagRequestTimeout, "request-timeout", 0, "Request timeout in seconds (env: AEGIS_TIMEOUT)")
 	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
+	rootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color output (env: NO_COLOR)")
 	rootCmd.PersistentFlags().BoolVar(&flagNonInteractive, "non-interactive", false, "Disable prompts and require explicit input (env: AEGIS_NON_INTERACTIVE)")
 	rootCmd.PersistentFlags().BoolVar(&flagDryRun, "dry-run", false, "Show what would be done without executing")
 
