@@ -726,6 +726,21 @@ class InjectionNodeResolver:
         # For 'from' direction: fault on incoming to source -> source perceives
         # For 'both': both directions affected -> source perceives
 
+        # Network faults frequently involve more than one service in the GT
+        # (partition, asymmetric loss between two endpoints, …). When the GT
+        # lists multiple services and all of them resolve in the graph, take
+        # them all as the injection_set — any single endpoint can leave the
+        # corridor's forward BFS stranded on whichever side has fewer
+        # outgoing edges (e.g. a callee whose primary out-edges are k8s
+        # structural rather than ``calls``). The other end provides the
+        # caller-perceptible expansion surface.
+        gt_services = [s for s in metadata.ground_truth_services if self.graph.get_node_by_name(f"service|{s}")]
+        if len(gt_services) >= 2:
+            return (
+                [f"service|{s}" for s in gt_services],
+                f"network_ground_truth_{direction or 'unknown'}",
+            )
+
         # Check if source exists in graph
         if source:
             source_node = self.graph.get_node_by_name(f"service|{source}")
