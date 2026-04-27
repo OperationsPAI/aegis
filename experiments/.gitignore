@@ -1,0 +1,16 @@
+# Loop run data — large + churning. Track scripts/docs only.
+candidates_round*.json
+runs_round*.tsv
+terminals_round*.tsv
+*.jsonl
+*.err
+
+# One-shot retry envelopes / replays
+_retry_*.json
+_tt_*.json
+_canary*.json
+canary_*.tsv
+_replay/
+
+# Per-loop ad-hoc bookkeeping
+PAUSED.md
