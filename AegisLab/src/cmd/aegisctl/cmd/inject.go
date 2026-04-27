@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
 	"aegis/consts"
+	"aegis/internal/cli/deprecate"
 
 	"github.com/spf13/cobra"
 )
@@ -96,6 +98,9 @@ func newProjectScopedResolver() (*client.Resolver, error) {
 }
 
 func resolveInjectionID(arg string) (int, error) {
+	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
+		return id, nil
+	}
 	r, err := newProjectScopedResolver()
 	if err != nil {
 		return 0, err
@@ -191,14 +196,10 @@ var injectListCmd = &cobra.Command{
 			return nil
 		}
 		if output.OutputFormat(flagOutput) == output.FormatNDJSON {
-			for _, item := range resp.Data.Items {
-				data, err := json.Marshal(item)
-				if err != nil {
-					return err
-				}
-				fmt.Fprintln(os.Stdout, string(data))
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
 			}
-			return nil
+			return output.PrintNDJSON(resp.Data.Items)
 		}
 
 		headers := []string{"NAME", "STATE", "FAULT-TYPE", "START-TIME", "LABELS"}
@@ -367,12 +368,26 @@ var injectSearchCmd = &cobra.Command{
 	},
 }
 
-// ---------- inject files ----------
+// ---------- inject list-files ----------
 
-var injectFilesCmd = &cobra.Command{
-	Use:   "files <name>",
+var injectListFilesCmd = &cobra.Command{
+	Use:   "list-files <name>",
 	Short: "List files produced by an injection",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return runStdinItems("inject list-files", "inject list-files <name>", args, stdinOptions{
+			enabled:  injectFilesStdin,
+			field:    injectFilesStdinField,
+			failFast: injectFilesStdinFailFast,
+		}, runInjectFiles)
+	},
+}
+
+var injectFilesCmd = &cobra.Command{
+	Use:        "files <name>",
+	Short:      injectListFilesCmd.Short,
+	Deprecated: deprecate.Message("files", "list-files"),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		deprecate.Warn("files", "list-files")
 		return runStdinItems("inject files", "inject files <name>", args, stdinOptions{
 			enabled:  injectFilesStdin,
 			field:    injectFilesStdinField,
@@ -394,13 +409,19 @@ func runInjectFiles(name string) error {
 		}
 
 		type fileItem struct {
+			Name string `json:"name,omitempty"`
 			Path string `json:"path"`
 			Size string `json:"size"`
-			Type string `json:"type"`
+			Type string `json:"type,omitempty"`
+		}
+		type filesPayload struct {
+			Files     []fileItem `json:"files"`
+			FileCount int        `json:"file_count"`
+			DirCount  int        `json:"dir_count,omitempty"`
 		}
 
 		c := newClient()
-		var resp client.APIResponse[[]fileItem]
+		var resp client.APIResponse[filesPayload]
 		if err := c.Get(fmt.Sprintf("/api/v2/injections/%d/files", id), &resp); err != nil {
 			return err
 		}
@@ -412,7 +433,7 @@ func runInjectFiles(name string) error {
 
 		headers := []string{"PATH", "SIZE", "TYPE"}
 		var rows [][]string
-		for _, f := range resp.Data {
+		for _, f := range resp.Data.Files {
 			rows = append(rows, []string{f.Path, f.Size, f.Type})
 		}
 		output.PrintTable(headers, rows)
@@ -685,16 +706,43 @@ func runInjectDownload(name string) error {
 			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("download failed (HTTP %d): %s", resp.StatusCode, string(body))
 		}
-		f, err := os.Create(injectDownloadOutput)
+
+		tmpPath := injectDownloadOutput + ".tmp"
+		f, err := os.Create(tmpPath)
 		if err != nil {
 			return fmt.Errorf("create output file: %w", err)
 		}
-		defer func() { _ = f.Close() }()
-		n, err := io.Copy(f, resp.Body)
-		if err != nil {
-			return fmt.Errorf("write output file: %w", err)
+		hasher := sha256.New()
+		n, copyErr := io.Copy(io.MultiWriter(f, hasher), resp.Body)
+		closeErr := f.Close()
+		// Cleanup partial file on error.
+		if copyErr != nil || closeErr != nil {
+			_ = os.Remove(tmpPath)
+			if copyErr != nil {
+				return fmt.Errorf("write output file: %w", copyErr)
+			}
+			return fmt.Errorf("close output file: %w", closeErr)
 		}
-		output.PrintInfo(fmt.Sprintf("Downloaded %d bytes to %s", n, injectDownloadOutput))
+		if cl := resp.Header.Get("Content-Length"); cl != "" {
+			if want, perr := strconv.ParseInt(cl, 10, 64); perr == nil && want != n {
+				_ = os.Remove(tmpPath)
+				return fmt.Errorf("download truncated: got %d bytes, expected %d", n, want)
+			}
+		}
+		if err := os.Rename(tmpPath, injectDownloadOutput); err != nil {
+			_ = os.Remove(tmpPath)
+			return fmt.Errorf("rename output file: %w", err)
+		}
+		sum := fmt.Sprintf("%x", hasher.Sum(nil))
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(map[string]any{
+				"path":   injectDownloadOutput,
+				"size":   n,
+				"sha256": sum,
+			})
+		} else {
+			output.PrintInfo(fmt.Sprintf("Downloaded %d bytes to %s (sha256=%s)", n, injectDownloadOutput, sum))
+		}
 		return nil
 	}
 
@@ -950,6 +998,7 @@ func init() {
 	injectCmd.AddCommand(injectListCmd)
 	injectCmd.AddCommand(injectGetCmd)
 	injectCmd.AddCommand(injectSearchCmd)
+	injectCmd.AddCommand(injectListFilesCmd)
 	injectCmd.AddCommand(injectFilesCmd)
 	injectCmd.AddCommand(injectDownloadCmd)
 	injectCmd.AddCommand(injectDownloadBatchCmd)

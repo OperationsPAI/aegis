@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"errors"
 	"strings"
 
+	"aegis/cmd/aegisctl/internal/cli/clierr"
 	"aegis/cmd/aegisctl/internal/cli/exitcode"
 	"aegis/cmd/aegisctl/output"
 
@@ -118,6 +120,11 @@ func executeArgs(args []string) int {
 func executeError(err error) int {
 	if err == nil {
 		return ExitCodeSuccess
+	}
+	var cliErr *clierr.CLIError
+	if errors.As(err, &cliErr) {
+		output.PrintCLIError(cliErr, output.OutputFormat(flagOutput))
+		return exitCodeFor(err)
 	}
 	if msg := errorMessage(err); msg != "" {
 		output.PrintError(msg)

@@ -62,6 +62,12 @@ func runStdinItems(commandPath, usage string, args []string, opts stdinOptions, 
 	if err != nil {
 		return err
 	}
+	// Single positional invocation: behave as a regular CLI command (no batch
+	// progress lines, return the underlying error directly so error renderers
+	// see the original type).
+	if !opts.enabled && len(items) == 1 {
+		return fn(items[0])
+	}
 	firstErr := error(nil)
 	successes := 0
 	failures := 0
