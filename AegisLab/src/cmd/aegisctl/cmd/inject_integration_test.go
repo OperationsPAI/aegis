@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"strings"
 	"testing"
 )
@@ -18,7 +21,14 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 		injectionID   = 744
 		injectionName = "otel-demo23-recommendation-pod-failure-4t2mpb"
 	)
+	similarNames := []string{
+		injectionName,
+		"otel-demo23-recommendation-pod-failure-4t2mpc",
+		"otel-demo23-recommendation-pod-failure-4t2mpd",
+		"otel-demo23-recommendation-pod-failure-4t2mqb",
+	}
 
+	var downloadCalls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -35,14 +45,19 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 				},
 			})
 		case http.MethodGet + " /api/v2/projects/7/injections":
+			items := make([]map[string]any, 0, len(similarNames))
+			for i, name := range similarNames {
+				items = append(items, map[string]any{
+					"id":   injectionID + i,
+					"name": name,
+				})
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "ok",
 				"data": map[string]any{
-					"items": []map[string]any{
-						{"id": injectionID, "name": injectionName},
-					},
-					"pagination": map[string]any{"page": 1, "size": 100, "total": 1, "total_pages": 1},
+					"items":      items,
+					"pagination": map[string]any{"page": 1, "size": 100, "total": len(items), "total_pages": 1},
 				},
 			})
 		case http.MethodGet + " /api/v2/injections/744":
@@ -64,6 +79,10 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 				},
 			})
 		case http.MethodGet + " /api/v2/injections/744/download":
+			if downloadCalls.Add(1) == 1 {
+				_, _ = w.Write([]byte("zip payload"))
+				return
+			}
 			// Intentionally signal a shorter body than declared to mimic a broken
 			// transport and exercise partial-output cleanup logic.
 			w.Header().Set("Content-Length", "32")
@@ -109,6 +128,28 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 		t.Fatalf("inject files length=%d, want 1", len(filesPayload))
 	}
 
+	successPath := filepath.Join(t.TempDir(), "download-success.tar.gz")
+	success := runCLI(t, append([]string{
+		"inject", "download", "744", "--output-file", successPath, "--output", "json",
+	}, commonArgs[:len(commonArgs)-2]...)...)
+	if success.code != ExitCodeSuccess {
+		t.Fatalf("inject download success = %d, want %d; stderr=%q stdout=%q", success.code, ExitCodeSuccess, success.stderr, success.stdout)
+	}
+	var successPayload map[string]any
+	if err := json.Unmarshal([]byte(success.stdout), &successPayload); err != nil {
+		t.Fatalf("invalid JSON from inject download success: %v; stdout=%q", err, success.stdout)
+	}
+	if got, _ := successPayload["path"].(string); got != successPath {
+		t.Fatalf("download path = %q, want %q", got, successPath)
+	}
+	if got, _ := successPayload["size"].(float64); int64(got) != int64(len("zip payload")) {
+		t.Fatalf("download size = %v, want %d", successPayload["size"], len("zip payload"))
+	}
+	wantSHA := fmt.Sprintf("%x", sha256.Sum256([]byte("zip payload")))
+	if got, _ := successPayload["sha256"].(string); got != wantSHA {
+		t.Fatalf("download sha256 = %q, want %q", got, wantSHA)
+	}
+
 	outputPath := filepath.Join(t.TempDir(), "download.tar.gz")
 	download := runCLI(t, append([]string{"inject", "download", injectionName, "--output-file", outputPath}, commonArgs[:len(commonArgs)-2]...)...)
 	if download.code == ExitCodeSuccess {
@@ -121,14 +162,26 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 		t.Fatalf("expected temp file %s to be removed, err=%v", outputPath+".tmp", err)
 	}
 
-	missing := runCLI(t, append([]string{"inject", "get", "does-not-exist"}, commonArgs...)...)
+	missing := runCLI(t, append([]string{"inject", "get", "otel-demo23-recommendation-pod-failure-4t2mpx"}, commonArgs...)...)
 	if missing.code != ExitCodeNotFound {
 		t.Fatalf("inject get missing = %d, want %d; stderr=%q stdout=%q", missing.code, ExitCodeNotFound, missing.stderr, missing.stdout)
 	}
-	if !strings.Contains(missing.stderr, "\"type\":\"not_found\"") {
-		t.Fatalf("missing resolver output should be structured; stderr=%q", missing.stderr)
+	payloadText := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(missing.stderr), "Error:"))
+	var missingPayload map[string]any
+	if err := json.Unmarshal([]byte(payloadText), &missingPayload); err != nil {
+		t.Fatalf("missing resolver output should contain JSON: %v; stderr=%q", err, missing.stderr)
 	}
-	if !strings.Contains(missing.stderr, "\"suggestions\"") {
-		t.Fatalf("missing resolver output should include suggestions; stderr=%q", missing.stderr)
+	if got, _ := missingPayload["type"].(string); got != "not_found" {
+		t.Fatalf("missing type = %q, want not_found", got)
+	}
+	suggestions, ok := missingPayload["suggestions"].([]any)
+	if !ok {
+		t.Fatalf("missing suggestions should be an array; payload=%v", missingPayload)
+	}
+	if len(suggestions) != 3 {
+		t.Fatalf("suggestions length = %d, want 3; payload=%v", len(suggestions), missingPayload)
+	}
+	if got, _ := suggestions[0].(string); got != injectionName {
+		t.Fatalf("first suggestion = %q, want %q", got, injectionName)
 	}
 }
