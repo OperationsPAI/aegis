@@ -1,0 +1,129 @@
+name: aegisctl schema diff gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "AegisLab/**"
+      - ".github/workflows/aegisctl-schema-diff.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  schema-diff-gate:
+    name: schema gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "AegisLab/src/go.mod"
+
+      - name: Generate schema and enforce acknowledged diff policy
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          workdir="$RUNNER_TEMP/aegisctl-schema-diff"
+          base_repo="$workdir/base-repo"
+          mkdir -p "$workdir"
+
+          current_json="$workdir/current-schema.json"
+          base_json="$workdir/base-schema.json"
+          diff_file="$workdir/schema.diff"
+          comment_file="$workdir/comment.md"
+          build_bin="$workdir/aegisctl-schema-dump"
+
+          build_schema() {
+            local repo_root=$1
+            local out_file=$2
+
+            (cd "$repo_root/AegisLab" && go build -o "$build_bin" ./src/cmd/aegisctl)
+            (cd "$repo_root/AegisLab/src" && "$build_bin" schema dump > "$out_file")
+          }
+
+          cleanup() {
+            if [ -d "$base_repo" ]; then
+              git worktree remove --force "$base_repo" || true
+            fi
+            rm -f "$build_bin"
+          }
+          trap cleanup EXIT
+
+          # Current head schema (this PR version).
+          build_schema "$GITHUB_WORKSPACE" "$current_json"
+
+          # Base schema from PR base sha.
+          git worktree add --detach "$base_repo" "$BASE_SHA"
+          build_schema "$base_repo" "$base_json"
+
+          if ! diff -u "$base_json" "$current_json" > "$diff_file"; then
+            :
+          fi
+
+          has_changes=0
+          if [ -s "$diff_file" ]; then
+            has_changes=1
+          fi
+
+          pr_body="$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")"
+          acked="false"
+          if printf '%s' "$pr_body" | grep -Eq '(^|[[:space:]])schema-changes-acknowledged:[[:space:]]*true([[:space:]]|$)'; then
+            acked="true"
+          fi
+
+          {
+            echo "## aegisctl schema diff"
+            echo
+            echo "- PR: #$PR_NUMBER"
+            echo "- Base: $BASE_SHA"
+            echo "- Head: $HEAD_SHA"
+            echo
+
+            if [ "$has_changes" -eq 0 ]; then
+            echo "No schema changes were detected."
+            echo
+            echo "Gate result: PASS"
+            echo
+            echo "No action required from schema-gate policy."
+            else
+              echo "Schema changed in this PR."
+              echo
+              echo "PR description must include: \\`schema-changes-acknowledged: true\\`."
+              echo "PR body acknowledgement: \\`$acked\\`"
+              echo
+              echo "### Diff (truncated to first 400 lines)"
+              echo '```diff'
+              if [ "$(wc -l < "$diff_file")" -gt 400 ]; then
+                sed -n '1,400p' "$diff_file"
+                echo '...'
+                echo '... truncated to first 400 lines ...'
+              else
+                cat "$diff_file"
+              fi
+              echo '```'
+              echo
+              if [ "$acked" = "true" ]; then
+                echo "Gate result: PASS (acknowledged)"
+              else
+                echo "Gate result: FAIL (missing acknowledgement)"
+              fi
+            fi
+          } > "$comment_file"
+
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$comment_file"
+
+          if [ "$has_changes" -eq 1 ] && [ "$acked" != "true" ]; then
+            echo "::error::aegisctl schema changed but PR body does not include 'schema-changes-acknowledged: true'."
+            exit 1
+          fi
