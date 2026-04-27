@@ -18,7 +18,7 @@ from rcabench_platform.v3.internal.reasoning.algorithms.rule_matcher import Rule
 from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import TemporalValidator
 from rcabench_platform.v3.internal.reasoning.algorithms.topology_explorer import TopologyExplorer
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline, TimelineWindow
-from rcabench_platform.v3.internal.reasoning.models.graph import Edge, HyperGraph, Node, PlaceKind
+from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, HyperGraph, Node, PlaceKind
 from rcabench_platform.v3.internal.reasoning.models.propagation import PropagationPath, PropagationResult
 from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationDirection, PropagationRule
 
@@ -95,7 +95,67 @@ class FaultPropagator:
                 src_id, dst_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
             )
 
-        subgraph_edges = self.topology_explorer.find_reachable_subgraph(injection_node_ids, alarm_nodes, edge_filter)
+        # §7.6 step 6 + §13.2 step 2.6 — bidirectional corridor + activity filter.
+        # corridor       = Reach_forward(injection_set, max_hops_fwd)
+        #                ∩ Reach_backward(alarm_set,    max_hops_bwd)
+        # relevant_nodes = corridor ∩ (deviating_set ∪ injection_set)
+        #
+        # ``compute_corridor`` walks pure out_edges/in_edges, which assumes
+        # propagation direction == graph edge direction. rcabench's ``calls``
+        # edges go caller→callee while propagation flows callee→caller, so
+        # we reuse ``find_reachable_subgraph`` (neighbor-based, both edge
+        # directions, edge_filter applied) for both passes — matching how
+        # the propagator already enumerates walkable subgraphs.
+        injection_set = set(injection_node_ids)
+
+        # Reverse-orientation filter for the backward reach pass: an edge
+        # (a, b) participates in backward reach from b iff (b → a) matches
+        # some rule's forward propagation direction. Critically, we must
+        # also reproduce the forward filter's first_hop_config semantics on
+        # the injection end of the chain — without this, backward BFS
+        # rejects rule-less first edges that forward admits.
+        #
+        # In rcabench, ``container`` kind's ``DEFAULT_FIRST_HOP_CONFIGS``
+        # has ``require_src_states=False`` so a Class C JVMException
+        # injection (container.erroring, no matching rule for
+        # container.erroring → anything) still crosses the first edge
+        # forward. The methodology-aligned refactor exposed this
+        # asymmetry: backward without the equivalent relaxation cannot
+        # walk back into the injection container from its pod, so the
+        # corridor breaks for these cases.
+        #
+        # The fix sets ``is_first_hop=True`` on the swapped rule check
+        # iff ``dst_id`` (the neighbor we're stepping toward in backward
+        # BFS, which becomes the SRC of the forward-propagation rule)
+        # is in the original ``injection_set``.
+        def backward_edge_filter(src_id: int, dst_id: int, is_first_hop_unused: bool) -> bool:
+            src_states = self._states_for_node(dst_id)
+            dst_states = self._states_for_node(src_id)
+            src_labels = self._labels_for_node(dst_id)
+            is_first_hop = dst_id in injection_set
+            return self.rule_matcher.edge_matches_any_rule(
+                dst_id, src_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
+            )
+
+        forward_edges = self.topology_explorer.find_reachable_subgraph(injection_node_ids, alarm_nodes, edge_filter)
+        forward_visited: set[int] = set(injection_set)
+        for s, d in forward_edges:
+            forward_visited.add(s)
+            forward_visited.add(d)
+
+        backward_edges = self.topology_explorer.find_reachable_subgraph(
+            list(alarm_nodes), set(injection_set), backward_edge_filter
+        )
+        backward_visited: set[int] = set(alarm_nodes)
+        for s, d in backward_edges:
+            backward_visited.add(s)
+            backward_visited.add(d)
+
+        corridor = forward_visited & backward_visited
+        deviating_set = self._compute_deviating_set()
+        relevant_nodes = corridor & (deviating_set | injection_set)
+
+        subgraph_edges = [(s, d) for s, d in forward_edges if s in relevant_nodes and d in relevant_nodes]
         warnings: list[str] = []
 
         if not subgraph_edges:
@@ -169,6 +229,44 @@ class FaultPropagator:
         if tl is None:
             return set()
         return {w.state for w in tl.windows}
+
+    def _compute_deviating_set(self) -> set[int]:
+        """Nodes whose timeline has ever been in a non-{HEALTHY, UNKNOWN}
+        state during the abnormal window, OR whose kind is a structural
+        k8s infra connector (pod / replica_set / deployment).
+
+        Per §7.4, used by the activity filter in
+        :meth:`propagate_from_injection` to restrict path search to nodes
+        that actually exhibit anomalous behavior. The methodology's
+        argument for dropping HEALTHY middlemen ("propagation rules never
+        have HEALTHY as src_state") holds for request-layer kinds
+        (service / span) but not for structural connectors: e.g.
+        StructuralInheritanceAdapter shortcuts container.degraded →
+        service.degraded, leaving the intervening pod with an empty
+        timeline. The pod is still the necessary topological hop between
+        container and service. Treating pod / replica_set / deployment as
+        always-relevant matches the §7.4 invariant 1 spirit ("node
+        completeness — service / pod / container nodes are extracted from
+        the union of k8s + traces") — they exist in the graph because
+        they are part of the cascade structure, not because traces saw
+        them.
+        """
+        structural_kinds = {PlaceKind.pod, PlaceKind.replica_set, PlaceKind.deployment}
+        deviating: set[int] = set()
+        nominal = {"healthy", "unknown"}
+        for node_id in self.graph._graph.nodes:
+            node = self.graph.get_node_by_id(node_id)
+            if node is not None and node.kind in structural_kinds:
+                deviating.add(node_id)
+                continue
+            tl = self._timeline_for_node(node_id)
+            if tl is None:
+                continue
+            for window in tl.windows:
+                if window.state not in nominal:
+                    deviating.add(node_id)
+                    break
+        return deviating
 
     def _labels_for_node(self, node_id: int) -> frozenset[str]:
         """Aggregate every specialization label ever observed on the node.
@@ -332,7 +430,22 @@ class FaultPropagator:
         state_start_times: list[int | None] = []
         propagation_delays: list[float] = []
 
-        if src_matching_window:
+        # §7.5 trajectory rule: anchor src_start_time on the EARLIEST
+        # transition into rule.src_states (not the most-recent). This avoids
+        # the temporal gate rejecting valid chains because the source onset
+        # has slipped past the downstream onset (e.g. ERRORING -> SILENT).
+        if rule_src_states:
+            earliest = self.temporal_validator.onset_for_rule(src_node.uniq_name, rule_src_states)
+            if earliest is not None:
+                src_start_time = earliest
+            elif src_matching_window:
+                src_start_time = src_matching_window.start
+            elif src_tl and src_tl.windows:
+                src_start_time = src_tl.windows[0].start
+            else:
+                all_starts = [tl.windows[0].start for tl in self.timelines.values() if tl.windows]
+                src_start_time = min(all_starts) if all_starts else 0
+        elif src_matching_window:
             src_start_time = src_matching_window.start
         elif src_tl and src_tl.windows:
             src_start_time = src_tl.windows[0].start
@@ -342,6 +455,14 @@ class FaultPropagator:
 
         state_start_times.append(src_start_time)
         current_start_time = src_start_time
+        # Track the state currently anchoring the chain — starts with the
+        # rule.src_state that matched the source, then advances to whatever
+        # state the previous hop's causal_window matched.
+        current_src_state: str = (
+            src_matching_window.state
+            if src_matching_window
+            else (next(iter(src_states_all)) if src_states_all else "unknown")
+        )
 
         for hop_idx, path_hop in enumerate(rule.path):
             current_node_id = node_ids[hop_idx]
@@ -366,18 +487,31 @@ class FaultPropagator:
                     allowed_states = set(path_hop.intermediate_states)
                     if not check_states.intersection(allowed_states):
                         return None
+                # ε-tolerant admission against the intermediate-state set
+                hop_dst_states: set[str] = (
+                    set(path_hop.intermediate_states) if path_hop.intermediate_states is not None else next_states_all
+                )
             else:
                 dst_states_set = set(rule.possible_dst_states)
                 if dst_states_set and next_states_all and not next_states_all.intersection(dst_states_set):
                     return None
+                hop_dst_states = dst_states_set or next_states_all
 
-            causal_window = self.temporal_validator.find_causal_window(next_node.uniq_name, current_start_time)
+            causal_window = self.temporal_validator.find_admissible_window(
+                next_node.uniq_name,
+                src_onset=current_start_time,
+                edge_kind=edge_data.kind,
+                src_state=current_src_state,
+                dst_states=hop_dst_states,
+            )
             if causal_window is not None:
                 delay = float(causal_window.start - current_start_time)
                 next_start_time = causal_window.start
+                current_src_state = causal_window.state
             else:
                 delay = 0.0
                 next_start_time = current_start_time
+                # current_src_state stays — no observation advanced the chain
 
             nodes.append(next_node_id)
             states.append(sorted(next_states_all) if next_states_all else ["unknown"])
@@ -448,9 +582,25 @@ class FaultPropagator:
         state_start_times: list[int | None] = []
         propagation_delays: list[float] = []
 
-        if src_matching_window:
+        # §7.5 trajectory rule for the first hop of the subpath: anchor on
+        # the EARLIEST transition into rule.src_states. For non-first
+        # subpaths, prev_start_time already reflects the upstream chain.
+        if is_first_hop and rule_src_states:
+            earliest = self.temporal_validator.onset_for_rule(src_node.uniq_name, rule_src_states)
+            if earliest is not None:
+                src_start_time = earliest
+            elif src_matching_window:
+                src_start_time = src_matching_window.start
+            elif src_tl and src_tl.windows:
+                src_start_time = src_tl.windows[0].start
+            else:
+                all_starts = [tl.windows[0].start for tl in self.timelines.values() if tl.windows]
+                src_start_time = min(all_starts) if all_starts else 0
+        elif src_matching_window:
             src_start_time = src_matching_window.start
         elif prev_start_time is not None:
+            # Locate where on the source timeline the previous chain landed
+            # (intra-chain bookkeeping, not a propagation hop).
             causal_window = self.temporal_validator.find_causal_window(src_node.uniq_name, prev_start_time)
             src_start_time = causal_window.start if causal_window else prev_start_time
         elif src_tl and src_tl.windows:
@@ -461,6 +611,18 @@ class FaultPropagator:
 
         state_start_times.append(src_start_time)
         current_start_time = src_start_time
+        # Track the state currently anchoring the chain — see _verify_multi_hop_path.
+        if src_matching_window:
+            current_src_state: str = src_matching_window.state
+        elif rule_src_states and src_states_all:
+            matching = src_states_all.intersection(rule_src_states)
+            current_src_state = (
+                next(iter(matching)) if matching else (next(iter(src_states_all)) if src_states_all else "unknown")
+            )
+        elif src_states_all:
+            current_src_state = next(iter(src_states_all))
+        else:
+            current_src_state = "unknown"
 
         for hop_idx, path_hop in enumerate(rule.path):
             current_node_id = node_ids[hop_idx]
@@ -485,11 +647,24 @@ class FaultPropagator:
                     allowed_states = set(path_hop.intermediate_states)
                     if not check_states.intersection(allowed_states):
                         return None
+                hop_dst_states: set[str] = (
+                    set(path_hop.intermediate_states) if path_hop.intermediate_states is not None else next_states_all
+                )
+            else:
+                dst_states_set = set(rule.possible_dst_states)
+                hop_dst_states = dst_states_set or next_states_all
 
-            causal_window = self.temporal_validator.find_causal_window(next_node.uniq_name, current_start_time)
+            causal_window = self.temporal_validator.find_admissible_window(
+                next_node.uniq_name,
+                src_onset=current_start_time,
+                edge_kind=edge_data.kind,
+                src_state=current_src_state,
+                dst_states=hop_dst_states,
+            )
             if causal_window is not None:
                 delay = float(causal_window.start - current_start_time)
                 next_start_time = causal_window.start
+                current_src_state = causal_window.state
             else:
                 delay = 0.0
                 next_start_time = current_start_time
@@ -542,10 +717,10 @@ class FaultPropagator:
 
         for rule in valid_rules:
             if is_first_hop:
-                result = self._process_first_hop(hop_index, src_id, dst_id, edge_desc, rule)
+                result = self._process_first_hop(hop_index, src_id, dst_id, edge_desc, edge_data.kind, rule)
             else:
                 result = self._process_subsequent_hop(
-                    hop_index, src_id, dst_id, src_node, dst_node, edge_desc, rule, prev_start_time
+                    hop_index, src_id, dst_id, src_node, dst_node, edge_desc, edge_data.kind, rule, prev_start_time
                 )
             if result is not None:
                 return result
@@ -557,6 +732,7 @@ class FaultPropagator:
         src_id: int,
         dst_id: int,
         edge_desc: str,
+        edge_kind: DepKind,
         rule: PropagationRule,
     ) -> tuple[int, int, list[str], list[str], int | None, int | None, str, str, float] | None:
         src_node = self.graph.get_node_by_id(src_id)
@@ -569,18 +745,42 @@ class FaultPropagator:
         dst_tl = self._timeline_for_node(dst_id)
         dst_states_all = {w.state for w in dst_tl.windows} if dst_tl else set()
 
+        rule_src_states = set(rule.src_states)
         if src_node.kind == PlaceKind.span:
-            rule_src_states = set(rule.src_states)
             if rule_src_states and not src_states_all.intersection(rule_src_states):
                 return None
 
         if not dst_states_all:
             return None
 
-        src_time: int | None = src_tl.windows[0].start if src_tl and src_tl.windows else None
+        # §7.5 trajectory rule: anchor on the EARLIEST transition into
+        # rule.src_states (not the first window, which may be HEALTHY).
+        src_time: int | None = None
+        if rule_src_states:
+            src_time = self.temporal_validator.onset_for_rule(src_node.uniq_name, rule_src_states)
+        if src_time is None and src_tl and src_tl.windows:
+            src_time = src_tl.windows[0].start
+
+        # Pick the src_state that anchors ε_eff: prefer a rule.src_states match.
+        src_state_for_eps: str
+        if rule_src_states and src_states_all.intersection(rule_src_states):
+            src_state_for_eps = next(iter(src_states_all.intersection(rule_src_states)))
+        elif src_states_all:
+            src_state_for_eps = next(iter(src_states_all))
+        else:
+            src_state_for_eps = "unknown"
+
+        rule_dst_states = set(rule.possible_dst_states)
+        admissible_dst_states = (rule_dst_states & dst_states_all) or dst_states_all
 
         if src_time is not None:
-            causal_window = self.temporal_validator.find_causal_window(dst_node.uniq_name, src_time)
+            causal_window = self.temporal_validator.find_admissible_window(
+                dst_node.uniq_name,
+                src_onset=src_time,
+                edge_kind=edge_kind,
+                src_state=src_state_for_eps,
+                dst_states=admissible_dst_states,
+            )
             if causal_window is not None:
                 dst_time: int | None = causal_window.start
                 delay = float(causal_window.start - src_time)
@@ -612,6 +812,7 @@ class FaultPropagator:
         src_node: Node,
         dst_node: Node,
         edge_desc: str,
+        edge_kind: DepKind,
         rule: PropagationRule,
         prev_start_time: int | None,
     ) -> tuple[int, int, list[str], list[str], int | None, int | None, str, str, float] | None:
@@ -627,8 +828,24 @@ class FaultPropagator:
         if rule_dst_states and not dst_states_all.intersection(rule_dst_states):
             return None
 
+        # Pick the src_state that anchors ε_eff (see _process_first_hop).
+        if rule_src_states and src_states_all.intersection(rule_src_states):
+            src_state_for_eps = next(iter(src_states_all.intersection(rule_src_states)))
+        elif src_states_all:
+            src_state_for_eps = next(iter(src_states_all))
+        else:
+            src_state_for_eps = "unknown"
+
+        admissible_dst_states = (rule_dst_states & dst_states_all) or dst_states_all
+
         if prev_start_time is not None:
-            causal_window = self.temporal_validator.find_causal_window(dst_node.uniq_name, prev_start_time)
+            causal_window = self.temporal_validator.find_admissible_window(
+                dst_node.uniq_name,
+                src_onset=prev_start_time,
+                edge_kind=edge_kind,
+                src_state=src_state_for_eps,
+                dst_states=admissible_dst_states,
+            )
             if causal_window is None:
                 return None
             dst_time: int | None = causal_window.start

@@ -16,6 +16,7 @@ from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultP
 from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
 from rcabench_platform.v3.internal.reasoning.ir.adapters.inferred_edges import enrich_with_inferred_edges
+from rcabench_platform.v3.internal.reasoning.ir.adapters.log_dependency import dispatch_log_adapters
 from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
@@ -371,6 +372,30 @@ def _earliest_abnormal_seconds(abnormal_traces: pl.DataFrame) -> int:
     return int(raw)  # type: ignore[arg-type]
 
 
+def _latest_abnormal_seconds(abnormal_traces: pl.DataFrame) -> int:
+    """Latest abnormal-trace timestamp normalized to unix seconds.
+
+    Mirrors ``ir/adapters/traces.py::_ts_seconds`` so the abnormal-window
+    end used by ``TraceVolumeAdapter`` lands on the same time axis as the
+    InjectionAdapter seed regardless of how parquet stores ``time``
+    (Datetime[ns]/[us]/[ms], or int nanos/micros/secs).
+    """
+    if abnormal_traces.height == 0 or "time" not in abnormal_traces.columns:
+        return 0
+    raw = abnormal_traces["time"].max()
+    if raw is None:
+        return 0
+    if isinstance(raw, datetime):
+        return int(raw.timestamp())
+    if isinstance(raw, int):
+        if raw > 10**14:
+            return raw // 1_000_000_000
+        if raw > 10**11:
+            return raw // 1_000
+        return raw
+    return int(raw)  # type: ignore[arg-type]
+
+
 def run_single_case(
     data_dir: Path,
     max_hops: int,
@@ -441,6 +466,7 @@ def run_single_case(
         baseline_traces = loader.load_traces("normal")
         abnormal_traces = loader.load_traces("abnormal")
         injection_at = _earliest_abnormal_seconds(abnormal_traces)
+        abnormal_window_end = _latest_abnormal_seconds(abnormal_traces)
         ctx = AdapterContext(datapack_dir=data_dir, case_name=case_name)
         timelines = run_reasoning_ir(
             graph=graph,
@@ -449,16 +475,35 @@ def run_single_case(
             injection_at=injection_at,
             baseline_traces=baseline_traces,
             abnormal_traces=abnormal_traces,
+            abnormal_window_end=abnormal_window_end,
         )
-        logger.info(f"[{case_name}] IR pipeline: {len(timelines)} node timelines")
+        logger.info(
+            f"[{case_name}] IR pipeline: {len(timelines)} node timelines "
+            f"(trace_volume window={injection_at}..{abnormal_window_end})"
+        )
 
         # Add inferred call-graph edges for trace-blind dependencies (e.g.
         # Spring auth filters that fire before any controller span). This is
         # NOT a StateAdapter — it mutates graph topology after the IR
         # pipeline has settled, so the propagator sees the new edges
         # naturally on construction. See ir/adapters/inferred_edges.py.
-        n_inferred = enrich_with_inferred_edges(graph, timelines)
+        n_inferred = enrich_with_inferred_edges(graph, timelines, physical_node_ids)
         logger.info(f"[{case_name}] inferred edges: {n_inferred}")
+
+        # Per-system log-evidence adapters: scan application logs for
+        # backing-service failure patterns (HikariPool / SQLException for
+        # Java/Spring, dial-tcp / EOF for Go, etc.) and add inferred
+        # ``service|backing -[includes]→ span|caller_alarm`` edges that
+        # the temporal-coincidence heuristic alone cannot reach (JDBC
+        # traffic is not in OTel spans). See ir/adapters/log_dependency.py.
+        try:
+            abnormal_logs_for_deps = loader.load_logs("abnormal")
+            normal_logs_for_deps = loader.load_logs("normal")
+        except FileNotFoundError:
+            logger.debug(f"[{case_name}] logs absent — skipping log-dependency adapters")
+        else:
+            n_log_inferred = dispatch_log_adapters(graph, timelines, abnormal_logs_for_deps, normal_logs_for_deps)
+            logger.info(f"[{case_name}] log-inferred edges: {n_log_inferred}")
 
         # Resolve propagation starting points based on rule semantics
         # For HTTP response faults, propagation starts from caller service (not physical injection)
@@ -819,7 +864,7 @@ def _log_batch_summary(stats: dict[str, int], total_time: float) -> None:
 @app.command("run")
 def run(
     data_dir: str = typer.Option(..., help="Directory containing parquet data files"),
-    max_hops: int = typer.Option(20, help="Maximum propagation hops"),
+    max_hops: int = typer.Option(15, help="Maximum propagation hops"),
 ) -> int:
     """Run fault propagation analysis for a single case."""
     setup_logging(verbose=True)
@@ -883,7 +928,7 @@ def batch(
     ),
     max_cases: int = typer.Option(0, help="Maximum number of cases to run (0 = all)"),
     max_workers: int = typer.Option(12, help="Maximum number of parallel workers"),
-    max_hops: int = typer.Option(30, help="Maximum propagation hops"),
+    max_hops: int = typer.Option(15, help="Maximum propagation hops"),
     force: bool = typer.Option(False, "--force", help="Force reprocess all cases"),
     retry_no_paths: bool = typer.Option(False, "--retry-no-paths", help="Only retry no_paths cases"),
 ) -> int:

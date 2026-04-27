@@ -73,10 +73,10 @@ def test_canonical_seed_tier_unknown_returns_default_with_warning_flag() -> None
         ("HTTPResponseAbort", "erroring"),
         ("HTTPRequestDelay", "slow"),
         ("HTTPResponseDelay", "slow"),
-        ("DNSError", "erroring"),
-        ("DNSRandom", "erroring"),
+        ("DNSError", "silent"),
+        ("DNSRandom", "silent"),
         ("TimeSkew", "degraded"),
-        ("NetworkPartition", "unavailable"),
+        ("NetworkPartition", "silent"),
         ("NetworkDelay", "slow"),
         ("NetworkLoss", "degraded"),
         ("NetworkBandwidth", "slow"),
@@ -119,3 +119,38 @@ def test_explicit_tier_assignments(fault_type_name: str, expected_tier: str) -> 
 )
 def test_pick_canonical_state(kind: PlaceKind, tier: str, expected: str) -> None:
     assert pick_canonical_state(kind, tier) == expected
+
+
+# ----------------------------------------------------------------------
+# L5: SILENT seed wiring (Class E per §3.E of reasoning-feature-taxonomy.md)
+# ----------------------------------------------------------------------
+
+
+def test_silent_in_seed_tiers() -> None:
+    """``silent`` is admitted as a canonical seed tier (Class E)."""
+    assert "silent" in SEED_TIERS
+
+
+def test_dns_error_seeds_silent() -> None:
+    """DNSError → outbound flow silenced (Class E per §3.E)."""
+    assert canonical_seed_tier("DNSError") == ("silent", True)
+
+
+def test_dns_random_seeds_silent() -> None:
+    """DNSRandom → outbound flow silenced (Class E per §3.E)."""
+    assert canonical_seed_tier("DNSRandom") == ("silent", True)
+
+
+def test_network_partition_seeds_silent() -> None:
+    """NetworkPartition → inbound flow silenced (Class E per §3.E)."""
+    assert canonical_seed_tier("NetworkPartition") == ("silent", True)
+
+
+def test_pick_canonical_state_silent_service() -> None:
+    """Service has SILENT in its enum — resolves to the literal 'silent'."""
+    assert pick_canonical_state(PlaceKind.service, "silent") == ServiceStateIR.SILENT.value
+
+
+def test_pick_canonical_state_silent_span() -> None:
+    """Span has SILENT in its enum — resolves to the literal 'silent'."""
+    assert pick_canonical_state(PlaceKind.span, "silent") == SpanStateIR.SILENT.value

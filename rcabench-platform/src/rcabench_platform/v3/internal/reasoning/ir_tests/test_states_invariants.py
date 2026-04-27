@@ -43,3 +43,29 @@ def test_severity_monotonic() -> None:
 
 def test_severity_unknown_state_is_lowest() -> None:
     assert severity("not-a-real-state") == 0
+
+
+def test_span_has_silent() -> None:
+    assert "SILENT" in SpanStateIR.__members__
+
+
+def test_service_has_silent() -> None:
+    assert "SILENT" in ServiceStateIR.__members__
+
+
+def test_pod_has_no_silent() -> None:
+    assert "SILENT" not in PodStateIR.__members__
+
+
+def test_container_has_no_silent() -> None:
+    assert "SILENT" not in ContainerStateIR.__members__
+
+
+def test_silent_severity_equals_erroring() -> None:
+    assert severity("silent") == severity("erroring") == 4
+
+
+def test_severity_silent_ordering() -> None:
+    assert severity("degraded") < severity("silent")
+    assert severity("silent") < severity("unavailable")
+    assert severity("silent") < severity("missing")

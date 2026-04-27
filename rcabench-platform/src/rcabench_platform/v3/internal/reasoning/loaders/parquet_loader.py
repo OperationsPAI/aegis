@@ -1,5 +1,6 @@
 import logging
 import re
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,11 @@ import polars as pl
 
 from ..algorithms.baseline_detector import get_adaptive_threshold
 from ..models.graph import CallsEdgeData, DepKind, Edge, HyperGraph, Node, PlaceKind
+from .trace_truncation import (
+    TruncationAlarmInfo,
+    build_baseline_profile,
+    detect_truncated_endpoints,
+)
 from .utils import fmap_threadpool, timeit
 
 logger = logging.getLogger(__name__)
@@ -150,6 +156,10 @@ LOADGEN_LIKE_SERVICES: set[str] = {
     "k6",
 }
 
+# Methodology-spec name (§7.1) for the same set; provided as an alias so future
+# PRs can refer to LOADGEN_SERVICES without renaming.
+LOADGEN_SERVICES: set[str] = LOADGEN_LIKE_SERVICES
+
 # Frontend aggregators + loadgens. Used when multiple services share the same span_name
 # to prefer the backend service that owns the URL path rather than the caller.
 CALLER_LIKE_SERVICES: set[str] = LOADGEN_LIKE_SERVICES | {
@@ -161,6 +171,80 @@ CALLER_LIKE_SERVICES: set[str] = LOADGEN_LIKE_SERVICES | {
 
 def _is_caller_like(service_name: str) -> bool:
     return service_name.lower() in CALLER_LIKE_SERVICES
+
+
+def is_root_alarm_candidate_row(span: Mapping[str, Any], trace_index: dict[tuple[str, str], dict]) -> bool:
+    """§7.1 alarm-root predicate, kind-agnostic.
+
+    A span is a root alarm candidate iff:
+      * its owner service is NOT in ``LOADGEN_SERVICES``, AND
+      * its parent (looked up via ``(trace_id, parent_span_id) -> span``)
+        is missing (true root) OR is owned by a ``LOADGEN_SERVICES`` service.
+
+    ``span_kind`` is intentionally NOT consulted: instrumentation across
+    services labels Server / Client / Internal inconsistently and the
+    label is not load-bearing for alarm detection. The topmost
+    non-loadgen span per trace IS the request entry point regardless of
+    how its kind happens to be reported.
+
+    This generalises the methodology spec's ``parent ∈ LOADGEN_SERVICES``
+    clause: ``parent is missing`` covers true trace roots in non-
+    loadgen-bracketed traces.
+    """
+    service = span.get("service_name") or ""
+    if service.lower() in LOADGEN_SERVICES:
+        return False
+    parent_span_id = span.get("parent_span_id") or ""
+    if not parent_span_id:
+        return True
+    trace_id = span.get("trace_id") or ""
+    parent = trace_index.get((trace_id, parent_span_id))
+    if parent is None:
+        return True
+    parent_service = (parent.get("service_name") or "").lower()
+    return parent_service in LOADGEN_SERVICES
+
+
+# Backwards-compatibility alias — older imports reference this name.
+is_root_server_row = is_root_alarm_candidate_row
+
+
+def filter_root_alarm_candidate_spans(df: pl.DataFrame) -> pl.DataFrame:
+    """Keep the topmost non-loadgen span per trace (§7.1, kind-agnostic).
+
+    Polars implementation of :func:`is_root_alarm_candidate_row`: drop
+    spans whose service is in ``LOADGEN_SERVICES``, then anti-join on
+    parent owner (parent is missing OR parent service is in
+    ``LOADGEN_SERVICES``).
+
+    ``span_kind`` is intentionally NOT used to gate alarm candidacy —
+    instrumentation across services applies the kind label
+    inconsistently, so gating on Server kind drops legitimate alarm
+    boundaries (e.g. a service that emits its entry handler as
+    ``Internal`` rather than ``Server``).
+    """
+    loadgens = list(LOADGEN_LIKE_SERVICES)
+    non_loadgen = df.filter(~pl.col("service_name").str.to_lowercase().is_in(loadgens))
+    if len(non_loadgen) == 0:
+        return non_loadgen
+
+    # Build (trace_id, span_id) -> service_name lookup over ALL spans so we
+    # can decide whether each non-loadgen candidate's parent is loadgen-owned.
+    parent_services = df.select(
+        pl.col("trace_id"),
+        pl.col("span_id").alias("parent_span_id"),
+        pl.col("service_name").alias("parent_service_name"),
+    )
+
+    joined = non_loadgen.join(parent_services, on=["trace_id", "parent_span_id"], how="left")
+
+    return joined.filter(
+        pl.col("parent_service_name").is_null() | pl.col("parent_service_name").str.to_lowercase().is_in(loadgens)
+    ).drop("parent_service_name")
+
+
+# Backwards-compatibility alias — older callers reference this name.
+filter_root_server_spans = filter_root_alarm_candidate_spans
 
 
 def _ts_to_int_seconds(values) -> np.ndarray:
@@ -250,6 +334,10 @@ class ParquetDataLoader:
         self._abnormal_traces: pl.DataFrame | None = None
         self._baseline_logs: pl.DataFrame | None = None
         self._abnormal_logs: pl.DataFrame | None = None
+
+        # Sidecar from identify_alarm_nodes_v2's structural-truncation pass.
+        # Populated lazily; consumers fetch via get_truncation_alarms().
+        self._truncation_alarms: dict[str, TruncationAlarmInfo] = {}
 
     @staticmethod
     def normalize_span_name(span_name: str) -> str:
@@ -488,17 +576,14 @@ class ParquetDataLoader:
         baseline_traces = self.load_traces("normal")
         abnormal_traces = self.load_traces("abnormal")
 
-        loadgens = list(LOADGEN_LIKE_SERVICES)
-
         def filter_root_spans(df: pl.DataFrame) -> pl.DataFrame:
-            # Backend "root" = first server-side span the request hits, regardless of whether
-            # an instrumented loadgen produced an outer client/root span above it. Using
-            # parent_span_id=="" alone breaks on TrainTicket-style data where 100% of true
-            # roots belong to the loadgenerator and the actual frontend (ts-ui-dashboard)
-            # only ever appears as a Server-kind child.
-            return df.filter(
-                (pl.col("attr.span_kind") == "Server") & (~pl.col("service_name").str.to_lowercase().is_in(loadgens))
-            )
+            # Methodology §7.1: ``alarm_set`` is the set of *topmost* Server-kind
+            # nodes per trace — a Server span whose parent (in the same trace)
+            # is NOT itself Server-kind. Plain ``parent_span_id == ""`` breaks
+            # on TrainTicket-style data where the loadgenerator emits the only
+            # true root, and naive ``span_kind == Server`` re-inflates the alarm
+            # set to every Server span across the call tree.
+            return filter_root_server_spans(df)
 
         baseline_root = filter_root_spans(baseline_traces)
         abnormal_root = filter_root_spans(abnormal_traces)
@@ -583,13 +668,38 @@ class ParquetDataLoader:
                     logger.debug(f"Alarm: {full_span_name} missing in abnormal period (baseline had {b_count} calls)")
                     alarm_spans.add(full_span_name)
 
+        # Structural-truncation pass: surface endpoints whose abnormal traces
+        # collapse to a 2-span loadgen→frontend skeleton (silent-injection
+        # cases — no descendant carries an error attribute, so latency /
+        # error / missing-span detectors all miss them). See
+        # ``loaders/trace_truncation.py`` for the full design.
+        try:
+            baseline_profile = build_baseline_profile(baseline_traces)
+            truncation_alarms = detect_truncated_endpoints(abnormal_traces, baseline_profile)
+        except Exception as exc:  # defensive: never let the structural pass break alarm detection
+            logger.warning(f"identify_alarm_nodes_v2: truncation pass failed ({exc}); skipping")
+            truncation_alarms = {}
+
+        new_truncation_endpoints = set(truncation_alarms.keys()) - alarm_spans
+        alarm_spans.update(truncation_alarms.keys())
+        self._truncation_alarms = truncation_alarms
+
         logger.info(
             f"identify_alarm_nodes_v2: detected {len(alarm_spans)} alarm spans "
-            f"(including {len(missing_spans & alarm_spans)} missing spans) "
+            f"(including {len(missing_spans & alarm_spans)} missing spans, "
+            f"{len(truncation_alarms)} truncation endpoints; "
+            f"{len(new_truncation_endpoints)} added by truncation pass) "
             f"from {len(comparison)} backend root span types"
         )
 
         return alarm_spans
+
+    def get_truncation_alarms(self) -> dict[str, TruncationAlarmInfo]:
+        """Return the per-endpoint truncation sidecar populated by the
+        most recent ``identify_alarm_nodes_v2`` call. Empty if that
+        method has not yet run on this loader instance.
+        """
+        return dict(self._truncation_alarms)
 
     def _aggregate_root_span_metrics(self, df: pl.DataFrame) -> pl.DataFrame:
         """Aggregate metrics for root spans grouped by service_name and span_name.

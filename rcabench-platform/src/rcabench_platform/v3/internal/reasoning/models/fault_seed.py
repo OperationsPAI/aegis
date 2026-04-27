@@ -41,15 +41,15 @@ to ``slow`` because :class:`SpanStateIR` does not have a ``DEGRADED`` member.
 | `HTTPRequestReplacePath`    | erroring     | wrong path → 4xx/5xx                         |
 | `HTTPRequestReplaceMethod`  | erroring     | wrong method → 405/4xx                       |
 | `HTTPResponseReplaceCode`   | erroring     | non-2xx forced                               |
-| `DNSError`                  | erroring     | resolution failure                           |
-| `DNSRandom`                 | erroring     | resolution returns garbage                   |
+| `DNSError`                  | silent       | outbound flow silenced (Class E)             |
+| `DNSRandom`                 | silent       | outbound flow silenced (Class E)             |
 | `TimeSkew`                  | degraded     | clock drift; ambiguous (see notes)           |
 | `NetworkDelay`              | slow         | latency-style                                |
 | `NetworkLoss`               | degraded     | partial loss; not full outage                |
 | `NetworkDuplicate`          | degraded     | duplicate packets; service still flowing     |
 | `NetworkCorrupt`            | degraded     | corrupted packets; degraded but reachable    |
 | `NetworkBandwidth`          | slow         | throughput cap                               |
-| `NetworkPartition`          | unavailable  | full split; service unreachable              |
+| `NetworkPartition`          | silent       | inbound flow silenced (Class E)              |
 | `JVMLatency`                | slow         | method-level injected delay                  |
 | `JVMReturn`                 | erroring     | forced return value → semantic error         |
 | `JVMException`              | erroring     | thrown exception                             |
@@ -102,10 +102,10 @@ from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
 
 # Canonical severity tier — shared across PlaceKinds. The kind-appropriate
 # concrete state is resolved by :func:`pick_canonical_state`.
-SeedTier = str  # one of: "unavailable" | "erroring" | "slow" | "degraded"
+SeedTier = str  # one of: "unavailable" | "erroring" | "slow" | "degraded" | "silent"
 
 # Closed set of valid tiers.
-SEED_TIERS: Final[frozenset[str]] = frozenset({"unavailable", "erroring", "slow", "degraded"})
+SEED_TIERS: Final[frozenset[str]] = frozenset({"unavailable", "erroring", "slow", "degraded", "silent"})
 
 # Default tier for unknown fault types. ``degraded`` is the most
 # conservative choice that still gives propagation a non-UNKNOWN seed.
@@ -133,9 +133,9 @@ FAULT_TYPE_TO_SEED_TIER: Final[dict[str, SeedTier]] = {
     "HTTPResponseReplaceBody": "erroring",
     "HTTPResponsePatchBody": "erroring",
     "HTTPResponseReplaceCode": "erroring",
-    # DNS
-    "DNSError": "erroring",
-    "DNSRandom": "erroring",
+    # DNS resolution failure → outbound flow silenced (Class E per §3.E)
+    "DNSError": "silent",
+    "DNSRandom": "silent",
     # Time
     "TimeSkew": "degraded",
     # Network
@@ -144,7 +144,8 @@ FAULT_TYPE_TO_SEED_TIER: Final[dict[str, SeedTier]] = {
     "NetworkDuplicate": "degraded",
     "NetworkCorrupt": "degraded",
     "NetworkBandwidth": "slow",
-    "NetworkPartition": "unavailable",
+    # Inbound flow silenced (Class E per §3.E)
+    "NetworkPartition": "silent",
     # JVM method-level
     "JVMLatency": "slow",
     "JVMReturn": "erroring",

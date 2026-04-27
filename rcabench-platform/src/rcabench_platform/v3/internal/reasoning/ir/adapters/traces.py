@@ -34,6 +34,11 @@ from rcabench_platform.v3.internal.reasoning.algorithms.baseline_detector import
 )
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
 from rcabench_platform.v3.internal.reasoning.ir.evidence import Evidence, EvidenceLevel
+from rcabench_platform.v3.internal.reasoning.ir.protocols import (
+    FailureDetector,
+    default_failure_detector,
+    filter_by_columns,
+)
 from rcabench_platform.v3.internal.reasoning.ir.transition import Transition
 from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
 
@@ -59,18 +64,16 @@ class _WindowStat:
     count: int
 
 
-def _aggregate_baseline(traces: pl.DataFrame) -> dict[str, _BaselineStat]:
+def _aggregate_baseline(
+    traces: pl.DataFrame,
+    failure_detector: FailureDetector,
+) -> dict[str, _BaselineStat]:
     if len(traces) == 0:
         return {}
     df = traces.with_columns(
         [
             (pl.col("duration") / 1e9).alias("duration_sec"),
-            (
-                (pl.col("attr.http.response.status_code").is_not_null())
-                & (pl.col("attr.http.response.status_code") >= 500)
-            )
-            .cast(pl.Int32)
-            .alias("is_error"),
+            failure_detector.is_failure_expr().cast(pl.Int32).alias("is_error"),
             (pl.col("service_name") + "::" + pl.col("span_name")).alias("full_span_name"),
         ]
     )
@@ -98,18 +101,16 @@ def _aggregate_baseline(traces: pl.DataFrame) -> dict[str, _BaselineStat]:
     return out
 
 
-def _aggregate_window(traces: pl.DataFrame) -> dict[str, _WindowStat]:
+def _aggregate_window(
+    traces: pl.DataFrame,
+    failure_detector: FailureDetector,
+) -> dict[str, _WindowStat]:
     if len(traces) == 0:
         return {}
     df = traces.with_columns(
         [
             (pl.col("duration") / 1e9).alias("duration_sec"),
-            (
-                (pl.col("attr.http.response.status_code").is_not_null())
-                & (pl.col("attr.http.response.status_code") >= 500)
-            )
-            .cast(pl.Int32)
-            .alias("is_error"),
+            failure_detector.is_failure_expr().cast(pl.Int32).alias("is_error"),
             (pl.col("service_name") + "::" + pl.col("span_name")).alias("full_span_name"),
         ]
     )
@@ -195,18 +196,27 @@ class TraceStateAdapter:
         window_sec: int = DEFAULT_WINDOW_SEC,
         error_rate_floor: float = DEFAULT_ERROR_RATE_FLOOR,
         min_calls: int = DEFAULT_MIN_CALLS,
+        failure_detector: FailureDetector | None = None,
     ) -> None:
         self._baseline = baseline_traces
         self._abnormal = abnormal_traces
         self._window_sec = window_sec
         self._error_rate_floor = error_rate_floor
         self._min_calls = min_calls
+        # Per-system FailureDetector contract (§9.2). Default = HTTP OR gRPC.
+        # Trim detectors whose required columns aren't present in the input
+        # frames — polars raises ColumnNotFoundError otherwise. Use the
+        # union of baseline + abnormal columns so a detector applicable to
+        # either side is preserved.
+        detector = failure_detector if failure_detector is not None else default_failure_detector()
+        available = set(baseline_traces.columns) | set(abnormal_traces.columns)
+        self._failure_detector: FailureDetector = filter_by_columns(detector, available)
 
     def emit(self, ctx: AdapterContext) -> Iterable[Transition]:
         return list(self._emit_all())
 
     def _emit_all(self) -> Iterable[Transition]:
-        baseline_stats = _aggregate_baseline(self._baseline)
+        baseline_stats = _aggregate_baseline(self._baseline, self._failure_detector)
         if not baseline_stats and len(self._abnormal) == 0:
             return
 
@@ -243,7 +253,7 @@ class TraceStateAdapter:
         for w_start in range(ts_min, ts_max + 1, window):
             w_end = w_start + window
             chunk = df.filter((pl.col("_ts") >= w_start) & (pl.col("_ts") < w_end))
-            win_stats = _aggregate_window(chunk)
+            win_stats = _aggregate_window(chunk, self._failure_detector)
             seen_keys = set(win_stats.keys())
 
             service_worst: dict[str, str] = {}

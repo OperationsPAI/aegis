@@ -134,6 +134,20 @@
             }
         },
         {
+            "name": "RULE_SERVICE_SILENT_TO_SPAN",
+            "rule_id": "service_silent_to_span",
+            "description": "Service SILENT -> Span SILENT/MISSING. Class E (traffic isolation, §3.E): a silent service's includes-spans inherit the silent state. Mirrors RULE_SERVICE_TO_SPAN's shape but specialized for the silent state.",
+            "tier": "core",
+            "src_kind": "service",
+            "src_states": ["silent"],
+            "edge_kind": "includes",
+            "direction": "forward",
+            "dst_kind": "span",
+            "possible_dst_states": ["silent", "missing"],
+            "confidence": 0.5,
+            "_comment": "P_causal provisional (Beta(2,2) prior, §11.3); calibration_n=0. To be re-calibrated in L7 of the methodology rollout."
+        },
+        {
             "name": "RULE_SPAN_SLOW_TO_CALLER",
             "rule_id": "span_slow_to_caller",
             "description": "SLOW span propagates SLOW to its caller (callee->caller via reverse calls edge).",
@@ -171,6 +185,20 @@
             "dst_kind": "span",
             "possible_dst_states": ["erroring", "unavailable", "missing"],
             "confidence": 0.85
+        },
+        {
+            "name": "RULE_SPAN_SILENT_TO_CALLER",
+            "rule_id": "span_silent_to_caller",
+            "description": "Callee Span SILENT -> Caller Span SILENT/ERRORING/MISSING. Class E (traffic isolation, §3.E): when a callee span goes silent, the caller span observes a missing or timing-out call (rendered as silent if the caller chain stays quiet, erroring if the caller surfaces a timeout, missing if the caller drops the span).",
+            "tier": "core",
+            "src_kind": "span",
+            "src_states": ["silent"],
+            "edge_kind": "calls",
+            "direction": "forward",
+            "dst_kind": "span",
+            "possible_dst_states": ["silent", "erroring", "missing"],
+            "confidence": 0.5,
+            "_comment": "P_causal provisional (Beta(2,2) prior, §11.3); calibration_n=0. To be re-calibrated in L7 of the methodology rollout."
         },
         {
             "name": "RULE_POD_DEGRADED_FREQUENT_GC_TO_SPAN",
