@@ -1,0 +1,10 @@
+{
+  "round": 55, "system": "ts", "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Canary verifying freshness probe (PR #228 fix) doesn't abort.",
+  "candidates": [
+    {"id": "tt55c_canary","app": "ts-station-service","chaos_type": "PodFailure","params": {},"duration_override": 18}
+  ]
+}

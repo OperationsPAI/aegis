@@ -1,0 +1,2 @@
+{"ts": "2026-04-27T03:23:39+0100", "candidate_id": "x31_01", "paired_with": [], "group_id": "7cc2a1b8-7926-456f-aee2-c8ac90e10c3e", "trace_id": "70f90073-4d20-4c4f-8ad3-13b88d4aa639", "ns": "otel-demo20"}
+{"ts": "2026-04-27T03:23:47+0100", "candidate_id": "x31_02", "paired_with": [], "group_id": "5e2c6717-77cb-4e61-a946-5fb6b8cddd34", "trace_id": "43c1a5c1-a8dc-4008-8b75-af602f8bb47a", "ns": "otel-demo21"}
