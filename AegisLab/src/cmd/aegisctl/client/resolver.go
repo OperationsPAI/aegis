@@ -1,9 +1,10 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
-	"strings"
 )
 
 // Resolver resolves human-readable names (e.g. "train-ticket") to numeric IDs
@@ -45,6 +46,29 @@ type datasetItem struct {
 	Name string `json:"name"`
 }
 
+type notFoundResolution struct {
+	Type        string   `json:"type"`
+	Resource    string   `json:"resource"`
+	Query       string   `json:"query"`
+	ProjectID   int      `json:"project_id,omitempty"`
+	Suggestions []string `json:"suggestions"`
+}
+
+// NotFoundError is returned when a resolver cannot find a resource by name.
+// It is intentionally JSON-serializable so stderr can print machine-readable
+// clues like `type`, `query`, and nearest suggestions.
+type NotFoundError struct {
+	Payload notFoundResolution
+}
+
+func (e *NotFoundError) Error() string {
+	b, err := json.Marshal(e.Payload)
+	if err != nil {
+		return "not found"
+	}
+	return string(b)
+}
+
 // resolve is the generic resolution helper. It calls the list endpoint, finds
 // items matching the given name, and caches the result. The endpoint is
 // paginated automatically (page=1..N, size=100) until the name is found, the
@@ -58,13 +82,8 @@ func resolve[T any](r *Resolver, kind, basePath, name string, extract func(T) (i
 
 	const pageSize = 100
 	const maxResolvePages = 100 // hard cap: 10 000 items
-	sep := "?"
-	if strings.Contains(basePath, "?") {
-		sep = "&"
-	}
-
 	for page := 1; page <= maxResolvePages; page++ {
-		path := fmt.Sprintf("%s%spage=%d&size=%d", basePath, sep, page, pageSize)
+		path := fmt.Sprintf("%s?page=%d&size=%d", basePath, page, pageSize)
 		var resp APIResponse[PaginatedData[T]]
 		if err := r.client.Get(path, &resp); err != nil {
 			return 0, fmt.Errorf("resolve %s %q: %w", kind, name, err)
@@ -83,6 +102,88 @@ func resolve[T any](r *Resolver, kind, basePath, name string, extract func(T) (i
 	return 0, fmt.Errorf("resolve %s %q: not found", kind, name)
 }
 
+func nearestSuggestions(query string, candidates []string, limit int) []string {
+	if len(candidates) == 0 || limit <= 0 {
+		return nil
+	}
+
+	type scoredItem struct {
+		value    string
+		distance int
+	}
+
+	scoredItems := make([]scoredItem, 0, len(candidates))
+	for _, c := range candidates {
+		scoredItems = append(scoredItems, scoredItem{value: c, distance: levenshtein(query, c)})
+	}
+
+	sort.Slice(scoredItems, func(i, j int) bool {
+		if scoredItems[i].distance == scoredItems[j].distance {
+			return scoredItems[i].value < scoredItems[j].value
+		}
+		return scoredItems[i].distance < scoredItems[j].distance
+	})
+
+	if len(scoredItems) > limit {
+		scoredItems = scoredItems[:limit]
+	}
+
+	out := make([]string, 0, len(scoredItems))
+	for _, s := range scoredItems {
+		out = append(out, s.value)
+	}
+	return out
+}
+
+func levenshtein(a, b string) int {
+	aLen := len(a)
+	bLen := len(b)
+
+	if aLen == 0 {
+		return bLen
+	}
+	if bLen == 0 {
+		return aLen
+	}
+
+	dp := make([]int, bLen+1)
+	next := make([]int, bLen+1)
+	for j := 0; j <= bLen; j++ {
+		dp[j] = j
+	}
+
+	for i := 1; i <= aLen; i++ {
+		next[0] = i
+		ai := a[i-1]
+		for j := 1; j <= bLen; j++ {
+			cost := 0
+			if ai != b[j-1] {
+				cost = 1
+			}
+			insert := next[j-1] + 1
+			delete := dp[j] + 1
+			replace := dp[j-1] + cost
+			next[j] = min3(insert, delete, replace)
+		}
+		dp, next = next, dp
+	}
+
+	return dp[bLen]
+}
+
+func min3(a, b, c int) int {
+	if a < b {
+		if a < c {
+			return a
+		}
+		return c
+	}
+	if b < c {
+		return b
+	}
+	return c
+}
+
 // ProjectID resolves a project name to its numeric ID.
 func (r *Resolver) ProjectID(name string) (int, error) {
 	return resolve(r, "project", "/api/v2/projects", name,
@@ -93,12 +194,50 @@ func (r *Resolver) ProjectID(name string) (int, error) {
 // under a project, so the caller must resolve a project first via
 // SetProjectScope before calling this.
 func (r *Resolver) InjectionID(name string) (int, error) {
+	if id, err := strconv.Atoi(name); err == nil && id > 0 {
+		return id, nil
+	}
 	if r.projectID == 0 {
 		return 0, fmt.Errorf("resolve injection %q: project scope not set (call SetProjectScope or pass --project)", name)
 	}
-	return resolve(r, "injection",
-		fmt.Sprintf("/api/v2/projects/%d/injections", r.projectID),
-		name, func(i injectionItem) (int, string) { return i.ID, i.Name })
+
+	cacheKey := fmt.Sprintf("injection:%d:%s", r.projectID, name)
+	if id, ok := r.cache[cacheKey]; ok {
+		return id, nil
+	}
+
+	basePath := fmt.Sprintf("/api/v2/projects/%d/injections", r.projectID)
+	const pageSize = 100
+	const maxResolvePages = 100
+
+	allNames := make([]string, 0, pageSize)
+
+	for page := 1; page <= maxResolvePages; page++ {
+		path := fmt.Sprintf("%s?page=%d&size=%d", basePath, page, pageSize)
+		var resp APIResponse[PaginatedData[injectionItem]]
+		if err := r.client.Get(path, &resp); err != nil {
+			return 0, fmt.Errorf("resolve %s %q: %w", "injection", name, err)
+		}
+		for _, item := range resp.Data.Items {
+			id, itemName := item.ID, item.Name
+			allNames = append(allNames, itemName)
+			if itemName == name {
+				r.cache[cacheKey] = id
+				return id, nil
+			}
+		}
+		if len(resp.Data.Items) < pageSize {
+			break
+		}
+	}
+
+	return 0, &NotFoundError{Payload: notFoundResolution{
+		Type:        "not_found",
+		Resource:    "injection",
+		Query:       name,
+		ProjectID:   r.projectID,
+		Suggestions: nearestSuggestions(name, allNames, 3),
+	}}
 }
 
 // SetProjectScope tells the resolver which project to scope project-scoped
