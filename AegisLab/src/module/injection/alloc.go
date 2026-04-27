@@ -178,7 +178,14 @@ func AllocateNamespaceForRestart(
 
 	now := time.Now()
 
-	// Pass 1: hole-fill. Walk existing slots lowest-index first.
+	// Pass 1: hole-fill. Walk existing slots lowest-index first. Prefer
+	// slots that already have a workload (cheap reuse — RestartPedestal
+	// can helm-upgrade in place). Track the lowest-index unlocked-but-
+	// empty slot so Pass 1.5 can recycle it when the operator deleted the
+	// underlying namespace between rounds. Without this fallback, deleted
+	// slots looked identical to never-existed ones and the allocator
+	// always grew the pool via Pass 2; see #227.
+	emptySlotIdx := -1
 	for idx := 0; idx < cfg.Count; idx++ {
 		ns := fmt.Sprintf(template, idx)
 
@@ -196,6 +203,12 @@ func AllocateNamespaceForRestart(
 				return AllocateResult{}, fmt.Errorf("probe workload in %s: %w", ns, probeErr)
 			}
 			if !hasWorkload {
+				// Remember the lowest-index empty hole; Pass 1.5
+				// will fill it (treated as Fresh) after the
+				// workload-bearing scan completes.
+				if opts.AllowBootstrap && emptySlotIdx == -1 {
+					emptySlotIdx = idx
+				}
 				continue
 			}
 		}
@@ -212,6 +225,26 @@ func AllocateNamespaceForRestart(
 			return AllocateResult{}, fmt.Errorf("acquire ns lock for %s: %w", ns, err)
 		}
 		return AllocateResult{Namespace: ns, Fresh: false}, nil
+	}
+
+	// Pass 1.5: hole-fill into a deleted-but-counted slot before extending
+	// the pool. This is the fix for #227: an operator who deletes
+	// namespaces between rounds (autonomous inject-loop campaign) used to
+	// see count grow monotonically because every freed slot fell through
+	// to Pass 2 instead of being reused. Treated as Fresh because the
+	// caller must helm-install before BuildInjection can list pods —
+	// identical post-conditions to Pass 2.
+	if emptySlotIdx >= 0 {
+		ns := fmt.Sprintf(template, emptySlotIdx)
+		if err := nsLockAcquireFn(ctx, redis, ns, endTime, traceID, now); err != nil {
+			if !errors.Is(err, ErrNamespaceLocked) {
+				return AllocateResult{}, fmt.Errorf("recycle empty slot %s: %w", ns, err)
+			}
+			// Race: a peer allocator grabbed the empty slot between
+			// our scan and our lock. Fall through to bootstrap.
+		} else {
+			return AllocateResult{Namespace: ns, Fresh: true}, nil
+		}
 	}
 
 	// Pass 2: bootstrap a fresh slot at index = count, if allowed.
