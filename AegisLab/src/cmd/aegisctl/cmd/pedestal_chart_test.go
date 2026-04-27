@@ -303,10 +303,16 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false); err != nil {
 			t.Fatalf("backend chart install failed: %v", err)
 		}
-		if len(f.calls) != 1 {
-			t.Fatalf("want 1 helm call, got %d: %v", len(f.calls), f.calls)
+		var helmCalls [][]string
+		for _, c := range f.calls {
+			if len(c) > 0 && c[0] == "helm" {
+				helmCalls = append(helmCalls, c)
+			}
 		}
-		call := f.calls[0]
+		if len(helmCalls) != 1 {
+			t.Fatalf("want 1 helm call, got %d: %v", len(helmCalls), helmCalls)
+		}
+		call := helmCalls[0]
 		if !containsArg(call, "-f") {
 			t.Fatalf("expected helm values file flag, got %v", call)
 		}

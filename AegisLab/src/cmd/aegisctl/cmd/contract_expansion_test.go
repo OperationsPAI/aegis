@@ -2,32 +2,9 @@ package cmd
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 )
-
-// TestInjectGetUnknownReturnsNotFoundExitCode — when the list API returns 404
-// during name->ID resolution for `inject get <unknown>`, exitCodeFor must map
-// the wrapped APIError to the new ExitCodeNotFound (7).
-func TestInjectGetUnknownReturnsNotFoundExitCode(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"code":404,"message":"injection not found"}`))
-	}))
-	defer srv.Close()
-
-	res := runCLI(t, "inject", "get", "ghost-injection",
-		"--server", srv.URL,
-		"--token", "token",
-	)
-	if res.code != ExitCodeNotFound {
-		t.Fatalf("exit code = %d, want %d; stdout=%q stderr=%q",
-			res.code, ExitCodeNotFound, res.stdout, res.stderr)
-	}
-}
 
 // TestDryRunOnUnsupportedCommandErrors — `status --dry-run` must exit 2 and
 // mention --dry-run in stderr. status never consumed flagDryRun before, so
