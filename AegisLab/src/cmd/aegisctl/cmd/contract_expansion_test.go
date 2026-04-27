@@ -56,3 +56,29 @@ func TestSchemaDumpEmitsValidJSON(t *testing.T) {
 		t.Fatalf("schema document missing exit code 7 entry")
 	}
 }
+
+// TestSchemaDumpCommandsPathsAreUnique — every command path in schema output must
+// be unique; duplicates indicate duplicated registration in command tree.
+func TestSchemaDumpCommandsPathsAreUnique(t *testing.T) {
+	res := runCLI(t, "schema", "dump")
+	if res.code != ExitCodeSuccess {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", res.code, ExitCodeSuccess, res.stderr)
+	}
+
+	var doc struct {
+		Commands []struct {
+			Path string `json:"path"`
+		} `json:"commands"`
+	}
+	if err := json.Unmarshal([]byte(res.stdout), &doc); err != nil {
+		t.Fatalf("stdout is not valid JSON: %v\nstdout=%q", err, res.stdout)
+	}
+
+	paths := make(map[string]struct{})
+	for _, c := range doc.Commands {
+		if _, ok := paths[c.Path]; ok {
+			t.Fatalf("duplicate schema command path: %q", c.Path)
+		}
+		paths[c.Path] = struct{}{}
+	}
+}
