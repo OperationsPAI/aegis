@@ -60,8 +60,8 @@ func TestSchemaDumpEmitsValidJSON(t *testing.T) {
 		t.Fatalf("schema document missing exit code 11 entry")
 	}
 
-	if got := exitCodeFor(fmt.Errorf("decode response: unexpected payload format")); got != ExitCodeDecodeResponse {
-		t.Fatalf("exit code for decode response error = %d, want %d", got, ExitCodeDecodeResponse)
+	if got := exitCodeFor(fmt.Errorf("decode response: unexpected payload format")); got != ExitCodeDecodeFailure {
+		t.Fatalf("exit code for decode response error = %d, want %d", got, ExitCodeDecodeFailure)
 	}
 }
 
