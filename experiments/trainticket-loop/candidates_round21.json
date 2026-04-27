@@ -1,0 +1,24 @@
+{
+  "round": 21,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R19 strong (9/12 +1 final), R20 mixed (~33% so far). Major insight: **JVMException duration=7 unlocks signals that duration=5/6 missed** (R4 getRouteByIds, R5 retrieve, R6 addMoney all flipped at dur=7). R21 strategy: (1) Re-test R3-R6 -1 JVMException candidates at duration=7 to confirm pattern. (2) Test entirely-new JVM hooks: TokenServiceImpl other methods, FoodServiceImpl methods not yet tried. (3) Continue admin-* sweep with PodKill (R19 success on cancel/assurance/contacts/food).",
+  "_jvm_classes_source":"FudanSELab/train-ticket@main 2026-04-25",
+  "candidates": [
+    {"id": "tt241","app": "ts-station-service",      "chaos_type": "JVMException","params": {"class":"fdse.microservice.service.StationServiceImpl","method":"exist","exception_opt":"random"}, "duration_override": 7, "_note":"R3 winner duration 7 (R20 dur=8 -1)"},
+    {"id": "tt242","app": "ts-payment-service",      "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"initPayment","exception_opt":"random"}, "duration_override": 8, "_note":"R12 winner with dur=8 (R17 dur=7 -1, R20 dur=5 retry running)"},
+    {"id": "tt243","app": "ts-cancel-service",       "chaos_type": "JVMException","params": {"class":"cancel.service.CancelServiceImpl","method":"cancelOrder","exception_opt":"random"}, "duration_override": 8, "trace_id": "3993388c-3b37-4a12-ac76-009e1b804f94", "ns": "ts7", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"R15 winner re-confirmed at dur=8"},
+    {"id": "tt244","app": "ts-food-service",         "chaos_type": "JVMException","params": {"class":"foodsearch.service.FoodServiceImpl","method":"getAllFood","exception_opt":"random"}, "duration_override": 7, "trace_id": "553d3f56-6581-4328-a747-ba8c709741e3", "ns": "ts8", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"R3 -1 → R21 +1 flipped at dur=7"},
+    {"id": "tt245","app": "ts-payment-service",      "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"query","exception_opt":"random"}, "duration_override": 8, "trace_id": "5a69d8b7-fb9b-4d54-ab11-3edd8229d6cd", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "tt246","app": "ts-admin-order-service",  "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "dec45687-7b5e-47b7-90b9-26d36c335f42", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt247","app": "ts-admin-user-service",   "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "f5908749-a406-4ffd-b3b5-eda9fa601850", "terminal": "fault.injection.failed", "reward": 0},
+    {"id": "tt248","app": "ts-admin-travel-service", "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "4bf49d95-cbaf-4f78-81f3-8748e3bf6e25", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt249","app": "ts-station-food-service", "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "b218bcd0-fbc8-457b-a4ad-eed6d7c69782", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt250","app": "ts-food-delivery-service","chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "80f308ad-66f0-4fdc-aa7a-d549f598b35d", "terminal": "fault.injection.failed", "reward": 0},
+    {"id": "tt251","app": "ts-inside-payment-service","chaos_type": "PodKill",    "params": {}, "duration_override": 5, "trace_id": "773dab22-6d24-4c7a-8813-c1f9c458a139", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "tt252","app": "ts-notification-service", "chaos_type": "PodKill",     "params": {}, "duration_override": 5, "trace_id": "877aa768-0127-40ff-b801-8e1139f2546e", "terminal": "datapack.no_anomaly", "reward": -1}
+  ]
+}

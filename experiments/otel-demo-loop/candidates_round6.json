@@ -1,0 +1,22 @@
+{
+  "round": 6,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R5: 1 confirmed +1 (s02+s03 frontend+checkout PodFailure PAIR — same pattern as R4 ad+frontend pair). NetworkDelay R4 winner failed to repeat 2 times. Hypothesis: otel-demo detector specifically lights on 2-service-down pairs (i.e. broader cascade), not single chaos. R6 strategy: (1) Aggressive PAIR coverage of primary path 2-service combos. (2) Use shorter durations (5 min) since longer doesn't change signal but slows iteration. (3) Try ContainerKill (different mech). (4) Test frontend solo as control.",
+  "_results": "1/5 +1 (u07 currency solo PodFailure5min — NEW WINNER). 4/5 -1 (u01 frontend solo, u02 checkout solo, u03+u04 payment+ad PAIR, u05 shipping solo). 4 submit-fail: u06 wrong app name (productcatalog vs product-catalog), u08-u10 ContainerKill on otel-demo0 bootstrap-empty. **Signal**: solo PodFailure on hot services -1; pair PodFailure DID NOT repeat (R4/R5 ad+frontend, frontend+checkout pairs were +1, R6 payment+ad pair was -1). New winner: currency solo. Lesson: detector signal tied to specific service+timing, not general chaos topology.",
+  "candidates": [
+    {"id": "u01", "app": "frontend",       "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "trace_id": "3617fc8c-a20b-4d99-91d4-fa6499c50b73", "ns": "otel-demo1", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "u02", "app": "checkout",       "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "paired_with":["u03"], "trace_id": "9b5c6e98-b369-4cfd-9563-a481f96b24b2", "ns": "otel-demo2", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "u03", "app": "payment",        "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "paired_with":["u04"], "trace_id": "4eaf32bc-0d4d-40ef-943a-5f4c71e52a38", "ns": "otel-demo3", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "u04", "app": "ad",             "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "paired_with":["u03"], "trace_id": "4eaf32bc-0d4d-40ef-943a-5f4c71e52a38", "ns": "otel-demo3", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "u05", "app": "shipping",       "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "trace_id": "d1495a6f-97d7-44f1-9080-44d2608dffd2", "ns": "otel-demo4", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "u06", "app": "productcatalog", "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"App name wrong: 'productcatalog' should be 'product-catalog' (with dash). otel-demo upstream uses kebab-case for multi-word services."},
+    {"id": "u07", "app": "currency",       "chaos_type": "PodFailure",  "params": {}, "duration_override": 5, "trace_id": "97491eb2-d7c5-49f3-8c63-079ab6b282f7", "ns": "otel-demo6", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"NEW WINNER: currency/PodFailure solo (5min). currency is on primary order path (price calc); detector senses currency outage."},
+    {"id": "u08", "app": "recommendation", "chaos_type": "ContainerKill","params": {"container":"recommendation"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "u09", "app": "ad",             "chaos_type": "ContainerKill","params": {"container":"ad"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "u10", "app": "checkout",       "chaos_type": "ContainerKill","params": {"container":"checkout"}, "duration_override": 5, "trace_id": null, "terminal": "submit.error.500", "reward": 0}
+  ]
+}

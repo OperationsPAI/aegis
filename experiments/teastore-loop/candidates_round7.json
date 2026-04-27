@@ -1,0 +1,12 @@
+{
+  "round": 7, "system": "teastore", "system_type": "teastore",
+  "pedestal": {"name": "teastore", "tag": "1.4.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Try other components.",
+  "candidates": [
+    {"id": "te7_01", "app": "teastore-auth",        "chaos_type": "PodFailure", "params": {}, "duration_override": 11},
+    {"id": "te7_02", "app": "teastore-recommender", "chaos_type": "PodFailure", "params": {}, "duration_override": 11},
+    {"id": "te7_03", "app": "teastore-registry",    "chaos_type": "PodFailure", "params": {}, "duration_override": 11}
+  ]
+}

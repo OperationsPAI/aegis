@@ -1,0 +1,12 @@
+{
+  "round": 27, "system": "otel-demo", "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5, "container": "currencyservice"},
+  "candidates": [
+    {"id": "x27_01", "app": "currency",        "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "x27_02", "app": "image-provider",  "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
+    {"id": "x27_03", "app": "product-catalog", "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "x27_04", "app": "checkout",        "chaos_type": "PodFailure", "params": {}, "duration_override": 10}
+  ]
+}

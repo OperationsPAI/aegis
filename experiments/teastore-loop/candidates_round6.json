@@ -1,0 +1,12 @@
+{
+  "round": 6, "system": "teastore", "system_type": "teastore",
+  "pedestal": {"name": "teastore", "tag": "1.4.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Throttled jmeter (numUsers=2 dur=120) — fresh tea ns will pickup.",
+  "candidates": [
+    {"id": "te6_01", "app": "teastore-webui",       "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "te6_02", "app": "teastore-persistence", "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "te6_03", "app": "teastore-image",       "chaos_type": "PodFailure", "params": {}, "duration_override": 9}
+  ]
+}

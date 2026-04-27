@@ -1,0 +1,3 @@
+{"ts": "2026-04-26T20:10:39+0100", "candidate_id": "h10_01", "paired_with": [], "group_id": "8e9f7ab9-8dd5-403d-babb-18385f048d46", "trace_id": "12d616fd-b4df-4caf-8e91-f1d0b49b6bca", "ns": "hs20"}
+{"ts": "2026-04-26T20:10:53+0100", "candidate_id": "h10_02", "paired_with": [], "group_id": "2afe116e-46f5-482f-b1ec-625de7e228f2", "trace_id": "30ab4e08-7a6a-4ac9-9e30-f17d500d71c5", "ns": "hs21"}
+{"ts": "2026-04-26T20:11:04+0100", "candidate_id": "h10_03", "paired_with": [], "group_id": "aaa2c749-ed04-4383-9ff8-9addbd43875e", "trace_id": "e9f0f2d7-412d-449e-a371-0ffc1c480cff", "ns": "hs22"}

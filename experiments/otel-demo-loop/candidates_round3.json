@@ -1,0 +1,22 @@
+{
+  "round": 3,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R2: 3/5 valid traces +1 (accounting/NetworkLoss postgresql, recommendation/NetworkPartition flagd ×PAIRED image-provider/PodKill, email/NetworkDelay3s checkout). 2/5 -1 (cart/NetworkBandwidth, quote/PodKill solo). Errors recorded: p03 network pair unobserved, p09 DNS short-name. R3 strategy: (1) keep NetworkLoss/Partition/Delay on observed pairs. (2) Add new pairs based on strong cross-service patterns: recommendation→productcatalog, fraud-detection→checkout. (3) Fix DNSError with FQDN. (4) Try CPUStress/MemoryStress on hot pods. (5) 30% pair rate continues.",
+  "_results": "1/1 valid trace -1: q04+q05 PAIR checkout/NetworkPartition→payment × ad/NetworkDelay3s flagd → datapack.no_anomaly. Pair miss. 5/10 candidates failed at submit (all 500s — pair-pre-check trip on q01 q02+q03 q06 q07+q08 q09+q10). q07+q08 also hit memory_size string error (q08 cart/MemoryStress). Conclusion: R3 was a near-write-off due to submit-side pair check; need either (a) pre-warm loadgen, (b) drop network-pair chaos and use single-target chaos (Pod/CPU/Mem/DNS-FQDN/JVM), or (c) file backend issue to skip pair check or use snapshot fallback.",
+  "candidates": [
+    {"id": "q01", "app": "recommendation", "chaos_type": "NetworkLoss",      "params": {"target_service":"productcatalog","loss":80,"correlation":50,"direction":"to"}, "duration_override": 7, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "q02", "app": "checkout",       "chaos_type": "NetworkLoss",      "params": {"target_service":"flagd","loss":80,"correlation":50,"direction":"to"}, "duration_override": 7, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "q03", "app": "frontend",       "chaos_type": "NetworkPartition", "params": {"target_service":"productcatalog","direction":"both"}, "duration_override": 7, "trace_id": null, "terminal": "submit.error.500", "reward": 0},
+    {"id": "q04", "app": "checkout",       "chaos_type": "NetworkPartition", "params": {"target_service":"payment","direction":"both"}, "duration_override": 7, "paired_with":["q05"], "trace_id": "930b4872-2dcc-4304-962c-c9007aa6a239", "ns": "otel-demo3", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "q05", "app": "ad",             "chaos_type": "NetworkDelay",     "params": {"target_service":"flagd","latency":3000,"jitter":300,"correlation":25,"direction":"to"}, "duration_override": 7, "paired_with":["q04"], "trace_id": "930b4872-2dcc-4304-962c-c9007aa6a239", "ns": "otel-demo3", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "q06", "app": "fraud-detection","chaos_type": "DNSError",         "params": {"domain":"checkout.otel-demo.svc.cluster.local"}, "duration_override": 7, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"FQDN resolver still trips — likely chaos-mesh DNSChaos requires *real* domain (external host). For service-internal DNS denial, use upstream svc query like 'checkout' (which we already saw fail for short name). May need different chaos type entirely (e.g. NetworkLoss to coredns)."},
+    {"id": "q07", "app": "currency",       "chaos_type": "PodKill",          "params": {}, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"PodKill itself is no-pair, but paired in batch with q08 MemoryStress which had string format error → likely whole-batch validation aborted"},
+    {"id": "q08", "app": "cart",           "chaos_type": "MemoryStress",     "params": {"memory_size":"512MB","mem_worker":2,"mem_type":"ram"}, "duration_override": 10, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"memory_size string format"},
+    {"id": "q09", "app": "frontend",       "chaos_type": "CPUStress",        "params": {"cpu_load":80,"cpu_worker":2}, "duration_override": 10, "trace_id": null, "terminal": "submit.error.500", "reward": 0, "_failure":"paired with q10 NetworkPartition→postgresql; likely pair-not-observed dragged whole batch"},
+    {"id": "q10", "app": "accounting",     "chaos_type": "NetworkPartition", "params": {"target_service":"postgresql","direction":"both"}, "duration_override": 7, "trace_id": null, "terminal": "submit.error.500", "reward": 0}
+  ]
+}

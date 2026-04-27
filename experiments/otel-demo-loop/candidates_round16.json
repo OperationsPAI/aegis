@@ -1,0 +1,22 @@
+{
+  "round": 16,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R15: 0/8 valid +1. R1 exact replay failed. otel-demo detector confirmed stochastic ~10-20%. R16 strategy: (1) Accept stochastic baseline. (2) Last sweep: every service solo with 5min PodFailure to systematically estimate detector hit rate per-service over N=15 attempts total in this round. (3) After R16, otel-demo loop pauses similar to sockshop — recommend deeper investigation into detector implementation.",
+  "_results": "0/7 done valid +1 so far. 5/7 -1 (frontend, cart, payment, email, quote). 2/7 env-fail (checkout fault.injection.failed, fraud-detection datapack.build.failed). 3 still running. **R16 confirms otel-demo detector ~0% on PodFailure 12min single-service.** Hit rate is essentially noise floor.",
+  "candidates": [
+    {"id": "e01", "app": "frontend",       "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "41796e06-3e03-429f-ae99-d45b0d5bbd7e", "ns": "otel-demo1", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "e02", "app": "ad",             "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "a814dbd3-bd46-4360-b87c-16932ee68c57", "ns": "otel-demo2", "terminal": "TBD", "reward": null},
+    {"id": "e03", "app": "checkout",       "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "22cdff5c-8f7c-4d75-beae-74589066d8ad", "ns": "otel-demo3", "terminal": "fault.injection.failed", "reward": 0},
+    {"id": "e04", "app": "cart",           "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "7bcd22e9-d4d6-4a42-9029-e6ebbb52ec46", "ns": "otel-demo4", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "e05", "app": "payment",        "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "1b4a607c-294b-4b73-9cec-a6c1e59379d2", "ns": "otel-demo5", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "e06", "app": "shipping",       "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "9380a5f5-dcf4-4633-a8f2-655018012170", "ns": "otel-demo6", "terminal": "TBD", "reward": null},
+    {"id": "e07", "app": "email",          "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "4677e170-c3c5-4219-b381-5d6986d19877", "ns": "otel-demo7", "terminal": "datapack.no_anomaly", "reward": -1},
+    {"id": "e08", "app": "accounting",     "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "01dd9206-b8a3-447e-93fb-76b69e882c1a", "ns": "otel-demo8", "terminal": "TBD", "reward": null},
+    {"id": "e09", "app": "fraud-detection","chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "db4fd847-1ee7-4325-980e-2cb1d8f4dec9", "ns": "otel-demo9", "terminal": "datapack.build.failed", "reward": 0},
+    {"id": "e10", "app": "quote",          "chaos_type": "PodFailure", "params": {}, "duration_override": 12, "trace_id": "6df92c11-4291-4864-8a7e-c5b7d656b21a", "ns": "otel-demo10", "terminal": "datapack.no_anomaly", "reward": -1}
+  ]
+}

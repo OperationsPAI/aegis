@@ -1,0 +1,6 @@
+{"ts": "2026-04-26T16:09:01+0100", "candidate_id": "w7_01", "paired_with": [], "group_id": "22695fed-126c-42ea-9457-43563cd27eae", "trace_id": "f27f58b4-6327-4e23-a44e-6c57f90e2fb3", "ns": "sockshop10"}
+{"ts": "2026-04-26T16:09:11+0100", "candidate_id": "w7_02", "paired_with": [], "group_id": "e6db681d-1fe6-4533-9666-f77e355978d7", "trace_id": "45b00db9-af7e-487c-85b3-0b6076ef00c8", "ns": "sockshop11"}
+{"ts": "2026-04-26T16:09:23+0100", "candidate_id": "w7_03", "paired_with": [], "group_id": "f3bf256a-f297-4900-818d-426ad10a9ddf", "trace_id": "73cecde0-50ae-467c-8362-000fcb706e41", "ns": "sockshop12"}
+{"ts": "2026-04-26T16:09:36+0100", "candidate_id": "w7_04", "paired_with": [], "group_id": "aafc3683-c882-4586-9d24-582ad0803153", "trace_id": "0b0fde57-860e-445a-8170-5dfbe57cda07", "ns": "sockshop13"}
+{"ts": "2026-04-26T16:09:48+0100", "candidate_id": "w7_05", "paired_with": [], "group_id": "869e7c8d-7579-4728-bb0e-badfa0999fbe", "trace_id": "a0b8198c-3cd5-4f8b-adf0-91ba6050692b", "ns": "sockshop14"}
+{"ts": "2026-04-26T16:10:02+0100", "candidate_id": "w7_06", "paired_with": [], "group_id": "8748a1c6-18bc-4f03-8b1c-334e98d59f87", "trace_id": "45825959-eec9-4ee7-8b08-cdf525a9580c", "ns": "sockshop15"}

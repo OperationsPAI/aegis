@@ -21,3 +21,7 @@ _tmp*/
 .aegisctl
 .kube
 
+
+# Loop campaign artifacts — cache subdirs (cloned source repos for analysis) are large + reproducible
+experiments/*/cache/
+experiments/*/.cache/

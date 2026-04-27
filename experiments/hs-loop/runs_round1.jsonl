@@ -1,0 +1,10 @@
+{"ts": "2026-04-26T01:18:56+0100", "candidate_id": "h01", "paired_with": [], "group_id": "147b46b5-71c3-4bb0-b3d1-d9c56cd6d706", "trace_id": "3ac28479-d110-4bfe-ad77-da9aaf60fd69", "ns": "hs0"}
+{"ts": "2026-04-26T01:19:01+0100", "candidate_id": "h02", "paired_with": [], "group_id": "bbcf1d37-8246-4370-bdeb-241f24209314", "trace_id": "63fb6ea3-a2f9-4201-9ade-fd3acc8a4252", "ns": "hs1"}
+{"ts": "2026-04-26T01:19:06+0100", "candidate_id": "h03", "paired_with": [], "group_id": "c343e33b-a536-4db6-8361-a3524c016c45", "trace_id": "87100ab0-0ead-4f18-b509-73807eabafdb", "ns": "hs2"}
+{"ts": "2026-04-26T01:19:11+0100", "candidate_id": "h04", "paired_with": [], "group_id": "d6b6e259-a7e5-4b4b-b1d6-837fc6086b2e", "trace_id": "bb9158be-c6be-4b1e-8b00-f64387d82256", "ns": "hs3"}
+{"ts": "2026-04-26T01:19:15+0100", "candidate_id": "h05", "paired_with": [], "group_id": "7582d2a4-0c68-458a-837f-ab868f127aa9", "trace_id": "fbf335ea-8e35-4018-adc2-77510d5e48d6", "ns": "hs4"}
+{"ts": "2026-04-26T01:19:20+0100", "candidate_id": "h06", "paired_with": [], "group_id": "ea522031-3534-4650-9546-231afa42726e", "trace_id": "947b1988-0239-44aa-a290-eeee6474d692", "ns": "hs5"}
+{"ts": "2026-04-26T01:19:25+0100", "candidate_id": "h07", "paired_with": [], "group_id": "66a800bf-6509-47b4-8dad-c2c80e9241bb", "trace_id": "fd64a238-bfa5-4af6-9a4e-6db217f66b64", "ns": "hs6"}
+{"ts": "2026-04-26T01:19:30+0100", "candidate_id": "h08", "paired_with": [], "group_id": "af202453-6bd9-445e-b3dc-579827f0b13a", "trace_id": "8b3f4a03-c6bd-499b-ad67-a07fe8379b74", "ns": "hs7"}
+{"ts": "2026-04-26T01:19:35+0100", "candidate_id": "h09", "paired_with": [], "group_id": "b1dd82fc-82de-4807-b432-713ef9afa898", "trace_id": "d6a7c482-245b-4ad6-9cde-e7b50bf69b1e", "ns": "hs8"}
+{"ts": "2026-04-26T01:19:39+0100", "candidate_id": "h10", "paired_with": [], "group_id": "561adac2-8a4a-4abf-a69f-df0aa423c5f3", "trace_id": "2c96e8c6-1cee-46db-afc5-59427c4a4293", "ns": "hs9"}

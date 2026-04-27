@@ -1,0 +1,19 @@
+{
+  "round": 4,
+  "system": "mm",
+  "system_type": "mm",
+  "pedestal": {"name": "media", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "First round on chart 0.1.3 (pre-baked dataset image). Use 8 of 13 valid services for baseline.",
+  "candidates": [
+    {"id": "m4_01", "app": "nginx-web-server",       "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "m4_02", "app": "review-storage-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "m4_03", "app": "user-review-service",    "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "m4_04", "app": "movie-info-service",     "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "m4_05", "app": "compose-review-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "m4_06", "app": "user-service",           "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "m4_07", "app": "nginx-web-server",       "chaos_type": "PodKill",    "params": {}, "duration_override": 7},
+    {"id": "m4_08", "app": "movie-review-service",   "chaos_type": "PodKill",    "params": {}, "duration_override": 7}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "round": 8,
+  "system": "sockshop",
+  "system_type": "sockshop",
+  "pedestal": {"name": "sockshop", "tag": "1.1.2"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5, "container": "coherence"},
+  "_strategy": "Retry R7 after CH host fix.",
+  "candidates": [
+    {"id": "w8_01", "app": "front-end", "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "w8_02", "app": "catalog",   "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "w8_03", "app": "carts",     "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "w8_04", "app": "orders",    "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "w8_05", "app": "shipping",  "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "w8_06", "app": "payment",   "chaos_type": "PodFailure", "params": {}, "duration_override": 9}
+  ]
+}

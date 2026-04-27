@@ -1,0 +1,12 @@
+{
+  "round": 6, "system": "sn", "system_type": "sn",
+  "pedestal": {"name": "sn", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Post python:3.9-slim image fix; loadgen running. R5 stuck.",
+  "candidates": [
+    {"id": "n6_01", "app": "nginx-thrift",         "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "n6_02", "app": "post-storage-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "n6_03", "app": "social-graph-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 9}
+  ]
+}

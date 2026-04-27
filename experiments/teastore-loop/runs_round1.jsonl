@@ -1,0 +1,8 @@
+{"ts": "2026-04-26T09:06:06+0100", "candidate_id": "te1", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777190765}"}
+{"ts": "2026-04-26T09:06:07+0100", "candidate_id": "te2", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777190767}"}
+{"ts": "2026-04-26T09:06:08+0100", "candidate_id": "te3", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777190768}"}
+{"ts": "2026-04-26T09:06:09+0100", "candidate_id": "te4", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777190769}"}
+{"ts": "2026-04-26T09:06:11+0100", "candidate_id": "te5", "paired_with": [], "group_id": "5048afb0-d4f1-4afd-83ec-371cf4efb220", "trace_id": "149582d4-52d3-4fd1-b4c3-e975ac8cf63c", "ns": "tea8"}
+{"ts": "2026-04-26T09:06:16+0100", "candidate_id": "te6", "paired_with": [], "group_id": "046c7a3b-fc92-47ab-b940-3c7f5b8b3952", "trace_id": "c318e25f-40f5-4934-9777-36a891db65f7", "ns": "tea9"}
+{"ts": "2026-04-26T09:06:22+0100", "candidate_id": "te7", "paired_with": [], "group_id": "d154e802-d48f-4ed0-b059-938a350a0541", "trace_id": "447e64a5-702a-48aa-a522-37d319bd5afb", "ns": "tea10"}
+{"ts": "2026-04-26T09:06:28+0100", "candidate_id": "te8", "paired_with": [], "group_id": "ad6b2bb7-08ea-4805-b1b4-e1da0f3df50f", "trace_id": "c8fa211d-75bd-4dad-a2de-09d4dd556fde", "ns": "tea11"}

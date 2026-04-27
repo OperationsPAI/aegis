@@ -1,0 +1,21 @@
+{
+  "round": 1,
+  "system": "sn",
+  "system_type": "sn",
+  "pedestal": {"name": "sn", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "SocialNetwork R1: PodFailure sweep. DSB C++ stack with thrift+nginx, jaeger-bridge plumbed (per memory). Mix in some Pod and Network chaos.",
+  "candidates": [
+    {"id": "n01", "app": "nginx-thrift",         "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n02", "app": "compose-post-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n03", "app": "home-timeline-service","chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n04", "app": "post-storage-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n05", "app": "social-graph-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n06", "app": "user-timeline-service","chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n07", "app": "media-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n08", "app": "text-service",         "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n09", "app": "url-shorten-service",  "chaos_type": "PodFailure", "params": {}, "duration_override": 5},
+    {"id": "n10", "app": "unique-id-service",    "chaos_type": "PodFailure", "params": {}, "duration_override": 5}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "round": 5,
+  "system": "hs",
+  "system_type": "hs",
+  "pedestal": {"name": "hs", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "First round on chart 0.1.2 post CH fix. R3/R4 0/15 due to OTel ingestion lag (issue #210). Now CH at 2000 query + token bucket.",
+  "candidates": [
+    {"id": "h5_01", "app": "frontend",       "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
+    {"id": "h5_02", "app": "search",         "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
+    {"id": "h5_03", "app": "geo",            "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
+    {"id": "h5_04", "app": "rate",           "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
+    {"id": "h5_05", "app": "profile",        "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
+    {"id": "h5_06", "app": "reservation",    "chaos_type": "PodFailure", "params": {}, "duration_override": 8}
+  ]
+}

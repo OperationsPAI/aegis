@@ -1,0 +1,13 @@
+{
+  "round": 37, "system": "ts", "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Post-CH-truncate retry. Varied dur to avoid dedup with R36.",
+  "candidates": [
+    {"id": "tt37_01","app": "ts-station-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 9},
+    {"id": "tt37_02","app": "ts-train-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 14},
+    {"id": "tt37_03","app": "ts-payment-service",      "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"initPayment","exception_opt":"random"}, "duration_override": 14},
+    {"id": "tt37_04","app": "ts-cancel-service",       "chaos_type": "JVMException","params": {"class":"cancel.service.CancelServiceImpl","method":"cancelOrder","exception_opt":"random"}, "duration_override": 14}
+  ]
+}

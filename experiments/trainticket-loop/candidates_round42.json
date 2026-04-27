@@ -1,0 +1,13 @@
+{
+  "round": 42, "system": "ts", "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "Continuous stability sweep.",
+  "candidates": [
+    {"id": "tt42_01","app": "ts-station-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 7},
+    {"id": "tt42_02","app": "ts-train-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "tt42_03","app": "ts-route-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
+    {"id": "tt42_04","app": "ts-config-service",       "chaos_type": "PodFailure", "params": {}, "duration_override": 19}
+  ]
+}

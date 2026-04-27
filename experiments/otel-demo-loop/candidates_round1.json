@@ -1,0 +1,186 @@
+{
+  "round": 1,
+  "system": "otel-demo",
+  "pedestal": {
+    "name": "otel-demo",
+    "tag": "0.1.5"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5
+  },
+  "_notes": "Round 1 on otel-demo dogfooding --auto --allow-bootstrap (post #175 + #192). 11 services polyglot stack. Candidate space: 563 (HTTP 60%, Network 26%, JVM 9%).",
+  "candidates": [
+    {
+      "id": "o01",
+      "app": "frontend",
+      "chaos_type": "HTTPRequestDelay",
+      "params": {
+        "route": "/api/cart",
+        "http_method": "GET",
+        "target_service": "frontend",
+        "delay_duration": 500
+      },
+      "history": [
+        {
+          "trace_id": "53479692-8654-419c-95a3-c3059261886f",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "o02",
+      "app": "cart",
+      "chaos_type": "HTTPResponseAbort",
+      "params": {
+        "route": "/flagd.evaluation.v1.Service/EventStream",
+        "http_method": "POST",
+        "target_service": "flagd"
+      },
+      "history": [
+        {
+          "trace_id": "fabdec42-669d-45bf-9b23-378572459f22",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "o03",
+      "app": "checkout",
+      "chaos_type": "HTTPResponseDelay",
+      "params": {
+        "route": "/get-quote",
+        "http_method": "POST",
+        "target_service": "quote",
+        "delay_duration": 500
+      },
+      "history": [
+        {
+          "trace_id": "7544bb14-fed5-470f-ba48-13cf4a889f3f",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "o04",
+      "app": "recommendation",
+      "chaos_type": "HTTPRequestAbort",
+      "params": {
+        "route": "/flagd.evaluation.v1.Service/EventStream",
+        "http_method": "POST",
+        "target_service": "flagd"
+      },
+      "history": [
+        {
+          "trace_id": "32530654-7211-4639-9c83-14e74de6bf1a",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "o05",
+      "app": "accounting",
+      "chaos_type": "NetworkDelay",
+      "params": {
+        "target_service": "postgresql",
+        "latency": 300,
+        "jitter": 30,
+        "correlation": 25,
+        "direction": "to"
+      },
+      "history": [
+        {
+          "trace_id": "203a6d17-2e97-4c7f-bdbf-0f99a099980f",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    },
+    {
+      "id": "o06",
+      "app": "ad",
+      "chaos_type": "NetworkLoss",
+      "params": {
+        "target_service": "flagd",
+        "loss": 30,
+        "correlation": 25,
+        "direction": "to"
+      },
+      "history": [
+        {
+          "trace_id": "6e799595-e2d5-419c-8fb4-6ac51c0dc61b",
+          "terminal": "datapack.result.collection",
+          "reward": 1
+        }
+      ]
+    },
+    {
+      "id": "o07",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "params": {
+        "class": "oteldemo.AdService",
+        "method": "blockUntilShutdown",
+        "exception_opt": "random"
+      },
+      "duration_override": 10,
+      "history": [
+        {
+          "trace_id": "1c5d7008-63ec-4cc7-9f81-23d61cf2a222",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    },
+    {
+      "id": "o08",
+      "app": "shipping",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "duration_override": 10,
+      "history": [
+        {
+          "trace_id": "0489b248-d57f-4052-9b72-ab1882a5edd7",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    },
+    {
+      "id": "o09",
+      "app": "email",
+      "chaos_type": "DNSError",
+      "params": {
+        "domain": "checkout"
+      },
+      "history": [
+        {
+          "trace_id": "90ce4717-2da4-46f6-b759-d58a5a616c89",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    },
+    {
+      "id": "o10",
+      "app": "fraud-detection",
+      "chaos_type": "PodKill",
+      "params": {},
+      "history": [
+        {
+          "trace_id": "86b78517-001d-41ac-abbb-bf131822edde",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    }
+  ]
+}

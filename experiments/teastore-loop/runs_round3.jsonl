@@ -1,0 +1,4 @@
+{"ts": "2026-04-26T16:45:02+0100", "candidate_id": "te3_01", "paired_with": [], "group_id": "c371f27e-ffc7-4ab4-9be2-2a43a079c093", "trace_id": "e6664d9c-8de4-4b9d-9944-2743061b391d", "ns": "tea16"}
+{"ts": "2026-04-26T16:45:10+0100", "candidate_id": "te3_02", "paired_with": [], "group_id": "ab506846-3525-4f06-bfd3-e2354435e659", "trace_id": "17a107ae-073d-481a-8bc0-ab287307dc67", "ns": "tea17"}
+{"ts": "2026-04-26T16:45:17+0100", "candidate_id": "te3_03", "paired_with": [], "group_id": "ef63456a-b91f-417a-af2c-a92a0b6b6cbc", "trace_id": "60a2974a-5e60-49ff-beb4-ceb412d890d2", "ns": "tea18"}
+{"ts": "2026-04-26T16:45:25+0100", "candidate_id": "te3_04", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777218325}"}

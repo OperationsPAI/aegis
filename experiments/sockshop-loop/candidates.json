@@ -1,0 +1,198 @@
+{
+  "system": "sockshop",
+  "pedestal": {
+    "name": "sockshop",
+    "tag": "1.1.1"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5,
+    "duration": 2,
+    "container": "coherence"
+  },
+  "_services_in_chart": [
+    "front-end",
+    "carts",
+    "catalog",
+    "orders",
+    "payment",
+    "shipping",
+    "users"
+  ],
+  "candidates": [
+    {
+      "id": "c01",
+      "app": "front-end",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "24e91bda-5bbb-4925-ac7f-866cc946069e",
+          "ns": "sockshop1",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    },
+    {
+      "id": "c02",
+      "app": "carts",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "834aa0c0-3c89-477d-88ea-0d05b0496d66",
+          "ns": "sockshop2",
+          "terminal": "datapack.result.collection",
+          "reward": 1
+        }
+      ]
+    },
+    {
+      "id": "c03",
+      "app": "catalog",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "26699943-2ac5-4b26-a71d-f35a0848293e",
+          "ns": "sockshop3",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    },
+    {
+      "id": "c04",
+      "app": "orders",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "6cf077e8-4402-4098-93e5-476bc61c01d4",
+          "ns": "sockshop4",
+          "terminal": "datapack.no_anomaly",
+          "reward": -1
+        }
+      ]
+    },
+    {
+      "id": "c05",
+      "app": "payment",
+      "chaos_type": "CPUStress",
+      "params": {
+        "cpu_load": 80,
+        "cpu_worker": 2
+      },
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "1553a0a0-2b37-4982-ab54-e23d162b489d",
+          "ns": "sockshop5",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "c06",
+      "app": "shipping",
+      "chaos_type": "CPUStress",
+      "params": {
+        "cpu_load": 80,
+        "cpu_worker": 2
+      },
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "0bebb143-b904-4ce0-9e33-9990aa6439be",
+          "ns": "sockshop6",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "c07",
+      "app": "users",
+      "chaos_type": "MemoryStress",
+      "params": {
+        "memory_size": 200,
+        "mem_worker": 1,
+        "mem_type": "heap"
+      },
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "7ae80202-34c3-4b69-be7c-0d7b2a53c1f1",
+          "ns": "sockshop7",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "c08",
+      "app": "carts",
+      "chaos_type": "CPUStress",
+      "params": {
+        "cpu_load": 90,
+        "cpu_worker": 3
+      },
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "93bbd184-f5c7-473d-9a92-90e2eee03c66",
+          "ns": "sockshop8",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "c09",
+      "app": "orders",
+      "chaos_type": "MemoryStress",
+      "params": {
+        "memory_size": 256,
+        "mem_worker": 1,
+        "mem_type": "heap"
+      },
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "7b469dc0-9288-4a1e-9822-5ff70537a11c",
+          "ns": "sockshop9",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    },
+    {
+      "id": "c10",
+      "app": "catalog",
+      "chaos_type": "CPUStress",
+      "params": {
+        "cpu_load": 60,
+        "cpu_worker": 1
+      },
+      "prior": 1.0,
+      "history": [
+        {
+          "trace_id": "adfe7109-88a5-44b4-a1ea-713383750885",
+          "ns": "sockshop0",
+          "terminal": "fault.injection.failed",
+          "reward": 0
+        }
+      ]
+    }
+  ]
+}

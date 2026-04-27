@@ -1,0 +1,24 @@
+{
+  "round": 20,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {"name": "ts", "tag": "1.0.0"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "R19: 3/5 done +1 = 60%. addMoney signal flipped at dur=7. R20 strategy: (1) Cross-duration sweep on R6/R7/R12 winners that regressed (initPayment, calculateRefund, station.exist) — try durations 5, 6, 7, 8 to find duration-dependent winners. (2) JVMException with exception_opt=throw_specific (try IllegalArgumentException explicitly instead of random). (3) PodFailure 8min on services that failed with PodKill (rebook, route-plan, config) — restore baseline.",
+  "_jvm_classes_source":"FudanSELab/train-ticket@main 2026-04-25",
+  "candidates": [
+    {"id": "tt229","app": "ts-rebook-service",       "chaos_type": "PodFailure", "params": {}, "duration_override": 8, "_note":"Restore baseline; PodKill -1 in R19 vs PodFailure +1 in R14"},
+    {"id": "tt230","app": "ts-route-plan-service",   "chaos_type": "PodFailure", "params": {}, "duration_override": 8, "_note":"PodKill -1 in R18 vs PodFailure +1 in R13"},
+    {"id": "tt231","app": "ts-config-service",       "chaos_type": "PodFailure", "params": {}, "duration_override": 10, "_note":"5 confirmations; 6th at dur=10", "trace_id": "7b4956bc-bdc1-468f-9ddd-c4e70c87c8e4", "ns": "ts8", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"6TH CONFIRMATION at dur=10"},
+    {"id": "tt232","app": "ts-payment-service",      "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"initPayment","exception_opt":"random"}, "duration_override": 5, "_note":"R12 +1 dur=5 retry", "trace_id": "f33c910a-bd71-461f-8ac0-de35036c5090", "ns": "ts9", "terminal": "datapack.result.collection", "reward": 1, "_outcome":"R12 winner re-confirmed at duration 5"},
+    {"id": "tt233","app": "ts-cancel-service",       "chaos_type": "JVMException","params": {"class":"cancel.service.CancelServiceImpl","method":"calculateRefund","exception_opt":"random"}, "duration_override": 5, "_note":"R6 -1 retry dur=5"},
+    {"id": "tt234","app": "ts-station-service",      "chaos_type": "JVMException","params": {"class":"fdse.microservice.service.StationServiceImpl","method":"exist","exception_opt":"random"}, "duration_override": 8, "_note":"R3 winner dur=8"},
+    {"id": "tt235","app": "ts-order-service",        "chaos_type": "JVMException","params": {"class":"order.service.OrderServiceImpl","method":"create","exception_opt":"throw"}, "duration_override": 6, "_note":"exception_opt=throw"},
+    {"id": "tt236","app": "ts-payment-service",      "chaos_type": "JVMException","params": {"class":"com.trainticket.service.PaymentServiceImpl","method":"pay","exception_opt":"throw"}, "duration_override": 5},
+    {"id": "tt237","app": "ts-travel-service",       "chaos_type": "JVMException","params": {"class":"travel.service.TravelServiceImpl","method":"create","exception_opt":"random"}, "duration_override": 6, "_note":"R4 winner dur=6", "trace_id": "6897d3ef-a691-44fc-92b0-5d0537c4b357", "terminal": "datapack.no_anomaly", "reward": -1, "_outcome":"R4 winner regressed at dur=6"},
+    {"id": "tt238","app": "ts-basic-service",        "chaos_type": "JVMException","params": {"class":"fdse.microservice.service.BasicServiceImpl","method":"queryForTravel","exception_opt":"random"}, "duration_override": 6},
+    {"id": "tt239","app": "ts-route-service",        "chaos_type": "JVMException","params": {"class":"route.service.RouteServiceImpl","method":"getRouteByStartAndEnd","exception_opt":"random"}, "duration_override": 8, "_note":"R2 winner dur=8"},
+    {"id": "tt240","app": "ts-station-service",      "chaos_type": "JVMException","params": {"class":"fdse.microservice.service.StationServiceImpl","method":"create","exception_opt":"random"}, "duration_override": 9, "_note":"R2 winner dur=9"}
+  ]
+}

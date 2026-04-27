@@ -1,0 +1,20 @@
+{
+  "round": 3,
+  "system": "hs",
+  "system_type": "hs",
+  "pedestal": {"name": "hs", "tag": "0.1.1"},
+  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
+  "defaults": {"interval": 10, "pre_duration": 5},
+  "_strategy": "HS R3 retry of R2 candidates that returned ns=null due to allocator exhaustion (hs0..hs9 already in use from R1). Now hs10+ available. Vary duration for dedup.",
+  "candidates": [
+    {"id": "h3_01", "app": "frontend",       "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_02", "app": "search",         "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_03", "app": "geo",            "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_04", "app": "rate",           "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_05", "app": "profile",        "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_06", "app": "recommendation", "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_07", "app": "reservation",    "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_08", "app": "user",           "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
+    {"id": "h3_09", "app": "frontend",       "chaos_type": "PodKill",    "params": {}, "duration_override": 6}
+  ]
+}

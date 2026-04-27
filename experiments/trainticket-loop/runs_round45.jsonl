@@ -1,0 +1,3 @@
+{"ts": "2026-04-26T23:57:03+0100", "candidate_id": "tt45_01", "paired_with": [], "group_id": "62c90cf4-3499-49ef-b438-fa3b18c4bc00", "trace_id": "9a275b75-4f3e-4d02-87d9-39a6d2f968a2", "ns": "ts5"}
+{"ts": "2026-04-26T23:57:13+0100", "candidate_id": "tt45_02", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777244233}"}
+{"ts": "2026-04-26T23:57:15+0100", "candidate_id": "tt45_03", "paired_with": [], "group_id": "72ea5377-e7ad-4201-bca1-4dca3c1c1268", "trace_id": "077e2cb9-2eef-47b4-bc2c-a1220fe9b144", "ns": "ts7"}
