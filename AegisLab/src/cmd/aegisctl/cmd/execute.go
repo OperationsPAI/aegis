@@ -121,6 +121,15 @@ var executeSubmitCmd = &cobra.Command{
 
 // ---------- execute list ----------
 
+type executeListItem struct {
+	ID        int     `json:"id"`
+	Algorithm string  `json:"algorithm"`
+	Datapack  string  `json:"datapack"`
+	State     string  `json:"state"`
+	Duration  float64 `json:"duration"`
+	CreatedAt string  `json:"created_at"`
+}
+
 var (
 	executeListPage int
 	executeListSize int
@@ -134,20 +143,10 @@ var executeListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-type listItem struct {
-    ID        int     `json:"id"`
-    Algorithm string  `json:"algorithm"`
-    Datapack  string  `json:"datapack"`
-    State     string  `json:"state"`
-    Duration  float64 `json:"duration"`
-    CreatedAt string  `json:"created_at"`
-}
-
 		c := newClient()
 		q := fmt.Sprintf("/api/v2/projects/%d/executions?page=%d&size=%d", pid, executeListPage, executeListSize)
 
-		var resp client.APIResponse[client.PaginatedData[listItem]]
+		var resp client.APIResponse[client.PaginatedData[executeListItem]]
 		if err := c.Get(q, &resp); err != nil {
 			return err
 		}
