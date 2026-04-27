@@ -251,7 +251,7 @@ containers:
               type: 0
               category: 2
               value_type: 0
-              default_value: 0.1.1
+              default_value: 20260427-9397c2e
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -282,9 +282,9 @@ containers:
               overridable: true
             - key: global.defaultImageVersion
               type: 0
-              category: 1
+              category: 3
               value_type: 0
-              default_value: 20260423-61074ea
+              default_value: 20260427-9397c2e
               overridable: true
             - key: global.otel.endpoint
               type: 0
