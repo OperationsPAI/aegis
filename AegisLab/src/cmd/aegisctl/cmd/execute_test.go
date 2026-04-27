@@ -8,7 +8,7 @@ import (
 )
 
 func TestDecodeExecuteListResponse(t *testing.T) {
-	payload := `{"code":0,"message":"success","data":{"items":[{"id":101,"algorithm":"Traceback","datapack":"pair_diagnosis","state":"Success","duration":3,"created_at":"2026-04-26T08:12:24Z"}],"pagination":{"page":1,"size":20,"total":1,"total_pages":1}}}`
+	payload := `{"code":0,"message":"success","data":{"items":[{"id":508,"algorithm":"","datapack":"","state":"success","duration":34.176802,"created_at":"2026-04-27T17:26:46.299+08:00"}],"pagination":{"page":1,"size":20,"total":508,"total_pages":26}}}`
 
 	var resp client.APIResponse[client.PaginatedData[executeListItem]]
 	if err := json.Unmarshal([]byte(payload), &resp); err != nil {
@@ -17,7 +17,7 @@ func TestDecodeExecuteListResponse(t *testing.T) {
 	if len(resp.Data.Items) != 1 {
 		t.Fatalf("unexpected item count: %d", len(resp.Data.Items))
 	}
-	if got := resp.Data.Items[0].Duration; got != 3 {
+	if got := resp.Data.Items[0].Duration; got != 34.176802 {
 		t.Fatalf("unexpected duration value: %v", got)
 	}
 }
