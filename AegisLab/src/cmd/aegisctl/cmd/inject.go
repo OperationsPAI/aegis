@@ -182,6 +182,16 @@ var injectListCmd = &cobra.Command{
 			output.PrintJSON(resp.Data)
 			return nil
 		}
+		if output.OutputFormat(flagOutput) == output.FormatNDJSON {
+			for _, item := range resp.Data.Items {
+				data, err := json.Marshal(item)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(os.Stdout, string(data))
+			}
+			return nil
+		}
 
 		headers := []string{"NAME", "STATE", "FAULT-TYPE", "START-TIME", "LABELS"}
 		var rows [][]string
