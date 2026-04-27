@@ -86,10 +86,16 @@ var taskListCmd = &cobra.Command{
 			items = filtered
 		}
 
-		if output.OutputFormat(flagOutput) == output.FormatJSON {
+		switch output.OutputFormat(flagOutput) {
+		case output.FormatJSON:
 			resp.Data.Items = items
 			output.PrintJSON(resp.Data)
 			return nil
+		case output.FormatNDJSON:
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
+			}
+			return output.PrintNDJSON(items)
 		}
 
 		headers := []string{"TASK-ID", "TYPE", "STATE", "WAIT", "TRACE-ID", "PROJECT-ID", "CREATED"}

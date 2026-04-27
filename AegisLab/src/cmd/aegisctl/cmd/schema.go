@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"aegis/cmd/aegisctl/output"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
@@ -296,5 +298,6 @@ func argsDescription(cmd *cobra.Command) string {
 }
 
 func init() {
+	registerOutputFormats(schemaDumpCmd, output.OutputFormat("yaml"))
 	schemaCmd.AddCommand(schemaDumpCmd)
 }

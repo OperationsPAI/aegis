@@ -151,9 +151,15 @@ var executeListCmd = &cobra.Command{
 			return err
 		}
 
-		if output.OutputFormat(flagOutput) == output.FormatJSON {
+		switch output.OutputFormat(flagOutput) {
+		case output.FormatJSON:
 			output.PrintJSON(resp.Data)
 			return nil
+		case output.FormatNDJSON:
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
+			}
+			return output.PrintNDJSON(resp.Data.Items)
 		}
 
 		headers := []string{"ID", "ALGORITHM", "DATAPACK", "STATE", "DURATION", "CREATED"}
