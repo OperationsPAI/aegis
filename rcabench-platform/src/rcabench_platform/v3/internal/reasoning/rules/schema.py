@@ -49,6 +49,32 @@ class RuleTier(StrEnum):
     augmentation = auto()
 
 
+class EpistemicClass(StrEnum):
+    """Epistemic strength of the claim a rule encodes.
+
+    Orthogonal to ``RuleTier`` (which is about label dependency). Used in
+    the paper appendix to distinguish topology axioms from mechanism priors
+    from causal hypotheses.
+
+    ``A`` (axiom): structural containment / topology invariants that must hold
+    by construction (e.g. pod UNAVAILABLE -> all its containers UNAVAILABLE).
+    Cannot be falsified; violation means the topology graph itself is wrong.
+
+    ``B`` (mechanism): well-established failure-propagation mechanisms in
+    distributed systems (e.g. RPC callee fault cascading to caller). Falsifiable
+    in principle but well-supported across stacks; admitted by default.
+
+    ``C`` (hypothesis): causal claims that depend on a specific signature or
+    label (e.g. JVM frequent_gc as a slow-span source). Require explicit
+    evidence (specialization labels) to fire; the rule is essentially saying
+    "if this signature is present, the propagation is plausible".
+    """
+
+    A = "A"
+    B = "B"
+    C = "C"
+
+
 class PathHop(BaseModel):
     """A single hop in a multi-hop propagation path.
 
@@ -158,6 +184,16 @@ class PropagationRule(BaseModel):
             "Rule classification — `core` rules speak only canonical IR states and "
             "fire on any OTel-instrumented stack; `augmentation` rules depend on "
             "specialization labels emitted by specific augmenter adapters."
+        ),
+    )
+
+    epistemic_class: EpistemicClass = Field(
+        default=EpistemicClass.B,
+        description=(
+            "Epistemic strength of the rule's claim — `A` for topology axioms, "
+            "`B` for mechanism priors, `C` for label-gated causal hypotheses. "
+            "Orthogonal to `tier`; used by appendix reporting and (optional) "
+            "tier-aware gate selection."
         ),
     )
 

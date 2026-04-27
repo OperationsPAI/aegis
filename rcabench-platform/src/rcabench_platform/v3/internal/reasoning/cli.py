@@ -12,8 +12,11 @@ import typer
 from tqdm import tqdm
 
 from rcabench_platform.v3.internal.reasoning._util import setup_logging
+from rcabench_platform.v3.internal.reasoning.algorithms.gates import INJECT_TIME_TOLERANCE_SECONDS
+from rcabench_platform.v3.internal.reasoning.algorithms.label_classifier import classify
 from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultPropagator
 from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
+from rcabench_platform.v3.internal.reasoning.config.slo_surface import SLOSurface
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
 from rcabench_platform.v3.internal.reasoning.ir.adapters.inferred_edges import enrich_with_inferred_edges
 from rcabench_platform.v3.internal.reasoning.ir.adapters.log_dependency import dispatch_log_adapters
@@ -21,11 +24,19 @@ from rcabench_platform.v3.internal.reasoning.ir.adapters.trace_db_binding import
     dispatch_trace_db_binding_adapters,
 )
 from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
+from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperGraph, PlaceKind
 from rcabench_platform.v3.internal.reasoning.models.injection import InjectionNodeResolver
-from rcabench_platform.v3.internal.reasoning.models.propagation import PropagationResult
+from rcabench_platform.v3.internal.reasoning.models.propagation import (
+    FaultDecomposition,
+    LabelT,
+    LocalEffect,
+    MechanismPath,
+    PropagationResult,
+    SLOImpact,
+)
 from rcabench_platform.v3.internal.reasoning.rules.builtin_rules import get_builtin_rules
 from rcabench_platform.v3.sdk.evaluation.causal_graph import CausalEdge, CausalGraph, CausalNode
 from rcabench_platform.v3.sdk.utils.serde import save_json
@@ -399,26 +410,134 @@ def _latest_abnormal_seconds(abnormal_traces: pl.DataFrame) -> int:
     return int(raw)  # type: ignore[arg-type]
 
 
+_LOCAL_EFFECT_BAD_STATES: frozenset[str] = frozenset(
+    {"slow", "degraded", "restarting", "erroring", "silent", "unavailable", "missing"}
+)
+
+
+def _compute_local_effect(
+    physical_node_ids: list[int],
+    timelines: dict[str, StateTimeline],
+    graph: HyperGraph,
+) -> LocalEffect:
+    """Probe injection-node timelines for any non-healthy state.
+
+    L=1 iff ANY injection node has at least one timeline window in a state
+    of severity >= 2 (slow/degraded/restarting/erroring/silent/unavailable/missing).
+    """
+    impacted: list[dict[str, Any]] = []
+    for nid in physical_node_ids:
+        node = graph.get_node_by_id(nid)
+        if node is None:
+            continue
+        tl = timelines.get(node.uniq_name)
+        if tl is None:
+            continue
+        bad_windows = [w for w in tl.windows if w.state in _LOCAL_EFFECT_BAD_STATES]
+        if bad_windows:
+            impacted.append(
+                {
+                    "node": node.uniq_name,
+                    "states": sorted({w.state for w in bad_windows}),
+                    "first_state_at": min(w.start for w in bad_windows),
+                }
+            )
+    return LocalEffect(detected=bool(impacted), evidence={"impacted_nodes": impacted})
+
+
+def _compute_slo_impact(
+    alarm_nodes: set[int],
+    graph: HyperGraph,
+    slo_surface: SLOSurface,
+) -> SLOImpact:
+    names: list[str] = []
+    for nid in alarm_nodes:
+        n = graph.get_node_by_id(nid)
+        if n is not None:
+            names.append(n.uniq_name)
+    return SLOImpact(
+        detected=bool(alarm_nodes),
+        impacted_nodes=names,
+        evidence={
+            "alarm_count": len(alarm_nodes),
+            "slo_surface_source": slo_surface.source,
+            "slo_surface_size": len(slo_surface.services),
+        },
+    )
+
+
+def _filter_alarms_by_surface(
+    alarm_node_names: list[str],
+    graph: HyperGraph,
+    slo_surface: SLOSurface,
+) -> list[str]:
+    """Restrict alarm spans to those owned by services in the explicit surface.
+
+    For ``slo_surface.is_default()`` returns the input unchanged — the alarm
+    detector's own loadgen/caller exclusion is the heuristic surface.
+    """
+    if slo_surface.is_default():
+        return alarm_node_names
+    kept: list[str] = []
+    for span_name in alarm_node_names:
+        node = graph.get_node_by_name(f"span|{span_name}")
+        if node is None:
+            continue
+        owning_service = getattr(node, "service_name", None) or _extract_service_from_span_uniq(node.uniq_name)
+        if owning_service in slo_surface.services:
+            kept.append(span_name)
+    return kept
+
+
+def _extract_service_from_span_uniq(uniq_name: str) -> str | None:
+    """Best-effort extraction: span uniq_name is ``span|<service>::<span_name>``.
+
+    Returns ``None`` if the format doesn't match.
+    """
+    if not uniq_name.startswith("span|"):
+        return None
+    body = uniq_name[len("span|") :]
+    if "::" not in body:
+        return None
+    return body.split("::", 1)[0]
+
+
+def _label_to_legacy_status(label: LabelT, e_detected: bool) -> str:
+    """Map new label to legacy ``status`` string for back-compat skip-logic.
+
+    - ``attributed`` -> ``success``
+    - ``ineffective`` / ``absorbed`` / ``unexplained_impact`` -> ``no_paths`` (legacy bucket)
+    - When E=0 we still surface ``no_alarms`` to keep `_collect_batch_tasks`
+      able to retire alarm-less cases via the existing marker.
+    """
+    if label == "attributed":
+        return "success"
+    if not e_detected:
+        return "no_alarms"
+    return "no_paths"
+
+
 def run_single_case(
     data_dir: Path,
     max_hops: int,
     return_graph: bool = False,
     injection_data: dict[str, Any] | None = None,
+    slo_surface: SLOSurface | None = None,
 ) -> dict[str, Any]:
     case_name = data_dir.name
     if case_name == "converted":
         case_name = data_dir.parent.name
+
+    surface = slo_surface or SLOSurface.default()
 
     try:
         loader = ParquetDataLoader(data_dir, 2)
         graph = loader.build_graph_from_parquet()
 
         alarm_node_names = loader.identify_alarm_nodes_v2()
+        alarm_node_names = _filter_alarms_by_surface(list(alarm_node_names), graph, surface)
         alarm_nodes = _resolve_alarm_nodes(graph, list(alarm_node_names))
-
-        if not alarm_nodes:
-            _save_case_result(data_dir, case_name, "no_alarms")
-            return _build_result(case_name, "no_alarms", graph if return_graph else None)
+        slo_impact = _compute_slo_impact(alarm_nodes, graph, surface)
 
         actual_injection_nodes = []
         resolution_info: dict[str, Any] = {}
@@ -534,31 +653,77 @@ def run_single_case(
                 f"{starting_node_names} (physical: {actual_injection_nodes})"
             )
 
-        propagator = FaultPropagator(
-            graph=graph,
-            rules=rules,
-            timelines=timelines,
-            max_hops=max_hops,
-        )
-        result = propagator.propagate_from_injection(
-            injection_node_ids=injection_node_ids,
-            alarm_nodes=alarm_nodes,
-        )
+        local_effect = _compute_local_effect(physical_node_ids, timelines, graph)
 
-        if result.paths:
+        propagator_graph = graph
+        if slo_impact.detected:
+            delta_t = max(0, abnormal_window_end - injection_at)
+            injection_window = (injection_at, injection_at + delta_t + INJECT_TIME_TOLERANCE_SECONDS)
+            propagator = FaultPropagator(
+                graph=graph,
+                rules=rules,
+                timelines=timelines,
+                max_hops=max_hops,
+                injection_window=injection_window,
+            )
+            result = propagator.propagate_from_injection(
+                injection_node_ids=injection_node_ids,
+                alarm_nodes=alarm_nodes,
+            )
+            propagator_graph = propagator.graph
+        else:
+            result = PropagationResult(
+                injection_node_ids=injection_node_ids,
+                injection_states=[],
+                paths=[],
+                visited_nodes=set(),
+                max_hops_reached=0,
+            )
+
+        has_path = bool(result.paths)
+        label, label_reason = classify(local_effect, slo_impact, has_path)
+        mechanism: MechanismPath | None = None
+        if has_path:
+            mechanism = MechanismPath(
+                paths=list(result.paths),
+                n_paths=len(result.paths),
+                confidence=max((p.confidence for p in result.paths), default=0.0),
+            )
+        result.label = label
+        result.label_reason = label_reason
+        result.decomposition = FaultDecomposition(L=local_effect, E=slo_impact, M=mechanism)
+
+        legacy_status = _label_to_legacy_status(label, slo_impact.detected)
+
+        if has_path:
             return _process_successful_propagation(
                 case_name=case_name,
                 result=result,
-                graph=propagator.graph,
+                graph=propagator_graph,
                 injection_nodes=actual_injection_nodes,
                 alarm_nodes=alarm_nodes,
                 return_graph=return_graph,
                 data_dir=data_dir,
                 resolution_info=resolution_info,
+                label=label,
+                label_reason=label_reason,
             )
-        else:
-            _save_case_result(data_dir, case_name, "no_paths")
-            return _build_result(case_name, "no_paths", graph if return_graph else None)
+
+        _save_case_result(
+            data_dir=data_dir,
+            case_name=case_name,
+            status=legacy_status,
+            result=result,
+            label=label,
+            label_reason=label_reason,
+        )
+        return _build_result(
+            case_name,
+            legacy_status,
+            graph if return_graph else None,
+            label=label,
+            label_reason=label_reason,
+        )
 
     except Exception as e:
         logger.exception(f"[{case_name}] Error during processing")
@@ -599,6 +764,8 @@ def _process_successful_propagation(
     return_graph: bool,
     data_dir: Path,
     resolution_info: dict[str, Any] | None = None,
+    label: LabelT | None = None,
+    label_reason: str = "",
 ) -> dict[str, Any]:
     """Process case with successful propagation paths."""
     primary_injection_node = injection_nodes[0] if injection_nodes else ""
@@ -626,6 +793,8 @@ def _process_successful_propagation(
         result=result,
         viz_paths=viz_paths,
         resolution_info=resolution_info,
+        label=label,
+        label_reason=label_reason,
     )
 
     ret: dict[str, Any] = {
@@ -634,6 +803,9 @@ def _process_successful_propagation(
         "paths": len(result.paths),
         "propagation_result": result,
     }
+    if label is not None:
+        ret["label"] = label
+        ret["label_reason"] = label_reason
     if resolution_info:
         ret["resolution_info"] = resolution_info
     if return_graph:
@@ -647,6 +819,7 @@ def _clean_previous_results(data_dir: Path) -> None:
         data_dir / "causal_graph.json",
         data_dir / "no_alarms.marker",
         data_dir / "no_paths.marker",
+        data_dir / "label.txt",
     ]
     for file in files_to_clean:
         if file.exists():
@@ -663,6 +836,8 @@ def _save_case_result(
     result: PropagationResult | None = None,
     viz_paths: list[dict[str, Any]] | None = None,
     resolution_info: dict[str, Any] | None = None,
+    label: LabelT | None = None,
+    label_reason: str = "",
 ) -> None:
     _clean_previous_results(data_dir)
 
@@ -679,16 +854,40 @@ def _save_case_result(
         }
         if resolution_info:
             result_data["resolution_info"] = resolution_info
+        if label is not None:
+            result_data["label"] = label
+            result_data["label_reason"] = label_reason
         save_json(result_data, path=data_dir / "result.json")
         logger.info(f"[{case_name}] Saved causal_graph.json and result.json")
 
     elif status == "no_alarms":
         (data_dir / "no_alarms.marker").touch()
+        if result is not None:
+            result_data = {
+                "case_name": case_name,
+                "propagation_result": result.to_dict(),
+            }
+            if label is not None:
+                result_data["label"] = label
+                result_data["label_reason"] = label_reason
+            save_json(result_data, path=data_dir / "result.json")
         logger.info(f"[{case_name}] No alarm nodes found, created marker")
 
     elif status == "no_paths":
         (data_dir / "no_paths.marker").touch()
+        if result is not None:
+            result_data = {
+                "case_name": case_name,
+                "propagation_result": result.to_dict(),
+            }
+            if label is not None:
+                result_data["label"] = label
+                result_data["label_reason"] = label_reason
+            save_json(result_data, path=data_dir / "result.json")
         logger.info(f"[{case_name}] No propagation paths found, created marker")
+
+    if label is not None:
+        (data_dir / "label.txt").write_text(label + "\n", encoding="utf-8")
 
 
 # =============================================================================
