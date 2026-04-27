@@ -1,30 +1,32 @@
 # Review for issue #240 — PR #262
 
+Reviewed commit: `93bf744f9274dc444f9cd6e51e784e8fc7de8df6`
+
 ## Cascade preconditions
 | submodule | remote branch | SHA match | FF-able |
 |-----------|---------------|-----------|---------|
-| none (no `.gitmodules`, no `160000` diff entries) | n/a | n/a | n/a |
+| _none_ | `.gitmodules` absent; `git diff --submodule=short --name-only origin/main..origin/workbuddy/issue-240` shows only regular files | N/A | N/A |
 
-**command**: `python3 - <<'PY'
-import subprocess
-raw = subprocess.run(['git','diff','--raw','origin/main...origin/workbuddy/issue-240'], capture_output=True, text=True, check=True).stdout.splitlines()
-submods = [line.split('\t',1)[1] for line in raw if line.startswith(':160000') or ' 160000 ' in line]
-print('gitmodules_exists=' + ('yes' if subprocess.run(['bash','-lc','test -f .gitmodules']).returncode == 0 else 'no'))
-print('submodule_pointer_changes=' + (','.join(submods) if submods else '<none>'))
-status = subprocess.run(['git','submodule','status'], capture_output=True, text=True)
-print('git_submodule_status=' + (status.stdout.strip() if status.stdout.strip() else '<empty>'))
-PY`
+**command**: `bash -lc 'if [ -f .gitmodules ]; then echo .gitmodules-present; else echo .gitmodules-absent; fi; echo ---; git diff --submodule=short --name-only origin/main..origin/workbuddy/issue-240; echo ---; git submodule status || true'`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-gitmodules_exists=no
-submodule_pointer_changes=<none>
-git_submodule_status=<empty>
+.gitmodules-absent
+---
+AegisLab/src/cmd/aegisctl/client/resolver.go
+AegisLab/src/cmd/aegisctl/cmd/contract.go
+AegisLab/src/cmd/aegisctl/cmd/inject.go
+AegisLab/src/cmd/aegisctl/cmd/inject_integration_test.go
+scripts/review-reports/issue-240-checks/ac1_get_by_name_and_id.py
+scripts/review-reports/issue-240-checks/ac2_files_contract.py
+scripts/review-reports/issue-240-checks/ac3_not_found.py
+scripts/review-reports/issue-240-checks/ac4_download_atomic.py
+scripts/review-reports/issue-240-review.md
+---
 ```
 
 ## Per-AC verdicts
-
-### AC 1: `aegisctl inject get <name>` 与 `aegisctl inject get <numeric_id>` 都能返回正确的 injection 详情
+### AC 1: `aegisctl inject get <name>` 与 `aegisctl inject get <numeric_id>` 都能返回正确的 injection 详情（任选一条 `inject list` 列出的对象验证）。
 **verdict**: PASS
 **command**: `python3 scripts/review-reports/issue-240-checks/ac1_get_by_name_and_id.py`
 **exit**: 0
@@ -44,35 +46,28 @@ git_submodule_status=<empty>
 }
 ```
 
-### AC 2: `inject files <name>` 与 `inject download <name> --output-file <path>` 在合法 name/ID 上都不再 404
-**verdict**: FAIL
+### AC 2: `aegisctl inject files <name>` 与 `aegisctl inject download <name> --output-file <path>` 在合法 name/ID 上都不再 404。
+**verdict**: PASS
 **command**: `python3 scripts/review-reports/issue-240-checks/ac2_files_contract.py`
-**exit**: 1
+**exit**: 0
 **stdout** (first 20 lines):
 ```text
 {
   "files": {
-    "code": 1,
-    "stdout": "",
-    "stderr": "Error: decode response: json: cannot unmarshal object into Go struct field APIResponse[[]aegis/cmd/aegisctl/cmd.fileItem·3].data of type []cmd.fileItem\nexit status 1"
+    "code": 0,
+    "stdout": "{\n  \"files\": [\n    {\n      \"name\": \"demo.log\",\n      \"path\": \"raw/demo.log\",\n      \"size\": \"10 B\"\n    }\n  ],\n  \"file_count\": 1,\n  \"dir_count\": 0\n}",
+    "stderr": ""
   },
   "download_by_id": {
     "code": 0,
     "stdout": "",
-    "stderr": "Downloaded 9 bytes to /tmp/tmp15yydcq9",
+    "stderr": "Downloaded 9 bytes to /tmp/tmpifz_enrf",
     "exists": true
   }
 }
 ```
-**stderr** (first 20 lines, if nonzero):
-```text
-```
 
-Relevant code inspected in this turn:
-- `AegisLab/src/cmd/aegisctl/cmd/inject.go:360-380` still decodes `/files` into `APIResponse[[]fileItem]`.
-- `AegisLab/src/module/injection/api_types.go:915-918` defines the backend contract as `data.files`, `file_count`, and `dir_count`.
-
-### AC 3: resolver 失败时 stderr 输出结构化 `not_found` 错误，并附 3 个最近邻 name suggestion；EXIT=7
+### AC 3: resolver 失败时 stderr 输出结构化 not_found 错误，并附 3 个最近邻 name 作 suggestion；EXIT=7（依赖 #237-退出码中枢子 issue）。
 **verdict**: PASS
 **command**: `python3 scripts/review-reports/issue-240-checks/ac3_not_found.py`
 **exit**: 0
@@ -85,7 +80,7 @@ Relevant code inspected in this turn:
 }
 ```
 
-### AC 4: `inject download` 写文件用 `<path>.tmp` → `rename`；失败时清理 tmp、最终路径不存在；成功时 `-o json` 输出 `{path,size,sha256}`
+### AC 4: `inject download` 写文件用 `<path>.tmp` → `rename`：失败时清理 tmp、最终路径不存在；成功时 stdout（`-o json`）输出 `{path,size,sha256}`。
 **verdict**: PASS
 **command**: `python3 scripts/review-reports/issue-240-checks/ac4_download_atomic.py`
 **exit**: 0
@@ -94,7 +89,7 @@ Relevant code inspected in this turn:
 {
   "success": {
     "code": 0,
-    "stdout": "{\n  \"path\": \"/tmp/issue240-ok-idct1_ko\",\n  \"size\": 22,\n  \"sha256\": \"3d9c69475b0f23610df5d9fb02a1f88f74c68b60da8af24aa78b90ebb81528e8\"\n}",
+    "stdout": "{\n  \"path\": \"/tmp/issue240-ok-lk5jcb3n\",\n  \"size\": 22,\n  \"sha256\": \"3d9c69475b0f23610df5d9fb02a1f88f74c68b60da8af24aa78b90ebb81528e8\"\n}",
     "stderr": "",
     "path_exists": true,
     "tmp_exists": false,
@@ -110,58 +105,52 @@ Relevant code inspected in this turn:
 }
 ```
 
-### AC 5: 一个 integration test（仅一个）：mock server 返回一个 injection 的 list + get；CLI 用 name 与 id 各调一次 `inject get` 都成功；并断言 `download` 在中途断流时不留 partial 文件
-**verdict**: PASS
-**command**: `bash -lc 'count=$(rg -n "^func Test" AegisLab/src/cmd/aegisctl/cmd/inject_integration_test.go | wc -l); echo "test_count=$count"; cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestInjectGetByNameAndIdAndDownloadAtomicFailure -count=1'`
-**exit**: 0
-**stdout** (first 20 lines):
-```text
-test_count=1
-ok  	aegis/cmd/aegisctl/cmd	0.028s
-```
-
-Relevant file inspected in this turn:
-- `AegisLab/src/cmd/aegisctl/cmd/inject_integration_test.go:73-90` mocks `/api/v2/injections/744/files` as a bare array, which does not match the backend wire format even though the single test passes.
-
-### Plan mini-AC 1: verify command for “Fix `inject` resolver routing for name/ID lookups …”
+### AC 5: 一个 integration test（**仅一个**）：mock server 返回一个 injection 的 list + get；CLI 用 name 与 id 各调一次 `inject get` 都成功；并断言 `download` 在中途断流时不留 partial 文件。
 **verdict**: PASS
 **command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestInjectGetByNameAndIdAndDownloadAtomicFailure -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/cmd	0.027s
+ok  	aegis/cmd/aegisctl/cmd	0.030s
 ```
 
-### Plan mini-AC 2: verify command for “Add structured resolver not-found output …”
+### Plan AC 1: Verify command for “Fix `inject` resolver routing for name/ID lookups used by `inject get/files/download`, keeping project-scoped name resolution and direct numeric-ID support.”
 **verdict**: PASS
 **command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestInjectGetByNameAndIdAndDownloadAtomicFailure -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/cmd	0.027s
+ok  	aegis/cmd/aegisctl/cmd	0.030s
 ```
 
-### Plan mini-AC 3: verify command for “Make `inject download --output-file` write atomically …”
+### Plan AC 2: Verify command for “Add structured resolver not-found output with top-3 nearest injection-name suggestions and ensure CLI maps it to exit code 7.”
 **verdict**: PASS
 **command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestInjectGetByNameAndIdAndDownloadAtomicFailure -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/cmd	0.027s
+ok  	aegis/cmd/aegisctl/cmd	0.030s
 ```
 
-### Plan mini-AC 4: verify command for “Keep exactly one integration test …”
+### Plan AC 3: Verify command for “Make `inject download --output-file` write atomically via `<path>.tmp` + fsync + rename + cleanup, and emit `{path,size,sha256}` on JSON success.”
 **verdict**: PASS
 **command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestInjectGetByNameAndIdAndDownloadAtomicFailure -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/cmd	0.027s
+ok  	aegis/cmd/aegisctl/cmd	0.030s
+```
+
+### Plan AC 4: Verify command for “Keep exactly one integration test covering `inject get` by name and id plus interrupted `download` cleanup.”
+**verdict**: PASS
+**command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestInjectGetByNameAndIdAndDownloadAtomicFailure -count=1`
+**exit**: 0
+**stdout** (first 20 lines):
+```text
+ok  	aegis/cmd/aegisctl/cmd	0.030s
 ```
 
 ## Overall
-- PASS: 8 / 9
-- FAIL:
-  - AC 2 (`inject files` still fails against the real `data.files` response shape)
-- UNVERIFIABLE:
-  - none
+- PASS: 9 / 9
+- FAIL: none
+- UNVERIFIABLE: none
