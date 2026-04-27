@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -346,5 +348,65 @@ func TestTraceGetMissingTokenUsesAuthExitCode(t *testing.T) {
 	}
 	if strings.TrimSpace(res.stdout) != "" {
 		t.Fatalf("stdout should be empty on auth failure, got %q", res.stdout)
+	}
+}
+
+func TestServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("unexpected method: %v", r.Method)
+		}
+		switch r.URL.Path {
+		case "/api/v2/projects":
+			if r.URL.Query().Get("page") == "2" {
+				w.WriteHeader(http.StatusOK)
+				// Payload is intentionally schema-incompatible for
+				// PaginatedData[projectListItem] (id must be int).
+				_, _ = w.Write([]byte(`{"code":0,"message":"ok","data":{"items":[{"id":"bad-id","name":"broken","description":"","status":"active","created_at":"2026-01-01"}],"pagination":{"page":2,"size":20,"total":1,"total_pages":1}}}`))
+				return
+			}
+			w.Header().Set("X-Request-Id", "req-server-fail")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"code":500,"message":"boom","request_id":"should-not-be-in-json"}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	serverErr := runCLI(t, "project", "list", "--server", server.URL, "--output", "json")
+	if serverErr.code != ExitCodeServer {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", serverErr.code, ExitCodeServer, serverErr.stderr)
+	}
+	var serverPayload map[string]any
+	if err := json.Unmarshal([]byte(serverErr.stderr), &serverPayload); err != nil {
+		t.Fatalf("stderr should be JSON for --output=json: %v\nstderr=%q", err, serverErr.stderr)
+	}
+	if got, _ := serverPayload["type"].(string); got != "server" {
+		t.Fatalf("server payload type = %v, want server", serverPayload["type"])
+	}
+	if got, _ := serverPayload["exit_code"].(float64); int(got) != ExitCodeServer {
+		t.Fatalf("server payload exit_code = %v, want %d", serverPayload["exit_code"], ExitCodeServer)
+	}
+	if v := serverPayload["request_id"]; v != "req-server-fail" {
+		t.Fatalf("server payload request_id = %v, want req-server-fail", v)
+	}
+
+	decodeErr := runCLI(t, "project", "list", "--page", "2", "--server", server.URL, "--output", "ndjson")
+	if decodeErr.code != ExitCodeDecode {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", decodeErr.code, ExitCodeDecode, decodeErr.stderr)
+	}
+	var decodePayload map[string]any
+	if err := json.Unmarshal([]byte(decodeErr.stderr), &decodePayload); err != nil {
+		t.Fatalf("stderr should be JSON for --output=ndjson: %v\nstderr=%q", err, decodeErr.stderr)
+	}
+	if got, _ := decodePayload["type"].(string); got != "decode" {
+		t.Fatalf("decode payload type = %v, want decode", decodePayload["type"])
+	}
+	if got, _ := decodePayload["exit_code"].(float64); int(got) != ExitCodeDecode {
+		t.Fatalf("decode payload exit_code = %v, want %d", decodePayload["exit_code"], ExitCodeDecode)
+	}
+	if !strings.Contains(decodeErr.stderr, "field") || !strings.Contains(decodeErr.stderr, "expected") {
+		t.Fatalf("decode payload should include path/type details, got %q", decodeErr.stderr)
 	}
 }

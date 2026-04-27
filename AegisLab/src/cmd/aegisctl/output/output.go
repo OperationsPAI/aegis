@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"aegis/cmd/aegisctl/internal/cli/clierr"
+
 	"golang.org/x/term"
 )
 
@@ -67,6 +69,10 @@ const (
 	FormatNDJSON OutputFormat = "ndjson"
 )
 
+func IsJSONOutput(format OutputFormat) bool {
+	return format == FormatJSON || format == FormatNDJSON
+}
+
 // PrintJSON writes v as indented JSON to stdout.
 func PrintJSON(v any) {
 	data, err := json.MarshalIndent(v, "", "  ")
@@ -122,4 +128,39 @@ func PrintInfo(msg string) {
 // PrintError writes an error message to stderr.
 func PrintError(msg string) {
 	fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
+}
+
+// PrintCLIError renders a structured CLI error according to output format.
+//
+//   - JSON / NDJSON: single-line machine-readable payload on stderr.
+//   - table/text: human-readable multiline output with cause/hint hints.
+func PrintCLIError(e *clierr.CLIError, format OutputFormat) {
+	if e == nil {
+		return
+	}
+
+	switch {
+	case IsJSONOutput(format):
+		payload, err := json.Marshal(e)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "{\"type\":\"internal\",\"message\":\"encoding error\"}\n")
+			return
+		}
+		fmt.Fprintln(os.Stderr, string(payload))
+	default:
+		fmt.Fprintf(os.Stderr, "Error [%s]: %s", e.Type, e.Message)
+		if e.Cause != "" {
+			fmt.Fprintf(os.Stderr, "\n  cause: %s", e.Cause)
+		}
+		if e.Suggestion != "" {
+			fmt.Fprintf(os.Stderr, "\n  hint: %s", e.Suggestion)
+		}
+		if e.RequestID != "" && strings.TrimSpace(e.Message) != "" && !strings.Contains(e.Message, "request_id=") {
+			fmt.Fprintf(os.Stderr, "\n  request_id=%s", e.RequestID)
+		}
+		if e.Retryable {
+			fmt.Fprintf(os.Stderr, "\n  retryable: true")
+		}
+		fmt.Fprintln(os.Stderr)
+	}
 }

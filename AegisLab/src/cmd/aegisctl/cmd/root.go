@@ -265,7 +265,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagServer, "server", "", "AegisLab server URL (env: AEGIS_SERVER)")
 	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "Authentication token (env: AEGIS_TOKEN)")
 	rootCmd.PersistentFlags().StringVar(&flagProject, "project", "", "Default project name (resolved to ID; env: AEGIS_PROJECT)")
-	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table|json (env: AEGIS_OUTPUT)")
+	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table|json|ndjson (env: AEGIS_OUTPUT)")
 	rootCmd.PersistentFlags().IntVar(&flagRequestTimeout, "request-timeout", 0, "Request timeout in seconds (env: AEGIS_TIMEOUT)")
 	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
 	rootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color output (env: NO_COLOR)")
