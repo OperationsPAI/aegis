@@ -307,9 +307,6 @@ func setupDryRunRegistry() {
 	if executeCreateCmd != nil {
 		markDryRunSupported(executeCreateCmd)
 	}
-	if executeSubmitCmd != nil {
-		markDryRunSupported(executeSubmitCmd)
-	}
 	if clusterPrepareCmd != nil {
 		markDryRunSupported(clusterPrepareCmd)
 	}

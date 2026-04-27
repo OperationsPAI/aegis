@@ -6,7 +6,6 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
-	"aegis/internal/cli/deprecate"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -69,10 +68,7 @@ SPEC FILE FORMAT (execution.yaml):
 
 // ---------- execute create ----------
 
-var (
-	executeCreateInput string
-	executeCreateSpec  string
-)
+var executeCreateInput string
 
 var executeCreateCmd = &cobra.Command{
 	Use:   "create",
@@ -83,9 +79,6 @@ var executeCreateCmd = &cobra.Command{
 }
 
 func runExecuteCreate(cmd *cobra.Command, args []string) error {
-	if err := resolveExclusiveFlags(cmd); err != nil {
-		return usageErrorf("%s", err)
-	}
 	specPath, err := resolveExecuteSpecPath(cmd)
 	if err != nil {
 		return err
@@ -129,16 +122,6 @@ func runExecuteCreate(cmd *cobra.Command, args []string) error {
 
 	output.PrintJSON(resp.Data)
 	return nil
-}
-
-var executeSubmitCmd = &cobra.Command{
-	Use:        "submit",
-	Short:      executeCreateCmd.Short,
-	Deprecated: deprecate.Message("submit", "create"),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		deprecate.Warn("submit", "create")
-		return runExecuteCreate(cmd, args)
-	},
 }
 
 // ---------- execute list ----------
@@ -228,67 +211,15 @@ func init() {
 	executeListCmd.Flags().IntVar(&executeListSize, "size", 20, "Page size")
 
 	executeCmd.AddCommand(executeCreateCmd)
-	executeCmd.AddCommand(executeSubmitCmd)
 	executeCmd.AddCommand(executeListCmd)
 	executeCmd.AddCommand(executeGetCmd)
+
+	executeCreateCmd.Flags().StringVarP(&executeCreateInput, "input", "f", "", "Path to execution spec YAML file (required)")
 }
 
 func resolveExecuteSpecPath(cmd *cobra.Command) (string, error) {
-	var specPath string
-	inputProvided := false
-	specProvided := false
-
-	if cmd != nil {
-		if flag := cmd.Flags().Lookup("input"); flag != nil && flag.Changed {
-			inputProvided = true
-			specPath = executeCreateInput
-		}
-		if flag := cmd.Flags().Lookup("spec"); flag != nil && flag.Changed {
-			specProvided = true
-			if specPath == "" {
-				specPath = executeCreateSpec
-			}
-		}
+	if executeCreateInput == "" {
+		return "", usageErrorf("--input is required")
 	}
-
-	if !inputProvided && !specProvided {
-		switch {
-		case executeCreateInput != "":
-			specPath = executeCreateInput
-		case executeCreateSpec != "":
-			specPath = executeCreateSpec
-		default:
-			return "", usageErrorf("--spec or --input is required")
-		}
-	} else if inputProvided && specProvided {
-		return "", usageErrorf("at most one of --spec, --input, --input(-f) may be specified")
-	}
-
-	if specPath == "" {
-		return "", usageErrorf("--spec or --input is required")
-	}
-	return specPath, nil
-}
-
-func resolveExclusiveFlags(cmd *cobra.Command) error {
-	if cmd != nil {
-		return deprecate.EnsureMutuallyExclusiveStringFlags(cmd.Flags(), "spec", "input")
-	}
-
-	if executeCreateInput != "" && executeCreateSpec != "" {
-		return fmt.Errorf("at most one of --spec, --input, --input(-f) may be specified")
-	}
-
-	return nil
-}
-
-func init() {
-	bindExecuteSpecFlags(executeCreateCmd)
-	bindExecuteSpecFlags(executeSubmitCmd)
-}
-
-func bindExecuteSpecFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&executeCreateInput, "input", "f", "", "Path to execution spec YAML file (required)")
-	cmd.Flags().StringVar(&executeCreateSpec, "spec", "", "Deprecated. Path to execution spec YAML file")
-	_ = cmd.Flags().MarkDeprecated("spec", "use --input/-f instead")
+	return executeCreateInput, nil
 }

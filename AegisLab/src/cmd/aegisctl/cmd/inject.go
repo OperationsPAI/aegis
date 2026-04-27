@@ -17,7 +17,6 @@ import (
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
 	"aegis/consts"
-	"aegis/internal/cli/deprecate"
 
 	"github.com/spf13/cobra"
 )
@@ -131,7 +130,7 @@ Read-only / listing commands:
   aegisctl inject list --project pair_diagnosis
   aegisctl inject get <injection-name>
   aegisctl inject search --name-pattern "cpu*" --project pair_diagnosis
-  aegisctl inject files <injection-name>
+  aegisctl inject list-files <injection-name>
   aegisctl inject download <injection-name> --output-file ./output.tar.gz
 
 NOTE: --project is required for list, search, and guided --apply.
@@ -375,20 +374,6 @@ var injectListFilesCmd = &cobra.Command{
 	Short: "List files produced by an injection",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("inject list-files", "inject list-files <name>", args, stdinOptions{
-			enabled:  injectFilesStdin,
-			field:    injectFilesStdinField,
-			failFast: injectFilesStdinFailFast,
-		}, runInjectFiles)
-	},
-}
-
-var injectFilesCmd = &cobra.Command{
-	Use:        "files <name>",
-	Short:      injectListFilesCmd.Short,
-	Deprecated: deprecate.Message("files", "list-files"),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		deprecate.Warn("files", "list-files")
-		return runStdinItems("inject files", "inject files <name>", args, stdinOptions{
 			enabled:  injectFilesStdin,
 			field:    injectFilesStdinField,
 			failFast: injectFilesStdinFailFast,
@@ -984,7 +969,7 @@ func init() {
 	injectDownloadCmd.Flags().IntVar(&injectDownloadFilePar, "parallel-files", 4, "Concurrent file downloads when using --output-dir")
 	injectDownloadCmd.Flags().IntVar(&injectDownloadTimeout, "request-timeout-override", 0, "Per-request HTTP timeout in seconds (0 = use global --request-timeout)")
 	addStdinFlags(injectGetCmd, &injectGetStdin, &injectGetStdinField, &injectGetStdinFailFast)
-	addStdinFlags(injectFilesCmd, &injectFilesStdin, &injectFilesStdinField, &injectFilesStdinFailFast)
+	addStdinFlags(injectListFilesCmd, &injectFilesStdin, &injectFilesStdinField, &injectFilesStdinFailFast)
 	addStdinFlags(injectDownloadCmd, &injectDownloadStdin, &injectDownloadStdinField, &injectDownloadStdinFailFast)
 
 	injectDownloadBatchCmd.Flags().StringVar(&injectBatchOutputDir, "output-dir", "", "Required: directory under which each pack is extracted as <output-dir>/<name>/")
@@ -999,7 +984,6 @@ func init() {
 	injectCmd.AddCommand(injectGetCmd)
 	injectCmd.AddCommand(injectSearchCmd)
 	injectCmd.AddCommand(injectListFilesCmd)
-	injectCmd.AddCommand(injectFilesCmd)
 	injectCmd.AddCommand(injectDownloadCmd)
 	injectCmd.AddCommand(injectDownloadBatchCmd)
 }

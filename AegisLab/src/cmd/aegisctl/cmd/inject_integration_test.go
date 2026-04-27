@@ -121,20 +121,20 @@ func TestInjectGetByNameAndIdAndDownloadAtomicFailure(t *testing.T) {
 		t.Fatalf("inject get by id = %d, want %d; stderr=%q stdout=%q", getByID.code, ExitCodeSuccess, getByID.stderr, getByID.stdout)
 	}
 
-	files := runCLI(t, append([]string{"inject", "files", injectionName, "--output", "json"}, commonArgs...)...)
+	files := runCLI(t, append([]string{"inject", "list-files", injectionName, "--output", "json"}, commonArgs...)...)
 	if files.code != ExitCodeSuccess {
-		t.Fatalf("inject files = %d, want %d; stderr=%q stdout=%q", files.code, ExitCodeSuccess, files.stderr, files.stdout)
+		t.Fatalf("inject list-files = %d, want %d; stderr=%q stdout=%q", files.code, ExitCodeSuccess, files.stderr, files.stdout)
 	}
 	var filesPayload map[string]any
 	if err := json.Unmarshal([]byte(files.stdout), &filesPayload); err != nil {
-		t.Fatalf("invalid JSON from inject files: %v; stdout=%q", err, files.stdout)
+		t.Fatalf("invalid JSON from inject list-files: %v; stdout=%q", err, files.stdout)
 	}
 	filesList, ok := filesPayload["files"].([]any)
 	if !ok || len(filesList) != 1 {
-		t.Fatalf("inject files should contain one file; payload=%v", filesPayload)
+		t.Fatalf("inject list-files should contain one file; payload=%v", filesPayload)
 	}
 	if got, _ := filesPayload["file_count"].(float64); int(got) != 1 {
-		t.Fatalf("inject files file_count=%v, want 1", filesPayload["file_count"])
+		t.Fatalf("inject list-files file_count=%v, want 1", filesPayload["file_count"])
 	}
 
 	successPath := filepath.Join(t.TempDir(), "download-success.tar.gz")
