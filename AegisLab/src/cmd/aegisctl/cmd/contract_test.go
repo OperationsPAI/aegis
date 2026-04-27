@@ -229,6 +229,19 @@ func TestAuthLoginMissingSecretUsesUsageExitCode(t *testing.T) {
 	}
 }
 
+func TestAuthLoginMissingIdentityUsesUsageExitCode(t *testing.T) {
+	res := runCLI(t, "auth", "login", "--server", "http://example.test")
+	if res.code != ExitCodeUsage {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", res.code, ExitCodeUsage, res.stderr)
+	}
+	if !strings.Contains(res.stderr, "either --username or --key-id is required") {
+		t.Fatalf("stderr = %q, want identity diagnostic", res.stderr)
+	}
+	if strings.TrimSpace(res.stdout) != "" {
+		t.Fatalf("stdout should be empty on validation failure, got %q", res.stdout)
+	}
+}
+
 func TestClusterPreflightUnknownCheckUsesUsageExitCode(t *testing.T) {
 	res := runCLI(t, "cluster", "preflight", "--check", "does-not-exist")
 	if res.code != ExitCodeUsage {

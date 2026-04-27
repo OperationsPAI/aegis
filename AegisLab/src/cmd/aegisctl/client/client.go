@@ -43,6 +43,21 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("API error %d: %s", e.StatusCode, e.Message)
 }
 
+// DecodeError wraps JSON decoding failures when the API returns a non-conformant
+// body for the requested schema.
+type DecodeError struct {
+	Body []byte
+	Err  error
+}
+
+func (e *DecodeError) Error() string {
+	return fmt.Sprintf("decode response: %v", e.Err)
+}
+
+func (e *DecodeError) Unwrap() error {
+	return e.Err
+}
+
 // Client is the core HTTP client for the AegisLab API.
 type Client struct {
 	BaseURL    string
@@ -120,7 +135,7 @@ func (c *Client) doRequest(method, path string, body any, headers map[string]str
 
 	if dest != nil {
 		if err := json.Unmarshal(respBody, dest); err != nil {
-			return fmt.Errorf("decode response: %w", err)
+			return &DecodeError{Body: respBody, Err: err}
 		}
 	}
 	return nil
