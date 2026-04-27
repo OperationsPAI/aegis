@@ -69,18 +69,18 @@ var traceColumnExtractors = map[string]func(map[string]any) string{
 		}
 		return stringField(m, "trace_id")
 	},
-	"type":         func(m map[string]any) string { return stringField(m, "type") },
-	"state":        func(m map[string]any) string { return stringField(m, "state") },
-	"status":       func(m map[string]any) string { return stringField(m, "status") },
-	"project":      func(m map[string]any) string { return stringField(m, "project_name") },
-	"project_id":   func(m map[string]any) string { return stringField(m, "project_id") },
-	"group_id":     func(m map[string]any) string { return stringField(m, "group_id") },
-	"last_event":   func(m map[string]any) string { return stringField(m, "last_event") },
-	"final_event":  func(m map[string]any) string { return stringField(m, "last_event") }, // alias for terminal event
-	"created_at":   func(m map[string]any) string { return stringField(m, "created_at") },
-	"start_time":   func(m map[string]any) string { return stringField(m, "start_time") },
-	"end_time":     func(m map[string]any) string { return stringField(m, "end_time") },
-	"leaf_num":     func(m map[string]any) string { return stringField(m, "leaf_num") },
+	"type":        func(m map[string]any) string { return stringField(m, "type") },
+	"state":       func(m map[string]any) string { return stringField(m, "state") },
+	"status":      func(m map[string]any) string { return stringField(m, "status") },
+	"project":     func(m map[string]any) string { return stringField(m, "project_name") },
+	"project_id":  func(m map[string]any) string { return stringField(m, "project_id") },
+	"group_id":    func(m map[string]any) string { return stringField(m, "group_id") },
+	"last_event":  func(m map[string]any) string { return stringField(m, "last_event") },
+	"final_event": func(m map[string]any) string { return stringField(m, "last_event") }, // alias for terminal event
+	"created_at":  func(m map[string]any) string { return stringField(m, "created_at") },
+	"start_time":  func(m map[string]any) string { return stringField(m, "start_time") },
+	"end_time":    func(m map[string]any) string { return stringField(m, "end_time") },
+	"leaf_num":    func(m map[string]any) string { return stringField(m, "leaf_num") },
 }
 
 func validTraceColumns() []string {
@@ -123,6 +123,7 @@ var traceListCmd = &cobra.Command{
 Output formats:
   --format table   (default) human-readable aligned table
   --format json    raw JSON response data
+  --format ndjson  one JSON object per line (envelope omitted)
   --format tsv     tab-separated values with a single header row, safe for
                    piping into awk/cut/sort. Uses --columns to pick fields.
 
@@ -143,9 +144,9 @@ Columns available for --columns (TSV only):
 			format = "table"
 		}
 		switch format {
-		case "table", "json", "tsv":
+		case "table", "json", "ndjson", "tsv":
 		default:
-			return fmt.Errorf("invalid --format %q; expected table|json|tsv", format)
+			return fmt.Errorf("invalid --format %q; expected table|json|ndjson|tsv", format)
 		}
 
 		// Resolve columns up-front so invalid values fail before the HTTP call.
@@ -202,6 +203,11 @@ Columns available for --columns (TSV only):
 			return nil
 		case "tsv":
 			return printTracesTSV(columns, resp.Data.Items)
+		case "ndjson":
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
+			}
+			return output.PrintNDJSON(resp.Data.Items)
 		}
 
 		// Default: table.
