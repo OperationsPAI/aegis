@@ -22,6 +22,7 @@ var (
 	flagNoColor        bool
 	flagNonInteractive bool
 	flagDryRun         bool
+	flagVersion        bool
 
 	// Resolved at PersistentPreRun time.
 	cfg *config.Config
@@ -33,6 +34,13 @@ var rootCmd = &cobra.Command{
 	Short:         "CLI client for the AegisLab platform",
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		if flagVersion {
+			printVersionInfo()
+			return nil
+		}
+		return cmd.Help()
+	},
 	Long: `aegisctl is a command-line interface for managing the AegisLab (RCABench)
 fault-injection and root-cause-analysis benchmarking platform.
 
@@ -95,6 +103,11 @@ NAMING CONVENTION:
   For example: "aegisctl container get detector" resolves "detector" to its ID.
   The --project flag also accepts project names (e.g. "pair_diagnosis").`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if flagVersion {
+			printVersionInfo()
+			return silentExit(ExitCodeSuccess)
+		}
+
 		// Load configuration file.
 		var err error
 		cfg, err = config.LoadConfig()
@@ -196,6 +209,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color output (env: NO_COLOR)")
 	rootCmd.PersistentFlags().BoolVar(&flagNonInteractive, "non-interactive", false, "Disable prompts and require explicit input (env: AEGIS_NON_INTERACTIVE)")
 	rootCmd.PersistentFlags().BoolVar(&flagDryRun, "dry-run", false, "Show what would be done without executing")
+	rootCmd.PersistentFlags().BoolVar(&flagVersion, "version", false, "Print version information and exit")
 
 	// Register subcommands.
 	rootCmd.AddCommand(authCmd)
@@ -214,6 +228,7 @@ func init() {
 	rootCmd.AddCommand(regressionCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(pedestalCmd)
 	rootCmd.AddCommand(schemaCmd)
 	rootCmd.AddCommand(systemCmd)

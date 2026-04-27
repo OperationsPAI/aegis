@@ -194,7 +194,16 @@ build-aegisctl output="/tmp/aegisctl":
     #!/usr/bin/env bash
     set -euo pipefail
     printf "{{blue}}🔨 Building aegisctl...{{reset}}\n"
-    cd {{src_dir}} && go build -o {{output}} ./cmd/aegisctl
+    version="$(git describe --tags --dirty --always 2>/dev/null | tr -d '\n')"
+    commit="$(git rev-parse --short HEAD 2>/dev/null | tr -d '\n')"
+    build_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    ldflags=(
+      "-X aegis/cmd/aegisctl/cmd.version=${version}"
+      "-X aegis/cmd/aegisctl/cmd.commit=${commit}"
+      "-X aegis/cmd/aegisctl/cmd.buildTime=${build_time}"
+      "-X aegis/cmd/aegisctl/cmd.minServerAPIVersion=2"
+    )
+    cd {{src_dir}} && go build -ldflags "${ldflags[*]}" -o {{output}} ./cmd/aegisctl
     printf "{{green}}✅ aegisctl built: {{output}}{{reset}}\n"
 
 # =============================================================================
