@@ -59,6 +59,12 @@ containers:
               value_type: 1
               template_string: 31%03d
               overridable: false
+            - key: global.otelcollector
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              overridable: true
           status: 1
   - type: 2
     name: otel-demo
