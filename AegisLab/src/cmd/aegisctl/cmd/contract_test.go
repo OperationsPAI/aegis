@@ -31,6 +31,7 @@ func resetCLIState() {
 	flagNonInteractive = false
 	flagDryRun = false
 	output.Quiet = false
+	commandStdin = os.Stdin
 
 	authLoginServer = ""
 	authLoginKeyID = ""
@@ -80,6 +81,25 @@ func resetCLIState() {
 
 	waitTimeout = 0
 	waitInterval = 0
+	waitStdin = false
+	waitStdinField = ""
+
+	injectGetStdin = false
+	injectGetStdinField = ""
+	injectFilesStdin = false
+	injectFilesStdinField = ""
+	injectDownloadStdin = false
+	injectDownloadStdinField = ""
+
+	taskGetStdin = false
+	taskGetStdinField = ""
+	taskLogsStdin = false
+	taskLogsStdinField = ""
+
+	traceGetStdin = false
+	traceGetStdinField = ""
+	traceWatchStdin = false
+	traceWatchStdinField = ""
 
 	resetCommandFlags(rootCmd)
 }

@@ -11,8 +11,10 @@ import (
 )
 
 var (
-	waitTimeout  int
-	waitInterval int
+	waitTimeout    int
+	waitInterval   int
+	waitStdin      bool
+	waitStdinField string
 )
 
 var (
@@ -47,12 +49,18 @@ EXAMPLES:
     --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 \
     --interval 10 --pre-duration 5 | \
     jq -r '.items[0].trace_id' | xargs aegisctl wait`,
-	Args: exactArgs(1, "wait <trace-id|task-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return runStdinItems("wait", "wait <trace-id|task-id>", args, stdinOptions{
+			enabled: waitStdin,
+			field:   waitStdinField,
+		}, runWait)
+	},
+}
+
+func runWait(id string) error {
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		id := args[0]
 		c := newClient()
 
 		// Determine resource type: try trace first, then task.
@@ -103,7 +111,6 @@ EXAMPLES:
 
 			time.Sleep(interval)
 		}
-	},
 }
 
 // detectResourceType probes the API to determine if the id refers to a trace
@@ -167,4 +174,5 @@ func isTerminal(resourceType, state string) bool {
 func init() {
 	waitCmd.Flags().IntVar(&waitTimeout, "timeout", 600, "Maximum time to wait in seconds")
 	waitCmd.Flags().IntVar(&waitInterval, "interval", 5, "Poll interval in seconds")
+	addStdinFlags(waitCmd, &waitStdin, &waitStdinField)
 }

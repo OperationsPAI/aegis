@@ -208,13 +208,25 @@ var injectListCmd = &cobra.Command{
 var injectGetCmd = &cobra.Command{
 	Use:   "get <name>",
 	Short: "Get detailed info about an injection",
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return runStdinItems("inject get", "inject get <name>", args, stdinOptions{
+			enabled: injectGetStdin,
+			field:   injectGetStdinField,
+		}, runInjectGet)
+	},
+}
+
+var (
+	injectGetStdin      bool
+	injectGetStdinField string
+)
+
+func runInjectGet(name string) error {
 		r, err := newProjectScopedResolver()
 		if err != nil {
 			return err
 		}
-		id, err := r.InjectionID(args[0])
+		id, err := r.InjectionID(name)
 		if err != nil {
 			return err
 		}
@@ -280,7 +292,6 @@ var injectGetCmd = &cobra.Command{
 
 		output.PrintTable(headers, rows)
 		return nil
-	},
 }
 
 func formatInjectGetValue(v any) string {
@@ -345,13 +356,25 @@ var injectSearchCmd = &cobra.Command{
 var injectFilesCmd = &cobra.Command{
 	Use:   "files <name>",
 	Short: "List files produced by an injection",
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return runStdinItems("inject files", "inject files <name>", args, stdinOptions{
+			enabled: injectFilesStdin,
+			field:   injectFilesStdinField,
+		}, runInjectFiles)
+	},
+}
+
+var (
+	injectFilesStdin      bool
+	injectFilesStdinField string
+)
+
+func runInjectFiles(name string) error {
 		r, err := newProjectScopedResolver()
 		if err != nil {
 			return err
 		}
-		id, err := r.InjectionID(args[0])
+		id, err := r.InjectionID(name)
 		if err != nil {
 			return err
 		}
@@ -380,7 +403,6 @@ var injectFilesCmd = &cobra.Command{
 		}
 		output.PrintTable(headers, rows)
 		return nil
-	},
 }
 
 // ---------- inject download ----------
@@ -391,6 +413,8 @@ var (
 	injectDownloadInclude  string
 	injectDownloadFilePar  int
 	injectDownloadTimeout  int
+	injectDownloadStdin    bool
+	injectDownloadStdinField string
 )
 
 const (
@@ -580,8 +604,18 @@ var injectDownloadCmd = &cobra.Command{
 	Long: `Download a datapack either as a single zip file (--output-file) or extracted
 into a directory (--output-dir). When extracting, --include selects which
 subset of the datapack to fetch.`,
-	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if injectDownloadStdin && injectDownloadOutput != "" {
+			return usageErrorf("--stdin requires --output-dir; --output-file only supports a single positional target")
+		}
+		return runStdinItems("inject download", "inject download <name>", args, stdinOptions{
+			enabled: injectDownloadStdin,
+			field:   injectDownloadStdinField,
+		}, runInjectDownload)
+	},
+}
+
+func runInjectDownload(name string) error {
 		if injectDownloadOutput == "" && injectDownloadDir == "" {
 			return usageErrorf("either --output-file <path> or --output-dir <dir> is required")
 		}
@@ -598,7 +632,7 @@ subset of the datapack to fetch.`,
 		if err != nil {
 			return err
 		}
-		id, err := r.InjectionID(args[0])
+		id, err := r.InjectionID(name)
 		if err != nil {
 			return err
 		}
@@ -610,14 +644,14 @@ subset of the datapack to fetch.`,
 		httpClient := &http.Client{Timeout: time.Duration(timeoutSec) * time.Second}
 
 		if injectDownloadDir != "" {
-			outDir := filepathJoin(injectDownloadDir, args[0])
+			outDir := filepathJoin(injectDownloadDir, name)
 			if err := os.MkdirAll(outDir, 0o755); err != nil {
 				return fmt.Errorf("create output dir: %w", err)
 			}
-			if err := downloadPackToDir(httpClient, flagServer, flagToken, id, args[0], outDir, include, injectDownloadFilePar); err != nil {
-				return fmt.Errorf("download %s: %w", args[0], err)
+			if err := downloadPackToDir(httpClient, flagServer, flagToken, id, name, outDir, include, injectDownloadFilePar); err != nil {
+				return fmt.Errorf("download %s: %w", name, err)
 			}
-			output.PrintInfo(fmt.Sprintf("Downloaded %s (include=%s) to %s", args[0], include, outDir))
+			output.PrintInfo(fmt.Sprintf("Downloaded %s (include=%s) to %s", name, include, outDir))
 			return nil
 		}
 
@@ -650,8 +684,7 @@ subset of the datapack to fetch.`,
 		}
 		output.PrintInfo(fmt.Sprintf("Downloaded %d bytes to %s", n, injectDownloadOutput))
 		return nil
-	},
-}
+	}
 
 // ---------- inject download-batch ----------
 
@@ -890,6 +923,9 @@ func init() {
 	injectDownloadCmd.Flags().StringVar(&injectDownloadInclude, "include", "converted", "Which subset to download when using --output-dir: "+injectIncludeFlagHelp())
 	injectDownloadCmd.Flags().IntVar(&injectDownloadFilePar, "parallel-files", 4, "Concurrent file downloads when using --output-dir")
 	injectDownloadCmd.Flags().IntVar(&injectDownloadTimeout, "request-timeout-override", 0, "Per-request HTTP timeout in seconds (0 = use global --request-timeout)")
+	addStdinFlags(injectGetCmd, &injectGetStdin, &injectGetStdinField)
+	addStdinFlags(injectFilesCmd, &injectFilesStdin, &injectFilesStdinField)
+	addStdinFlags(injectDownloadCmd, &injectDownloadStdin, &injectDownloadStdinField)
 
 	injectDownloadBatchCmd.Flags().StringVar(&injectBatchOutputDir, "output-dir", "", "Required: directory under which each pack is extracted as <output-dir>/<name>/")
 	injectDownloadBatchCmd.Flags().StringVar(&injectBatchInclude, "include", "converted", "Which subset to download per pack: "+injectIncludeFlagHelp())
