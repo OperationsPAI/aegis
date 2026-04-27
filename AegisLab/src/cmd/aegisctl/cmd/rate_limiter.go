@@ -113,6 +113,7 @@ var (
 	rlResetBucket string
 	rlResetForce  bool
 )
+var rlGCForce bool
 
 var rateLimiterResetCmd = &cobra.Command{
 	Use:   "reset",
@@ -139,10 +140,41 @@ var rateLimiterGCCmd = &cobra.Command{
 	Short: "Release tokens held by terminal-state tasks across all buckets",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
+		doMutation := rlGCForce && !flagDryRun
+
+		var listResp client.APIResponse[rlListResp]
+		if err := c.Get("/api/v2/rate-limiters", &listResp); err != nil {
+			return err
+		}
+		leaked := leakedRateLimiterBuckets(listResp.Data.Items)
+		if len(leaked) == 0 && !doMutation {
+			if output.OutputFormat(flagOutput) == output.FormatJSON {
+				output.PrintJSON(map[string]any{"dry_run": true, "items": []rlItem{}, "count": 0})
+				return nil
+			}
+			output.PrintInfo("No terminal-state buckets to clean")
+			output.PrintInfo("Use --force to execute cleanup")
+			return nil
+		}
+
+		if !doMutation {
+			if output.OutputFormat(flagOutput) == output.FormatJSON {
+				output.PrintJSON(map[string]any{
+					"dry_run": true,
+					"items":   leaked,
+					"count":   len(leaked),
+				})
+				return nil
+			}
+			printRateLimiterGCPlan(leaked)
+			return nil
+		}
+
 		var resp client.APIResponse[rlGCResp]
 		if err := c.Post("/api/v2/rate-limiters/gc", nil, &resp); err != nil {
 			return err
 		}
+
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
 			output.PrintJSON(resp.Data)
 			return nil
@@ -153,11 +185,59 @@ var rateLimiterGCCmd = &cobra.Command{
 	},
 }
 
+func leakedRateLimiterBuckets(items []rlItem) []rlItem {
+	out := make([]rlItem, 0, len(items))
+	for _, item := range items {
+		leakedHolders := make([]rlHolder, 0, len(item.Holders))
+		for _, holder := range item.Holders {
+			if holder.IsTerminal {
+				leakedHolders = append(leakedHolders, holder)
+			}
+		}
+		if len(leakedHolders) == 0 {
+			continue
+		}
+		filtered := item
+		filtered.Holders = leakedHolders
+		out = append(out, filtered)
+	}
+	return out
+}
+
+func printRateLimiterGCPlan(leaks []rlItem) {
+	if len(leaks) == 0 {
+		fmt.Println("No terminal-state buckets to clean")
+		output.PrintInfo("Use --force to execute cleanup")
+		return
+	}
+
+	fmt.Println("The following buckets have terminal-state holders and would be cleaned:")
+	headers := []string{"BUCKET", "HELD/CAP", "TERMINAL HOLDERS"}
+	rows := make([][]string, 0, len(leaks))
+	for _, item := range leaks {
+		holders := make([]string, 0, len(item.Holders))
+		for _, holder := range item.Holders {
+			holders = append(holders, fmt.Sprintf("%s[%s]", holder.TaskID, holder.TaskState))
+		}
+		rows = append(rows, []string{
+			item.Bucket,
+			fmt.Sprintf("%d/%d", item.Held, item.Capacity),
+			strings.Join(holders, ", "),
+		})
+	}
+	output.PrintTable(headers, rows)
+	output.PrintInfo("Use --force to execute cleanup")
+}
+
 func init() {
 	rateLimiterResetCmd.Flags().StringVar(&rlResetBucket, "bucket", "", "Bucket short name, e.g. restart_service")
 	rateLimiterResetCmd.Flags().BoolVar(&rlResetForce, "force", false, "Required to actually perform the reset")
+	rateLimiterGCCmd.Flags().BoolVar(&rlGCForce, "force", false, "Required to actually perform cleanup")
 	rateLimiterCmd.AddCommand(rateLimiterStatusCmd)
 	rateLimiterCmd.AddCommand(rateLimiterResetCmd)
 	rateLimiterCmd.AddCommand(rateLimiterGCCmd)
+	cobra.OnInitialize(func() {
+		markDryRunSupported(rateLimiterGCCmd)
+	})
 	rootCmd.AddCommand(rateLimiterCmd)
 }
