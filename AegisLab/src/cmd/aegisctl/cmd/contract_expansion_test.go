@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -27,8 +28,8 @@ func TestSchemaDumpEmitsValidJSON(t *testing.T) {
 		t.Fatalf("exit code = %d, want %d; stderr=%q", res.code, ExitCodeSuccess, res.stderr)
 	}
 	var doc struct {
-		Version   string `json:"version"`
-		Commands  []struct {
+		Version  string `json:"version"`
+		Commands []struct {
 			Path string `json:"path"`
 		} `json:"commands"`
 		ExitCodes map[string]string `json:"exit_codes"`
@@ -54,6 +55,13 @@ func TestSchemaDumpEmitsValidJSON(t *testing.T) {
 	}
 	if _, ok := doc.ExitCodes["7"]; !ok {
 		t.Fatalf("schema document missing exit code 7 entry")
+	}
+	if _, ok := doc.ExitCodes["11"]; !ok {
+		t.Fatalf("schema document missing exit code 11 entry")
+	}
+
+	if got := exitCodeFor(fmt.Errorf("decode response: unexpected payload format")); got != ExitCodeDecodeResponse {
+		t.Fatalf("exit code for decode response error = %d, want %d", got, ExitCodeDecodeResponse)
 	}
 }
 
