@@ -378,8 +378,8 @@ func TestIntegrationServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) 
 	defer server.Close()
 
 	serverErr := runCLI(t, "project", "list", "--server", server.URL, "--output", "json")
-	if serverErr.code != ExitCodeServer {
-		t.Fatalf("exit code = %d, want %d; stderr=%q", serverErr.code, ExitCodeServer, serverErr.stderr)
+	if serverErr.code != ExitCodeServerError {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", serverErr.code, ExitCodeServerError, serverErr.stderr)
 	}
 	var serverPayload map[string]any
 	if err := json.Unmarshal([]byte(serverErr.stderr), &serverPayload); err != nil {
@@ -388,8 +388,8 @@ func TestIntegrationServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) 
 	if got, _ := serverPayload["type"].(string); got != "server" {
 		t.Fatalf("server payload type = %v, want server", serverPayload["type"])
 	}
-	if got, _ := serverPayload["exit_code"].(float64); int(got) != ExitCodeServer {
-		t.Fatalf("server payload exit_code = %v, want %d", serverPayload["exit_code"], ExitCodeServer)
+	if got, _ := serverPayload["exit_code"].(float64); int(got) != ExitCodeServerError {
+		t.Fatalf("server payload exit_code = %v, want %d", serverPayload["exit_code"], ExitCodeServerError)
 	}
 	if v := serverPayload["request_id"]; v != "req-server-fail" {
 		t.Fatalf("server payload request_id = %v, want req-server-fail", v)
@@ -399,8 +399,8 @@ func TestIntegrationServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) 
 	}
 
 	decodeErr := runCLI(t, "project", "list", "--page", "2", "--server", server.URL, "--output", "ndjson")
-	if decodeErr.code != ExitCodeDecode {
-		t.Fatalf("exit code = %d, want %d; stderr=%q", decodeErr.code, ExitCodeDecode, decodeErr.stderr)
+	if decodeErr.code != ExitCodeDecodeFailure {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", decodeErr.code, ExitCodeDecodeFailure, decodeErr.stderr)
 	}
 	var decodePayload map[string]any
 	if err := json.Unmarshal([]byte(decodeErr.stderr), &decodePayload); err != nil {
@@ -409,8 +409,8 @@ func TestIntegrationServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) 
 	if got, _ := decodePayload["type"].(string); got != "decode" {
 		t.Fatalf("decode payload type = %v, want decode", decodePayload["type"])
 	}
-	if got, _ := decodePayload["exit_code"].(float64); int(got) != ExitCodeDecode {
-		t.Fatalf("decode payload exit_code = %v, want %d", decodePayload["exit_code"], ExitCodeDecode)
+	if got, _ := decodePayload["exit_code"].(float64); int(got) != ExitCodeDecodeFailure {
+		t.Fatalf("decode payload exit_code = %v, want %d", decodePayload["exit_code"], ExitCodeDecodeFailure)
 	}
 	if !strings.Contains(decodeErr.stderr, "field") || !strings.Contains(decodeErr.stderr, "expected") {
 		t.Fatalf("decode payload should include path/type details, got %q", decodeErr.stderr)
