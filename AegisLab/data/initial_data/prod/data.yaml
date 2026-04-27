@@ -60,7 +60,7 @@ containers:
         github_link: OperationsPAI/train-ticket
         status: 1
         helm_config:
-          version: 0.1.0
+          version: 0.2.0
           chart_name: trainticket
           repo_name: train-ticket
           repo_url: https://operationspai.github.io/train-ticket
