@@ -216,6 +216,13 @@ func TestRootPersistentFlagsExposeNonInteractiveMode(t *testing.T) {
 	}
 }
 
+func TestRootPersistentFlagsExposeNoColorMode(t *testing.T) {
+	f := rootCmd.PersistentFlags().Lookup("no-color")
+	if f == nil {
+		t.Fatalf("expected --no-color persistent flag to be registered")
+	}
+}
+
 func TestAuthLoginMissingSecretUsesUsageExitCode(t *testing.T) {
 	res := runCLI(t, "auth", "login", "--server", "http://example.test", "--key-id", "pk_test")
 	if res.code != ExitCodeUsage {
