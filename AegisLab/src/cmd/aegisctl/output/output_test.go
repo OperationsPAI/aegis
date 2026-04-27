@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"aegis/cmd/aegisctl/internal/cli/clierr"
 )
 
 func captureStderr(fn func()) string {
@@ -105,6 +107,64 @@ func TestPrintError(t *testing.T) {
 	}
 	if !strings.Contains(got, "something went wrong") {
 		t.Errorf("PrintError output = %q, want it to contain %q", got, "something went wrong")
+	}
+}
+
+func TestPrintCLIError_JSON(t *testing.T) {
+	payload := &clierr.CLIError{
+		Type:       "server",
+		Message:    "server returned HTTP 500; cause: boom; request_id=req-1",
+		Cause:      "boom",
+		RequestID:  "req-1",
+		Suggestion: "retry later",
+		Retryable:  true,
+		ExitCode:   10,
+	}
+
+	got := captureStderr(func() {
+		PrintCLIError(payload, FormatJSON)
+	})
+
+	var decoded clierr.CLIError
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("expected JSON stderr, got %q: %v", got, err)
+	}
+	if decoded.Type != payload.Type {
+		t.Fatalf("decoded.Type = %q, want %q", decoded.Type, payload.Type)
+	}
+	if decoded.ExitCode != payload.ExitCode {
+		t.Fatalf("decoded.ExitCode = %d, want %d", decoded.ExitCode, payload.ExitCode)
+	}
+	if decoded.RequestID != payload.RequestID {
+		t.Fatalf("decoded.RequestID = %q, want %q", decoded.RequestID, payload.RequestID)
+	}
+}
+
+func TestPrintCLIError_HumanReadable(t *testing.T) {
+	payload := &clierr.CLIError{
+		Type:       "decode",
+		Message:    "schema mismatch",
+		Cause:      "field=id expected=int got=string",
+		Suggestion: "align schema",
+		RequestID:  "req-2",
+		Retryable:  false,
+		ExitCode:   11,
+	}
+
+	got := captureStderr(func() {
+		PrintCLIError(payload, FormatTable)
+	})
+	if !strings.Contains(got, "Error [decode]: schema mismatch") {
+		t.Fatalf("human output = %q, want first line prefix", got)
+	}
+	if !strings.Contains(got, "cause: field=id expected=int got=string") {
+		t.Fatalf("human output = %q, want cause", got)
+	}
+	if !strings.Contains(got, "hint: align schema") {
+		t.Fatalf("human output = %q, want hint", got)
+	}
+	if !strings.Contains(got, "request_id=req-2") {
+		t.Fatalf("human output = %q, want request_id", got)
 	}
 }
 
