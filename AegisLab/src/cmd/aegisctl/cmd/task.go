@@ -87,7 +87,8 @@ var taskListCmd = &cobra.Command{
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(items)
+			resp.Data.Items = items
+			output.PrintJSON(resp.Data)
 			return nil
 		}
 
