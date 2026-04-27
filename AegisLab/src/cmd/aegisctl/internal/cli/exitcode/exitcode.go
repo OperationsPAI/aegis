@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"aegis/cmd/aegisctl/client"
+	"aegis/cmd/aegisctl/internal/cli/clierr"
 )
 
 const (
@@ -115,9 +116,14 @@ func ForError(err error) int {
 		}
 	}
 
-	var decodeErr *client.DecodeError
-	if errors.As(err, &decodeErr) {
-		return CodeDecodeFailure
+	var cliErr *clierr.CLIError
+	if errors.As(err, &cliErr) {
+		if cliErr.ExitCode != 0 {
+			return cliErr.ExitCode
+		}
+		if cliErr.Type == "decode" {
+			return CodeDecodeFailure
+		}
 	}
 
 	var execErr *exec.Error
