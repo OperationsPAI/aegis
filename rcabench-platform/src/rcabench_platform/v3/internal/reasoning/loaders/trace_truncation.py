@@ -129,9 +129,7 @@ def _build_trace_signatures(
                 "trace_id": pl.Utf8,
                 "span_count": pl.UInt32,
                 "service_set": pl.List(pl.Utf8),
-                "service_edge_set": pl.List(
-                    pl.Struct([pl.Field("parent", pl.Utf8), pl.Field("child", pl.Utf8)])
-                ),
+                "service_edge_set": pl.List(pl.Struct([pl.Field("parent", pl.Utf8), pl.Field("child", pl.Utf8)])),
                 "endpoint": pl.Utf8,
             }
         )
@@ -143,10 +141,7 @@ def _build_trace_signatures(
 
     # 2. Distinct non-loadgen services per trace.
     non_loadgen = df.filter(~pl.col("service_name").str.to_lowercase().is_in(loadgens))
-    service_set_df = (
-        non_loadgen.group_by("trace_id")
-        .agg(pl.col("service_name").unique().sort().alias("service_set"))
-    )
+    service_set_df = non_loadgen.group_by("trace_id").agg(pl.col("service_name").unique().sort().alias("service_set"))
 
     # 3. Edge set per trace via self-join on (trace_id, parent_span_id) → (trace_id, span_id).
     parents = df.select(
@@ -166,10 +161,12 @@ def _build_trace_signatures(
         .filter(pl.col("parent_service") != pl.col("child_service"))  # drop intra-service self-loops
         .select(
             pl.col("trace_id"),
-            pl.struct([
-                pl.col("parent_service").alias("parent"),
-                pl.col("child_service").alias("child"),
-            ]).alias("edge"),
+            pl.struct(
+                [
+                    pl.col("parent_service").alias("parent"),
+                    pl.col("child_service").alias("child"),
+                ]
+            ).alias("edge"),
         )
         .unique()
     )
@@ -185,12 +182,9 @@ def _build_trace_signatures(
     candidates = (
         non_loadgen.join(parent_services, on=["trace_id", "parent_span_id"], how="left")
         .filter(
-            pl.col("parent_service_name").is_null()
-            | pl.col("parent_service_name").str.to_lowercase().is_in(loadgens)
+            pl.col("parent_service_name").is_null() | pl.col("parent_service_name").str.to_lowercase().is_in(loadgens)
         )
-        .with_columns(
-            (pl.col("service_name") + "::" + pl.col("span_name")).alias("endpoint")
-        )
+        .with_columns((pl.col("service_name") + "::" + pl.col("span_name")).alias("endpoint"))
         .sort(["trace_id", "time"])
         .group_by("trace_id")
         .agg(pl.col("endpoint").first().alias("endpoint"))
@@ -207,9 +201,7 @@ def _build_trace_signatures(
         pl.col("service_edge_set").fill_null(
             pl.lit(
                 [],
-                dtype=pl.List(
-                    pl.Struct([pl.Field("parent", pl.Utf8), pl.Field("child", pl.Utf8)])
-                ),
+                dtype=pl.List(pl.Struct([pl.Field("parent", pl.Utf8), pl.Field("child", pl.Utf8)])),
             )
         ),
     )
@@ -294,16 +286,12 @@ def build_baseline_profile(baseline_traces: pl.DataFrame) -> dict[str, BaselineP
         for s in service_sets:
             service_freq.update(s)
         ubiq_threshold_count = UBIQUITY_THRESHOLD * n
-        ubiquitous_services = frozenset(
-            svc for svc, cnt in service_freq.items() if cnt >= ubiq_threshold_count
-        )
+        ubiquitous_services = frozenset(svc for svc, cnt in service_freq.items() if cnt >= ubiq_threshold_count)
 
         edge_freq: Counter[tuple[str, str]] = Counter()
         for es in edge_sets:
             edge_freq.update(es)
-        ubiquitous_edges = frozenset(
-            e for e, cnt in edge_freq.items() if cnt >= ubiq_threshold_count
-        )
+        ubiquitous_edges = frozenset(e for e, cnt in edge_freq.items() if cnt >= ubiq_threshold_count)
 
         most_common = canonical_shapes[0] if canonical_shapes else frozenset()
 

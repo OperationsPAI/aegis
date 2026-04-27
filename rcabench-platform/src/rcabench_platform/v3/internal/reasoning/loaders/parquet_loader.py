@@ -239,8 +239,7 @@ def filter_root_alarm_candidate_spans(df: pl.DataFrame) -> pl.DataFrame:
     joined = non_loadgen.join(parent_services, on=["trace_id", "parent_span_id"], how="left")
 
     return joined.filter(
-        pl.col("parent_service_name").is_null()
-        | pl.col("parent_service_name").str.to_lowercase().is_in(loadgens)
+        pl.col("parent_service_name").is_null() | pl.col("parent_service_name").str.to_lowercase().is_in(loadgens)
     ).drop("parent_service_name")
 
 
@@ -338,7 +337,7 @@ class ParquetDataLoader:
 
         # Sidecar from identify_alarm_nodes_v2's structural-truncation pass.
         # Populated lazily; consumers fetch via get_truncation_alarms().
-        self._truncation_alarms: dict[str, "TruncationAlarmInfo"] = {}
+        self._truncation_alarms: dict[str, TruncationAlarmInfo] = {}
 
     @staticmethod
     def normalize_span_name(span_name: str) -> str:

@@ -95,16 +95,25 @@ RATE_STEADY = 10.0  # ~10 spans/s gives mean ~300 / 30s subwindow
 def test_emits_silent_when_service_disappears_from_abnormal() -> None:
     rng = np.random.default_rng(1)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     base_rows += _synth_traces(
-        service="B", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="B",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows = _synth_traces(
-        service="A", start_ts=ABNORMAL_START, end_ts=ABNORMAL_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=ABNORMAL_START,
+        end_ts=ABNORMAL_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     # B disappears entirely from abnormal window.
 
@@ -125,12 +134,18 @@ def test_emits_silent_when_service_disappears_from_abnormal() -> None:
 def test_no_emission_when_abnormal_rate_within_baseline() -> None:
     rng = np.random.default_rng(2)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows = _synth_traces(
-        service="A", start_ts=ABNORMAL_START, end_ts=ABNORMAL_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=ABNORMAL_START,
+        end_ts=ABNORMAL_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     adapter = TraceVolumeAdapter(
         _df(base_rows),
@@ -147,16 +162,25 @@ def test_skip_service_only_in_abnormal() -> None:
     rng = np.random.default_rng(3)
     # No baseline data for C; baseline only contains A.
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows = _synth_traces(
-        service="A", start_ts=ABNORMAL_START, end_ts=ABNORMAL_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=ABNORMAL_START,
+        end_ts=ABNORMAL_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows += _synth_traces(
-        service="C", start_ts=ABNORMAL_START, end_ts=ABNORMAL_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="C",
+        start_ts=ABNORMAL_START,
+        end_ts=ABNORMAL_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     adapter = TraceVolumeAdapter(
         _df(base_rows),
@@ -177,8 +201,11 @@ def test_baseline_too_short_skips_service() -> None:
     # subwindow fits and the service is skipped before the calibrator runs.
     short_base_end = BASELINE_START + 20
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=short_base_end,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=short_base_end,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows: list[dict] = []  # no spans for A in abnormal -> would fire if we got that far
     adapter = TraceVolumeAdapter(
@@ -195,8 +222,11 @@ def test_baseline_too_short_skips_service() -> None:
 def test_emit_transition_metadata() -> None:
     rng = np.random.default_rng(5)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows: list[dict] = []  # A vanishes entirely in abnormal window
     adapter = TraceVolumeAdapter(
@@ -245,8 +275,11 @@ def test_per_service_calibration() -> None:
     base_rows: list[dict] = []
     # Steady service: rate ~3/s for the full baseline — calibrator stable.
     base_rows += _synth_traces(
-        service="steady", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="steady",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     # Bursty service: spans confined to a narrow [t0, t0+310] slice with
     # a spike in the middle. The slice is just long enough to yield a
@@ -255,16 +288,28 @@ def test_per_service_calibration() -> None:
     burst_start = BASELINE_START + 100
     bursty_rows: list[dict] = []
     bursty_rows += _synth_traces(
-        service="bursty", start_ts=burst_start, end_ts=burst_start + 5,
-        rate_per_sec=2.0, rng=rng, span_name="GET /burst",
+        service="bursty",
+        start_ts=burst_start,
+        end_ts=burst_start + 5,
+        rate_per_sec=2.0,
+        rng=rng,
+        span_name="GET /burst",
     )
     bursty_rows += _synth_traces(
-        service="bursty", start_ts=burst_start + 150, end_ts=burst_start + 160,
-        rate_per_sec=200.0, rng=rng, span_name="GET /burst",
+        service="bursty",
+        start_ts=burst_start + 150,
+        end_ts=burst_start + 160,
+        rate_per_sec=200.0,
+        rng=rng,
+        span_name="GET /burst",
     )
     bursty_rows += _synth_traces(
-        service="bursty", start_ts=burst_start + 305, end_ts=burst_start + 310,
-        rate_per_sec=2.0, rng=rng, span_name="GET /burst",
+        service="bursty",
+        start_ts=burst_start + 305,
+        end_ts=burst_start + 310,
+        rate_per_sec=2.0,
+        rng=rng,
+        span_name="GET /burst",
     )
     base_rows += bursty_rows
 
@@ -287,16 +332,25 @@ def test_per_service_calibration() -> None:
 def test_seeded_reproducibility() -> None:
     rng = np.random.default_rng(7)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     base_rows += _synth_traces(
-        service="B", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="B",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows = _synth_traces(
-        service="A", start_ts=ABNORMAL_START, end_ts=ABNORMAL_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=ABNORMAL_START,
+        end_ts=ABNORMAL_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     base_df = _df(base_rows)
     abn_df = _df(abn_rows)
@@ -328,12 +382,18 @@ def test_zero_baseline_traffic_skipped() -> None:
     # plus an abnormal window in which Z also has zero spans. The adapter
     # cannot calibrate Z (it has no baseline rows) and must not raise.
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows = _synth_traces(
-        service="A", start_ts=ABNORMAL_START, end_ts=ABNORMAL_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=ABNORMAL_START,
+        end_ts=ABNORMAL_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     adapter = TraceVolumeAdapter(
         _df(base_rows),
@@ -350,8 +410,11 @@ def test_zero_baseline_traffic_skipped() -> None:
 
 def test_invalid_window_raises() -> None:
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=np.random.default_rng(0),
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=np.random.default_rng(0),
     )
     with pytest.raises(ValueError):
         TraceVolumeAdapter(
@@ -374,8 +437,11 @@ def test_invalid_window_raises() -> None:
 def test_silent_evidence_carries_specialization_label() -> None:
     rng = np.random.default_rng(9)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows: list[dict] = []  # A goes silent
     adapter = TraceVolumeAdapter(
@@ -416,17 +482,26 @@ def test_emits_silent_when_baseline_equals_abnormal_length() -> None:
     abn_start = base_end
     abn_end = abn_start + 3600  # 3600s abnormal — equal to baseline
     base_rows = _synth_traces(
-        service="A", start_ts=base_start, end_ts=base_end,
-        rate_per_sec=10.0, rng=rng,
+        service="A",
+        start_ts=base_start,
+        end_ts=base_end,
+        rate_per_sec=10.0,
+        rng=rng,
     )
     base_rows += _synth_traces(
-        service="B", start_ts=base_start, end_ts=base_end,
-        rate_per_sec=10.0, rng=rng,
+        service="B",
+        start_ts=base_start,
+        end_ts=base_end,
+        rate_per_sec=10.0,
+        rng=rng,
     )
     # In the abnormal window B vanishes entirely; A keeps steady traffic.
     abn_rows = _synth_traces(
-        service="A", start_ts=abn_start, end_ts=abn_end,
-        rate_per_sec=10.0, rng=rng,
+        service="A",
+        start_ts=abn_start,
+        end_ts=abn_end,
+        rate_per_sec=10.0,
+        rng=rng,
     )
     adapter = TraceVolumeAdapter(
         _df(base_rows),
@@ -450,8 +525,11 @@ def test_short_abnormal_window_uses_aggregate_fallback() -> None:
     """
     rng = np.random.default_rng(13)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     # 20s abnormal window — shorter than the 30s default subwindow.
     abn_start = BASELINE_END
@@ -501,22 +579,34 @@ def test_emit_at_uses_first_below_threshold_subwindow() -> None:
     flip_at = abn_start + 60  # B flips to 0 at this offset
 
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     base_rows += _synth_traces(
-        service="B", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="B",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
 
     abn_rows = _synth_traces(
-        service="A", start_ts=abn_start, end_ts=abn_end,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=abn_start,
+        end_ts=abn_end,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     # B keeps healthy traffic for the first 60s, then is silent.
     abn_rows += _synth_traces(
-        service="B", start_ts=abn_start, end_ts=flip_at,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="B",
+        start_ts=abn_start,
+        end_ts=flip_at,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
 
     adapter = TraceVolumeAdapter(
@@ -547,7 +637,9 @@ def test_emit_at_uses_first_below_threshold_subwindow() -> None:
     subwindow_seconds = 30
     bucket_seconds = 5
     assert flip_at - subwindow_seconds <= t.at <= flip_at + bucket_seconds, (
-        t.at, flip_at, abn_start,
+        t.at,
+        flip_at,
+        abn_start,
     )
     # Sanity: the timestamp is well inside the abnormal window, not the
     # legacy abnormal_window_start.
@@ -581,14 +673,21 @@ def test_emit_at_falls_back_to_abnormal_start_when_no_subwindow_below() -> None:
     from rcabench_platform.v3.internal.reasoning.ir.adapters.trace_volume import (
         TraceVolumeAdapter as _TVA,
     )
+
     rng = np.random.default_rng(202)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_rows = _synth_traces(
-        service="A", start_ts=ABNORMAL_START, end_ts=ABNORMAL_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=ABNORMAL_START,
+        end_ts=ABNORMAL_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     adapter = _TVA(
         _df(base_rows),
@@ -608,9 +707,8 @@ def test_emit_at_falls_back_to_abnormal_start_when_no_subwindow_below() -> None:
     from rcabench_platform.v3.internal.reasoning.ir.adapters.traces import (
         _ts_seconds,
     )
-    abn_ts_full = _ts_seconds(abn_df_processed).with_columns(
-        pl.col("_ts").cast(pl.Int64)
-    )
+
+    abn_ts_full = _ts_seconds(abn_df_processed).with_columns(pl.col("_ts").cast(pl.Int64))
     # threshold = 0.0 → no sub-window strictly below 0; fallback path.
     fallback_at = adapter._first_below_threshold_at(abn_ts_full, "A", 0.0)
     assert fallback_at == ABNORMAL_START
@@ -630,8 +728,11 @@ def test_emit_at_falls_back_when_abnormal_shorter_than_subwindow() -> None:
     """
     rng = np.random.default_rng(303)
     base_rows = _synth_traces(
-        service="A", start_ts=BASELINE_START, end_ts=BASELINE_END,
-        rate_per_sec=RATE_STEADY, rng=rng,
+        service="A",
+        start_ts=BASELINE_START,
+        end_ts=BASELINE_END,
+        rate_per_sec=RATE_STEADY,
+        rng=rng,
     )
     abn_start = BASELINE_END
     abn_end = abn_start + 20  # 20s abnormal < 30s subwindow

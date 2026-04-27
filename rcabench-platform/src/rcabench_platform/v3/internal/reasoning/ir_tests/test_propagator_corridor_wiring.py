@@ -127,16 +127,13 @@ def test_corridor_drops_dead_end_branch_from_subgraph() -> None:
     # Dead-end node is excluded from subgraph_edges (corridor effect).
     nodes_in_subgraph = {n for s, d in result.subgraph_edges for n in (s, d)}
     assert dead.id not in nodes_in_subgraph, (
-        f"corridor failed to prune dead-end node {dead.id}; "
-        f"subgraph_edges={result.subgraph_edges}"
+        f"corridor failed to prune dead-end node {dead.id}; subgraph_edges={result.subgraph_edges}"
     )
 
     # Baseline check: forward-only find_reachable_subgraph WOULD include
     # the dead-end branch — confirming the corridor is the actual pruner.
     explorer = TopologyExplorer(g, max_hops=4)
-    forward_only = explorer.find_reachable_subgraph(
-        [inject.id], {alarm.id}, edge_filter=None
-    )
+    forward_only = explorer.find_reachable_subgraph([inject.id], {alarm.id}, edge_filter=None)
     forward_only_nodes = {n for s, d in forward_only for n in (s, d)}
     assert dead.id in forward_only_nodes, (
         "test fixture invalid: forward-only reach must reach the dead-end "
@@ -189,8 +186,7 @@ def test_activity_filter_drops_healthy_middleman() -> None:
     # Activity filter drops Mid — the corridor edge (inject↔mid) is gone.
     nodes_in_subgraph = {n for s, d in result.subgraph_edges for n in (s, d)}
     assert mid.id not in nodes_in_subgraph, (
-        f"activity filter failed to drop HEALTHY middleman; "
-        f"subgraph_edges={result.subgraph_edges}"
+        f"activity filter failed to drop HEALTHY middleman; subgraph_edges={result.subgraph_edges}"
     )
 
 
@@ -225,9 +221,7 @@ def test_compute_deviating_set_excludes_healthy_and_unknown() -> None:
         max_hops=4,
     )
     deviating = propagator._compute_deviating_set()
-    assert deviating == {erroring_top.id}, (
-        f"deviating_set must contain only the erroring node, got {deviating}"
-    )
+    assert deviating == {erroring_top.id}, f"deviating_set must contain only the erroring node, got {deviating}"
 
     # The injection_set ∪ deviating_set guard means the activity filter
     # cannot drop a HEALTHY injection node — verified by checking that
@@ -275,10 +269,9 @@ def test_extract_paths_max_paths_cap_fires_and_warns(
         paths = explorer.extract_paths(edges, [inject.id], {alarm.id})
 
     assert len(paths) == 3, f"expected exactly max_paths=3, got {len(paths)}"
-    assert any(
-        "max_paths" in rec.message and "safety cap" in rec.message
-        for rec in caplog.records
-    ), f"expected safety-cap warning, got: {[r.message for r in caplog.records]}"
+    assert any("max_paths" in rec.message and "safety cap" in rec.message for rec in caplog.records), (
+        f"expected safety-cap warning, got: {[r.message for r in caplog.records]}"
+    )
 
 
 def test_extract_paths_under_cap_does_not_warn(

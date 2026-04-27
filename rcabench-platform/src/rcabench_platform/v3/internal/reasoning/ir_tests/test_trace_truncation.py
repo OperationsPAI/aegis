@@ -20,7 +20,6 @@ from rcabench_platform.v3.internal.reasoning.loaders.trace_truncation import (
     detect_truncated_endpoints,
 )
 
-
 _TRACE_COLUMNS: dict[str, Any] = {
     "time": pl.Datetime("ns"),
     "trace_id": pl.Utf8,
@@ -35,7 +34,6 @@ _TRACE_COLUMNS: dict[str, Any] = {
 
 
 def _make_trace_df(rows: list[dict[str, Any]]) -> pl.DataFrame:
-    n = len(rows)
     times = [int(r.get("_time_offset", idx)) for idx, r in enumerate(rows)]
     base_time = pl.Series("time", times).cast(pl.Datetime("ns"))
     full: dict[str, Any] = {"time": base_time}
@@ -49,9 +47,7 @@ def _make_trace_df(rows: list[dict[str, Any]]) -> pl.DataFrame:
     ):
         full[col] = [r.get(col, "") for r in rows]
     full["duration"] = [int(r.get("duration", 1_000_000)) for r in rows]
-    full["attr.http.response.status_code"] = [
-        r.get("attr.http.response.status_code") for r in rows
-    ]
+    full["attr.http.response.status_code"] = [r.get("attr.http.response.status_code") for r in rows]
     df = pl.DataFrame(full)
     return df.with_columns(
         pl.col("attr.http.response.status_code").cast(pl.Int64),

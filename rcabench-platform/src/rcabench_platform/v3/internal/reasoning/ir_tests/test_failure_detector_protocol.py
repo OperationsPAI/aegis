@@ -169,9 +169,7 @@ def test_trace_adapter_default_filters_to_http_only_when_grpc_column_absent() ->
 # ---------------------------------------------------------------------------
 class _InvertedHTTPDetector:
     def is_failure_expr(self) -> pl.Expr:
-        return pl.col("attr.http.response.status_code").is_not_null() & (
-            pl.col("attr.http.response.status_code") < 500
-        )
+        return pl.col("attr.http.response.status_code").is_not_null() & (pl.col("attr.http.response.status_code") < 500)
 
     def required_columns(self):  # type: ignore[no-untyped-def]
         return ("attr.http.response.status_code",)

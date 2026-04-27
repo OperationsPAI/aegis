@@ -18,7 +18,6 @@ import polars as pl
 
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 
-
 _TRACE_COLUMNS: dict[str, Any] = {
     "time": pl.Datetime("ns"),
     "trace_id": pl.Utf8,
@@ -53,9 +52,7 @@ def _make_trace_df(rows: list[dict[str, Any]]) -> pl.DataFrame:
     ):
         full[col] = [r.get(col, "") for r in rows]
     full["duration"] = [int(r.get("duration", 1_000_000)) for r in rows]
-    full["attr.http.response.status_code"] = [
-        r.get("attr.http.response.status_code") for r in rows
-    ]
+    full["attr.http.response.status_code"] = [r.get("attr.http.response.status_code") for r in rows]
     df = pl.DataFrame(full)
     return df.with_columns(
         pl.col("attr.http.response.status_code").cast(pl.Int64),
@@ -154,8 +151,8 @@ def test_topmost_server_only_when_all_anomalous() -> None:
             _three_deep_trace(
                 trace_id=f"base-{i}",
                 a_dur_ns=10 * 1_000_000,  # 10ms
-                b_dur_ns=5 * 1_000_000,   # 5ms
-                c_dur_ns=2 * 1_000_000,   # 2ms
+                b_dur_ns=5 * 1_000_000,  # 5ms
+                c_dur_ns=2 * 1_000_000,  # 2ms
             )
         )
 

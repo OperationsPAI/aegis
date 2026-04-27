@@ -77,9 +77,7 @@ _DEAD_INFRA_STATES: frozenset[str] = frozenset({"unavailable"})
 # ``unknown`` (no observation). Includes the canonical request-layer
 # anomalous palette so downstream rules (``span_*_to_caller``,
 # ``service_to_span``) admit the consumer's chain.
-_SCENARIO_A_TARGET_SPAN_STATES: frozenset[str] = frozenset(
-    {"missing", "slow", "erroring", "unavailable", "silent"}
-)
+_SCENARIO_A_TARGET_SPAN_STATES: frozenset[str] = frozenset({"missing", "slow", "erroring", "unavailable", "silent"})
 
 # States that mark a gating service as having failed (Scenario E source).
 _GATING_FAILURE_STATES: frozenset[str] = frozenset({"erroring", "silent"})
@@ -277,7 +275,12 @@ def _scenario_a_consumer_services(graph: HyperGraph, dead_node: Node) -> list[No
                 # Skip loadgen-side callers — they're synthetic traffic, not
                 # consumer services of the dead infra.
                 if candidate.self_name.lower() in {
-                    "loadgenerator", "load-generator", "locust", "wrk2", "dsb-wrk2", "k6",
+                    "loadgenerator",
+                    "load-generator",
+                    "locust",
+                    "wrk2",
+                    "dsb-wrk2",
+                    "k6",
                 }:
                     continue
                 seen.add(caller_svc_id)
@@ -310,6 +313,8 @@ def _apply_scenario_a(
     Returns the number of edges added.
     """
     if injection_node.kind not in (PlaceKind.pod, PlaceKind.container):
+        return 0
+    if injection_node.id is None:
         return 0
     if not _timeline_ever_in(timelines, injection_node.uniq_name, _DEAD_INFRA_STATES):
         return 0

@@ -12,9 +12,7 @@ from rcabench_platform.v3.internal.reasoning.algorithms.baseline_calibrator impo
 def test_lower_tail_uniform_distribution() -> None:
     rng = np.random.default_rng(42)
     samples = rng.uniform(0.0, 1.0, size=1000).tolist()
-    result = calibrate_quantile_threshold(
-        samples, alpha=0.01, tail="lower", rng_seed=42
-    )
+    result = calibrate_quantile_threshold(samples, alpha=0.01, tail="lower", rng_seed=42)
     assert result.opt_out is False
     assert result.threshold is not None
     assert 0.0 <= result.threshold <= 0.05
@@ -23,9 +21,7 @@ def test_lower_tail_uniform_distribution() -> None:
 def test_upper_tail_uniform_distribution() -> None:
     rng = np.random.default_rng(42)
     samples = rng.uniform(0.0, 1.0, size=1000).tolist()
-    result = calibrate_quantile_threshold(
-        samples, alpha=0.01, tail="upper", rng_seed=42
-    )
+    result = calibrate_quantile_threshold(samples, alpha=0.01, tail="upper", rng_seed=42)
     assert result.opt_out is False
     assert result.threshold is not None
     assert 0.95 <= result.threshold <= 1.0
@@ -34,12 +30,8 @@ def test_upper_tail_uniform_distribution() -> None:
 def test_lower_vs_upper_complementary_on_same_data() -> None:
     rng = np.random.default_rng(123)
     samples = rng.uniform(0.0, 1.0, size=1000).tolist()
-    lower = calibrate_quantile_threshold(
-        samples, alpha=0.10, tail="lower", rng_seed=1
-    )
-    upper = calibrate_quantile_threshold(
-        samples, alpha=0.10, tail="upper", rng_seed=1
-    )
+    lower = calibrate_quantile_threshold(samples, alpha=0.10, tail="lower", rng_seed=1)
+    upper = calibrate_quantile_threshold(samples, alpha=0.10, tail="upper", rng_seed=1)
     assert lower.opt_out is False
     assert upper.opt_out is False
     assert lower.threshold is not None
@@ -87,12 +79,8 @@ def test_opt_out_on_unstable_small_sample() -> None:
 def test_seeded_reproducibility() -> None:
     rng = np.random.default_rng(99)
     samples = rng.uniform(0.0, 1.0, size=500).tolist()
-    a = calibrate_quantile_threshold(
-        samples, alpha=0.05, tail="lower", rng_seed=7
-    )
-    b = calibrate_quantile_threshold(
-        samples, alpha=0.05, tail="lower", rng_seed=7
-    )
+    a = calibrate_quantile_threshold(samples, alpha=0.05, tail="lower", rng_seed=7)
+    b = calibrate_quantile_threshold(samples, alpha=0.05, tail="lower", rng_seed=7)
     assert a.threshold == b.threshold
     assert a.bootstrap_rel_std == b.bootstrap_rel_std
     assert a.opt_out == b.opt_out
@@ -106,9 +94,7 @@ def test_returns_baseline_n() -> None:
     r1 = calibrate_quantile_threshold([2.0], alpha=0.01, tail="lower")
     assert r1.baseline_n == 1
     # opt_out="unstable" path (N=4 wide spread, see test_opt_out_on_unstable_small_sample)
-    r2 = calibrate_quantile_threshold(
-        [1.0, 2.0, 5.0, 10.0], alpha=0.01, tail="lower", rng_seed=0
-    )
+    r2 = calibrate_quantile_threshold([1.0, 2.0, 5.0, 10.0], alpha=0.01, tail="lower", rng_seed=0)
     assert r2.baseline_n == 4
     # successful path
     rng = np.random.default_rng(11)
@@ -120,9 +106,7 @@ def test_returns_baseline_n() -> None:
 def test_lower_tail_normal_distribution_threshold_in_expected_range() -> None:
     rng = np.random.default_rng(11)
     samples = rng.normal(0.0, 1.0, size=1000).tolist()
-    result = calibrate_quantile_threshold(
-        samples, alpha=0.05, tail="lower", rng_seed=11
-    )
+    result = calibrate_quantile_threshold(samples, alpha=0.05, tail="lower", rng_seed=11)
     assert result.opt_out is False
     assert result.threshold is not None
     assert -2.0 <= result.threshold <= -1.4
@@ -134,9 +118,7 @@ def test_lower_tail_near_zero_quantile_does_not_falsely_opt_out() -> None:
     # also small and IQR ~= 0.5, so rel_std stays well below 0.10.
     rng = np.random.default_rng(42)
     samples = rng.uniform(0.0, 1.0, size=1000).tolist()
-    result = calibrate_quantile_threshold(
-        samples, alpha=0.01, tail="lower", rng_seed=42
-    )
+    result = calibrate_quantile_threshold(samples, alpha=0.01, tail="lower", rng_seed=42)
     assert result.opt_out is False
     assert result.threshold is not None
     assert 0.0 <= result.threshold <= 0.05

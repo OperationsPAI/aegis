@@ -122,8 +122,6 @@ def test_specialization_labels_from_demoted_state_survive() -> None:
     timelines = synth_timelines([erroring, silent], observation_end=20)
     win = timelines["span|GET /qux"].windows[0]
     assert win.state == "erroring"
-    assert win.evidence.get("specialization_labels") == frozenset(
-        {"frequent_gc", "high_load"}
-    )
+    assert win.evidence.get("specialization_labels") == frozenset({"frequent_gc", "high_load"})
     shadowed = win.evidence.get("shadowed", ())
     assert any(s[0] == "silent" for s in shadowed)

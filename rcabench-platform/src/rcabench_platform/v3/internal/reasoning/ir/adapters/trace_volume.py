@@ -123,9 +123,7 @@ class TraceVolumeAdapter:
         # below. Abnormal slicing happens per-service inside the loop —
         # there is no global per-service count aggregation up front.
         if len(self._abnormal) > 0:
-            abnormal_ts = _ts_seconds(self._abnormal).with_columns(
-                pl.col("_ts").cast(pl.Int64)
-            )
+            abnormal_ts = _ts_seconds(self._abnormal).with_columns(pl.col("_ts").cast(pl.Int64))
         else:
             abnormal_ts = None
 
@@ -193,7 +191,9 @@ class TraceVolumeAdapter:
             #      granularity is available, fall back to
             #      abnormal_window_start.
             transition_at = self._first_below_threshold_at(
-                abnormal_ts, svc_name, result.threshold,
+                abnormal_ts,
+                svc_name,
+                result.threshold,
             )
 
             node_key = f"service|{svc_name}"
@@ -240,9 +240,7 @@ class TraceVolumeAdapter:
             if abnormal_ts is None:
                 count = 0
             else:
-                ts_col = abnormal_ts.filter(
-                    pl.col("service_name") == svc_name
-                ).select(pl.col("_ts")).to_series()
+                ts_col = abnormal_ts.filter(pl.col("service_name") == svc_name).select(pl.col("_ts")).to_series()
                 mask = (ts_col >= abn_ts_min) & (ts_col <= abn_ts_max)
                 count = int(mask.sum())
             return float(count) / float(self._abnormal_window_length)

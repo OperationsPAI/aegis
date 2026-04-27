@@ -86,9 +86,7 @@ def test_scenario_a_positive_dead_pod_emits_edge_to_consumer_anomalous_span() ->
     timelines = {
         "pod|payment-0": _timeline("pod|payment-0", PlaceKind.pod, [(1000, 1050, "unavailable")]),
         # Caller span is anomalous in the abnormal window.
-        "span|checkout::POST /buy": _timeline(
-            "span|checkout::POST /buy", PlaceKind.span, [(1000, 1050, "missing")]
-        ),
+        "span|checkout::POST /buy": _timeline("span|checkout::POST /buy", PlaceKind.span, [(1000, 1050, "missing")]),
     }
     assert pod.id is not None
     n_added = enrich_with_inferred_edges(g, timelines, [pod.id])

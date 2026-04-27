@@ -137,9 +137,7 @@ class FaultPropagator:
                 dst_id, src_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
             )
 
-        forward_edges = self.topology_explorer.find_reachable_subgraph(
-            injection_node_ids, alarm_nodes, edge_filter
-        )
+        forward_edges = self.topology_explorer.find_reachable_subgraph(injection_node_ids, alarm_nodes, edge_filter)
         forward_visited: set[int] = set(injection_set)
         for s, d in forward_edges:
             forward_visited.add(s)
@@ -157,10 +155,7 @@ class FaultPropagator:
         deviating_set = self._compute_deviating_set()
         relevant_nodes = corridor & (deviating_set | injection_set)
 
-        subgraph_edges = [
-            (s, d) for s, d in forward_edges
-            if s in relevant_nodes and d in relevant_nodes
-        ]
+        subgraph_edges = [(s, d) for s, d in forward_edges if s in relevant_nodes and d in relevant_nodes]
         warnings: list[str] = []
 
         if not subgraph_edges:
@@ -464,7 +459,9 @@ class FaultPropagator:
         # rule.src_state that matched the source, then advances to whatever
         # state the previous hop's causal_window matched.
         current_src_state: str = (
-            src_matching_window.state if src_matching_window else (next(iter(src_states_all)) if src_states_all else "unknown")
+            src_matching_window.state
+            if src_matching_window
+            else (next(iter(src_states_all)) if src_states_all else "unknown")
         )
 
         for hop_idx, path_hop in enumerate(rule.path):
@@ -619,8 +616,8 @@ class FaultPropagator:
             current_src_state: str = src_matching_window.state
         elif rule_src_states and src_states_all:
             matching = src_states_all.intersection(rule_src_states)
-            current_src_state = next(iter(matching)) if matching else (
-                next(iter(src_states_all)) if src_states_all else "unknown"
+            current_src_state = (
+                next(iter(matching)) if matching else (next(iter(src_states_all)) if src_states_all else "unknown")
             )
         elif src_states_all:
             current_src_state = next(iter(src_states_all))

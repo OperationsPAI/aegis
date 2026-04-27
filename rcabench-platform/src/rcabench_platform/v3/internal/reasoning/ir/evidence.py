@@ -49,4 +49,4 @@ class Evidence(TypedDict, total=False):
     # and ``docs/reasoning-feature-taxonomy.md`` §7.1). Each entry is a
     # ``(loser_to_state, loser_evidence)`` pair so downstream rules can still
     # see that the lower-precedence signal was observed.
-    shadowed: NotRequired[tuple[tuple[str, "Evidence"], ...]]
+    shadowed: NotRequired[tuple[tuple[str, Evidence], ...]]

@@ -250,9 +250,7 @@ def _silent_path_baseline_rows(rng: np.random.Generator) -> list[dict[str, Any]]
         ):
             n = int(rng.poisson(3.0))
             for i in range(n):
-                rows.append(
-                    _trace_row(ts, svc, span, 10_000_000, 200, parent_id=f"p{i}")
-                )
+                rows.append(_trace_row(ts, svc, span, 10_000_000, 200, parent_id=f"p{i}"))
     return rows
 
 
@@ -266,9 +264,7 @@ def _silent_path_abnormal_rows(rng: np.random.Generator) -> list[dict[str, Any]]
         ):
             n = int(rng.poisson(3.0))
             for i in range(n):
-                rows.append(
-                    _trace_row(ts, svc, span, 5_000_000_000, 200, parent_id=f"p{i}")
-                )
+                rows.append(_trace_row(ts, svc, span, 5_000_000_000, 200, parent_id=f"p{i}"))
         # svc-quiet emits nothing in the abnormal window.
     return rows
 

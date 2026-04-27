@@ -83,9 +83,7 @@ def _build_basic_graph() -> tuple[HyperGraph, dict[str, Node]]:
 def test_service_silent_propagates_to_each_span() -> None:
     g, _ = _build_basic_graph()
     prior = {
-        "service|svc-A": _make_timeline(
-            "service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed
-        ),
+        "service|svc-A": _make_timeline("service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed),
     }
     events = list(StructuralInheritanceAdapter(graph=g, prior_timelines=prior).emit(CTX))
 
@@ -99,9 +97,7 @@ def test_service_silent_propagates_to_each_span() -> None:
 def test_service_silent_emits_silent_not_missing() -> None:
     g, _ = _build_basic_graph()
     prior = {
-        "service|svc-A": _make_timeline(
-            "service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed
-        ),
+        "service|svc-A": _make_timeline("service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed),
     }
     events = list(StructuralInheritanceAdapter(graph=g, prior_timelines=prior).emit(CTX))
 
@@ -129,9 +125,7 @@ def test_service_unavailable_still_propagates_to_missing() -> None:
 def test_silent_inheritance_is_inferred_level() -> None:
     g, _ = _build_basic_graph()
     prior = {
-        "service|svc-A": _make_timeline(
-            "service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed
-        ),
+        "service|svc-A": _make_timeline("service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed),
     }
     events = list(StructuralInheritanceAdapter(graph=g, prior_timelines=prior).emit(CTX))
     span_events = [e for e in events if e.node_key.startswith("span|")]
@@ -143,14 +137,10 @@ def test_silent_inheritance_is_inferred_level() -> None:
 def test_silent_inheritance_suppressed_when_observed_present() -> None:
     g, _ = _build_basic_graph()
     prior = {
-        "service|svc-A": _make_timeline(
-            "service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed
-        ),
+        "service|svc-A": _make_timeline("service|svc-A", PlaceKind.service, "silent", level=EvidenceLevel.observed),
         # ep1 already observed silent — structural claim would be redundant
         # (same severity), so _is_weaker_or_equal must suppress it.
-        "span|svc-A::ep1": _make_timeline(
-            "span|svc-A::ep1", PlaceKind.span, "silent", level=EvidenceLevel.observed
-        ),
+        "span|svc-A::ep1": _make_timeline("span|svc-A::ep1", PlaceKind.span, "silent", level=EvidenceLevel.observed),
     }
     events = list(StructuralInheritanceAdapter(graph=g, prior_timelines=prior).emit(CTX))
 
@@ -171,15 +161,10 @@ def test_no_silent_inheritance_for_pod_or_container_silent() -> None:
     # path is locked down.
     prior = {
         "pod|p": _make_timeline("pod|p", PlaceKind.pod, "silent", level=EvidenceLevel.observed),
-        "container|c1": _make_timeline(
-            "container|c1", PlaceKind.container, "silent", level=EvidenceLevel.observed
-        ),
+        "container|c1": _make_timeline("container|c1", PlaceKind.container, "silent", level=EvidenceLevel.observed),
     }
     events = list(StructuralInheritanceAdapter(graph=g, prior_timelines=prior).emit(CTX))
-    assert events == [], (
-        "pod/container silent must not propagate via structural inheritance, "
-        f"got {events}"
-    )
+    assert events == [], f"pod/container silent must not propagate via structural inheritance, got {events}"
 
 
 def test_existing_container_unavailable_to_span_missing_unchanged() -> None:

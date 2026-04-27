@@ -66,9 +66,7 @@ def test_silent_rules_count_increment() -> None:
     additions don't flake this assertion.
     """
     silent_rule_ids = {
-        r.rule_id
-        for r in get_builtin_rules()
-        if r.rule_id in {"service_silent_to_span", "span_silent_to_caller"}
+        r.rule_id for r in get_builtin_rules() if r.rule_id in {"service_silent_to_span", "span_silent_to_caller"}
     }
     assert silent_rule_ids == {"service_silent_to_span", "span_silent_to_caller"}, (
         f"expected exactly the two L5 SILENT rules, found {silent_rule_ids}"
