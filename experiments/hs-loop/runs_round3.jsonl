@@ -1,9 +1,0 @@
-{"ts": "2026-04-26T09:17:08+0100", "candidate_id": "h3_01", "paired_with": [], "group_id": "d462a059-db35-4077-965e-073674ac961f", "trace_id": "4db99ada-625a-490d-914a-218687fd7fb1", "ns": "hs12"}
-{"ts": "2026-04-26T09:17:14+0100", "candidate_id": "h3_02", "paired_with": [], "group_id": "c1365592-a8a2-4fcb-af76-b560072e0dd0", "trace_id": "4541cf09-77c4-4396-a93b-8a713b015387", "ns": "hs13"}
-{"ts": "2026-04-26T09:17:20+0100", "candidate_id": "h3_03", "paired_with": [], "group_id": "eee8486d-d800-43b3-9a10-b5ce6cda3693", "trace_id": "87e6ec81-7ea6-455a-b445-91e4aafeea3d", "ns": "hs14"}
-{"ts": "2026-04-26T09:17:26+0100", "candidate_id": "h3_04", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777191446}"}
-{"ts": "2026-04-26T09:17:27+0100", "candidate_id": "h3_05", "paired_with": [], "group_id": "108d4778-cd9d-409a-8e52-0890096bbbc0", "trace_id": "95074053-9f4d-416b-aa7f-91216351178e", "ns": "hs16"}
-{"ts": "2026-04-26T09:17:33+0100", "candidate_id": "h3_06", "paired_with": [], "group_id": "e259fc41-60cc-48a6-80f4-89fd6588e097", "trace_id": "765a454a-62fc-441d-990e-ecede9a3f5d0", "ns": "hs17"}
-{"ts": "2026-04-26T09:17:39+0100", "candidate_id": "h3_07", "paired_with": [], "group_id": "a0ece8ee-e87d-4eb9-81e0-a93c711f4db0", "trace_id": "ece03a3d-3a4c-40a4-9424-7e3c4fe6580b", "ns": "hs18"}
-{"ts": "2026-04-26T09:17:45+0100", "candidate_id": "h3_08", "paired_with": [], "group_id": "f2771821-a09c-458b-9454-bd0aec43dd0e", "trace_id": "367e97d6-2dda-4490-bea0-8e9c5d944615", "ns": "hs19"}
-{"ts": "2026-04-26T09:17:50+0100", "candidate_id": "h3_09", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777191470}"}

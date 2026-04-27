@@ -1,8 +1,0 @@
-{"ts": "2026-04-26T16:09:02+0100", "candidate_id": "m4_01", "paired_with": [], "group_id": "f2168039-7972-4734-96cc-ab1921b3db86", "trace_id": "bfa2cf00-280a-42f3-9238-40cb1deb6cdc", "ns": "mm13"}
-{"ts": "2026-04-26T16:09:18+0100", "candidate_id": "m4_02", "paired_with": [], "group_id": "acabb438-a29c-4245-960f-399528864e22", "trace_id": "77f1f053-15aa-44b4-8b7a-84e400845958", "ns": "mm14"}
-{"ts": "2026-04-26T16:09:32+0100", "candidate_id": "m4_03", "paired_with": [], "group_id": "c7552b7c-56a6-4f90-8d36-7c6dcaab0adf", "trace_id": "0abd3974-9fb7-4a12-b3ac-9b0487380cbe", "ns": "mm15"}
-{"ts": "2026-04-26T16:09:44+0100", "candidate_id": "m4_04", "paired_with": [], "group_id": "fe2f26f5-8564-4e5a-901c-ce280b65fbae", "trace_id": "e37576ca-b4d7-4d94-8b0f-49e9b7d31ced", "ns": "mm16"}
-{"ts": "2026-04-26T16:10:01+0100", "candidate_id": "m4_05", "paired_with": [], "group_id": "de038987-9f21-4cea-9017-c0c45ec4231b", "trace_id": "bb7fb531-4cb8-474f-a4f4-4b7dbb1266f6", "ns": "mm17"}
-{"ts": "2026-04-26T16:10:11+0100", "candidate_id": "m4_06", "paired_with": [], "group_id": "a440d93c-d826-430d-8707-4b4b4b8aa589", "trace_id": "0044e08d-2c7b-4c36-8315-e594a527689d", "ns": "mm18"}
-{"ts": "2026-04-26T16:10:18+0100", "candidate_id": "m4_07", "paired_with": [], "group_id": "bbc94c7a-ff97-48c3-abbe-3632ca359019", "trace_id": "79ab0540-d368-4de9-875a-b59c5cd6f225", "ns": "mm19"}
-{"ts": "2026-04-26T16:10:26+0100", "candidate_id": "m4_08", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777216226}"}

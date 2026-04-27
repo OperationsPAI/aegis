@@ -1,6 +1,0 @@
-{"ts": "2026-04-25T19:35:24+0100", "candidate_id": "z01", "paired_with": [], "group_id": "579d40eb-de97-4718-9446-5f091be69f66", "trace_id": null, "ns": null}
-{"ts": "2026-04-25T19:35:27+0100", "candidate_id": "z02", "paired_with": [], "group_id": "d01f04e1-449e-4a6e-9832-acb5fffca63d", "trace_id": null, "ns": null}
-{"ts": "2026-04-25T19:35:30+0100", "candidate_id": "z03", "paired_with": [], "group_id": "98a427ec-62eb-48a6-a85a-32cd9931019f", "trace_id": null, "ns": null}
-{"ts": "2026-04-25T19:35:33+0100", "candidate_id": "z04", "paired_with": [], "group_id": "6fa7de86-8d86-457f-97e4-40737d3c3096", "trace_id": null, "ns": null}
-{"ts": "2026-04-25T19:35:36+0100", "candidate_id": "z05", "paired_with": [], "group_id": "31ddb3b5-07d1-4d27-b398-a37a175f9ce1", "trace_id": "1c9c3594-460b-44ce-91cd-ab84ee690003", "ns": "otel-demo5"}
-{"ts": "2026-04-25T19:35:39+0100", "candidate_id": "z06", "paired_with": [], "group_id": "2ba511d1-8a87-409e-9bdc-19b18a73f684", "trace_id": "33257506-129f-4d2a-9443-4aa7e1154192", "ns": "otel-demo6"}

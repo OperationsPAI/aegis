@@ -1,5 +1,0 @@
-1f1f5586-0e49-4e41-9069-55985c91f33f	Running	fault.injection.started
-43dcc718-d601-4c9d-8e9d-d8b18fe2829a	Failed	datapack.build.failed
-6dffc0e6-45aa-4700-9cb6-7e400c566965	Completed	datapack.no_anomaly
-7b21b85d-a2c2-498e-9ed2-6d90dd115b27	Completed	datapack.no_anomaly
-ad4c5944-9af0-49b4-9506-8c5f69c56d34	Failed	fault.injection.failed

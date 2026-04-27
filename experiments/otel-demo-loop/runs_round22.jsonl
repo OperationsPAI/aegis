@@ -1,4 +1,0 @@
-{"ts": "2026-04-26T21:00:09+0100", "candidate_id": "x22_01", "paired_with": [], "group_id": "e13444a1-5682-436f-9f53-1c07df82adaf", "trace_id": "b3ebe45d-4ce4-45b9-8c31-1be1cf73b0ce", "ns": "otel-demo20"}
-{"ts": "2026-04-26T21:00:17+0100", "candidate_id": "x22_02", "paired_with": [], "group_id": "46c0f0e8-d610-4a47-a725-9cfa278d857d", "trace_id": "e82e8151-3fe7-48c8-9b2a-b2b1a8f14880", "ns": "otel-demo21"}
-{"ts": "2026-04-26T21:00:27+0100", "candidate_id": "x22_03", "paired_with": [], "group_id": "84ab1465-0b8d-49a3-84d4-d6b58744d57c", "trace_id": "3595a53e-8cd6-42df-8441-ed0d7446ecb6", "ns": "otel-demo22"}
-{"ts": "2026-04-26T21:00:36+0100", "candidate_id": "x22_04", "paired_with": [], "group_id": "3687f965-4a71-49a7-9db7-73eed592e139", "trace_id": "12a7e63b-36d6-4af7-b38b-3f5306ba2bf2", "ns": "otel-demo23"}
