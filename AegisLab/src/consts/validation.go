@@ -88,11 +88,13 @@ var ValidConfigScopes = map[ConfigScope]struct{}{
 }
 
 var ValidDatapackStates = map[DatapackState]struct{}{
-	DatapackInitial:       {},
-	DatapackInjectFailed:  {},
-	DatapackInjectSuccess: {},
-	DatapackBuildFailed:   {},
-	DatapackBuildSuccess:  {},
+	DatapackInitial:         {},
+	DatapackInjectFailed:    {},
+	DatapackInjectSuccess:   {},
+	DatapackBuildFailed:     {},
+	DatapackBuildSuccess:    {},
+	DatapackDetectorFailed:  {},
+	DatapackDetectorSuccess: {},
 }
 
 var ValidDynamicConfigTypes = map[ConfigValueType]struct{}{
