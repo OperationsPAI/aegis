@@ -17,6 +17,9 @@ from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver 
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
 from rcabench_platform.v3.internal.reasoning.ir.adapters.inferred_edges import enrich_with_inferred_edges
 from rcabench_platform.v3.internal.reasoning.ir.adapters.log_dependency import dispatch_log_adapters
+from rcabench_platform.v3.internal.reasoning.ir.adapters.trace_db_binding import (
+    dispatch_trace_db_binding_adapters,
+)
 from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
@@ -467,6 +470,16 @@ def run_single_case(
         abnormal_traces = loader.load_traces("abnormal")
         injection_at = _earliest_abnormal_seconds(abnormal_traces)
         abnormal_window_end = _latest_abnormal_seconds(abnormal_traces)
+
+        # Per-system trace -> DB binding. Runs BEFORE the IR pipeline so that
+        # the structural edges this adapter wires (service->pod routes_to,
+        # stateful_set->pod manages) participate in StructuralInheritance's
+        # ``container.unavailable`` -> ``service.unavailable`` cascade. Each
+        # registered adapter gates itself on its system signature, so this
+        # is a no-op on non-matching benchmarks.
+        n_db_binding_edges = dispatch_trace_db_binding_adapters(graph, abnormal_traces, baseline_traces)
+        logger.info(f"[{case_name}] trace-db-binding edges: {n_db_binding_edges}")
+
         ctx = AdapterContext(datapack_dir=data_dir, case_name=case_name)
         timelines = run_reasoning_ir(
             graph=graph,
