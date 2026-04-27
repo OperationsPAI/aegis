@@ -95,6 +95,7 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		ExecutionOwner:           params.ExecutionOwner,
 		InjectionOwner:           params.InjectionOwner,
 		TaskRegistry:             params.TaskRegistry,
+		FreshnessProbe:           consumer.NewClickHouseFreshnessProbe(),
 	})
 	return nil
 }

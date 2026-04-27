@@ -38,4 +38,10 @@ type RuntimeDeps struct {
 	// TaskRegistry is the framework-aggregated dispatch table; nil in
 	// tests that don't exercise dispatchTask. See service/consumer.Module.
 	TaskRegistry *TaskRegistry
+	// FreshnessProbe gates BuildDatapack on otel.otel_traces ingestion
+	// freshness so prepare_inputs.py does not race the OTel exporter
+	// retry queue and produce empty abnormal_traces.parquet (issue #210).
+	// Optional in tests; when nil, the executor skips the pre-flight
+	// (preserves pre-PR behavior).
+	FreshnessProbe FreshnessProbe
 }

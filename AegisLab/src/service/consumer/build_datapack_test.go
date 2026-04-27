@@ -3,12 +3,40 @@ package consumer
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"aegis/dto"
 
 	"github.com/sirupsen/logrus"
 )
+
+// fakeFreshnessProbe is a deterministic FreshnessProbe used by the
+// issue #210 pre-flight tests. It walks a canned response sequence; once
+// exhausted, the last response is sticky so "always too stale" / "always
+// errors" stories work without bookkeeping.
+type fakeFreshnessProbe struct {
+	responses []freshnessProbeResponse
+	calls     atomic.Int32
+}
+
+type freshnessProbeResponse struct {
+	ts  time.Time
+	ok  bool
+	err error
+}
+
+func (f *fakeFreshnessProbe) MaxTraceTimestamp(_ context.Context, _ string) (time.Time, bool, error) {
+	idx := int(f.calls.Add(1)) - 1
+	if idx >= len(f.responses) {
+		idx = len(f.responses) - 1
+	}
+	r := f.responses[idx]
+	return r.ts, r.ok, r.err
+}
+
+func (f *fakeFreshnessProbe) callCount() int { return int(f.calls.Load()) }
 
 // TestAcquireBuildDatapackToken_AcquiresOnFirstTry covers the happy path:
 // when the bucket has capacity, AcquireToken returns (true, nil) and we
@@ -111,5 +139,141 @@ func TestAcquireBuildDatapackToken_PropagatesAcquireError(t *testing.T) {
 	}
 	if issuer.waitCalls != 0 {
 		t.Fatalf("WaitForToken should not be called when AcquireToken errors: %d calls", issuer.waitCalls)
+	}
+}
+
+// withFastFreshnessBackoff shrinks the freshness probe backoff for the
+// duration of one test so the multi-probe path stays well under the
+// repo-wide 60s test timeout.
+func withFastFreshnessBackoff(t *testing.T) {
+	t.Helper()
+	prevInit, prevMax := freshnessInitialBackoff, freshnessMaxBackoff
+	freshnessInitialBackoff = 5 * time.Millisecond
+	freshnessMaxBackoff = 20 * time.Millisecond
+	t.Cleanup(func() {
+		freshnessInitialBackoff = prevInit
+		freshnessMaxBackoff = prevMax
+	})
+}
+
+// TestWaitForCHFreshness_ReturnsNilOnceFresh covers the happy path: the
+// first three probes report a max(Timestamp) that's older than the
+// (abnormal_end - watermark) deadline; the 4th probe finally crosses the
+// threshold. waitForCHFreshness must return nil after the 4th call and
+// not keep probing.
+func TestWaitForCHFreshness_ReturnsNilOnceFresh(t *testing.T) {
+	withFastFreshnessBackoff(t)
+	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	watermark := 30 * time.Second
+	stale := abnormalEnd.Add(-2 * time.Minute) // < deadline (= abnormalEnd-30s)
+	fresh := abnormalEnd.Add(-10 * time.Second) // >= deadline
+	probe := &fakeFreshnessProbe{
+		responses: []freshnessProbeResponse{
+			{ts: stale, ok: true},
+			{ts: stale, ok: true},
+			{ts: stale, ok: true},
+			{ts: fresh, ok: true},
+		},
+	}
+	logEntry := logrus.NewEntry(logrus.StandardLogger())
+	err := waitForCHFreshness(context.Background(), probe, "ts0", abnormalEnd, watermark, 5*time.Second, logEntry)
+	if err != nil {
+		t.Fatalf("waitForCHFreshness: %v", err)
+	}
+	if got := probe.callCount(); got != 4 {
+		t.Fatalf("probe call count = %d, want 4", got)
+	}
+}
+
+// TestWaitForCHFreshness_TimesOut covers the timeout path: every probe
+// keeps reporting a stale max(Timestamp). After maxWait the helper must
+// return errFreshnessTimeout (a sentinel the executor maps to a task
+// reschedule, NOT to datapack.build.failed).
+func TestWaitForCHFreshness_TimesOut(t *testing.T) {
+	withFastFreshnessBackoff(t)
+	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	stale := abnormalEnd.Add(-5 * time.Minute)
+	probe := &fakeFreshnessProbe{
+		responses: []freshnessProbeResponse{{ts: stale, ok: true}},
+	}
+	logEntry := logrus.NewEntry(logrus.StandardLogger())
+	err := waitForCHFreshness(context.Background(), probe, "ts0", abnormalEnd, 30*time.Second, 50*time.Millisecond, logEntry)
+	if err == nil {
+		t.Fatalf("expected timeout error, got nil")
+	}
+	if !errors.Is(err, errFreshnessTimeout) {
+		t.Fatalf("expected errFreshnessTimeout, got %v", err)
+	}
+	if !errorsIsFreshnessTimeout(err) {
+		t.Fatalf("errorsIsFreshnessTimeout should match the timeout sentinel")
+	}
+	if probe.callCount() < 1 {
+		t.Fatalf("probe should have been called at least once")
+	}
+}
+
+// TestWaitForCHFreshness_PropagatesProbeError covers the "don't silently
+// retry forever on a misconfigured DSN" requirement: a CH error from the
+// probe must surface to the caller (which then handleExecutionError-marks
+// the task) instead of being swallowed by the retry loop.
+func TestWaitForCHFreshness_PropagatesProbeError(t *testing.T) {
+	withFastFreshnessBackoff(t)
+	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	probeErr := errors.New("clickhouse: connection refused")
+	probe := &fakeFreshnessProbe{
+		responses: []freshnessProbeResponse{{err: probeErr}},
+	}
+	logEntry := logrus.NewEntry(logrus.StandardLogger())
+	err := waitForCHFreshness(context.Background(), probe, "ts0", abnormalEnd, 30*time.Second, 5*time.Second, logEntry)
+	if err == nil {
+		t.Fatalf("expected probe error to propagate, got nil")
+	}
+	if errorsIsFreshnessTimeout(err) {
+		t.Fatalf("probe error must NOT be reported as the timeout sentinel: %v", err)
+	}
+	if !errors.Is(err, probeErr) {
+		t.Fatalf("probe error chain lost; want wrap of %v, got %v", probeErr, err)
+	}
+	if got := probe.callCount(); got != 1 {
+		t.Fatalf("probe call count = %d, want 1 (errors must not retry)", got)
+	}
+}
+
+// TestWaitForCHFreshness_NoOpWhenProbeNil documents the back-compat
+// guarantee: if RuntimeDeps.FreshnessProbe is nil (unit-test path or a
+// pre-issue-#210 deployment that hasn't wired the probe yet),
+// waitForCHFreshness must return immediately without blocking the
+// executor. This is the safety hatch — no probe, no race-fix, but also
+// no regression vs. the pre-PR behavior.
+func TestWaitForCHFreshness_NoOpWhenProbeNil(t *testing.T) {
+	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	logEntry := logrus.NewEntry(logrus.StandardLogger())
+	if err := waitForCHFreshness(context.Background(), nil, "ts0", abnormalEnd, 30*time.Second, 5*time.Second, logEntry); err != nil {
+		t.Fatalf("nil probe should be a no-op, got %v", err)
+	}
+}
+
+// TestExtractNamespaceFromBenchmarkEnv ensures the executor pulls the
+// per-task namespace out of the benchmark env-var list (the
+// fault-injection callback prepends NAMESPACE before submitting the
+// BuildDatapack task), and falls back to "" when missing — in which case
+// waitForCHFreshness still works against a table-wide max(Timestamp).
+func TestExtractNamespaceFromBenchmarkEnv(t *testing.T) {
+	cases := []struct {
+		name string
+		in   []dto.ParameterItem
+		want string
+	}{
+		{name: "happy", in: []dto.ParameterItem{{Key: "NAMESPACE", Value: "ts0"}}, want: "ts0"},
+		{name: "missing", in: []dto.ParameterItem{{Key: "OTHER", Value: "x"}}, want: ""},
+		{name: "non-string-value", in: []dto.ParameterItem{{Key: "NAMESPACE", Value: 42}}, want: ""},
+		{name: "empty", in: nil, want: ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := extractNamespaceFromBenchmarkEnv(tc.in); got != tc.want {
+				t.Fatalf("extractNamespaceFromBenchmarkEnv = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
