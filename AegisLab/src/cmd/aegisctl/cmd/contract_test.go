@@ -351,7 +351,7 @@ func TestTraceGetMissingTokenUsesAuthExitCode(t *testing.T) {
 	}
 }
 
-func TestServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) {
+func TestIntegrationServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Fatalf("unexpected method: %v", r.Method)
@@ -367,7 +367,7 @@ func TestServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) {
 			}
 			w.Header().Set("X-Request-Id", "req-server-fail")
 			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte(`{"code":500,"message":"boom","request_id":"should-not-be-in-json"}`))
+			_, _ = w.Write([]byte(`{"code":500,"message":"An unexpected error occurred","request_id":"should-not-be-in-json"}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -390,6 +390,9 @@ func TestServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) {
 	}
 	if v := serverPayload["request_id"]; v != "req-server-fail" {
 		t.Fatalf("server payload request_id = %v, want req-server-fail", v)
+	}
+	if strings.Contains(serverErr.stderr, "An unexpected error occurred") {
+		t.Fatalf("server payload leaked generic server message: %q", serverErr.stderr)
 	}
 
 	decodeErr := runCLI(t, "project", "list", "--page", "2", "--server", server.URL, "--output", "ndjson")
