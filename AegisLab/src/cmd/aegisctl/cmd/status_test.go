@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -228,5 +229,83 @@ func TestStatusJSON(t *testing.T) {
 		if _, exists := services[svc]; !exists {
 			t.Errorf("health.services should contain %q", svc)
 		}
+	}
+}
+
+func TestStatusIntegrationNonTTYNoANSIAndTraceID(t *testing.T) {
+	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/system/health":
+			json.NewEncoder(w).Encode(healthyResponse())
+		case "/api/v2/auth/profile":
+			json.NewEncoder(w).Encode(map[string]any{
+				"code":    200,
+				"message": "success",
+				"data":    map[string]any{"id": 1, "username": "admin"},
+			})
+		case "/api/v2/tasks":
+			json.NewEncoder(w).Encode(map[string]any{
+				"code":    200,
+				"message": "success",
+				"data": map[string]any{
+					"items":      []any{},
+					"pagination": map[string]any{"page": 1, "size": 100, "total": 0, "total_pages": 0},
+				},
+			})
+		case "/api/v2/traces":
+			json.NewEncoder(w).Encode(map[string]any{
+				"code":    200,
+				"message": "success",
+				"data": map[string]any{
+					"items": []any{
+						map[string]any{
+							"id":           "trace-id-001",
+							"state":        "Completed",
+							"type":         "FullPipeline",
+							"project_name": "case-a",
+							"project_id":   101,
+						},
+					},
+					"pagination": map[string]any{"page": 1, "size": 10, "total": 1, "total_pages": 1},
+				},
+			})
+		default:
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]any{"code": 401, "message": "unauthorized"})
+		}
+	})
+	defer ts.Close()
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	flagServer = ts.URL
+	flagOutput = "table"
+	flagToken = "test-token"
+	output.SetNoColor(true)
+	defer output.SetNoColor(false)
+
+	err := statusCmd.RunE(nil, nil)
+
+	_ = w.Close()
+	os.Stdout = old
+
+	if err != nil {
+		t.Fatalf("statusCmd should not return error, got: %v", err)
+	}
+
+	var buf [4096]byte
+	n, _ := r.Read(buf[:])
+	got := string(buf[:n])
+
+	if regexp.MustCompile(`\x1b\[`).MatchString(got) {
+		t.Fatalf("status output contains ANSI escape: %q", got)
+	}
+	if !strings.Contains(got, "Recent Traces:") {
+		t.Fatalf("missing Recent Traces section: %q", got)
+	}
+	if !strings.Contains(got, "trace-id-001") {
+		t.Fatalf("trace-id should be rendered in table: %q", got)
 	}
 }
