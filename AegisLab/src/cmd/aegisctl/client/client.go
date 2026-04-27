@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
+
+	"aegis/cmd/aegisctl/internal/cli/clierr"
 )
 
 // APIResponse is the standard response envelope returned by the AegisLab API.
@@ -17,6 +20,12 @@ type APIResponse[T any] struct {
 	Timestamp int64  `json:"timestamp,omitempty"`
 	Errors    []any  `json:"errors,omitempty"`
 }
+
+const (
+	exitCodeServer = 10
+	exitCodeDecode = 11
+	genericServerMessage = "An unexpected error occurred"
+)
 
 // Pagination contains pagination metadata.
 type Pagination struct {
@@ -41,21 +50,6 @@ type APIError struct {
 
 func (e *APIError) Error() string {
 	return fmt.Sprintf("API error %d: %s", e.StatusCode, e.Message)
-}
-
-// DecodeError wraps JSON decoding failures when the API returns a non-conformant
-// body for the requested schema.
-type DecodeError struct {
-	Body []byte
-	Err  error
-}
-
-func (e *DecodeError) Error() string {
-	return fmt.Sprintf("decode response: %v", e.Err)
-}
-
-func (e *DecodeError) Unwrap() error {
-	return e.Err
 }
 
 // Client is the core HTTP client for the AegisLab API.
@@ -117,8 +111,30 @@ func (c *Client) doRequest(method, path string, body any, headers map[string]str
 	if err != nil {
 		return fmt.Errorf("read response: %w", err)
 	}
+	requestID := resp.Header.Get("X-Request-Id")
+	bodySummary := summarizeBody(respBody)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
+			cause := summarizeServerCause(respBody)
+			message := fmt.Sprintf("server returned HTTP %d", resp.StatusCode)
+			if cause != "" {
+				message += fmt.Sprintf("; cause: %s", cause)
+			}
+			if requestID != "" {
+				message += fmt.Sprintf("; request_id=%s", requestID)
+			}
+			return &clierr.CLIError{
+				Type:       "server",
+				Message:    message,
+				Cause:      cause,
+				RequestID:  requestID,
+				Suggestion: "The request failed on the server side. Retry if this is a transient incident.",
+				Retryable:  true,
+				ExitCode:   exitCodeServer,
+			}
+		}
+
 		var apiResp APIResponse[any]
 		if json.Unmarshal(respBody, &apiResp) == nil && apiResp.Message != "" {
 			return &APIError{
@@ -135,10 +151,83 @@ func (c *Client) doRequest(method, path string, body any, headers map[string]str
 
 	if dest != nil {
 		if err := json.Unmarshal(respBody, dest); err != nil {
-			return &DecodeError{Body: respBody, Err: err}
+			return decodeError(err, bodySummary, requestID)
 		}
 	}
 	return nil
+}
+
+func decodeError(err error, bodySummary string, requestID string) error {
+	cause := decodeCause(err, bodySummary)
+	return &clierr.CLIError{
+		Type:       "decode",
+		Message:    "decode response: failed to decode server JSON payload",
+		Cause:      cause,
+		RequestID:  requestID,
+		Suggestion: "Check that client and server response contracts are aligned.",
+		Retryable:  false,
+		ExitCode:   exitCodeDecode,
+	}
+}
+
+func decodeCause(err error, bodySummary string) string {
+	if ute, ok := err.(*json.UnmarshalTypeError); ok {
+		expected := "unknown"
+		if ute.Type != nil {
+			expected = ute.Type.String()
+		}
+		actual := ute.Value
+		if actual == "" {
+			actual = "unknown"
+		}
+		if ute.Field != "" {
+			return fmt.Sprintf("field %q: expected %s, got %s", ute.Field, expected, actual)
+		}
+		return fmt.Sprintf("expected %s, got %s", expected, actual)
+	}
+
+	if len(bodySummary) == 0 {
+		return err.Error()
+	}
+	return fmt.Sprintf("%s; body=%s", err.Error(), bodySummary)
+}
+
+func summarizeBody(body []byte) string {
+	summary := strings.TrimSpace(string(body))
+	if summary == "" {
+		return "empty response body"
+	}
+	summary = strings.ReplaceAll(summary, "\n", " ")
+	const maxBodySummary = 200
+	if len(summary) <= maxBodySummary {
+		return summary
+	}
+	return summary[:maxBodySummary] + "..."
+}
+
+func summarizeServerCause(body []byte) string {
+	summary := summarizeBody(body)
+	if summary == "empty response body" {
+		return summary
+	}
+
+	var payload struct {
+		Code    any    `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(body, &payload); err == nil {
+		if strings.EqualFold(strings.TrimSpace(payload.Message), genericServerMessage) {
+			if payload.Code != nil {
+				return fmt.Sprintf("generic internal server error payload (code=%v)", payload.Code)
+			}
+			return "generic internal server error payload"
+		}
+	}
+
+	if strings.Contains(summary, genericServerMessage) {
+		return "generic internal server error payload"
+	}
+	return summary
 }
 
 // Get sends a GET request.
