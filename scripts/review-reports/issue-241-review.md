@@ -8,9 +8,7 @@ No gitlink/submodule pointer changes were present in `origin/main...origin/workb
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-Changed gitlinks vs origin/main...origin/workbuddy/issue-241
 
-Top-level gitlinks in HEAD
 ```
 
 | submodule | remote branch | SHA match | FF-able |
@@ -26,9 +24,11 @@ Top-level gitlinks in HEAD
 **stdout** (first 20 lines):
 ```text
 missing AEGIS_SERVER or AEGIS_TOKEN; cannot verify against production server
+
 ```
 **stderr** (first 20 lines, if nonzero):
 ```text
+
 ```
 
 ### AC 2: 客户端 struct 的 duration 字段类型与 server openapi 声明对齐；若不一致，记录在 PR description 里说明选择原因。
@@ -56,15 +56,36 @@ client list type
    128		State     string  `json:"state"`
    129		Duration  float64 `json:"duration"`
    130		CreatedAt string  `json:"created_at"`
+
 ```
 
 ### AC 3: 一个 unit test（仅一个）：以 server 实际返回的一段真实 JSON sample 喂给 decoder，断言不报错、duration 字段值正确。
 **verdict**: PASS
-**command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestDecodeExecuteListResponse -count=1`
+**command**: `printf "test file excerpt\n"; nl -ba AegisLab/src/cmd/aegisctl/cmd/execute_test.go | sed -n "1,80p"; printf "\nrun test\n"; cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestDecodeExecuteListResponse -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/cmd	0.038s
+test file excerpt
+     1	package cmd
+     2	
+     3	import (
+     4		"encoding/json"
+     5		"testing"
+     6	
+     7		"aegis/cmd/aegisctl/client"
+     8	)
+     9	
+    10	func TestDecodeExecuteListResponse(t *testing.T) {
+    11		payload := `{"code":0,"message":"success","data":{"items":[{"id":101,"algorithm":"Traceback","datapack":"pair_diagnosis","state":"Success","duration":3,"created_at":"2026-04-26T08:12:24Z"}],"pagination":{"page":1,"size":20,"total":1,"total_pages":1}}}`
+    12	
+    13		var resp client.APIResponse[client.PaginatedData[executeListItem]]
+    14		if err := json.Unmarshal([]byte(payload), &resp); err != nil {
+    15			t.Fatalf("decode execute list response: %v", err)
+    16		}
+    17		if len(resp.Data.Items) != 1 {
+    18			t.Fatalf("unexpected item count: %d", len(resp.Data.Items))
+    19		}
+
 ```
 
 ### AC 4: decode 失败时（非本字段，未来其它字段）EXIT=11（依赖 #237-退出码中枢子 issue）。
@@ -73,16 +94,37 @@ ok  	aegis/cmd/aegisctl/cmd	0.038s
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/cmd	0.036s
+ok  	aegis/cmd/aegisctl/cmd	0.025s
+
 ```
 
 ### Mini-AC 1 (latest dev plan): Tighten the decode regression test to use the real `aegisctl execute list` response type from `cmd/execute.go`, not a test-local stand-in.
 **verdict**: PASS
-**command**: `cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestDecodeExecuteListResponse -count=1`
+**command**: `printf "real type excerpt\n"; nl -ba AegisLab/src/cmd/aegisctl/cmd/execute_test.go | sed -n "1,40p"; printf "\nrun test\n"; cd AegisLab/src && go test ./cmd/aegisctl/cmd -run TestDecodeExecuteListResponse -count=1`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/cmd	0.038s
+real type excerpt
+     1	package cmd
+     2	
+     3	import (
+     4		"encoding/json"
+     5		"testing"
+     6	
+     7		"aegis/cmd/aegisctl/client"
+     8	)
+     9	
+    10	func TestDecodeExecuteListResponse(t *testing.T) {
+    11		payload := `{"code":0,"message":"success","data":{"items":[{"id":101,"algorithm":"Traceback","datapack":"pair_diagnosis","state":"Success","duration":3,"created_at":"2026-04-26T08:12:24Z"}],"pagination":{"page":1,"size":20,"total":1,"total_pages":1}}}`
+    12	
+    13		var resp client.APIResponse[client.PaginatedData[executeListItem]]
+    14		if err := json.Unmarshal([]byte(payload), &resp); err != nil {
+    15			t.Fatalf("decode execute list response: %v", err)
+    16		}
+    17		if len(resp.Data.Items) != 1 {
+    18			t.Fatalf("unexpected item count: %d", len(resp.Data.Items))
+    19		}
+
 ```
 
 ### Mini-AC 2 (latest dev plan): Re-run the affected aegisctl packages to confirm the duration decode fix and exit-code path still compile and pass after the test move.
@@ -91,8 +133,9 @@ ok  	aegis/cmd/aegisctl/cmd	0.038s
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
-ok  	aegis/cmd/aegisctl/client	0.006s
-ok  	aegis/cmd/aegisctl/cmd	0.796s
+ok  	aegis/cmd/aegisctl/client	0.011s
+ok  	aegis/cmd/aegisctl/cmd	0.905s
+
 ```
 
 ### Mini-AC 3 (latest dev plan): Refresh the parent PR/issue handoff so review can continue with the corrected evidence and current branch state.
@@ -102,6 +145,7 @@ ok  	aegis/cmd/aegisctl/cmd	0.796s
 **stdout** (first 20 lines):
 ```text
 {"headRefName":"workbuddy/issue-241","state":"OPEN","url":"https://github.com/OperationsPAI/aegis/pull/261"}
+
 ```
 
 ## Overall
