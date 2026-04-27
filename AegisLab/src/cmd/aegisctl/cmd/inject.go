@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -17,6 +19,13 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+func urlQueryEscape(s string) string { return url.QueryEscape(s) }
+func bufioScanner(r io.Reader) *bufio.Scanner {
+	sc := bufio.NewScanner(r)
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	return sc
+}
 
 // resolveDatapackStateFlag accepts either a numeric state (e.g. "6") or a
 // symbolic name (e.g. "detector_success") and returns the numeric form expected
@@ -72,6 +81,18 @@ func resolveProjectIDByName() (int, error) {
 		return 0, err
 	}
 	return newResolver().ProjectID(name)
+}
+
+// newProjectScopedResolver builds a resolver that already knows the current
+// --project, so InjectionID lookups go to the project-scoped list endpoint.
+func newProjectScopedResolver() (*client.Resolver, error) {
+	pid, err := resolveProjectIDByName()
+	if err != nil {
+		return nil, err
+	}
+	r := newResolver()
+	r.SetProjectScope(pid)
+	return r, nil
 }
 
 // ---------- inject root ----------
@@ -189,7 +210,10 @@ var injectGetCmd = &cobra.Command{
 	Short: "Get detailed info about an injection",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r := newResolver()
+		r, err := newProjectScopedResolver()
+		if err != nil {
+			return err
+		}
 		id, err := r.InjectionID(args[0])
 		if err != nil {
 			return err
@@ -323,7 +347,10 @@ var injectFilesCmd = &cobra.Command{
 	Short: "List files produced by an injection",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r := newResolver()
+		r, err := newProjectScopedResolver()
+		if err != nil {
+			return err
+		}
 		id, err := r.InjectionID(args[0])
 		if err != nil {
 			return err
@@ -358,24 +385,243 @@ var injectFilesCmd = &cobra.Command{
 
 // ---------- inject download ----------
 
-var injectDownloadOutput string
+var (
+	injectDownloadOutput   string
+	injectDownloadDir      string
+	injectDownloadInclude  string
+	injectDownloadFilePar  int
+	injectDownloadTimeout  int
+)
+
+const (
+	includeConverted = "converted"
+	includeRaw       = "raw"
+	includeAll       = "all"
+)
+
+func injectIncludeFlagHelp() string {
+	return "{converted, raw, all}"
+}
+
+// validateIncludeFlag checks --include and returns it normalized.
+func validateIncludeFlag(raw string) (string, error) {
+	switch raw {
+	case includeConverted, includeRaw, includeAll:
+		return raw, nil
+	case "":
+		return includeConverted, nil
+	default:
+		return "", fmt.Errorf("invalid --include %q; valid values: %s", raw, injectIncludeFlagHelp())
+	}
+}
+
+// pathMatchesInclude reports whether the given relative path inside a datapack
+// should be downloaded under the given include mode.
+func pathMatchesInclude(path, include string) bool {
+	switch include {
+	case includeAll:
+		return true
+	case includeConverted:
+		return strings.HasPrefix(path, "converted/")
+	case includeRaw:
+		return !strings.HasPrefix(path, "converted/")
+	default:
+		return false
+	}
+}
+
+type datapackFileEntry struct {
+	Path     string              `json:"path"`
+	Children []datapackFileEntry `json:"children,omitempty"`
+}
+
+// listInjectionFiles fetches the datapack file tree for the given injection
+// and returns the flattened list of leaf file paths (directories are skipped).
+func listInjectionFiles(c *client.Client, id int) ([]string, error) {
+	type fileTreeResp struct {
+		Files []datapackFileEntry `json:"files"`
+	}
+	var resp client.APIResponse[fileTreeResp]
+	if err := c.Get(fmt.Sprintf("/api/v2/injections/%d/files", id), &resp); err != nil {
+		return nil, err
+	}
+	var out []string
+	var walk func(items []datapackFileEntry)
+	walk = func(items []datapackFileEntry) {
+		for _, it := range items {
+			if len(it.Children) > 0 {
+				walk(it.Children)
+			} else {
+				out = append(out, it.Path)
+			}
+		}
+	}
+	walk(resp.Data.Files)
+	return out, nil
+}
+
+// downloadInjectionFile streams a single datapack file to disk. Parent
+// directories under outDir are created on demand.
+func downloadInjectionFile(httpClient *http.Client, server, token string, id int, relPath, outPath string) error {
+	if err := os.MkdirAll(filepathDir(outPath), 0o755); err != nil {
+		return err
+	}
+	url := fmt.Sprintf("%s/api/v2/injections/%d/files/download?path=%s", server, id, queryEscape(relPath))
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	f, err := os.Create(outPath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		return err
+	}
+	return nil
+}
+
+// downloadPackToDir downloads a single injection's datapack into outDir,
+// honoring the include filter and per-file parallelism. A `.done` marker is
+// written under outDir on success so subsequent calls can short-circuit.
+func downloadPackToDir(httpClient *http.Client, server, token string, id int, name, outDir, include string, fileParallelism int) error {
+	c := newClient()
+	files, err := listInjectionFiles(c, id)
+	if err != nil {
+		return fmt.Errorf("list files: %w", err)
+	}
+
+	var wanted []string
+	for _, p := range files {
+		if pathMatchesInclude(p, include) {
+			wanted = append(wanted, p)
+		}
+	}
+	if len(wanted) == 0 {
+		// Touch marker so we don't keep retrying empty packs.
+		return touchFile(filepathJoin(outDir, ".done"))
+	}
+
+	if fileParallelism < 1 {
+		fileParallelism = 1
+	}
+	type work struct{ rel, dst string }
+	jobs := make(chan work, len(wanted))
+	errCh := make(chan error, fileParallelism)
+
+	for i := 0; i < fileParallelism; i++ {
+		go func() {
+			for w := range jobs {
+				if err := downloadInjectionFile(httpClient, server, token, id, w.rel, w.dst); err != nil {
+					errCh <- fmt.Errorf("%s: %w", w.rel, err)
+					return
+				}
+			}
+			errCh <- nil
+		}()
+	}
+	for _, p := range wanted {
+		// Strip the include-determined prefix when laying out files locally
+		// so `--include converted` doesn't recreate the converted/ wrapper dir.
+		rel := p
+		if include == includeConverted {
+			rel = strings.TrimPrefix(p, "converted/")
+		}
+		jobs <- work{rel: p, dst: filepathJoin(outDir, rel)}
+	}
+	close(jobs)
+	for i := 0; i < fileParallelism; i++ {
+		if e := <-errCh; e != nil {
+			return e
+		}
+	}
+
+	return touchFile(filepathJoin(outDir, ".done"))
+}
+
+// Tiny path helpers kept inline so we don't pull "path/filepath" into more
+// files than necessary.
+func filepathJoin(parts ...string) string {
+	return strings.Join(parts, string(os.PathSeparator))
+}
+func filepathDir(p string) string {
+	if i := strings.LastIndex(p, string(os.PathSeparator)); i >= 0 {
+		return p[:i]
+	}
+	return "."
+}
+func queryEscape(s string) string { return urlQueryEscape(s) }
+
+// touchFile creates an empty marker file (idempotent).
+func touchFile(p string) error {
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
 
 var injectDownloadCmd = &cobra.Command{
 	Use:   "download <name>",
-	Short: "Download injection artifacts to a file",
-	Args:  cobra.ExactArgs(1),
+	Short: "Download an injection's datapack",
+	Long: `Download a datapack either as a single zip file (--output-file) or extracted
+into a directory (--output-dir). When extracting, --include selects which
+subset of the datapack to fetch.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if injectDownloadOutput == "" {
-			return usageErrorf("--output-file <path> is required")
+		if injectDownloadOutput == "" && injectDownloadDir == "" {
+			return usageErrorf("either --output-file <path> or --output-dir <dir> is required")
+		}
+		if injectDownloadOutput != "" && injectDownloadDir != "" {
+			return usageErrorf("--output-file and --output-dir are mutually exclusive")
 		}
 
-		r := newResolver()
+		include, err := validateIncludeFlag(injectDownloadInclude)
+		if err != nil {
+			return err
+		}
+
+		r, err := newProjectScopedResolver()
+		if err != nil {
+			return err
+		}
 		id, err := r.InjectionID(args[0])
 		if err != nil {
 			return err
 		}
 
-		// Build a raw HTTP request (binary download, not JSON).
+		timeoutSec := injectDownloadTimeout
+		if timeoutSec <= 0 {
+			timeoutSec = flagRequestTimeout
+		}
+		httpClient := &http.Client{Timeout: time.Duration(timeoutSec) * time.Second}
+
+		if injectDownloadDir != "" {
+			outDir := filepathJoin(injectDownloadDir, args[0])
+			if err := os.MkdirAll(outDir, 0o755); err != nil {
+				return fmt.Errorf("create output dir: %w", err)
+			}
+			if err := downloadPackToDir(httpClient, flagServer, flagToken, id, args[0], outDir, include, injectDownloadFilePar); err != nil {
+				return fmt.Errorf("download %s: %w", args[0], err)
+			}
+			output.PrintInfo(fmt.Sprintf("Downloaded %s (include=%s) to %s", args[0], include, outDir))
+			return nil
+		}
+
+		// Legacy path: server-side zip stream into a single file.
 		url := flagServer + fmt.Sprintf("/api/v2/injections/%d/download", id)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
@@ -384,37 +630,247 @@ var injectDownloadCmd = &cobra.Command{
 		if flagToken != "" {
 			req.Header.Set("Authorization", "Bearer "+flagToken)
 		}
-
-		httpClient := &http.Client{Timeout: time.Duration(flagRequestTimeout) * time.Second}
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("download request failed: %w", err)
 		}
-		defer func() {
-			_ = resp.Body.Close()
-		}()
-
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("download failed (HTTP %d): %s", resp.StatusCode, string(body))
 		}
-
 		f, err := os.Create(injectDownloadOutput)
 		if err != nil {
 			return fmt.Errorf("create output file: %w", err)
 		}
-		defer func() {
-			_ = f.Close()
-		}()
-
+		defer func() { _ = f.Close() }()
 		n, err := io.Copy(f, resp.Body)
 		if err != nil {
 			return fmt.Errorf("write output file: %w", err)
 		}
-
 		output.PrintInfo(fmt.Sprintf("Downloaded %d bytes to %s", n, injectDownloadOutput))
 		return nil
 	},
+}
+
+// ---------- inject download-batch ----------
+
+var (
+	injectBatchOutputDir string
+	injectBatchInclude   string
+	injectBatchPackPar   int
+	injectBatchFilePar   int
+	injectBatchFromStdin bool
+	injectBatchState     string
+	injectBatchResume    bool
+)
+
+var injectDownloadBatchCmd = &cobra.Command{
+	Use:   "download-batch [name|id ...]",
+	Short: "Download many datapacks in parallel",
+	Long: `Download multiple datapacks into --output-dir. Targets can be supplied as
+positional arguments (name or numeric id), piped via --from-stdin (one
+name/id per line), or selected from the project by --state.
+
+Examples:
+  # Download every detector_success datapack in the default project, only the
+  # converted/ subtree, with 3 packs in flight at a time.
+  aegisctl inject download-batch --state detector_success --output-dir ./data
+
+  # Pipe a custom name list:
+  aegisctl inject list --state build_success -o json --size 100 \
+    | jq -r '.items[].name' \
+    | aegisctl inject download-batch --from-stdin --output-dir ./data
+
+  # Or pipe ids directly (no resolver round-trip):
+  jq -r '.items[].id' picks.json \
+    | aegisctl inject download-batch --from-stdin --output-dir ./data`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if injectBatchOutputDir == "" {
+			return usageErrorf("--output-dir is required")
+		}
+		include, err := validateIncludeFlag(injectBatchInclude)
+		if err != nil {
+			return err
+		}
+		if injectBatchPackPar < 1 {
+			injectBatchPackPar = 1
+		}
+		if injectBatchFilePar < 1 {
+			injectBatchFilePar = 1
+		}
+		if err := os.MkdirAll(injectBatchOutputDir, 0o755); err != nil {
+			return fmt.Errorf("create output dir: %w", err)
+		}
+
+		targets, err := collectBatchTargets(args)
+		if err != nil {
+			return err
+		}
+		if len(targets) == 0 {
+			return usageErrorf("no targets supplied (use args, --from-stdin, or --state)")
+		}
+
+		// Resolver is shared across workers; only by-name targets need it and the
+		// internal cache makes repeated misses cheap.
+		resolver, err := newProjectScopedResolver()
+		if err != nil {
+			return err
+		}
+
+		httpClient := &http.Client{Timeout: time.Duration(flagRequestTimeout) * time.Second}
+		jobs := make(chan batchTarget, len(targets))
+		results := make(chan batchResult, len(targets))
+
+		for i := 0; i < injectBatchPackPar; i++ {
+			go func() {
+				for t := range jobs {
+					results <- runBatchTarget(httpClient, resolver, t, include)
+				}
+			}()
+		}
+		for _, t := range targets {
+			jobs <- t
+		}
+		close(jobs)
+
+		var ok, skip, fail int
+		for i := 0; i < len(targets); i++ {
+			r := <-results
+			switch r.status {
+			case "ok":
+				ok++
+				output.PrintInfo(fmt.Sprintf("[ok] %s", r.label))
+			case "skip":
+				skip++
+				output.PrintInfo(fmt.Sprintf("[skip] %s (already complete)", r.label))
+			default:
+				fail++
+				output.PrintInfo(fmt.Sprintf("[fail] %s: %v", r.label, r.err))
+			}
+		}
+		output.PrintInfo(fmt.Sprintf("done: ok=%d skip=%d fail=%d / total=%d", ok, skip, fail, len(targets)))
+		if fail > 0 {
+			return fmt.Errorf("%d datapack(s) failed", fail)
+		}
+		return nil
+	},
+}
+
+type batchTarget struct {
+	id   int    // 0 means "resolve by name first"
+	name string // human-readable label and on-disk dirname
+}
+
+type batchResult struct {
+	label  string
+	status string // ok | skip | fail
+	err    error
+}
+
+// collectBatchTargets builds the (id, name) list from positional args, stdin,
+// or --state, in that order of precedence (first non-empty source wins).
+func collectBatchTargets(posArgs []string) ([]batchTarget, error) {
+	if len(posArgs) > 0 {
+		return parseBatchTokens(posArgs)
+	}
+	if injectBatchFromStdin {
+		var lines []string
+		sc := bufioScanner(os.Stdin)
+		for sc.Scan() {
+			line := strings.TrimSpace(sc.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			lines = append(lines, line)
+		}
+		if err := sc.Err(); err != nil {
+			return nil, fmt.Errorf("read stdin: %w", err)
+		}
+		return parseBatchTokens(lines)
+	}
+	if injectBatchState != "" {
+		return collectBatchTargetsByState(injectBatchState)
+	}
+	return nil, nil
+}
+
+func parseBatchTokens(tokens []string) ([]batchTarget, error) {
+	out := make([]batchTarget, 0, len(tokens))
+	for _, raw := range tokens {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		if id, err := strconv.Atoi(raw); err == nil && id > 0 {
+			out = append(out, batchTarget{id: id, name: raw})
+			continue
+		}
+		out = append(out, batchTarget{name: raw})
+	}
+	return out, nil
+}
+
+// collectBatchTargetsByState pages through the project's injection list,
+// filtered by the resolved DatapackState.
+func collectBatchTargetsByState(stateRaw string) ([]batchTarget, error) {
+	stateParam, err := resolveDatapackStateFlag(stateRaw)
+	if err != nil {
+		return nil, err
+	}
+	pid, err := resolveProjectIDByName()
+	if err != nil {
+		return nil, err
+	}
+	c := newClient()
+	const pageSize = 100
+	var out []batchTarget
+	for page := 1; page <= 1000; page++ {
+		path := fmt.Sprintf("/api/v2/projects/%d/injections?page=%d&size=%d", pid, page, pageSize)
+		if stateParam != "" {
+			path += "&state=" + stateParam
+		}
+		type listItem struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+		}
+		var resp client.APIResponse[client.PaginatedData[listItem]]
+		if err := c.Get(path, &resp); err != nil {
+			return nil, err
+		}
+		for _, it := range resp.Data.Items {
+			out = append(out, batchTarget{id: it.ID, name: it.Name})
+		}
+		if len(resp.Data.Items) < pageSize {
+			break
+		}
+	}
+	return out, nil
+}
+
+func runBatchTarget(httpClient *http.Client, resolver *client.Resolver, t batchTarget, include string) batchResult {
+	label := t.name
+	id := t.id
+	if id == 0 {
+		got, err := resolver.InjectionID(t.name)
+		if err != nil {
+			return batchResult{label: label, status: "fail", err: err}
+		}
+		id = got
+	}
+	outDir := filepathJoin(injectBatchOutputDir, t.name)
+	if injectBatchResume {
+		if _, err := os.Stat(filepathJoin(outDir, ".done")); err == nil {
+			return batchResult{label: label, status: "skip"}
+		}
+	}
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return batchResult{label: label, status: "fail", err: err}
+	}
+	if err := downloadPackToDir(httpClient, flagServer, flagToken, id, t.name, outDir, include, injectBatchFilePar); err != nil {
+		return batchResult{label: label, status: "fail", err: err}
+	}
+	return batchResult{label: label, status: "ok"}
 }
 
 // ---------- init ----------
@@ -429,11 +885,24 @@ func init() {
 	injectSearchCmd.Flags().StringVar(&injectSearchNamePattern, "name-pattern", "", "Name pattern to search for")
 	injectSearchCmd.Flags().StringVar(&injectSearchLabels, "labels", "", "Labels to filter (key=val,...)")
 
-	injectDownloadCmd.Flags().StringVar(&injectDownloadOutput, "output-file", "", "Output file path")
+	injectDownloadCmd.Flags().StringVar(&injectDownloadOutput, "output-file", "", "Write the server-side zip stream to this path (legacy mode)")
+	injectDownloadCmd.Flags().StringVar(&injectDownloadDir, "output-dir", "", "Extract the datapack into this directory (creates <dir>/<name>/)")
+	injectDownloadCmd.Flags().StringVar(&injectDownloadInclude, "include", "converted", "Which subset to download when using --output-dir: "+injectIncludeFlagHelp())
+	injectDownloadCmd.Flags().IntVar(&injectDownloadFilePar, "parallel-files", 4, "Concurrent file downloads when using --output-dir")
+	injectDownloadCmd.Flags().IntVar(&injectDownloadTimeout, "request-timeout-override", 0, "Per-request HTTP timeout in seconds (0 = use global --request-timeout)")
+
+	injectDownloadBatchCmd.Flags().StringVar(&injectBatchOutputDir, "output-dir", "", "Required: directory under which each pack is extracted as <output-dir>/<name>/")
+	injectDownloadBatchCmd.Flags().StringVar(&injectBatchInclude, "include", "converted", "Which subset to download per pack: "+injectIncludeFlagHelp())
+	injectDownloadBatchCmd.Flags().IntVar(&injectBatchPackPar, "parallel-packs", 3, "How many packs to download in parallel")
+	injectDownloadBatchCmd.Flags().IntVar(&injectBatchFilePar, "parallel-files", 4, "How many files to download in parallel within a single pack")
+	injectDownloadBatchCmd.Flags().BoolVar(&injectBatchFromStdin, "from-stdin", false, "Read names or numeric ids from stdin (one per line; '#' starts a comment)")
+	injectDownloadBatchCmd.Flags().StringVar(&injectBatchState, "state", "", "Shortcut: select all injections in --project with this datapack state (name or numeric id; valid: "+datapackStateFlagHelp()+")")
+	injectDownloadBatchCmd.Flags().BoolVar(&injectBatchResume, "resume", true, "Skip packs that already have a .done marker (default true)")
 
 	injectCmd.AddCommand(injectListCmd)
 	injectCmd.AddCommand(injectGetCmd)
 	injectCmd.AddCommand(injectSearchCmd)
 	injectCmd.AddCommand(injectFilesCmd)
 	injectCmd.AddCommand(injectDownloadCmd)
+	injectCmd.AddCommand(injectDownloadBatchCmd)
 }
