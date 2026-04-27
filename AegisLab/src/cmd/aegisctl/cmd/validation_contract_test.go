@@ -27,6 +27,32 @@ func resetCLIStateForTest() {
 	output.Quiet = false
 	flagDryRun = false
 	cfg = nil
+	commandStdin = os.Stdin
+
+	waitStdin = false
+	waitStdinField = ""
+	waitStdinFailFast = false
+	injectGetStdin = false
+	injectGetStdinField = ""
+	injectGetStdinFailFast = false
+	injectFilesStdin = false
+	injectFilesStdinField = ""
+	injectFilesStdinFailFast = false
+	injectDownloadStdin = false
+	injectDownloadStdinField = ""
+	injectDownloadStdinFailFast = false
+	taskGetStdin = false
+	taskGetStdinField = ""
+	taskGetStdinFailFast = false
+	taskLogsStdin = false
+	taskLogsStdinField = ""
+	taskLogsStdinFailFast = false
+	traceGetStdin = false
+	traceGetStdinField = ""
+	traceGetStdinFailFast = false
+	traceWatchStdin = false
+	traceWatchStdinField = ""
+	traceWatchStdinFailFast = false
 }
 
 func captureStdIO(t *testing.T, fn func() error) (stdout string, stderr string, err error) {

@@ -252,14 +252,28 @@ func printTracesTSV(columns []string, items []map[string]any) error {
 var traceGetCmd = &cobra.Command{
 	Use:   "get <trace-id>",
 	Short: "Show detailed trace information",
-	Args:  exactArgs(1, "trace get <trace-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return runStdinItems("trace get", "trace get <trace-id>", args, stdinOptions{
+			enabled:  traceGetStdin,
+			field:    traceGetStdinField,
+			failFast: traceGetStdinFailFast,
+		}, runTraceGet)
+	},
+}
+
+var (
+	traceGetStdin         bool
+	traceGetStdinField    string
+	traceGetStdinFailFast bool
+)
+
+func runTraceGet(traceID string) error {
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
 		c := newClient()
 
-		path := fmt.Sprintf("/api/v2/traces/%s", args[0])
+		path := fmt.Sprintf("/api/v2/traces/%s", traceID)
 		var resp client.APIResponse[map[string]any]
 		if err := c.Get(path, &resp); err != nil {
 			return err
@@ -303,7 +317,6 @@ var traceGetCmd = &cobra.Command{
 			}
 		}
 		return nil
-	},
 }
 
 // --- trace watch ---
@@ -311,9 +324,22 @@ var traceGetCmd = &cobra.Command{
 var traceWatchCmd = &cobra.Command{
 	Use:   "watch <trace-id>",
 	Short: "Watch trace events via SSE stream",
-	Args:  exactArgs(1, "trace watch <trace-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		traceID := args[0]
+		return runStdinItems("trace watch", "trace watch <trace-id>", args, stdinOptions{
+			enabled:  traceWatchStdin,
+			field:    traceWatchStdinField,
+			failFast: traceWatchStdinFailFast,
+		}, runTraceWatch)
+	},
+}
+
+var (
+	traceWatchStdin         bool
+	traceWatchStdinField    string
+	traceWatchStdinFailFast bool
+)
+
+func runTraceWatch(traceID string) error {
 		ssePath := fmt.Sprintf("/api/v2/traces/%s/stream", traceID)
 		reader := client.NewSSEReader(flagServer, ssePath, flagToken)
 
@@ -354,7 +380,6 @@ var traceWatchCmd = &cobra.Command{
 				return nil
 			}
 		}
-	},
 }
 
 // --- trace cancel ---
@@ -509,6 +534,8 @@ func init() {
 			"Valid: id,type,state,status,project,project_id,group_id,last_event,final_event,created_at,start_time,end_time,leaf_num")
 
 	traceCancelCmd.Flags().BoolVarP(&traceCancelForce, "force", "f", false, "Skip confirmation prompt")
+	addStdinFlags(traceGetCmd, &traceGetStdin, &traceGetStdinField, &traceGetStdinFailFast)
+	addStdinFlags(traceWatchCmd, &traceWatchStdin, &traceWatchStdinField, &traceWatchStdinFailFast)
 
 	traceCmd.AddCommand(traceListCmd)
 	traceCmd.AddCommand(traceGetCmd)

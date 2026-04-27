@@ -186,11 +186,25 @@ func execTimeField(m map[string]any) int64 {
 var taskGetCmd = &cobra.Command{
 	Use:   "get <task-id>",
 	Short: "Show detailed task information",
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return runStdinItems("task get", "task get <task-id>", args, stdinOptions{
+			enabled:  taskGetStdin,
+			field:    taskGetStdinField,
+			failFast: taskGetStdinFailFast,
+		}, runTaskGet)
+	},
+}
+
+var (
+	taskGetStdin         bool
+	taskGetStdinField    string
+	taskGetStdinFailFast bool
+)
+
+func runTaskGet(taskID string) error {
 		c := newClient()
 
-		path := fmt.Sprintf("/api/v2/tasks/%s", args[0])
+		path := fmt.Sprintf("/api/v2/tasks/%s", taskID)
 		var resp client.APIResponse[map[string]any]
 		if err := c.Get(path, &resp); err != nil {
 			return err
@@ -206,7 +220,6 @@ var taskGetCmd = &cobra.Command{
 			fmt.Printf("%-20s %v\n", k+":", v)
 		}
 		return nil
-	},
 }
 
 // --- task logs ---
@@ -216,9 +229,22 @@ var taskLogsFollow bool
 var taskLogsCmd = &cobra.Command{
 	Use:   "logs <task-id>",
 	Short: "Stream task logs via WebSocket",
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		taskID := args[0]
+		return runStdinItems("task logs", "task logs <task-id>", args, stdinOptions{
+			enabled:  taskLogsStdin,
+			field:    taskLogsStdinField,
+			failFast: taskLogsStdinFailFast,
+		}, runTaskLogs)
+	},
+}
+
+var (
+	taskLogsStdin         bool
+	taskLogsStdinField    string
+	taskLogsStdinFailFast bool
+)
+
+func runTaskLogs(taskID string) error {
 		wsPath := fmt.Sprintf("/api/v2/tasks/%s/logs/ws", taskID)
 		reader := client.NewWSReader(flagServer, wsPath, flagToken)
 
@@ -275,7 +301,6 @@ var taskLogsCmd = &cobra.Command{
 				}
 			}
 		}
-	},
 }
 
 // Helper functions shared by task and trace commands.
@@ -320,6 +345,8 @@ func init() {
 	taskListCmd.Flags().BoolVar(&taskListOverdue, "overdue", false, "Show only Pending tasks whose execute_time has passed (WAIT < 0)")
 
 	taskLogsCmd.Flags().BoolVarP(&taskLogsFollow, "follow", "f", false, "Follow log output")
+	addStdinFlags(taskGetCmd, &taskGetStdin, &taskGetStdinField, &taskGetStdinFailFast)
+	addStdinFlags(taskLogsCmd, &taskLogsStdin, &taskLogsStdinField, &taskLogsStdinFailFast)
 
 	taskCmd.AddCommand(taskListCmd)
 	taskCmd.AddCommand(taskGetCmd)

@@ -64,6 +64,7 @@ type OutputFormat string
 const (
 	FormatTable OutputFormat = "table"
 	FormatJSON  OutputFormat = "json"
+	FormatNDJSON OutputFormat = "ndjson"
 )
 
 // PrintJSON writes v as indented JSON to stdout.
