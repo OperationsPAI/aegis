@@ -134,9 +134,15 @@ func ForError(err error) int {
 		return CodeMissingEnv
 	}
 
+	if strings.HasPrefix(err.Error(), "decode response:") {
+		return CodeDecodeFailure
+	}
+
 	if strings.Contains(err.Error(), "unknown flag") ||
 		strings.Contains(err.Error(), "unknown command") ||
 		strings.Contains(err.Error(), "requires a subcommand") ||
+		strings.Contains(err.Error(), "flag needs an argument") ||
+		strings.Contains(err.Error(), "invalid argument ") ||
 		strings.Contains(err.Error(), "expected ") ||
 		strings.Contains(err.Error(), "requires at least") ||
 		strings.Contains(err.Error(), "accepts ") {
