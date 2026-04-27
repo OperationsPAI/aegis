@@ -135,14 +135,14 @@ var executeListCmd = &cobra.Command{
 			return err
 		}
 
-		type listItem struct {
-			ID        int    `json:"id"`
-			Algorithm string `json:"algorithm"`
-			Datapack  string `json:"datapack"`
-			State     string `json:"state"`
-			Duration  string `json:"duration"`
-			CreatedAt string `json:"created_at"`
-		}
+type listItem struct {
+    ID        int     `json:"id"`
+    Algorithm string  `json:"algorithm"`
+    Datapack  string  `json:"datapack"`
+    State     string  `json:"state"`
+    Duration  float64 `json:"duration"`
+    CreatedAt string  `json:"created_at"`
+}
 
 		c := newClient()
 		q := fmt.Sprintf("/api/v2/projects/%d/executions?page=%d&size=%d", pid, executeListPage, executeListSize)
