@@ -44,7 +44,7 @@ printf %s\n "$AEGIS_PASSWORD" | ./bin/aegisctl auth login \
   --interval 10 --pre-duration 5
 
 # 5. Submit algorithm execution against a datapack or dataset
-./bin/aegisctl execute submit --project pair_diagnosis --spec ./execution.yaml -o json
+./bin/aegisctl execute create --project pair_diagnosis --input ./execution.yaml -o json
 ```
 
 The full CLI contract, including output and exit-code expectations, lives in

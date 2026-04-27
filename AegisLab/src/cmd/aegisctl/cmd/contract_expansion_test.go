@@ -155,3 +155,31 @@ func TestSchemaDumpFlagMetadataContainsTypeDefaultRequiredEnumValues(t *testing.
 		t.Fatalf("expected top-level --output enum values in schema")
 	}
 }
+
+func TestSchemaDumpMarksDeprecatedAliases(t *testing.T) {
+	doc := buildSchemaDocument()
+
+	findByPath := func(path string) *schemaCommand {
+		for _, c := range doc.Commands {
+			if c.Path == path {
+				return &c
+			}
+		}
+		return nil
+	}
+
+	assertDeprecated := func(path string, wantDeprecated bool) {
+		c := findByPath(path)
+		if c == nil {
+			t.Fatalf("schema missing path %s", path)
+		}
+		if c.Deprecated != wantDeprecated {
+			t.Fatalf("schema path %s deprecated=%v, want %v", path, c.Deprecated, wantDeprecated)
+		}
+	}
+
+	assertDeprecated("aegisctl execute create", false)
+	assertDeprecated("aegisctl execute submit", true)
+	assertDeprecated("aegisctl inject list-files", false)
+	assertDeprecated("aegisctl inject files", true)
+}

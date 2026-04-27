@@ -36,6 +36,9 @@ func resetCLIState() {
 	output.Quiet = false
 	commandStdin = os.Stdin
 
+	executeCreateInput = ""
+	executeCreateSpec = ""
+
 	authLoginServer = ""
 	authLoginKeyID = ""
 	authLoginKeySecret = ""
