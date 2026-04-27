@@ -9,8 +9,7 @@ No submodule pointers were modified in `origin/main...origin/workbuddy/issue-245
 ### AC 1: `./bin/aegisctl --help | grep -c '^  regression '` 返回 `1`
 
 **verdict**: PASS
-**command**: `cd AegisLab/src && go build -o /tmp/aegisctl ./cmd/aegisctl && /tmp/aegisctl --help | grep -c '^  regression '
-`
+**command**: `cd AegisLab/src && go build -o /tmp/aegisctl ./cmd/aegisctl && /tmp/aegisctl --help | grep -c '^  regression '`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
