@@ -53,15 +53,7 @@ func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namesp
 	if p.cfg == nil || p.cfg.Host == "" {
 		return time.Time{}, false, fmt.Errorf("clickhouse host not configured")
 	}
-	conn, err := chdriver.Open(&chdriver.Options{
-		Addr: []string{net.JoinHostPort(p.cfg.Host, strconv.Itoa(p.cfg.Port))},
-		Auth: chdriver.Auth{
-			Database: orDefaultStr(p.cfg.Database, "otel"),
-			Username: p.cfg.User,
-			Password: p.cfg.Password,
-		},
-		DialTimeout: 3 * time.Second,
-	})
+	conn, err := chdriver.Open(freshnessProbeOptions(p.cfg))
 	if err != nil {
 		return time.Time{}, false, fmt.Errorf("clickhouse open: %w", err)
 	}
@@ -88,6 +80,32 @@ func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namesp
 		return time.Time{}, false, nil
 	}
 	return ts, true, nil
+}
+
+// freshnessProbeOptions builds the clickhouse-go/v2 driver options used by
+// the freshness probe.
+//
+// Why HTTP: the dynamic etcd config (`database.clickhouse.port`) holds the
+// HTTP listener (8123) — the same port the BuildDatapack Job env vars and
+// clickstack tooling target. clickhouse-go/v2 defaults to the native binary
+// protocol (port 9000); speaking native bytes at 8123 yields
+// `unexpected packet [72] from server` (the 'H' of "HTTP/1.1"), which broke
+// every BuildDatapack run after the freshness pre-flight landed (#222) and
+// is the regression tracked in #226. Pinning Protocol=HTTP here keeps the
+// probe consistent with the configured port without introducing a new etcd
+// key. Extracted as a pure helper so unit tests can assert the choice
+// without opening a network connection.
+func freshnessProbeOptions(cfg *db.DatabaseConfig) *chdriver.Options {
+	return &chdriver.Options{
+		Addr: []string{net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))},
+		Auth: chdriver.Auth{
+			Database: orDefaultStr(cfg.Database, "otel"),
+			Username: cfg.User,
+			Password: cfg.Password,
+		},
+		Protocol:    chdriver.HTTP,
+		DialTimeout: 3 * time.Second,
+	}
 }
 
 func orDefaultStr(s, def string) string {
