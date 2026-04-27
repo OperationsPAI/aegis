@@ -41,7 +41,11 @@ from typing import Literal
 
 import numpy as np
 
-__all__ = ["CalibrationResult", "calibrate_quantile_threshold"]
+__all__ = [
+    "CalibrationResult",
+    "calibrate_quantile_threshold",
+    "calibrate_with_holdout",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,3 +147,70 @@ def calibrate_quantile_threshold(
         alpha=alpha,
         tail=tail,
     )
+
+
+def calibrate_with_holdout(
+    baseline_values: Iterable[float],
+    *,
+    alpha: float = 0.01,
+    tail: Literal["lower", "upper"] = "lower",
+    holdout_frac: float = 0.2,
+    bootstrap_n: int = 200,
+    stability_rel_std_max: float = 0.10,
+    rng_seed: int | None = None,
+) -> tuple[CalibrationResult, float | None]:
+    """80/20 split: calibrate on the leading slice, measure FP rate on the holdout.
+
+    Reports the soundness empiric the §3 paper appendix needs: the per-(svc, case)
+    threshold's apparent false-positive rate against an independent slice of the
+    same baseline. ``holdout_fp_rate`` is the fraction of holdout values that fall
+    on the alarming side of ``threshold`` (above for ``tail="upper"``, below for
+    ``tail="lower"``); it should be close to ``alpha`` when the baseline is
+    well-behaved.
+
+    The split is deterministic: first ``floor(n * (1 - holdout_frac))`` samples
+    calibrate, the remainder evaluate. Callers that need shuffling should shuffle
+    upstream.
+
+    Returns ``(CalibrationResult, holdout_fp_rate)``. ``holdout_fp_rate`` is
+    ``None`` when the calibrator opted out, when ``n < 4`` (not enough to split),
+    or when the holdout slice is empty.
+    """
+    arr = np.asarray(list(baseline_values), dtype=np.float64)
+    n = int(arr.size)
+
+    if n < 4:
+        result = calibrate_quantile_threshold(
+            arr,
+            alpha=alpha,
+            tail=tail,
+            bootstrap_n=bootstrap_n,
+            stability_rel_std_max=stability_rel_std_max,
+            rng_seed=rng_seed,
+        )
+        return result, None
+
+    split_idx = max(2, int(n * (1.0 - holdout_frac)))
+    if split_idx >= n:
+        split_idx = n - 1
+    cal_part = arr[:split_idx]
+    holdout = arr[split_idx:]
+
+    result = calibrate_quantile_threshold(
+        cal_part,
+        alpha=alpha,
+        tail=tail,
+        bootstrap_n=bootstrap_n,
+        stability_rel_std_max=stability_rel_std_max,
+        rng_seed=rng_seed,
+    )
+
+    if result.opt_out or result.threshold is None or holdout.size == 0:
+        return result, None
+
+    if tail == "upper":
+        fp_count = int(np.sum(holdout > result.threshold))
+    else:
+        fp_count = int(np.sum(holdout < result.threshold))
+
+    return result, fp_count / float(holdout.size)

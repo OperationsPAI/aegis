@@ -9,20 +9,39 @@
             "rule_id": "container_unavailable_to_span",
             "description": "Container UNAVAILABLE -> Pod -> Service -> Span MISSING/UNAVAILABLE",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "container",
-            "src_states": ["unavailable"],
+            "src_states": [
+                "unavailable"
+            ],
             "path": [
                 {
                     "edge_kind": "runs",
                     "direction": "backward",
                     "intermediate_kind": "pod",
-                    "intermediate_states": ["unavailable", "degraded", "healthy", "unknown"]
+                    "intermediate_states": [
+                        "unavailable",
+                        "degraded",
+                        "healthy",
+                        "unknown"
+                    ]
                 },
-                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-                {"edge_kind": "includes", "direction": "forward"}
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
             ],
             "dst_kind": "span",
-            "possible_dst_states": ["missing", "unavailable", "erroring"],
+            "possible_dst_states": [
+                "missing",
+                "unavailable",
+                "erroring"
+            ],
             "confidence": 0.9
         },
         {
@@ -30,20 +49,37 @@
             "rule_id": "container_degraded_to_span",
             "description": "Container DEGRADED -> Pod -> Service -> Span SLOW/ERRORING",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "container",
-            "src_states": ["degraded"],
+            "src_states": [
+                "degraded"
+            ],
             "path": [
                 {
                     "edge_kind": "runs",
                     "direction": "backward",
                     "intermediate_kind": "pod",
-                    "intermediate_states": ["degraded", "healthy", "unknown"]
+                    "intermediate_states": [
+                        "degraded",
+                        "healthy",
+                        "unknown"
+                    ]
                 },
-                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-                {"edge_kind": "includes", "direction": "forward"}
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
             ],
             "dst_kind": "span",
-            "possible_dst_states": ["slow", "erroring"],
+            "possible_dst_states": [
+                "slow",
+                "erroring"
+            ],
             "confidence": 0.8
         },
         {
@@ -51,12 +87,19 @@
             "rule_id": "container_unavailable_to_pod",
             "description": "Container UNAVAILABLE -> Pod DEGRADED (one bad container degrades the pod, structural).",
             "tier": "core",
+            "epistemic_class": "A",
             "src_kind": "container",
-            "src_states": ["unavailable"],
+            "src_states": [
+                "unavailable"
+            ],
             "edge_kind": "runs",
             "direction": "backward",
             "dst_kind": "pod",
-            "possible_dst_states": ["degraded", "unavailable", "erroring"],
+            "possible_dst_states": [
+                "degraded",
+                "unavailable",
+                "erroring"
+            ],
             "confidence": 0.85
         },
         {
@@ -64,12 +107,18 @@
             "rule_id": "pod_unavailable_to_container",
             "description": "Pod UNAVAILABLE -> all Containers UNAVAILABLE (containment, structural).",
             "tier": "core",
+            "epistemic_class": "A",
             "src_kind": "pod",
-            "src_states": ["unavailable"],
+            "src_states": [
+                "unavailable"
+            ],
             "edge_kind": "runs",
             "direction": "forward",
             "dst_kind": "container",
-            "possible_dst_states": ["unavailable", "erroring"],
+            "possible_dst_states": [
+                "unavailable",
+                "erroring"
+            ],
             "confidence": 0.95
         },
         {
@@ -77,12 +126,19 @@
             "rule_id": "pod_unavailable_to_service",
             "description": "Pod UNAVAILABLE -> Service UNAVAILABLE/DEGRADED (rollup; the only routable backend went away).",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "pod",
-            "src_states": ["unavailable"],
+            "src_states": [
+                "unavailable"
+            ],
             "edge_kind": "routes_to",
             "direction": "backward",
             "dst_kind": "service",
-            "possible_dst_states": ["unavailable", "degraded", "erroring"],
+            "possible_dst_states": [
+                "unavailable",
+                "degraded",
+                "erroring"
+            ],
             "confidence": 0.85
         },
         {
@@ -90,14 +146,28 @@
             "rule_id": "pod_unavailable_to_span",
             "description": "Pod UNAVAILABLE -> Service -> Span MISSING/UNAVAILABLE (no requests served).",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "pod",
-            "src_states": ["unavailable"],
+            "src_states": [
+                "unavailable"
+            ],
             "path": [
-                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-                {"edge_kind": "includes", "direction": "forward"}
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
             ],
             "dst_kind": "span",
-            "possible_dst_states": ["missing", "unavailable", "erroring"],
+            "possible_dst_states": [
+                "missing",
+                "unavailable",
+                "erroring"
+            ],
             "confidence": 0.9
         },
         {
@@ -105,14 +175,27 @@
             "rule_id": "pod_degraded_to_span",
             "description": "Pod DEGRADED -> Service -> Span SLOW/ERRORING (resource pressure causes latency).",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "pod",
-            "src_states": ["degraded"],
+            "src_states": [
+                "degraded"
+            ],
             "path": [
-                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-                {"edge_kind": "includes", "direction": "forward"}
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
             ],
             "dst_kind": "span",
-            "possible_dst_states": ["slow", "erroring"],
+            "possible_dst_states": [
+                "slow",
+                "erroring"
+            ],
             "confidence": 0.8
         },
         {
@@ -120,12 +203,23 @@
             "rule_id": "service_to_span",
             "description": "Service-level fault propagates into its spans (first hop, lenient).",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "service",
-            "src_states": ["slow", "erroring", "degraded", "unavailable"],
+            "src_states": [
+                "slow",
+                "erroring",
+                "degraded",
+                "unavailable"
+            ],
             "edge_kind": "includes",
             "direction": "forward",
             "dst_kind": "span",
-            "possible_dst_states": ["slow", "erroring", "missing", "unavailable"],
+            "possible_dst_states": [
+                "slow",
+                "erroring",
+                "missing",
+                "unavailable"
+            ],
             "confidence": 0.85,
             "first_hop_config": {
                 "require_src_states": false,
@@ -138,12 +232,18 @@
             "rule_id": "service_silent_to_span",
             "description": "Service SILENT -> Span SILENT/MISSING. Class E (traffic isolation, §3.E): a silent service's includes-spans inherit the silent state. Mirrors RULE_SERVICE_TO_SPAN's shape but specialized for the silent state.",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "service",
-            "src_states": ["silent"],
+            "src_states": [
+                "silent"
+            ],
             "edge_kind": "includes",
             "direction": "forward",
             "dst_kind": "span",
-            "possible_dst_states": ["silent", "missing"],
+            "possible_dst_states": [
+                "silent",
+                "missing"
+            ],
             "confidence": 0.5,
             "_comment": "P_causal provisional (Beta(2,2) prior, §11.3); calibration_n=0. To be re-calibrated in L7 of the methodology rollout."
         },
@@ -152,12 +252,18 @@
             "rule_id": "span_slow_to_caller",
             "description": "SLOW span propagates SLOW to its caller (callee->caller via reverse calls edge).",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "span",
-            "src_states": ["slow"],
+            "src_states": [
+                "slow"
+            ],
             "edge_kind": "calls",
             "direction": "backward",
             "dst_kind": "span",
-            "possible_dst_states": ["slow", "erroring"],
+            "possible_dst_states": [
+                "slow",
+                "erroring"
+            ],
             "confidence": 0.8
         },
         {
@@ -165,12 +271,18 @@
             "rule_id": "span_erroring_to_caller",
             "description": "ERRORING span propagates ERRORING to its caller.",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "span",
-            "src_states": ["erroring"],
+            "src_states": [
+                "erroring"
+            ],
             "edge_kind": "calls",
             "direction": "backward",
             "dst_kind": "span",
-            "possible_dst_states": ["erroring", "slow"],
+            "possible_dst_states": [
+                "erroring",
+                "slow"
+            ],
             "confidence": 0.8
         },
         {
@@ -178,12 +290,20 @@
             "rule_id": "span_unavailable_to_caller",
             "description": "UNAVAILABLE/MISSING span propagates ERRORING/UNAVAILABLE to its caller.",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "span",
-            "src_states": ["unavailable", "missing"],
+            "src_states": [
+                "unavailable",
+                "missing"
+            ],
             "edge_kind": "calls",
             "direction": "backward",
             "dst_kind": "span",
-            "possible_dst_states": ["erroring", "unavailable", "missing"],
+            "possible_dst_states": [
+                "erroring",
+                "unavailable",
+                "missing"
+            ],
             "confidence": 0.85
         },
         {
@@ -191,12 +311,19 @@
             "rule_id": "span_silent_to_caller",
             "description": "Callee Span SILENT -> Caller Span SILENT/ERRORING/MISSING. Class E (traffic isolation, §3.E): when a callee span goes silent, the caller span observes a missing or timing-out call (rendered as silent if the caller chain stays quiet, erroring if the caller surfaces a timeout, missing if the caller drops the span).",
             "tier": "core",
+            "epistemic_class": "B",
             "src_kind": "span",
-            "src_states": ["silent"],
+            "src_states": [
+                "silent"
+            ],
             "edge_kind": "calls",
             "direction": "forward",
             "dst_kind": "span",
-            "possible_dst_states": ["silent", "erroring", "missing"],
+            "possible_dst_states": [
+                "silent",
+                "erroring",
+                "missing"
+            ],
             "confidence": 0.5,
             "_comment": "P_causal provisional (Beta(2,2) prior, §11.3); calibration_n=0. To be re-calibrated in L7 of the methodology rollout."
         },
@@ -205,15 +332,30 @@
             "rule_id": "pod_degraded_frequent_gc_to_span",
             "description": "Pod DEGRADED with frequent_gc -> Service -> Span SLOW (Java GC pauses become user-visible latency).",
             "tier": "augmentation",
+            "epistemic_class": "C",
             "src_kind": "pod",
-            "src_states": ["degraded"],
-            "required_labels": ["frequent_gc"],
+            "src_states": [
+                "degraded"
+            ],
+            "required_labels": [
+                "frequent_gc"
+            ],
             "path": [
-                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-                {"edge_kind": "includes", "direction": "forward"}
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
             ],
             "dst_kind": "span",
-            "possible_dst_states": ["slow", "erroring"],
+            "possible_dst_states": [
+                "slow",
+                "erroring"
+            ],
             "confidence": 0.85
         },
         {
@@ -221,15 +363,30 @@
             "rule_id": "pod_degraded_high_heap_to_span",
             "description": "Pod DEGRADED with high_heap_pressure -> Service -> Span SLOW (heap near limit -> sustained allocator stalls).",
             "tier": "augmentation",
+            "epistemic_class": "C",
             "src_kind": "pod",
-            "src_states": ["degraded"],
-            "required_labels": ["high_heap_pressure"],
+            "src_states": [
+                "degraded"
+            ],
+            "required_labels": [
+                "high_heap_pressure"
+            ],
             "path": [
-                {"edge_kind": "routes_to", "direction": "backward", "intermediate_kind": "service"},
-                {"edge_kind": "includes", "direction": "forward"}
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
             ],
             "dst_kind": "span",
-            "possible_dst_states": ["slow", "erroring"],
+            "possible_dst_states": [
+                "slow",
+                "erroring"
+            ],
             "confidence": 0.8
         },
         {
@@ -237,13 +394,22 @@
             "rule_id": "container_unavailable_oom_killed",
             "description": "Container UNAVAILABLE with oom_killed -> Pod UNAVAILABLE (one OOM kill takes the pod out; distinct from generic crash_loop).",
             "tier": "augmentation",
+            "epistemic_class": "C",
             "src_kind": "container",
-            "src_states": ["unavailable"],
-            "required_labels": ["oom_killed"],
+            "src_states": [
+                "unavailable"
+            ],
+            "required_labels": [
+                "oom_killed"
+            ],
             "edge_kind": "runs",
             "direction": "backward",
             "dst_kind": "pod",
-            "possible_dst_states": ["unavailable", "degraded", "erroring"],
+            "possible_dst_states": [
+                "unavailable",
+                "degraded",
+                "erroring"
+            ],
             "confidence": 0.9
         }
     ],
