@@ -164,7 +164,7 @@ var executeListCmd = &cobra.Command{
 				item.Algorithm,
 				item.Datapack,
 				item.State,
-				item.Duration,
+				fmt.Sprintf("%v", item.Duration),
 				item.CreatedAt,
 			})
 		}
