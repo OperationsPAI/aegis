@@ -65,6 +65,27 @@ func TestVersionJSONIncludesRequiredFields(t *testing.T) {
 		}
 	})
 
+	t.Run("version_flag_alias_matches_env_selected_json_output", func(t *testing.T) {
+		versionStdout, versionStderr, err := runBuiltAegisctl(t, binPath, "version")
+		if err != nil {
+			t.Fatalf("run version with env output: %v\nstderr=%s", err, versionStderr)
+		}
+
+		flagStdout, flagStderr, err := runBuiltAegisctl(t, binPath, "--version")
+		if err != nil {
+			t.Fatalf("run --version with env output: %v\nstderr=%s", err, flagStderr)
+		}
+
+		if versionStdout != flagStdout {
+			t.Fatalf("stdout mismatch with env output\nversion=%q\n--version=%q", versionStdout, flagStdout)
+		}
+
+		var payload map[string]string
+		if err := json.Unmarshal([]byte(flagStdout), &payload); err != nil {
+			t.Fatalf("stdout is not valid JSON under env output: %v\nstdout=%s", err, flagStdout)
+		}
+	})
+
 	t.Run("missing_output_argument_reports_usage_error", func(t *testing.T) {
 		_, stderr, err := runBuiltAegisctl(t, binPath, "version", "--output")
 		if err == nil {
@@ -98,7 +119,7 @@ func runBuiltAegisctl(t *testing.T, binPath string, args ...string) (string, str
 	t.Helper()
 
 	cmd := exec.Command(binPath, args...)
-	cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
+	cmd.Env = append(os.Environ(), "HOME="+t.TempDir(), "AEGIS_OUTPUT=json")
 
 	stdout, err := cmd.Output()
 	if err == nil {

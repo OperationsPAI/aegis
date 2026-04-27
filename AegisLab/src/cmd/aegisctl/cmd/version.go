@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	"aegis/cmd/aegisctl/config"
 	"aegis/cmd/aegisctl/output"
 
 	"github.com/spf13/cobra"
@@ -34,7 +36,7 @@ type versionInfo struct {
 
 func printVersionInfo() {
 	info := versionInfoPayload()
-	if output.OutputFormat(flagOutput) == output.FormatJSON {
+	if output.OutputFormat(resolveVersionOutputFormat()) == output.FormatJSON {
 		output.PrintJSON(info)
 		return
 	}
@@ -52,6 +54,24 @@ func versionInfoPayload() versionInfo {
 		BuildTime:    normalizedBuildTime(buildTime),
 		MinServerAPI: normalizedString(minServerAPIVersion, "2"),
 	}
+}
+
+func resolveVersionOutputFormat() string {
+	if flagOutput != "" {
+		return flagOutput
+	}
+	if envOutput := os.Getenv("AEGIS_OUTPUT"); envOutput != "" {
+		return envOutput
+	}
+	if cfg != nil && cfg.Preferences.Output != "" {
+		return cfg.Preferences.Output
+	}
+
+	loadedCfg, err := config.LoadConfig()
+	if err == nil && loadedCfg.Preferences.Output != "" {
+		return loadedCfg.Preferences.Output
+	}
+	return string(output.FormatTable)
 }
 
 func normalizedString(value, fallback string) string {
