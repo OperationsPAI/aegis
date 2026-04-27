@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"time"
 
 	"aegis/cmd/aegisctl/output"
 
@@ -64,7 +63,7 @@ func normalizedString(value, fallback string) string {
 
 func normalizedBuildTime(raw string) string {
 	if raw == "" {
-		return time.Now().UTC().Format(time.RFC3339)
+		return "unknown"
 	}
 	return raw
 }
