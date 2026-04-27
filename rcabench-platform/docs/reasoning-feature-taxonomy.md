@@ -471,6 +471,125 @@ exists), and §7.6's path search is skipped. This is consistent with
 `fault_seed.has_alarm == false` ground truth and lets the pipeline
 return early without any DFS work.
 
+#### 7.1.1 Structural truncation alarms — multi-signal detector
+
+The §7.1 alarm definition (`is_root_server` + state ≠ HEALTHY) catches
+the cases where the user-perceptible boundary deviates *visibly* in the
+abnormal trace: the topmost non-loadgen Server span is slow, errors
+out, or fails. Empirically a non-trivial slice of real injections
+deviates *invisibly* at the boundary while the request *body* is
+truncated: the boundary span returns 200 with normal latency, but the
+fault has cut the call subtree short — downstream services that should
+have been invoked never were, or were collapsed into an error stub. A
+status-code check on the loadgen child cannot see this; an
+endpoint-level latency/error detector cannot either.
+
+We extend §7.1's alarm extraction with a **trace-shape detector** that
+operates on the same per-endpoint granularity (`service::span_name`)
+and writes its hits into `alarm_set` alongside the canonical detector
+output. The detector is *purely structural* — it makes no claim about
+which downstream service caused the truncation, only that the
+boundary's request body is shaped wrong relative to baseline.
+
+**Per-endpoint baseline profile** (computed once from baseline traces):
+
+```
+for each (service, span_name) seen as a root alarm candidate:
+    canonical_shapes        ≔ top-K most frequent (sorted) tuples of
+                              descendant (service, span_name) edges,
+                              covering ≥ COVERAGE of baseline traces
+    span_count_distribution ≔ baseline (median, p10, p90) of
+                              descendant span count per trace
+    ubiquitous_services     ≔ services that appear in ≥ UBIQUITY of
+                              baseline traces for this endpoint
+```
+
+`canonical_shapes` is bounded (`K ≤ 20`, `COVERAGE = 0.95`) so the
+profile stays small. `ubiquitous_services` is the set of services
+whose absence is structurally meaningful (a service present in 95% of
+baseline traces is not optional — it is part of the request's normal
+body).
+
+**Per-trace flagging rule** (during abnormal period). For each trace
+hitting endpoint *e*:
+
+```
+S1 ≔ |services(trace) ∩ ubiquitous_services(e)|
+     < |ubiquitous_services(e)|         (a normally-ubiquitous service is missing)
+S2 ≔ span_count(trace) < p10_baseline(e) × 0.5
+                                        (request body is unusually small)
+S3 ≔ jaccard(edges(trace), nearest canonical_shape(e)) < J_THRESHOLD
+                                        (edge structure diverged)
+S4 ≔ trace_terminates_at_error(trace) ∧ S3
+                                        (truncated AND errored, evidence
+                                         the truncation is fault-driven
+                                         rather than a benign cache hit)
+
+trace_truncated(trace, e) ≡ Σ Sᵢ ≥ SCORE_GATE
+```
+
+Multi-signal — no single S is sufficient. A trace can be small (S2)
+because of a benign cache; it can be missing a service (S1) because
+the request was a different operation; it can have a different shape
+(S3) because of A/B traffic. Two of the four signals firing together
+indicates the request *body* (not just its outcome) deviates from
+how the endpoint normally serves traffic. (`SCORE_GATE = 3`,
+`J_THRESHOLD = 0.5`, `UBIQUITY = 0.95` in the current calibration.)
+
+**Per-endpoint promotion rule**. An endpoint is added to `alarm_set`
+only if a *fraction* of its abnormal traces were truncated:
+
+```
+truncation_rate(e) ≔ |{t ∈ abnormal_traces(e) : trace_truncated(t, e)}|
+                     / |abnormal_traces(e)|
+
+e ∈ alarm_set  ⟸  truncation_rate(e) ≥ R_THRESHOLD
+              ∧   |truncated traces| ≥ MIN_FAILED_TRACES
+```
+
+(`R_THRESHOLD = 0.05`, `MIN_FAILED_TRACES = 3`.) The rate gate keeps
+out endpoints with one-off odd traces; the absolute floor keeps out
+low-traffic endpoints where two unlucky traces would crest the rate.
+An endpoint with no baseline coverage (`< MIN_BASELINE_TRACES = 5`)
+is skipped — we cannot distinguish "different from usual" from
+"never seen before".
+
+**Sidecar output for downstream ranking**. The detector also emits,
+per flagged endpoint, the set of `missing_services` — the
+`ubiquitous_services` that vanished. Downstream root-cause ranking
+(§7.6) prefers candidates whose place is in or causally upstream of
+this set; the truncation alarm thus carries its own *witness* of
+which sub-tree was cut, narrowing the search even though the alarm
+itself is endpoint-local.
+
+**Composition with the §7.1 alarm definition**:
+
+```
+alarm_set ≔ {n : is_root_alarm_candidate(n) ∧ state(n) ≠ HEALTHY}
+          ∪ {e : truncation_rate(e) ≥ R_THRESHOLD
+                 ∧ |truncated traces(e)| ≥ MIN_FAILED_TRACES}
+```
+
+The two branches are complementary: state-machine alarms catch
+*outcome* deviations (latency/error) at the boundary; truncation
+alarms catch *body* deviations when the boundary still returns 200.
+Cases are no longer mis-classified as silent-injection just because
+their boundary outcome looks normal — the truncation pass converts
+five v4-baseline `no_alarms`/`no_paths` failures (silent-injection
+mis-routes) into solved cases on the TrainTicket fixture (498/500 ⇒
+99.6% success, +5 over the v4 baseline of 493/500).
+
+**Why kind-agnostic**. The §7.1 root-alarm predicate started as
+`is_root_server` (Server-kind + non-loadgen). Real instrumentation
+mis-labels span kinds inconsistently (the same Spring filter chain
+is Server in one service and Internal in another), so the predicate
+was relaxed to `is_root_alarm_candidate`: *non-loadgen owner whose
+parent is loadgen-or-missing*, with no kind constraint. The
+truncation detector inherits this predicate — it scans the same set
+of endpoints the canonical alarm extractor sees. This keeps the two
+branches aligned and prevents the truncation pass from silently
+expanding scope into mid-tier spans.
+
 ### 7.2 Rule firing scoped by fault class
 
 §3 partitions faults by primary class. Rules in `builtin_rules.json`
@@ -1443,4 +1562,5 @@ single-pass pipeline would have produced.
 | 2026-04-26 | §7.5 + §12.4 — ε generalized to `ε_eff = ε(edge_kind) + onset_resolution(src_state) + onset_resolution(dst_state)`. `onset_resolution` per state added to §12.4 policy table (ERRORING/SLOW=3 s; SILENT=30 s; DEGRADED=5 s; UNAVAILABLE/RESTARTING=1 s). Concrete examples: SILENT→SILENT on `calls` ε_eff = 65 s; ERRORING→ERRORING on `calls` ε_eff = 11 s. New §7.5 sub-section "Why per-edge tolerance is set generously" formalizes the noise-compounding argument — joint survival of an N-edge noise path is `q^N`, exponentially decaying, so per-edge ε can favor recall without inflating accepted noise (the path-length filter and §7.4's alarm-set narrowing absorb the rest) | Originally raised as vulnerability #3: SILENT onset has 30 s sub-window aliasing noise but ε(`calls`)=5 s — bucket-boundary alignment can flip apparent onset order on legitimate causal silent→silent chains, getting them rejected by §7.5. Reviewer's principled answer: "我们允许有一些噪声，因为这些噪声可以随着传播链路的增强，概率会逐渐降低" — accept per-edge noise, rely on chain-length compounding. ε_eff makes this concrete |
 | 2026-04-26 | Three coupled methodology decisions: (a) §7.3 rewritten — inferred edges are **injection-anchored**, generated only in two named scenarios (Scenario A "depends_on_dead_infra" + Scenario E "gated_silenced"); the earlier co-anomaly bridge (any silent service ⇨ any alarm span) is dropped — too many spurious paths and competes with rule-based transitions. Cardinality drops from O(silent × alarm) to O(consumers of injection). (b) §7.5 adds "Onset for rule firing — earliest matching state in the trajectory" — for entities with HEALTHY→ERRORING→SILENT trajectories, rule R uses the *earliest* transition into a state ∈ R.src_states; this naturally lets silent rules fire on Class C trajectories but with an onset that the temporal gate then rejects, removing the need for §7.2's hard fault-class gate. (c) §7.6 + §12.3 — pipeline output is the SET of admissible paths, not a ranked list. Path-level confidence scoring is removed: §12.3's `P_struct × P_causal` stays as a per-rule admission gate but does not compose into chain scores. Service-level ranking, when needed, derives from structural signals (frequency / earliest onset / graph distance), not composite confidence | Reviewer locked these three together: (a) "inferred edge其实没那么多场景，如果是pod整个都不行了，那只会是我们故障注入的点就是那个pod ... 而对于前置的请求，比如说认证没过，导致后续的操作都消失了，那也只会有这种场景" — narrowing to injection-anchored scenarios; (b) "State时序的话，我们可以取之前的所有的state，比如说他之前有A，那我们就可以拿error来作为因" — earliest-state trajectory rule; (c) "路径打分其实不需要吧，它其实也没那么可靠，反而会干扰" — drop path scoring. Net effect: methodology is simpler (no fault-class hard gate, no chain composition), inference is faster (smaller inferred-edge cardinality, no scoring layer), and recall is preserved (trajectory rule keeps real chains, ε_eff keeps real onsets) |
 | 2026-04-26 | §7.4 — added "Graph-completeness invariants assumed by this step" sub-section: (1) node completeness via union of k8s metrics + baseline traces + abnormal traces; (2) edge completeness via union of baseline and abnormal trace-derived edges. Together they ensure idle-in-abnormal services / edges still appear in the search space. Activity-filter dropping HEALTHY corridor nodes is exact because propagation rules never have HEALTHY as src_state; the injection point exception is rescued by `∪ injection_set` | Originally raised as vulnerability #8 — concern that idle services could be erased from the graph and silently lower recall. Reviewer confirmed the graph build (parquet_loader.build_graph_from_parquet) already unions all three sources for nodes and both windows for edges, so the invariant holds. Documenting it now keeps future per-system loaders from regressing the contract |
+| 2026-04-27 | §7.1.1 added — "Structural truncation alarms — multi-signal detector". Extends `alarm_set` with a per-endpoint baseline-shape detector that catches *body-deviation* alarms (request truncated, ubiquitous downstream service missing, edge-set Jaccard collapsed) where outcome-deviation at the boundary is silent (200, normal latency). Detector is purely structural — multi-signal score gate (S1 ubiquitous-service absence, S2 span-count below baseline p10×0.5, S3 canonical-shape Jaccard < 0.5, S4 truncated-and-errored), per-endpoint promotion only when ≥5% of abnormal traces flag and ≥3 absolute, baseline ≥5 traces. Sidecar `missing_services` per flagged endpoint feeds downstream root-cause ranking. Composes by union with the canonical §7.1 `is_root_alarm_candidate` extractor. Companion change: §7.1's root-alarm predicate relaxed from `is_root_server` to `is_root_alarm_candidate` (drops Server-kind requirement; non-loadgen owner ∧ parent loadgen-or-missing) — span-kind labels are unreliable across instrumentation, so the predicate is now structural | E2E v6 vs v4 baseline on TrainTicket 500-case fixture: 493/500 (98.6%) → 498/500 (99.6%), +5 cases recovered, 0 regressions. The 5 recovered cases were all status-code-200 silent-injection mis-routes (`ts5-ts-contacts-service-pod-kill-srvmct`, `ts5-ts-travel-plan-service-container-kill-4s877v`, `ts5-ts-verification-code-service-container-kill-g22rpg`, `ts5-ts-preserve-service-container-kill-lft86s`, `ts4-ts-verification-code-service-partition-nlbl25`) where `is_root_server` returned `state(boundary) = HEALTHY` despite the call subtree being truncated; the canonical extractor was producing `alarm_set = ∅` and short-circuiting to SILENT_INJECTION. Truncation pass converts these into legitimate alarms by detecting the body-shape divergence directly, without claiming knowledge of which downstream service caused it (that's left to §7.4 corridor + §7.6 ranking) |
 | 2026-04-26 | §13 added — "Implementation strategy: two-phase pipeline". Phase 1 (cheap, structural) extracts SLO-violation `cheap_alarm_set` on root Server spans only (loose thresholds: error>1% AND ≥2× baseline, p95 latency >1.5×, rate <0.5×), pre-computes injection-anchored inferred edges from k8s + baseline lineage, and builds the corridor with two BFS passes — no detector machinery, no §12.2 calibration. Phase 2 runs full §7.1 detectors only on corridor nodes (~5–20% of graph), with precedence merge / trajectory / alarm tightening / temporal pruning / DFS / verification on the same set. Output unchanged. Two correctness invariants: (A) `cheap_alarm_set ⊇ true_alarm_set` so backward-reach loses nothing recoverable; (B) `corridor ⊇ relevant_nodes_full_pipeline` because both Phase 1 expansions are over-approximations. Renumber Glossary §13 → §14 and Change log §14 → §15 to make room | Reviewer raised performance: "实现的时候怎么去快速地检测和剪枝 ... 先把 SLO violation 的 nodes 抽取出来 ... 我们只需要关心这些有 violation 的 notes 和故障注入点 ... 我们只考虑这两批 node 之间的可能的可达路径，这是第一批剪枝，第 2 批剪枝的话，我们再去剪对应的状态". The §7.6 9-step linear order is the **methodology contract**; §13 is a soundness-preserving reordering for the implementation. Detector evaluation is the dominant cost (per-(svc, case) baseline calibration + per-state passes); shifting it behind topology pruning cuts wall-clock by 80–90% on real corridors |
