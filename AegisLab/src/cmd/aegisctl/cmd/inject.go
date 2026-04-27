@@ -7,14 +7,55 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
+
+// resolveDatapackStateFlag accepts either a numeric state (e.g. "6") or a
+// symbolic name (e.g. "detector_success") and returns the numeric form expected
+// by the API.
+func resolveDatapackStateFlag(raw string) (string, error) {
+	if raw == "" {
+		return "", nil
+	}
+	if _, err := strconv.Atoi(raw); err == nil {
+		return raw, nil
+	}
+	st := consts.GetDatapackStateByName(raw)
+	if st == nil {
+		return "", fmt.Errorf("invalid --state %q; valid values: %s", raw, datapackStateFlagHelp())
+	}
+	return strconv.Itoa(int(*st)), nil
+}
+
+func datapackStateFlagHelp() string {
+	names := make([]string, 0, len(consts.ValidDatapackStates))
+	for s := range consts.ValidDatapackStates {
+		names = append(names, fmt.Sprintf("%s (%d)", consts.GetDatapackStateName(s), int(s)))
+	}
+	sort.Strings(names)
+	return strings.Join(names, ", ")
+}
+
+func pageSizeFlagHelp() string {
+	sizes := make([]int, 0, len(consts.ValidPageSizes))
+	for s := range consts.ValidPageSizes {
+		sizes = append(sizes, int(s))
+	}
+	sort.Ints(sizes)
+	parts := make([]string, len(sizes))
+	for i, s := range sizes {
+		parts[i] = strconv.Itoa(s)
+	}
+	return "{" + strings.Join(parts, ", ") + "}"
+}
 
 // ---------- helpers ----------
 
@@ -82,10 +123,15 @@ var injectListCmd = &cobra.Command{
 			return err
 		}
 
+		stateParam, err := resolveDatapackStateFlag(injectListState)
+		if err != nil {
+			return err
+		}
+
 		c := newClient()
 		q := fmt.Sprintf("/api/v2/projects/%d/injections?page=%d&size=%d", pid, injectListPage, injectListSize)
-		if injectListState != "" {
-			q += "&state=" + injectListState
+		if stateParam != "" {
+			q += "&state=" + stateParam
 		}
 		if injectListFaultType != "" {
 			q += "&fault_type=" + injectListFaultType
@@ -374,11 +420,11 @@ var injectDownloadCmd = &cobra.Command{
 // ---------- init ----------
 
 func init() {
-	injectListCmd.Flags().StringVar(&injectListState, "state", "", "Filter by state")
+	injectListCmd.Flags().StringVar(&injectListState, "state", "", "Filter by datapack state (name or numeric id; valid: "+datapackStateFlagHelp()+")")
 	injectListCmd.Flags().StringVar(&injectListFaultType, "fault-type", "", "Filter by fault type")
 	injectListCmd.Flags().StringVar(&injectListLabels, "labels", "", "Filter by labels (key=val,...)")
 	injectListCmd.Flags().IntVar(&injectListPage, "page", 1, "Page number")
-	injectListCmd.Flags().IntVar(&injectListSize, "size", 20, "Page size")
+	injectListCmd.Flags().IntVar(&injectListSize, "size", 20, "Page size; must be one of "+pageSizeFlagHelp())
 
 	injectSearchCmd.Flags().StringVar(&injectSearchNamePattern, "name-pattern", "", "Name pattern to search for")
 	injectSearchCmd.Flags().StringVar(&injectSearchLabels, "labels", "", "Labels to filter (key=val,...)")
