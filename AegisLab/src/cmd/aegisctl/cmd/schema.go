@@ -3,7 +3,9 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -12,12 +14,13 @@ import (
 
 // schemaFlag describes one local flag on a command.
 type schemaFlag struct {
-	Name      string `json:"name" yaml:"name"`
-	Shorthand string `json:"shorthand" yaml:"shorthand"`
-	Type      string `json:"type" yaml:"type"`
-	Default   string `json:"default" yaml:"default"`
-	Usage     string `json:"usage" yaml:"usage"`
-	Required  bool   `json:"required" yaml:"required"`
+	Name       string   `json:"name" yaml:"name"`
+	Shorthand  string   `json:"shorthand" yaml:"shorthand"`
+	Type       string   `json:"type" yaml:"type"`
+	Default    string   `json:"default" yaml:"default"`
+	Usage      string   `json:"usage" yaml:"usage"`
+	Required   bool     `json:"required" yaml:"required"`
+	EnumValues []string `json:"enum_values" yaml:"enum_values"`
 }
 
 // schemaCommand is a single entry in the schema dump.
@@ -125,17 +128,156 @@ func collectLocalFlags(cmd *cobra.Command) []schemaFlag {
 		if annotations := f.Annotations[cobra.BashCompOneRequiredFlag]; len(annotations) > 0 && annotations[0] == "true" {
 			required = true
 		}
+		enumValues := collectFlagEnumValues(f.Usage)
+		if enumValues == nil {
+			enumValues = []string{}
+		}
 		flags = append(flags, schemaFlag{
-			Name:      f.Name,
-			Shorthand: f.Shorthand,
-			Type:      f.Value.Type(),
-			Default:   f.DefValue,
-			Usage:     f.Usage,
-			Required:  required,
+			Name:       f.Name,
+			Shorthand:  f.Shorthand,
+			Type:       f.Value.Type(),
+			Default:    f.DefValue,
+			Usage:      f.Usage,
+			Required:   required,
+			EnumValues: enumValues,
 		})
 	})
 	sort.Slice(flags, func(i, j int) bool { return flags[i].Name < flags[j].Name })
 	return flags
+}
+
+var (
+	enumValueKeywordRE = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)(?:valid values?|possible values|must be one of|valid:|valid values?:?)\s*[:;]?\s*([^\n.)]+)`),
+		regexp.MustCompile(`(?i)(?:can be one of|allowed values?|values? are)\s*[:;]?\s*([^\n.)]+)`),
+	}
+	parenthesizedRE = regexp.MustCompile(`\(([^()]*)\)`)
+	pipeValueRE     = regexp.MustCompile(`\b([A-Za-z0-9._-]+(?:\s*\|\s*[A-Za-z0-9._-]+)+)\b`)
+	quotedValueRE   = regexp.MustCompile(`'([^']+)'(?:\s*(?:/|\|)\s*'[^']+')+`)
+)
+
+func collectFlagEnumValues(usage string) []string {
+	for _, re := range enumValueKeywordRE {
+		matches := re.FindAllStringSubmatch(usage, -1)
+		for _, match := range matches {
+			values := splitEnumValueCandidates(match[1])
+			if isLikelyEnumValueSet(values) {
+				return values
+			}
+		}
+	}
+
+	for _, match := range parenthesizedRE.FindAllStringSubmatch(usage, -1) {
+		values := splitEnumValueCandidates(match[1])
+		if isLikelyEnumValueSet(values) {
+			return values
+		}
+	}
+
+	quotedValues := quotedValueRE.FindStringSubmatch(usage)
+	if len(quotedValues) > 0 {
+		return splitQuotedEnumValues(quotedValues[0])
+	}
+
+	for _, match := range pipeValueRE.FindAllStringSubmatch(usage, -1) {
+		values := splitEnumValueCandidates(match[1])
+		if isLikelyEnumValueSet(values) {
+			return values
+		}
+	}
+
+	return nil
+}
+
+func splitEnumValueCandidates(raw string) []string {
+	parts := []string{raw}
+
+	if strings.Contains(raw, "|") {
+		parts = strings.Split(raw, "|")
+	} else if strings.Contains(raw, ",") {
+		parts = strings.Split(raw, ",")
+	} else if strings.Contains(raw, " / ") || strings.Contains(raw, "/") {
+		parts = strings.Split(raw, "/")
+	}
+
+	values := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		value = strings.Trim(value, " ()")
+		value = strings.Trim(value, `"'`)
+		if !isLikelyEnumValue(value) {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		values = append(values, value)
+	}
+	return values
+}
+
+func splitQuotedEnumValues(raw string) []string {
+	parts := quotedValueRE.FindAllStringSubmatch(raw, -1)
+	if len(parts) == 0 {
+		return nil
+	}
+
+	values := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, p := range parts {
+		value := strings.TrimSpace(p[1])
+		if !isLikelyEnumValue(value) {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		values = append(values, value)
+	}
+	return values
+}
+
+func isLikelyEnumValue(value string) bool {
+	if value == "" {
+		return false
+	}
+	if strings.ContainsAny(value, " \t\n\r") {
+		return false
+	}
+	if strings.HasSuffix(value, ";") || strings.HasPrefix(value, ";") {
+		return false
+	}
+	switch value {
+	case "id", "name", "required", "file", "required)", "required;":
+		return false
+	}
+	return true
+}
+
+func isLikelyEnumValueSet(values []string) bool {
+	if len(values) < 2 {
+		return false
+	}
+	return len(values) == len(uniqueEnumValues(values))
+}
+
+func uniqueEnumValues(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }
 
 func argsDescription(cmd *cobra.Command) string {
