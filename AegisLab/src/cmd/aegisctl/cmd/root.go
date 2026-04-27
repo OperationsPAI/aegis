@@ -304,6 +304,9 @@ func setupDryRunRegistry() {
 	if injectGuidedCmd != nil {
 		markDryRunSupported(injectGuidedCmd)
 	}
+	if executeCreateCmd != nil {
+		markDryRunSupported(executeCreateCmd)
+	}
 	if executeSubmitCmd != nil {
 		markDryRunSupported(executeSubmitCmd)
 	}

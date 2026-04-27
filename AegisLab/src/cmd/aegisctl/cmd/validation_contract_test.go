@@ -399,7 +399,7 @@ labels:
 	flagProject = "pair_diagnosis"
 	flagOutput = "json"
 	flagDryRun = true
-	executeSubmitSpec = execSpec
+	executeCreateSpec = execSpec
 
 	stdout, _, err = captureStdIO(t, func() error {
 		return executeSubmitCmd.RunE(nil, nil)

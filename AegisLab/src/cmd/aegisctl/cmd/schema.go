@@ -27,10 +27,11 @@ type schemaFlag struct {
 
 // schemaCommand is a single entry in the schema dump.
 type schemaCommand struct {
-	Path  string       `json:"path" yaml:"path"`
-	Short string       `json:"short" yaml:"short"`
-	Flags []schemaFlag `json:"flags" yaml:"flags"`
-	Args  string       `json:"args" yaml:"args"`
+	Path       string       `json:"path" yaml:"path"`
+	Short      string       `json:"short" yaml:"short"`
+	Flags      []schemaFlag `json:"flags" yaml:"flags"`
+	Args       string       `json:"args" yaml:"args"`
+	Deprecated bool         `json:"deprecated" yaml:"deprecated"`
 }
 
 // schemaDocument is the top-level document emitted by `aegisctl schema dump`.
@@ -105,15 +106,16 @@ func collectSchemaCommands(cmd *cobra.Command, out *[]schemaCommand) {
 	if cmd == nil {
 		return
 	}
-	if cmd.Hidden || cmd.Deprecated != "" {
+	if cmd.Hidden {
 		return
 	}
 
 	entry := schemaCommand{
-		Path:  cmd.CommandPath(),
-		Short: cmd.Short,
-		Flags: collectLocalFlags(cmd),
-		Args:  argsDescription(cmd),
+		Path:       cmd.CommandPath(),
+		Short:      cmd.Short,
+		Flags:      collectLocalFlags(cmd),
+		Args:       argsDescription(cmd),
+		Deprecated: cmd.Deprecated != "",
 	}
 	*out = append(*out, entry)
 

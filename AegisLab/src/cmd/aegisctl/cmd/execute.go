@@ -6,6 +6,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/internal/cli/deprecate"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -40,8 +41,8 @@ var executeCmd = &cobra.Command{
 	Long: `Manage RCA algorithm executions in AegisLab projects.
 
 WORKFLOW:
-  # Submit algorithm execution from a YAML spec file
-  aegisctl execute submit --spec execution.yaml --project pair_diagnosis
+  # Create algorithm execution from a YAML spec file
+  aegisctl execute create --input execution.yaml --project pair_diagnosis
 
   # List executions in a project
   aegisctl execute list --project pair_diagnosis
@@ -66,56 +67,77 @@ SPEC FILE FORMAT (execution.yaml):
       value: algorithm-comparison`,
 }
 
-// ---------- execute submit ----------
+// ---------- execute create ----------
 
-var executeSubmitSpec string
+var (
+	executeCreateInput string
+	executeCreateSpec  string
+)
 
-var executeSubmitCmd = &cobra.Command{
-	Use:   "submit",
+var executeCreateCmd = &cobra.Command{
+	Use:   "create",
 	Short: "Submit an algorithm execution from a YAML spec",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if executeSubmitSpec == "" {
-			return fmt.Errorf("--spec is required")
-		}
+		return runExecuteCreate(cmd, args)
+	},
+}
 
-		data, err := os.ReadFile(executeSubmitSpec)
-		if err != nil {
-			return fmt.Errorf("read spec file: %w", err)
-		}
+func runExecuteCreate(cmd *cobra.Command, args []string) error {
+	if err := resolveExclusiveFlags(cmd); err != nil {
+		return usageErrorf("%s", err)
+	}
+	specPath, err := resolveExecuteSpecPath(cmd)
+	if err != nil {
+		return err
+	}
 
-		var spec ExecuteSpec
-		if err := yaml.Unmarshal(data, &spec); err != nil {
-			return fmt.Errorf("parse spec YAML: %w", err)
-		}
+	data, err := os.ReadFile(specPath)
+	if err != nil {
+		return fmt.Errorf("read spec file: %w", err)
+	}
 
-		pid, err := resolveProjectIDByName()
-		if err != nil {
-			return err
-		}
+	var spec ExecuteSpec
+	if err := yaml.Unmarshal(data, &spec); err != nil {
+		return fmt.Errorf("parse spec YAML: %w", err)
+	}
 
-		path := fmt.Sprintf("/api/v2/projects/%d/executions/execute", pid)
-		if flagDryRun {
-			plan := map[string]any{
-				"dry_run":    true,
-				"operation":  "execute_submit",
-				"project":    flagProject,
-				"project_id": pid,
-				"method":     "POST",
-				"path":       path,
-				"spec":       spec,
-			}
-			output.PrintJSON(plan)
-			return nil
-		}
+	pid, err := resolveProjectIDByName()
+	if err != nil {
+		return err
+	}
 
-		c := newClient()
-		var resp client.APIResponse[any]
-		if err := c.Post(path, spec, &resp); err != nil {
-			return err
+	path := fmt.Sprintf("/api/v2/projects/%d/executions/execute", pid)
+	if flagDryRun {
+		plan := map[string]any{
+			"dry_run":    true,
+			"operation":  "execute_submit",
+			"project":    flagProject,
+			"project_id": pid,
+			"method":     "POST",
+			"path":       path,
+			"spec":       spec,
 		}
-
-		output.PrintJSON(resp.Data)
+		output.PrintJSON(plan)
 		return nil
+	}
+
+	c := newClient()
+	var resp client.APIResponse[any]
+	if err := c.Post(path, spec, &resp); err != nil {
+		return err
+	}
+
+	output.PrintJSON(resp.Data)
+	return nil
+}
+
+var executeSubmitCmd = &cobra.Command{
+	Use:        "submit",
+	Short:      executeCreateCmd.Short,
+	Deprecated: deprecate.Message("submit", "create"),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		deprecate.Warn("submit", "create")
+		return runExecuteCreate(cmd, args)
 	},
 }
 
@@ -202,12 +224,71 @@ var executeGetCmd = &cobra.Command{
 // ---------- init ----------
 
 func init() {
-	executeSubmitCmd.Flags().StringVar(&executeSubmitSpec, "spec", "", "Path to execution spec YAML file")
-
 	executeListCmd.Flags().IntVar(&executeListPage, "page", 1, "Page number")
 	executeListCmd.Flags().IntVar(&executeListSize, "size", 20, "Page size")
 
+	executeCmd.AddCommand(executeCreateCmd)
 	executeCmd.AddCommand(executeSubmitCmd)
 	executeCmd.AddCommand(executeListCmd)
 	executeCmd.AddCommand(executeGetCmd)
+}
+
+func resolveExecuteSpecPath(cmd *cobra.Command) (string, error) {
+	var specPath string
+	inputProvided := false
+	specProvided := false
+
+	if cmd != nil {
+		if flag := cmd.Flags().Lookup("input"); flag != nil && flag.Changed {
+			inputProvided = true
+			specPath = executeCreateInput
+		}
+		if flag := cmd.Flags().Lookup("spec"); flag != nil && flag.Changed {
+			specProvided = true
+			if specPath == "" {
+				specPath = executeCreateSpec
+			}
+		}
+	}
+
+	if !inputProvided && !specProvided {
+		switch {
+		case executeCreateInput != "":
+			specPath = executeCreateInput
+		case executeCreateSpec != "":
+			specPath = executeCreateSpec
+		default:
+			return "", usageErrorf("--spec or --input is required")
+		}
+	} else if inputProvided && specProvided {
+		return "", usageErrorf("at most one of --spec, --input, --input(-f) may be specified")
+	}
+
+	if specPath == "" {
+		return "", usageErrorf("--spec or --input is required")
+	}
+	return specPath, nil
+}
+
+func resolveExclusiveFlags(cmd *cobra.Command) error {
+	if cmd != nil {
+		return deprecate.EnsureMutuallyExclusiveStringFlags(cmd.Flags(), "spec", "input")
+	}
+
+	if executeCreateInput != "" && executeCreateSpec != "" {
+		return fmt.Errorf("at most one of --spec, --input, --input(-f) may be specified")
+	}
+
+	return nil
+}
+
+func init() {
+	bindExecuteSpecFlags(executeCreateCmd)
+	bindExecuteSpecFlags(executeSubmitCmd)
+}
+
+func bindExecuteSpecFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&executeCreateInput, "input", "f", "", "Path to execution spec YAML file (required)")
+	cmd.Flags().StringVar(&executeCreateSpec, "spec", "", "Deprecated. Path to execution spec YAML file")
+	_ = cmd.Flags().MarkDeprecated("spec", "use --input/-f instead")
 }
