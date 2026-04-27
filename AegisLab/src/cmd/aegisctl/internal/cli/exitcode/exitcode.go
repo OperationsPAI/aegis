@@ -116,6 +116,11 @@ func ForError(err error) int {
 		}
 	}
 
+	var notFoundErr *client.NotFoundError
+	if errors.As(err, &notFoundErr) {
+		return CodeNotFound
+	}
+
 	var cliErr *clierr.CLIError
 	if errors.As(err, &cliErr) {
 		if cliErr.ExitCode != 0 {
