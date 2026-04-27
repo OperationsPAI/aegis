@@ -97,7 +97,23 @@ func TestDecodeExecuteListResponse(t *testing.T) {
 
 ### AC 4: decode 失败时（非本字段，未来其它字段）EXIT=11（依赖 #237-退出码中枢子 issue）。
 **verdict**: PASS
-**command**: `tmpdir=$(mktemp -d); cat >"$tmpdir/server.py" <<'PY' ... PY; python3 "$tmpdir/server.py" & just build-aegisctl >/tmp/issue241-ac4-build.stdout 2>/tmp/issue241-ac4-build.stderr; AEGIS_SERVER=http://127.0.0.1:18081 AEGIS_TOKEN=dummy /tmp/aegisctl execute list --project pair_diagnosis >/tmp/issue241-ac4-cli.stdout 2>/tmp/issue241-ac4-cli.stderr; printf 'exit=%s\n' "$status"; sed -n '1,20p' /tmp/issue241-ac4-cli.stderr`
+**command**: `tmpdir=$(mktemp -d); cat >"$tmpdir/server.py" <<'PY'
+from http.server import BaseHTTPRequestHandler, HTTPServer
+class H(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path.startswith('/api/v2/projects?page=1&size=100'):
+            body = b'{"code":0,"message":"success","data":{"items":[{"id":7,"name":"pair_diagnosis"}],"pagination":{"page":1,"size":100,"total":1,"total_pages":1}}}'
+        elif self.path.startswith('/api/v2/projects/7/executions?page=1&size=20'):
+            body = b'{"code":0,"message":"success","data":{"items":[{"id":1,"algorithm":"algo","datapack":"dp","state":"success","duration":1.25,"created_at":123}],"pagination":{"page":1,"size":20,"total":1,"total_pages":1}}}'
+        else:
+            self.send_response(404); self.end_headers(); return
+        self.send_response(200); self.send_header('Content-Type', 'application/json'); self.end_headers(); self.wfile.write(body)
+    def log_message(self, format, *args):
+        pass
+HTTPServer(('127.0.0.1', 18081), H).serve_forever()
+PY
+python3 "$tmpdir/server.py" >/tmp/issue241-ac4-server.stdout 2>/tmp/issue241-ac4-server.stderr &
+server_pid=$!; trap 'kill $server_pid >/dev/null 2>&1 || true; rm -rf "$tmpdir"' EXIT; sleep 1; cd AegisLab; just build-aegisctl >/tmp/issue241-ac4-build.stdout 2>/tmp/issue241-ac4-build.stderr; set +e; AEGIS_SERVER=http://127.0.0.1:18081 AEGIS_TOKEN=dummy /tmp/aegisctl execute list --project pair_diagnosis >/tmp/issue241-ac4-cli.stdout 2>/tmp/issue241-ac4-cli.stderr; status=$?; set -e; printf 'exit=%s\n' "$status"; sed -n '1,20p' /tmp/issue241-ac4-cli.stderr; if [ "$status" -ne 11 ]; then exit 1; fi`
 **exit**: 0
 **stdout** (first 20 lines):
 ```text
