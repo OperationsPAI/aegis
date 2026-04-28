@@ -76,6 +76,17 @@ var (
 	guidedInstallerHook chartInstaller
 	guidedPodListerHook PodLister
 
+	// Multi-fault batch staging (mirrors backend SubmitInjectionReq.Specs[i]
+	// inner-array semantics: configs in one inner slice run in parallel).
+	// --stage appends the current finalized cfg to a stage file and resets
+	// the working session so the user can configure the next fault. --apply
+	// --batch ships every staged cfg as one parallel batch.
+	guidedStage      bool
+	guidedBatch      bool
+	guidedResetBatch bool
+	guidedListBatch  bool
+	guidedBatchPath  string
+
 	guidedDuration        int
 	guidedMemorySize      int
 	guidedMemWorker       int
@@ -127,6 +138,81 @@ current stage's selection, and --apply to submit the finalized config.`,
 		ctx := cmd.Context()
 		if ctx == nil {
 			ctx = context.Background()
+		}
+
+		// Multi-fault batch dispatch. --stage / --reset-batch / --list-batch
+		// are mutually exclusive with each other, and --batch is only
+		// meaningful in combination with --apply (= submit staged specs as
+		// one parallel batch).
+		batchModes := 0
+		for _, f := range []bool{guidedStage, guidedResetBatch, guidedListBatch} {
+			if f {
+				batchModes++
+			}
+		}
+		if batchModes > 1 {
+			return usageErrorf("--stage, --reset-batch, and --list-batch are mutually exclusive")
+		}
+		if guidedBatch && !guidedApply && !guidedListBatch {
+			return usageErrorf("--batch is only valid with --apply (or implicitly with --list-batch); pass --apply to submit staged specs")
+		}
+		if guidedStage && guidedApply {
+			return usageErrorf("--stage and --apply are mutually exclusive: --stage saves the current cfg for later, --apply submits now")
+		}
+
+		batchPath, err := resolveGuidedBatchPath(guidedBatchPath)
+		if err != nil {
+			return err
+		}
+
+		if guidedResetBatch {
+			if err := saveGuidedBatch(batchPath, &guidedBatchFile{Version: 1}); err != nil {
+				return err
+			}
+			output.PrintInfo(fmt.Sprintf("cleared guided batch stage file %s", batchPath))
+			return nil
+		}
+
+		if guidedListBatch {
+			batch, err := loadGuidedBatch(batchPath)
+			if err != nil {
+				return err
+			}
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(map[string]any{
+				"path":         batchPath,
+				"version":      batch.Version,
+				"staged_count": len(batch.StagedSpecs),
+				"staged_specs": batch.StagedSpecs,
+			}); err != nil {
+				return fmt.Errorf("encode batch listing: %w", err)
+			}
+			return nil
+		}
+
+		// --apply --batch short-circuits the working-session resolve loop:
+		// the staged file is the source of truth.
+		if guidedApply && guidedBatch {
+			batch, err := loadGuidedBatch(batchPath)
+			if err != nil {
+				return err
+			}
+			if len(batch.StagedSpecs) == 0 {
+				return usageErrorf("--apply --batch: no staged specs in %s; run `--stage` first to add at least one ready_to_apply config", batchPath)
+			}
+			if err := submitGuidedApply(batch.StagedSpecs...); err != nil {
+				return err
+			}
+			// Submit succeeded (non-dedupe path returns nil; dedupe-suppressed
+			// returns a sentinel that we let propagate). Clear the stage file
+			// only on the clean-success path so a dedupe error keeps the
+			// staged specs around for the user to re-inspect.
+			if err := saveGuidedBatch(batchPath, &guidedBatchFile{Version: 1}); err != nil {
+				return fmt.Errorf("submit ok but failed to clear batch stage file %s: %w", batchPath, err)
+			}
+			output.PrintInfo(fmt.Sprintf("cleared guided batch stage file %s after successful submit", batchPath))
+			return nil
 		}
 
 		path := guidedCfgPath
@@ -254,6 +340,39 @@ current stage's selection, and --apply to submit the finalized config.`,
 			}
 		}
 
+		if guidedStage {
+			// Same fail-loud guard as --apply: only stage configs the local
+			// resolver believes are submittable.
+			if err := guidedResolveErr(response); err != nil {
+				return err
+			}
+			batch, err := loadGuidedBatch(batchPath)
+			if err != nil {
+				return err
+			}
+			candidate := append(batch.StagedSpecs, response.Config)
+			if err := validateBatchCompat(candidate); err != nil {
+				return err
+			}
+			batch.StagedSpecs = candidate
+			if err := saveGuidedBatch(batchPath, batch); err != nil {
+				return err
+			}
+			// Reset the working session so the next invocation starts clean
+			// for the next fault. Honors --no-save-config: when the user
+			// asked us not to persist the session, leave the working file
+			// untouched (they accept the responsibility of resetting it
+			// themselves on the next call).
+			if effectiveSave {
+				fileCfg.GuidedSession = guidedcli.GuidedSession{}
+				if err := guidedcli.SaveConfig(path, fileCfg, guidedcli.GuidedConfig{}); err != nil {
+					return fmt.Errorf("reset working session after stage: %w", err)
+				}
+			}
+			output.PrintInfo(fmt.Sprintf("staged spec #%d to %s; working session reset", len(candidate), batchPath))
+			return nil
+		}
+
 		if guidedApply {
 			// Issue #176: short-circuit before shipping an un-normalized
 			// config to the backend when the local resolver reported errors.
@@ -336,6 +455,12 @@ func init() {
 	f.StringVar(&guidedApplyBenchmarkTag, "benchmark-tag", "", "Benchmark container version/tag (required with --apply)")
 	f.IntVar(&guidedApplyInterval, "interval", 0, "Total experiment interval in minutes (required with --apply)")
 	f.IntVar(&guidedApplyPreDuration, "pre-duration", 0, "Normal-data collection duration in minutes (required with --apply)")
+
+	f.BoolVar(&guidedStage, "stage", false, "Append the current ready_to_apply config to the batch stage file and reset the working session (does not submit). Use with --apply --batch later to submit every staged spec as one parallel batch.")
+	f.BoolVar(&guidedBatch, "batch", false, "With --apply, submit every staged spec from the batch file as a single parallel batch (cleared on success). Without --apply, used by --list-batch to point at the stage file.")
+	f.BoolVar(&guidedResetBatch, "reset-batch", false, "Discard the batch stage file and exit (mutually exclusive with --apply / --stage / --list-batch)")
+	f.BoolVar(&guidedListBatch, "list-batch", false, "Print the contents of the batch stage file as JSON and exit (mutually exclusive with --apply / --stage / --reset-batch)")
+	f.StringVar(&guidedBatchPath, "batch-config", "", "Path to the batch stage file (default ~/.aegisctl/inject-guided-batch.yaml)")
 
 	f.IntVar(&guidedDuration, "duration", 0, "Duration in minutes (default 5)")
 	f.IntVar(&guidedMemorySize, "memory-size", 0, "Memory size in MiB")
@@ -422,10 +547,16 @@ func guidedResolveErr(response *guidedcli.GuidedResponse) error {
 	return usageErrorf("%s:\n%s", preamble, strings.Join(bullets, "\n"))
 }
 
-// submitGuidedApply wraps a finalized GuidedConfig in the SubmitInjectionReq
-// envelope expected by POST /api/v2/projects/{id}/injections/inject and
-// forwards it through the guided-only backend path.
-func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
+// submitGuidedApply wraps one or more finalized GuidedConfigs in the
+// SubmitInjectionReq envelope expected by POST
+// /api/v2/projects/{id}/injections/inject and forwards them through the
+// guided-only backend path. When len(cfgs) > 1 the configs are sent as one
+// inner specs slice so the backend treats them as a parallel batch (see
+// SubmitInjectionReq.Specs semantics in module/injection/api_types.go).
+func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
+	if len(cfgs) == 0 {
+		return usageErrorf("no guided config to apply")
+	}
 	// Validate required envelope flags up front so the user gets a clear
 	// message instead of a 400 from the backend.
 	if guidedApplyPedestalName == "" || guidedApplyPedestalTag == "" || guidedApplyBenchmarkName == "" || guidedApplyBenchmarkTag == "" {
@@ -437,22 +568,29 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 	if guidedApplyInterval <= guidedApplyPreDuration {
 		return usageErrorf("--interval must be greater than --pre-duration")
 	}
-	if guidedAutoAllocate && strings.TrimSpace(cfg.Namespace) != "" && strings.TrimSpace(guidedNamespace) != "" {
-		// Only fire the conflict error when the user explicitly passed
-		// --namespace alongside --auto. A namespace inherited from the
-		// saved session config gets silently overridden below.
-		return usageErrorf("--auto cannot be combined with --namespace; pick one")
+	if len(cfgs) > 1 {
+		if err := validateBatchCompat(cfgs); err != nil {
+			return err
+		}
 	}
-	if guidedAutoAllocate {
-		cfg.Namespace = ""
+	for i := range cfgs {
+		if guidedAutoAllocate && strings.TrimSpace(cfgs[i].Namespace) != "" && strings.TrimSpace(guidedNamespace) != "" {
+			// Only fire the conflict error when the user explicitly passed
+			// --namespace alongside --auto. A namespace inherited from the
+			// saved session config gets silently overridden below.
+			return usageErrorf("--auto cannot be combined with --namespace; pick one")
+		}
+		if guidedAutoAllocate {
+			cfgs[i].Namespace = ""
+		}
 	}
 	if err := requireAPIContext(true); err != nil {
 		return err
 	}
 	if !guidedSkipStaleCheck {
-		// Non-blocking: any error from the check itself is silently downgraded
-		// to an info line by warnStalePodChaos. We still ignore its return.
-		_ = warnStalePodChaos(context.Background(), cfg.Namespace, guidedStalePodChaosListerHook, os.Stderr)
+		// All staged cfgs share a namespace (validateBatchCompat enforced
+		// it), so we only probe once.
+		_ = warnStalePodChaos(context.Background(), cfgs[0].Namespace, guidedStalePodChaosListerHook, os.Stderr)
 	}
 	opts := guidedApplyOptions{
 		PedestalName:  guidedApplyPedestalName,
@@ -477,7 +615,7 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 		},
 		"interval":     opts.Interval,
 		"pre_duration": opts.PreDuration,
-		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
+		"specs":        [][]guidedcli.GuidedConfig{cfgs},
 	}
 	if guidedSkipRestartPedestal {
 		envelope["skip_restart_pedestal"] = true
@@ -500,7 +638,7 @@ func submitGuidedApply(cfg guidedcli.GuidedConfig) error {
 		})
 		return nil
 	}
-	resp, err := submitGuidedApplyWithOptions(flagProject, cfg, opts)
+	resp, err := submitGuidedApplyWithOptions(flagProject, cfgs, opts)
 	if err != nil {
 		return err
 	}
@@ -525,7 +663,10 @@ type guidedApplyOptions struct {
 	PreDuration   int
 }
 
-func submitGuidedApplyWithOptions(projectName string, cfg guidedcli.GuidedConfig, opts guidedApplyOptions) (*client.APIResponse[injectSubmitResponse], error) {
+func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions) (*client.APIResponse[injectSubmitResponse], error) {
+	if len(cfgs) == 0 {
+		return nil, fmt.Errorf("no guided config to apply")
+	}
 	if opts.PedestalName == "" || opts.PedestalTag == "" || opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
 		return nil, fmt.Errorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
 	}
@@ -552,7 +693,7 @@ func submitGuidedApplyWithOptions(projectName string, cfg guidedcli.GuidedConfig
 		},
 		"interval":     opts.Interval,
 		"pre_duration": opts.PreDuration,
-		"specs":        [][]guidedcli.GuidedConfig{{cfg}},
+		"specs":        [][]guidedcli.GuidedConfig{cfgs},
 	}
 	if guidedSkipRestartPedestal {
 		envelope["skip_restart_pedestal"] = true
