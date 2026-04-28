@@ -234,13 +234,13 @@ The byte-cluster ClickStack runs operator-managed (chart 2.1.1+) with these caps
 - CH replicas: 2 with replication via Keeper (3 nodes)
 - CH resource limits: cpu 8/mem 16Gi per replica
 - OTel deployment-collector HPA: minReplicas=6 **maxReplicas=120**, target 60% memory / 55% CPU (was 40 → 120 in #279)
-- OTel collector pod: cpu 4 / **mem 8Gi** (was 4Gi → 8Gi in #279)
+- OTel collector pod: cpu 4 / **mem 16Gi** (was 4Gi → 8Gi → 16Gi in #279; the 8Gi step still saturated under TT firehose at 120/120 replicas)
 
 If you see `Code 202: Too many simultaneous queries` in build-pod logs, `max_concurrent_queries` was hit — likely because someone deployed teastore at chart < 0.1.4 (jmeter firehose). If you see `data refused due to high memory usage` in collector logs OR a pod log, OTel is OOM-throttling — bump `maxReplicas` and/or per-pod `memory` limit in `AegisLab/manifests/byte-cluster/otel-kube-stack.values.yaml`.
 
 **Pre-flight before TT-scale campaigns** (TT = ~50 services × 16 ns; teastore = jmeter firehose). Run `kubectl -n monitoring get hpa opentelemetry-kube-stack-deployment-collector` BEFORE kicking off the round. If `MAXPODS` is at the deployed ceiling AND `memory` exceeds 100% of target, raise the ceiling first. Otherwise the **silent ts/teastore drop pattern** triggers: Java agent's OkHttp gRPC exporter does not retry on `UNAVAILABLE`, so TT spans are dropped on the floor while otel-demo / DSB Go-SDK / Node-SDK keep flowing (BatchSpanProcessor + retry). One-system-zero-traces-others-fine is the diagnostic signature.
 
-### Best timing for aegis redeploy / namespace lifecycle
+### Best practices for aegis redeploy / namespace lifecycle
 
 **Redeploy aegis only between rounds.** `runtime-worker` / `api-gateway` rollout silently orphans in-flight tasks (no error log, redis queues empty, the trace just stops progressing at whatever stage the worker was handling). Wait until `terminals_round<N>.tsv` has been fully reaped before any `kubectl rollout restart` or helm upgrade against `exp/`.
 
