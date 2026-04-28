@@ -83,6 +83,86 @@
             "confidence": 0.8
         },
         {
+            "name": "RULE_CONTAINER_ERRORING_TO_SPAN",
+            "rule_id": "container_erroring_to_span",
+            "description": "Container ERRORING (e.g. JVMReturn / JVMException) -> Pod -> Service -> Span ERRORING/SLOW/MISSING (application-level fault propagates to spans on the service)",
+            "tier": "core",
+            "epistemic_class": "B",
+            "src_kind": "container",
+            "src_states": [
+                "erroring"
+            ],
+            "path": [
+                {
+                    "edge_kind": "runs",
+                    "direction": "backward",
+                    "intermediate_kind": "pod",
+                    "intermediate_states": [
+                        "unavailable",
+                        "degraded",
+                        "erroring",
+                        "healthy",
+                        "unknown"
+                    ]
+                },
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": [
+                "erroring",
+                "slow",
+                "missing"
+            ],
+            "confidence": 0.85
+        },
+        {
+            "name": "RULE_CONTAINER_SLOW_TO_SPAN",
+            "rule_id": "container_slow_to_span",
+            "description": "Container SLOW (e.g. JVMLatency) -> Pod -> Service -> Span SLOW/MISSING (latency injection cascades through service spans)",
+            "tier": "core",
+            "epistemic_class": "B",
+            "src_kind": "container",
+            "src_states": [
+                "slow"
+            ],
+            "path": [
+                {
+                    "edge_kind": "runs",
+                    "direction": "backward",
+                    "intermediate_kind": "pod",
+                    "intermediate_states": [
+                        "slow",
+                        "degraded",
+                        "healthy",
+                        "unknown"
+                    ]
+                },
+                {
+                    "edge_kind": "routes_to",
+                    "direction": "backward",
+                    "intermediate_kind": "service"
+                },
+                {
+                    "edge_kind": "includes",
+                    "direction": "forward"
+                }
+            ],
+            "dst_kind": "span",
+            "possible_dst_states": [
+                "slow",
+                "missing"
+            ],
+            "confidence": 0.8
+        },
+        {
             "name": "RULE_CONTAINER_UNAVAILABLE_TO_POD",
             "rule_id": "container_unavailable_to_pod",
             "description": "Container UNAVAILABLE -> Pod DEGRADED (one bad container degrades the pod, structural).",
