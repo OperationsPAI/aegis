@@ -342,9 +342,7 @@ def main() -> int:
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(summary, indent=2, ensure_ascii=False))
-    print(
-        f"\nresult: joint_fp_rate = {fp_rate:.2%} ({fp}/{total} sham trials produced 'attributed')"
-    )
+    print(f"\nresult: joint_fp_rate = {fp_rate:.2%} ({fp}/{total} sham trials produced 'attributed')")
     print(f"label distribution: {dict(label_counts)}")
     print(f"errors: {dict(error_counts)} (total {sum(error_counts.values())})")
     print(f"wrote {args.out}")

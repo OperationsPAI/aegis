@@ -119,7 +119,9 @@ def main() -> int:
                 for site in sample:
                     callsite_counter[site] += 1
             if done % 50 == 0:
-                print(f"  [{done}/{len(cases)}] cases-with-hits={cases_with_hits} total-hits={sum(c['hits'] for c in per_case.values())}")
+                print(
+                    f"  [{done}/{len(cases)}] cases-with-hits={cases_with_hits} total-hits={sum(c['hits'] for c in per_case.values())}"
+                )
 
     summary = {
         "n_cases": len(cases),

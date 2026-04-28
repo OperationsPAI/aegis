@@ -183,9 +183,7 @@ class PathBuilder:
             sub_src_labels = self._labels_for_node(sub[0])
             if not self.rule_matcher.matches_multi_hop_rule(rule, sub, self.graph, src_labels=sub_src_labels):
                 continue
-            built = self._build_multi_hop(
-                sub, rule, is_first_hop=(start == 0), prev_start_time=prev_start_time
-            )
+            built = self._build_multi_hop(sub, rule, is_first_hop=(start == 0), prev_start_time=prev_start_time)
             if built is None:
                 continue
             return (
@@ -257,9 +255,7 @@ class PathBuilder:
             src_start_time = _effective_onset(src_matching_window, prev_start_time)
         elif prev_start_time is not None:
             causal_window = self.temporal_validator.find_causal_window(src_node.uniq_name, prev_start_time)
-            src_start_time = (
-                _effective_onset(causal_window, prev_start_time) if causal_window else prev_start_time
-            )
+            src_start_time = _effective_onset(causal_window, prev_start_time) if causal_window else prev_start_time
         elif src_tl and src_tl.windows:
             src_start_time = src_tl.windows[0].start
         else:

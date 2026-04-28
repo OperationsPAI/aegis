@@ -325,4 +325,3 @@ class FaultPropagator:
             if ws:
                 labels.update(ws)
         return frozenset(labels)
-
