@@ -57,6 +57,7 @@ var (
 	traceListSize    int
 	traceListFormat  string
 	traceListColumns string
+	traceListAll     bool
 )
 
 // traceColumnExtractors maps short column names to a function that pulls the
@@ -180,7 +181,20 @@ Columns available for --columns (TSV only):
 			}
 		}
 
-		path := "/api/v2/traces"
+		basePath := "/api/v2/traces"
+		baseParams := map[string]string{
+			"project_id": projectIDStr,
+			"state":      traceListState,
+			"group_id":   traceListGroupID,
+		}
+
+		if traceListAll {
+			if format != "ndjson" {
+				return fmt.Errorf("--all requires --format/--output ndjson (table/json/tsv buffer the full result set; use ndjson for streaming)")
+			}
+			return streamListAllNDJSON[map[string]any](c, basePath, baseParams)
+		}
+
 		params := buildQueryParams(map[string]string{
 			"project_id": projectIDStr,
 			"state":      traceListState,
@@ -188,6 +202,7 @@ Columns available for --columns (TSV only):
 			"page":       intToString(traceListPage),
 			"size":       intToString(traceListSize),
 		})
+		path := basePath
 		if params != "" {
 			path += "?" + params
 		}
@@ -534,6 +549,7 @@ func init() {
 	traceListCmd.Flags().StringVar(&traceListGroupID, "group-id", "", "Filter by group ID")
 	traceListCmd.Flags().IntVar(&traceListPage, "page", 0, "Page number")
 	traceListCmd.Flags().IntVar(&traceListSize, "size", 0, "Page size")
+	traceListCmd.Flags().BoolVar(&traceListAll, "all", false, "Stream every page as NDJSON to stdout (ignores --page/--size; requires --output ndjson)")
 	traceListCmd.Flags().StringVar(&traceListFormat, "format", "", "Output format: table|json|tsv (overrides -o)")
 	traceListCmd.Flags().StringVar(&traceListColumns, "columns", "",
 		"Comma-separated columns for --format tsv (default: id,state,last_event). "+

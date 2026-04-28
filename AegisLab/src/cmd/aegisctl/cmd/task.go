@@ -45,6 +45,7 @@ var taskListType string
 var taskListPage int
 var taskListSize int
 var taskListOverdue bool
+var taskListAll bool
 
 var taskListCmd = &cobra.Command{
 	Use:   "list",
@@ -52,13 +53,33 @@ var taskListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
 
-		path := "/api/v2/tasks"
+		basePath := "/api/v2/tasks"
+		baseParams := map[string]string{
+			"state": taskListState,
+			"type":  taskListType,
+		}
+
+		if taskListAll {
+			if output.OutputFormat(flagOutput) != output.FormatNDJSON {
+				return fmt.Errorf("--all requires --output ndjson (table/json buffer the full result set; use ndjson for streaming)")
+			}
+			var keep func(map[string]any) bool
+			if taskListOverdue {
+				nowEpoch := time.Now().Unix()
+				keep = func(item map[string]any) bool {
+					return stringField(item, "state") == "Pending" && execTimeField(item) <= nowEpoch
+				}
+			}
+			return streamListAllNDJSONFiltered[map[string]any](c, basePath, baseParams, keep)
+		}
+
 		params := buildQueryParams(map[string]string{
 			"state": taskListState,
 			"type":  taskListType,
 			"page":  intToString(taskListPage),
 			"size":  intToString(taskListSize),
 		})
+		path := basePath
 		if params != "" {
 			path += "?" + params
 		}
@@ -348,6 +369,7 @@ func init() {
 	taskListCmd.Flags().StringVar(&taskListType, "type", "", "Filter by type (BuildContainer, RestartPedestal, FaultInjection, RunAlgorithm, BuildDatapack, CollectResult, CronJob)")
 	taskListCmd.Flags().IntVar(&taskListPage, "page", 0, "Page number")
 	taskListCmd.Flags().IntVar(&taskListSize, "size", 0, "Page size")
+	taskListCmd.Flags().BoolVar(&taskListAll, "all", false, "Stream every page as NDJSON to stdout (ignores --page/--size; requires --output ndjson)")
 	taskListCmd.Flags().BoolVar(&taskListOverdue, "overdue", false, "Show only Pending tasks whose execute_time has passed (WAIT < 0)")
 
 	taskLogsCmd.Flags().BoolVarP(&taskLogsFollow, "follow", "f", false, "Follow log output")

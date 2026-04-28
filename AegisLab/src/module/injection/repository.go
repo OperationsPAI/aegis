@@ -398,11 +398,33 @@ func (r *Repository) listInjectionsView(limit, offset int, filterOptions *ListIn
 	return injections, total, nil
 }
 
-func (r *Repository) listProjectInjectionsView(projectID, limit, offset int) ([]model.FaultInjection, int64, error) {
+func (r *Repository) listProjectInjectionsView(projectID, limit, offset int, filterOptions *ListInjectionFilters) ([]model.FaultInjection, int64, error) {
 	baseQuery := r.db.Model(&model.FaultInjection{}).
 		Joins("JOIN tasks ON tasks.id = fault_injections.task_id").
 		Joins("JOIN traces on traces.id = tasks.trace_id").
 		Where("traces.project_id = ? AND fault_injections.status != ?", projectID, consts.CommonDeleted)
+
+	if filterOptions != nil {
+		if filterOptions.FaultType != nil {
+			baseQuery = baseQuery.Where("fault_injections.fault_type = ?", *filterOptions.FaultType)
+		}
+		if filterOptions.Benchmark != "" {
+			baseQuery = baseQuery.Where("fault_injections.benchmark = ?", filterOptions.Benchmark)
+		}
+		if filterOptions.State != nil {
+			baseQuery = baseQuery.Where("fault_injections.state = ?", *filterOptions.State)
+		}
+		if filterOptions.Status != nil {
+			baseQuery = baseQuery.Where("fault_injections.status = ?", *filterOptions.Status)
+		}
+		for _, condition := range filterOptions.LabelConditions {
+			subQuery := r.db.Table("fault_injection_labels fil").
+				Select("fil.fault_injection_id").
+				Joins("JOIN labels ON labels.id = fil.label_id").
+				Where("labels.label_key = ? AND labels.label_value = ?", condition["key"], condition["value"])
+			baseQuery = baseQuery.Where("fault_injections.id IN (?)", subQuery)
+		}
+	}
 
 	var (
 		injections []model.FaultInjection
