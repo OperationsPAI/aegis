@@ -1,0 +1,284 @@
+{
+  "system": "hs",
+  "backend_system": "hs",
+  "project": "pair_diagnosis",
+  "namespace": "hs0",
+  "loop_dir": "/home/nn/workspace/aegis/experiments/hs-loop",
+  "campaign": "/home/nn/workspace/aegis/ralph/examples/inject-loop/campaigns/hs/campaign.json",
+  "supported": {
+    "candidate_count": 102,
+    "by_chaos_type": {
+      "CPUStress": 9,
+      "ContainerKill": 9,
+      "MemoryStress": 9,
+      "NetworkBandwidth": 8,
+      "NetworkCorrupt": 8,
+      "NetworkDelay": 8,
+      "NetworkDuplicate": 8,
+      "NetworkLoss": 8,
+      "NetworkPartition": 8,
+      "PodFailure": 9,
+      "PodKill": 9,
+      "TimeSkew": 9
+    },
+    "by_family": {
+      "network": 48,
+      "pod": 27,
+      "stress": 18,
+      "time": 9
+    },
+    "by_app": {
+      "attractions": 6,
+      "frontend": 42,
+      "geo": 6,
+      "profile": 6,
+      "rate": 6,
+      "recommendation": 6,
+      "reservation": 6,
+      "search": 18,
+      "user": 6
+    },
+    "app_chaos_pairs": {
+      "attractions::CPUStress": 1,
+      "attractions::ContainerKill": 1,
+      "attractions::MemoryStress": 1,
+      "attractions::PodFailure": 1,
+      "attractions::PodKill": 1,
+      "attractions::TimeSkew": 1,
+      "frontend::CPUStress": 1,
+      "frontend::ContainerKill": 1,
+      "frontend::MemoryStress": 1,
+      "frontend::NetworkBandwidth": 6,
+      "frontend::NetworkCorrupt": 6,
+      "frontend::NetworkDelay": 6,
+      "frontend::NetworkDuplicate": 6,
+      "frontend::NetworkLoss": 6,
+      "frontend::NetworkPartition": 6,
+      "frontend::PodFailure": 1,
+      "frontend::PodKill": 1,
+      "frontend::TimeSkew": 1,
+      "geo::CPUStress": 1,
+      "geo::ContainerKill": 1,
+      "geo::MemoryStress": 1,
+      "geo::PodFailure": 1,
+      "geo::PodKill": 1,
+      "geo::TimeSkew": 1,
+      "profile::CPUStress": 1,
+      "profile::ContainerKill": 1,
+      "profile::MemoryStress": 1,
+      "profile::PodFailure": 1,
+      "profile::PodKill": 1,
+      "profile::TimeSkew": 1,
+      "rate::CPUStress": 1,
+      "rate::ContainerKill": 1,
+      "rate::MemoryStress": 1,
+      "rate::PodFailure": 1,
+      "rate::PodKill": 1,
+      "rate::TimeSkew": 1,
+      "recommendation::CPUStress": 1,
+      "recommendation::ContainerKill": 1,
+      "recommendation::MemoryStress": 1,
+      "recommendation::PodFailure": 1,
+      "recommendation::PodKill": 1,
+      "recommendation::TimeSkew": 1,
+      "reservation::CPUStress": 1,
+      "reservation::ContainerKill": 1,
+      "reservation::MemoryStress": 1,
+      "reservation::PodFailure": 1,
+      "reservation::PodKill": 1,
+      "reservation::TimeSkew": 1,
+      "search::CPUStress": 1,
+      "search::ContainerKill": 1,
+      "search::MemoryStress": 1,
+      "search::NetworkBandwidth": 2,
+      "search::NetworkCorrupt": 2,
+      "search::NetworkDelay": 2,
+      "search::NetworkDuplicate": 2,
+      "search::NetworkLoss": 2,
+      "search::NetworkPartition": 2,
+      "search::PodFailure": 1,
+      "search::PodKill": 1,
+      "search::TimeSkew": 1,
+      "user::CPUStress": 1,
+      "user::ContainerKill": 1,
+      "user::MemoryStress": 1,
+      "user::PodFailure": 1,
+      "user::PodKill": 1,
+      "user::TimeSkew": 1
+    }
+  },
+  "injections": {
+    "injection_count": 4,
+    "by_chaos_type": {
+      "PodFailure": 4
+    },
+    "by_fault_type": {
+      "FaultInjection": 4
+    },
+    "by_state": {
+      "Failed": 4
+    },
+    "by_last_event": {
+      "datapack.build.failed": 4
+    },
+    "by_family": {
+      "pod": 4
+    },
+    "missing_trace_ids": [],
+    "sample": [
+      {
+        "candidate_id": "h11_01",
+        "trace_id": "e2ff5dc1-a053-43e9-8f54-79f200233197",
+        "chaos_type": "PodFailure",
+        "app": "frontend",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "h11_02",
+        "trace_id": "1880a4d7-1305-4535-8811-f558aa925b77",
+        "chaos_type": "PodFailure",
+        "app": "search",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "h11_03",
+        "trace_id": "4fe4c4c1-0c78-4fe1-bca3-f5292d440d77",
+        "chaos_type": "PodFailure",
+        "app": "geo",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "h11_04",
+        "trace_id": "62e25a46-1fad-4f73-a9be-1782cf3193f4",
+        "chaos_type": "PodFailure",
+        "app": "rate",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "runs": {
+    "submission_count": 4,
+    "by_chaos_type": {
+      "PodFailure": 4
+    },
+    "by_round": {
+      "11": 4
+    },
+    "submit_errors": {}
+  },
+  "traces": {
+    "joined_trace_count": 4,
+    "by_state": {
+      "Failed": 4
+    },
+    "by_last_event": {
+      "datapack.build.failed": 4
+    },
+    "by_chaos_type": {
+      "PodFailure": {
+        "event:datapack.build.failed": 4,
+        "state:Failed": 4,
+        "total": 4
+      }
+    },
+    "by_round": {
+      "11": 4
+    },
+    "pending_trace_ids": [],
+    "sample": [
+      {
+        "trace_id": "1880a4d7-1305-4535-8811-f558aa925b77",
+        "chaos_type": "PodFailure",
+        "app": "search",
+        "round": 11,
+        "ns": "hs25",
+        "group_id": "2baa89fb-5c17-46df-ab40-0f614f4e5d02",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "4fe4c4c1-0c78-4fe1-bca3-f5292d440d77",
+        "chaos_type": "PodFailure",
+        "app": "geo",
+        "round": 11,
+        "ns": "hs26",
+        "group_id": "27ae9417-f127-4b3a-9c85-ba68ddc4d7bd",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "62e25a46-1fad-4f73-a9be-1782cf3193f4",
+        "chaos_type": "PodFailure",
+        "app": "rate",
+        "round": 11,
+        "ns": "hs27",
+        "group_id": "ac5476af-1832-41a5-b1f3-9b573422624d",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "e2ff5dc1-a053-43e9-8f54-79f200233197",
+        "chaos_type": "PodFailure",
+        "app": "frontend",
+        "round": 11,
+        "ns": "hs24",
+        "group_id": "735a8365-4b80-4d62-b7c7-394e00dd687c",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "coverage_gap": {
+    "missing_from_injections": [
+      "CPUStress",
+      "ContainerKill",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "PodKill",
+      "TimeSkew"
+    ],
+    "missing_from_traces": [
+      "CPUStress",
+      "ContainerKill",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "PodKill",
+      "TimeSkew"
+    ],
+    "overrepresented_pod_family": 4
+  },
+  "notes": {
+    "injections_source": "local loop submissions joined with backend trace state",
+    "trace_source": "backend trace get on trace_ids from local runs/history",
+    "trace_fetch_failures": [],
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

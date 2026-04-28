@@ -1,0 +1,248 @@
+{
+  "system": "sn",
+  "backend_system": "sn",
+  "project": "pair_diagnosis",
+  "namespace": "sn0",
+  "loop_dir": "/home/nn/workspace/aegis/experiments/sn-loop",
+  "campaign": "/home/nn/workspace/aegis/ralph/examples/inject-loop/campaigns/sn/campaign.json",
+  "supported": {
+    "candidate_count": 76,
+    "by_chaos_type": {
+      "CPUStress": 6,
+      "ContainerKill": 6,
+      "DNSError": 5,
+      "DNSRandom": 5,
+      "MemoryStress": 6,
+      "NetworkBandwidth": 5,
+      "NetworkCorrupt": 5,
+      "NetworkDelay": 5,
+      "NetworkDuplicate": 5,
+      "NetworkLoss": 5,
+      "NetworkPartition": 5,
+      "PodFailure": 6,
+      "PodKill": 6,
+      "TimeSkew": 6
+    },
+    "by_family": {
+      "dns": 10,
+      "network": 30,
+      "pod": 18,
+      "stress": 12,
+      "time": 6
+    },
+    "by_app": {
+      "nginx-thrift": 46,
+      "post-storage-service": 6,
+      "social-graph-service": 6,
+      "url-shorten-service": 6,
+      "user-mention-service": 6,
+      "user-service": 6
+    },
+    "app_chaos_pairs": {
+      "nginx-thrift::CPUStress": 1,
+      "nginx-thrift::ContainerKill": 1,
+      "nginx-thrift::DNSError": 5,
+      "nginx-thrift::DNSRandom": 5,
+      "nginx-thrift::MemoryStress": 1,
+      "nginx-thrift::NetworkBandwidth": 5,
+      "nginx-thrift::NetworkCorrupt": 5,
+      "nginx-thrift::NetworkDelay": 5,
+      "nginx-thrift::NetworkDuplicate": 5,
+      "nginx-thrift::NetworkLoss": 5,
+      "nginx-thrift::NetworkPartition": 5,
+      "nginx-thrift::PodFailure": 1,
+      "nginx-thrift::PodKill": 1,
+      "nginx-thrift::TimeSkew": 1,
+      "post-storage-service::CPUStress": 1,
+      "post-storage-service::ContainerKill": 1,
+      "post-storage-service::MemoryStress": 1,
+      "post-storage-service::PodFailure": 1,
+      "post-storage-service::PodKill": 1,
+      "post-storage-service::TimeSkew": 1,
+      "social-graph-service::CPUStress": 1,
+      "social-graph-service::ContainerKill": 1,
+      "social-graph-service::MemoryStress": 1,
+      "social-graph-service::PodFailure": 1,
+      "social-graph-service::PodKill": 1,
+      "social-graph-service::TimeSkew": 1,
+      "url-shorten-service::CPUStress": 1,
+      "url-shorten-service::ContainerKill": 1,
+      "url-shorten-service::MemoryStress": 1,
+      "url-shorten-service::PodFailure": 1,
+      "url-shorten-service::PodKill": 1,
+      "url-shorten-service::TimeSkew": 1,
+      "user-mention-service::CPUStress": 1,
+      "user-mention-service::ContainerKill": 1,
+      "user-mention-service::MemoryStress": 1,
+      "user-mention-service::PodFailure": 1,
+      "user-mention-service::PodKill": 1,
+      "user-mention-service::TimeSkew": 1,
+      "user-service::CPUStress": 1,
+      "user-service::ContainerKill": 1,
+      "user-service::MemoryStress": 1,
+      "user-service::PodFailure": 1,
+      "user-service::PodKill": 1,
+      "user-service::TimeSkew": 1
+    }
+  },
+  "injections": {
+    "injection_count": 3,
+    "by_chaos_type": {
+      "PodFailure": 3
+    },
+    "by_fault_type": {
+      "FaultInjection": 3
+    },
+    "by_state": {
+      "Failed": 3
+    },
+    "by_last_event": {
+      "datapack.build.failed": 2,
+      "fault.injection.failed": 1
+    },
+    "by_family": {
+      "pod": 3
+    },
+    "missing_trace_ids": [],
+    "sample": [
+      {
+        "candidate_id": "n11_01",
+        "trace_id": "0b8cdb59-8f66-4d40-8655-e3c188a5b678",
+        "chaos_type": "PodFailure",
+        "app": "nginx-thrift",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "n11_02",
+        "trace_id": "047b02e5-86f4-4ab5-9c62-fd6c981ba20a",
+        "chaos_type": "PodFailure",
+        "app": "post-storage-service",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "fault.injection.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "n11_03",
+        "trace_id": "ced5af10-7f5e-46e2-a578-5ef2bb2fc913",
+        "chaos_type": "PodFailure",
+        "app": "social-graph-service",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "runs": {
+    "submission_count": 3,
+    "by_chaos_type": {
+      "PodFailure": 3
+    },
+    "by_round": {
+      "11": 3
+    },
+    "submit_errors": {}
+  },
+  "traces": {
+    "joined_trace_count": 3,
+    "by_state": {
+      "Failed": 3
+    },
+    "by_last_event": {
+      "datapack.build.failed": 2,
+      "fault.injection.failed": 1
+    },
+    "by_chaos_type": {
+      "PodFailure": {
+        "event:datapack.build.failed": 2,
+        "event:fault.injection.failed": 1,
+        "state:Failed": 3,
+        "total": 3
+      }
+    },
+    "by_round": {
+      "11": 3
+    },
+    "pending_trace_ids": [],
+    "sample": [
+      {
+        "trace_id": "047b02e5-86f4-4ab5-9c62-fd6c981ba20a",
+        "chaos_type": "PodFailure",
+        "app": "post-storage-service",
+        "round": 11,
+        "ns": "sn29",
+        "group_id": "a99b5b5b-e9e9-4c74-a7bf-49cbffe137cd",
+        "state": "Failed",
+        "last_event": "fault.injection.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "0b8cdb59-8f66-4d40-8655-e3c188a5b678",
+        "chaos_type": "PodFailure",
+        "app": "nginx-thrift",
+        "round": 11,
+        "ns": "sn28",
+        "group_id": "9c5a8bfa-4370-46a3-914d-6e3d20a4c2a8",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "ced5af10-7f5e-46e2-a578-5ef2bb2fc913",
+        "chaos_type": "PodFailure",
+        "app": "social-graph-service",
+        "round": 11,
+        "ns": "sn30",
+        "group_id": "152023dc-d117-4c97-913e-d1c7bd863f43",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "coverage_gap": {
+    "missing_from_injections": [
+      "CPUStress",
+      "ContainerKill",
+      "DNSError",
+      "DNSRandom",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "PodKill",
+      "TimeSkew"
+    ],
+    "missing_from_traces": [
+      "CPUStress",
+      "ContainerKill",
+      "DNSError",
+      "DNSRandom",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "PodKill",
+      "TimeSkew"
+    ],
+    "overrepresented_pod_family": 3
+  },
+  "notes": {
+    "injections_source": "local loop submissions joined with backend trace state",
+    "trace_source": "backend trace get on trace_ids from local runs/history",
+    "trace_fetch_failures": [],
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

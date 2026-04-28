@@ -1,0 +1,54 @@
+{
+  "campaign": "sockshop",
+  "system": "sockshop",
+  "project": "pair_diagnosis",
+  "namespace": "sockshop10",
+  "loop_dir": "experiments/sockshop-loop",
+  "current_round": 0,
+  "max_rounds": 20,
+  "batch_size": 10,
+  "history_window": 3,
+  "pair_prob": 0.0,
+  "status": "paused",
+  "duration_policy": "fixed",
+  "duration_minutes": 2,
+  "forbid_duration_override": true,
+  "max_per_app_divisor": 3,
+  "excluded_chaos_types": [
+    "HTTP*"
+  ],
+  "reward_policy": {
+    "success_terminals": [
+      "algorithm.result.collection",
+      "datapack.result.collection"
+    ],
+    "negative_terminals": [
+      "datapack.no_anomaly"
+    ],
+    "neutral_prefixes": [
+      "fault.injection.failed",
+      "datapack.build.failed",
+      "restart.pedestal.failed",
+      "submit.error"
+    ]
+  },
+  "metadata": {
+    "system_type": null,
+    "pedestal": {
+      "name": "sockshop",
+      "tag": "1.1.1"
+    },
+    "benchmark": {
+      "name": "clickhouse",
+      "tag": "1.0.0"
+    },
+    "defaults": {
+      "interval": 10,
+      "pre_duration": 5,
+      "duration": 2,
+      "container": "coherence"
+    },
+    "latest_round_file": "/home/nn/workspace/aegis/experiments/sockshop-loop/candidates.json"
+  },
+  "backend_system": "sockshop"
+}

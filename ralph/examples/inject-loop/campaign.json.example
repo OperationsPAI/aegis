@@ -1,0 +1,37 @@
+{
+  "campaign": "trainticket-loop",
+  "system": "ts",
+  "backend_system": "ts",
+  "project": "pair_diagnosis",
+  "namespace": "ts0",
+  "loop_dir": "experiments/trainticket-loop",
+  "current_round": 54,
+  "max_rounds": 80,
+  "batch_size": 10,
+  "history_window": 3,
+  "pair_prob": 0.3,
+  "status": "running",
+  "duration_policy": "fixed",
+  "duration_minutes": 10,
+  "forbid_duration_override": true,
+  "max_per_app_divisor": 3,
+  "excluded_chaos_types": [
+    "HTTP*"
+  ],
+  "reward_policy": {
+    "success_terminals": [
+      "algorithm.result.collection",
+      "datapack.result.collection"
+    ],
+    "negative_terminals": [
+      "datapack.no_anomaly"
+    ],
+    "neutral_prefixes": [
+      "fault.injection.failed",
+      "datapack.build.failed",
+      "restart.pedestal.failed",
+      "submit.error"
+    ]
+  },
+  "notes": "Use this as the campaign state file read by examples/inject-loop/CODEX.md."
+}

@@ -1,0 +1,309 @@
+{
+  "system": "mm",
+  "backend_system": "media",
+  "project": "pair_diagnosis",
+  "namespace": "mm0",
+  "loop_dir": "/home/nn/workspace/aegis/experiments/mm-loop",
+  "campaign": "/home/nn/workspace/aegis/ralph/examples/inject-loop/campaigns/mm/campaign.json",
+  "supported": {
+    "candidate_count": 132,
+    "by_chaos_type": {
+      "CPUStress": 13,
+      "ContainerKill": 13,
+      "DNSError": 6,
+      "DNSRandom": 6,
+      "MemoryStress": 13,
+      "NetworkBandwidth": 7,
+      "NetworkCorrupt": 7,
+      "NetworkDelay": 7,
+      "NetworkDuplicate": 7,
+      "NetworkLoss": 7,
+      "NetworkPartition": 7,
+      "PodFailure": 13,
+      "PodKill": 13,
+      "TimeSkew": 13
+    },
+    "by_family": {
+      "dns": 12,
+      "network": 42,
+      "pod": 39,
+      "stress": 26,
+      "time": 13
+    },
+    "by_app": {
+      "cast-info-service": 12,
+      "compose-review-service": 6,
+      "movie-id-service": 6,
+      "movie-info-service": 6,
+      "movie-review-service": 6,
+      "nginx-web-server": 54,
+      "plot-service": 6,
+      "rating-service": 6,
+      "review-storage-service": 6,
+      "text-service": 6,
+      "unique-id-service": 6,
+      "user-review-service": 6,
+      "user-service": 6
+    },
+    "app_chaos_pairs": {
+      "cast-info-service::CPUStress": 1,
+      "cast-info-service::ContainerKill": 1,
+      "cast-info-service::MemoryStress": 1,
+      "cast-info-service::NetworkBandwidth": 1,
+      "cast-info-service::NetworkCorrupt": 1,
+      "cast-info-service::NetworkDelay": 1,
+      "cast-info-service::NetworkDuplicate": 1,
+      "cast-info-service::NetworkLoss": 1,
+      "cast-info-service::NetworkPartition": 1,
+      "cast-info-service::PodFailure": 1,
+      "cast-info-service::PodKill": 1,
+      "cast-info-service::TimeSkew": 1,
+      "compose-review-service::CPUStress": 1,
+      "compose-review-service::ContainerKill": 1,
+      "compose-review-service::MemoryStress": 1,
+      "compose-review-service::PodFailure": 1,
+      "compose-review-service::PodKill": 1,
+      "compose-review-service::TimeSkew": 1,
+      "movie-id-service::CPUStress": 1,
+      "movie-id-service::ContainerKill": 1,
+      "movie-id-service::MemoryStress": 1,
+      "movie-id-service::PodFailure": 1,
+      "movie-id-service::PodKill": 1,
+      "movie-id-service::TimeSkew": 1,
+      "movie-info-service::CPUStress": 1,
+      "movie-info-service::ContainerKill": 1,
+      "movie-info-service::MemoryStress": 1,
+      "movie-info-service::PodFailure": 1,
+      "movie-info-service::PodKill": 1,
+      "movie-info-service::TimeSkew": 1,
+      "movie-review-service::CPUStress": 1,
+      "movie-review-service::ContainerKill": 1,
+      "movie-review-service::MemoryStress": 1,
+      "movie-review-service::PodFailure": 1,
+      "movie-review-service::PodKill": 1,
+      "movie-review-service::TimeSkew": 1,
+      "nginx-web-server::CPUStress": 1,
+      "nginx-web-server::ContainerKill": 1,
+      "nginx-web-server::DNSError": 6,
+      "nginx-web-server::DNSRandom": 6,
+      "nginx-web-server::MemoryStress": 1,
+      "nginx-web-server::NetworkBandwidth": 6,
+      "nginx-web-server::NetworkCorrupt": 6,
+      "nginx-web-server::NetworkDelay": 6,
+      "nginx-web-server::NetworkDuplicate": 6,
+      "nginx-web-server::NetworkLoss": 6,
+      "nginx-web-server::NetworkPartition": 6,
+      "nginx-web-server::PodFailure": 1,
+      "nginx-web-server::PodKill": 1,
+      "nginx-web-server::TimeSkew": 1,
+      "plot-service::CPUStress": 1,
+      "plot-service::ContainerKill": 1,
+      "plot-service::MemoryStress": 1,
+      "plot-service::PodFailure": 1,
+      "plot-service::PodKill": 1,
+      "plot-service::TimeSkew": 1,
+      "rating-service::CPUStress": 1,
+      "rating-service::ContainerKill": 1,
+      "rating-service::MemoryStress": 1,
+      "rating-service::PodFailure": 1,
+      "rating-service::PodKill": 1,
+      "rating-service::TimeSkew": 1,
+      "review-storage-service::CPUStress": 1,
+      "review-storage-service::ContainerKill": 1,
+      "review-storage-service::MemoryStress": 1,
+      "review-storage-service::PodFailure": 1,
+      "review-storage-service::PodKill": 1,
+      "review-storage-service::TimeSkew": 1,
+      "text-service::CPUStress": 1,
+      "text-service::ContainerKill": 1,
+      "text-service::MemoryStress": 1,
+      "text-service::PodFailure": 1,
+      "text-service::PodKill": 1,
+      "text-service::TimeSkew": 1,
+      "unique-id-service::CPUStress": 1,
+      "unique-id-service::ContainerKill": 1,
+      "unique-id-service::MemoryStress": 1,
+      "unique-id-service::PodFailure": 1,
+      "unique-id-service::PodKill": 1,
+      "unique-id-service::TimeSkew": 1,
+      "user-review-service::CPUStress": 1,
+      "user-review-service::ContainerKill": 1,
+      "user-review-service::MemoryStress": 1,
+      "user-review-service::PodFailure": 1,
+      "user-review-service::PodKill": 1,
+      "user-review-service::TimeSkew": 1,
+      "user-service::CPUStress": 1,
+      "user-service::ContainerKill": 1,
+      "user-service::MemoryStress": 1,
+      "user-service::PodFailure": 1,
+      "user-service::PodKill": 1,
+      "user-service::TimeSkew": 1
+    }
+  },
+  "injections": {
+    "injection_count": 3,
+    "by_chaos_type": {
+      "PodFailure": 3
+    },
+    "by_fault_type": {
+      "FaultInjection": 3
+    },
+    "by_state": {
+      "Failed": 1,
+      "Running": 2
+    },
+    "by_last_event": {
+      "datapack.build.failed": 1,
+      "restart.pedestal.started": 2
+    },
+    "by_family": {
+      "pod": 3
+    },
+    "missing_trace_ids": [],
+    "sample": [
+      {
+        "candidate_id": "m11_01",
+        "trace_id": "4f0a4f5a-319d-4bde-a16e-0094ad74d5b5",
+        "chaos_type": "PodFailure",
+        "app": "nginx-web-server",
+        "round": 11,
+        "state": "Running",
+        "last_event": "restart.pedestal.started",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "m11_02",
+        "trace_id": "d47fdd0a-01fd-42d6-8c7d-f8fac3586de1",
+        "chaos_type": "PodFailure",
+        "app": "movie-info-service",
+        "round": 11,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "m11_03",
+        "trace_id": "b01eb3f6-6e69-4842-9e51-5cd0639b3d86",
+        "chaos_type": "PodFailure",
+        "app": "user-review-service",
+        "round": 11,
+        "state": "Running",
+        "last_event": "restart.pedestal.started",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "runs": {
+    "submission_count": 3,
+    "by_chaos_type": {
+      "PodFailure": 3
+    },
+    "by_round": {
+      "11": 3
+    },
+    "submit_errors": {}
+  },
+  "traces": {
+    "joined_trace_count": 3,
+    "by_state": {
+      "Failed": 1,
+      "Running": 2
+    },
+    "by_last_event": {
+      "datapack.build.failed": 1,
+      "restart.pedestal.started": 2
+    },
+    "by_chaos_type": {
+      "PodFailure": {
+        "event:datapack.build.failed": 1,
+        "event:restart.pedestal.started": 2,
+        "state:Failed": 1,
+        "state:Running": 2,
+        "total": 3
+      }
+    },
+    "by_round": {
+      "11": 3
+    },
+    "pending_trace_ids": [
+      "4f0a4f5a-319d-4bde-a16e-0094ad74d5b5",
+      "b01eb3f6-6e69-4842-9e51-5cd0639b3d86"
+    ],
+    "sample": [
+      {
+        "trace_id": "4f0a4f5a-319d-4bde-a16e-0094ad74d5b5",
+        "chaos_type": "PodFailure",
+        "app": "nginx-web-server",
+        "round": 11,
+        "ns": "mm28",
+        "group_id": "05b8a47d-54d1-4d21-a3dd-d79bef1702f2",
+        "state": "Running",
+        "last_event": "restart.pedestal.started",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "b01eb3f6-6e69-4842-9e51-5cd0639b3d86",
+        "chaos_type": "PodFailure",
+        "app": "user-review-service",
+        "round": 11,
+        "ns": "mm30",
+        "group_id": "c586eacb-1567-4bc3-864d-eccd538d83c2",
+        "state": "Running",
+        "last_event": "restart.pedestal.started",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "d47fdd0a-01fd-42d6-8c7d-f8fac3586de1",
+        "chaos_type": "PodFailure",
+        "app": "movie-info-service",
+        "round": 11,
+        "ns": "mm29",
+        "group_id": "6c278cb0-150d-49c4-99db-8c5bf9cf1827",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "coverage_gap": {
+    "missing_from_injections": [
+      "CPUStress",
+      "ContainerKill",
+      "DNSError",
+      "DNSRandom",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "PodKill",
+      "TimeSkew"
+    ],
+    "missing_from_traces": [
+      "CPUStress",
+      "ContainerKill",
+      "DNSError",
+      "DNSRandom",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "PodKill",
+      "TimeSkew"
+    ],
+    "overrepresented_pod_family": 3
+  },
+  "notes": {
+    "injections_source": "local loop submissions joined with backend trace state",
+    "trace_source": "backend trace get on trace_ids from local runs/history",
+    "trace_fetch_failures": [],
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

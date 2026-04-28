@@ -1,0 +1,42 @@
+{
+  "workdir": "/home/nn/workspace/aegis",
+  "tool": "codex",
+  "default_max_iterations": 12,
+  "campaigns": [
+    {
+      "name": "trainticket",
+      "state_dir": "ralph/examples/inject-loop/campaigns/trainticket",
+      "max_iterations": 12
+    },
+    {
+      "name": "teastore",
+      "state_dir": "ralph/examples/inject-loop/campaigns/teastore",
+      "max_iterations": 12
+    },
+    {
+      "name": "hs",
+      "state_dir": "ralph/examples/inject-loop/campaigns/hs",
+      "max_iterations": 12
+    },
+    {
+      "name": "mm",
+      "state_dir": "ralph/examples/inject-loop/campaigns/mm",
+      "max_iterations": 12
+    },
+    {
+      "name": "sn",
+      "state_dir": "ralph/examples/inject-loop/campaigns/sn",
+      "max_iterations": 12
+    },
+    {
+      "name": "otel-demo",
+      "state_dir": "ralph/examples/inject-loop/campaigns/otel-demo",
+      "max_iterations": 12
+    },
+    {
+      "name": "sockshop",
+      "state_dir": "ralph/examples/inject-loop/campaigns/sockshop",
+      "max_iterations": 12
+    }
+  ]
+}

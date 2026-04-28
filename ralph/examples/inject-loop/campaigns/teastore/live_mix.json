@@ -1,0 +1,362 @@
+{
+  "system": "teastore",
+  "backend_system": "teastore",
+  "project": "pair_diagnosis",
+  "namespace": "tea0",
+  "loop_dir": "/home/nn/workspace/aegis/experiments/teastore-loop",
+  "campaign": "/home/nn/workspace/aegis/ralph/examples/inject-loop/campaigns/teastore/campaign.json",
+  "supported": {
+    "candidate_count": 2702,
+    "by_chaos_type": {
+      "CPUStress": 6,
+      "ContainerKill": 6,
+      "DNSError": 6,
+      "DNSRandom": 6,
+      "JVMCPUStress": 487,
+      "JVMException": 487,
+      "JVMGarbageCollector": 6,
+      "JVMLatency": 487,
+      "JVMMemoryStress": 487,
+      "JVMMySQLException": 4,
+      "JVMMySQLLatency": 4,
+      "JVMReturn": 487,
+      "JVMRuntimeMutator": 169,
+      "MemoryStress": 6,
+      "NetworkBandwidth": 6,
+      "NetworkCorrupt": 6,
+      "NetworkDelay": 6,
+      "NetworkDuplicate": 6,
+      "NetworkLoss": 6,
+      "NetworkPartition": 6,
+      "PodFailure": 6,
+      "PodKill": 6,
+      "TimeSkew": 6
+    },
+    "by_family": {
+      "dns": 12,
+      "jvm": 2618,
+      "network": 36,
+      "pod": 18,
+      "stress": 12,
+      "time": 6
+    },
+    "by_app": {
+      "teastore-auth": 127,
+      "teastore-image": 742,
+      "teastore-persistence": 1120,
+      "teastore-recommender": 316,
+      "teastore-registry": 124,
+      "teastore-webui": 273
+    },
+    "app_chaos_pairs": {
+      "teastore-auth::CPUStress": 1,
+      "teastore-auth::ContainerKill": 1,
+      "teastore-auth::DNSError": 1,
+      "teastore-auth::DNSRandom": 1,
+      "teastore-auth::JVMCPUStress": 20,
+      "teastore-auth::JVMException": 20,
+      "teastore-auth::JVMGarbageCollector": 1,
+      "teastore-auth::JVMLatency": 20,
+      "teastore-auth::JVMMemoryStress": 20,
+      "teastore-auth::JVMReturn": 20,
+      "teastore-auth::JVMRuntimeMutator": 12,
+      "teastore-auth::MemoryStress": 1,
+      "teastore-auth::NetworkBandwidth": 1,
+      "teastore-auth::NetworkCorrupt": 1,
+      "teastore-auth::NetworkDelay": 1,
+      "teastore-auth::NetworkDuplicate": 1,
+      "teastore-auth::NetworkLoss": 1,
+      "teastore-auth::NetworkPartition": 1,
+      "teastore-auth::PodFailure": 1,
+      "teastore-auth::PodKill": 1,
+      "teastore-auth::TimeSkew": 1,
+      "teastore-image::CPUStress": 1,
+      "teastore-image::ContainerKill": 1,
+      "teastore-image::DNSError": 1,
+      "teastore-image::DNSRandom": 1,
+      "teastore-image::JVMCPUStress": 136,
+      "teastore-image::JVMException": 136,
+      "teastore-image::JVMGarbageCollector": 1,
+      "teastore-image::JVMLatency": 136,
+      "teastore-image::JVMMemoryStress": 136,
+      "teastore-image::JVMReturn": 136,
+      "teastore-image::JVMRuntimeMutator": 47,
+      "teastore-image::MemoryStress": 1,
+      "teastore-image::NetworkBandwidth": 1,
+      "teastore-image::NetworkCorrupt": 1,
+      "teastore-image::NetworkDelay": 1,
+      "teastore-image::NetworkDuplicate": 1,
+      "teastore-image::NetworkLoss": 1,
+      "teastore-image::NetworkPartition": 1,
+      "teastore-image::PodFailure": 1,
+      "teastore-image::PodKill": 1,
+      "teastore-image::TimeSkew": 1,
+      "teastore-persistence::CPUStress": 1,
+      "teastore-persistence::ContainerKill": 1,
+      "teastore-persistence::DNSError": 1,
+      "teastore-persistence::DNSRandom": 1,
+      "teastore-persistence::JVMCPUStress": 209,
+      "teastore-persistence::JVMException": 209,
+      "teastore-persistence::JVMGarbageCollector": 1,
+      "teastore-persistence::JVMLatency": 209,
+      "teastore-persistence::JVMMemoryStress": 209,
+      "teastore-persistence::JVMMySQLException": 4,
+      "teastore-persistence::JVMMySQLLatency": 4,
+      "teastore-persistence::JVMReturn": 209,
+      "teastore-persistence::JVMRuntimeMutator": 52,
+      "teastore-persistence::MemoryStress": 1,
+      "teastore-persistence::NetworkBandwidth": 1,
+      "teastore-persistence::NetworkCorrupt": 1,
+      "teastore-persistence::NetworkDelay": 1,
+      "teastore-persistence::NetworkDuplicate": 1,
+      "teastore-persistence::NetworkLoss": 1,
+      "teastore-persistence::NetworkPartition": 1,
+      "teastore-persistence::PodFailure": 1,
+      "teastore-persistence::PodKill": 1,
+      "teastore-persistence::TimeSkew": 1,
+      "teastore-recommender::CPUStress": 1,
+      "teastore-recommender::ContainerKill": 1,
+      "teastore-recommender::DNSError": 1,
+      "teastore-recommender::DNSRandom": 1,
+      "teastore-recommender::JVMCPUStress": 56,
+      "teastore-recommender::JVMException": 56,
+      "teastore-recommender::JVMGarbageCollector": 1,
+      "teastore-recommender::JVMLatency": 56,
+      "teastore-recommender::JVMMemoryStress": 56,
+      "teastore-recommender::JVMReturn": 56,
+      "teastore-recommender::JVMRuntimeMutator": 21,
+      "teastore-recommender::MemoryStress": 1,
+      "teastore-recommender::NetworkBandwidth": 1,
+      "teastore-recommender::NetworkCorrupt": 1,
+      "teastore-recommender::NetworkDelay": 1,
+      "teastore-recommender::NetworkDuplicate": 1,
+      "teastore-recommender::NetworkLoss": 1,
+      "teastore-recommender::NetworkPartition": 1,
+      "teastore-recommender::PodFailure": 1,
+      "teastore-recommender::PodKill": 1,
+      "teastore-recommender::TimeSkew": 1,
+      "teastore-registry::CPUStress": 1,
+      "teastore-registry::ContainerKill": 1,
+      "teastore-registry::DNSError": 1,
+      "teastore-registry::DNSRandom": 1,
+      "teastore-registry::JVMCPUStress": 20,
+      "teastore-registry::JVMException": 20,
+      "teastore-registry::JVMGarbageCollector": 1,
+      "teastore-registry::JVMLatency": 20,
+      "teastore-registry::JVMMemoryStress": 20,
+      "teastore-registry::JVMReturn": 20,
+      "teastore-registry::JVMRuntimeMutator": 9,
+      "teastore-registry::MemoryStress": 1,
+      "teastore-registry::NetworkBandwidth": 1,
+      "teastore-registry::NetworkCorrupt": 1,
+      "teastore-registry::NetworkDelay": 1,
+      "teastore-registry::NetworkDuplicate": 1,
+      "teastore-registry::NetworkLoss": 1,
+      "teastore-registry::NetworkPartition": 1,
+      "teastore-registry::PodFailure": 1,
+      "teastore-registry::PodKill": 1,
+      "teastore-registry::TimeSkew": 1,
+      "teastore-webui::CPUStress": 1,
+      "teastore-webui::ContainerKill": 1,
+      "teastore-webui::DNSError": 1,
+      "teastore-webui::DNSRandom": 1,
+      "teastore-webui::JVMCPUStress": 46,
+      "teastore-webui::JVMException": 46,
+      "teastore-webui::JVMGarbageCollector": 1,
+      "teastore-webui::JVMLatency": 46,
+      "teastore-webui::JVMMemoryStress": 46,
+      "teastore-webui::JVMReturn": 46,
+      "teastore-webui::JVMRuntimeMutator": 28,
+      "teastore-webui::MemoryStress": 1,
+      "teastore-webui::NetworkBandwidth": 1,
+      "teastore-webui::NetworkCorrupt": 1,
+      "teastore-webui::NetworkDelay": 1,
+      "teastore-webui::NetworkDuplicate": 1,
+      "teastore-webui::NetworkLoss": 1,
+      "teastore-webui::NetworkPartition": 1,
+      "teastore-webui::PodFailure": 1,
+      "teastore-webui::PodKill": 1,
+      "teastore-webui::TimeSkew": 1
+    }
+  },
+  "injections": {
+    "injection_count": 3,
+    "by_chaos_type": {
+      "PodFailure": 2,
+      "PodKill": 1
+    },
+    "by_fault_type": {
+      "FaultInjection": 3
+    },
+    "by_state": {
+      "Failed": 3
+    },
+    "by_last_event": {
+      "datapack.build.failed": 3
+    },
+    "by_family": {
+      "pod": 3
+    },
+    "missing_trace_ids": [],
+    "sample": [
+      {
+        "candidate_id": "te12_01",
+        "trace_id": "26418d5d-1739-4c5d-9b49-c886b331df2f",
+        "chaos_type": "PodFailure",
+        "app": "teastore-auth",
+        "round": 12,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "te12_02",
+        "trace_id": "61ac1e23-b813-4504-82c2-d8f57fd97898",
+        "chaos_type": "PodKill",
+        "app": "teastore-persistence",
+        "round": 12,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "candidate_id": "te12_03",
+        "trace_id": "575a4a5d-3e1a-46f2-8634-f56b79bdcb7d",
+        "chaos_type": "PodFailure",
+        "app": "teastore-image",
+        "round": 12,
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "runs": {
+    "submission_count": 3,
+    "by_chaos_type": {
+      "PodFailure": 2,
+      "PodKill": 1
+    },
+    "by_round": {
+      "12": 3
+    },
+    "submit_errors": {}
+  },
+  "traces": {
+    "joined_trace_count": 3,
+    "by_state": {
+      "Failed": 3
+    },
+    "by_last_event": {
+      "datapack.build.failed": 3
+    },
+    "by_chaos_type": {
+      "PodFailure": {
+        "event:datapack.build.failed": 2,
+        "state:Failed": 2,
+        "total": 2
+      },
+      "PodKill": {
+        "event:datapack.build.failed": 1,
+        "state:Failed": 1,
+        "total": 1
+      }
+    },
+    "by_round": {
+      "12": 3
+    },
+    "pending_trace_ids": [],
+    "sample": [
+      {
+        "trace_id": "26418d5d-1739-4c5d-9b49-c886b331df2f",
+        "chaos_type": "PodFailure",
+        "app": "teastore-auth",
+        "round": 12,
+        "ns": "tea0",
+        "group_id": "1f20106c-30f6-47e3-ad7c-2d2bd03da289",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "575a4a5d-3e1a-46f2-8634-f56b79bdcb7d",
+        "chaos_type": "PodFailure",
+        "app": "teastore-image",
+        "round": 12,
+        "ns": "tea2",
+        "group_id": "ee86f20a-4eda-4da8-8f49-f797594eb887",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      },
+      {
+        "trace_id": "61ac1e23-b813-4504-82c2-d8f57fd97898",
+        "chaos_type": "PodKill",
+        "app": "teastore-persistence",
+        "round": 12,
+        "ns": "tea1",
+        "group_id": "3078a4c1-c6b8-4288-a829-cf183bd93e83",
+        "state": "Failed",
+        "last_event": "datapack.build.failed",
+        "type": "FaultInjection"
+      }
+    ]
+  },
+  "coverage_gap": {
+    "missing_from_injections": [
+      "CPUStress",
+      "ContainerKill",
+      "DNSError",
+      "DNSRandom",
+      "JVMCPUStress",
+      "JVMException",
+      "JVMGarbageCollector",
+      "JVMLatency",
+      "JVMMemoryStress",
+      "JVMMySQLException",
+      "JVMMySQLLatency",
+      "JVMReturn",
+      "JVMRuntimeMutator",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "TimeSkew"
+    ],
+    "missing_from_traces": [
+      "CPUStress",
+      "ContainerKill",
+      "DNSError",
+      "DNSRandom",
+      "JVMCPUStress",
+      "JVMException",
+      "JVMGarbageCollector",
+      "JVMLatency",
+      "JVMMemoryStress",
+      "JVMMySQLException",
+      "JVMMySQLLatency",
+      "JVMReturn",
+      "JVMRuntimeMutator",
+      "MemoryStress",
+      "NetworkBandwidth",
+      "NetworkCorrupt",
+      "NetworkDelay",
+      "NetworkDuplicate",
+      "NetworkLoss",
+      "NetworkPartition",
+      "TimeSkew"
+    ],
+    "overrepresented_pod_family": 3
+  },
+  "notes": {
+    "injections_source": "local loop submissions joined with backend trace state",
+    "trace_source": "backend trace get on trace_ids from local runs/history",
+    "trace_fetch_failures": [],
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

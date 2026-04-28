@@ -1,0 +1,54 @@
+{
+  "campaign": "otel-demo",
+  "system": "otel-demo",
+  "project": "pair_diagnosis",
+  "namespace": "otel-demo0",
+  "loop_dir": "experiments/otel-demo-loop",
+  "current_round": 31,
+  "max_rounds": 40,
+  "batch_size": 10,
+  "history_window": 3,
+  "pair_prob": 0.0,
+  "status": "paused",
+  "duration_policy": "fixed",
+  "duration_minutes": 14,
+  "forbid_duration_override": true,
+  "max_per_app_divisor": 3,
+  "excluded_chaos_types": [
+    "HTTP*"
+  ],
+  "reward_policy": {
+    "success_terminals": [
+      "algorithm.result.collection",
+      "datapack.result.collection"
+    ],
+    "negative_terminals": [
+      "datapack.no_anomaly"
+    ],
+    "neutral_prefixes": [
+      "fault.injection.failed",
+      "datapack.build.failed",
+      "restart.pedestal.failed",
+      "submit.error"
+    ]
+  },
+  "metadata": {
+    "system_type": "otel-demo",
+    "pedestal": {
+      "name": "otel-demo",
+      "tag": "0.1.5"
+    },
+    "benchmark": {
+      "name": "clickhouse",
+      "tag": "1.0.0"
+    },
+    "defaults": {
+      "interval": 10,
+      "pre_duration": 5,
+      "container": "currencyservice",
+      "duration": 14
+    },
+    "latest_round_file": "experiments/otel-demo-loop/candidates_round31.json"
+  },
+  "backend_system": "otel-demo"
+}

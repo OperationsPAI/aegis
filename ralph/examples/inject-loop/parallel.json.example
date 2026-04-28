@@ -1,0 +1,17 @@
+{
+  "workdir": "/home/nn/workspace/aegis",
+  "tool": "codex",
+  "default_max_iterations": 12,
+  "campaigns": [
+    {
+      "name": "trainticket",
+      "state_dir": "ralph/examples/inject-loop/campaigns/trainticket",
+      "max_iterations": 12
+    },
+    {
+      "name": "teastore",
+      "state_dir": "ralph/examples/inject-loop/campaigns/teastore",
+      "max_iterations": 12
+    }
+  ]
+}
