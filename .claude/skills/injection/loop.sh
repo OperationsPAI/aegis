@@ -59,8 +59,11 @@ if [[ -z "$SYSTEM" ]]; then
 fi
 
 case "$ENGINE" in
-  claude) ENGINE_CMD=("claude" "-p") ;;
-  codex)  ENGINE_CMD=("codex" "exec") ;;
+  # --dangerously-skip-permissions: the loop is fully autonomous, there's
+  # nobody at the keyboard to approve tool calls. Without this the spawned
+  # session blocks on every Write / Bash that touches a path outside cwd.
+  claude) ENGINE_CMD=("claude" "-p" "--dangerously-skip-permissions") ;;
+  codex)  ENGINE_CMD=("codex" "exec" "--dangerously-bypass-approvals-and-sandbox") ;;
   *) echo "error: --engine must be claude or codex" >&2; exit 2 ;;
 esac
 
