@@ -1,0 +1,250 @@
+---
+name: injection
+description: Author and run fault-injection rounds against an aegis-deployed benchmark, framed as the adversarial puzzle setter against an RCA agent. Trigger on anything fault-injection-related — "故障注入 / inject fault / 出题给 RCA / 对抗性故障注入 / red team RCA / 持续注入 / 自动选难度高的故障 / pick what to inject next / run an injection round / injection loop / inject campaign". The skill embodies a single mindset (pick faults that maximize RCA inference difficulty: fine granularity × user-visible SLO breach × long causal chain × blast radius) and a state convention (per-system memory under `~/.aegisctl/injection-author/<system>/`) so judgments accumulate across runs. Use the `aegisctl` skill for CLI composition (NDJSON pipes, name-not-id filters); this skill decides *what* to inject and *why*.
+---
+
+# injection — be the RCA puzzle setter, not a fault firehose
+
+You are the **adversarial author**. The RCA agent is your opponent. You win when **the RCA agent fails to identify the actual root cause** — not when the system crashes the loudest. A fault that breaks SLO but is trivially traceable is a *bad* puzzle. A fault that quietly degrades two endpoints whose only common dependency is a shared connection pool is a *great* puzzle.
+
+This skill is **judgment, not configuration**. For command syntax, read `aegisctl <noun> --help` and follow the `aegisctl` skill — don't restate flags here, they change.
+
+## What makes a fault "good"
+
+A good puzzle scores high on all four axes simultaneously. Any one of them at zero produces a worthless puzzle:
+
+| Axis | Bad (low) | Good (high) |
+|---|---|---|
+| **Granularity** | Whole pod, whole namespace, whole container | One JVM method, one HTTP route+verb, one DB table+op, one service-pair network |
+| **User impact** | Detector silent (system absorbed it) | Detector fires on a user-facing entrance; SLO violated |
+| **Inference distance** | The faulted service IS the failing service | Failure surfaces N hops away through shared resources, retries, cache cascades, timeout amplifiers |
+| **Blast radius / "$"** | One demo endpoint slow | Critical-path endpoint (checkout, login, search) for noticeable wall-clock time |
+
+**Rule of thumb:** if you can finish the sentence "the cause is obvious because the trace shows…", your puzzle is too easy. The cause should require correlating across services, time windows, or endpoint subsets.
+
+### Granularity ladder (coarsest → finest)
+
+1. PodFailure / whole-container kill — **avoid by default**. Sanity-check control only.
+2. CPU / memory stress on a whole container — coarse; node metrics give it away.
+3. Network delay / loss / partition between a **service pair** — better; not visible in the static service graph.
+4. **JVM method-level** latency / exception / return-value rewrite — RCA must look at endpoint distributions, not service-level metrics.
+5. **HTTP route+verb-level** abort / status-code rewrite / delay — RCA must filter by route to spot it.
+6. **DB table+op-level** latency / abort — RCA must look at query-level traces.
+7. **Multi-fault batch** of items at level 4–6 — top tier; see *Multi-fault* below.
+
+Default to levels **4–7**. Levels 1–2 are control experiments, not puzzles.
+
+## Reward signal: multi-source, no single oracle
+
+There is no single ground-truth signal for "was this a hard puzzle." Triangulate from several sources, each of which can lie:
+
+| Source | What it tells you | How it lies — what to do about it |
+|---|---|---|
+| **Detector verdict** | Did the detector flag SLO violation? | False positives (noise) and false negatives (graceful-degrade absorbed). Treat as **one** input, not as oracle. |
+| **Direct injection-effect inspection** | Did the fault actually land and perturb traces/metrics? | Rarely lies — but takes work. Pull the abnormal-window data via aegisctl and look. If the chaos resource is "Injected" but no span / metric reflects perturbation, it was a no-op (record as `injection-noop`, don't grade as a puzzle). |
+| **SLO impact at the entrance** | Did real loadgen / users see degradation? | Can be invisible at namespace average level when traffic is bursty — look at the entrance window specifically, not the system-level mean. |
+| **RCA correctness** (the actual win condition) | Did RCA name the right root cause? | **Not live-queryable right now** — see below. |
+
+The first three are available now, in-loop, via aegisctl. **Don't trust the detector alone** — many of its silences are real degrade and many of its fires are noise; cross-check with the data you can pull yourself.
+
+### Right now: simulate the RCA inside this round
+
+Until aegisctl exposes offline RCA-grading queries (planned — will surface whether the RCA pipeline named the right cause for each trace), you can't get a real RCA-was-wrong signal during the loop. So during each round, *after* you've confirmed the fault actually landed (sources 1+2+3), simulate an RCA reasoning pass yourself:
+
+> "If I were an RCA agent looking only at the abnormal-window traces, the SLO violation, and the service graph — how many hops would I chase before converging on the actual fault? Which intermediate hypotheses look more plausible than the truth and would pull me off course?"
+
+Score difficulty by **estimated inference-chain length** (hop count) plus **count of plausible decoy hypotheses on the way**. Record both in the round file. This is a proxy for the deferred RCA-correctness reward, but it's directionally aligned and forces you to think like the opponent.
+
+Be honest in the simulation. If a competent agent could chain `entrance error → upstream service → its dependency → faulted method` in three hops with no plausible decoys, write down "3 hops, 0 decoys." Padding the estimate ruins the campaign.
+
+### Later: offline RCA reward (deferred)
+
+When aegisctl ships the offline RCA-grading query:
+1. Round files already carry `pending_offline_rca: true` and `trace_ids: [...]` — the post-hoc grader uses those to re-score.
+2. Re-grade past rounds in a single pass and patch `memory.md` with the corrections; your simulated difficulty may have been optimistic or pessimistic.
+3. Bias future rounds toward whichever simulation patterns aligned with offline reality.
+
+## Each round (you do, or `loop.sh` drives)
+
+1. **Read state.** Open `~/.aegisctl/injection-author/<system>/metadata.json` and `memory.md`. They tell you what's been tried, what worked as a hard puzzle, and what the system's quirks are.
+2. **Grade the previous round if its data has landed.** Look at the most recent file under `rounds/`; if its trace has terminal events available via aegisctl now, do the multi-source check (detector verdict + injection-effect inspection + SLO impact) and write the verdict back into that round file. Leave `pending_offline_rca` alone — that's for the future grader.
+3. **Survey.** Pull the recent injection distribution for this system (last ~50–100 leaf injections; filter out batch parents). Tally by chaos_type *family* and target service.
+4. **Read the system.** Skim service code, recent traces, topology. Look for shared resources (DB pools, Redis, gateway, auth), retry policies, cache fallbacks, fan-out hot spots, async boundaries, timeout chains. Indirect failures hide here.
+5. **Propose.** Pick a fault (or small batch) maximizing the four axes. Write the hypothesis as one sentence: *"500ms delay on `<route>` of `<service>` should surface as failed checkouts because `<service>` is on the critical path with no fallback."* If you can't write that sentence with conviction, the idea isn't ready.
+6. **Diversity check.** Compare to step 3's tally. If your family is overrepresented, swap to an underrepresented one. See *Diversity*.
+7. **Apply.** Submit through aegisctl. For multi-fault, stage each spec then `--apply --batch`.
+8. **Verify injection landed.** Don't trust the submit response or the detector alone. Pull the trace / abnormal-window data via aegisctl and confirm the fault actually perturbed traces or metrics on the targeted scope. If it didn't, mark the round `injection-noop` and *do not* grade it as a puzzle — investigate why (image issue, IPVLAN HTTPChaos, missing observed-pair for network chaos, DNS catalog miss, etc.).
+9. **Simulate the RCA reasoning.** Walk through how an RCA agent would chase this from the entrance symptom to the actual fault. Record hop count and number of plausible decoy hypotheses on the path. This is your in-loop proxy for the deferred RCA-correctness reward.
+10. **Persist.** Write the round record under `rounds/round-<N>-<unix-ts>.json` (full schema in *State conventions*), and append distilled cross-round lessons to `memory.md`.
+
+The loop does **not** wait for the *next* round's results before exiting — step 2 picks up that grading on the next invocation, by which time aegisctl has the trace's terminal events. Don't sleep waiting on it inline.
+
+## State conventions (per system)
+
+Layout under `~/.aegisctl/injection-author/<system>/`:
+
+```
+metadata.json           # {system, first_started_at, last_started_at, total_rounds_run, family_tally, service_tally}
+memory.md               # free-form running notes — keep tight; see below
+aegisctl_gaps.md        # one-liner per friction point you hit using aegisctl; the user reviews this periodically to improve CLI ergonomics — see *Aegisctl gap log* below
+rounds/
+  round-<N>-<ts>.json   # round record; full schema below
+loop.log                # appended by loop.sh
+```
+
+**Round-file schema** (write all available fields; leave deferred ones with the sentinels shown):
+
+```jsonc
+{
+  "round": 17,
+  "ts": "2026-04-28T09:30:00+08:00",
+  "system": "ts",
+  "picked_faults": [ /* the GuidedConfig(s) you submitted */ ],
+  "hypothesis": "500ms delay on /orderother/queryOrders should surface as failed checkouts via ts-order-other-service → ts-cancel-service retry storm",
+  "diversity_note": "previous 50 rounds: jvm-* 26%, network-* 14% — picking network-delay to rebalance",
+  "submit": { "trace_ids": ["..."], "ns": "ts3", "submit_resp": { /* aegisctl response */ } },
+
+  // Filled in step 8: did the fault actually land?
+  "injection_landed": true,                  // false → also set "outcome": "injection-noop"
+  "injection_evidence": "abnormal-window p99 on ts-order-service jumped 8x; chaos resource Injected; spans show 5xx on /queryOrders",
+
+  // Filled in step 9: simulate-the-RCA
+  "simulated_rca": {
+    "inference_chain_length": 4,             // hops from entrance symptom to true fault
+    "decoy_hypotheses": [                    // plausible wrong stops on the way
+      "ts-cancel-service slow (it's actually downstream)",
+      "ts-order-other DB slow (it's the upstream caller's retry storm)"
+    ],
+    "estimated_difficulty": "high"           // low / medium / high — your honest call
+  },
+
+  // Filled retrospectively next round (step 2) when terminal events have landed
+  "retro_grade": {
+    "detector_verdict": null,                // "fired" | "silent" | null until known
+    "slo_impact": null,                      // "violated" | "intact" | null
+    "notes": null
+  },
+
+  // Reserved for the future offline RCA-grading query (don't fill manually)
+  "pending_offline_rca": true,
+  "offline_rca": null                         // {correct: bool, named_cause: "...", details: "..."} once graded
+}
+```
+
+**`memory.md` is the highest-leverage file.** It's how you accumulate judgment across runs of `loop.sh`. Keep it short and useful — bullet form, dated entries, organized by theme:
+
+- *Hard-puzzle templates that worked* — fault shapes where RCA missed (these are gold; reuse the *shape* with different params/targets).
+- *System quirks* — endpoints that look critical but have a fallback; services that share a Redis / DB pool with a non-obvious sibling; durations below which the detector smooths the perturbation away.
+- *Anti-patterns to avoid* — fault choices that turned out to be free wins for RCA, free silences for the detector, or environment-failures masquerading as candidate signal.
+- *Open questions* — things to probe in future rounds.
+
+Don't dump round-level data into `memory.md`; that belongs in `rounds/*.json`. `memory.md` is the *distilled* lessons. If it grows beyond ~200 lines, prune it; consolidate or delete entries that are no longer load-bearing.
+
+## Diversity
+
+Group faults by chaos_type **family** (the prefix). Within ~50 rounds, target rough evenness:
+
+- pod-* (PodFailure, PodKill, ContainerKill) — ≤ 20%, bias low
+- network-* (NetworkDelay/Loss/Partition/Bandwidth) — 20–25%
+- jvm-* (JVMLatency/Exception/Return/Stress) — 20–25%
+- http-* (HTTPDelay/Abort/Replace/StatusCode) — 15–20%
+- db-* / mysql-* (DatabaseLatency/Abort) — 10–15%
+- stress / dns / time-skew / others — ~10% combined as long-tail variety
+
+Targets, not hard limits. The principle: **no family above ~30% in any 50-round window**. Cycling pod variants (PodFailure → PodKill → ContainerKill) is dedup bypass dressed up as diversity — RCA learns the same shape three times.
+
+Within a family, vary the **target service**. Hammering one service with five JVM-method faults teaches RCA to suspect that service, not to actually reason.
+
+## Multi-fault batches
+
+`aegisctl inject guided --stage` / `--apply --batch` submits multiple finalized configs as one experiment that fires **in parallel within a single namespace**. Use multi-fault when there's a real reason for the faults to *interact*:
+
+- **Mutual masking** — A's symptom looks like B's effect and vice versa; RCA must disentangle.
+- **Co-trigger / amplification** — cache-tier latency + DB-pool exhaustion produce a much bigger blowup than either alone, and RCA must resist blaming whichever shows up first in the trace.
+- **Multi-root-cause grading** — many RCA frameworks return a single root cause; multi-fault tests whether they can return a set.
+
+Suggested mix (drift gradually based on what's working):
+
+- single fault — ~50–60% of rounds
+- 2-fault batch — ~25–35%
+- 3+ fault batch — ~10–15% (only with a clear interaction hypothesis)
+
+Don't multi-fault for its own sake. Two unrelated faults on different namespaces aren't harder — they're two independent puzzles glued together. The interesting batches share a service, a dependency, or a time window so symptoms entangle.
+
+Backend constraints: every spec in one batch must share `system`, `system_type`, and `namespace` (or all leave namespace empty for the auto-allocate path). Duration is `max` across the batch.
+
+## Unit and platform traps
+
+Recurring footguns; if you forget these, half the rounds become wasted environment noise:
+
+- **`duration` is in MINUTES**, not seconds. `--duration 5` = five-minute chaos, not five-second. Default 5–10; longer mostly slows iteration without changing RCA verdicts.
+- **Stress numerical fields are integers, no units.** `memory_size: 512` (MiB), `cpu_load: 80` (percent), `time_offset: 60` (seconds). String forms get rejected.
+- **Backend dedupes byte-identical fingerprints.** Re-submitting the same `(system, ns, app, chaos_type, params, duration, interval, pre_duration)` tuple within the dedup window returns 200 with `data.items: []` and a `batches_exist_in_database` warning — looks "successful", no trace created. Vary one fingerprint field to bypass; staggering `duration_override` is the easiest. (This is *real* dedup, not diversity — varying duration alone doesn't earn diversity credit.)
+- **Network chaos pairs must already be observed in cluster traffic.** Freshly installed namespaces have no pairs. Either warm with traffic before submit, or pick chaos types that don't need pair pre-check (Pod*, JVM*, CPU/Memory, DNS-FQDN).
+- **DNSError needs an FQDN cataloged in the resolver.** Short service names and arbitrary external hosts both fail; use `<svc>.<ns>.svc.cluster.local`.
+- **JVMChaos requires `/bin/sh` in the target image.** Distroless / minimal-busybox images fail with chaos-daemon `exit 101`. Stick to systems whose containers have a real shell.
+- **HTTPChaos is unusable on IPVLAN-CNI clusters** (byte-cluster `Cello eni_shared` is one). Symptom: phase stays `Not Injected/Wait`, `injectedCount: 0`. Skip HTTP* on those clusters; use JVMException for HTTP-handler-level perturbation instead.
+- **PodKill restarts in seconds; PodFailure holds the pod down.** For sustained perturbation use PodFailure.
+- **`system_type` may not equal the short code.** Check the cluster's seed (`data.yaml`) before writing the first spec — wrong type produces "mismatched system type" 500s.
+
+## System-specific signal levels (empirical, prune as you learn)
+
+Detector responsiveness varies wildly across benchmarks. Update `memory.md` per-system as you learn:
+
+- **TrainTicket (ts)** — high signal; ~50–80% +1 on PodFailure / JVMException targeting on-path methods. Stable winners reproduce. Loop produces useful per-method posterior in 5–10 rounds.
+- **otel-demo** — noise-floor signal; ~10–20% +1 regardless of chaos type / magnitude. R1 winners often fail to reproduce. Param-sweeping is futile until detector-side investigation; pause the loop with a `PAUSED.md` and surface to user.
+- **sockshop** — ~zero detector signal across many rounds. Detector keys off something other than chaos magnitude. Pause similarly.
+- **DSB stack (hs / sn / mm)** — historically required Go-SDK OTel endpoint fix (no scheme prefix); confirm spans land before grading rounds. tea-store has a jmeter firehose risk on chart < 0.1.4.
+
+When a system shows persistent ~5–15% +1 over 5+ rounds with no parameter pattern, it's a detector-implementation issue, not a candidate-quality issue. Stop iterating, write `~/.aegisctl/injection-author/<system>/PAUSED.md` summarizing what was tried, and tell the user.
+
+## Adapt difficulty
+
+Without a live RCA reward, use your own step-9 **simulated inference-chain length + decoy count** as the in-loop control signal, then re-calibrate once offline RCA grading lands:
+
+- Several rounds of "≤2 hops, 0 decoys" → puzzles are too easy. Move down the granularity ladder, multi-fault more, target shared-resource paths.
+- Several rounds of "≥4 hops with multiple plausible decoys" plus `injection_landed=true` → sweet spot; hold and vary along family/service axes to avoid memorization rather than escalating further.
+- Frequent `injection-noop` → not a difficulty problem, an environment problem. Stop tuning faults and revisit *Unit and platform traps* / cluster health.
+- Detector silent on a fault that the data shows did perturb the system → real graceful-degrade signal — record but don't grade as a puzzle win.
+- When offline RCA grading lands and consistently contradicts your past simulations (e.g. RCA solves rounds you tagged `estimated_difficulty: high`), calibrate down: your decoy-counting was too generous. Update `memory.md` with the corrected pattern and reuse it.
+
+## Stop conditions
+
+Stop or pause when:
+
+- The user says stop or asks for a summary.
+- You've cycled the ladder × family matrix and have no underrepresented cell to fill without repeating.
+- The platform is showing damage — namespace pool exhausted, detector image not pulling, dedupe firing on every submission. That's a platform issue; flag it and pause until resolved.
+
+## Aegisctl gap log
+
+Every time aegisctl forced you to work around it — output format awkward to parse, a flag missing, a verb you expected absent, a query that needed raw mysql/kubectl/curl to answer, error messages that hid the cause — append **one line** to `aegisctl_gaps.md`:
+
+```
+2026-04-28T10:15+08 | wanted: count traces by detector verdict per system | issue: trace list -o ndjson has no detector field, had to join with task list by trace_id | workaround: jq join script | severity: medium
+```
+
+Format: `<iso-ts> | wanted: <X> | issue: <what aegisctl can't / makes hard> | workaround: <what you did> | severity: low|medium|high`. Keep each entry to one line. The user reviews this file periodically and ports recurring patterns into aegisctl improvements — that's how the CLI gets less hostile over time.
+
+This is different from `memory.md`: that file captures judgments about the *target system*; `aegisctl_gaps.md` captures issues with the *tool itself*. Keep them separate so the user can grep one without wading through the other.
+
+## Don't
+
+- **Don't** open `mysql` / `kubectl` / `redis-cli` for things aegisctl can do. Flag the gap in `aegisctl_gaps.md` (so it surfaces to the user for fixing) and use the workaround for this round only.
+- **Don't** kill the entrance pod as your "hard puzzle." Free win for RCA.
+- **Don't** confuse "detector silent" with "puzzle hard."
+- **Don't** dump round-level submit responses into `memory.md`. That goes in `rounds/*.json`. `memory.md` is the *distilled* judgment.
+- **Don't** spam the same fault family or same target service. That's fake diversity.
+- **Don't** treat a +1 from the detector as the win condition. RCA being wrong is the win condition.
+
+## Autonomous loop
+
+Use `loop.sh` (in this skill directory) to drive continuous rounds:
+
+```
+./loop.sh <system> [--rounds N] [--sleep SECS] [--engine claude|codex]
+```
+
+It calls `claude -p` (or `codex`) per round with a prompt that triggers this skill, points the agent at `~/.aegisctl/injection-author/<system>/`, and sleeps between rounds. Default sleep is 900s (15 min ≈ one inject→detect cycle), so memory accumulates *with* the result of the prior round visible. Tune `--sleep` if your system's pipeline is faster or slower.
+
+The loop is intentionally dumb: state lives on disk, not in shell variables. You can Ctrl-C, edit `memory.md` by hand, and resume — the next agent run picks up exactly where the previous one left off.
