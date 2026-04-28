@@ -350,11 +350,13 @@ collectors:
     enabled: true
     replicas: 6
     autoscaler:
-      # Bumped maxReplicas 18 → 40 because under teastore firehose load the
-      # HPA pegged at 18 with memory at 170 %/60 %. With each replica at 8Gi
-      # mem limit we have headroom to scale up further before node pressure.
+      # Under TT firehose (50+ services × 16 ns) the HPA pegged at 40 with
+      # memory_limiter at 174 %/60 %, dropping every TT span via UNAVAILABLE
+      # responses (Java agent OkHttp gRPC exporter does not retry). Raised
+      # ceiling to 120 and per-pod limit to 8Gi so the limiter can scale before
+      # rejecting; cluster (36 nodes, ~120Gi each) has headroom.
       minReplicas: 6
-      maxReplicas: 40
+      maxReplicas: 120
       targetCPUUtilization: 55
       targetMemoryUtilization: 60
     podDisruptionBudget:
@@ -362,10 +364,10 @@ collectors:
     resources:
       limits:
         cpu: 4000m
-        memory: 4000Mi
+        memory: 8000Mi
       requests:
         cpu: 1000m
-        memory: 2000Mi
+        memory: 3000Mi
     presets:
       kubernetesEvents:
         enabled: true
