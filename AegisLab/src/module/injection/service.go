@@ -108,7 +108,7 @@ func (s *Service) ListProjectInjections(ctx context.Context, req *ListInjectionR
 	}
 
 	limit, offset := req.ToGormParams()
-	injections, total, err := s.repo.listProjectInjectionsView(projectID, limit, offset)
+	injections, total, err := s.repo.listProjectInjectionsView(projectID, limit, offset, req.ToFilterOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list injections for project %d: %w", projectID, err)
 	}

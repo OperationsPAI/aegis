@@ -3,6 +3,7 @@ package injection
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -143,17 +144,28 @@ type ListInjectionFilters struct {
 // ListInjectionReq represents the request to list injections with various filters
 type ListInjectionReq struct {
 	dto.PaginationReq
-	Type      *chaos.ChaosType      `form:"fault_type" binding:"omitempty"`
+	TypeRaw   string                `form:"fault_type" binding:"omitempty"`
 	Category  *chaos.SystemType     `form:"category" binding:"omitempty"`
 	Benchmark string                `form:"benchmark" binding:"omitempty"`
 	State     *consts.DatapackState `form:"state" binding:"omitempty"`
 	Status    *consts.StatusType    `form:"status" binding:"omitempty"`
 	Labels    []string              `form:"labels" binding:"omitempty"`
+
+	// Type is resolved from TypeRaw during Validate; not directly form-bound.
+	// Accepts either a chaos type name (e.g. "NetworkLoss") or its numeric id.
+	Type *chaos.ChaosType `form:"-"`
 }
 
 func (req *ListInjectionReq) Validate() error {
 	if err := req.PaginationReq.Validate(); err != nil {
 		return err
+	}
+	if req.TypeRaw != "" {
+		ct, err := parseFaultTypeParam(req.TypeRaw)
+		if err != nil {
+			return err
+		}
+		req.Type = &ct
 	}
 	if err := validateChaosType(req.Type); err != nil {
 		return err
@@ -916,6 +928,20 @@ type DatapackFilesResp struct {
 	Files     []DatapackFileItem `json:"files"`
 	FileCount int                `json:"file_count"` // Number of files (excluding directories)
 	DirCount  int                `json:"dir_count"`  // Number of directories
+}
+
+// parseFaultTypeParam accepts either a chaos type name (e.g. "NetworkLoss")
+// or its numeric id (e.g. "18") and returns the corresponding ChaosType.
+// Membership in ChaosTypeMap is enforced by validateChaosType after this
+// returns, so unknown numeric ids fall through to the standard error path.
+func parseFaultTypeParam(raw string) (chaos.ChaosType, error) {
+	if i, err := strconv.Atoi(raw); err == nil {
+		return chaos.ChaosType(i), nil
+	}
+	if v, ok := chaos.ChaosNameMap[raw]; ok {
+		return v, nil
+	}
+	return 0, fmt.Errorf("invalid fault_type %q: expected name (e.g. NetworkLoss) or numeric id", raw)
 }
 
 // validateChaosType checks if the provided chaos type is valid
