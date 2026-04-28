@@ -229,14 +229,31 @@ Per-system `injection.system.<sys>.count` has `max_value=20` in `dynamic_configs
 
 ### ClickHouse capacity & OTel collector capacity
 
-The byte-cluster ClickStack runs operator-managed (chart 2.1.1+) with these caps after PRs #206/#211/#213/#218:
+The byte-cluster ClickStack runs operator-managed (chart 2.1.1+) with these caps after PRs #206/#211/#213/#218/#279:
 - `max_concurrent_queries: 5000` (was 100 default → 500 hot-fix → 2000 → 5000)
 - CH replicas: 2 with replication via Keeper (3 nodes)
 - CH resource limits: cpu 8/mem 16Gi per replica
-- OTel deployment-collector HPA: minReplicas=6 maxReplicas=40, target 60% memory / 55% CPU
-- OTel collector pod: cpu 4/mem 8Gi
+- OTel deployment-collector HPA: minReplicas=6 **maxReplicas=120**, target 60% memory / 55% CPU (was 40 → 120 in #279)
+- OTel collector pod: cpu 4 / **mem 16Gi** (4Gi originally; #279 → 8Gi; #281 → 16Gi because the 8Gi step still saturated under TT firehose at 120/120 replicas)
 
-If you see `Code 202: Too many simultaneous queries` in build-pod logs, `max_concurrent_queries` was hit — likely because someone deployed teastore at chart < 0.1.4 (jmeter firehose). If you see `data refused due to high memory usage` in collector logs, OTel is OOM-throttling — bump `maxReplicas` higher.
+If you see `Code 202: Too many simultaneous queries` in build-pod logs, `max_concurrent_queries` was hit — likely because someone deployed teastore at chart < 0.1.4 (jmeter firehose). If you see `data refused due to high memory usage` in collector logs OR a pod log, OTel is OOM-throttling — bump `maxReplicas` and/or per-pod `memory` limit in `AegisLab/manifests/byte-cluster/otel-kube-stack.values.yaml`.
+
+**Pre-flight before TT-scale campaigns** (TT = ~50 services × 16 ns; teastore = jmeter firehose). Run `kubectl -n monitoring get hpa opentelemetry-kube-stack-deployment-collector` BEFORE kicking off the round. If `MAXPODS` is at the deployed ceiling AND `memory` exceeds 100% of target, raise the ceiling first. Otherwise the **silent ts/teastore drop pattern** triggers: Java agent's OkHttp gRPC exporter does not retry on `UNAVAILABLE`, so TT spans are dropped on the floor while otel-demo / DSB Go-SDK / Node-SDK keep flowing (BatchSpanProcessor + retry). One-system-zero-traces-others-fine is the diagnostic signature.
+
+### Best practices for aegis redeploy / namespace lifecycle
+
+**Redeploy aegis only between rounds.** `runtime-worker` / `api-gateway` rollout silently orphans in-flight tasks (no error log, redis queues empty, the trace just stops progressing at whatever stage the worker was handling). Wait until `terminals_round<N>.tsv` has been fully reaped before any `kubectl rollout restart` or helm upgrade against `exp/`.
+
+**Don't `helm install <sys>N` to pre-create benchmark namespaces.** Raw helm bypasses aegis's allocator + pool counter, and they desync (the pool registry doesn't know about the ns; later you hit `value 21 exceeds maximum 20` once aegis catches up). Two aegis-native paths:
+
+1. **Default** — `submit_dual.py --auto --allow-bootstrap` lets the allocator bootstrap a slot at submit time (already the default; accept the first-round latency).
+2. **Pre-warm to remove first-round bootstrap latency** — `aegisctl inject guided --install --namespace <sys>N` deploys the workload through the aegis path so allocator state stays consistent.
+
+If neither covers your case, **flag it as an aegisctl gap** (per `CLAUDE.md`'s "aegisctl ownership" rule) — don't reach for raw helm/kubectl/mysql to work around. The CLI is the supported surface.
+
+**Provision capacity ahead of demand, with 2× headroom.** When you onboard a new benchmark, scale ns count up, or move from sockshop-only to TT-scale (~50 services × 16 ns), bump OTel collector ceiling and per-pod memory **before** the campaign starts, not after the silent-drop pattern surfaces. The 8Gi-then-16Gi roll on this campaign was the cost of ignoring that twice. Rule of thumb: each pod should sit at <50% of its memory limit at steady state, so a 2× spike doesn't trip `memory_limiter`.
+
+**After live-patching the cluster, immediately commit the same change to the source-of-truth values file (`AegisLab/manifests/byte-cluster/otel-kube-stack.values.yaml` etc.) and open a PR.** A live `kubectl patch` that doesn't get into yaml gets blown away by the next helm upgrade, and you re-learn the same incident. (#279, #281 came from this rule.)
 
 ### BuildDatapack races OTel ingestion lag (issue #210)
 
