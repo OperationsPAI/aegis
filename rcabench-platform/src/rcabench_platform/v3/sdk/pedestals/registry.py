@@ -74,6 +74,38 @@ class Pedestal(ABC):
         """
         ...
 
+    @property
+    def success_codes(self) -> set[str]:
+        """HTTP/RPC status codes that count as 'success' for SLO purposes.
+
+        Default ``{"200"}`` matches systems whose REST endpoints uniformly return
+        200. Override per system: e.g. sockshop's REST API returns 201 for POSTs,
+        otel-demo's browser traffic legitimately returns 3xx redirects, etc.
+        """
+        return {"200"}
+
+    @property
+    def slo_latency_relative_ratio(self) -> float:
+        """Abnormal/normal latency ratio above which the entrance SLO is considered
+        violated, on top of any absolute thresholds.
+
+        A ratio of 3.0 means 'p99 jumped to 3× of baseline' triggers a flag,
+        regardless of whether the absolute latency exceeds the system's hard
+        threshold. Combined with ``slo_latency_min_absolute`` to suppress noise on
+        sub-millisecond endpoints.
+        """
+        return 3.0
+
+    @property
+    def slo_latency_min_absolute(self) -> float:
+        """Minimum abnormal latency (seconds) for the relative-ratio rule to fire.
+
+        Even a 100× ratio on a 0.1ms baseline isn't a user-visible SLO violation.
+        Default 100ms — anything below the human-perceivable response-time floor
+        is ignored by the relative-ratio detector.
+        """
+        return 0.1
+
     @abstractmethod
     def fix_client_spans(self, traces: pl.DataFrame) -> tuple[pl.DataFrame, dict[str, str], dict[str, str]]:
         """

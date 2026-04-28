@@ -129,6 +129,16 @@ class TrainTicketPedestal(Pedestal):
     def entrance_service(self) -> str:
         return "ts-ui-dashboard"
 
+    @property
+    def success_codes(self) -> set[str]:
+        # ts-ui-dashboard returns 200 for everything (including PUT/DELETE), no redirects
+        return {"200"}
+
+    @property
+    def slo_latency_relative_ratio(self) -> float:
+        # ts has tight latency budgets (microservice chain depth ~5-7); 3× is too lax
+        return 2.5
+
     def normalize_op_name(self, op_name: pl.Expr) -> pl.Expr:
         for pattern, replacement in self._PATTERN_REPLACEMENTS_POLARS:
             op_name = op_name.str.replace(pattern, replacement)

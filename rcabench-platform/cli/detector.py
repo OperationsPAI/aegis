@@ -34,6 +34,7 @@ from rcabench_platform.v3.internal.metrics.metrics_calculator import DatasetMetr
 from rcabench_platform.v3.sdk.datasets.rcabench import RCABenchAnalyzerLoader, valid
 from rcabench_platform.v3.sdk.logging import logger, timeit
 from rcabench_platform.v3.sdk.pedestals import Pedestal, get_pedestal
+from rcabench_platform.v3.sdk.pedestals import generic as _generic_pedestals  # noqa: F401  # registers hs / otel-demo / tea / sn / mm / sockshop
 from rcabench_platform.v3.sdk.utils.fmap import fmap_processpool
 
 load_dotenv(Path.cwd() / ".env")
@@ -146,6 +147,7 @@ class AnalysisMetrics:
 class AnalysisState(TypedDict):
     conclusion_data: list[ConclusionRow]
     metrics: AnalysisMetrics
+    pedestal: Pedestal
 
 
 class AnalysisResult(TypedDict):
@@ -362,9 +364,9 @@ def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
         request_content_length = {i: v["request_content_length"].count(i) for i in set(v["request_content_length"])}
         response_content_length = {i: v["response_content_length"].count(i) for i in set(v["response_content_length"])}
 
-        # Calculate success rate
+        # Calculate success rate (system-specific success codes from pedestal)
         total_requests = sum(status_code.values())
-        success_count = status_code.get("200", 0)
+        success_count = sum(status_code.get(c, 0) for c in pedestal.success_codes)
         succ_rate = success_count / total_requests if total_requests > 0 else None
 
         v["status_code"] = status_code
@@ -502,7 +504,8 @@ def handle_new_endpoint(k: str, v: dict[str, Any], state: AnalysisState) -> None
     success_rate_threshold = 0.9
     total_requests = sum(v.get("status_code", {}).values())
     if total_requests > 0:
-        success_count = v.get("status_code", {}).get("200", 0)
+        pedestal = state["pedestal"]
+        success_count = sum(v.get("status_code", {}).get(c, 0) for c in pedestal.success_codes)
         success_rate = success_count / total_requests
 
         if success_rate < success_rate_threshold:
@@ -577,7 +580,25 @@ def detect_latency_anomalies(
                 normal_data,
                 abnormal_value,
             )
-            if result.get("is_anomaly"):
+            is_anomaly = result.get("is_anomaly")
+
+            # Pedestal-driven relative-ratio check: catches latency degradations that
+            # stay below absolute thresholds but are clearly user-visible (e.g. p99
+            # 12ms -> 4.27s on sockshop POST /cart). Suppressed when abnormal value is
+            # below the system-specific noise floor.
+            pedestal = state["pedestal"]
+            normal_mean = float(np.mean(normal_data)) if normal_data else 0.0
+            ratio_anomaly = False
+            if (
+                not is_anomaly
+                and normal_mean > 0
+                and abnormal_value >= pedestal.slo_latency_min_absolute
+                and abnormal_value / normal_mean >= pedestal.slo_latency_relative_ratio
+            ):
+                is_anomaly = True
+                ratio_anomaly = True
+
+            if is_anomaly:
                 abnormal_tag[key] = {
                     "normal": normal_stat[k][key],
                     "abnormal": v[key],
@@ -586,7 +607,10 @@ def detect_latency_anomalies(
                     "absolute_change": result.get("abnormal_value"),
                     "slo_violated": True,
                 }
-                if result.get("rule_anomaly"):
+                if ratio_anomaly:
+                    abnormal_tag[key]["detection_method"] = "relative_ratio"
+                    abnormal_tag[key]["ratio"] = abnormal_value / normal_mean if normal_mean > 0 else None
+                if result.get("rule_anomaly") or ratio_anomaly:
                     state["metrics"].set_absolute_anomaly()
 
     return abnormal_tag
@@ -602,8 +626,11 @@ def detect_success_rate_anomalies(
     """Detect success rate anomalies for an endpoint."""
     normal_total = sum(normal_stat[k]["status_code"].values())
     abnormal_total = sum(v["status_code"].values())
-    normal_succ_rate = normal_stat[k]["status_code"].get("200", 0) / max(normal_total, 1)
-    abnormal_succ_rate = v["status_code"].get("200", 0) / max(abnormal_total, 1)
+    pedestal = state["pedestal"]
+    normal_succ_count = sum(normal_stat[k]["status_code"].get(c, 0) for c in pedestal.success_codes)
+    abnormal_succ_count = sum(v["status_code"].get(c, 0) for c in pedestal.success_codes)
+    normal_succ_rate = normal_succ_count / max(normal_total, 1)
+    abnormal_succ_rate = abnormal_succ_count / max(abnormal_total, 1)
 
     success_rate_result = is_success_rate_significant(
         normal_succ_rate, abnormal_succ_rate, normal_total, abnormal_total
@@ -835,6 +862,7 @@ def run(
     state = AnalysisState(
         conclusion_data=[],
         metrics=AnalysisMetrics(),
+        pedestal=pedestal,
     )
     percentiles = get_percentile_config()
 
