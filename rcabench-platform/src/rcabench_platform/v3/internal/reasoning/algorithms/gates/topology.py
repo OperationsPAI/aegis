@@ -1,4 +1,4 @@
-"""TopologyGate: re-check that every edge has a rule that admits it."""
+"""TopologyGate: rule-admitted invariant + per-edge rule_id evidence channel."""
 
 from __future__ import annotations
 
@@ -7,11 +7,28 @@ from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import Cand
 
 
 class TopologyGate:
-    """Each edge must have at least one rule whose (kind, edge_kind, direction) admits it.
+    """Guards the topological-rule invariant of the §7.6 4-gate pipeline.
 
-    PathBuilder already guarantees this for any returned candidate, so the
-    gate primarily exists to surface the per-edge rule_id evidence for
-    ablation runs.
+    Invariant: every edge ``(node_i, node_{i+1})`` in a candidate path has
+    at least one rule in ``ctx.rules`` whose ``(src_kind, edge_kind,
+    direction, dst_kind)`` admits the edge given the per-node state
+    universe and any first-hop / required-label constraints.
+
+    Why have a gate when PathBuilder already filters?
+
+    * PathBuilder operates with a fixed rule set baked into its constructor;
+      callers who want to *re-evaluate* an existing candidate against a
+      different rule set (ablation runs, sensitivity studies) need a
+      checker that doesn't rebuild.
+    * The gate doubles as an executable assertion of the build-time
+      invariant — a future PathBuilder bug that lets a non-admitted edge
+      slip through is caught here rather than silently propagating.
+    * The per-edge ``admitting_rule_ids`` evidence is the canonical channel
+      consumers use to learn *which* rule fired on each edge, including
+      alternate rules that were also admissible. The propagator records
+      only the picked rule on the path itself.
+
+    Pass criterion: every edge has at least one admitting rule.
     """
 
     name = "topology"

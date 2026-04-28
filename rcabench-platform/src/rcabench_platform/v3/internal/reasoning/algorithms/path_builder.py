@@ -6,28 +6,10 @@ It performs only **structural** validation (an edge exists between adjacent
 nodes; some rule admits the (kind, edge_kind, direction) triple). Temporal
 ordering, drift, and inject-time checks are the gates' responsibility.
 
-Effective onset rule (Strategy E)
----------------------------------
-``picked_state_start_times`` does NOT carry the literal ``window.start`` for
-every hop — it carries an "effective onset" that respects the IR's
-``EvidenceLevel`` hierarchy:
-
-* ``observed`` windows have a real wall-clock observation timestamp
-  (carrying detector / scrape latency); we use ``window.start`` directly.
-* ``inferred`` / ``structural`` windows are logically simultaneous with
-  whatever caused them — their literal ``window.start`` is a synth artifact
-  (e.g. zero-duration containers and service rollups inherit from upstream).
-  We clamp their effective onset up to the predecessor's effective onset
-  so they don't appear to precede their cause.
-
-The first hop's source has no predecessor so we always use ``window.start``.
-
-This makes Strategy B (synthesize unknown intermediate) and Strategy C
-(symmetric inject_time grace) unnecessary — pod observation lag and
-zero-duration inferred service rollups are absorbed naturally. If
-``find_admissible_window`` returns ``None`` after this adjustment, there
-genuinely is no admissible dst window matching the rule and the path is
-not built.
+Effective onset and EvidenceLevel awareness now live in
+``TemporalValidator.find_admissible_window``: it returns ``(window,
+effective_onset)`` directly, so this module no longer needs its own helpers
+for the §7.5 admission predicate or the symbolic-onset fallback.
 """
 
 from __future__ import annotations
@@ -35,46 +17,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rcabench_platform.v3.internal.reasoning.algorithms.rule_matcher import RuleMatcher
-from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import TemporalValidator
-from rcabench_platform.v3.internal.reasoning.ir.evidence import EvidenceLevel
-from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline, TimelineWindow
-from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, HyperGraph
+from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import (
+    TemporalValidator,
+    _effective_onset,
+)
+from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
+from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, HyperGraph, PlaceKind
 from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationDirection, PropagationRule
-
-
-def _effective_onset(window: TimelineWindow, prev_onset: int | None) -> int:
-    """Onset adjusted by the window's evidence level (see module docstring).
-
-    For observed windows we keep ``window.start`` so observation-channel lag
-    (``window.start > prev_onset``) is faithfully represented. For inferred
-    and structural windows we clamp up to ``prev_onset`` since their literal
-    start is a synth artifact and they are logically simultaneous with their
-    cause.
-    """
-    if prev_onset is None:
-        return window.start
-    if window.level == EvidenceLevel.observed:
-        return window.start
-    return max(window.start, prev_onset)
-
-
-def _earliest_logical_window(
-    tl: StateTimeline | None, states: set[str]
-) -> TimelineWindow | None:
-    """Earliest non-observed window whose state is in ``states``.
-
-    These windows (inferred / structural) are logically simultaneous with
-    upstream onsets — their literal ``window.start`` is a synth artifact.
-    ``find_admissible_window`` filters them by ``window.start`` against the
-    upstream onset, which is wrong for non-observed levels; this helper
-    is the level-aware fallback.
-    """
-    if tl is None or not tl.windows or not states:
-        return None
-    for w in tl.windows:
-        if w.state in states and w.level != EvidenceLevel.observed:
-            return w
-    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -298,7 +247,12 @@ class PathBuilder:
             elif src_tl and src_tl.windows:
                 src_start_time = src_tl.windows[0].start
             else:
-                src_start_time = self._fallback_global_start()
+                # Source has no timeline at all — refuse to manufacture an
+                # onset. The audit (P1-F) showed every such candidate is
+                # subsequently rejected by InjectTimeGate, so returning None
+                # here only saves compute and preserves the build/admit
+                # invariant that PathBuilder never invents timestamps.
+                return None
         elif src_matching_window:
             src_start_time = _effective_onset(src_matching_window, prev_start_time)
         elif prev_start_time is not None:
@@ -309,7 +263,7 @@ class PathBuilder:
         elif src_tl and src_tl.windows:
             src_start_time = src_tl.windows[0].start
         else:
-            src_start_time = self._fallback_global_start()
+            return None
 
         if (not is_first_hop) and rule_src_states and src_states_all:
             matching = src_states_all & rule_src_states
@@ -365,18 +319,16 @@ class PathBuilder:
                     return None
                 hop_dst_states = dst_states_set or next_states_all
 
-            causal_window = self.temporal_validator.find_admissible_window(
+            admitted = self.temporal_validator.find_admissible_window(
                 next_node.uniq_name,
                 src_onset=current_start_time,
                 edge_kind=edge_data.kind,
                 src_state=current_src_state,
                 dst_states=hop_dst_states,
             )
-            if causal_window is None:
-                causal_window = _earliest_logical_window(next_tl, hop_dst_states)
-            if causal_window is None:
+            if admitted is None:
                 return None
-            next_start_time = _effective_onset(causal_window, current_start_time)
+            causal_window, next_start_time = admitted
             delay = float(next_start_time - current_start_time)
             next_picked_state = causal_window.state
 
@@ -440,8 +392,6 @@ class PathBuilder:
         dst_tl = self._timeline_for_node(dst_id)
         dst_states_all = {w.state for w in dst_tl.windows} if dst_tl else set()
 
-        from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
-
         for rule in valid_rules:
             rule_src_states = set(rule.src_states)
             rule_dst_states = set(rule.possible_dst_states)
@@ -477,27 +427,28 @@ class PathBuilder:
                 if src_time is None and src_tl and src_tl.windows:
                     src_time = src_tl.windows[0].start
                 if src_time is None:
-                    src_time = self._fallback_global_start()
-
+                    # No source timeline — see _build_multi_hop comment above.
+                    continue
                 anchor = src_time
             else:
-                src_time = prev_start_time if prev_start_time is not None else (
-                    src_tl.windows[0].start if src_tl and src_tl.windows else self._fallback_global_start()
-                )
+                if prev_start_time is not None:
+                    src_time = prev_start_time
+                elif src_tl and src_tl.windows:
+                    src_time = src_tl.windows[0].start
+                else:
+                    continue
                 anchor = prev_start_time if prev_start_time is not None else src_time
 
-            causal_window = self.temporal_validator.find_admissible_window(
+            admitted = self.temporal_validator.find_admissible_window(
                 dst_node.uniq_name,
                 src_onset=anchor,
                 edge_kind=edge_data.kind,
                 src_state=src_state_for_eps,
                 dst_states=admissible_dst_states,
             )
-            if causal_window is None:
-                causal_window = _earliest_logical_window(dst_tl, admissible_dst_states)
-            if causal_window is None:
+            if admitted is None:
                 continue
-            dst_time = _effective_onset(causal_window, anchor)
+            causal_window, dst_time = admitted
             dst_picked = causal_window.state
             delay = float(dst_time - anchor)
 
@@ -517,10 +468,6 @@ class PathBuilder:
             )
 
         return None
-
-    def _fallback_global_start(self) -> int:
-        all_starts = [tl.windows[0].start for tl in self.timelines.values() if tl.windows]
-        return min(all_starts) if all_starts else 0
 
     def _get_edge_between(self, src_id: int, dst_id: int) -> tuple[Edge | None, PropagationDirection | None]:
         if self.graph._graph.has_edge(src_id, dst_id):

@@ -114,6 +114,29 @@ class DepKind(StrEnum):
     """resource interference/impact relationship"""
 
 
+_STRUCTURAL_MEDIATOR_KINDS: frozenset[PlaceKind] = frozenset(
+    {PlaceKind.pod, PlaceKind.replica_set, PlaceKind.deployment}
+)
+"""PlaceKinds that participate in the cascade structure but have no per-entity
+timeline in the IR (state on them is asserted via inferred-level rollup from
+pods/containers, never via direct observation channels).
+
+Used by: drift gate exemption, deviating-set inclusion, first-hop strictness
+in path_builder. Single source of truth: change here, all sites pick it up.
+"""
+
+
+def is_structural_mediator(kind: PlaceKind) -> bool:
+    """Whether ``kind`` is a topological mediator without its own timeline.
+
+    Pod, replica_set and deployment exist in the graph because they are part
+    of the k8s containment cascade structure, not because any adapter
+    observes a state on them directly. Multiple sites need to special-case
+    them — see ``_STRUCTURAL_MEDIATOR_KINDS`` for rationale.
+    """
+    return kind in _STRUCTURAL_MEDIATOR_KINDS
+
+
 class EdgeData(BaseModel):
     pass
 

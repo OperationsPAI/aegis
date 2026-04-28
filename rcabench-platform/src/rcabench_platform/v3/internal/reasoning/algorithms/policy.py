@@ -91,6 +91,55 @@ the deferred-implementation note.
 """
 
 
+# -----------------------------------------------------------------------------
+# Inject-time admission window — per-path InjectTimeGate constants.
+#
+# A picked onset must lie within ``[t0, t0 + Δt + INJECT_TIME_TOLERANCE_SECONDS]``
+# (with the injection node itself getting an additional pre-grace), where t0
+# is the chaos-mesh start time and Δt is the declared injection duration.
+#
+# Derivation (§12.4 +δ):
+#   τ = Δ_clock + Δ_event + max(onset_resolution)
+#     ≈ 30s (NTP-bounded clock skew between chaos control plane and trace
+#            collectors)
+#       + 30s (k8s informer + scrape pipeline propagation lag for pod /
+#              container / endpoint events at the chaos start instant)
+#       + 30s (slowest onset_resolution across canonical states; ``silent``
+#              fires only after a 30s subwindow boundary).
+#   Sum bound ≈ 90s but the slowest channel (silent) only matters if a
+#   declared latency-or-erroring fault projects into a silent-rooted path —
+#   that is rare. Picking 60s lands on the inflection of the empirical
+#   "did the cascade actually show up by then" curve while staying inside
+#   the conservative ½ × (Δ_clock + Δ_event + onset_resolution) envelope
+#   so multi-hop chains do not stack tolerance unboundedly.
+#
+# Sensitivity: see ``bin/paper_artifacts/inject_time_sensitivity.py`` for the
+# τ ∈ {30, 60, 90, 120} sweep across the 500-case dataset; recall plateaus
+# at τ ≥ 60s and the marginal label-flip count at τ = 30s vs 60s is the
+# dominant calibration evidence reported in the paper appendix.
+# -----------------------------------------------------------------------------
+
+INJECT_TIME_TOLERANCE_SECONDS: int = 60
+"""Upper-bound slack on a derived path's terminal onset relative to t0 + Δt.
+
+Picked deliberately on the recall plateau identified by the τ ∈ {30, 60,
+90, 120} sweep (see derivation above). Increasing further admits more late
+onsets at the cost of increasing the joint observation window probability
+of an unrelated baseline drift coinciding with the chaos start.
+"""
+
+INJECT_NODE_PRE_GRACE_SECONDS: int = 5
+"""Pre-injection slack applied **only to the injection node**.
+
+Absorbs NTP-bounded clock skew between the chaos control plane and trace
+timestamps for the very first onset on the injection node — the node where
+chaos-mesh observed the fault and our pipeline observed the cascade may
+disagree by a few seconds even on synchronised infrastructure. Downstream
+nodes do not need this grace because their onsets are gated by the source
+onset via the temporal admission rule.
+"""
+
+
 def edge_epsilon_seconds(edge_kind: DepKind) -> int:
     """Return epsilon(edge_kind) — per-channel propagation-delay budget."""
     return _EDGE_EPSILON_SECONDS.get(edge_kind, _DEFAULT_EDGE_EPSILON_SECONDS)

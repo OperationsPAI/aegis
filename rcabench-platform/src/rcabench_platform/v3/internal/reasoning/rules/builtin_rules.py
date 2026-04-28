@@ -24,7 +24,11 @@ from pathlib import Path
 from typing import Any
 
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, PlaceKind
-from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationRule, RuleTier
+from rcabench_platform.v3.internal.reasoning.rules.schema import (
+    PropagationRule,
+    RuleTier,
+    StructuralRule,
+)
 
 # ==============================================================================
 # JSON Rules Loading
@@ -179,3 +183,37 @@ def get_rules_for_place_kind(
         return [rule for rule in rules if rule.src_kind == place_kind]
     else:
         return [rule for rule in rules if rule.dst_kind == place_kind]
+
+
+# ==============================================================================
+# Structural Rules Loading (containment-axis IR-layer cascades)
+# ==============================================================================
+
+_STRUCTURAL_RULES_JSON_PATH = Path(__file__).parent / "structural_rules.json"
+_structural_rules_cache: list[StructuralRule] | None = None
+
+
+def _load_structural_rules_from_json() -> list[StructuralRule]:
+    global _structural_rules_cache
+    if _structural_rules_cache is not None:
+        return _structural_rules_cache
+
+    with open(_STRUCTURAL_RULES_JSON_PATH, encoding="utf-8") as f:
+        data = json.load(f)
+
+    rules: list[StructuralRule] = []
+    for rule_data in data.get("rules", []):
+        rules.append(StructuralRule(**rule_data))
+    _structural_rules_cache = rules
+    return rules
+
+
+def get_builtin_structural_rules() -> list[StructuralRule]:
+    """Return built-in structural cascade rules.
+
+    Structural rules are class-A axioms asserted at the IR layer by
+    ``StructuralInheritanceAdapter`` before the propagator runs. They are
+    not subject to the 4-gate falsification (the gates apply to causal
+    propagation, not topology containment).
+    """
+    return list(_load_structural_rules_from_json())

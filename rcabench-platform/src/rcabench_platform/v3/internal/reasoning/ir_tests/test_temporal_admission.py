@@ -116,14 +116,18 @@ def test_find_admissible_window_boundary_admit() -> None:
     tl = _tl("dst", _w(100, 200, "erroring"))
     tv = TemporalValidator({"dst": tl})
 
-    w = tv.find_admissible_window(
+    admitted = tv.find_admissible_window(
         "dst",
         src_onset=110,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"erroring"},
     )
-    assert w is not None and w.start == 100
+    assert admitted is not None
+    w, onset = admitted
+    assert w.start == 100
+    # Observed window keeps wall-clock start as effective onset.
+    assert onset == 100
 
 
 def test_find_admissible_window_boundary_reject() -> None:
@@ -174,14 +178,15 @@ def test_find_admissible_window_picks_earliest_admissible() -> None:
     )
     tv = TemporalValidator({"dst": tl})
 
-    w = tv.find_admissible_window(
+    admitted = tv.find_admissible_window(
         "dst",
         src_onset=90,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"silent"},
     )
-    assert w is not None
+    assert admitted is not None
+    w, _ = admitted
     assert w.start == 80
 
 
@@ -212,11 +217,13 @@ def test_find_admissible_window_per_state_epsilon() -> None:
     # admissible wins (it's the first in start order).
     # src_onset=110: ERRORING (start=100): 100 >= 110-11=99 → ADMIT (and earliest in iter order
     # is SILENT at 80 → 80 >= 110-38=72 → ADMIT first).
-    w2 = tv.find_admissible_window(
+    admitted2 = tv.find_admissible_window(
         "dst",
         src_onset=110,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"erroring", "silent"},
     )
-    assert w2 is not None and w2.start == 80 and w2.state == "silent"
+    assert admitted2 is not None
+    w2, _ = admitted2
+    assert w2.start == 80 and w2.state == "silent"
