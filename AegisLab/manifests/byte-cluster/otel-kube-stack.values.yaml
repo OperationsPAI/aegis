@@ -352,9 +352,10 @@ collectors:
     autoscaler:
       # Under TT firehose (50+ services × 16 ns) the HPA pegged at 40 with
       # memory_limiter at 174 %/60 %, dropping every TT span via UNAVAILABLE
-      # responses (Java agent OkHttp gRPC exporter does not retry). Raised
-      # ceiling to 120 and per-pod limit to 8Gi so the limiter can scale before
-      # rejecting; cluster (36 nodes, ~120Gi each) has headroom.
+      # responses (Java agent OkHttp gRPC exporter does not retry). First lift
+      # was 40→120 + 4Gi→8Gi; the post-roll fleet still saturated at 8Gi
+      # (75 %/60 %), so the limit went 8Gi→16Gi as well. Cluster (36 nodes,
+      # ~120Gi each) absorbs 120 × 16Gi ≈ 53Gi/node worst case.
       minReplicas: 6
       maxReplicas: 120
       targetCPUUtilization: 55
@@ -364,10 +365,10 @@ collectors:
     resources:
       limits:
         cpu: 4000m
-        memory: 8000Mi
+        memory: 16000Mi
       requests:
         cpu: 1000m
-        memory: 3000Mi
+        memory: 6000Mi
     presets:
       kubernetesEvents:
         enabled: true
