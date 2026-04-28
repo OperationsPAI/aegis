@@ -123,14 +123,43 @@ def test_no_emit_when_prior_already_worse_or_equal() -> None:
     assert [e for e in events if e.node_key == "span|svc::POST /"]
 
 
-def test_does_not_inherit_slow_or_erroring() -> None:
+def test_container_erroring_cascades_to_service_only_when_pod_already_observed() -> None:
+    """Strategy E semantics: container.erroring cascades pod.erroring + service.erroring.
+
+    When the pod is already observed at erroring, the pod-step is suppressed by
+    the severity check; the service-step still emits. Spans are NOT inherited
+    from erroring (the application-rooted ``container_erroring_to_span`` causal
+    rule walks the hop sequence on its own — this cascade only ensures pod and
+    service have an intermediate window at the fault onset).
+    """
     g, _ = _build_basic_graph()
     prior = {
         "container|c": _make_timeline("container|c", PlaceKind.container, "erroring", level=EvidenceLevel.observed),
         "pod|p": _make_timeline("pod|p", PlaceKind.pod, "erroring", level=EvidenceLevel.observed),
     }
     events = list(StructuralInheritanceAdapter(graph=g, prior_timelines=prior).emit(CTX))
-    assert events == [], f"adapter must ignore non-availability axes, got {events}"
+    pod_events = [e for e in events if e.node_key == "pod|p"]
+    svc_events = [e for e in events if e.node_key == "service|svc"]
+    span_events = [e for e in events if e.kind == PlaceKind.span]
+    assert not pod_events, f"pod prior already erroring; cascade must suppress, got {pod_events}"
+    assert svc_events and svc_events[0].to_state == "erroring"
+    assert not span_events, f"erroring cascade must not propagate to spans, got {span_events}"
+
+
+def test_container_slow_cascades_to_pod_degraded_and_service_slow() -> None:
+    """Strategy E semantics: container.slow projects DEGRADED to pod (pod has no
+    SLOW state per §11.1) and SLOW to service. Spans NOT inherited."""
+    g, _ = _build_basic_graph()
+    prior = {
+        "container|c": _make_timeline("container|c", PlaceKind.container, "slow", level=EvidenceLevel.observed),
+    }
+    events = list(StructuralInheritanceAdapter(graph=g, prior_timelines=prior).emit(CTX))
+    pod_events = [e for e in events if e.node_key == "pod|p"]
+    svc_events = [e for e in events if e.node_key == "service|svc"]
+    span_events = [e for e in events if e.kind == PlaceKind.span]
+    assert pod_events and pod_events[0].to_state == "degraded"
+    assert svc_events and svc_events[0].to_state == "slow"
+    assert not span_events, f"slow cascade must not propagate to spans, got {span_events}"
 
 
 def test_one_container_unavailable_others_healthy_yields_pod_degraded() -> None:

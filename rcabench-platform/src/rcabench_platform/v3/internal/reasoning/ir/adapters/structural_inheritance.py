@@ -15,22 +15,21 @@ states are empty.
 This adapter expresses the structural invariant *if your container/pod/service
 is unavailable (or silent at the request layer), the spans it would serve
 cannot be served either* directly at the IR layer, before the propagator
-runs. It walks the containment hierarchy implied by graph edges (``runs``,
-``routes_to``, ``includes``) and emits ``EvidenceLevel.inferred``
-``Transition`` events for the derived nodes that are weaker (or equal) in
-severity than what the upstream adapters already established. It inherits
-the **availability** axis (``unavailable`` / ``degraded``) and — for
-``service`` only — the Class E **silent** signal down to spans (mirror of
-the unavailable→missing rule; pod/container do not carry SILENT per
-taxonomy §11.1). Slow / erroring are causal claims that the propagator +
-rules should derive, not structural inheritance.
+runs. The cascade table itself lives in ``rules/structural_rules.json`` —
+this adapter is a generic walker over those rules. It walks the containment
+hierarchy implied by graph edges (``runs``, ``routes_to``, ``includes``) and
+emits ``EvidenceLevel.inferred`` ``Transition`` events for the derived
+nodes.
+
+Each structural rule asserts a class-A topology axiom — violating one means
+the topology graph itself is wrong, so the 4-gate does not falsify them.
 
 The adapter is a regular ``StateAdapter`` but takes ``prior_timelines`` at
 construction so it can avoid emitting transitions that would be redundant
-(observed worst-or-equal already present) or contradictory (observed
-healthy-after-recovery later). The pipeline driver runs the observation
-adapters first, synthesises a phase-1 timeline dict, then constructs this
-adapter and re-synthesises with the combined transition stream.
+(observed worst-or-equal already present at the cascade onset). The
+pipeline driver runs the observation adapters first, synthesises a phase-1
+timeline dict, then constructs this adapter and re-synthesises with the
+combined transition stream.
 """
 
 from __future__ import annotations
@@ -39,47 +38,24 @@ from collections.abc import Iterable
 
 from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
 from rcabench_platform.v3.internal.reasoning.ir.evidence import EvidenceLevel
+from rcabench_platform.v3.internal.reasoning.ir.states import severity as state_severity
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
 from rcabench_platform.v3.internal.reasoning.ir.transition import Transition
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperGraph, PlaceKind
-
-# Infrastructure-level states that trigger structural inheritance. Erroring and
-# slow on a container/pod manifest at the owning service the moment the fault
-# starts (the service has no other backend to route to) — without this cascade
-# the application-rooted rules ``container_erroring_to_span`` and
-# ``container_slow_to_span`` cannot find an intermediate pod/service window at
-# the fault onset and the path drops out at temporal admission. ``silent`` is
-# included because a service with no observable request flow cannot carry
-# observed traces on its spans either; per §11.1 only request-layer kinds
-# (service, span) carry SILENT, so it only fires for ``source_kind == service``.
-_INHERIT_SOURCE_STATES = frozenset({"unavailable", "degraded", "erroring", "slow", "silent"})
-
-# Severity ranks for the availability axis only. Mirrors the canonical severity
-# table in ir/states.py (silent ties with erroring at tier 4 per §11.1). Kept
-# local so this adapter does not couple to states the propagator might reorder
-# later. ``missing`` and ``unavailable`` tie at the top — both mean "the node
-# is gone".
-_AVAILABILITY_SEVERITY: dict[str, int] = {
-    "unknown": 0,
-    "healthy": 1,
-    "slow": 2,
-    "degraded": 3,
-    "restarting": 3,
-    "erroring": 4,
-    "silent": 4,
-    "unavailable": 5,
-    "missing": 5,
-}
+from rcabench_platform.v3.internal.reasoning.rules.builtin_rules import get_builtin_structural_rules
+from rcabench_platform.v3.internal.reasoning.rules.schema import (
+    PropagationDirection,
+    StructuralRule,
+)
 
 
 def _is_weaker_or_equal(prior_state: str, candidate: str) -> bool:
-    return _AVAILABILITY_SEVERITY.get(prior_state, 0) >= _AVAILABILITY_SEVERITY.get(candidate, 0)
+    """Whether ``prior_state`` is at least as severe as ``candidate``.
 
-
-def _last_state(timeline: StateTimeline | None) -> str:
-    if timeline is None or not timeline.windows:
-        return "healthy"
-    return timeline.windows[-1].state
+    Severity ranks come from the canonical taxonomy table in
+    :mod:`rcabench_platform.v3.internal.reasoning.ir.states` (§11.1).
+    """
+    return state_severity(prior_state) >= state_severity(candidate)
 
 
 def _state_at(timeline: StateTimeline | None, at: int) -> str:
@@ -88,9 +64,9 @@ def _state_at(timeline: StateTimeline | None, at: int) -> str:
     Used by the redundancy check in :meth:`_maybe_emit` so that a prior with
     a *late* worse-or-equal window does not suppress a structural claim at
     an *earlier* time when the prior is still healthy. The original
-    ``_last_state`` view is too coarse for the erroring/slow cascades — pods
-    typically reach ``degraded`` at +90s via k8s metric lag, which would
-    otherwise mask our injection-time pod cascade.
+    ``last_state`` view (using ``windows[-1].state``) is too coarse for the
+    erroring/slow cascades — pods typically reach ``degraded`` at +90s via
+    k8s metric lag, which would otherwise mask our injection-time pod cascade.
     """
     if timeline is None:
         return "healthy"
@@ -99,39 +75,12 @@ def _state_at(timeline: StateTimeline | None, at: int) -> str:
 
 
 class StructuralInheritanceAdapter:
-    """Emit inferred transitions on derived nodes when infra is unavailable/degraded.
+    """Emit inferred transitions on derived nodes per ``structural_rules.json``.
 
-    Inheritance map (derived state strictly within the containment edges'
-    ``possible_dst_states`` so propagator-side rule shapes stay consistent):
-
-    - ``container.unavailable`` -> parent ``pod.degraded``
-                                -> ``service.unavailable``
-                                -> every ``span|service::*``: ``missing``
-    - ``container.degraded``    -> ``service.degraded``
-                                (spans NOT inherited; degraded infra does not
-                                imply spans degrade — that should come from
-                                the trace adapter as an observable)
-    - ``container.erroring``    -> parent ``pod.erroring``
-                                -> ``service.erroring``
-                                (spans NOT inherited; the application-rooted
-                                rule ``container_erroring_to_span`` walks the
-                                hop sequence itself, this cascade only ensures
-                                pod and service have an intermediate window
-                                at the fault onset.)
-    - ``container.slow``        -> parent ``pod.degraded``
-                                -> ``service.slow``
-                                (pod has no SLOW state per taxonomy §11.1, so
-                                latency at the app layer projects as DEGRADED
-                                at pod level. Spans NOT inherited; same
-                                reasoning as the erroring cascade.)
-    - ``pod.unavailable``       -> ``service.unavailable``
-                                -> every ``span|service::*``: ``missing``
-    - ``pod.degraded``          -> ``service.degraded``
-    - ``service.unavailable``   -> every ``span|service::*``: ``missing``
-    - ``service.silent``        -> every ``span|service::*``: ``silent``
-                                (Class E mirror of the unavailable→missing rule;
-                                spans of a silent service cannot carry observed
-                                traces in this case.)
+    The cascade table is purely declarative — see
+    ``rules/structural_rules.json`` for the
+    ``(src_kind, src_state) -> [(via_edge, derived_kind, derived_state), ...]``
+    mapping. This adapter is a generic walker.
     """
 
     name = "structural_inheritance"
@@ -141,9 +90,16 @@ class StructuralInheritanceAdapter:
         *,
         graph: HyperGraph,
         prior_timelines: dict[str, StateTimeline],
+        rules: list[StructuralRule] | None = None,
     ) -> None:
         self._graph = graph
         self._prior_timelines = prior_timelines
+        self._rules = rules if rules is not None else get_builtin_structural_rules()
+        self._rule_index: dict[tuple[PlaceKind, str], StructuralRule] = {
+            (r.src_kind, r.src_state): r for r in self._rules
+        }
+        self._inherit_kinds: frozenset[PlaceKind] = frozenset(r.src_kind for r in self._rules)
+        self._inherit_states: frozenset[str] = frozenset(r.src_state for r in self._rules)
 
     def emit(self, ctx: AdapterContext) -> Iterable[Transition]:
         return list(self._emit_all())
@@ -154,234 +110,65 @@ class StructuralInheritanceAdapter:
         derived_last: dict[str, str] = {}
 
         for source_node_key, timeline in self._prior_timelines.items():
-            if timeline.kind not in (PlaceKind.container, PlaceKind.pod, PlaceKind.service):
+            if timeline.kind not in self._inherit_kinds:
                 continue
             for window in timeline.windows:
-                if window.state not in _INHERIT_SOURCE_STATES:
+                if window.state not in self._inherit_states:
                     continue
-                yield from self._emit_inheritance(
+                rule = self._rule_index.get((timeline.kind, window.state))
+                if rule is None:
+                    continue
+                yield from self._walk_rule(
+                    rule=rule,
                     source_node_key=source_node_key,
-                    source_kind=timeline.kind,
-                    source_state=window.state,
                     at=window.start,
                     derived_last=derived_last,
                 )
 
-    def _emit_inheritance(
+    def _walk_rule(
         self,
         *,
+        rule: StructuralRule,
         source_node_key: str,
-        source_kind: PlaceKind,
-        source_state: str,
         at: int,
         derived_last: dict[str, str],
     ) -> Iterable[Transition]:
-        if source_kind == PlaceKind.container:
-            yield from self._from_container(source_node_key, source_state, at, derived_last)
-        elif source_kind == PlaceKind.pod:
-            yield from self._from_pod(source_node_key, source_state, at, derived_last)
-        elif source_kind == PlaceKind.service:
-            if source_state == "unavailable":
-                yield from self._propagate_to_spans(source_node_key, source_state, at, derived_last)
-            elif source_state == "silent":
-                yield from self._propagate_to_spans(
-                    source_node_key,
-                    source_state,
-                    at,
-                    derived_last,
-                    derived_span_state="silent",
-                )
-
-    def _from_container(
-        self,
-        container_key: str,
-        source_state: str,
-        at: int,
-        derived_last: dict[str, str],
-    ) -> Iterable[Transition]:
-        container_node = self._graph.get_node_by_name(container_key)
-        if container_node is None or container_node.id is None:
+        source_node = self._graph.get_node_by_name(source_node_key)
+        if source_node is None or source_node.id is None:
             return
+        current_node_ids: list[int] = [source_node.id]
+        for step in rule.derivations:
+            next_node_ids: list[int] = []
+            for cur_id in current_node_ids:
+                for next_id in self._traverse(cur_id, step.via.edge_kind, step.via.direction):
+                    next_node = self._graph.get_node_by_id(next_id)
+                    if next_node is None or next_node.kind != step.derived_kind:
+                        continue
+                    next_node_ids.append(next_id)
+                    if step.derived_state is None:
+                        continue
+                    yield from self._maybe_emit(
+                        derived_node_key=next_node.uniq_name,
+                        derived_kind=next_node.kind,
+                        derived_state=step.derived_state,
+                        at=at,
+                        source_node_key=source_node_key,
+                        source_state=rule.src_state,
+                        derived_last=derived_last,
+                    )
+            current_node_ids = next_node_ids
+            if not current_node_ids:
+                return
 
-        pod_ids = [
-            src_id
-            for src_id, _dst_id, edge_key in self._graph._graph.in_edges(container_node.id, keys=True)  # type: ignore[call-arg]
-            if edge_key == DepKind.runs
-        ]
-
-        if source_state == "unavailable":
-            for pod_id in pod_ids:
-                pod_node = self._graph.get_node_by_id(pod_id)
-                yield from self._maybe_emit(
-                    derived_node_key=pod_node.uniq_name,
-                    derived_kind=PlaceKind.pod,
-                    derived_state="degraded",
-                    at=at,
-                    source_node_key=container_key,
-                    source_state=source_state,
-                    derived_last=derived_last,
-                )
-                yield from self._propagate_pod_to_service_and_spans(
-                    pod_node_id=pod_id,
-                    derived_service_state="unavailable",
-                    propagate_spans=True,
-                    at=at,
-                    source_node_key=container_key,
-                    source_state=source_state,
-                    derived_last=derived_last,
-                )
-        elif source_state == "degraded":
-            for pod_id in pod_ids:
-                yield from self._propagate_pod_to_service_and_spans(
-                    pod_node_id=pod_id,
-                    derived_service_state="degraded",
-                    propagate_spans=False,
-                    at=at,
-                    source_node_key=container_key,
-                    source_state=source_state,
-                    derived_last=derived_last,
-                )
-        elif source_state == "erroring":
-            for pod_id in pod_ids:
-                pod_node = self._graph.get_node_by_id(pod_id)
-                yield from self._maybe_emit(
-                    derived_node_key=pod_node.uniq_name,
-                    derived_kind=PlaceKind.pod,
-                    derived_state="erroring",
-                    at=at,
-                    source_node_key=container_key,
-                    source_state=source_state,
-                    derived_last=derived_last,
-                )
-                yield from self._propagate_pod_to_service_and_spans(
-                    pod_node_id=pod_id,
-                    derived_service_state="erroring",
-                    propagate_spans=False,
-                    at=at,
-                    source_node_key=container_key,
-                    source_state=source_state,
-                    derived_last=derived_last,
-                )
-        elif source_state == "slow":
-            # Pod has no SLOW state (§11.1), so app-layer slowness projects as
-            # DEGRADED at the pod level. Service does carry SLOW.
-            for pod_id in pod_ids:
-                pod_node = self._graph.get_node_by_id(pod_id)
-                yield from self._maybe_emit(
-                    derived_node_key=pod_node.uniq_name,
-                    derived_kind=PlaceKind.pod,
-                    derived_state="degraded",
-                    at=at,
-                    source_node_key=container_key,
-                    source_state=source_state,
-                    derived_last=derived_last,
-                )
-                yield from self._propagate_pod_to_service_and_spans(
-                    pod_node_id=pod_id,
-                    derived_service_state="slow",
-                    propagate_spans=False,
-                    at=at,
-                    source_node_key=container_key,
-                    source_state=source_state,
-                    derived_last=derived_last,
-                )
-
-    def _from_pod(
-        self,
-        pod_key: str,
-        source_state: str,
-        at: int,
-        derived_last: dict[str, str],
-    ) -> Iterable[Transition]:
-        pod_node = self._graph.get_node_by_name(pod_key)
-        if pod_node is None or pod_node.id is None:
-            return
-        if source_state == "unavailable":
-            yield from self._propagate_pod_to_service_and_spans(
-                pod_node_id=pod_node.id,
-                derived_service_state="unavailable",
-                propagate_spans=True,
-                at=at,
-                source_node_key=pod_key,
-                source_state=source_state,
-                derived_last=derived_last,
-            )
-        elif source_state == "degraded":
-            yield from self._propagate_pod_to_service_and_spans(
-                pod_node_id=pod_node.id,
-                derived_service_state="degraded",
-                propagate_spans=False,
-                at=at,
-                source_node_key=pod_key,
-                source_state=source_state,
-                derived_last=derived_last,
-            )
-
-    def _propagate_pod_to_service_and_spans(
-        self,
-        *,
-        pod_node_id: int,
-        derived_service_state: str,
-        propagate_spans: bool,
-        at: int,
-        source_node_key: str,
-        source_state: str,
-        derived_last: dict[str, str],
-    ) -> Iterable[Transition]:
-        service_ids = [
-            src_id
-            for src_id, _dst_id, edge_key in self._graph._graph.in_edges(pod_node_id, keys=True)  # type: ignore[call-arg]
-            if edge_key == DepKind.routes_to
-        ]
-        for service_id in service_ids:
-            service_node = self._graph.get_node_by_id(service_id)
-            yield from self._maybe_emit(
-                derived_node_key=service_node.uniq_name,
-                derived_kind=PlaceKind.service,
-                derived_state=derived_service_state,
-                at=at,
-                source_node_key=source_node_key,
-                source_state=source_state,
-                derived_last=derived_last,
-            )
-            if propagate_spans:
-                yield from self._propagate_to_spans(
-                    service_node.uniq_name,
-                    source_state,
-                    at,
-                    derived_last,
-                    source_node_key_override=source_node_key,
-                )
-
-    def _propagate_to_spans(
-        self,
-        service_key: str,
-        source_state: str,
-        at: int,
-        derived_last: dict[str, str],
-        *,
-        source_node_key_override: str | None = None,
-        derived_span_state: str = "missing",
-    ) -> Iterable[Transition]:
-        service_node = self._graph.get_node_by_name(service_key)
-        if service_node is None or service_node.id is None:
-            return
-        source_for_evidence = source_node_key_override or service_key
-        for _src_id, dst_id, edge_key in self._graph._graph.out_edges(service_node.id, keys=True):  # type: ignore[call-arg]
-            if edge_key != DepKind.includes:
-                continue
-            span_node = self._graph.get_node_by_id(dst_id)
-            if span_node.kind != PlaceKind.span:
-                continue
-            yield from self._maybe_emit(
-                derived_node_key=span_node.uniq_name,
-                derived_kind=PlaceKind.span,
-                derived_state=derived_span_state,
-                at=at,
-                source_node_key=source_for_evidence,
-                source_state=source_state,
-                derived_last=derived_last,
-            )
+    def _traverse(self, node_id: int, edge_kind: DepKind, direction: PropagationDirection) -> Iterable[int]:
+        if direction == PropagationDirection.FORWARD:
+            for _src, dst, ek in self._graph._graph.out_edges(node_id, keys=True):  # type: ignore[call-arg]
+                if ek == edge_kind:
+                    yield dst
+        else:
+            for src, _dst, ek in self._graph._graph.in_edges(node_id, keys=True):  # type: ignore[call-arg]
+                if ek == edge_kind:
+                    yield src
 
     def _maybe_emit(
         self,

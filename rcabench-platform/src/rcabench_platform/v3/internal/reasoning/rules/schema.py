@@ -331,3 +331,65 @@ class PropagationRule(BaseModel):
         if self.is_multi_hop:
             return len(self.path)  # type: ignore[arg-type]
         return 1
+
+
+class StructuralVia(BaseModel):
+    """One edge traversal in a structural cascade."""
+
+    edge_kind: DepKind = Field(description="Edge type to traverse")
+    direction: PropagationDirection = Field(
+        description="Traversal direction (FORWARD = follow edge, BACKWARD = reverse)"
+    )
+
+
+class StructuralDerivation(BaseModel):
+    """A single step in a structural cascade.
+
+    Walk from the previous step's nodes (or the source node, for the first
+    step) along ``via`` to the next set of nodes. Filter by ``derived_kind``;
+    if ``derived_state`` is non-null, emit an ``EvidenceLevel.inferred``
+    Transition for every reached node. Otherwise pass through silently.
+    """
+
+    via: StructuralVia
+    derived_kind: PlaceKind = Field(
+        description="Expected PlaceKind of derived nodes; non-matching neighbours are skipped"
+    )
+    derived_state: str | None = Field(
+        default=None,
+        description=(
+            "Canonical state to assert on derived nodes. ``None`` means walk "
+            "through without emitting — used when the intermediate kind has no "
+            "canonical mapping (e.g. pod has no SLOW state but still sits on "
+            "the container -> service path)."
+        ),
+    )
+
+    @field_validator("derived_state", mode="after")
+    @classmethod
+    def normalize_derived_state(cls, v: str | None) -> str | None:
+        return v.lower() if isinstance(v, str) else v
+
+
+class StructuralRule(BaseModel):
+    """A containment-axis structural inheritance rule.
+
+    Asserted by ``StructuralInheritanceAdapter`` at the IR layer, before
+    the propagator runs. All structural rules carry epistemic class ``A``
+    by definition — they encode topology axioms that follow from the k8s
+    containment hierarchy and cannot be falsified without invalidating
+    the topology graph itself.
+    """
+
+    rule_id: str = Field(description="Unique identifier")
+    description: str = Field(description="Human-readable description")
+    src_kind: PlaceKind = Field(description="Source PlaceKind that triggers the cascade")
+    src_state: str = Field(description="Source state that triggers the cascade")
+    derivations: list[StructuralDerivation] = Field(
+        description="Sequence of steps walked from the source node to derive states on downstream nodes"
+    )
+
+    @field_validator("src_state", mode="after")
+    @classmethod
+    def normalize_src_state(cls, v: str) -> str:
+        return v.lower()

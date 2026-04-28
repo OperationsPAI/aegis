@@ -30,7 +30,7 @@ from rcabench_platform.v3.internal.reasoning.algorithms.rule_matcher import Rule
 from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import TemporalValidator
 from rcabench_platform.v3.internal.reasoning.algorithms.topology_explorer import TopologyExplorer
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
-from rcabench_platform.v3.internal.reasoning.models.graph import HyperGraph, PlaceKind
+from rcabench_platform.v3.internal.reasoning.models.graph import HyperGraph, is_structural_mediator
 from rcabench_platform.v3.internal.reasoning.models.propagation import (
     PropagationPath,
     PropagationResult,
@@ -283,21 +283,21 @@ class FaultPropagator:
     def _compute_deviating_set(self) -> set[int]:
         """Nodes whose timeline has ever been in a non-{HEALTHY, UNKNOWN}
         state during the abnormal window, OR whose kind is a structural
-        k8s infra connector (pod / replica_set / deployment).
+        mediator (pod / replica_set / deployment, see
+        :func:`models.graph.is_structural_mediator`).
 
         Per §7.4, used by the activity filter in
         :meth:`propagate_from_injection` to restrict path search to nodes
-        that actually exhibit anomalous behavior. Treating pod / replica_set /
-        deployment as always-relevant matches the §7.4 invariant 1 spirit
+        that actually exhibit anomalous behavior. Treating structural
+        mediators as always-relevant matches the §7.4 invariant 1 spirit
         — they exist in the graph because they are part of the cascade
         structure, not because traces saw them.
         """
-        structural_kinds = {PlaceKind.pod, PlaceKind.replica_set, PlaceKind.deployment}
         deviating: set[int] = set()
         nominal = {"healthy", "unknown"}
         for node_id in self.graph._graph.nodes:
             node = self.graph.get_node_by_id(node_id)
-            if node is not None and node.kind in structural_kinds:
+            if node is not None and is_structural_mediator(node.kind):
                 deviating.add(node_id)
                 continue
             tl = self._timeline_for_node(node_id)

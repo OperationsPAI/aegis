@@ -4,9 +4,19 @@ from __future__ import annotations
 
 from rcabench_platform.v3.internal.reasoning.algorithms.gates.base import GateContext, GateResult
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath
+from rcabench_platform.v3.internal.reasoning.algorithms.policy import (
+    INJECT_NODE_PRE_GRACE_SECONDS,
+    INJECT_TIME_TOLERANCE_SECONDS,
+)
 
-INJECT_TIME_TOLERANCE_SECONDS: int = 60
-INJECT_NODE_PRE_GRACE_SECONDS: int = 5
+# Re-exported here for backward-compatibility with callers (cli.py, gates
+# package __init__) that imported these from the gate module before P0-A
+# centralised the constants in policy.py.
+__all__ = [
+    "InjectTimeGate",
+    "INJECT_TIME_TOLERANCE_SECONDS",
+    "INJECT_NODE_PRE_GRACE_SECONDS",
+]
 
 
 class InjectTimeGate:

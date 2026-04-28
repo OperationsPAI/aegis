@@ -523,6 +523,7 @@ def run_single_case(
     return_graph: bool = False,
     injection_data: dict[str, Any] | None = None,
     slo_surface: SLOSurface | None = None,
+    inject_time_tolerance_seconds: int | None = None,
 ) -> dict[str, Any]:
     case_name = data_dir.name
     if case_name == "converted":
@@ -657,8 +658,9 @@ def run_single_case(
 
         propagator_graph = graph
         if slo_impact.detected:
+            tau = INJECT_TIME_TOLERANCE_SECONDS if inject_time_tolerance_seconds is None else inject_time_tolerance_seconds
             delta_t = max(0, abnormal_window_end - injection_at)
-            injection_window = (injection_at, injection_at + delta_t + INJECT_TIME_TOLERANCE_SECONDS)
+            injection_window = (injection_at, injection_at + delta_t + tau)
             propagator = FaultPropagator(
                 graph=graph,
                 rules=rules,
