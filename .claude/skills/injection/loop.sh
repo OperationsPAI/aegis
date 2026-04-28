@@ -9,14 +9,21 @@
 #
 # Usage:
 #   loop.sh <system> [--rounds N] [--sleep SECS] [--engine claude|codex]
-#                    [--state-dir DIR] [--extra-instruction TEXT]
+#                    [--state-dir DIR] [--source-dir PATH]
+#                    [--extra-instruction TEXT] [--aegisctl-bin PATH]
 #
 # Defaults: rounds=999, sleep=900s, engine=claude,
 #           state-dir=~/.aegisctl/injection-author/<system>
+#           aegisctl-bin=/tmp/aegisctl
 #
 # 900s ≈ one inject→detect cycle, so the agent's next round can grade the
 # previous one retrospectively from aegisctl. Tune with --sleep if your
 # pipeline is faster/slower or the system shows long detector latency.
+#
+# --source-dir lets the agent grep the target system's source code during
+# step 4 (read-the-system) — code-grounded judgment about fan-in callers,
+# retry/timeout policies, and cache fallbacks beats prior-only judgment.
+# When omitted, the agent has to fall back on memory.md + topology only.
 
 set -euo pipefail
 
@@ -27,6 +34,7 @@ ENGINE="claude"
 STATE_BASE="${HOME}/.aegisctl/injection-author"
 EXTRA_INSTRUCTION=""
 AEGISCTL_BIN="/tmp/aegisctl"
+SOURCE_DIR=""
 
 usage() {
   sed -n '2,20p' "$0" >&2
@@ -41,6 +49,7 @@ while [[ $# -gt 0 ]]; do
     --state-dir)         STATE_BASE="$2"; shift 2 ;;
     --extra-instruction) EXTRA_INSTRUCTION="$2"; shift 2 ;;
     --aegisctl-bin)      AEGISCTL_BIN="$2"; shift 2 ;;
+    --source-dir)        SOURCE_DIR="$2"; shift 2 ;;
     -h|--help)           usage 0 ;;
     -*)                  echo "unknown flag: $1" >&2; usage 2 ;;
     *)
@@ -75,6 +84,11 @@ fi
 if [[ ! -x "$AEGISCTL_BIN" ]]; then
   echo "error: aegisctl binary not executable at $AEGISCTL_BIN — pass --aegisctl-bin /abs/path/to/aegisctl" >&2
   exit 127
+fi
+
+if [[ -n "$SOURCE_DIR" && ! -d "$SOURCE_DIR" ]]; then
+  echo "error: --source-dir $SOURCE_DIR is not a directory" >&2
+  exit 2
 fi
 
 STATE_DIR="${STATE_BASE}/${SYSTEM}"
@@ -117,6 +131,8 @@ for i in $(seq 1 "$ROUNDS"); do
 Autonomous injection round ${i} of ${ROUNDS}, target system: ${SYSTEM}.
 State directory: ${STATE_DIR}
 aegisctl binary: ${AEGISCTL_BIN}  (use this absolute path for every aegisctl invocation — it's the build matched to the current backend; do NOT rely on \`aegisctl\` from PATH).
+${SOURCE_DIR:+system source code: ${SOURCE_DIR}  (this is the target system's source repo — grep it during step 4 to ground your puzzle choice in real code, not priors. Look for fan-in callers (who calls the candidate method), retry/timeout policies, cache fallbacks, and shared resources before proposing a fault. Code-grounded judgment beats prior-only judgment.)
+}
 
 Follow the \`injection\` skill end-to-end this round. The skill body has the full schema for round files and the multi-source reward framework — read it before doing anything else.
 
