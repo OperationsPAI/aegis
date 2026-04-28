@@ -408,6 +408,9 @@ func (r *Repository) listProjectInjectionsView(projectID, limit, offset int, fil
 		if filterOptions.FaultType != nil {
 			baseQuery = baseQuery.Where("fault_injections.fault_type = ?", *filterOptions.FaultType)
 		}
+		if filterOptions.Category != nil {
+			baseQuery = baseQuery.Where("fault_injections.category = ?", *filterOptions.Category)
+		}
 		if filterOptions.Benchmark != "" {
 			baseQuery = baseQuery.Where("fault_injections.benchmark = ?", filterOptions.Benchmark)
 		}
