@@ -1,0 +1,1041 @@
+{
+  "candidates": [
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "CPUStress",
+      "container": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "ContainerKill",
+      "container": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "MemoryStress",
+      "container": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "NetworkDelay",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "NetworkLoss",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "NetworkPartition",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "cast-info-service",
+      "chaos_type": "TimeSkew",
+      "container": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "compose-review-service",
+      "chaos_type": "CPUStress",
+      "container": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "compose-review-service",
+      "chaos_type": "ContainerKill",
+      "container": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "compose-review-service",
+      "chaos_type": "MemoryStress",
+      "container": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "compose-review-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "compose-review-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "compose-review-service",
+      "chaos_type": "TimeSkew",
+      "container": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-id-service",
+      "chaos_type": "CPUStress",
+      "container": "movie-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-id-service",
+      "chaos_type": "ContainerKill",
+      "container": "movie-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-id-service",
+      "chaos_type": "MemoryStress",
+      "container": "movie-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-id-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-id-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-id-service",
+      "chaos_type": "TimeSkew",
+      "container": "movie-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-info-service",
+      "chaos_type": "CPUStress",
+      "container": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-info-service",
+      "chaos_type": "ContainerKill",
+      "container": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-info-service",
+      "chaos_type": "MemoryStress",
+      "container": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-info-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-info-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-info-service",
+      "chaos_type": "TimeSkew",
+      "container": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-review-service",
+      "chaos_type": "CPUStress",
+      "container": "movie-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-review-service",
+      "chaos_type": "ContainerKill",
+      "container": "movie-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-review-service",
+      "chaos_type": "MemoryStress",
+      "container": "movie-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-review-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-review-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "movie-review-service",
+      "chaos_type": "TimeSkew",
+      "container": "movie-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "CPUStress",
+      "container": "nginx-web-server"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "ContainerKill",
+      "container": "nginx-web-server"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSError",
+      "domain": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSError",
+      "domain": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSError",
+      "domain": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSError",
+      "domain": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSError",
+      "domain": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSError",
+      "domain": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSRandom",
+      "domain": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSRandom",
+      "domain": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSRandom",
+      "domain": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSRandom",
+      "domain": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSRandom",
+      "domain": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "DNSRandom",
+      "domain": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "MemoryStress",
+      "container": "nginx-web-server"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDelay",
+      "target_service": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDelay",
+      "target_service": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDelay",
+      "target_service": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDelay",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDelay",
+      "target_service": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDelay",
+      "target_service": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkLoss",
+      "target_service": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkLoss",
+      "target_service": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkLoss",
+      "target_service": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkLoss",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkLoss",
+      "target_service": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkLoss",
+      "target_service": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkPartition",
+      "target_service": "cast-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkPartition",
+      "target_service": "compose-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkPartition",
+      "target_service": "movie-info-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkPartition",
+      "target_service": "page-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkPartition",
+      "target_service": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "NetworkPartition",
+      "target_service": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "nginx-web-server",
+      "chaos_type": "TimeSkew",
+      "container": "nginx-web-server"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "plot-service",
+      "chaos_type": "CPUStress",
+      "container": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "plot-service",
+      "chaos_type": "ContainerKill",
+      "container": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "plot-service",
+      "chaos_type": "MemoryStress",
+      "container": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "plot-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "plot-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "plot-service",
+      "chaos_type": "TimeSkew",
+      "container": "plot-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "rating-service",
+      "chaos_type": "CPUStress",
+      "container": "rating-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "rating-service",
+      "chaos_type": "ContainerKill",
+      "container": "rating-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "rating-service",
+      "chaos_type": "MemoryStress",
+      "container": "rating-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "rating-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "rating-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "rating-service",
+      "chaos_type": "TimeSkew",
+      "container": "rating-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "review-storage-service",
+      "chaos_type": "CPUStress",
+      "container": "review-storage-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "review-storage-service",
+      "chaos_type": "ContainerKill",
+      "container": "review-storage-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "review-storage-service",
+      "chaos_type": "MemoryStress",
+      "container": "review-storage-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "review-storage-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "review-storage-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "review-storage-service",
+      "chaos_type": "TimeSkew",
+      "container": "review-storage-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "text-service",
+      "chaos_type": "CPUStress",
+      "container": "text-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "text-service",
+      "chaos_type": "ContainerKill",
+      "container": "text-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "text-service",
+      "chaos_type": "MemoryStress",
+      "container": "text-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "text-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "text-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "text-service",
+      "chaos_type": "TimeSkew",
+      "container": "text-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "unique-id-service",
+      "chaos_type": "CPUStress",
+      "container": "unique-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "unique-id-service",
+      "chaos_type": "ContainerKill",
+      "container": "unique-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "unique-id-service",
+      "chaos_type": "MemoryStress",
+      "container": "unique-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "unique-id-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "unique-id-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "unique-id-service",
+      "chaos_type": "TimeSkew",
+      "container": "unique-id-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-review-service",
+      "chaos_type": "CPUStress",
+      "container": "user-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-review-service",
+      "chaos_type": "ContainerKill",
+      "container": "user-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-review-service",
+      "chaos_type": "MemoryStress",
+      "container": "user-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-review-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-review-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-review-service",
+      "chaos_type": "TimeSkew",
+      "container": "user-review-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-service",
+      "chaos_type": "CPUStress",
+      "container": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-service",
+      "chaos_type": "ContainerKill",
+      "container": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-service",
+      "chaos_type": "MemoryStress",
+      "container": "user-service"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "media",
+      "system_type": "media",
+      "namespace": "mm0",
+      "app": "user-service",
+      "chaos_type": "TimeSkew",
+      "container": "user-service"
+    }
+  ],
+  "_meta": {
+    "raw_candidate_count": 204,
+    "filtered_candidate_count": 132,
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

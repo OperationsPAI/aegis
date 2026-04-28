@@ -1,0 +1,2562 @@
+{
+  "candidates": [
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "CPUStress",
+      "container": "accounting"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "ContainerKill",
+      "container": "accounting"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "DNSError",
+      "domain": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "DNSRandom",
+      "domain": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "MemoryStress",
+      "container": "accounting"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "NetworkDelay",
+      "target_service": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "NetworkLoss",
+      "target_service": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "NetworkPartition",
+      "target_service": "postgresql"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "accounting",
+      "chaos_type": "TimeSkew",
+      "container": "accounting"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "CPUStress",
+      "container": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "ContainerKill",
+      "container": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "blockUntilShutdown"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "createAdsMap"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "getAdsByCategory"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "getInstance"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "getRandomAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "main"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "start"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService",
+      "method": "stop"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "AdServiceImpl"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMCPUStress",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "getAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "blockUntilShutdown"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "createAdsMap"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "getAdsByCategory"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "getInstance"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "getRandomAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "main"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "start"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService",
+      "method": "stop"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "AdServiceImpl"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMException",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "getAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMGarbageCollector"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "blockUntilShutdown"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "createAdsMap"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "getAdsByCategory"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "getInstance"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "getRandomAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "main"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "start"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService",
+      "method": "stop"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "AdServiceImpl"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMLatency",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "getAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "blockUntilShutdown"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "createAdsMap"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "getAdsByCategory"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "getInstance"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "getRandomAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "main"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "start"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService",
+      "method": "stop"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "AdServiceImpl"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMMemoryStress",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "getAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "blockUntilShutdown"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "createAdsMap"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "getAdsByCategory"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "getInstance"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "getRandomAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "main"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "start"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService",
+      "method": "stop"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "AdServiceImpl"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMReturn",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "getAds"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMRuntimeMutator",
+      "class": "oteldemo.AdService",
+      "method": "createAdsMap",
+      "mutator_config": "constant:\"/product/0PUK6V6EV0\":\"mutated_/product/0PUK6V6EV0\""
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMRuntimeMutator",
+      "class": "oteldemo.AdService",
+      "method": "getAdsByCategory",
+      "mutator_config": "constant:\"app.ads.category\":\"mutated_app.ads.category\""
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMRuntimeMutator",
+      "class": "oteldemo.AdService",
+      "method": "getRandomAds",
+      "mutator_config": "constant:\"app.ads.count\":\"mutated_app.ads.count\""
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMRuntimeMutator",
+      "class": "oteldemo.AdService",
+      "method": "start",
+      "mutator_config": "constant:\"\":\"mutated_\""
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMRuntimeMutator",
+      "class": "oteldemo.AdService",
+      "method": "stop",
+      "mutator_config": "constant:\"\":\"mutated_\""
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "JVMRuntimeMutator",
+      "class": "oteldemo.AdService.AdServiceImpl",
+      "method": "getAds",
+      "mutator_config": "constant:\" enabled, performing a manual gc now\":\"mutated_ enabled, performing a manual gc now\""
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "MemoryStress",
+      "container": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "NetworkDelay",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "NetworkLoss",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "NetworkPartition",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "ad",
+      "chaos_type": "TimeSkew",
+      "container": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "CPUStress",
+      "container": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "ContainerKill",
+      "container": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "DNSError",
+      "domain": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "DNSRandom",
+      "domain": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "MemoryStress",
+      "container": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkDelay",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkDelay",
+      "target_service": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkLoss",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkLoss",
+      "target_service": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkPartition",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "NetworkPartition",
+      "target_service": "valkey-cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "cart",
+      "chaos_type": "TimeSkew",
+      "container": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "CPUStress",
+      "container": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "ContainerKill",
+      "container": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "DNSError",
+      "domain": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "DNSError",
+      "domain": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "DNSRandom",
+      "domain": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "DNSRandom",
+      "domain": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "MemoryStress",
+      "container": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDelay",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDelay",
+      "target_service": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDelay",
+      "target_service": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDelay",
+      "target_service": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDelay",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDelay",
+      "target_service": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkLoss",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkLoss",
+      "target_service": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkLoss",
+      "target_service": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkLoss",
+      "target_service": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkLoss",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkLoss",
+      "target_service": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkPartition",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkPartition",
+      "target_service": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkPartition",
+      "target_service": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkPartition",
+      "target_service": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkPartition",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "NetworkPartition",
+      "target_service": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "checkout",
+      "chaos_type": "TimeSkew",
+      "container": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "currency",
+      "chaos_type": "CPUStress",
+      "container": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "currency",
+      "chaos_type": "ContainerKill",
+      "container": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "currency",
+      "chaos_type": "MemoryStress",
+      "container": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "currency",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "currency",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "currency",
+      "chaos_type": "TimeSkew",
+      "container": "currency"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "CPUStress",
+      "container": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "ContainerKill",
+      "container": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "DNSError",
+      "domain": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "DNSRandom",
+      "domain": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "MemoryStress",
+      "container": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "NetworkDelay",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "NetworkLoss",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "NetworkPartition",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "email",
+      "chaos_type": "TimeSkew",
+      "container": "email"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "CPUStress",
+      "container": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "CPUStress",
+      "container": "flagd-ui"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "ContainerKill",
+      "container": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "ContainerKill",
+      "container": "flagd-ui"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "MemoryStress",
+      "container": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "MemoryStress",
+      "container": "flagd-ui"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "TimeSkew",
+      "container": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "flagd",
+      "chaos_type": "TimeSkew",
+      "container": "flagd-ui"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "CPUStress",
+      "container": "fraud-detection"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "ContainerKill",
+      "container": "fraud-detection"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "MemoryStress",
+      "container": "fraud-detection"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "NetworkDelay",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "NetworkLoss",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "NetworkPartition",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "fraud-detection",
+      "chaos_type": "TimeSkew",
+      "container": "fraud-detection"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "CPUStress",
+      "container": "frontend"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "ContainerKill",
+      "container": "frontend"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "DNSError",
+      "domain": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "DNSRandom",
+      "domain": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "MemoryStress",
+      "container": "frontend"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "ad"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "cart"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "frontend",
+      "chaos_type": "TimeSkew",
+      "container": "frontend"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "CPUStress",
+      "container": "image-provider"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "ContainerKill",
+      "container": "image-provider"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "DNSError",
+      "domain": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "DNSRandom",
+      "domain": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "MemoryStress",
+      "container": "image-provider"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "NetworkDelay",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "NetworkLoss",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "NetworkPartition",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "image-provider",
+      "chaos_type": "TimeSkew",
+      "container": "image-provider"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "payment",
+      "chaos_type": "CPUStress",
+      "container": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "payment",
+      "chaos_type": "ContainerKill",
+      "container": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "payment",
+      "chaos_type": "MemoryStress",
+      "container": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "payment",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "payment",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "payment",
+      "chaos_type": "TimeSkew",
+      "container": "payment"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "product-catalog",
+      "chaos_type": "CPUStress",
+      "container": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "product-catalog",
+      "chaos_type": "ContainerKill",
+      "container": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "product-catalog",
+      "chaos_type": "MemoryStress",
+      "container": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "product-catalog",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "product-catalog",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "product-catalog",
+      "chaos_type": "TimeSkew",
+      "container": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "quote",
+      "chaos_type": "CPUStress",
+      "container": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "quote",
+      "chaos_type": "ContainerKill",
+      "container": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "quote",
+      "chaos_type": "MemoryStress",
+      "container": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "quote",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "quote",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "quote",
+      "chaos_type": "TimeSkew",
+      "container": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "CPUStress",
+      "container": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "ContainerKill",
+      "container": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "MemoryStress",
+      "container": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkDelay",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkDelay",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkLoss",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkLoss",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkPartition",
+      "target_service": "flagd"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "NetworkPartition",
+      "target_service": "product-catalog"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "recommendation",
+      "chaos_type": "TimeSkew",
+      "container": "recommendation"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "CPUStress",
+      "container": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "ContainerKill",
+      "container": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "DNSError",
+      "domain": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "DNSError",
+      "domain": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "DNSError",
+      "domain": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "DNSRandom",
+      "domain": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "DNSRandom",
+      "domain": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "DNSRandom",
+      "domain": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "MemoryStress",
+      "container": "shipping"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkDelay",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkDelay",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkDelay",
+      "target_service": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkLoss",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkLoss",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkLoss",
+      "target_service": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkPartition",
+      "target_service": "checkout"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkPartition",
+      "target_service": "load-generator"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "NetworkPartition",
+      "target_service": "quote"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "otel-demo",
+      "system_type": "otel-demo",
+      "namespace": "otel-demo0",
+      "app": "shipping",
+      "chaos_type": "TimeSkew",
+      "container": "shipping"
+    }
+  ],
+  "_meta": {
+    "raw_candidate_count": 657,
+    "filtered_candidate_count": 315,
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

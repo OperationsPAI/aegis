@@ -1,12 +1,43 @@
 {
-  "round": 11, "system": "mm", "system_type": "mm",
-  "pedestal": {"name": "media", "tag": "0.1.1"},
-  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
-  "defaults": {"interval": 10, "pre_duration": 5},
+  "round": 11,
+  "system": "mm",
+  "system_type": "mm",
+  "pedestal": {
+    "name": "media",
+    "tag": "0.1.1"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5,
+    "duration": 10
+  },
   "_strategy": "First test post chart 0.1.4 OTel fix.",
   "candidates": [
-    {"id": "m11_01", "app": "nginx-web-server",    "chaos_type": "PodFailure", "params": {}, "duration_override": 10},
-    {"id": "m11_02", "app": "movie-info-service",  "chaos_type": "PodFailure", "params": {}, "duration_override": 10},
-    {"id": "m11_03", "app": "user-review-service", "chaos_type": "PodFailure", "params": {}, "duration_override": 10}
-  ]
+    {
+      "id": "m11_01",
+      "app": "nginx-web-server",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 10
+    },
+    {
+      "id": "m11_02",
+      "app": "movie-info-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 10
+    },
+    {
+      "id": "m11_03",
+      "app": "user-review-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 10
+    }
+  ],
+  "_migration_note": "Migrated to fixed-duration schema with defaults.duration=10. Candidate-level duration_override removed from routine round generation."
 }

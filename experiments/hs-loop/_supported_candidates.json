@@ -1,0 +1,809 @@
+{
+  "candidates": [
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "attractions",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "attractions",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "attractions",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "attractions",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "attractions",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "attractions",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-frontend"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-frontend"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-frontend"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDelay",
+      "target_service": "user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkLoss",
+      "target_service": "user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "attractions"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "NetworkPartition",
+      "target_service": "user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "frontend",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-frontend"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "geo",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "geo",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "geo",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "geo",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "geo",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "geo",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "profile",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "profile",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "profile",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "profile",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "profile",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "profile",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-profile"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "rate",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "rate",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "rate",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "rate",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "rate",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "rate",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "recommendation",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "recommendation",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "recommendation",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "recommendation",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "recommendation",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "recommendation",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-recommendation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "reservation",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "reservation",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "reservation",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "reservation",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "reservation",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "reservation",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-reservation"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkDelay",
+      "target_service": "geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkDelay",
+      "target_service": "rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkLoss",
+      "target_service": "geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkLoss",
+      "target_service": "rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkPartition",
+      "target_service": "geo"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "NetworkPartition",
+      "target_service": "rate"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "search",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-search"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "user",
+      "chaos_type": "CPUStress",
+      "container": "hotel-reserv-user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "user",
+      "chaos_type": "ContainerKill",
+      "container": "hotel-reserv-user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "user",
+      "chaos_type": "MemoryStress",
+      "container": "hotel-reserv-user"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "user",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "user",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "hs",
+      "system_type": "hs",
+      "namespace": "hs0",
+      "app": "user",
+      "chaos_type": "TimeSkew",
+      "container": "hotel-reserv-user"
+    }
+  ],
+  "_meta": {
+    "raw_candidate_count": 174,
+    "filtered_candidate_count": 102,
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

@@ -1,6 +1,14 @@
 ---
 name: inject-loop
-description: Drive a closed-loop fault-injection campaign against an aegis-deployed benchmark system. Use when the user asks to "run an injection loop", "iterate on fault candidates", "pick the next batch", "score candidates and submit", or wants you to repeatedly choose-submit-watch-update over a candidate pool of (app, chaos_type, params) tuples on systems like sockshop / otel-demo / ts / tea / hs / sn / mm. Trigger words: inject loop, candidate pool, batch injection, fault campaign, posterior, reward, adversarial inject, anti-detector inject.
+description: >-
+  Drive a closed-loop fault-injection campaign against an aegis-deployed
+  benchmark system. Use when the user asks to "run an injection loop",
+  "iterate on fault candidates", "pick the next batch", "score candidates and
+  submit", or wants you to repeatedly choose-submit-watch-update over a
+  candidate pool of (app, chaos_type, params) tuples on systems like sockshop /
+  otel-demo / ts / tea / hs / sn / mm. Trigger words: inject loop, candidate
+  pool, batch injection, fault campaign, posterior, reward, adversarial
+  inject, anti-detector inject.
 ---
 
 # Fault-Injection Loop
@@ -24,7 +32,7 @@ Drive a closed-loop fault-injection campaign: a stable candidate pool, K paralle
 
 Maintain per-round files under `experiments/<system>-loop/`:
 
-- `candidates_round<N>.json` — the round's pool: `{round, system, system_type, pedestal, benchmark, defaults, _strategy, _results, candidates: [...]}`. Each candidate is `{id, app, chaos_type, params, duration_override?, paired_with?, trace_id?, ns?, terminal?, reward?, _note?, _outcome?, _failure?}`. The fields with `_` prefix are free-form annotations; `_strategy` is one paragraph at the top describing why this round is shaped the way it is, and `_results` is a one-paragraph postmortem appended after reaping.
+- `candidates_round<N>.json` — the round's pool: `{round, system, system_type, pedestal, benchmark, defaults, _strategy, _results, candidates: [...]}`. `defaults` must include `{interval, pre_duration, duration}` for a normal loop round. Each candidate is `{id, app, chaos_type, params, duration_override?, paired_with?, trace_id?, ns?, terminal?, reward?, _note?, _outcome?, _failure?}`. The fields with `_` prefix are free-form annotations; `_strategy` is one paragraph at the top describing why this round is shaped the way it is, and `_results` is a one-paragraph postmortem appended after reaping. `duration_override` is for explicit manual experiments only — not routine round generation.
 - `runs_round<N>.jsonl` — append-only, one line per submission attempt: `{ts, candidate_id, paired_with, group_id, trace_id, task_id, ns}` or `{ts, candidate_id, error}` on submit failure.
 - `terminals_round<N>.tsv` — one row per unique trace_id with `{trace_id, state, last_event}`. Refresh by running `experiments/lib/loop_iter.sh <system> <round>`.
 
@@ -43,9 +51,47 @@ python3 lib/submit_dual.py \
   --submit-sleep 4
 ```
 
-It reads candidates, walks them in order, and either submits each as a single-spec batch or pairs the head with the next remaining (probability `--pair-prob`) into a multi-spec batch sharing one ns + trace. When a pair lands `+1`, both candidates inherit it. The script defaults `container` to `app` when a chaos type needs a container and neither `defaults.container` nor a per-candidate override is set — fixes CPUStress / MemoryStress / ContainerKill on systems without a `defaults.container`.
+It reads candidates, walks them in order, and either submits each as a single-spec batch or pairs the head with the next remaining (probability `--pair-prob`) into a multi-spec batch sharing one ns + trace. When a pair lands `+1`, both candidates inherit it. The script defaults `container` to `app` when a chaos type needs a container and neither `defaults.container` nor a per-candidate override is set — fixes CPUStress / MemoryStress / ContainerKill on systems without a `defaults.container`. It also prefers a round-level fixed `defaults.duration`; do not use candidate-level duration tweaking as your normal dedup strategy.
 
 `--submit-sleep` controls inter-submit delay (default 2s). Bump to 4s+ when running back-to-back same-app candidates: bursting the same `(app, chaos_type, params)` fingerprint hits the backend's regression dedup.
+
+## Round validator
+
+Before every submit, run:
+
+```bash
+python3 experiments/lib/validate_round.py \
+  --candidates experiments/<system>-loop/candidates_round<N>.json \
+  --supported  experiments/<system>-loop/_supported_candidates.json \
+  --campaign   ralph/examples/inject-loop/campaign.json
+```
+
+The validator is a hard gate:
+
+- rejects rounds that exceed the pod-family cap
+- rejects rounds that ignore supported chaos types absent in the last 3 rounds
+- rejects duplicate fingerprints within the round
+- rejects per-candidate `duration_override` when the campaign is in fixed-duration mode
+
+Do not submit a round that fails validation.
+
+## Live system mix
+
+Before planning the next round, refresh a live snapshot of the system's supported fault space, current injection mix, and trace runtime mix:
+
+```bash
+python3 experiments/lib/live_mix.py \
+  --campaign ralph/examples/inject-loop/campaigns/<system>/campaign.json \
+  --refresh-supported
+```
+
+This snapshot combines:
+
+- `aegisctl inject candidates ls` for supported `(app, chaos_type, params)` space
+- `aegisctl inject list` + `inject get` for current backend injection inventory filtered by `display_config.system`
+- `aegisctl trace list` joined with the loop's local `runs_round*.jsonl` / legacy history for actual Running / Completed / Failed trace state by `chaos_type`
+
+Use `live_mix.json` as the first input to round planning. If a `chaos_type` already has a large Running backlog, reduce its budget even if the last 3 local rounds under-sampled it.
 
 ## Two critical unit traps
 
@@ -56,7 +102,7 @@ It reads candidates, walks them in order, and either submits each as a single-sp
 
 Submitting the same `(system, ns, app, chaos_type, params, duration, interval, pre_duration)` fingerprint a second time within the dedup window returns HTTP 200 with `data.items: []` and `data.warnings.batches_exist_in_database: [<batch index>]`. The submit looks "successful" but no trace is created. `submit_dual.py` logs this as `ns=None trace=None`.
 
-**Bypass:** vary one of the fingerprint fields per candidate. Easiest is to stagger `duration_override` (5/6/7/8/9 across an N=5 stability sweep). Same chaos params with different durations are distinct fingerprints and all submit cleanly.
+**Bypass:** vary one of the fingerprint fields per candidate. In this loop, keep `defaults.duration` fixed for the round and prefer varying `params`, `interval`, `pre_duration`, or the chosen non-pod `chaos_type` slot. Do **not** build a round by cloning candidates and only staggering `duration_override` — that is explicitly invalid now.
 
 ## Enumerate the candidate space
 
@@ -76,10 +122,11 @@ The dataset this campaign produces is meant to *cover the system's fault space*.
 
 **Pre-submit gate (run BEFORE building the round)**:
 1. List the supported chaos_type set for the system: `aegisctl inject candidates ls --system <code> --namespace <ns> -o json | jq -r '.candidates[].chaos_type' | sort -u`. (Or read `experiments/<sys>-loop/_supported_chaos_types.txt` if cached.)
+   - Preferred cache form now: `aegisctl inject candidates ls --system <code> --namespace <ns> -o json > experiments/<sys>-loop/_supported_candidates.json`, then derive chaos types from that file and feed it to `validate_round.py`.
 2. Count `chaos_type` distribution across the **last 3 rounds** of `runs_round*.tsv` for this system.
-3. **If any supported chaos_type with non-zero candidate space has 0 picks across the last 3 rounds, it MUST occupy ≥1 slot in this round.** No exceptions for "dedup easier with PodFailure". Fix the dedup with duration/interval/pre_duration/params variation, not by flattening fault diversity.
+3. **If any supported chaos_type with non-zero candidate space has 0 picks across the last 3 rounds, it MUST occupy ≥1 slot in this round.** No exceptions for "dedup easier with PodFailure". Fix the dedup with params / interval / pre_duration variation, not by flattening fault diversity.
 
-If you find yourself cycling `PodFailure → PodKill → ContainerKill` round-to-round and calling that "diversifying" — STOP. Those are all `category=pod`. Real diversity needs `network-*`, `JVM*` (Java), `HTTPChaos`, `CPUStress`/`MemoryStress`, `DNSError`/`DNSRandom`, `TimeSkew`. (Failure mode logged 2026-04-28: a 31h / 662-trace campaign that came in 80% PodFailure and 0% network/HTTP/stress/DNS/time. Don't repeat it.)
+If you find yourself cycling `PodFailure → PodKill → ContainerKill` round-to-round and calling that "diversifying" — STOP. Those are all `category=pod`. Real diversity needs `network-*`, `JVM*` (Java), HTTP faults on clusters that actually support them, `CPUStress`/`MemoryStress`, `DNSError`/`DNSRandom`, `TimeSkew`. (Failure mode logged 2026-04-28: a 31h / 662-trace campaign that came in 80% PodFailure and 0% network/HTTP/stress/DNS/time. Don't repeat it.)
 
 **Coarse: chaos_type budget** — proportional to that chaos_type's candidate-space size, but with floor and ceiling so no single type dominates.
 - `coarse_share[c] = clamp(space[c] / Σ space, floor=1/(2·n_types·K), ceiling=0.5)`
@@ -87,7 +134,7 @@ If you find yourself cycling `PodFailure → PodKill → ContainerKill` round-to
 - Apply success boost: `share[c] *= 1 + α · (success_rate[c] − mean_success_rate)`, with `α ≈ 0.3`. Small, so success doesn't snowball into bias.
 - A chaos_type that hit zero successes drops to its floor, **not to zero** — keeps exploration alive.
 - **Category guard**: at most ⌈K/2⌉ slots from the `pod-*` family (PodFailure + PodKill + ContainerKill combined). Forces network / JVM / HTTP / stress / DNS / time to claim the rest.
-- **Per-round target shape** (for K=10–12, after the floor + category guard land): roughly 40% pod-*, 30% network-*, 20% JVM* (Java systems) or HTTPChaos (otel-demo / non-Java), 10% stress/DNS/time. Shape it before scoring fine valuation, not after.
+- **Per-round target shape** (for K=10–12, after the floor + category guard land): roughly 40% pod-*, 30% network-*, 20% JVM* (Java systems) or HTTP faults on clusters that support them, 10% stress/DNS/time. On the current byte-cluster style deployment, `HTTP*` is hard-disabled, so push that budget into network/stress/DNS/time instead. Shape it before scoring fine valuation, not after.
 
 **Fine: candidate valuation** — driven by the system's source repo, not by ClickHouse.
 - For **JVM** candidates `(app, class, method)`:
@@ -105,6 +152,8 @@ Diversity guards:
 ### 2. Submit each candidate
 
 Default to `submit_dual.py` (handles `--auto --allow-bootstrap` plus the dual-fault pairing). Always pass `--reset-config --no-save-config --non-interactive --output json` if invoking `aegisctl` directly. Other flags depend on chaos_type — see "Chaos-type traps" below.
+
+Normal policy: set one round-level `defaults.duration` and keep it fixed. Candidate-level `duration_override` should appear only when the user explicitly asked for a duration experiment.
 
 If submit returns 500: read the backend log immediately, don't retry blindly. The error message names the exact missing field 90% of the time (network pair not found, container not found, app not found in ns, etc.). Capture the response body in the candidate's `_failure` field — the failure mode is itself a finding.
 
@@ -160,7 +209,7 @@ Use pairing as a probe, not a default: 30% rate is reasonable for exploration ro
 - **DNSError needs a cataloged domain.** Short service names ("checkout") and arbitrary external hosts ("www.example.com") both fail. Use FQDN inside the cluster (`checkout.<ns>.svc.cluster.local`) or a domain the resolver actually has.
 - **TimeSkew `time_offset` is integer seconds.** `"+1h"` 400s.
 - **HTTPRequest/Response chaos** needs a route that's in the observed-routes catalog. Random gateway paths fail.
-- **HTTPChaos is unusable on byte-cluster (and any IPVLAN-based CNI cluster).** chaos-mesh's tproxy implementation tries to attach the pod's `eth0` to a Linux bridge in `chaos-tproxy-controller/src/proxy/net/bridge.rs::setenv_bridge`. The kernel rejects this on IPVLAN child interfaces with `RTNETLINK answers: Invalid argument`. byte-cluster's CNI is Cello in `eni_shared` mode (default), which makes pod `eth0` an IPVLAN child of a host ENI. Symptom: HTTPChaos stays at `Phase: Not Injected/Wait`, `injectedCount: 0`; tproxy ends up running inside the pod (chaos-daemon spawned it before bridge setup), but rules are never applied. Skip HTTPChaos / HTTPDelay / HTTPAbort entirely on this class of cluster — exclude them from candidate generation. Tracked at `OperationsPAI/chaos-mesh#7`.
+- **HTTPChaos is unusable on byte-cluster (and any IPVLAN-based CNI cluster).** chaos-mesh's tproxy implementation tries to attach the pod's `eth0` to a Linux bridge in `chaos-tproxy-controller/src/proxy/net/bridge.rs::setenv_bridge`. The kernel rejects this on IPVLAN child interfaces with `RTNETLINK answers: Invalid argument`. byte-cluster's CNI is Cello in `eni_shared` mode (default), which makes pod `eth0` an IPVLAN child of a host ENI. Symptom: HTTPChaos stays at `Phase: Not Injected/Wait`, `injectedCount: 0`; tproxy ends up running inside the pod (chaos-daemon spawned it before bridge setup), but rules are never applied. On the current cluster, treat this as a **hard blocking rule**: configure campaign `excluded_chaos_types` with `HTTP*`, keep `_supported_candidates.json` filtered, and reject any round that still includes HTTP faults. Tracked at `OperationsPAI/chaos-mesh#7`.
 - **PodFailure vs PodKill.** PodKill restarts fast (tens of seconds); for detectors that need sustained service degradation, PodFailure is the canonical chaos. On TT we saw config-service +1 with PodFailure ×6, but -1 with PodKill — kill-then-restart is too quick to perturb the metric window.
 - **PodFailure needs no extra flags** — easiest first-round chaos type.
 

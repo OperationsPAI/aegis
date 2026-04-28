@@ -1,12 +1,43 @@
 {
-  "round": 12, "system": "teastore", "system_type": "teastore",
-  "pedestal": {"name": "teastore", "tag": "1.4.0"},
-  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
-  "defaults": {"interval": 10, "pre_duration": 5},
+  "round": 12,
+  "system": "teastore",
+  "system_type": "teastore",
+  "pedestal": {
+    "name": "teastore",
+    "tag": "1.4.0"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5,
+    "duration": 15
+  },
   "_strategy": "Chart 0.1.4 (throttled jmeter) + freshness check.",
   "candidates": [
-    {"id": "te12_01", "app": "teastore-auth",        "chaos_type": "PodFailure", "params": {}, "duration_override": 15},
-    {"id": "te12_02", "app": "teastore-persistence", "chaos_type": "PodKill",    "params": {}, "duration_override": 13},
-    {"id": "te12_03", "app": "teastore-image",       "chaos_type": "PodFailure", "params": {}, "duration_override": 15}
-  ]
+    {
+      "id": "te12_01",
+      "app": "teastore-auth",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 15
+    },
+    {
+      "id": "te12_02",
+      "app": "teastore-persistence",
+      "chaos_type": "PodKill",
+      "params": {},
+      "_legacy_duration_override": 13
+    },
+    {
+      "id": "te12_03",
+      "app": "teastore-image",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 15
+    }
+  ],
+  "_migration_note": "Migrated to fixed-duration schema with defaults.duration=15. Candidate-level duration_override removed from routine round generation."
 }

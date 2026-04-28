@@ -1,11 +1,42 @@
 {
-  "round": 53, "system": "ts", "system_type": "ts",
-  "pedestal": {"name": "ts", "tag": "1.0.0"},
-  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
-  "defaults": {"interval": 10, "pre_duration": 5},
+  "round": 53,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {
+    "name": "ts",
+    "tag": "1.0.0"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5,
+    "duration": 10
+  },
   "candidates": [
-    {"id": "tt53_01","app": "ts-station-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 8},
-    {"id": "tt53_02","app": "ts-route-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 6},
-    {"id": "tt53_03","app": "ts-train-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 12}
-  ]
+    {
+      "id": "tt53_01",
+      "app": "ts-station-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 8
+    },
+    {
+      "id": "tt53_02",
+      "app": "ts-route-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 6
+    },
+    {
+      "id": "tt53_03",
+      "app": "ts-train-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 12
+    }
+  ],
+  "_migration_note": "Migrated to fixed-duration schema with defaults.duration=10. Candidate-level duration_override removed from routine round generation."
 }

@@ -29,3 +29,6 @@ experiments/*/.cache/
 # Loop campaign — transient enumeration / replay scratch (not part of the dataset)
 experiments/_supported/
 experiments/_replay/
+
+*.pyc
+.tmp

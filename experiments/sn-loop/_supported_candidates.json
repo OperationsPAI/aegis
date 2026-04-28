@@ -1,0 +1,607 @@
+{
+  "candidates": [
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "CPUStress",
+      "container": "nginx-thrift"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "ContainerKill",
+      "container": "nginx-thrift"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSError",
+      "domain": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSError",
+      "domain": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSError",
+      "domain": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSError",
+      "domain": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSError",
+      "domain": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSRandom",
+      "domain": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSRandom",
+      "domain": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSRandom",
+      "domain": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSRandom",
+      "domain": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "DNSRandom",
+      "domain": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "MemoryStress",
+      "container": "nginx-thrift"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkBandwidth",
+      "target_service": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkCorrupt",
+      "target_service": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDelay",
+      "target_service": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDelay",
+      "target_service": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDelay",
+      "target_service": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDelay",
+      "target_service": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDelay",
+      "target_service": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkDuplicate",
+      "target_service": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkLoss",
+      "target_service": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkLoss",
+      "target_service": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkLoss",
+      "target_service": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkLoss",
+      "target_service": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkLoss",
+      "target_service": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkPartition",
+      "target_service": "compose-post-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkPartition",
+      "target_service": "home-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkPartition",
+      "target_service": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkPartition",
+      "target_service": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "NetworkPartition",
+      "target_service": "user-timeline-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "nginx-thrift",
+      "chaos_type": "TimeSkew",
+      "container": "nginx-thrift"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "post-storage-service",
+      "chaos_type": "CPUStress",
+      "container": "post-storage-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "post-storage-service",
+      "chaos_type": "ContainerKill",
+      "container": "post-storage-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "post-storage-service",
+      "chaos_type": "MemoryStress",
+      "container": "post-storage-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "post-storage-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "post-storage-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "post-storage-service",
+      "chaos_type": "TimeSkew",
+      "container": "post-storage-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "social-graph-service",
+      "chaos_type": "CPUStress",
+      "container": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "social-graph-service",
+      "chaos_type": "ContainerKill",
+      "container": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "social-graph-service",
+      "chaos_type": "MemoryStress",
+      "container": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "social-graph-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "social-graph-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "social-graph-service",
+      "chaos_type": "TimeSkew",
+      "container": "social-graph-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "url-shorten-service",
+      "chaos_type": "CPUStress",
+      "container": "url-shorten-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "url-shorten-service",
+      "chaos_type": "ContainerKill",
+      "container": "url-shorten-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "url-shorten-service",
+      "chaos_type": "MemoryStress",
+      "container": "url-shorten-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "url-shorten-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "url-shorten-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "url-shorten-service",
+      "chaos_type": "TimeSkew",
+      "container": "url-shorten-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-mention-service",
+      "chaos_type": "CPUStress",
+      "container": "user-mention-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-mention-service",
+      "chaos_type": "ContainerKill",
+      "container": "user-mention-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-mention-service",
+      "chaos_type": "MemoryStress",
+      "container": "user-mention-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-mention-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-mention-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-mention-service",
+      "chaos_type": "TimeSkew",
+      "container": "user-mention-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-service",
+      "chaos_type": "CPUStress",
+      "container": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-service",
+      "chaos_type": "ContainerKill",
+      "container": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-service",
+      "chaos_type": "MemoryStress",
+      "container": "user-service"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-service",
+      "chaos_type": "PodFailure"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-service",
+      "chaos_type": "PodKill"
+    },
+    {
+      "system": "sn",
+      "system_type": "sn",
+      "namespace": "sn0",
+      "app": "user-service",
+      "chaos_type": "TimeSkew",
+      "container": "user-service"
+    }
+  ],
+  "_meta": {
+    "raw_candidate_count": 130,
+    "filtered_candidate_count": 76,
+    "excluded_chaos_types": [
+      "HTTP*"
+    ]
+  }
+}

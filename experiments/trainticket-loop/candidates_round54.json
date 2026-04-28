@@ -1,12 +1,53 @@
 {
-  "round": 54, "system": "ts", "system_type": "ts",
-  "pedestal": {"name": "ts", "tag": "1.0.0"},
-  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
-  "defaults": {"interval": 10, "pre_duration": 5},
+  "round": 54,
+  "system": "ts",
+  "system_type": "ts",
+  "pedestal": {
+    "name": "ts",
+    "tag": "1.0.0"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5,
+    "duration": 10
+  },
   "candidates": [
-    {"id": "tt54_01","app": "ts-station-service",      "chaos_type": "PodFailure", "params": {}, "duration_override": 4},
-    {"id": "tt54_02","app": "ts-route-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 16},
-    {"id": "tt54_03","app": "ts-train-service",        "chaos_type": "PodFailure", "params": {}, "duration_override": 17},
-    {"id": "tt54_04","app": "ts-cancel-service",       "chaos_type": "JVMException","params": {"class":"cancel.service.CancelServiceImpl","method":"cancelOrder","exception_opt":"random"}, "duration_override": 17}
-  ]
+    {
+      "id": "tt54_01",
+      "app": "ts-station-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 4
+    },
+    {
+      "id": "tt54_02",
+      "app": "ts-route-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 16
+    },
+    {
+      "id": "tt54_03",
+      "app": "ts-train-service",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 17
+    },
+    {
+      "id": "tt54_04",
+      "app": "ts-cancel-service",
+      "chaos_type": "JVMException",
+      "params": {
+        "class": "cancel.service.CancelServiceImpl",
+        "method": "cancelOrder",
+        "exception_opt": "random"
+      },
+      "_legacy_duration_override": 17
+    }
+  ],
+  "_migration_note": "Migrated to fixed-duration schema with defaults.duration=10. Candidate-level duration_override removed from routine round generation."
 }

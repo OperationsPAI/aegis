@@ -1,12 +1,50 @@
 {
-  "round": 31, "system": "otel-demo", "system_type": "otel-demo",
-  "pedestal": {"name": "otel-demo", "tag": "0.1.5"},
-  "benchmark": {"name": "clickhouse", "tag": "1.0.0"},
-  "defaults": {"interval": 10, "pre_duration": 5, "container": "currencyservice"},
+  "round": 31,
+  "system": "otel-demo",
+  "system_type": "otel-demo",
+  "pedestal": {
+    "name": "otel-demo",
+    "tag": "0.1.5"
+  },
+  "benchmark": {
+    "name": "clickhouse",
+    "tag": "1.0.0"
+  },
+  "defaults": {
+    "interval": 10,
+    "pre_duration": 5,
+    "container": "currencyservice",
+    "duration": 14
+  },
   "candidates": [
-    {"id": "x31_01", "app": "currency",        "chaos_type": "PodFailure", "params": {}, "duration_override": 14},
-    {"id": "x31_02", "app": "image-provider",  "chaos_type": "PodFailure", "params": {}, "duration_override": 15},
-    {"id": "x31_03", "app": "product-catalog", "chaos_type": "PodFailure", "params": {}, "duration_override": 14},
-    {"id": "x31_04", "app": "ad",              "chaos_type": "PodFailure", "params": {}, "duration_override": 13}
-  ]
+    {
+      "id": "x31_01",
+      "app": "currency",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 14
+    },
+    {
+      "id": "x31_02",
+      "app": "image-provider",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 15
+    },
+    {
+      "id": "x31_03",
+      "app": "product-catalog",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 14
+    },
+    {
+      "id": "x31_04",
+      "app": "ad",
+      "chaos_type": "PodFailure",
+      "params": {},
+      "_legacy_duration_override": 13
+    }
+  ],
+  "_migration_note": "Migrated to fixed-duration schema with defaults.duration=14. Candidate-level duration_override removed from routine round generation."
 }

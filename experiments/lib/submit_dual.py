@@ -31,6 +31,7 @@ import urllib.error
 import yaml
 
 DEFAULT_SERVER = "http://localhost:8082"
+HARD_DISABLED_CHAOS_PREFIXES = ("HTTP",)
 
 
 def load_token(path: str) -> str:
@@ -61,9 +62,11 @@ def build_guided_config(cand: dict, defaults: dict, system: str, system_type: st
         "app": cand["app"],
         "chaos_type": cand["chaos_type"],
     }
-    # Direct API needs explicit duration; CLI default-fills 5 (chaos-exp resolver
-    # success branch). Mirror that here.
-    out["duration"] = cand.get("duration_override", 5)
+    # Prefer a round-level fixed duration from defaults.duration. Candidate-level
+    # overrides are still supported for explicit experiments, but normal loop
+    # rounds should keep duration fixed and let params / interval / pre_duration
+    # carry dedup avoidance.
+    out["duration"] = cand.get("duration_override", defaults.get("duration", 5))
     # For resource chaos targeting a non-JVM container, container defaults to
     # `defaults.container` if set (sockshop=coherence) else the app name (most
     # k8s services name the container after the app — backend rejects "" with
@@ -119,6 +122,10 @@ def build_guided_config(cand: dict, defaults: dict, system: str, system_type: st
         for k in ("time_offset",):
             if k in params: out[k] = params[k]
     return out
+
+
+def chaos_type_hard_disabled(chaos_type: str) -> bool:
+    return any(chaos_type.startswith(prefix) for prefix in HARD_DISABLED_CHAOS_PREFIXES)
 
 
 def submit_batch(token: str, server: str, project_id: int, system: str, system_type: str,
@@ -187,13 +194,48 @@ def main():
         "container": cdoc["defaults"].get("container"),
     }
 
+    allowed_cands = []
+    blocked_cands = []
+    for cand in cands:
+        chaos_type = str(cand.get("chaos_type", ""))
+        if chaos_type_hard_disabled(chaos_type):
+            blocked_cands.append(cand)
+        else:
+            allowed_cands.append(cand)
+
+    if blocked_cands:
+        print(
+            "hard-disabled chaos types present in round; logging them as submit errors: "
+            + ", ".join(f"{cand.get('id')}={cand.get('chaos_type')}" for cand in blocked_cands),
+            file=sys.stderr,
+        )
+
+    with open(args.runs_out, "a") as runs:
+        for cand in blocked_cands:
+            runs.write(
+                json.dumps(
+                    {
+                        "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                        "candidate_id": cand.get("id"),
+                        "paired_with": [],
+                        "error": f"submit.error.hard_disabled_chaos_type:{cand.get('chaos_type')}",
+                    }
+                )
+                + "\n"
+            )
+        runs.flush()
+
+    if not allowed_cands:
+        print("no allowed candidates remain after hard exclusions", file=sys.stderr)
+        return
+
     token = load_token(args.token_file)
     project_id = get_project_id(token, args.project, args.server)
     print(f"project_id={project_id}", file=sys.stderr)
 
     # Group candidates: walk in order; with prob pair-prob, pair current with
     # next remaining; else solo.
-    queue = list(cands)
+    queue = list(allowed_cands)
     submissions = []  # list of (cid_list,)
     while queue:
         head = queue.pop(0)
