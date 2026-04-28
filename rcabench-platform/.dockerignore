@@ -9,3 +9,27 @@
 /db
 /.devbox
 /output
+# Heavy / repo-only artefacts that bloat the build context
+/.git
+/.github
+/.idea
+/.docker-build
+/cli/dataset_analysis
+/cli/dataset_transform
+/cli/tests
+/docs
+/examples
+/notebook
+/scripts
+/tests
+/ipynb
+__pycache__
+*.pyc
+*.pyo
+*.ipynb
+*.parquet
+*.csv
+*.tar
+*.tar.gz
+*.zip
+*.log

@@ -90,6 +90,16 @@ llm-eval = [
     "uvicorn>=0.38.0",
 ]
 all = ["rcabench-platform[sdk,internal,analysis,llm-eval]"]
+# Minimal runtime deps for the standalone detector image. Keep small —
+# changes here ripple to image size.
+detector = [
+    "polars>=1.31.0",
+    "numpy>=2.2.6",
+    "pandas>=2.3.1",      # transitive: sdk.utils.serde
+    "scipy>=1.15.0",
+    "networkx>=3.4.2",
+    "rcabench>=1.1.51",
+]
 
 [dependency-groups]
 dev = [ #
