@@ -70,11 +70,24 @@ For systems with Java services, **also clone the upstream source repo** and extr
 
 ### 1. Pick K candidates — coarse-then-fine
 
+#### 🚨 BLOCKING RULE: chaos_type budget is the FIRST decision per round, not an afterthought
+
+The dataset this campaign produces is meant to *cover the system's fault space*. A round that's 100% PodFailure (or 80% Pod-* including PodKill / ContainerKill) is **not diverse** — those are all "kill-the-pod" failure modes and teach a downstream model exactly one mode. Every supported chaos_type must show up in proportion to its candidate space, with a floor.
+
+**Pre-submit gate (run BEFORE building the round)**:
+1. List the supported chaos_type set for the system: `aegisctl inject candidates ls --system <code> --namespace <ns> -o json | jq -r '.candidates[].chaos_type' | sort -u`. (Or read `experiments/<sys>-loop/_supported_chaos_types.txt` if cached.)
+2. Count `chaos_type` distribution across the **last 3 rounds** of `runs_round*.tsv` for this system.
+3. **If any supported chaos_type with non-zero candidate space has 0 picks across the last 3 rounds, it MUST occupy ≥1 slot in this round.** No exceptions for "dedup easier with PodFailure". Fix the dedup with duration/interval/pre_duration/params variation, not by flattening fault diversity.
+
+If you find yourself cycling `PodFailure → PodKill → ContainerKill` round-to-round and calling that "diversifying" — STOP. Those are all `category=pod`. Real diversity needs `network-*`, `JVM*` (Java), `HTTPChaos`, `CPUStress`/`MemoryStress`, `DNSError`/`DNSRandom`, `TimeSkew`. (Failure mode logged 2026-04-28: a 31h / 662-trace campaign that came in 80% PodFailure and 0% network/HTTP/stress/DNS/time. Don't repeat it.)
+
 **Coarse: chaos_type budget** — proportional to that chaos_type's candidate-space size, but with floor and ceiling so no single type dominates.
 - `coarse_share[c] = clamp(space[c] / Σ space, floor=1/(2·n_types·K), ceiling=0.5)`
 - Renormalize so shares sum to 1.
 - Apply success boost: `share[c] *= 1 + α · (success_rate[c] − mean_success_rate)`, with `α ≈ 0.3`. Small, so success doesn't snowball into bias.
-- A chaos_type that hit zero successes drops to its floor, not to zero — keeps exploration alive.
+- A chaos_type that hit zero successes drops to its floor, **not to zero** — keeps exploration alive.
+- **Category guard**: at most ⌈K/2⌉ slots from the `pod-*` family (PodFailure + PodKill + ContainerKill combined). Forces network / JVM / HTTP / stress / DNS / time to claim the rest.
+- **Per-round target shape** (for K=10–12, after the floor + category guard land): roughly 40% pod-*, 30% network-*, 20% JVM* (Java systems) or HTTPChaos (otel-demo / non-Java), 10% stress/DNS/time. Shape it before scoring fine valuation, not after.
 
 **Fine: candidate valuation** — driven by the system's source repo, not by ClickHouse.
 - For **JVM** candidates `(app, class, method)`:
