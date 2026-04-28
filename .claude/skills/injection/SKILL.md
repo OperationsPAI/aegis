@@ -69,7 +69,19 @@ When aegisctl ships the offline RCA-grading query:
 1. **Read state.** Open `~/.aegisctl/injection-author/<system>/metadata.json` and `memory.md`. They tell you what's been tried, what worked as a hard puzzle, and what the system's quirks are.
 2. **Grade the previous round if its data has landed.** Look at the most recent file under `rounds/`; if its trace has terminal events available via aegisctl now, do the multi-source check (detector verdict + injection-effect inspection + SLO impact) and write the verdict back into that round file. Leave `pending_offline_rca` alone — that's for the future grader.
 3. **Survey.** Pull the recent injection distribution for this system (last ~50–100 leaf injections; filter out batch parents). Tally by chaos_type *family* and target service.
-4. **Read the system.** When the loop driver passed a `--source-dir`, **grep that source tree** before proposing — find fan-in callers of your candidate (who else calls this method/route?), retry/timeout policies, cache fallbacks, shared resources (DB pools, Redis, gateway, auth), async boundaries, timeout chains. Code-grounded judgment beats prior-only judgment; without source you're guessing about which method is actually a fan-in chokepoint vs. a leaf. Without source available, skim recent traces and topology and say so explicitly in `diversity_note`.
+4. **Read the system — code AND data, not priors.** Empirically the single biggest behavior regression in autonomous rounds: the agent already "knows" common targets (queryForTravel, checkout, etc.) from training and skips real reading. The judgment may still happen to be correct on familiar systems, but the methodology is brittle on any unfamiliar one, and even on familiar systems you miss recently-changed behavior. Two parallel evidence streams, both required when available — **before** writing the hypothesis:
+
+   **a. Source code (when `--source-dir` is set).** Run **at least two `Read` or `Grep` calls** under `${SOURCE_DIR}` and cite the results in the round file's `code_evidence` block:
+   - **Fan-in callers** of your candidate method / route / table — real codebases routinely have 5–10× the call sites you'd guess.
+   - **Retry / timeout / circuit-breaker / cache-fallback** logic around the candidate. A fault on a path with a graceful fallback is a *bad* puzzle (detector silent, RCA never sees a symptom).
+   - **Shared resources** (connection pools, Redis, auth, gateway) the candidate touches.
+
+   **b. Observable data (always available via aegisctl).** Pull recent traces / metrics around your candidate. Look at:
+   - The **actual outbound span graph right now** — production calls may differ from what the code suggests after recent rollouts or feature flags.
+   - **Latency distributions per endpoint** — pick a candidate that's already a tail-latency contributor; extra latency on a fast endpoint may not move the entrance.
+   - **Recent error / status-code distributions** — if the entrance already has noisy 5xx, your fault won't stand out.
+
+   The wire (b) shows what the cluster actually does; the code (a) shows what it's supposed to do; **both can lie alone**, neither is replaceable by priors. With `--source-dir` provided and `code_evidence` empty, the next round's step-2 retro-grade will mark this round as "prior-only" anti-pattern in `memory.md`. Without `--source-dir`, do (b) only and set `code_evidence: []` with a `_note: "source unavailable"`.
 5. **Propose.** Pick a fault (or small batch) maximizing the four axes. Write the hypothesis as one sentence: *"500ms delay on `<route>` of `<service>` should surface as failed checkouts because `<service>` is on the critical path with no fallback."* If you can't write that sentence with conviction, the idea isn't ready.
 6. **Diversity check.** Compare to step 3's tally. If your family is overrepresented, swap to an underrepresented one. See *Diversity*.
 7. **Apply.** Submit through aegisctl. For multi-fault, stage each spec then `--apply --batch`.
@@ -103,6 +115,21 @@ loop.log                # appended by loop.sh
   "hypothesis": "500ms delay on /orderother/queryOrders should surface as failed checkouts via ts-order-other-service → ts-cancel-service retry storm",
   "diversity_note": "previous 50 rounds: jvm-* 26%, network-* 14% — picking network-delay to rebalance",
   "submit": { "trace_ids": ["..."], "ns": "ts3", "submit_resp": { /* aegisctl response */ } },
+
+  // Filled in step 4: code grounding (when --source-dir was set; empty list otherwise).
+  // Each entry is a real (file, line-range, what-you-learned). Empty array when
+  // --source-dir was provided is an anti-pattern — next round's retro-grade will
+  // mark it as "prior-only" in memory.md.
+  "code_evidence": [
+    {"file": "ts-travel-service/.../TravelServiceImpl.java", "lines": "78-115",
+     "what": "queryForTravel callers: TravelController.queryRoute, PreserveServiceImpl.fillBasicInfo, OrderServiceImpl.calcRefund (3 fan-in)"},
+    {"file": "ts-travel-service/.../resources/application.yml", "lines": "42-58",
+     "what": "no retry, ribbon read-timeout=2000ms; latency >2s gets translated into 504 at this caller"}
+  ],
+
+  // Filled in step 4 too: live data grounding from aegisctl traces / metrics.
+  // What does the cluster ACTUALLY do right now (vs. what code suggests)?
+  "data_evidence": "Recent ts1 trace sample: queryForTravel outbound spans hit ts-station (12 calls/req, p95 80ms), ts-train (4 calls, p95 30ms), ts-route (1, 60ms). Entrance /preserve p99 currently 1.2s — has headroom for ~1s injected latency before SLO breach.",
 
   // Filled in step 8: did the fault actually land?
   "injection_landed": true,                  // false → also set "outcome": "injection-noop"

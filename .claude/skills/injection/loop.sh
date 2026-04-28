@@ -124,6 +124,18 @@ for i in $(seq 1 "$ROUNDS"); do
   ROUND_TS="$(ts)"
   echo "[${ROUND_TS}] ===== round ${i}/${ROUNDS} =====" | tee -a "$LOG"
 
+  # Pre-render optional sections OUTSIDE the heredoc — bash ${VAR:+...}
+  # expansion chokes on nested ${} or unbalanced parens inside the
+  # alternate-text, so we keep the heredoc free of conditional substitutions.
+  SOURCE_LINE=""
+  if [[ -n "$SOURCE_DIR" ]]; then
+    SOURCE_LINE="system source code: ${SOURCE_DIR}  (target system's source repo — you MUST run at least 2 Read or Grep calls under it during step 4 BEFORE proposing a fault, and cite each result as a {file,lines,what} entry in the round file's code_evidence block. Look for: fan-in callers of your candidate, retry/timeout/circuit-breaker logic, cache fallbacks, shared resources. Empty code_evidence here is an anti-pattern that the next round will mark prior-only in memory.md. Priors lie on unfamiliar systems and miss recent changes on familiar ones — read the actual code.)"
+  fi
+  EXTRA_LINE=""
+  if [[ -n "$EXTRA_INSTRUCTION" ]]; then
+    EXTRA_LINE="Additional instruction for this campaign: ${EXTRA_INSTRUCTION}"
+  fi
+
   # The prompt is intentionally short; the heavy lifting lives in the
   # `injection` skill, which is loaded by the agent once it triggers on
   # "故障注入" / "injection". Keep this prompt stable so caching stays warm.
@@ -131,27 +143,25 @@ for i in $(seq 1 "$ROUNDS"); do
 Autonomous injection round ${i} of ${ROUNDS}, target system: ${SYSTEM}.
 State directory: ${STATE_DIR}
 aegisctl binary: ${AEGISCTL_BIN}  (use this absolute path for every aegisctl invocation — it's the build matched to the current backend; do NOT rely on \`aegisctl\` from PATH).
-${SOURCE_DIR:+system source code: ${SOURCE_DIR}  (this is the target system's source repo — grep it during step 4 to ground your puzzle choice in real code, not priors. Look for fan-in callers (who calls the candidate method), retry/timeout policies, cache fallbacks, and shared resources before proposing a fault. Code-grounded judgment beats prior-only judgment.)
-}
+${SOURCE_LINE}
 
 Follow the \`injection\` skill end-to-end this round. The skill body has the full schema for round files and the multi-source reward framework — read it before doing anything else.
 
 1. Read ${STATE_DIR}/metadata.json and ${STATE_DIR}/memory.md (may be empty on first run).
 2. Look at the most recent round file in ${STATE_DIR}/rounds/. If its trace's terminal events have landed in aegisctl by now, retroactively grade it using the multi-source signals (detector verdict + injection-effect inspection + SLO impact at the entrance) and patch the round file's "retro_grade" block. Don't trust the detector alone — it has FPs and FNs; cross-check by pulling the abnormal-window trace data via aegisctl. Leave "pending_offline_rca" untouched (that field is reserved for the future offline RCA-grading query).
 3. Use aegisctl to survey the recent injection distribution for ${SYSTEM} (last ~50–100 leaf injections, batch parents excluded). Tally by chaos_type family + target service.
-4. Read service code / topology / traces enough to pick ONE hard puzzle this round. Optimize for: fine granularity (JVM method / HTTP route+verb / DB table+op / service-pair network — NOT whole-pod) × user-visible SLO breach × long causal chain (≥2 hops, shared resource, retry/cache cascade, or timeout amplifier) × blast radius on a critical-path endpoint.
+4. **Read the system — code AND data, not priors.** This is the round's biggest quality lever; do NOT skip to "I already know queryForTravel/checkout/etc." (a) **Source code:** if a source-dir was given above, run **at least 2 \`Read\` or \`Grep\` calls** under it — find fan-in callers of your candidate, retry/timeout/circuit-breaker/cache-fallback logic, and shared resources. Cite them in the round file's \`code_evidence\` block as \`{file, lines, what}\` triples. Empty \`code_evidence\` when source-dir was provided is an anti-pattern; the next round will mark this round "prior-only" in memory.md. (b) **Live data:** pull recent traces / metrics for the candidate service via aegisctl — actual outbound spans, latency distribution per endpoint, baseline error rates. Cite in \`data_evidence\`. The wire (b) shows what the cluster actually does; the code (a) shows what it's supposed to do; both can lie alone, neither is replaceable by priors. Only after these two evidence streams are gathered do you pick the fault. Optimize for: fine granularity (JVM method / HTTP route+verb / DB table+op / service-pair network — NOT whole-pod) × user-visible SLO breach × long causal chain (≥2 hops, shared resource, retry/cache cascade, or timeout amplifier) × blast radius on a critical-path endpoint.
 5. Diversify against the family/service tally — no chaos_type family above ~30% of the recent window; no single target service dominating.
 6. Submit through aegisctl. Multi-fault batches (\`inject guided --stage\` then \`--apply --batch\`) are encouraged when faults have a concrete interaction hypothesis (mutual masking, co-trigger amplification, multi-root-cause grading); ~25–35% of rounds.
 7. **Verify the fault actually landed.** Pull the trace / abnormal-window data via aegisctl and confirm the chaos perturbed traces or metrics on the targeted scope. If it didn't, mark the round outcome "injection-noop" and investigate (image issue, IPVLAN HTTPChaos, missing observed-pair for network chaos, DNS catalog miss, etc.) — do NOT grade a no-op round as a puzzle.
 8. **Simulate the RCA reasoning.** Walk through how an RCA agent would chase this from entrance symptom to actual fault. Count hops in the inference chain and list plausible decoy hypotheses on the way. Record both in the round file's "simulated_rca" block — be honest, don't pad.
-9. Write the round record to ${STATE_DIR}/rounds/round-${i}-\$(date +%s).json using the schema from the skill body (picked_faults, hypothesis, diversity_note, submit, injection_landed, injection_evidence, simulated_rca, retro_grade, pending_offline_rca: true).
+9. Write the round record to ${STATE_DIR}/rounds/round-${i}-\$(date +%s).json using the schema from the skill body (picked_faults, hypothesis, diversity_note, code_evidence, data_evidence, submit, injection_landed, injection_evidence, simulated_rca, retro_grade, pending_offline_rca: true).
 10. Append distilled cross-round lessons (NOT round-level dumps) to ${STATE_DIR}/memory.md — hard-puzzle templates that worked, system quirks discovered, anti-patterns to avoid, open questions. Prune memory.md if it exceeds ~200 lines.
 11. Update ${STATE_DIR}/metadata.json: bump total_rounds_run, refresh family_tally and service_tally.
 12. Whenever you reach for mysql/kubectl/redis-cli/raw helm/curl to compensate for something aegisctl couldn't do — or whenever aegisctl output / errors / missing flags forced a workaround — append one line to ${STATE_DIR}/aegisctl_gaps.md per the skill's *Aegisctl gap log* format. The user reviews this periodically to improve the CLI; don't bury friction silently.
 
 Don't sleep waiting for this round's terminal event inline — step 2 of the next round picks it up. Exit cleanly once the round is recorded.
-${EXTRA_INSTRUCTION:+
-Additional instruction for this campaign: ${EXTRA_INSTRUCTION}}
+${EXTRA_LINE}
 EOF
 )
 
