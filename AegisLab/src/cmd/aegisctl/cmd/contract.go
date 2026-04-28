@@ -2,84 +2,68 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 
-	"aegis/cmd/aegisctl/client"
+	"aegis/cmd/aegisctl/internal/cli/clierr"
+	"aegis/cmd/aegisctl/internal/cli/exitcode"
 	"aegis/cmd/aegisctl/output"
 
 	"github.com/spf13/cobra"
 )
 
 const (
-	ExitCodeSuccess         = 0
-	ExitCodeUnexpected      = 1
-	ExitCodeUsage           = 2
-	ExitCodeAuthFailure     = 3
-	ExitCodeMissingEnv      = 4
-	ExitCodeWorkflowFailure = 5
-	ExitCodeTimeout         = 6
-	ExitCodeNotFound        = 7
-	ExitCodeConflict        = 8
+	ExitCodeSuccess         = exitcode.CodeSuccess
+	ExitCodeUnexpected      = exitcode.CodeUnexpected
+	ExitCodeUsage           = exitcode.CodeUsage
+	ExitCodeAuthFailure     = exitcode.CodeAuthFailure
+	ExitCodeMissingEnv      = exitcode.CodeMissingEnv
+	ExitCodeWorkflowFailure = exitcode.CodeWorkflowFailure
+	ExitCodeTimeout         = exitcode.CodeTimeout
+	ExitCodeNotFound        = exitcode.CodeNotFound
+	ExitCodeConflict        = exitcode.CodeConflict
 	// ExitCodeDedupeSuppressed signals that an inject/regression submission
 	// returned HTTP 200 but every batch was deduplicated against an existing
 	// injection. No trace_id was produced; the caller should change a spec
 	// field or wait for cooldown. See issues #91/#92.
-	ExitCodeDedupeSuppressed = 9
+	ExitCodeDedupeSuppressed = exitcode.CodeDedupeSuppressed
+	// ExitCodeServerError maps to API 5xx failures.
+	ExitCodeServerError = exitcode.CodeServerError
+	// ExitCodeDecodeFailure maps to JSON decode failures while decoding API responses.
+	ExitCodeDecodeFailure = exitcode.CodeDecodeFailure
 )
 
-type exitError struct {
-	Code    int
-	Message string
-	Cause   error
-}
-
-func (e *exitError) Error() string {
-	if e.Message != "" {
-		return e.Message
-	}
-	if e.Cause != nil {
-		return e.Cause.Error()
-	}
-	return fmt.Sprintf("command failed with exit code %d", e.Code)
-}
-
-func (e *exitError) Unwrap() error {
-	return e.Cause
-}
+type exitError = exitcode.Error
 
 func usageErrorf(format string, args ...any) error {
-	return &exitError{Code: ExitCodeUsage, Message: fmt.Sprintf(format, args...)}
+	return exitcode.UsageErrorf(format, args...)
 }
 
 func authErrorf(format string, args ...any) error {
-	return &exitError{Code: ExitCodeAuthFailure, Message: fmt.Sprintf(format, args...)}
+	return exitcode.AuthErrorf(format, args...)
 }
 
 func missingEnvErrorf(format string, args ...any) error {
-	return &exitError{Code: ExitCodeMissingEnv, Message: fmt.Sprintf(format, args...)}
+	return exitcode.MissingEnvErrorf(format, args...)
 }
 
 func workflowFailureErrorf(format string, args ...any) error {
-	return &exitError{Code: ExitCodeWorkflowFailure, Message: fmt.Sprintf(format, args...)}
+	return exitcode.WorkflowFailureErrorf(format, args...)
 }
 
 func timeoutErrorf(format string, args ...any) error {
-	return &exitError{Code: ExitCodeTimeout, Message: fmt.Sprintf(format, args...)}
+	return exitcode.TimeoutErrorf(format, args...)
 }
 
 func notFoundErrorf(format string, args ...any) error {
-	return &exitError{Code: ExitCodeNotFound, Message: fmt.Sprintf(format, args...)}
+	return exitcode.NotFoundErrorf(format, args...)
 }
 
 func conflictErrorf(format string, args ...any) error {
-	return &exitError{Code: ExitCodeConflict, Message: fmt.Sprintf(format, args...)}
+	return exitcode.ConflictErrorf(format, args...)
 }
 
 func silentExit(code int) error {
-	return &exitError{Code: code}
+	return exitcode.SilentExit(code)
 }
 
 func exactArgs(count int, usage string) cobra.PositionalArgs {
@@ -130,10 +114,18 @@ func executeArgs(args []string) int {
 	rootCmd.SetArgs(args)
 	err := rootCmd.Execute()
 	rootCmd.SetArgs(nil)
+	return executeError(err)
+}
+
+func executeError(err error) int {
 	if err == nil {
 		return ExitCodeSuccess
 	}
-
+	var cliErr *clierr.CLIError
+	if errors.As(err, &cliErr) {
+		output.PrintCLIError(cliErr, output.OutputFormat(flagOutput))
+		return exitCodeFor(err)
+	}
 	if msg := errorMessage(err); msg != "" {
 		output.PrintError(msg)
 	}
@@ -141,47 +133,12 @@ func executeArgs(args []string) int {
 }
 
 func errorMessage(err error) string {
-	var ee *exitError
-	if errors.As(err, &ee) {
-		return ee.Message
+	if err == nil {
+		return ""
 	}
-	return err.Error()
+	return exitcode.ErrorMessage(err)
 }
 
 func exitCodeFor(err error) int {
-	var ee *exitError
-	if errors.As(err, &ee) {
-		return ee.Code
-	}
-
-	var apiErr *client.APIError
-	if errors.As(err, &apiErr) {
-		switch apiErr.StatusCode {
-		case 401, 403:
-			return ExitCodeAuthFailure
-		case 404:
-			return ExitCodeNotFound
-		case 409:
-			return ExitCodeConflict
-		}
-	}
-
-	var execErr *exec.Error
-	if errors.As(err, &execErr) || errors.Is(err, exec.ErrNotFound) {
-		return ExitCodeMissingEnv
-	}
-	if os.IsNotExist(err) {
-		return ExitCodeMissingEnv
-	}
-
-	if strings.Contains(err.Error(), "unknown flag") ||
-		strings.Contains(err.Error(), "unknown command") ||
-		strings.Contains(err.Error(), "requires a subcommand") ||
-		strings.Contains(err.Error(), "expected ") ||
-		strings.Contains(err.Error(), "requires at least") ||
-		strings.Contains(err.Error(), "accepts ") {
-		return ExitCodeUsage
-	}
-
-	return ExitCodeUnexpected
+	return exitcode.ForError(err)
 }

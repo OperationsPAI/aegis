@@ -51,12 +51,10 @@ development cluster needs before guided local end-to-end validation.
 
 By default the command previews intended changes without writing. Pass
 --apply (or the alias --fix) to perform the actual writes. --dry-run can be
-used explicitly to force a no-write preview, and --output json returns a
+used explicitly to force a no-write preview, --non-interactive is treated
+as an explicit apply request, and --output json returns a
 stable machine-readable summary with create/update/skip outcomes.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if clusterPrepareApply && flagDryRun {
-			return fmt.Errorf("--apply/--fix cannot be combined with --dry-run")
-		}
 		if clusterPrepareTimeout <= 0 {
 			return fmt.Errorf("--timeout must be greater than 0")
 		}
@@ -74,7 +72,7 @@ stable machine-readable summary with create/update/skip outcomes.`,
 		ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(clusterPrepareTimeout)*time.Second)
 		defer cancel()
 
-		apply := clusterPrepareApply && !flagDryRun
+		apply := shouldApplyClusterPrepareLocalE2E()
 		results, err := runner.Run(ctx, env, apply)
 		if err != nil {
 			return err
@@ -94,6 +92,10 @@ stable machine-readable summary with create/update/skip outcomes.`,
 		cluster.RenderPrepareTable(os.Stdout, results)
 		return nil
 	},
+}
+
+func shouldApplyClusterPrepareLocalE2E() bool {
+	return (clusterPrepareApply || flagNonInteractive) && !flagDryRun
 }
 
 var clusterPreflightCmd = &cobra.Command{
@@ -153,6 +155,9 @@ func init() {
 	clusterPrepareLocalE2ECmd.Flags().BoolVar(&clusterPrepareApply, "fix", false, "Alias for --apply")
 	clusterPrepareLocalE2ECmd.Flags().StringVar(&clusterPrepareConfig, "config", "", "Path to a specific config TOML (defaults to config.$ENV_MODE.toml in cwd)")
 	clusterPrepareLocalE2ECmd.Flags().IntVar(&clusterPrepareTimeout, "timeout", 30, "Overall timeout for the local/e2e preparation run in seconds")
+	cobra.OnInitialize(func() {
+		markDryRunSupported(clusterPrepareLocalE2ECmd)
+	})
 
 	clusterCmd.AddCommand(clusterPreflightCmd)
 	clusterPrepareCmd.AddCommand(clusterPrepareLocalE2ECmd)

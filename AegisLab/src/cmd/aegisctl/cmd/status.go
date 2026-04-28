@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sort"
 
 	"aegis/cmd/aegisctl/client"
@@ -23,11 +24,19 @@ type taskItem struct {
 }
 
 type traceItem struct {
+	ID        string `json:"id"`
 	TraceID   string `json:"trace_id"`
 	State     string `json:"state"`
 	Type      string `json:"type"`
 	Project   string `json:"project_name"`
 	ProjectID int    `json:"project_id"`
+}
+
+func traceID(item traceItem) string {
+	if item.ID != "" {
+		return item.ID
+	}
+	return item.TraceID
 }
 
 type healthServiceInfo struct {
@@ -134,7 +143,7 @@ var statusCmd = &cobra.Command{
 				if project == "" {
 					project = fmt.Sprintf("%d", t.ProjectID)
 				}
-				rows = append(rows, []string{t.TraceID, t.State, t.Type, project})
+				rows = append(rows, []string{traceID(t), t.State, t.Type, project})
 			}
 			output.PrintTable([]string{"Trace-ID", "State", "Type", "Project"}, rows)
 		}
@@ -144,7 +153,7 @@ var statusCmd = &cobra.Command{
 		fmt.Println("Infrastructure Health:")
 		var healthResp client.APIResponse[healthCheckResp]
 		if err := c.Get("/api/v2/system/health", &healthResp); err != nil {
-			fmt.Printf("  \033[31m\u2717\033[0m Could not reach health endpoint: %v\n", err)
+			fmt.Printf("  %s Could not reach health endpoint: %v\n", output.ColorRed(os.Stdout, "\u2717"), err)
 		} else {
 			names := make([]string, 0, len(healthResp.Data.Services))
 			for name := range healthResp.Data.Services {
@@ -154,13 +163,13 @@ var statusCmd = &cobra.Command{
 			for _, name := range names {
 				svc := healthResp.Data.Services[name]
 				if svc.Status == "healthy" {
-					fmt.Printf("  \033[32m\u2713\033[0m %-12s %s\n", name, svc.ResponseTime)
+					fmt.Printf("  %s %-12s %s\n", output.ColorGreen(os.Stdout, "\u2713"), name, svc.ResponseTime)
 				} else {
 					errMsg := svc.Error
 					if errMsg == "" {
 						errMsg = "unhealthy"
 					}
-					fmt.Printf("  \033[31m\u2717\033[0m %-12s %s (%s)\n", name, svc.ResponseTime, errMsg)
+					fmt.Printf("  %s %-12s %s (%s)\n", output.ColorRed(os.Stdout, "\u2717"), name, svc.ResponseTime, errMsg)
 				}
 			}
 		}

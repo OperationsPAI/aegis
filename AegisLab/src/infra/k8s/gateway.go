@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -22,6 +23,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+// Default client-go rate limits. The upstream defaults (QPS=5 / Burst=10) are
+// far too low for a fault-injection workload that lists Deployments across
+// 30+ namespaces (e.g. DSB mm has 33 deployments per canary), causing
+// readiness wait loops to trip "client rate limiter Wait returned an error:
+// context deadline exceeded" — see issue #275.
+const (
+	defaultK8sClientQPS   = 50.0
+	defaultK8sClientBurst = 100
 )
 
 type Gateway struct {
@@ -468,6 +479,7 @@ func getK8sRestConfig() (*rest.Config, error) {
 		restConfig, err := rest.InClusterConfig()
 		if err == nil {
 			logrus.Info("Successfully loaded In-Cluster Kubernetes configuration.")
+			applyK8sClientRateLimits(restConfig)
 			k8sRestConfig = restConfig
 			logrus.Infof("Using Kubernetes Context: %s", "In-Cluster")
 			return
@@ -485,12 +497,41 @@ func getK8sRestConfig() (*rest.Config, error) {
 			return
 		}
 
+		applyK8sClientRateLimits(config)
 		k8sRestConfig = config
 	})
 	if k8sRestConfigErr != nil {
 		return nil, k8sRestConfigErr
 	}
 	return k8sRestConfig, nil
+}
+
+// applyK8sClientRateLimits raises the rest.Config QPS/Burst above client-go's
+// defaults (5/10) so the worker's readiness wait loop — which lists
+// Deployments / StatefulSets / DaemonSets / Jobs across 30+ namespaces — does
+// not trip the per-client rate limiter and time out (issue #275). The
+// defaults can be overridden via K8S_CLIENT_QPS (float) and K8S_CLIENT_BURST
+// (int); malformed values fall back to the in-source defaults.
+func applyK8sClientRateLimits(cfg *rest.Config) {
+	qps := defaultK8sClientQPS
+	if raw := os.Getenv("K8S_CLIENT_QPS"); raw != "" {
+		if v, err := strconv.ParseFloat(raw, 32); err == nil && v > 0 {
+			qps = v
+		} else {
+			logrus.Warnf("invalid K8S_CLIENT_QPS=%q, falling back to default %v", raw, defaultK8sClientQPS)
+		}
+	}
+	burst := defaultK8sClientBurst
+	if raw := os.Getenv("K8S_CLIENT_BURST"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
+			burst = v
+		} else {
+			logrus.Warnf("invalid K8S_CLIENT_BURST=%q, falling back to default %d", raw, defaultK8sClientBurst)
+		}
+	}
+	cfg.QPS = float32(qps)
+	cfg.Burst = burst
+	logrus.Infof("Kubernetes client rate limit: QPS=%v Burst=%d", cfg.QPS, cfg.Burst)
 }
 
 // k8sControllerErr captures a controller-init failure so repeated callers

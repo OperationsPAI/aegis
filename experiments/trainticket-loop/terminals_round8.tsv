@@ -1,7 +1,0 @@
-0fa81c66-44c5-41b6-9f2f-5cc707859186	Failed	fault.injection.failed
-66f5a979-f98e-4823-ba8c-4e4f1e77c647	Completed	datapack.no_anomaly
-7f65c4d5-3a57-41e5-a910-dfe6b4e52b11	Running	restart.pedestal.started
-86af14be-19b8-4be5-9e40-c89a9e6b0b66	Completed	datapack.result.collection
-bd1a8c9f-1b6e-46ed-ae16-b05620a6ca6a	Completed	datapack.result.collection
-ca38deb0-ce59-4220-a557-c362aa48c1c0	Completed	datapack.result.collection
-e2cad5f7-3cc1-45a6-9c12-a14146a8725b	Running	datapack.build.started

@@ -60,7 +60,7 @@ containers:
         github_link: OperationsPAI/train-ticket
         status: 1
         helm_config:
-          version: 0.1.0
+          version: 0.2.0
           chart_name: trainticket
           repo_name: train-ticket
           repo_url: https://operationspai.github.io/train-ticket
@@ -71,17 +71,23 @@ containers:
               value_type: 1
               template_string: 31%03d
               overridable: false
+            - key: global.otelcollector
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              overridable: true
           status: 1
   - type: 2
     name: otel-demo
     is_public: true
     status: 1
     versions:
-      - name: 0.1.5
+      - name: 0.1.6
         github_link: open-telemetry/opentelemetry-demo
         status: 1
         helm_config:
-          version: 0.1.5
+          version: 0.1.6
           chart_name: otel-demo-aegis
           repo_name: opspai
           repo_url: oci://registry-1.docker.io/opspai
@@ -243,9 +249,9 @@ containers:
               overridable: true
             - key: global.defaultImageVersion
               type: 0
-              category: 1
+              category: 2
               value_type: 0
-              default_value: 20260423-61074ea
+              default_value: 20260427-9397c2e
               overridable: true
             - key: global.otel.endpoint
               type: 0
@@ -276,9 +282,9 @@ containers:
               overridable: true
             - key: global.defaultImageVersion
               type: 0
-              category: 1
+              category: 3
               value_type: 0
-              default_value: 20260423-61074ea
+              default_value: 20260427-9397c2e
               overridable: true
             - key: global.otel.endpoint
               type: 0

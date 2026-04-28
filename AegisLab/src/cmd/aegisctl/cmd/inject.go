@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -95,6 +96,17 @@ func newProjectScopedResolver() (*client.Resolver, error) {
 	return r, nil
 }
 
+func resolveInjectionID(arg string) (int, error) {
+	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
+		return id, nil
+	}
+	r, err := newProjectScopedResolver()
+	if err != nil {
+		return 0, err
+	}
+	return r.InjectionID(arg)
+}
+
 // ---------- inject root ----------
 
 var injectCmd = &cobra.Command{
@@ -118,7 +130,7 @@ Read-only / listing commands:
   aegisctl inject list --project pair_diagnosis
   aegisctl inject get <injection-name>
   aegisctl inject search --name-pattern "cpu*" --project pair_diagnosis
-  aegisctl inject files <injection-name>
+  aegisctl inject list-files <injection-name>
   aegisctl inject download <injection-name> --output-file ./output.tar.gz
 
 NOTE: --project is required for list, search, and guided --apply.
@@ -182,6 +194,12 @@ var injectListCmd = &cobra.Command{
 			output.PrintJSON(resp.Data)
 			return nil
 		}
+		if output.OutputFormat(flagOutput) == output.FormatNDJSON {
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
+			}
+			return output.PrintNDJSON(resp.Data.Items)
+		}
 
 		headers := []string{"NAME", "STATE", "FAULT-TYPE", "START-TIME", "LABELS"}
 		var rows [][]string
@@ -208,13 +226,23 @@ var injectListCmd = &cobra.Command{
 var injectGetCmd = &cobra.Command{
 	Use:   "get <name>",
 	Short: "Get detailed info about an injection",
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r, err := newProjectScopedResolver()
-		if err != nil {
-			return err
-		}
-		id, err := r.InjectionID(args[0])
+		return runStdinItems("inject get", "inject get <name>", args, stdinOptions{
+			enabled:  injectGetStdin,
+			field:    injectGetStdinField,
+			failFast: injectGetStdinFailFast,
+		}, runInjectGet)
+	},
+}
+
+var (
+	injectGetStdin         bool
+	injectGetStdinField    string
+	injectGetStdinFailFast bool
+)
+
+func runInjectGet(name string) error {
+		id, err := resolveInjectionID(name)
 		if err != nil {
 			return err
 		}
@@ -280,7 +308,6 @@ var injectGetCmd = &cobra.Command{
 
 		output.PrintTable(headers, rows)
 		return nil
-	},
 }
 
 func formatInjectGetValue(v any) string {
@@ -340,30 +367,46 @@ var injectSearchCmd = &cobra.Command{
 	},
 }
 
-// ---------- inject files ----------
+// ---------- inject list-files ----------
 
-var injectFilesCmd = &cobra.Command{
-	Use:   "files <name>",
+var injectListFilesCmd = &cobra.Command{
+	Use:   "list-files <name>",
 	Short: "List files produced by an injection",
-	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r, err := newProjectScopedResolver()
-		if err != nil {
-			return err
-		}
-		id, err := r.InjectionID(args[0])
+		return runStdinItems("inject list-files", "inject list-files <name>", args, stdinOptions{
+			enabled:  injectFilesStdin,
+			field:    injectFilesStdinField,
+			failFast: injectFilesStdinFailFast,
+		}, runInjectFiles)
+	},
+}
+
+var (
+	injectFilesStdin         bool
+	injectFilesStdinField    string
+	injectFilesStdinFailFast bool
+)
+
+func runInjectFiles(name string) error {
+		id, err := resolveInjectionID(name)
 		if err != nil {
 			return err
 		}
 
 		type fileItem struct {
+			Name string `json:"name,omitempty"`
 			Path string `json:"path"`
 			Size string `json:"size"`
-			Type string `json:"type"`
+			Type string `json:"type,omitempty"`
+		}
+		type filesPayload struct {
+			Files     []fileItem `json:"files"`
+			FileCount int        `json:"file_count"`
+			DirCount  int        `json:"dir_count,omitempty"`
 		}
 
 		c := newClient()
-		var resp client.APIResponse[[]fileItem]
+		var resp client.APIResponse[filesPayload]
 		if err := c.Get(fmt.Sprintf("/api/v2/injections/%d/files", id), &resp); err != nil {
 			return err
 		}
@@ -375,22 +418,24 @@ var injectFilesCmd = &cobra.Command{
 
 		headers := []string{"PATH", "SIZE", "TYPE"}
 		var rows [][]string
-		for _, f := range resp.Data {
+		for _, f := range resp.Data.Files {
 			rows = append(rows, []string{f.Path, f.Size, f.Type})
 		}
 		output.PrintTable(headers, rows)
 		return nil
-	},
 }
 
 // ---------- inject download ----------
 
 var (
-	injectDownloadOutput   string
-	injectDownloadDir      string
-	injectDownloadInclude  string
-	injectDownloadFilePar  int
-	injectDownloadTimeout  int
+	injectDownloadOutput        string
+	injectDownloadDir           string
+	injectDownloadInclude       string
+	injectDownloadFilePar       int
+	injectDownloadTimeout       int
+	injectDownloadStdin         bool
+	injectDownloadStdinField    string
+	injectDownloadStdinFailFast bool
 )
 
 const (
@@ -580,8 +625,19 @@ var injectDownloadCmd = &cobra.Command{
 	Long: `Download a datapack either as a single zip file (--output-file) or extracted
 into a directory (--output-dir). When extracting, --include selects which
 subset of the datapack to fetch.`,
-	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if injectDownloadStdin && injectDownloadOutput != "" {
+			return usageErrorf("--stdin requires --output-dir; --output-file only supports a single positional target")
+		}
+		return runStdinItems("inject download", "inject download <name>", args, stdinOptions{
+			enabled:  injectDownloadStdin,
+			field:    injectDownloadStdinField,
+			failFast: injectDownloadStdinFailFast,
+		}, runInjectDownload)
+	},
+}
+
+func runInjectDownload(name string) error {
 		if injectDownloadOutput == "" && injectDownloadDir == "" {
 			return usageErrorf("either --output-file <path> or --output-dir <dir> is required")
 		}
@@ -594,11 +650,7 @@ subset of the datapack to fetch.`,
 			return err
 		}
 
-		r, err := newProjectScopedResolver()
-		if err != nil {
-			return err
-		}
-		id, err := r.InjectionID(args[0])
+		id, err := resolveInjectionID(name)
 		if err != nil {
 			return err
 		}
@@ -610,14 +662,14 @@ subset of the datapack to fetch.`,
 		httpClient := &http.Client{Timeout: time.Duration(timeoutSec) * time.Second}
 
 		if injectDownloadDir != "" {
-			outDir := filepathJoin(injectDownloadDir, args[0])
+			outDir := filepathJoin(injectDownloadDir, name)
 			if err := os.MkdirAll(outDir, 0o755); err != nil {
 				return fmt.Errorf("create output dir: %w", err)
 			}
-			if err := downloadPackToDir(httpClient, flagServer, flagToken, id, args[0], outDir, include, injectDownloadFilePar); err != nil {
-				return fmt.Errorf("download %s: %w", args[0], err)
+			if err := downloadPackToDir(httpClient, flagServer, flagToken, id, name, outDir, include, injectDownloadFilePar); err != nil {
+				return fmt.Errorf("download %s: %w", name, err)
 			}
-			output.PrintInfo(fmt.Sprintf("Downloaded %s (include=%s) to %s", args[0], include, outDir))
+			output.PrintInfo(fmt.Sprintf("Downloaded %s (include=%s) to %s", name, include, outDir))
 			return nil
 		}
 
@@ -639,19 +691,45 @@ subset of the datapack to fetch.`,
 			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("download failed (HTTP %d): %s", resp.StatusCode, string(body))
 		}
-		f, err := os.Create(injectDownloadOutput)
+
+		tmpPath := injectDownloadOutput + ".tmp"
+		f, err := os.Create(tmpPath)
 		if err != nil {
 			return fmt.Errorf("create output file: %w", err)
 		}
-		defer func() { _ = f.Close() }()
-		n, err := io.Copy(f, resp.Body)
-		if err != nil {
-			return fmt.Errorf("write output file: %w", err)
+		hasher := sha256.New()
+		n, copyErr := io.Copy(io.MultiWriter(f, hasher), resp.Body)
+		closeErr := f.Close()
+		// Cleanup partial file on error.
+		if copyErr != nil || closeErr != nil {
+			_ = os.Remove(tmpPath)
+			if copyErr != nil {
+				return fmt.Errorf("write output file: %w", copyErr)
+			}
+			return fmt.Errorf("close output file: %w", closeErr)
 		}
-		output.PrintInfo(fmt.Sprintf("Downloaded %d bytes to %s", n, injectDownloadOutput))
+		if cl := resp.Header.Get("Content-Length"); cl != "" {
+			if want, perr := strconv.ParseInt(cl, 10, 64); perr == nil && want != n {
+				_ = os.Remove(tmpPath)
+				return fmt.Errorf("download truncated: got %d bytes, expected %d", n, want)
+			}
+		}
+		if err := os.Rename(tmpPath, injectDownloadOutput); err != nil {
+			_ = os.Remove(tmpPath)
+			return fmt.Errorf("rename output file: %w", err)
+		}
+		sum := fmt.Sprintf("%x", hasher.Sum(nil))
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(map[string]any{
+				"path":   injectDownloadOutput,
+				"size":   n,
+				"sha256": sum,
+			})
+		} else {
+			output.PrintInfo(fmt.Sprintf("Downloaded %d bytes to %s (sha256=%s)", n, injectDownloadOutput, sum))
+		}
 		return nil
-	},
-}
+	}
 
 // ---------- inject download-batch ----------
 
@@ -890,6 +968,9 @@ func init() {
 	injectDownloadCmd.Flags().StringVar(&injectDownloadInclude, "include", "converted", "Which subset to download when using --output-dir: "+injectIncludeFlagHelp())
 	injectDownloadCmd.Flags().IntVar(&injectDownloadFilePar, "parallel-files", 4, "Concurrent file downloads when using --output-dir")
 	injectDownloadCmd.Flags().IntVar(&injectDownloadTimeout, "request-timeout-override", 0, "Per-request HTTP timeout in seconds (0 = use global --request-timeout)")
+	addStdinFlags(injectGetCmd, &injectGetStdin, &injectGetStdinField, &injectGetStdinFailFast)
+	addStdinFlags(injectListFilesCmd, &injectFilesStdin, &injectFilesStdinField, &injectFilesStdinFailFast)
+	addStdinFlags(injectDownloadCmd, &injectDownloadStdin, &injectDownloadStdinField, &injectDownloadStdinFailFast)
 
 	injectDownloadBatchCmd.Flags().StringVar(&injectBatchOutputDir, "output-dir", "", "Required: directory under which each pack is extracted as <output-dir>/<name>/")
 	injectDownloadBatchCmd.Flags().StringVar(&injectBatchInclude, "include", "converted", "Which subset to download per pack: "+injectIncludeFlagHelp())
@@ -902,7 +983,7 @@ func init() {
 	injectCmd.AddCommand(injectListCmd)
 	injectCmd.AddCommand(injectGetCmd)
 	injectCmd.AddCommand(injectSearchCmd)
-	injectCmd.AddCommand(injectFilesCmd)
+	injectCmd.AddCommand(injectListFilesCmd)
 	injectCmd.AddCommand(injectDownloadCmd)
 	injectCmd.AddCommand(injectDownloadBatchCmd)
 }

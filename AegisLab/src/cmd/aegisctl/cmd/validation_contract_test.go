@@ -27,6 +27,32 @@ func resetCLIStateForTest() {
 	output.Quiet = false
 	flagDryRun = false
 	cfg = nil
+	commandStdin = os.Stdin
+
+	waitStdin = false
+	waitStdinField = ""
+	waitStdinFailFast = false
+	injectGetStdin = false
+	injectGetStdinField = ""
+	injectGetStdinFailFast = false
+	injectFilesStdin = false
+	injectFilesStdinField = ""
+	injectFilesStdinFailFast = false
+	injectDownloadStdin = false
+	injectDownloadStdinField = ""
+	injectDownloadStdinFailFast = false
+	taskGetStdin = false
+	taskGetStdinField = ""
+	taskGetStdinFailFast = false
+	taskLogsStdin = false
+	taskLogsStdinField = ""
+	taskLogsStdinFailFast = false
+	traceGetStdin = false
+	traceGetStdinField = ""
+	traceGetStdinFailFast = false
+	traceWatchStdin = false
+	traceWatchStdinField = ""
+	traceWatchStdinFailFast = false
 }
 
 func captureStdIO(t *testing.T, fn func() error) (stdout string, stderr string, err error) {
@@ -373,13 +399,13 @@ labels:
 	flagProject = "pair_diagnosis"
 	flagOutput = "json"
 	flagDryRun = true
-	executeSubmitSpec = execSpec
+	executeCreateInput = execSpec
 
 	stdout, _, err = captureStdIO(t, func() error {
-		return executeSubmitCmd.RunE(nil, nil)
+		return executeCreateCmd.RunE(nil, nil)
 	})
 	if err != nil {
-		t.Fatalf("execute submit dry-run failed: %v", err)
+		t.Fatalf("execute create dry-run failed: %v", err)
 	}
 	executePlan := decodeJSONMap(t, stdout)
 	if executePlan["dry_run"] != true {
@@ -391,7 +417,7 @@ labels:
 
 	for _, path := range requestedPaths {
 		if path == "POST /api/v2/projects/7/executions/execute" {
-			t.Fatalf("execute submit --dry-run should not hit submit endpoint")
+			t.Fatalf("execute create --dry-run should not hit submit endpoint")
 		}
 	}
 }

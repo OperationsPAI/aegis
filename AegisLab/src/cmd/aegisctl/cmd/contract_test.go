@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,9 +30,13 @@ func resetCLIState() {
 	flagOutput = ""
 	flagRequestTimeout = 0
 	flagQuiet = false
+	flagVersion = false
 	flagNonInteractive = false
 	flagDryRun = false
 	output.Quiet = false
+	commandStdin = os.Stdin
+
+	executeCreateInput = ""
 
 	authLoginServer = ""
 	authLoginKeyID = ""
@@ -80,6 +86,33 @@ func resetCLIState() {
 
 	waitTimeout = 0
 	waitInterval = 0
+	waitStdin = false
+	waitStdinField = ""
+
+	injectGetStdin = false
+	injectGetStdinField = ""
+	injectGetStdinFailFast = false
+	injectFilesStdin = false
+	injectFilesStdinField = ""
+	injectFilesStdinFailFast = false
+	injectDownloadStdin = false
+	injectDownloadStdinField = ""
+	injectDownloadStdinFailFast = false
+
+	taskGetStdin = false
+	taskGetStdinField = ""
+	taskGetStdinFailFast = false
+	taskLogsStdin = false
+	taskLogsStdinField = ""
+	taskLogsStdinFailFast = false
+
+	traceGetStdin = false
+	traceGetStdinField = ""
+	traceGetStdinFailFast = false
+	traceWatchStdin = false
+	traceWatchStdinField = ""
+	traceWatchStdinFailFast = false
+	waitStdinFailFast = false
 
 	resetCommandFlags(rootCmd)
 }
@@ -216,6 +249,13 @@ func TestRootPersistentFlagsExposeNonInteractiveMode(t *testing.T) {
 	}
 }
 
+func TestRootPersistentFlagsExposeNoColorMode(t *testing.T) {
+	f := rootCmd.PersistentFlags().Lookup("no-color")
+	if f == nil {
+		t.Fatalf("expected --no-color persistent flag to be registered")
+	}
+}
+
 func TestAuthLoginMissingSecretUsesUsageExitCode(t *testing.T) {
 	res := runCLI(t, "auth", "login", "--server", "http://example.test", "--key-id", "pk_test")
 	if res.code != ExitCodeUsage {
@@ -223,6 +263,19 @@ func TestAuthLoginMissingSecretUsesUsageExitCode(t *testing.T) {
 	}
 	if !strings.Contains(res.stderr, "--key-secret is required") {
 		t.Fatalf("stderr = %q, want missing key-secret diagnostic", res.stderr)
+	}
+	if strings.TrimSpace(res.stdout) != "" {
+		t.Fatalf("stdout should be empty on validation failure, got %q", res.stdout)
+	}
+}
+
+func TestAuthLoginMissingIdentityUsesUsageExitCode(t *testing.T) {
+	res := runCLI(t, "auth", "login", "--server", "http://example.test")
+	if res.code != ExitCodeUsage {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", res.code, ExitCodeUsage, res.stderr)
+	}
+	if !strings.Contains(res.stderr, "either --username or --key-id is required") {
+		t.Fatalf("stderr = %q, want identity diagnostic", res.stderr)
 	}
 	if strings.TrimSpace(res.stdout) != "" {
 		t.Fatalf("stdout should be empty on validation failure, got %q", res.stdout)
@@ -297,5 +350,68 @@ func TestTraceGetMissingTokenUsesAuthExitCode(t *testing.T) {
 	}
 	if strings.TrimSpace(res.stdout) != "" {
 		t.Fatalf("stdout should be empty on auth failure, got %q", res.stdout)
+	}
+}
+
+func TestIntegrationServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("unexpected method: %v", r.Method)
+		}
+		switch r.URL.Path {
+		case "/api/v2/projects":
+			if r.URL.Query().Get("page") == "2" {
+				w.WriteHeader(http.StatusOK)
+				// Payload is intentionally schema-incompatible for
+				// PaginatedData[projectListItem] (id must be int).
+				_, _ = w.Write([]byte(`{"code":0,"message":"ok","data":{"items":[{"id":"bad-id","name":"broken","description":"","status":"active","created_at":"2026-01-01"}],"pagination":{"page":2,"size":20,"total":1,"total_pages":1}}}`))
+				return
+			}
+			w.Header().Set("X-Request-Id", "req-server-fail")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"code":500,"message":"An unexpected error occurred","request_id":"should-not-be-in-json"}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	serverErr := runCLI(t, "project", "list", "--server", server.URL, "--output", "json")
+	if serverErr.code != ExitCodeServerError {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", serverErr.code, ExitCodeServerError, serverErr.stderr)
+	}
+	var serverPayload map[string]any
+	if err := json.Unmarshal([]byte(serverErr.stderr), &serverPayload); err != nil {
+		t.Fatalf("stderr should be JSON for --output=json: %v\nstderr=%q", err, serverErr.stderr)
+	}
+	if got, _ := serverPayload["type"].(string); got != "server" {
+		t.Fatalf("server payload type = %v, want server", serverPayload["type"])
+	}
+	if got, _ := serverPayload["exit_code"].(float64); int(got) != ExitCodeServerError {
+		t.Fatalf("server payload exit_code = %v, want %d", serverPayload["exit_code"], ExitCodeServerError)
+	}
+	if v := serverPayload["request_id"]; v != "req-server-fail" {
+		t.Fatalf("server payload request_id = %v, want req-server-fail", v)
+	}
+	if strings.Contains(serverErr.stderr, "An unexpected error occurred") {
+		t.Fatalf("server payload leaked generic server message: %q", serverErr.stderr)
+	}
+
+	decodeErr := runCLI(t, "project", "list", "--page", "2", "--server", server.URL, "--output", "ndjson")
+	if decodeErr.code != ExitCodeDecodeFailure {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", decodeErr.code, ExitCodeDecodeFailure, decodeErr.stderr)
+	}
+	var decodePayload map[string]any
+	if err := json.Unmarshal([]byte(decodeErr.stderr), &decodePayload); err != nil {
+		t.Fatalf("stderr should be JSON for --output=ndjson: %v\nstderr=%q", err, decodeErr.stderr)
+	}
+	if got, _ := decodePayload["type"].(string); got != "decode" {
+		t.Fatalf("decode payload type = %v, want decode", decodePayload["type"])
+	}
+	if got, _ := decodePayload["exit_code"].(float64); int(got) != ExitCodeDecodeFailure {
+		t.Fatalf("decode payload exit_code = %v, want %d", decodePayload["exit_code"], ExitCodeDecodeFailure)
+	}
+	if !strings.Contains(decodeErr.stderr, "field") || !strings.Contains(decodeErr.stderr, "expected") {
+		t.Fatalf("decode payload should include path/type details, got %q", decodeErr.stderr)
 	}
 }

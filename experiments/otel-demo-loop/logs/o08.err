@@ -1,4 +1,0 @@
-time="2026-04-25T14:13:43+01:00" level=warning msg="Auto-initializing Kubernetes client. Consider calling InitWithConfig() explicitly."
-time="2026-04-25T14:13:43+01:00" level=warning msg="In-cluster config not found, trying kubeconfig file"
-time="2026-04-25T14:13:43+01:00" level=info msg="Using kubeconfig from ~/.kube/config"
-time="2026-04-25T14:13:43+01:00" level=info msg="Kubernetes client initialized with external config"

@@ -162,12 +162,12 @@ guided configs exclusively; there is no YAML-spec `inject submit` command.
 For execution requests driven through the Aegis API:
 
 ```bash
-./bin/aegisctl execute submit --project pair_diagnosis --spec ./execution.yaml -o json
+./bin/aegisctl execute create --project pair_diagnosis --input ./execution.yaml -o json
 ```
 
 Contract:
 
-- accepts the checked-in YAML schema documented by `execute submit --help`
+- accepts the checked-in YAML schema documented by `execute create --help`
 - writes the API response body to stdout as JSON
 - exits `0` on accepted submission, `1` on CLI / API / spec errors
 - `--dry-run` prints the resolved request contract without sending the POST
@@ -207,7 +207,7 @@ These are the command surfaces this document treats as stable for validation:
 - `aegisctl pedestal helm verify`
 - `aegisctl inject guided`
 - `aegisctl wait`
-- `aegisctl execute submit`
+- `aegisctl execute create`
 
 If behavior for one of these commands changes, update this file and the command
 coverage in `src/cmd/aegisctl/cmd/*_test.go` in the same change.

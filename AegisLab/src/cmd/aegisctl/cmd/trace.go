@@ -69,18 +69,18 @@ var traceColumnExtractors = map[string]func(map[string]any) string{
 		}
 		return stringField(m, "trace_id")
 	},
-	"type":         func(m map[string]any) string { return stringField(m, "type") },
-	"state":        func(m map[string]any) string { return stringField(m, "state") },
-	"status":       func(m map[string]any) string { return stringField(m, "status") },
-	"project":      func(m map[string]any) string { return stringField(m, "project_name") },
-	"project_id":   func(m map[string]any) string { return stringField(m, "project_id") },
-	"group_id":     func(m map[string]any) string { return stringField(m, "group_id") },
-	"last_event":   func(m map[string]any) string { return stringField(m, "last_event") },
-	"final_event":  func(m map[string]any) string { return stringField(m, "last_event") }, // alias for terminal event
-	"created_at":   func(m map[string]any) string { return stringField(m, "created_at") },
-	"start_time":   func(m map[string]any) string { return stringField(m, "start_time") },
-	"end_time":     func(m map[string]any) string { return stringField(m, "end_time") },
-	"leaf_num":     func(m map[string]any) string { return stringField(m, "leaf_num") },
+	"type":        func(m map[string]any) string { return stringField(m, "type") },
+	"state":       func(m map[string]any) string { return stringField(m, "state") },
+	"status":      func(m map[string]any) string { return stringField(m, "status") },
+	"project":     func(m map[string]any) string { return stringField(m, "project_name") },
+	"project_id":  func(m map[string]any) string { return stringField(m, "project_id") },
+	"group_id":    func(m map[string]any) string { return stringField(m, "group_id") },
+	"last_event":  func(m map[string]any) string { return stringField(m, "last_event") },
+	"final_event": func(m map[string]any) string { return stringField(m, "last_event") }, // alias for terminal event
+	"created_at":  func(m map[string]any) string { return stringField(m, "created_at") },
+	"start_time":  func(m map[string]any) string { return stringField(m, "start_time") },
+	"end_time":    func(m map[string]any) string { return stringField(m, "end_time") },
+	"leaf_num":    func(m map[string]any) string { return stringField(m, "leaf_num") },
 }
 
 func validTraceColumns() []string {
@@ -123,6 +123,7 @@ var traceListCmd = &cobra.Command{
 Output formats:
   --format table   (default) human-readable aligned table
   --format json    raw JSON response data
+  --format ndjson  one JSON object per line (envelope omitted)
   --format tsv     tab-separated values with a single header row, safe for
                    piping into awk/cut/sort. Uses --columns to pick fields.
 
@@ -143,9 +144,9 @@ Columns available for --columns (TSV only):
 			format = "table"
 		}
 		switch format {
-		case "table", "json", "tsv":
+		case "table", "json", "ndjson", "tsv":
 		default:
-			return fmt.Errorf("invalid --format %q; expected table|json|tsv", format)
+			return fmt.Errorf("invalid --format %q; expected table|json|ndjson|tsv", format)
 		}
 
 		// Resolve columns up-front so invalid values fail before the HTTP call.
@@ -202,6 +203,11 @@ Columns available for --columns (TSV only):
 			return nil
 		case "tsv":
 			return printTracesTSV(columns, resp.Data.Items)
+		case "ndjson":
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
+			}
+			return output.PrintNDJSON(resp.Data.Items)
 		}
 
 		// Default: table.
@@ -252,14 +258,28 @@ func printTracesTSV(columns []string, items []map[string]any) error {
 var traceGetCmd = &cobra.Command{
 	Use:   "get <trace-id>",
 	Short: "Show detailed trace information",
-	Args:  exactArgs(1, "trace get <trace-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		return runStdinItems("trace get", "trace get <trace-id>", args, stdinOptions{
+			enabled:  traceGetStdin,
+			field:    traceGetStdinField,
+			failFast: traceGetStdinFailFast,
+		}, runTraceGet)
+	},
+}
+
+var (
+	traceGetStdin         bool
+	traceGetStdinField    string
+	traceGetStdinFailFast bool
+)
+
+func runTraceGet(traceID string) error {
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
 		c := newClient()
 
-		path := fmt.Sprintf("/api/v2/traces/%s", args[0])
+		path := fmt.Sprintf("/api/v2/traces/%s", traceID)
 		var resp client.APIResponse[map[string]any]
 		if err := c.Get(path, &resp); err != nil {
 			return err
@@ -303,7 +323,6 @@ var traceGetCmd = &cobra.Command{
 			}
 		}
 		return nil
-	},
 }
 
 // --- trace watch ---
@@ -311,9 +330,22 @@ var traceGetCmd = &cobra.Command{
 var traceWatchCmd = &cobra.Command{
 	Use:   "watch <trace-id>",
 	Short: "Watch trace events via SSE stream",
-	Args:  exactArgs(1, "trace watch <trace-id>"),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		traceID := args[0]
+		return runStdinItems("trace watch", "trace watch <trace-id>", args, stdinOptions{
+			enabled:  traceWatchStdin,
+			field:    traceWatchStdinField,
+			failFast: traceWatchStdinFailFast,
+		}, runTraceWatch)
+	},
+}
+
+var (
+	traceWatchStdin         bool
+	traceWatchStdinField    string
+	traceWatchStdinFailFast bool
+)
+
+func runTraceWatch(traceID string) error {
 		ssePath := fmt.Sprintf("/api/v2/traces/%s/stream", traceID)
 		reader := client.NewSSEReader(flagServer, ssePath, flagToken)
 
@@ -354,7 +386,6 @@ var traceWatchCmd = &cobra.Command{
 				return nil
 			}
 		}
-	},
 }
 
 // --- trace cancel ---
@@ -509,6 +540,8 @@ func init() {
 			"Valid: id,type,state,status,project,project_id,group_id,last_event,final_event,created_at,start_time,end_time,leaf_num")
 
 	traceCancelCmd.Flags().BoolVarP(&traceCancelForce, "force", "f", false, "Skip confirmation prompt")
+	addStdinFlags(traceGetCmd, &traceGetStdin, &traceGetStdinField, &traceGetStdinFailFast)
+	addStdinFlags(traceWatchCmd, &traceWatchStdin, &traceWatchStdinField, &traceWatchStdinFailFast)
 
 	traceCmd.AddCommand(traceListCmd)
 	traceCmd.AddCommand(traceGetCmd)

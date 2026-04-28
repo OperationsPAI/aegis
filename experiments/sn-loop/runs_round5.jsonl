@@ -1,4 +1,0 @@
-{"ts": "2026-04-26T19:05:11+0100", "candidate_id": "n5_01", "paired_with": [], "group_id": "de19f745-59b4-4ca3-a7db-67fbe75c73bd", "trace_id": "c45ce211-e4b4-434d-9318-f3a88b451346", "ns": "sn20"}
-{"ts": "2026-04-26T19:05:25+0100", "candidate_id": "n5_02", "paired_with": [], "group_id": "d557653f-eb0d-4678-842c-96089c07a72f", "trace_id": "6000c5f3-3c61-400f-ad25-b7ef6da9ad2f", "ns": "sn21"}
-{"ts": "2026-04-26T19:05:41+0100", "candidate_id": "n5_03", "paired_with": [], "error": "{\"code\":500,\"message\":\"An unexpected error occurred\",\"timestamp\":1777226741}"}
-{"ts": "2026-04-26T19:05:57+0100", "candidate_id": "n5_04", "paired_with": [], "group_id": "daccc12f-093e-4f6e-9baa-e6610bbbaa54", "trace_id": "af39b16b-4755-4286-bbb1-8a7322ad5b22", "ns": "sn23"}

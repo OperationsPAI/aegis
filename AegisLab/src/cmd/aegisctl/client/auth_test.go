@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"aegis/cmd/aegisctl/internal/cli/clierr"
 )
 
 func TestCanonicalAPIKeyString(t *testing.T) {
@@ -158,5 +160,44 @@ func TestPostWithHeaders(t *testing.T) {
 		"X-Key-Id": "pk_demo",
 	}, &resp); err != nil {
 		t.Fatalf("PostWithHeaders returned error: %v", err)
+	}
+}
+
+func TestServerErrorsAreSanitized(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Request-Id", "req-500")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"code":500,"message":"An unexpected error occurred"}`))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "", 5*time.Second)
+	err := c.Get("/api/v2/auth/api-key/token", nil)
+	if err == nil {
+		t.Fatal("expected server error")
+	}
+
+	cliErr, ok := err.(*clierr.CLIError)
+	if !ok {
+		t.Fatalf("error type = %T, want *clierr.CLIError", err)
+	}
+	if cliErr.Type != "server" {
+		t.Fatalf("cliErr.Type = %q, want server", cliErr.Type)
+	}
+	if cliErr.ExitCode != exitCodeServer {
+		t.Fatalf("cliErr.ExitCode = %d, want %d", cliErr.ExitCode, exitCodeServer)
+	}
+	if cliErr.RequestID != "req-500" {
+		t.Fatalf("cliErr.RequestID = %q, want req-500", cliErr.RequestID)
+	}
+	if strings.Contains(cliErr.Message, genericServerMessage) {
+		t.Fatalf("cliErr.Message leaked generic server message: %q", cliErr.Message)
+	}
+	if strings.Contains(cliErr.Cause, genericServerMessage) {
+		t.Fatalf("cliErr.Cause leaked generic server message: %q", cliErr.Cause)
+	}
+	if !strings.Contains(cliErr.Message, "request_id=req-500") {
+		t.Fatalf("cliErr.Message = %q, want request_id", cliErr.Message)
 	}
 }

@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -44,5 +47,50 @@ func TestExecTimeField(t *testing.T) {
 	}
 	if got := execTimeField(map[string]any{"execute_time": "nope"}); got != 0 {
 		t.Fatalf("unknown type: got %d", got)
+	}
+}
+
+func TestTaskListJSONEnvelope(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v2/tasks" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"code":    200,
+			"message": "success",
+			"data": map[string]any{
+				"items": []map[string]any{
+					{"id": "task-1", "state": "Running", "type": "FaultInjection"},
+					{"id": "task-2", "state": "Error", "type": "RestartPedestal"},
+				},
+				"pagination": map[string]any{"page": 1, "size": 100, "total": 2, "total_pages": 1},
+			},
+		})
+	}))
+	defer ts.Close()
+
+	res := runCLI(t, "task", "list",
+		"--server", ts.URL, "--token", "tok", "--output", "json")
+	if res.code != ExitCodeSuccess {
+		t.Fatalf("exit = %d, want %d; stderr=%q stdout=%q", res.code, ExitCodeSuccess, res.stderr, res.stdout)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(res.stdout), &payload); err != nil {
+		t.Fatalf("stdout should be JSON object: %v; got %q", err, res.stdout)
+	}
+	if _, ok := payload["items"]; !ok {
+		t.Fatalf("missing items key in payload: %v", payload)
+	}
+	if _, ok := payload["pagination"]; !ok {
+		t.Fatalf("missing pagination key in payload: %v", payload)
+	}
+	items, ok := payload["items"].([]any)
+	if !ok {
+		t.Fatalf("items is %T, want []any", payload["items"])
+	}
+	if len(items) != 2 {
+		t.Fatalf("items length = %d, want 2", len(items))
 	}
 }

@@ -81,9 +81,15 @@ var containerListCmd = &cobra.Command{
 			return err
 		}
 
-		if output.OutputFormat(flagOutput) == output.FormatJSON {
+		switch output.OutputFormat(flagOutput) {
+		case output.FormatJSON:
 			output.PrintJSON(resp.Data)
 			return nil
+		case output.FormatNDJSON:
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
+			}
+			return output.PrintNDJSON(resp.Data.Items)
 		}
 
 		rows := make([][]string, 0, len(resp.Data.Items))
@@ -432,17 +438,26 @@ var containerResolveCmd = &cobra.Command{
 
 // --- container build ---
 
-var containerBuildVersion string
+var (
+	containerBuildVersion string
+	containerBuildForce   bool
+)
 
 var containerBuildCmd = &cobra.Command{
 	Use:   "build <name>",
 	Short: "Trigger a container build",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		name := args[0]
+		if !containerBuildForce || flagDryRun {
+			printContainerBuildPlan(name, containerBuildVersion)
+			return nil
+		}
+
 		c := newClient()
 
 		body := map[string]string{
-			"name": args[0],
+			"name": name,
 		}
 		if containerBuildVersion != "" {
 			body["version"] = containerBuildVersion
@@ -458,15 +473,40 @@ var containerBuildCmd = &cobra.Command{
 			return nil
 		}
 
-		output.PrintInfo(fmt.Sprintf("Build triggered for container %q", args[0]))
+		output.PrintInfo(fmt.Sprintf("Build triggered for container %q", name))
 		return nil
 	},
+}
+
+func printContainerBuildPlan(name, version string) {
+	if output.OutputFormat(flagOutput) == output.FormatJSON {
+		payload := map[string]any{
+			"dry_run": true,
+			"name":    name,
+		}
+		if version != "" {
+			payload["version"] = version
+		}
+		output.PrintJSON(payload)
+		return
+	}
+
+	if flagNonInteractive && !containerBuildForce {
+		output.PrintInfo("Refusing to build without --force in non-interactive mode")
+		return
+	}
+	fmt.Fprintf(os.Stdout, "Build preview for container %q\n", name)
+	if version != "" {
+		fmt.Fprintf(os.Stdout, "  version: %s\n", version)
+	}
+	output.PrintInfo("Run --force to execute the build")
 }
 
 func init() {
 	containerListCmd.Flags().StringVar(&containerListType, "type", "", "Filter by type: algorithm|benchmark|pedestal")
 
 	containerBuildCmd.Flags().StringVar(&containerBuildVersion, "version", "", "Version tag for the build")
+	containerBuildCmd.Flags().BoolVar(&containerBuildForce, "force", false, "Required to actually trigger the build")
 
 	containerDeleteCmd.Flags().BoolVar(&containerDeleteYes, "yes", false, "Skip confirmation prompt")
 	containerDeleteCmd.Flags().BoolVar(&containerDeleteYes, "force", false, "Alias for --yes")
@@ -479,6 +519,7 @@ func init() {
 	containerCmd.AddCommand(containerResolveCmd)
 
 	cobra.OnInitialize(func() {
+		markDryRunSupported(containerBuildCmd)
 		markDryRunSupported(containerDeleteCmd)
 	})
 
@@ -491,6 +532,7 @@ func init() {
 
 	containerVersionDescribeCmd.Flags().StringVar(&containerVersionDescribeFormat, "format", "",
 		"Output format: text|json|yaml (default text; falls back to --output when unset)")
+	registerOutputFormats(containerVersionDescribeCmd, output.OutputFormat("yaml"))
 
 	containerVersionCmd.AddCommand(containerVersionSetImageCmd)
 	containerVersionCmd.AddCommand(containerVersionListVersionsCmd)

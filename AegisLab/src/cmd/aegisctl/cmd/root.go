@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 
 	"aegis/cmd/aegisctl/config"
 	"aegis/cmd/aegisctl/output"
@@ -19,8 +21,10 @@ var (
 	flagOutput         string
 	flagRequestTimeout int
 	flagQuiet          bool
+	flagNoColor        bool
 	flagNonInteractive bool
 	flagDryRun         bool
+	flagVersion        bool
 
 	// Resolved at PersistentPreRun time.
 	cfg *config.Config
@@ -32,6 +36,13 @@ var rootCmd = &cobra.Command{
 	Short:         "CLI client for the AegisLab platform",
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		if flagVersion {
+			printVersionInfo()
+			return nil
+		}
+		return cmd.Help()
+	},
 	Long: `aegisctl is a command-line interface for managing the AegisLab (RCABench)
 fault-injection and root-cause-analysis benchmarking platform.
 
@@ -70,7 +81,8 @@ QUICK START:
   aegisctl execute list --project pair_diagnosis
 
 OUTPUT:
-  All commands support --output json (or -o json) for machine-parseable output.
+  All commands support --output table|json|ndjson (or -o) for machine output.
+  --output table remains human-friendly and writes to stdout.
   Table output goes to stdout; informational messages go to stderr.
   Use --quiet (-q) to suppress informational messages.
   Use --non-interactive to lock automation-facing commands into fail-fast,
@@ -85,7 +97,7 @@ ENVIRONMENT VARIABLES:
   AEGIS_PASSWORD    - Password for 'aegisctl auth login'
   AEGIS_PASSWORD_FILE - File containing the password for 'aegisctl auth login'
   AEGIS_PROJECT     - Default project name (overridden by --project flag)
-  AEGIS_OUTPUT      - Output format: table|json (overridden by --output flag)
+  AEGIS_OUTPUT      - Output format: table|json|ndjson (overridden by --output flag)
   AEGIS_TIMEOUT     - Request timeout in seconds (overridden by --request-timeout flag)
   AEGIS_NON_INTERACTIVE - Set true/1 to disable prompts and require explicit input
 
@@ -94,6 +106,11 @@ NAMING CONVENTION:
   For example: "aegisctl container get detector" resolves "detector" to its ID.
   The --project flag also accepts project names (e.g. "pair_diagnosis").`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if flagVersion {
+			printVersionInfo()
+			return silentExit(ExitCodeSuccess)
+		}
+
 		// Load configuration file.
 		var err error
 		cfg, err = config.LoadConfig()
@@ -165,8 +182,15 @@ NAMING CONVENTION:
 			}
 		}
 
+		// Respect --no-color and NO_COLOR for all colorized output.
+		output.SetNoColor(flagNoColor || os.Getenv("NO_COLOR") != "")
+
 		// Forward quiet flag into the output package.
 		output.Quiet = flagQuiet
+
+		if err := validateOutputFormat(cmd); err != nil {
+			return err
+		}
 
 		// Reject --dry-run on commands that don't implement it. We do this
 		// after the resolution logic so env-expansion still runs, but before
@@ -182,15 +206,72 @@ NAMING CONVENTION:
 	},
 }
 
+const outputFormatAllowlistAnnotation = "allowed-output-formats"
+
+func registerOutputFormats(cmd *cobra.Command, extras ...output.OutputFormat) {
+	if cmd == nil || len(extras) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, len(extras))
+	for _, extra := range extras {
+		seen[strings.ToLower(string(extra))] = struct{}{}
+	}
+	values := make([]string, 0, len(seen))
+	for v := range seen {
+		values = append(values, v)
+	}
+	sort.Strings(values)
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
+	}
+	cmd.Annotations[outputFormatAllowlistAnnotation] = strings.Join(values, ",")
+}
+
+func validateOutputFormat(cmd *cobra.Command) error {
+	allowed := map[string]struct{}{
+		string(output.FormatTable):  {},
+		string(output.FormatJSON):   {},
+		string(output.FormatNDJSON): {},
+	}
+	for _, v := range strings.Split(getAnnotatedOutputFormats(cmd), ",") {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		allowed[strings.ToLower(v)] = struct{}{}
+	}
+	if _, ok := allowed[strings.ToLower(flagOutput)]; ok {
+		return nil
+	}
+	return usageErrorf("invalid --output %q; expected %s", flagOutput, formatCSV(allowed))
+}
+
+func getAnnotatedOutputFormats(cmd *cobra.Command) string {
+	if cmd == nil || cmd.Annotations == nil {
+		return ""
+	}
+	return cmd.Annotations[outputFormatAllowlistAnnotation]
+}
+
+func formatCSV(values map[string]struct{}) string {
+	parts := make([]string, 0, len(values))
+	for v := range values {
+		parts = append(parts, v)
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ",")
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVar(&flagServer, "server", "", "AegisLab server URL (env: AEGIS_SERVER)")
 	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "Authentication token (env: AEGIS_TOKEN)")
 	rootCmd.PersistentFlags().StringVar(&flagProject, "project", "", "Default project name (resolved to ID; env: AEGIS_PROJECT)")
-	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table|json (env: AEGIS_OUTPUT)")
+	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table|json|ndjson (env: AEGIS_OUTPUT)")
 	rootCmd.PersistentFlags().IntVar(&flagRequestTimeout, "request-timeout", 0, "Request timeout in seconds (env: AEGIS_TIMEOUT)")
 	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
+	rootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable ANSI color output (env: NO_COLOR)")
 	rootCmd.PersistentFlags().BoolVar(&flagNonInteractive, "non-interactive", false, "Disable prompts and require explicit input (env: AEGIS_NON_INTERACTIVE)")
 	rootCmd.PersistentFlags().BoolVar(&flagDryRun, "dry-run", false, "Show what would be done without executing")
+	rootCmd.PersistentFlags().BoolVar(&flagVersion, "version", false, "Print version information and exit")
 
 	// Register subcommands.
 	rootCmd.AddCommand(authCmd)
@@ -209,6 +290,7 @@ func init() {
 	rootCmd.AddCommand(regressionCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(pedestalCmd)
 	rootCmd.AddCommand(schemaCmd)
 	rootCmd.AddCommand(systemCmd)
@@ -222,8 +304,8 @@ func setupDryRunRegistry() {
 	if injectGuidedCmd != nil {
 		markDryRunSupported(injectGuidedCmd)
 	}
-	if executeSubmitCmd != nil {
-		markDryRunSupported(executeSubmitCmd)
+	if executeCreateCmd != nil {
+		markDryRunSupported(executeCreateCmd)
 	}
 	if clusterPrepareCmd != nil {
 		markDryRunSupported(clusterPrepareCmd)

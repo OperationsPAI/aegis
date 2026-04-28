@@ -40,8 +40,8 @@ var executeCmd = &cobra.Command{
 	Long: `Manage RCA algorithm executions in AegisLab projects.
 
 WORKFLOW:
-  # Submit algorithm execution from a YAML spec file
-  aegisctl execute submit --spec execution.yaml --project pair_diagnosis
+  # Create algorithm execution from a YAML spec file
+  aegisctl execute create --input execution.yaml --project pair_diagnosis
 
   # List executions in a project
   aegisctl execute list --project pair_diagnosis
@@ -66,60 +66,74 @@ SPEC FILE FORMAT (execution.yaml):
       value: algorithm-comparison`,
 }
 
-// ---------- execute submit ----------
+// ---------- execute create ----------
 
-var executeSubmitSpec string
+var executeCreateInput string
 
-var executeSubmitCmd = &cobra.Command{
-	Use:   "submit",
+var executeCreateCmd = &cobra.Command{
+	Use:   "create",
 	Short: "Submit an algorithm execution from a YAML spec",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if executeSubmitSpec == "" {
-			return fmt.Errorf("--spec is required")
-		}
-
-		data, err := os.ReadFile(executeSubmitSpec)
-		if err != nil {
-			return fmt.Errorf("read spec file: %w", err)
-		}
-
-		var spec ExecuteSpec
-		if err := yaml.Unmarshal(data, &spec); err != nil {
-			return fmt.Errorf("parse spec YAML: %w", err)
-		}
-
-		pid, err := resolveProjectIDByName()
-		if err != nil {
-			return err
-		}
-
-		path := fmt.Sprintf("/api/v2/projects/%d/executions/execute", pid)
-		if flagDryRun {
-			plan := map[string]any{
-				"dry_run":    true,
-				"operation":  "execute_submit",
-				"project":    flagProject,
-				"project_id": pid,
-				"method":     "POST",
-				"path":       path,
-				"spec":       spec,
-			}
-			output.PrintJSON(plan)
-			return nil
-		}
-
-		c := newClient()
-		var resp client.APIResponse[any]
-		if err := c.Post(path, spec, &resp); err != nil {
-			return err
-		}
-
-		output.PrintJSON(resp.Data)
-		return nil
+		return runExecuteCreate(cmd, args)
 	},
 }
 
+func runExecuteCreate(cmd *cobra.Command, args []string) error {
+	specPath, err := resolveExecuteSpecPath(cmd)
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(specPath)
+	if err != nil {
+		return fmt.Errorf("read spec file: %w", err)
+	}
+
+	var spec ExecuteSpec
+	if err := yaml.Unmarshal(data, &spec); err != nil {
+		return fmt.Errorf("parse spec YAML: %w", err)
+	}
+
+	pid, err := resolveProjectIDByName()
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/api/v2/projects/%d/executions/execute", pid)
+	if flagDryRun {
+		plan := map[string]any{
+			"dry_run":    true,
+			"operation":  "execute_submit",
+			"project":    flagProject,
+			"project_id": pid,
+			"method":     "POST",
+			"path":       path,
+			"spec":       spec,
+		}
+		output.PrintJSON(plan)
+		return nil
+	}
+
+	c := newClient()
+	var resp client.APIResponse[any]
+	if err := c.Post(path, spec, &resp); err != nil {
+		return err
+	}
+
+	output.PrintJSON(resp.Data)
+	return nil
+}
+
 // ---------- execute list ----------
+
+type executeListItem struct {
+	ID        int     `json:"id"`
+	Algorithm string  `json:"algorithm"`
+	Datapack  string  `json:"datapack"`
+	State     string  `json:"state"`
+	Duration  float64 `json:"duration"`
+	CreatedAt string  `json:"created_at"`
+}
 
 var (
 	executeListPage int
@@ -134,27 +148,23 @@ var executeListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		type listItem struct {
-			ID        int    `json:"id"`
-			Algorithm string `json:"algorithm"`
-			Datapack  string `json:"datapack"`
-			State     string `json:"state"`
-			Duration  string `json:"duration"`
-			CreatedAt string `json:"created_at"`
-		}
-
 		c := newClient()
 		q := fmt.Sprintf("/api/v2/projects/%d/executions?page=%d&size=%d", pid, executeListPage, executeListSize)
 
-		var resp client.APIResponse[client.PaginatedData[listItem]]
+		var resp client.APIResponse[client.PaginatedData[executeListItem]]
 		if err := c.Get(q, &resp); err != nil {
 			return err
 		}
 
-		if output.OutputFormat(flagOutput) == output.FormatJSON {
+		switch output.OutputFormat(flagOutput) {
+		case output.FormatJSON:
 			output.PrintJSON(resp.Data)
 			return nil
+		case output.FormatNDJSON:
+			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+				return err
+			}
+			return output.PrintNDJSON(resp.Data.Items)
 		}
 
 		headers := []string{"ID", "ALGORITHM", "DATAPACK", "STATE", "DURATION", "CREATED"}
@@ -165,7 +175,7 @@ var executeListCmd = &cobra.Command{
 				item.Algorithm,
 				item.Datapack,
 				item.State,
-				item.Duration,
+				fmt.Sprintf("%v", item.Duration),
 				item.CreatedAt,
 			})
 		}
@@ -197,12 +207,19 @@ var executeGetCmd = &cobra.Command{
 // ---------- init ----------
 
 func init() {
-	executeSubmitCmd.Flags().StringVar(&executeSubmitSpec, "spec", "", "Path to execution spec YAML file")
-
 	executeListCmd.Flags().IntVar(&executeListPage, "page", 1, "Page number")
 	executeListCmd.Flags().IntVar(&executeListSize, "size", 20, "Page size")
 
-	executeCmd.AddCommand(executeSubmitCmd)
+	executeCmd.AddCommand(executeCreateCmd)
 	executeCmd.AddCommand(executeListCmd)
 	executeCmd.AddCommand(executeGetCmd)
+
+	executeCreateCmd.Flags().StringVarP(&executeCreateInput, "input", "f", "", "Path to execution spec YAML file (required)")
+}
+
+func resolveExecuteSpecPath(cmd *cobra.Command) (string, error) {
+	if executeCreateInput == "" {
+		return "", usageErrorf("--input is required")
+	}
+	return executeCreateInput, nil
 }
