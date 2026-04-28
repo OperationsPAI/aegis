@@ -5,6 +5,8 @@ description: Methodology for making the aegis control plane aware of a newly add
 
 # Registering a new system with the aegis control plane
 
+> **See also**: the `aegisctl` skill for general CLI composition (NDJSON streaming, name-not-id filters, when to *not* reach for raw mysql/etcdctl). Specific `aegisctl …` invocations below are illustrative — `aegisctl <noun> [verb] --help` is the source of truth and supersedes anything that drifts here.
+
 The workload (pods, charts, OTel collectors) is only half of adding a new
 benchmark. The other half is telling the aegis **control plane** it exists.
 The control plane state lives in five separate places, each one silently

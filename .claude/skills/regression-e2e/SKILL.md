@@ -5,6 +5,8 @@ description: Triage frame for end-to-end (E2E) test, smoke test, regression, and
 
 # Regression / E2E Triage
 
+> **See also**: the `aegisctl` skill for general CLI composition (NDJSON streaming, name-not-id filters). Specific `aegisctl …` invocations below are illustrative — `aegisctl <noun> [verb] --help` is the source of truth and supersedes anything that drifts here.
+
 Provide a short triage frame for E2E failures. Focus on likely problem classes and next inspection directions rather than detailed runbooks.
 
 ## Triage Order

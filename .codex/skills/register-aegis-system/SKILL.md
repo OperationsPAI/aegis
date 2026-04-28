@@ -1,20 +1,11 @@
 ---
 name: register-aegis-system
-description: >-
-  Methodology for making the aegis control plane aware of a newly added
-  microservice benchmark - what layers of the platform (systemconfig
-  registry, etcd dynamic config, DB seed, helm chart config, OTel pipeline)
-  must be told about the new system, and what fails silently if any layer is
-  skipped. Use whenever the user wants to "add a new benchmark", "register a
-  new system", "support X workload in aegis", "做一个新的 benchmark",
-  "加一个新的微服务", or is debugging why a freshly-deployed workload isn't
-  selectable in the guided inject flow, returns 500 on submit, or goes to `0
-  enabled` after backend restart. Complements `onboard-benchmark-system`
-  (which covers deploying the workload and wiring OTLP); this skill covers the
-  aegis-side registration that most new-benchmark failures trace back to.
+description: Methodology for making the aegis control plane aware of a newly added microservice benchmark — what layers of the platform (systemconfig registry, etcd dynamic config, DB seed, helm chart config, OTel pipeline) must be told about the new system, and what fails silently if any layer is skipped. Use whenever the user wants to "add a new benchmark", "register a new system", "support X workload in aegis", "做一个新的 benchmark", "加一个新的微服务", or is debugging why a freshly-deployed workload isn't selectable in the guided inject flow, returns 500 on submit, or goes to `0 enabled` after backend restart. Complements `onboard-benchmark-system` (which covers deploying the workload and wiring OTLP); this skill covers the aegis-side registration that most new-benchmark failures trace back to.
 ---
 
 # Registering a new system with the aegis control plane
+
+> **See also**: the `aegisctl` skill for general CLI composition (NDJSON streaming, name-not-id filters, when to *not* reach for raw mysql/etcdctl). Specific `aegisctl …` invocations below are illustrative — `aegisctl <noun> [verb] --help` is the source of truth and supersedes anything that drifts here.
 
 The workload (pods, charts, OTel collectors) is only half of adding a new
 benchmark. The other half is telling the aegis **control plane** it exists.

@@ -1,17 +1,11 @@
 ---
 name: regression-e2e
-description: >-
-  Triage frame for end-to-end (E2E) test, smoke test, regression, and
-  fault-injection validation failures. Use when the user reports an
-  E2E/smoke/regression run is broken, a fault-injection flow fails
-  mid-pipeline, a previously-green test is now flaky, or asks to "triage",
-  "debug the E2E", "why is the regression failing", "help me figure out what
-  broke the smoke test". Produces a short hypothesis list and next inspection
-  surfaces rather than a full runbook. Trigger words: e2e, end-to-end,
-  regression, smoke test, fault injection validation, flaky test, test broke.
+description: Triage frame for end-to-end (E2E) test, smoke test, regression, and fault-injection validation failures. Use when the user reports an E2E/smoke/regression run is broken, a fault-injection flow fails mid-pipeline, a previously-green test is now flaky, or asks to "triage", "debug the E2E", "why is the regression failing", "help me figure out what broke the smoke test". Produces a short hypothesis list and next inspection surfaces rather than a full runbook. Trigger words: e2e, end-to-end, regression, smoke test, fault injection validation, flaky test, test broke.
 ---
 
 # Regression / E2E Triage
+
+> **See also**: the `aegisctl` skill for general CLI composition (NDJSON streaming, name-not-id filters). Specific `aegisctl …` invocations below are illustrative — `aegisctl <noun> [verb] --help` is the source of truth and supersedes anything that drifts here.
 
 Provide a short triage frame for E2E failures. Focus on likely problem classes and next inspection directions rather than detailed runbooks.
 

@@ -5,6 +5,8 @@ description: How to onboard a new microservice benchmark (Online Boutique, Train
 
 # Onboard a benchmark system
 
+> **See also**: the `aegisctl` skill for general CLI composition (NDJSON streaming, name-not-id filters, when to *not* reach for raw kubectl/helm). Specific `aegisctl …` invocations below are illustrative — `aegisctl <noun> [verb] --help` is the source of truth and supersedes anything that drifts here.
+
 Goal: get a microservice workload (any of the ones listed in
 `chaos-experiment`'s `internal/systemconfig`, or a fresh one) to the point
 where you can run an injection and see the effect in ClickHouse traces.

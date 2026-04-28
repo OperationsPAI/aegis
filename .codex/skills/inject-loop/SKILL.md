@@ -5,6 +5,8 @@ description: Drive a closed-loop fault-injection campaign against an aegis-deplo
 
 # Fault-Injection Loop
 
+> **See also**: the `aegisctl` skill for general CLI composition (`--all -o ndjson | jq | sort | uniq -c`, name-not-id filters, never-loop-pages). Specific `aegisctl …` invocations below are illustrative — `aegisctl <noun> [verb] --help` is the source of truth and supersedes anything that drifts here.
+
 Drive a closed-loop fault-injection campaign: a stable candidate pool, K parallel submissions per round, and reward updates that bias the next round toward "interesting" faults.
 
 ## When to use

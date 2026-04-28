@@ -1,17 +1,11 @@
 ---
 name: onboard-benchmark-system
-description: >-
-  How to onboard a new microservice benchmark (Online Boutique, TrainTicket,
-  Hotel Reservation, Social Network, otel-demo, etc.) onto the aegis kind
-  cluster so it can be chaos-injected and observed via the OTLP -> ClickHouse
-  pipeline. Use this whenever the user asks to "add a new system", "run a
-  demo", "onboard <benchmark>", "inject chaos on X service", or wants to
-  gather fault-injection trace data on any workload that isn't already wired
-  up. Also use when diagnosing why a newly deployed demo isn't emitting traces
-  or why chaos isn't landing.
+description: How to onboard a new microservice benchmark (Online Boutique, TrainTicket, Hotel Reservation, Social Network, otel-demo, etc.) onto the aegis kind cluster so it can be chaos-injected and observed via the OTLP → ClickHouse pipeline. Use this whenever the user asks to "add a new system", "run a demo", "onboard <benchmark>", "inject chaos on X service", or wants to gather fault-injection trace data on any workload that isn't already wired up. Also use when diagnosing why a newly deployed demo isn't emitting traces or why chaos isn't landing.
 ---
 
 # Onboard a benchmark system
+
+> **See also**: the `aegisctl` skill for general CLI composition (NDJSON streaming, name-not-id filters, when to *not* reach for raw kubectl/helm). Specific `aegisctl …` invocations below are illustrative — `aegisctl <noun> [verb] --help` is the source of truth and supersedes anything that drifts here.
 
 Goal: get a microservice workload (any of the ones listed in
 `chaos-experiment`'s `internal/systemconfig`, or a fresh one) to the point
