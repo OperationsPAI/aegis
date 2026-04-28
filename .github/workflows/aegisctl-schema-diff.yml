@@ -48,7 +48,10 @@ jobs:
             local repo_root=$1
             local out_file=$2
 
-            (cd "$repo_root/AegisLab" && go build -o "$build_bin" ./src/cmd/aegisctl)
+            # `go build` must run from the module root (AegisLab/src, where
+            # go.mod lives). Running it from AegisLab/ walks up to the repo
+            # root and fails with "cannot find main module".
+            (cd "$repo_root/AegisLab/src" && go build -o "$build_bin" ./cmd/aegisctl)
             (cd "$repo_root/AegisLab/src" && "$build_bin" schema dump > "$out_file")
           }
 
