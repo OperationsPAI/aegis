@@ -106,6 +106,34 @@ class Pedestal(ABC):
         """
         return 0.1
 
+    @property
+    def slo_new_endpoint_latency_thresholds(self) -> dict[str, float]:
+        """Absolute latency thresholds (seconds) for endpoints that exist only
+        in the abnormal window (no normal baseline available). Used by
+        ``handle_new_endpoint``: a ts endpoint at p99=3s is bad, an otel-demo
+        image-provider at p99=3s is normal — no single set fits all systems.
+        """
+        return {"avg_duration": 3.0, "p90_duration": 7.0, "p95_duration": 8.0, "p99_duration": 10.0}
+
+    @property
+    def slo_new_endpoint_succ_rate_floor(self) -> float:
+        """Min success rate (0-1) below which a new-only endpoint is flagged
+        as an SLO violation. Used when no normal baseline is available."""
+        return 0.9
+
+    @property
+    def slo_new_endpoint_hard_timeout(self) -> float:
+        """Hard avg-duration ceiling (seconds) for a new-only endpoint —
+        unconditionally critical regardless of per-percentile thresholds."""
+        return 15.0
+
+    @property
+    def slo_disappeared_endpoint_min_normal_count(self) -> int:
+        """Min span count an endpoint must have in the normal window before its
+        absence in the abnormal window is flagged. Below this, disappearance is
+        treated as noise (rarely-invoked admin / cron endpoints)."""
+        return 10
+
     @abstractmethod
     def fix_client_spans(self, traces: pl.DataFrame) -> tuple[pl.DataFrame, dict[str, str], dict[str, str]]:
         """

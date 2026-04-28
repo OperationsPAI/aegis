@@ -117,6 +117,12 @@ class OtelDemoPedestal(GenericPedestal):
         # 100ms generic default.
         return 0.5
 
+    @property
+    def slo_new_endpoint_latency_thresholds(self) -> dict[str, float]:
+        # otel-demo legitimately has slow endpoints (image-provider, gen-AI inference);
+        # tighter than generic default would false-positive on healthy traffic.
+        return {"avg_duration": 5.0, "p90_duration": 10.0, "p95_duration": 12.0, "p99_duration": 15.0}
+
 
 @register_pedestal("tea")
 class TeaStorePedestal(GenericPedestal):

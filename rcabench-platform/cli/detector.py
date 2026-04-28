@@ -265,36 +265,37 @@ def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
     entry_count = entry_df.select(pl.len()).collect().item()
     if entry_count == 0:
         logger.error(f"loadgenerator not found in trace data, using {pedestal.entrance_service} as fallback")
+        # Substring match: handles deployments where the entrance pod has a
+        # namespace prefix (e.g. tea0-teastore-jmeter, tea24-teastore-jmeter,
+        # ...). The pedestal declares the stable suffix and we tolerate any
+        # leading prefix the orchestrator added.
         entry_df = df.filter(
-            (pl.col("ServiceName") == pedestal.entrance_service)
+            pl.col("ServiceName").str.contains(pedestal.entrance_service, literal=True)
             & (pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == ""))
         )
         entry_count = entry_df.select(pl.len()).collect().item()
 
     if entry_count == 0:
-        logger.error("No valid entrypoint found in trace data, trying all services")
-
-        # Try to find any service with root spans (no parent span)
-        available_services = df.select(pl.col("ServiceName")).unique().collect()["ServiceName"].to_list()
-        logger.error(f"Available services in trace data: {available_services}")
-
-        # Try each available service as potential entry point
-        for service in available_services:
-            if service in ["loadgenerator", pedestal.entrance_service]:
-                continue  # Already tried these
-
-            entry_df = df.filter(
-                (pl.col("ServiceName") == service) & (pl.col("ParentSpanId").is_null() | (pl.col("ParentSpanId") == ""))
-            )
-            entry_count = entry_df.select(pl.len()).collect().item()
-            if entry_count > 0:
-                logger.info(f"Using {service} as entry point with {entry_count} root spans")
-                break
-
-        # If still no entry points found, terminate the process
-        if entry_count == 0:
-            logger.error("No root spans found in any service, terminating analysis")
-            return {}
+        # Fail loud rather than silently iterating through services until one
+        # matches. The previous behaviour picked an arbitrary internal service
+        # as the entrance, which produced plausible-looking but completely wrong
+        # SLO numbers — tea/sn ran on an internal service for months before
+        # this was caught. Return empty stat so the caller can interpret this
+        # as "entrance unreachable" — a legitimate 100% SLO-violation case
+        # when the configured entrance pod is the one being chaos-killed.
+        # `run()` cross-references with the normal-window stat and surfaces
+        # any disappeared endpoints via detect_disappeared_endpoints.
+        available_services = sorted(
+            df.select(pl.col("ServiceName")).unique().collect()["ServiceName"].to_list()
+        )
+        logger.warning(
+            f"No entrance traffic found in {file}. "
+            f"Pedestal '{pedestal.name}' declared entrance_service='{pedestal.entrance_service}' "
+            f"but it has no root spans, and 'loadgenerator' is also absent. "
+            f"Available services: {available_services}. "
+            f"Returning empty stat — caller will treat as entrance-unreachable."
+        )
+        return {}
 
     entry_df_collected = entry_df.with_columns(pl.col("Timestamp").alias(pedestal.name)).sort(pedestal.name).collect()
 
@@ -332,7 +333,12 @@ def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
             if "http.status_code" in ra:
                 stat[dedupe_name]["status_code"].append(ra["http.status_code"])
             elif row["StatusCode"] != "Unset":
-                stat[dedupe_name]["status_code"].append(row["StatusCode"])
+                # gRPC and other non-HTTP spans only carry OTel status (Ok/Error/Unset).
+                # Normalize to HTTP-equivalent so the same `pedestal.success_codes` set
+                # works regardless of whether the underlying RPC is HTTP or gRPC.
+                otel_to_http = {"Ok": "200", "Error": "500"}
+                normalized = otel_to_http.get(row["StatusCode"], row["StatusCode"])
+                stat[dedupe_name]["status_code"].append(normalized)
 
             if "http.response_content_length" in ra:
                 stat[dedupe_name]["response_content_length"].append(ra["http.response_content_length"])
@@ -465,15 +471,13 @@ def handle_new_endpoint(k: str, v: dict[str, Any], state: AnalysisState) -> None
 
     # Use direct thresholds from EnhancedLatencyConfig to detect anomalies
     # Hard timeout threshold (15.0s)
-    hard_timeout_threshold = 15.0
-
-    # Absolute anomaly thresholds for different percentiles
-    absolute_thresholds = {
-        "avg_duration": 3.0,
-        "p90_duration": 7.0,
-        "p95_duration": 8.0,
-        "p99_duration": 10.0,
-    }
+    # Pedestal-provided thresholds (system-specific): a ts endpoint at p99=3s is
+    # bad, an otel-demo image-provider at p99=3s is normal. Pulling these out of
+    # detector core lets each system declare its own SLO budget.
+    pedestal = state["pedestal"]
+    absolute_thresholds = pedestal.slo_new_endpoint_latency_thresholds
+    hard_timeout_threshold = pedestal.slo_new_endpoint_hard_timeout
+    success_rate_threshold_value = pedestal.slo_new_endpoint_succ_rate_floor
 
     # Check latency thresholds
     for percentile_key, threshold in absolute_thresholds.items():
@@ -500,19 +504,17 @@ def handle_new_endpoint(k: str, v: dict[str, Any], state: AnalysisState) -> None
             "detection_reason": "hard_timeout_exceeded",
         }
 
-    # Check success rate (assuming < 90% is anomalous for new endpoints)
-    success_rate_threshold = 0.9
+    # Check success rate floor (system-specific)
     total_requests = sum(v.get("status_code", {}).values())
     if total_requests > 0:
-        pedestal = state["pedestal"]
         success_count = sum(v.get("status_code", {}).get(c, 0) for c in pedestal.success_codes)
         success_rate = success_count / total_requests
 
-        if success_rate < success_rate_threshold:
+        if success_rate < success_rate_threshold_value:
             abnormal_tag["succ_rate"] = {
                 "normal": 1.0,  # Assume normal should be 100%
                 "abnormal": success_rate,
-                "threshold": success_rate_threshold,
+                "threshold": success_rate_threshold_value,
                 "rate_drop": 1.0 - success_rate,
                 "slo_violated": True,
                 "detection_reason": "new_endpoint_low_success_rate",
@@ -654,6 +656,52 @@ def detect_success_rate_anomalies(
         state["metrics"].set_absolute_anomaly()
 
     return abnormal_tag
+
+
+def detect_disappeared_endpoints(
+    normal_stat: dict[str, Any],
+    abnormal_stat: dict[str, Any],
+    state: AnalysisState,
+) -> None:
+    """Flag endpoints with meaningful normal traffic that vanished from abnormal.
+
+    Distinct SLO signal from succ_rate / latency degradation: when users stop
+    being able to reach an endpoint at all (frontend disabled the button,
+    upstream rejected requests, etc.), the per-span_name detector loop never
+    visits the key — abnormal_stat simply doesn't contain it.
+    """
+    pedestal = state["pedestal"]
+    min_count = pedestal.slo_disappeared_endpoint_min_normal_count
+
+    for k, normal_v in normal_stat.items():
+        if k in abnormal_stat:
+            continue
+        normal_total = sum(normal_v.get("status_code", {}).values())
+        if normal_total < min_count:
+            continue  # too noisy to flag — rare admin / cron endpoints
+
+        state["metrics"].increment_processed()
+        state["metrics"].increment_anomaly()
+        state["metrics"].set_absolute_anomaly()
+        state["metrics"].categorize_issue(False, True)
+
+        abnormal_tag = {
+            "endpoint_disappeared": {
+                "normal_count": normal_total,
+                "abnormal_count": 0,
+                "slo_violated": True,
+                "detection_reason": "endpoint_disappeared",
+            }
+        }
+        v_zero: dict[str, Any] = {
+            "avg_duration": 0.0,
+            "p90_duration": 0.0,
+            "p95_duration": 0.0,
+            "p99_duration": 0.0,
+            "succ_rate": 0.0,
+            "status_code": {},
+        }
+        state["conclusion_data"].append(build_conclusion_row(k, v_zero, normal_stat, abnormal_tag))
 
 
 def analyze_single_endpoint(
@@ -853,10 +901,14 @@ def run(
     normal_stat = preprocess_trace(normal_trace, pedestal)
     abnormal_stat = preprocess_trace(abnormal_trace, pedestal)
 
-    # Check if we have valid data for analysis
-    if not normal_stat or not abnormal_stat:
-        logger.error("No endpoints found in normal or abnormal trace data, terminating analysis.")
-        raise ValueError("No endpoints found in normal or abnormal trace data.")
+    # Only raise when BOTH windows have no entrance traffic — that's a config
+    # error or upstream ingestion problem. Asymmetric cases are valid SLO signals:
+    #   - normal empty, abnormal full  → all endpoints are "new" (handle_new_endpoint)
+    #   - normal full,  abnormal empty → entrance unreachable, every normal endpoint
+    #                                    surfaces as "disappeared" (detect_disappeared)
+    if not normal_stat and not abnormal_stat:
+        logger.error("No entrance traffic in either window, terminating analysis.")
+        raise ValueError("No entrance traffic found in normal or abnormal trace data.")
 
     # Initialize analysis state and configuration
     state = AnalysisState(
@@ -866,8 +918,50 @@ def run(
     )
     percentiles = get_percentile_config()
 
-    for k, v in abnormal_stat.items():
-        analyze_single_endpoint(k, v, normal_stat, percentiles, state)
+    # Catastrophic case: entrance had traffic in normal but went completely silent
+    # in abnormal (entrance pod died, ingress unreachable, network partition cut
+    # off the loadgen). Per-span_name detection misses this — abnormal_stat is
+    # empty so neither analyze_single_endpoint nor detect_disappeared_endpoints
+    # produces output if low-volume normal endpoints fall below the disappearance
+    # threshold. Synthesize a single 'entrance_unreachable' issue summarizing the
+    # outage.
+    if normal_stat and not abnormal_stat:
+        normal_endpoints = len(normal_stat)
+        normal_spans = sum(sum(v.get("status_code", {}).values()) for v in normal_stat.values())
+        abnormal_tag = {
+            "entrance_unreachable": {
+                "normal_endpoints": normal_endpoints,
+                "normal_spans": normal_spans,
+                "abnormal_spans": 0,
+                "slo_violated": True,
+                "detection_reason": "entrance_pod_no_root_spans_in_abnormal",
+            }
+        }
+        v_zero: dict[str, Any] = {
+            "avg_duration": 0.0,
+            "p90_duration": 0.0,
+            "p95_duration": 0.0,
+            "p99_duration": 0.0,
+            "succ_rate": 0.0,
+            "status_code": {},
+        }
+        state["metrics"].increment_processed()
+        state["metrics"].increment_anomaly()
+        state["metrics"].set_absolute_anomaly()
+        state["metrics"].categorize_issue(False, True)
+        state["conclusion_data"].append(
+            build_conclusion_row("<entrance>", v_zero, {"<entrance>": v_zero}, abnormal_tag)
+        )
+    else:
+        for k, v in abnormal_stat.items():
+            analyze_single_endpoint(k, v, normal_stat, percentiles, state)
+
+        # Detect disappeared endpoints: a SpanName with meaningful normal traffic
+        # but completely absent from the abnormal window. Orthogonal to succ_rate
+        # / latency degradation — when users stop trying an endpoint entirely,
+        # the per-span_name loop above never visits the key because abnormal_stat
+        # doesn't contain it.
+        detect_disappeared_endpoints(normal_stat, abnormal_stat, state)
 
     if not state["conclusion_data"]:
         logger.warning("No anomalies detected, skipping file creation")

@@ -139,6 +139,11 @@ class TrainTicketPedestal(Pedestal):
         # ts has tight latency budgets (microservice chain depth ~5-7); 3× is too lax
         return 2.5
 
+    @property
+    def slo_new_endpoint_latency_thresholds(self) -> dict[str, float]:
+        # ts ingress is sub-second normal — 3s avg is already a serious problem
+        return {"avg_duration": 1.0, "p90_duration": 2.0, "p95_duration": 3.0, "p99_duration": 5.0}
+
     def normalize_op_name(self, op_name: pl.Expr) -> pl.Expr:
         for pattern, replacement in self._PATTERN_REPLACEMENTS_POLARS:
             op_name = op_name.str.replace(pattern, replacement)
