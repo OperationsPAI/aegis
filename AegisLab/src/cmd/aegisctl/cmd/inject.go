@@ -145,7 +145,20 @@ var (
 	injectListLabels    string
 	injectListPage      int
 	injectListSize      int
+	injectListAll       bool
 )
+
+type injectListItem struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	State     string `json:"state"`
+	FaultType string `json:"fault_type"`
+	StartTime string `json:"start_time"`
+	Labels    []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	} `json:"labels"`
+}
 
 var injectListCmd = &cobra.Command{
 	Use:   "list",
@@ -162,30 +175,26 @@ var injectListCmd = &cobra.Command{
 		}
 
 		c := newClient()
-		q := fmt.Sprintf("/api/v2/projects/%d/injections?page=%d&size=%d", pid, injectListPage, injectListSize)
-		if stateParam != "" {
-			q += "&state=" + stateParam
-		}
-		if injectListFaultType != "" {
-			q += "&fault_type=" + injectListFaultType
-		}
-		if injectListLabels != "" {
-			q += "&labels=" + injectListLabels
+		basePath := fmt.Sprintf("/api/v2/projects/%d/injections", pid)
+		baseParams := map[string]string{
+			"state":      stateParam,
+			"fault_type": injectListFaultType,
+			"labels":     injectListLabels,
 		}
 
-		type listItem struct {
-			ID        int    `json:"id"`
-			Name      string `json:"name"`
-			State     string `json:"state"`
-			FaultType string `json:"fault_type"`
-			StartTime string `json:"start_time"`
-			Labels    []struct {
-				Key   string `json:"key"`
-				Value string `json:"value"`
-			} `json:"labels"`
+		if injectListAll {
+			if output.OutputFormat(flagOutput) != output.FormatNDJSON {
+				return usageErrorf("--all requires --output ndjson (table/json buffer the full result set; use ndjson for streaming)")
+			}
+			return streamListAllNDJSON[injectListItem](c, basePath, baseParams)
 		}
 
-		var resp client.APIResponse[client.PaginatedData[listItem]]
+		q := basePath + fmt.Sprintf("?page=%d&size=%d", injectListPage, injectListSize)
+		if extra := buildQueryParams(baseParams); extra != "" {
+			q += "&" + extra
+		}
+
+		var resp client.APIResponse[client.PaginatedData[injectListItem]]
 		if err := c.Get(q, &resp); err != nil {
 			return err
 		}
@@ -959,6 +968,7 @@ func init() {
 	injectListCmd.Flags().StringVar(&injectListLabels, "labels", "", "Filter by labels (key=val,...)")
 	injectListCmd.Flags().IntVar(&injectListPage, "page", 1, "Page number")
 	injectListCmd.Flags().IntVar(&injectListSize, "size", 20, "Page size; must be one of "+pageSizeFlagHelp())
+	injectListCmd.Flags().BoolVar(&injectListAll, "all", false, "Stream every page as NDJSON to stdout (ignores --page/--size; requires --output ndjson)")
 
 	injectSearchCmd.Flags().StringVar(&injectSearchNamePattern, "name-pattern", "", "Name pattern to search for")
 	injectSearchCmd.Flags().StringVar(&injectSearchLabels, "labels", "", "Labels to filter (key=val,...)")
