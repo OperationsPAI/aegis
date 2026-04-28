@@ -199,6 +199,7 @@ func (req *ListInjectionReq) ToFilterOptions() *ListInjectionFilters {
 
 	return &ListInjectionFilters{
 		FaultType:       req.Type,
+		Category:        req.Category,
 		Benchmark:       req.Benchmark,
 		State:           req.State,
 		Status:          req.Status,
@@ -541,6 +542,11 @@ type InjectionResp struct {
 	UpdatedAt         time.Time            `json:"updated_at"`
 
 	Labels []dto.LabelItem `json:"labels,omitempty"`
+
+	// EngineConfigSummary is the parsed leaf list for hybrid batch parents only.
+	// For non-hybrid (single-leaf) injections it's omitted because the row's
+	// own fault_type and display_config already describe the leaf.
+	EngineConfigSummary []map[string]any `json:"engine_config_summary,omitempty" swaggertype:"array,object"`
 }
 
 func NewInjectionResp(injection *model.FaultInjection) *InjectionResp {
@@ -563,6 +569,12 @@ func NewInjectionResp(injection *model.FaultInjection) *InjectionResp {
 
 	if injection.FaultType == consts.Hybrid {
 		resp.FaultType = "hybrid"
+		if injection.EngineConfig != "" {
+			var leaves []map[string]any
+			if err := json.Unmarshal([]byte(injection.EngineConfig), &leaves); err == nil {
+				resp.EngineConfigSummary = leaves
+			}
+		}
 	} else {
 		resp.FaultType = chaos.ChaosTypeMap[injection.FaultType]
 	}

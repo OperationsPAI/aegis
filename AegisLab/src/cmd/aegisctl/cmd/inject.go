@@ -142,6 +142,7 @@ NOTE: --project is required for list, search, and guided --apply.
 var (
 	injectListState     string
 	injectListFaultType string
+	injectListSystem    string
 	injectListLabels    string
 	injectListPage      int
 	injectListSize      int
@@ -149,12 +150,14 @@ var (
 )
 
 type injectListItem struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	State     string `json:"state"`
-	FaultType string `json:"fault_type"`
-	StartTime string `json:"start_time"`
-	Labels    []struct {
+	ID                  int              `json:"id"`
+	Name                string           `json:"name"`
+	State               string           `json:"state"`
+	FaultType           string           `json:"fault_type"`
+	Category            string           `json:"category"`
+	StartTime           string           `json:"start_time"`
+	EngineConfigSummary []map[string]any `json:"engine_config_summary,omitempty"`
+	Labels              []struct {
 		Key   string `json:"key"`
 		Value string `json:"value"`
 	} `json:"labels"`
@@ -179,6 +182,7 @@ var injectListCmd = &cobra.Command{
 		baseParams := map[string]string{
 			"state":      stateParam,
 			"fault_type": injectListFaultType,
+			"category":   injectListSystem,
 			"labels":     injectListLabels,
 		}
 
@@ -210,7 +214,7 @@ var injectListCmd = &cobra.Command{
 			return output.PrintNDJSON(resp.Data.Items)
 		}
 
-		headers := []string{"NAME", "STATE", "FAULT-TYPE", "START-TIME", "LABELS"}
+		headers := []string{"NAME", "STATE", "FAULT-TYPE", "SYSTEM", "START-TIME", "LABELS"}
 		var rows [][]string
 		for _, item := range resp.Data.Items {
 			var lbls []string
@@ -221,6 +225,7 @@ var injectListCmd = &cobra.Command{
 				item.Name,
 				item.State,
 				item.FaultType,
+				item.Category,
 				item.StartTime,
 				strings.Join(lbls, ","),
 			})
@@ -965,6 +970,7 @@ func runBatchTarget(httpClient *http.Client, resolver *client.Resolver, t batchT
 func init() {
 	injectListCmd.Flags().StringVar(&injectListState, "state", "", "Filter by datapack state (name or numeric id; valid: "+datapackStateFlagHelp()+")")
 	injectListCmd.Flags().StringVar(&injectListFaultType, "fault-type", "", "Filter by fault type")
+	injectListCmd.Flags().StringVar(&injectListSystem, "system", "", "Filter by system code / pedestal category (e.g. ts, hs, sn, mm, otel-demo)")
 	injectListCmd.Flags().StringVar(&injectListLabels, "labels", "", "Filter by labels (key=val,...)")
 	injectListCmd.Flags().IntVar(&injectListPage, "page", 1, "Page number")
 	injectListCmd.Flags().IntVar(&injectListSize, "size", 20, "Page size; must be one of "+pageSizeFlagHelp())
