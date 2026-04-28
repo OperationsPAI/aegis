@@ -41,16 +41,12 @@ class GenericPedestal(Pedestal):
         return traces.with_columns(op_name.alias("op_name")).drop("span_name")
 
     @timeit(log_args=False)
-    def fix_client_spans(
-        self, traces: pl.DataFrame
-    ) -> tuple[pl.DataFrame, dict[str, str], dict[str, str]]:
+    def fix_client_spans(self, traces: pl.DataFrame) -> tuple[pl.DataFrame, dict[str, str], dict[str, str]]:
         id2op: dict[str, str] = {}
         id2parent: dict[str, str] = {}
         parent_child: defaultdict[str, set[str]] = defaultdict(set)
 
-        for span_id, parent_span_id, op_name in traces.select(
-            "span_id", "parent_span_id", "op_name"
-        ).iter_rows():
+        for span_id, parent_span_id, op_name in traces.select("span_id", "parent_span_id", "op_name").iter_rows():
             assert isinstance(span_id, str) and span_id
             id2op[span_id] = op_name
             if parent_span_id:
@@ -62,9 +58,12 @@ class GenericPedestal(Pedestal):
         fix: dict[str, str] = {}
         to_drop: set[str] = set()
         for span_id, op_name in id2op.items():
-            if op_name.endswith(" GET") or op_name.endswith(" POST") or op_name.endswith(
-                " PUT"
-            ) or op_name.endswith(" DELETE"):
+            if (
+                op_name.endswith(" GET")
+                or op_name.endswith(" POST")
+                or op_name.endswith(" PUT")
+                or op_name.endswith(" DELETE")
+            ):
                 kids = parent_child.get(span_id, set())
                 if not kids:
                     to_drop.add(span_id)
@@ -79,12 +78,12 @@ class GenericPedestal(Pedestal):
         id2op.update(fix)
 
         if fix:
-            patch_df = pl.DataFrame(
-                [{"span_id": sid, "op_name_fix": op} for sid, op in fix.items()]
+            patch_df = pl.DataFrame([{"span_id": sid, "op_name_fix": op} for sid, op in fix.items()])
+            traces = (
+                traces.join(patch_df, on="span_id", how="left")
+                .with_columns(pl.coalesce("op_name_fix", "op_name").alias("op_name"))
+                .drop("op_name_fix")
             )
-            traces = traces.join(patch_df, on="span_id", how="left").with_columns(
-                pl.coalesce("op_name_fix", "op_name").alias("op_name")
-            ).drop("op_name_fix")
 
         return traces, id2op, id2parent
 

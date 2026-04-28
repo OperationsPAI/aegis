@@ -285,9 +285,7 @@ def preprocess_trace(file: Path, pedestal: Pedestal) -> dict[str, Any]:
         # when the configured entrance pod is the one being chaos-killed.
         # `run()` cross-references with the normal-window stat and surfaces
         # any disappeared endpoints via detect_disappeared_endpoints.
-        available_services = sorted(
-            df.select(pl.col("ServiceName")).unique().collect()["ServiceName"].to_list()
-        )
+        available_services = sorted(df.select(pl.col("ServiceName")).unique().collect()["ServiceName"].to_list())
         logger.warning(
             f"No entrance traffic found in {file}. "
             f"Pedestal '{pedestal.name}' declared entrance_service='{pedestal.entrance_service}' "
