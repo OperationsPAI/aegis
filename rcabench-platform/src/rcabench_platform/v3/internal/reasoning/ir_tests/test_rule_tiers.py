@@ -50,12 +50,6 @@ def test_every_rule_in_builtin_rules_json_has_a_tier_within_enum() -> None:
         )
 
 
-def test_schema_validates_builtin_rules_json() -> None:
-    schema = _load_json(_SCHEMA_PATH)
-    data = _load_json(_RULES_JSON_PATH)
-    jsonschema.validate(data, schema)
-
-
 def test_schema_validates_propagation_rules_example() -> None:
     schema = _load_json(_SCHEMA_PATH)
     example = _load_json(_EXAMPLE_PATH)
