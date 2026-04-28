@@ -217,7 +217,7 @@ class PathBuilder:
         src_states_all = {w.state for w in src_tl.windows} if src_tl else set()
         rule_src_states = set(rule.src_states)
 
-        src_matching_window: TimelineWindow | None = None
+        src_matching_window: TimelineWindow | None = None  # noqa: F821
         if is_first_hop and rule_src_states and src_tl:
             for w in src_tl.windows:
                 if w.state in rule_src_states:

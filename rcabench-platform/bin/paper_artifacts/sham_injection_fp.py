@@ -178,7 +178,7 @@ def _run_one_sham(
             return (case_name, "no-sham-candidate", None)
 
         sham_node_id = rng.choice(candidates)
-        sham_node = graph.get_node_by_id(sham_node_id)
+        sham_node = graph.get_node_by_id(sham_node_id)  # noqa: F841
         physical_node_ids = [sham_node_id]
 
         # Run trace-DB binding + IR pipeline against real traces. The IR
@@ -278,7 +278,7 @@ def main() -> int:
         "--mode",
         choices=("v1", "v2"),
         default="v1",
-        help="v1 = sham target on real cascade (wrong-target rate); v2 = sham on baseline-only data (joint baseline FP).",
+        help="v1 = sham target on real cascade (wrong-target rate); v2 = sham on baseline-only data (joint baseline FP).",  # noqa: E501
     )
     args = parser.parse_args()
 

@@ -34,7 +34,9 @@ from rcabench_platform.v3.internal.metrics.metrics_calculator import DatasetMetr
 from rcabench_platform.v3.sdk.datasets.rcabench import RCABenchAnalyzerLoader, valid
 from rcabench_platform.v3.sdk.logging import logger, timeit
 from rcabench_platform.v3.sdk.pedestals import Pedestal, get_pedestal
-from rcabench_platform.v3.sdk.pedestals import generic as _generic_pedestals  # noqa: F401  # registers hs / otel-demo / tea / sn / mm / sockshop
+from rcabench_platform.v3.sdk.pedestals import (
+    generic as _generic_pedestals,  # noqa: F401  # registers hs / otel-demo / tea / sn / mm / sockshop
+)
 from rcabench_platform.v3.sdk.utils.fmap import fmap_processpool
 
 load_dotenv(Path.cwd() / ".env")
