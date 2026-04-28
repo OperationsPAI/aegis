@@ -658,7 +658,11 @@ def run_single_case(
 
         propagator_graph = graph
         if slo_impact.detected:
-            tau = INJECT_TIME_TOLERANCE_SECONDS if inject_time_tolerance_seconds is None else inject_time_tolerance_seconds
+            tau = (
+                INJECT_TIME_TOLERANCE_SECONDS
+                if inject_time_tolerance_seconds is None
+                else inject_time_tolerance_seconds
+            )
             delta_t = max(0, abnormal_window_end - injection_at)
             injection_window = (injection_at, injection_at + delta_t + tau)
             propagator = FaultPropagator(

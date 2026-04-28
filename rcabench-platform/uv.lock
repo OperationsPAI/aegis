@@ -3723,6 +3723,17 @@ analysis = [
     { name = "vega-datasets" },
     { name = "vegafusion" },
 ]
+detector = [
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pandas" },
+    { name = "polars" },
+    { name = "rcabench" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
 internal = [
     { name = "clickhouse-connect" },
     { name = "drain3" },
@@ -3789,12 +3800,16 @@ requires-dist = [
     { name = "matplotlib", marker = "extra == 'analysis'", specifier = ">=3.10.3" },
     { name = "minio", marker = "extra == 'internal'", specifier = ">=7.2.15" },
     { name = "neo4j", marker = "extra == 'internal'", specifier = ">=5.28.1" },
+    { name = "networkx", marker = "extra == 'detector'", specifier = ">=3.4.2" },
     { name = "networkx", marker = "extra == 'sdk'", specifier = ">=3.4.2" },
+    { name = "numpy", marker = "extra == 'detector'", specifier = ">=2.2.6" },
     { name = "numpy", marker = "extra == 'sdk'", specifier = ">=2.2.6" },
     { name = "openai", marker = "extra == 'llm-eval'", specifier = ">=1.40.0" },
     { name = "openpyxl", marker = "extra == 'llm-eval'", specifier = ">=3.1.0" },
+    { name = "pandas", marker = "extra == 'detector'", specifier = ">=2.3.1" },
     { name = "pandas", marker = "extra == 'sdk'", specifier = ">=2.3.1" },
     { name = "plotly", marker = "extra == 'analysis'", specifier = ">=6.2.0" },
+    { name = "polars", marker = "extra == 'detector'", specifier = ">=1.31.0" },
     { name = "polars", marker = "extra == 'sdk'", specifier = ">=1.31.0" },
     { name = "psycopg2-binary", marker = "extra == 'llm-eval'", specifier = ">=2.9.0" },
     { name = "pydantic", specifier = ">=2.12.4" },
@@ -3803,10 +3818,12 @@ requires-dist = [
     { name = "pyvis", marker = "extra == 'analysis'", specifier = ">=0.3.2" },
     { name = "pyyaml", marker = "extra == 'llm-eval'", specifier = ">=6.0.0" },
     { name = "questionary", marker = "extra == 'llm-eval'", specifier = ">=2.1.0" },
+    { name = "rcabench", marker = "extra == 'detector'", specifier = ">=1.1.51" },
     { name = "rcabench", marker = "extra == 'internal'", specifier = ">=1.1.51" },
     { name = "rcabench-platform", extras = ["sdk", "internal", "analysis", "llm-eval"], marker = "extra == 'all'" },
     { name = "requests", marker = "extra == 'llm-eval'", specifier = ">=2.32.4" },
     { name = "rich", marker = "extra == 'llm-eval'", specifier = ">=13.7.0" },
+    { name = "scipy", marker = "extra == 'detector'", specifier = ">=1.15.0" },
     { name = "scipy", marker = "extra == 'sdk'", specifier = ">=1.15.0" },
     { name = "sqlalchemy", marker = "extra == 'analysis'", specifier = ">=2.0.43" },
     { name = "sqlmodel", marker = "extra == 'llm-eval'", specifier = ">=0.0.22" },
@@ -3819,7 +3836,7 @@ requires-dist = [
     { name = "vega-datasets", marker = "extra == 'analysis'", specifier = ">=0.9.0" },
     { name = "vegafusion", marker = "extra == 'analysis'", specifier = ">=2.0.2" },
 ]
-provides-extras = ["sdk", "internal", "analysis", "llm-eval", "all"]
+provides-extras = ["sdk", "internal", "analysis", "llm-eval", "all", "detector"]
 
 [package.metadata.requires-dev]
 dev = [

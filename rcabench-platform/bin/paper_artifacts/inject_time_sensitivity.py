@@ -175,9 +175,7 @@ def main() -> int:
         "tau_seconds": list(args.tau),
         "label_counts": {str(t): dict(per_tau_counts[t]) for t in args.tau},
         "errors": {str(t): errors_per_tau[t] for t in args.tau},
-        "error_samples": {
-            str(t): [{"case": c, "error": e} for c, e in error_samples_per_tau[t]] for t in args.tau
-        },
+        "error_samples": {str(t): [{"case": c, "error": e} for c, e in error_samples_per_tau[t]] for t in args.tau},
     }
     json_out = args.out / "sensitivity.json"
     json_out.write_text(json.dumps(summary, indent=2, ensure_ascii=False))

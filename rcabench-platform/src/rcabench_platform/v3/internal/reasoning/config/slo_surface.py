@@ -37,7 +37,7 @@ class SLOSurface:
     source: Literal["operator_input", "default_heuristic"] = "default_heuristic"
 
     @classmethod
-    def default(cls) -> "SLOSurface":
+    def default(cls) -> SLOSurface:
         return cls(services=frozenset(), source="default_heuristic")
 
     def is_default(self) -> bool:
