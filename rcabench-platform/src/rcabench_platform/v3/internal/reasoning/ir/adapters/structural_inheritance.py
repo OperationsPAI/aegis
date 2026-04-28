@@ -43,13 +43,16 @@ from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
 from rcabench_platform.v3.internal.reasoning.ir.transition import Transition
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperGraph, PlaceKind
 
-# Infrastructure-level states that trigger structural inheritance. Slow / erroring
-# are intentionally excluded — those are causal claims that should flow through
-# the propagator and rule matcher, not through containment. ``silent`` is included
-# because a service with no observable request flow cannot carry observed traces
-# on its spans either; per §11.1 only request-layer kinds (service, span) carry
-# SILENT, so this only fires for ``source_kind == service``.
-_INHERIT_SOURCE_STATES = frozenset({"unavailable", "degraded", "silent"})
+# Infrastructure-level states that trigger structural inheritance. Erroring and
+# slow on a container/pod manifest at the owning service the moment the fault
+# starts (the service has no other backend to route to) — without this cascade
+# the application-rooted rules ``container_erroring_to_span`` and
+# ``container_slow_to_span`` cannot find an intermediate pod/service window at
+# the fault onset and the path drops out at temporal admission. ``silent`` is
+# included because a service with no observable request flow cannot carry
+# observed traces on its spans either; per §11.1 only request-layer kinds
+# (service, span) carry SILENT, so it only fires for ``source_kind == service``.
+_INHERIT_SOURCE_STATES = frozenset({"unavailable", "degraded", "erroring", "slow", "silent"})
 
 # Severity ranks for the availability axis only. Mirrors the canonical severity
 # table in ir/states.py (silent ties with erroring at tier 4 per §11.1). Kept
@@ -79,6 +82,22 @@ def _last_state(timeline: StateTimeline | None) -> str:
     return timeline.windows[-1].state
 
 
+def _state_at(timeline: StateTimeline | None, at: int) -> str:
+    """State of ``timeline`` at instant ``at`` (or ``healthy`` if uncovered).
+
+    Used by the redundancy check in :meth:`_maybe_emit` so that a prior with
+    a *late* worse-or-equal window does not suppress a structural claim at
+    an *earlier* time when the prior is still healthy. The original
+    ``_last_state`` view is too coarse for the erroring/slow cascades — pods
+    typically reach ``degraded`` at +90s via k8s metric lag, which would
+    otherwise mask our injection-time pod cascade.
+    """
+    if timeline is None:
+        return "healthy"
+    state = timeline.state_at(at)
+    return state if state is not None else "healthy"
+
+
 class StructuralInheritanceAdapter:
     """Emit inferred transitions on derived nodes when infra is unavailable/degraded.
 
@@ -92,6 +111,19 @@ class StructuralInheritanceAdapter:
                                 (spans NOT inherited; degraded infra does not
                                 imply spans degrade — that should come from
                                 the trace adapter as an observable)
+    - ``container.erroring``    -> parent ``pod.erroring``
+                                -> ``service.erroring``
+                                (spans NOT inherited; the application-rooted
+                                rule ``container_erroring_to_span`` walks the
+                                hop sequence itself, this cascade only ensures
+                                pod and service have an intermediate window
+                                at the fault onset.)
+    - ``container.slow``        -> parent ``pod.degraded``
+                                -> ``service.slow``
+                                (pod has no SLOW state per taxonomy §11.1, so
+                                latency at the app layer projects as DEGRADED
+                                at pod level. Spans NOT inherited; same
+                                reasoning as the erroring cascade.)
     - ``pod.unavailable``       -> ``service.unavailable``
                                 -> every ``span|service::*``: ``missing``
     - ``pod.degraded``          -> ``service.degraded``
@@ -209,6 +241,50 @@ class StructuralInheritanceAdapter:
                     source_state=source_state,
                     derived_last=derived_last,
                 )
+        elif source_state == "erroring":
+            for pod_id in pod_ids:
+                pod_node = self._graph.get_node_by_id(pod_id)
+                yield from self._maybe_emit(
+                    derived_node_key=pod_node.uniq_name,
+                    derived_kind=PlaceKind.pod,
+                    derived_state="erroring",
+                    at=at,
+                    source_node_key=container_key,
+                    source_state=source_state,
+                    derived_last=derived_last,
+                )
+                yield from self._propagate_pod_to_service_and_spans(
+                    pod_node_id=pod_id,
+                    derived_service_state="erroring",
+                    propagate_spans=False,
+                    at=at,
+                    source_node_key=container_key,
+                    source_state=source_state,
+                    derived_last=derived_last,
+                )
+        elif source_state == "slow":
+            # Pod has no SLOW state (§11.1), so app-layer slowness projects as
+            # DEGRADED at the pod level. Service does carry SLOW.
+            for pod_id in pod_ids:
+                pod_node = self._graph.get_node_by_id(pod_id)
+                yield from self._maybe_emit(
+                    derived_node_key=pod_node.uniq_name,
+                    derived_kind=PlaceKind.pod,
+                    derived_state="degraded",
+                    at=at,
+                    source_node_key=container_key,
+                    source_state=source_state,
+                    derived_last=derived_last,
+                )
+                yield from self._propagate_pod_to_service_and_spans(
+                    pod_node_id=pod_id,
+                    derived_service_state="slow",
+                    propagate_spans=False,
+                    at=at,
+                    source_node_key=container_key,
+                    source_state=source_state,
+                    derived_last=derived_last,
+                )
 
     def _from_pod(
         self,
@@ -319,16 +395,16 @@ class StructuralInheritanceAdapter:
         derived_last: dict[str, str],
     ) -> Iterable[Transition]:
         prior = self._prior_timelines.get(derived_node_key)
-        prior_state = _last_state(prior)
-        # Skip when an observed signal already classified this node at least
-        # as severely as our structural claim — emitting would only add a
-        # weaker, redundant transition.
-        if prior is not None and _is_weaker_or_equal(prior_state, derived_state):
+        # Compare at the source's onset time — a prior with a late worse-or-
+        # equal window must not suppress a structural claim at an earlier
+        # time when the prior is still healthy.
+        prior_state_at_t = _state_at(prior, at)
+        if prior is not None and _is_weaker_or_equal(prior_state_at_t, derived_state):
             return
         last_emitted = derived_last.get(derived_node_key)
         if last_emitted == derived_state:
             return
-        from_state = last_emitted if last_emitted is not None else prior_state
+        from_state = last_emitted if last_emitted is not None else prior_state_at_t
         yield Transition(
             node_key=derived_node_key,
             kind=derived_kind,

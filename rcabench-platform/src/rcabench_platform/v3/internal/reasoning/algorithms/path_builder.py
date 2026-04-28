@@ -6,13 +6,28 @@ It performs only **structural** validation (an edge exists between adjacent
 nodes; some rule admits the (kind, edge_kind, direction) triple). Temporal
 ordering, drift, and inject-time checks are the gates' responsibility.
 
-The window-picking semantics mirror the §7.5 trajectory rule used by the
-old fused verifier: anchor src_start_time on the EARLIEST transition into
-``rule.src_states`` and prefer ``temporal_validator.find_admissible_window``
-for downstream onsets. Where ``find_admissible_window`` returns ``None``
-(no temporally-valid window), the builder falls back to the earliest
-window matching the destination state set so the candidate still exists
-for the gate layer to inspect.
+Effective onset rule (Strategy E)
+---------------------------------
+``picked_state_start_times`` does NOT carry the literal ``window.start`` for
+every hop — it carries an "effective onset" that respects the IR's
+``EvidenceLevel`` hierarchy:
+
+* ``observed`` windows have a real wall-clock observation timestamp
+  (carrying detector / scrape latency); we use ``window.start`` directly.
+* ``inferred`` / ``structural`` windows are logically simultaneous with
+  whatever caused them — their literal ``window.start`` is a synth artifact
+  (e.g. zero-duration containers and service rollups inherit from upstream).
+  We clamp their effective onset up to the predecessor's effective onset
+  so they don't appear to precede their cause.
+
+The first hop's source has no predecessor so we always use ``window.start``.
+
+This makes Strategy B (synthesize unknown intermediate) and Strategy C
+(symmetric inject_time grace) unnecessary — pod observation lag and
+zero-duration inferred service rollups are absorbed naturally. If
+``find_admissible_window`` returns ``None`` after this adjustment, there
+genuinely is no admissible dst window matching the rule and the path is
+not built.
 """
 
 from __future__ import annotations
@@ -21,9 +36,45 @@ from dataclasses import dataclass
 
 from rcabench_platform.v3.internal.reasoning.algorithms.rule_matcher import RuleMatcher
 from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import TemporalValidator
+from rcabench_platform.v3.internal.reasoning.ir.evidence import EvidenceLevel
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline, TimelineWindow
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, HyperGraph
 from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationDirection, PropagationRule
+
+
+def _effective_onset(window: TimelineWindow, prev_onset: int | None) -> int:
+    """Onset adjusted by the window's evidence level (see module docstring).
+
+    For observed windows we keep ``window.start`` so observation-channel lag
+    (``window.start > prev_onset``) is faithfully represented. For inferred
+    and structural windows we clamp up to ``prev_onset`` since their literal
+    start is a synth artifact and they are logically simultaneous with their
+    cause.
+    """
+    if prev_onset is None:
+        return window.start
+    if window.level == EvidenceLevel.observed:
+        return window.start
+    return max(window.start, prev_onset)
+
+
+def _earliest_logical_window(
+    tl: StateTimeline | None, states: set[str]
+) -> TimelineWindow | None:
+    """Earliest non-observed window whose state is in ``states``.
+
+    These windows (inferred / structural) are logically simultaneous with
+    upstream onsets — their literal ``window.start`` is a synth artifact.
+    ``find_admissible_window`` filters them by ``window.start`` against the
+    upstream onset, which is wrong for non-observed levels; this helper
+    is the level-aware fallback.
+    """
+    if tl is None or not tl.windows or not states:
+        return None
+    for w in tl.windows:
+        if w.state in states and w.level != EvidenceLevel.observed:
+            return w
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -249,10 +300,12 @@ class PathBuilder:
             else:
                 src_start_time = self._fallback_global_start()
         elif src_matching_window:
-            src_start_time = src_matching_window.start
+            src_start_time = _effective_onset(src_matching_window, prev_start_time)
         elif prev_start_time is not None:
             causal_window = self.temporal_validator.find_causal_window(src_node.uniq_name, prev_start_time)
-            src_start_time = causal_window.start if causal_window else prev_start_time
+            src_start_time = (
+                _effective_onset(causal_window, prev_start_time) if causal_window else prev_start_time
+            )
         elif src_tl and src_tl.windows:
             src_start_time = src_tl.windows[0].start
         else:
@@ -319,24 +372,13 @@ class PathBuilder:
                 src_state=current_src_state,
                 dst_states=hop_dst_states,
             )
-            if causal_window is not None:
-                next_start_time = causal_window.start
-                delay = float(causal_window.start - current_start_time)
-                next_picked_state = causal_window.state
-            else:
-                fallback = self._earliest_window_in(next_tl, hop_dst_states)
-                if fallback is not None:
-                    next_start_time = fallback.start
-                    delay = float(fallback.start - current_start_time)
-                    next_picked_state = fallback.state
-                elif next_tl and next_tl.windows:
-                    next_start_time = next_tl.windows[0].start
-                    delay = float(next_start_time - current_start_time)
-                    next_picked_state = next_tl.windows[0].state
-                else:
-                    next_start_time = current_start_time
-                    delay = 0.0
-                    next_picked_state = "unknown"
+            if causal_window is None:
+                causal_window = _earliest_logical_window(next_tl, hop_dst_states)
+            if causal_window is None:
+                return None
+            next_start_time = _effective_onset(causal_window, current_start_time)
+            delay = float(next_start_time - current_start_time)
+            next_picked_state = causal_window.state
 
             nodes_out.append(next_node_id)
             all_states_out.append(sorted(next_states_all) if next_states_all else ["unknown"])
@@ -451,24 +493,13 @@ class PathBuilder:
                 src_state=src_state_for_eps,
                 dst_states=admissible_dst_states,
             )
-            if causal_window is not None:
-                dst_time = causal_window.start
-                dst_picked = causal_window.state
-                delay = float(causal_window.start - anchor)
-            else:
-                fallback = self._earliest_window_in(dst_tl, admissible_dst_states)
-                if fallback is not None:
-                    dst_time = fallback.start
-                    dst_picked = fallback.state
-                    delay = float(fallback.start - anchor)
-                elif dst_tl and dst_tl.windows:
-                    dst_time = dst_tl.windows[0].start
-                    dst_picked = dst_tl.windows[0].state
-                    delay = float(dst_time - anchor)
-                else:
-                    dst_time = anchor
-                    dst_picked = "unknown"
-                    delay = 0.0
+            if causal_window is None:
+                causal_window = _earliest_logical_window(dst_tl, admissible_dst_states)
+            if causal_window is None:
+                continue
+            dst_time = _effective_onset(causal_window, anchor)
+            dst_picked = causal_window.state
+            delay = float(dst_time - anchor)
 
             src_all = sorted(src_states_all) if src_states_all else ["unknown"]
             dst_all = sorted(dst_states_all) if dst_states_all else ["unknown"]
@@ -485,16 +516,6 @@ class PathBuilder:
                 delay,
             )
 
-        return None
-
-    def _earliest_window_in(
-        self, tl: StateTimeline | None, states: set[str]
-    ) -> TimelineWindow | None:
-        if tl is None or not tl.windows or not states:
-            return None
-        for w in tl.windows:
-            if w.state in states:
-                return w
         return None
 
     def _fallback_global_start(self) -> int:
