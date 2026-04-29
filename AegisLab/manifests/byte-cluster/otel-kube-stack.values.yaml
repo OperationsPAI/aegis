@@ -383,7 +383,7 @@ collectors:
     suffix: deployment
     mode: deployment
     enabled: true
-    replicas: 4
+    replicas: 8
     autoscaler:
       # History: this collector originally also ran prometheus pod/endpoints
       # scrape (kubernetes-pods + kubernetes-endpoints jobs in the receiver
@@ -398,22 +398,32 @@ collectors:
       # Pod scrape now lives in the daemon collector with a node-local
       # field selector, so deployment-mode collectors only carry OTLP
       # push (apps → here via Service load balancing), k8s_cluster, and
-      # k8sobjects (both leader-elected). With that load profile 4–12
-      # replicas is plenty; the previous 6/120 bounds were fighting the
-      # symptom, not the cause.
-      minReplicas: 4
-      maxReplicas: 12
+      # k8sobjects (both leader-elected).
+      #
+      # Bounds widened to 8–24 (from 4–12) and per-pod request doubled
+      # alongside #300: at 4–12 the pool sat permanently at maxReplicas
+      # with mem 68%/60% target, churning a fresh pod every 20–90 minutes
+      # under campaign load. Each churn broke the long-lived OTLP gRPC
+      # connection a workload exporter had pinned to that pod (ClusterIP
+      # Service + HTTP/2 multiplexing), and the Go SDK's exporter
+      # goroutine deadlocked on a closed socket — taking the whole
+      # namespace silent for 16–24 minutes. Doubling the request lifts
+      # absolute headroom so steady-state usage drops below the 60%
+      # target at min replicas; doubling max gives the HPA somewhere to
+      # go without re-pinning at the ceiling.
+      minReplicas: 8
+      maxReplicas: 24
       targetCPUUtilization: 55
       targetMemoryUtilization: 60
     podDisruptionBudget:
-      minAvailable: 4
+      minAvailable: 8
     resources:
       limits:
         cpu: 4000m
-        memory: 16000Mi
+        memory: 32000Mi
       requests:
         cpu: 1000m
-        memory: 6000Mi
+        memory: 12000Mi
     presets:
       kubernetesEvents:
         enabled: true

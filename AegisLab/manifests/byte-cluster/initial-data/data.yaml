@@ -59,11 +59,30 @@ containers:
               value_type: 1
               template_string: 31%03d
               overridable: false
+            # Java services use the OTel Java agent which does NOT support
+            # the `dns:///` URL scheme (config metadata requires http/https).
+            # Keeping the regular ClusterIP Service URL here means each Java
+            # exporter pins one HTTP/2 connection to one collector pod, which
+            # is the failure mode behind #300. If/when the Java agent gains
+            # gRPC client-side LB support, switch this to
+            # `dns:///opentelemetry-kube-stack-deployment-collector-headless...`
+            # to match the loadgenerator override below.
             - key: global.otelcollector
               type: 0
               category: 1
               value_type: 0
               default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              overridable: true
+            # Loadgenerator is a Go binary using the OTLP/gRPC SDK, which
+            # does support `dns:///` for client-side LB. Targeting the
+            # operator-rendered headless Service spreads the loadgen's
+            # exporter goroutines across all collector pods, so a single
+            # HPA churn cannot deadlock the loadgen the way it did in #300.
+            - key: loadgenerator.opentelemetry.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: dns:///opentelemetry-kube-stack-deployment-collector-headless.monitoring.svc.cluster.local:4317
               overridable: true
           status: 1
   - type: 2

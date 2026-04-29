@@ -1,6 +1,13 @@
 global:
   clusterCollector:
-    service: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local
+    # otel-demo deploys an in-namespace wrapper OTel Collector that forwards
+    # to this address (chart concatenates `:4317`). The wrapper is a Go OTel
+    # binary, so its OTLP gRPC exporter supports the `dns:///` scheme +
+    # round_robin balancer for client-side LB across the operator-rendered
+    # headless Service. Pointing here at the headless variant prevents the
+    # wrapper from pinning to a single deployment-collector pod that an HPA
+    # event could churn — the Go-SDK deadlock root-cause behind #300.
+    service: dns:///opentelemetry-kube-stack-deployment-collector-headless.monitoring.svc.cluster.local
 
 opentelemetry-demo:
   default:
