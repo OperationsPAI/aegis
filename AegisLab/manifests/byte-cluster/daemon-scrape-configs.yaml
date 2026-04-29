@@ -1,7 +1,15 @@
-# Collect all metrics from pods on the daemon set's node with at least this annotation:
-# prometheus.io/scrape: 'true'
-# The deployment collector handles cluster-wide pod/endpoints scraping. The daemon
-# collector only scrapes kubelet/cAdvisor on its own node.
+# Daemon-side scrape: every collector replica is per-node and only scrapes
+# pods running on its own node, so cardinality fans out by node count and there
+# is exactly one scrape per target per cycle (no duplication).
+# - kubelet/cAdvisor on this node
+# - kubernetes-pods filtered to this node via spec.nodeName field selector
+# Why this and not deployment-side scrape: a Deployment-mode collector with N
+# replicas runs N independent prometheus receivers that each scrape every
+# annotated target — N× duplicate writes to ClickHouse. With HPA keeping N
+# at ~30-120 to absorb memory pressure, the duplication crushed CH (4000+
+# concurrent inserts, parts merge backlog, OOM cycles). Sharding by node via
+# the daemonset shifts the same scrape work to a fan-out model where N is
+# bounded by the cluster's node count and each replica's load drops by ~N.
 - authorization:
     credentials_file: "/var/run/secrets/kubernetes.io/serviceaccount/token"
     type: Bearer
@@ -55,3 +63,34 @@
   tls_config:
     ca_file: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     insecure_skip_verify: true
+
+# Pod-level prometheus scrape, restricted to this node. Uses the kubernetes_sd
+# field selector spec.nodeName=$NODE so the API server returns only this
+# node's pods — same pattern as the kubelet job above. Without the selector
+# every daemon pod would re-scrape every target, recreating the duplication
+# problem in a different shape.
+- job_name: kubernetes-pods
+  scrape_interval: 15s
+  kubernetes_sd_configs:
+    - role: pod
+      selectors:
+        - role: pod
+          field: "spec.nodeName=${env:OTEL_K8S_NODE_NAME}"
+  relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+      action: keep
+      regex: true
+    - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+      action: replace
+      regex: ([^:]+)(?::\d+)?;(\d+)
+      replacement: $${1}:$${2}
+      target_label: __address__
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: namespace
+    - source_labels: [__meta_kubernetes_pod_name]
+      action: replace
+      target_label: pod
+    - source_labels: [__meta_kubernetes_pod_node_name]
+      action: replace
+      target_label: node
