@@ -45,6 +45,12 @@ type StuckTraceReconciler struct {
 	submitTask            taskSubmitter
 	maxBatchPerTick       int
 	tickHook              func(processed int, err error)
+	// runOnce guards Run from a misconfigured fx wiring that calls
+	// StartStuckTraceReconciler twice on the same instance. Instance-
+	// scoped (not package-scoped) so a fresh reconciler from a new fx
+	// lifecycle can start the loop again — important for tests and any
+	// future in-process controller restart.
+	runOnce sync.Once
 }
 
 // taskSubmitter is the seam tests use to capture the recovered BuildDatapack
@@ -371,6 +377,36 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 		return false, fmt.Errorf("submitTask not configured")
 	}
 
+	// For traces stuck at fault.injection.started, the FaultInjection
+	// parent task is still TaskRunning in the DB. selectBestLastEvent
+	// ranks EventFaultInjectionCompleted highest among leaf events, but
+	// only TaskCompleted leaves are candidates — leaving the parent at
+	// TaskRunning means trace.last_event stays pinned at
+	// fault.injection.started even after BuildDatapack/RunAlgorithm/
+	// CollectResult complete downstream. Mark the parent TaskCompleted so
+	// the next downstream task transition re-derives last_event
+	// correctly via updateTraceState.
+	//
+	// We deliberately update only the task row here, not the trace's
+	// last_event field directly. The very next event in this trace is
+	// BuildDatapack's state change (which we're about to submit), and
+	// that path's updateTraceState will reread all task rows and pick
+	// the highest-priority completed event — at which point our just-
+	// completed FaultInjection becomes the source for last_event. This
+	// avoids tying the reconciler to redisGateway availability and
+	// avoids racing with the goroutine-launched updateTraceState used
+	// elsewhere.
+	if trace.LastEvent == consts.EventFaultInjectionStarted {
+		if err := r.db.WithContext(ctx).Model(&model.Task{}).
+			Where("id = ? AND state = ?", fiTask.ID, consts.TaskRunning).
+			Update("state", consts.TaskCompleted).Error; err != nil {
+			return false, fmt.Errorf("advance fault-injection parent task: %w", err)
+		}
+		fiTask.State = consts.TaskCompleted
+		logEntry.WithField("fault_injection_task_id", fiTask.ID).
+			Info("advanced FaultInjection parent task to TaskCompleted before BuildDatapack submit")
+	}
+
 	// Replica-safe submit. Two reconciler ticks (across replicas or even
 	// the same replica racing on a slow submit) can both observe zero
 	// BuildDatapack children at the unsynchronized count. Serialize via
@@ -567,16 +603,16 @@ func mergeBenchmarkEnvVars(repo containerEnvVarLister, benchmarkID int, namespac
 	return merged
 }
 
-// runSingleton guards against double-Run from a misconfigured fx wiring.
-var runSingleton sync.Once
-
 // StartStuckTraceReconciler is the fx hook entry point. It launches Run on
-// a goroutine and is safe against double-invocation.
+// a goroutine. The runOnce guard is instance-scoped (not package-scoped) so
+// multiple fx app start/stop cycles in the same process — common in tests
+// and any future in-process controller restart — can each spawn the loop
+// against a fresh ctx without being silently no-op'd.
 func StartStuckTraceReconciler(ctx context.Context, r *StuckTraceReconciler) {
 	if r == nil {
 		return
 	}
-	runSingleton.Do(func() {
+	r.runOnce.Do(func() {
 		go r.Run(ctx)
 	})
 }

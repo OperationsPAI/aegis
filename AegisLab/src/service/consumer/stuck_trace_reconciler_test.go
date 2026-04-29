@@ -390,6 +390,53 @@ func TestReconciler_StuckAtFaultInjectionStartedFinalizesAfterDuration(t *testin
 	require.NoError(t, err)
 	require.Equal(t, 1, processed)
 	require.Len(t, captured, 1)
+
+	// Parent FaultInjection task must be advanced to TaskCompleted, otherwise
+	// selectBestLastEvent leaves trace.last_event pinned at fault.injection.started
+	// even after the recovered BuildDatapack chain finishes downstream. This
+	// is the behavior the second round of Copilot review on PR #294 caught:
+	// submitting BuildDatapack alone without advancing the parent task wedges
+	// the trace status at the originally-stuck event forever.
+	var parent model.Task
+	require.NoError(t, db.Where("id = ?", fix.faultTaskID).First(&parent).Error)
+	require.Equal(t, consts.TaskCompleted, parent.State, "FaultInjection parent must be advanced to TaskCompleted")
+}
+
+// TestReconciler_StuckAtFaultInjectionCompletedDoesNotReadvanceParent
+// verifies the parent-advance step is gated to last_event=Started — for
+// traces already past Completed, the parent is already TaskCompleted, so
+// re-touching it would be a wasted DB write at best and a regression
+// signal at worst (we'd be implying we re-derive Completed traces, which
+// we don't).
+func TestReconciler_StuckAtFaultInjectionCompletedDoesNotReadvanceParent(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	// 30min staleness vs 5min guided duration so we're past the duration gate.
+	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 5, 30*time.Minute, false)
+
+	// Inflate a non-current updated_at on the parent task so we can detect
+	// whether the reconciler wrote to it. If it doesn't write, updated_at
+	// stays at this old value (within 1ms tolerance).
+	frozen := time.Now().Add(-15 * time.Minute)
+	require.NoError(t, db.Model(&model.Task{}).
+		Where("id = ?", fix.faultTaskID).
+		UpdateColumn("updated_at", frozen).Error)
+
+	owner := newFakeInjectionOwner([]model.FaultInjection{
+		{ID: 1, Name: fix.injectionName, TaskID: &fix.faultTaskID},
+	})
+	submitter := taskSubmitter(func(_ context.Context, _ *gorm.DB, _ *redis.Gateway, _ *dto.UnifiedTask) error {
+		return nil
+	})
+	r := newReconcilerForTest(t, db, owner, submitter)
+	r.stuckThresholdSeconds = func() int { return 60 }
+	processed, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, processed)
+
+	var parent model.Task
+	require.NoError(t, db.Where("id = ?", fix.faultTaskID).First(&parent).Error)
+	require.WithinDuration(t, frozen, parent.UpdatedAt, time.Second,
+		"parent task updated_at should not have moved — completed-stuck path must not re-touch the parent")
 }
 
 // TestReconciler_ToleratesStateUpdateError verifies the reconciler does not
