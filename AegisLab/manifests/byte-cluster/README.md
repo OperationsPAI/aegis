@@ -205,9 +205,22 @@ kubectl describe hpa -n monitoring opentelemetry-kube-stack-deployment-collector
 ```
 
 Expected:
-- one daemon collector per node
-- one deployment collector pool with at least `6` replicas
+- one daemon collector per node (handles per-node pod prometheus scrape +
+  kubelet/cAdvisor + filelog — sharded by node, no cross-replica duplication)
+- one deployment collector pool of `4–12` replicas (HPA bounded by
+  `autoscaler.minReplicas`/`maxReplicas`; carries OTLP push + leader-elected
+  k8s_cluster / k8sobjects only — no prometheus scrape, so memory pressure
+  no longer scales with cluster pod count)
 - CPU and memory targets both present on the HPA
+
+History note: the deployment pool used to run prometheus pod scrape too, and
+HPA chased its memory up to 120 replicas. With each replica independently
+scraping every annotated target, ClickHouse received N× duplicate inserts
+and went into an OOM/restart loop. Pod scrape now lives in the daemon
+collector behind a `spec.nodeName` field selector — see
+`daemon-scrape-configs.yaml::kubernetes-pods` and the autoscaler comment in
+`otel-kube-stack.values.yaml`. Do not move it back without a sharding
+mechanism (TargetAllocator or equivalent).
 
 ## 4. Install AegisLab backend/runtime
 

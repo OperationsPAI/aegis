@@ -162,6 +162,38 @@ collectors:
                 tls_config:
                   ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
                   insecure_skip_verify: true
+              # Pod-level prometheus scrape, sharded by node via the
+              # spec.nodeName field selector. Each daemon replica only
+              # discovers and scrapes its own node's pods, so cross-replica
+              # duplication is structurally impossible. This used to live on
+              # the deployment collector (where N replicas all scraped the
+              # same global target list, multiplying writes to ClickHouse by
+              # N — see the autoscaler comment in the deploy section below).
+              - job_name: kubernetes-pods
+                scrape_interval: 15s
+                kubernetes_sd_configs:
+                  - role: pod
+                    selectors:
+                      - role: pod
+                        field: spec.nodeName=${env:OTEL_K8S_NODE_NAME}
+                relabel_configs:
+                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                    action: keep
+                    regex: true
+                  - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                    action: replace
+                    regex: ([^:]+)(?::\d+)?;(\d+)
+                    replacement: $${1}:$${2}
+                    target_label: __address__
+                  - source_labels: [__meta_kubernetes_namespace]
+                    action: replace
+                    target_label: namespace
+                  - source_labels: [__meta_kubernetes_pod_name]
+                    action: replace
+                    target_label: pod
+                  - source_labels: [__meta_kubernetes_pod_node_name]
+                    action: replace
+                    target_label: node
         kubeletstats:
           collection_interval: 5s
           auth_type: serviceAccount
@@ -339,7 +371,10 @@ collectors:
           metrics:
             exporters: [clickhouse]
             processors: [memory_limiter, k8sattributes, batch]
-            receivers: [otlp, kubeletstats]
+            # prometheus runs the daemon-side scrape (kubelet + node-local
+            # pod scrape from daemon-scrape-configs.yaml). Sharded by node, no
+            # cross-replica duplication.
+            receivers: [otlp, kubeletstats, prometheus]
           traces:
             exporters: [clickhouse]
             processors: [memory_limiter, k8sattributes, batch]
@@ -348,16 +383,26 @@ collectors:
     suffix: deployment
     mode: deployment
     enabled: true
-    replicas: 6
+    replicas: 4
     autoscaler:
-      # Under TT firehose (50+ services × 16 ns) the HPA pegged at 40 with
-      # memory_limiter at 174 %/60 %, dropping every TT span via UNAVAILABLE
-      # responses (Java agent OkHttp gRPC exporter does not retry). First lift
-      # (#279) was 40→120 + 4Gi→8Gi; the post-roll fleet still saturated at
-      # 8Gi (75 %/60 %), so the limit went 8Gi→16Gi as well. Cluster (36
-      # nodes, ~120Gi each) absorbs 120 × 16Gi ≈ 53Gi/node worst case.
-      minReplicas: 6
-      maxReplicas: 120
+      # History: this collector originally also ran prometheus pod/endpoints
+      # scrape (kubernetes-pods + kubernetes-endpoints jobs in the receiver
+      # config). Each replica scraped every annotated target independently,
+      # so memory pressure scaled with cluster size and HPA chased it
+      # vertically up to 120 replicas (#279). The collateral damage was N×
+      # duplicate inserts into ClickHouse — at N=120 that meant ~8.6k
+      # scrape requests per 15s window for ~72 annotated pods, plus the
+      # CH merge engine could not keep up (otel_metrics_gauge had 5.5B
+      # rows pending merge, CH OOM-restarted under the load).
+      #
+      # Pod scrape now lives in the daemon collector with a node-local
+      # field selector, so deployment-mode collectors only carry OTLP
+      # push (apps → here via Service load balancing), k8s_cluster, and
+      # k8sobjects (both leader-elected). With that load profile 4–12
+      # replicas is plenty; the previous 6/120 bounds were fighting the
+      # symptom, not the cause.
+      minReplicas: 4
+      maxReplicas: 12
       targetCPUUtilization: 55
       targetMemoryUtilization: 60
     podDisruptionBudget:
@@ -482,41 +527,14 @@ collectors:
               endpoint: 0.0.0.0:4317
             http:
               endpoint: 0.0.0.0:4318
-        prometheus:
-          config:
-            scrape_configs:
-              - job_name: kubernetes-pods
-                scrape_interval: 15s
-                kubernetes_sd_configs:
-                  - role: pod
-                relabel_configs:
-                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-                    action: keep
-                    regex: true
-                  - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
-                    action: replace
-                    regex: ([^:]+)(?::\d+)?;(\d+)
-                    replacement: $${1}:$${2}
-                    target_label: __address__
-                  - source_labels: [__meta_kubernetes_namespace]
-                    action: replace
-                    target_label: namespace
-                  - source_labels: [__meta_kubernetes_pod_name]
-                    action: replace
-                    target_label: pod
-              - job_name: kubernetes-endpoints
-                scrape_interval: 15s
-                kubernetes_sd_configs:
-                  - role: endpoints
-                relabel_configs:
-                  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
-                    action: keep
-                    regex: true
-                  - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
-                    action: replace
-                    regex: (.+)(?::\d+);(\d+)
-                    replacement: $$1:$$2
-                    target_label: __address__
+        # Pod-level prometheus scrape moved to the daemon collector so each
+        # replica only scrapes its own node's pods (see
+        # daemon-scrape-configs.yaml::kubernetes-pods). Keeping it here would
+        # re-introduce N× duplication across deployment replicas and is what
+        # originally drove the HPA to 120 (#279). If a future workload needs
+        # service-endpoint scraping, prefer extending daemon-scrape-configs
+        # with a similarly node-restricted endpoints job over reviving it
+        # here.
       service:
         pipelines:
           logs:
@@ -526,7 +544,7 @@ collectors:
           metrics:
             exporters: [clickhouse]
             processors: [memory_limiter, k8sattributes, transform/service_namespace, batch]
-            receivers: [otlp, prometheus, spanmetrics]
+            receivers: [otlp, spanmetrics]
           traces:
             exporters: [spanmetrics, clickhouse]
             processors: [memory_limiter, k8sattributes, transform/service_namespace, batch]
