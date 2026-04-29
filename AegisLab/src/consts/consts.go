@@ -437,6 +437,21 @@ const (
 	MaxTokensKeyNamespaceWarming  = "rate_limiting.max_concurrent_ns_warming"
 	MaxConcurrentNamespaceWarming = 30
 	NamespaceWarmingServiceName   = "namespace_warming"
+
+	// Stuck-trace reconciler (issue #293). Closes the latent gap where the
+	// chaos-mesh CRD-success path is the only thing that submits the
+	// BuildDatapack task: a worker restart, an in-memory batchManager race,
+	// or a silently early-returning postProcess closure leaves the trace
+	// pinned at last_event=fault.injection.{started,completed} with no
+	// downstream task. The reconciler is a periodic DB-driven sweep; it
+	// re-fires the equivalent of postProcess for traces older than the
+	// stuck threshold, idempotent on the per-fault-injection-task
+	// BuildDatapack child task. Both keys are read on every tick so a
+	// runtime aegisctl push to etcd applies without a backend rebuild.
+	StuckTraceReconcileIntervalKey         = "rate_limiting.stuck_trace_reconcile_interval_seconds"
+	StuckTraceReconcileStuckThresholdKey   = "rate_limiting.stuck_trace_reconcile_stuck_threshold_seconds"
+	DefaultStuckTraceReconcileIntervalSecs = 60
+	DefaultStuckTraceReconcileStuckSecs    = 600
 )
 
 type EventType string

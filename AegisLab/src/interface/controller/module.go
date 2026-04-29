@@ -65,6 +65,21 @@ func (r *Lifecycle) start(ctx context.Context, cancel context.CancelFunc) error 
 			r.params.InjectionOwner,
 		),
 	)
+	// Stuck-trace reconciler (issue #293). Runs alongside the chaos-mesh
+	// CRD informer; recovers traces stuck after fault.injection.{started,
+	// completed} when the CRD-success path failed to submit BuildDatapack
+	// (worker restart, in-memory batchManager race, silent postProcess
+	// early-return). Idempotent: a BuildDatapack child task already linked
+	// to the FaultInjection task is the trigger to skip.
+	consumer.StartStuckTraceReconciler(
+		ctx,
+		consumer.NewStuckTraceReconciler(
+			r.params.DB,
+			r.params.RedisGateway,
+			r.params.ExecutionOwner,
+			r.params.InjectionOwner,
+		),
+	)
 	return nil
 }
 
