@@ -82,9 +82,9 @@ When aegisctl ships the offline RCA-grading query:
    - **Recent error / status-code distributions** — if the entrance already has noisy 5xx, your fault won't stand out.
 
    The wire (b) shows what the cluster actually does; the code (a) shows what it's supposed to do; **both can lie alone**, neither is replaceable by priors. With `--source-dir` provided and `code_evidence` empty, the next round's step-2 retro-grade will mark this round as "prior-only" anti-pattern in `memory.md`. Without `--source-dir`, do (b) only and set `code_evidence: []` with a `_note: "source unavailable"`.
-5. **Propose.** Pick a fault (or small batch) maximizing the four axes. Write the hypothesis as one sentence: *"500ms delay on `<route>` of `<service>` should surface as failed checkouts because `<service>` is on the critical path with no fallback."* If you can't write that sentence with conviction, the idea isn't ready.
-6. **Diversity check.** Compare to step 3's tally. If your family is overrepresented, swap to an underrepresented one. See *Diversity*.
-7. **Apply.** Submit through aegisctl. For multi-fault, stage each spec then `--apply --batch`.
+5. **Propose.** Decide K_outer (parallel traces this round, see *Per-round shape*) and per-trace K_inner (leaves per trace's batch). For each of the K_outer puzzles, pick a fault (or K_inner-leaf interaction set) maximizing the four axes. Write the hypothesis as one sentence per trace: *"500ms delay on `<route>` of `<service>` should surface as failed checkouts because `<service>` is on the critical path with no fallback."* If you can't write that sentence with conviction, the idea isn't ready.
+6. **Diversity check.** Compare to step 3's tally. If your family is overrepresented, swap to an underrepresented one. Also vary across the K_outer parallel traces — don't pose the same puzzle K_outer times. See *Diversity*.
+7. **Apply.** Submit each of the K_outer puzzles as its own trace through aegisctl (use `--auto` namespace allocation so they spread across the deployed pool). For traces with K_inner ≥ 2, stage each spec then `--apply --batch` so the leaves land in the same trace; for K_inner=1, a single `--apply` per trace is enough.
 8. **Verify injection landed.** Don't trust the submit response or the detector alone. Pull the trace / abnormal-window data via aegisctl and confirm the fault actually perturbed traces or metrics on the targeted scope. If it didn't, mark the round `injection-noop` and *do not* grade it as a puzzle — investigate why (image issue, IPVLAN HTTPChaos, missing observed-pair for network chaos, DNS catalog miss, etc.).
 9. **Simulate the RCA reasoning.** Walk through how an RCA agent would chase this from the entrance symptom to the actual fault. Record hop count and number of plausible decoy hypotheses on the path. This is your in-loop proxy for the deferred RCA-correctness reward.
 10. **Persist.** Write the round record under `rounds/round-<N>-<unix-ts>.json` (full schema in *State conventions*), and append distilled cross-round lessons to `memory.md`.
@@ -182,23 +182,42 @@ Targets, not hard limits. The principle: **no family above ~30% in any 50-round 
 
 Within a family, vary the **target service**. Hammering one service with five JVM-method faults teaches RCA to suspect that service, not to actually reason.
 
-## Multi-fault batches
+## Per-round shape: two independent dimensions
 
-`aegisctl inject guided --stage` / `--apply --batch` submits multiple finalized configs as one experiment that fires **in parallel within a single namespace**. Use multi-fault when there's a real reason for the faults to *interact*:
+A round has TWO independent fault-fan-out dimensions, and they should not be conflated:
+
+- **K_outer = parallel TRACES per round.** Each trace is its own RCA puzzle, runs in its own ts/hs/sn namespace (auto-allocated via `--auto`), produces its own datapack, and is graded independently. K_outer ramps with the system's deployed-namespace pool (e.g. ts has 16 namespaces — K_outer up to ~12 leaves headroom for retries). This is **throughput**: more puzzles per unit wall-clock, more data per round.
+- **K_inner = LEAVES per trace** (the `--apply --batch` shape). Multiple leaves *within one trace* fire in parallel within the same namespace, share one abnormal-window in the datapack, and are graded together — RCA must attribute the symptom to one or more of the K_inner faults. K_inner is **per-puzzle hardness**: a 2-leaf batch with mutual-masking leaves is a distinctly harder puzzle than two independent 1-leaf traces.
+
+The two dimensions multiply: a round of K_outer=4 × K_inner=2 produces 4 separate traces, each containing 2 interacting leaves — i.e. 8 chaos resources, 4 datapacks, 4 RCA puzzles.
+
+Don't merge the two dimensions in your head. "Multi-fault" alone is ambiguous; always say "K_outer parallel" or "K_inner-leaf batch" so it's unambiguous what shape you're submitting.
+
+### K_outer guidance
+
+Default to **K_outer ≥ 2** when the namespace pool has slack — independent puzzles per round are pure throughput win. Cap K_outer below the deployed pool size for the system (so namespace allocation has retry headroom) and below any backend rate-limit ceiling (BuildDatapackRateLimiter default 8; #289-style ClickHouse freshness-probe contention shows up around K_outer≥4 if the probe isn't partition-pruned). When in doubt, ramp K_outer upward across rounds and watch the BuildDatapack failure rate.
+
+K_outer=1 is **not** a default — it's a deliberate choice when the round only has one good puzzle to pose this iteration (e.g. a deeply-considered K_inner=3 with a tight interaction hypothesis where parallel siblings would just add noise to the analysis).
+
+### K_inner — the multi-fault batch (`--apply --batch`)
+
+`aegisctl inject guided --stage` / `--apply --batch` submits multiple finalized configs as one experiment that fires **in parallel within a single namespace and one trace**. Use K_inner ≥ 2 when there's a real reason for the leaves to *interact within the same trace's data*:
 
 - **Mutual masking** — A's symptom looks like B's effect and vice versa; RCA must disentangle.
 - **Co-trigger / amplification** — cache-tier latency + DB-pool exhaustion produce a much bigger blowup than either alone, and RCA must resist blaming whichever shows up first in the trace.
-- **Multi-root-cause grading** — many RCA frameworks return a single root cause; multi-fault tests whether they can return a set.
+- **Multi-root-cause grading** — many RCA frameworks return a single root cause; K_inner ≥ 2 tests whether they can return a set.
 
-Suggested mix (drift gradually based on what's working):
+Suggested K_inner mix (drift gradually based on what's working):
 
-- single fault — ~50–60% of rounds
-- 2-fault batch — ~25–35%
-- 3+ fault batch — ~10–15% (only with a clear interaction hypothesis)
+- K_inner=1 — ~50–60% of traces
+- K_inner=2 — ~25–35%
+- K_inner=3+ — ~10–15% (only with a clear interaction hypothesis)
 
-Don't multi-fault for its own sake. Two unrelated faults on different namespaces aren't harder — they're two independent puzzles glued together. The interesting batches share a service, a dependency, or a time window so symptoms entangle.
+Don't K_inner for its own sake — two unrelated leaves crammed into one trace aren't harder than two separate traces, they're a single puzzle with random noise. The interesting K_inner batches share a service, a dependency, or a time window so symptoms entangle.
 
-Backend constraints: every spec in one batch must share `system`, `system_type`, and `namespace` (or all leave namespace empty for the auto-allocate path). Duration is `max` across the batch.
+**K_inner ≠ K_outer.** Two unrelated faults on *different* namespaces are not a K_inner=2 batch — they're K_outer=2 single-leaf traces, which is exactly what you want for throughput. Don't merge them into one trace just to have a "bigger" batch.
+
+Backend constraints (K_inner only): every spec in one `--apply --batch` must share `system`, `system_type`, and `namespace` (or all leave namespace empty for the auto-allocate path). Duration is `max` across the batch.
 
 ## Unit and platform traps
 
