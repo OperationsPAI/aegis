@@ -56,7 +56,13 @@ var authLoginCmd = &cobra.Command{
 			return usageErrorf("--server is required for login")
 		}
 
-		mode, username, keyID, keySecret, password, err := resolveAuthLoginInputs(cmd)
+		ctxName := resolveAuthLoginContextName()
+		var savedCtx config.Context
+		if cfg != nil {
+			savedCtx = cfg.Contexts[ctxName]
+		}
+
+		mode, username, keyID, keySecret, password, err := resolveAuthLoginInputs(cmd, savedCtx)
 		if err != nil {
 			return err
 		}
@@ -79,8 +85,7 @@ var authLoginCmd = &cobra.Command{
 			return fmt.Errorf("unsupported login mode %q", mode)
 		}
 
-		ctxName := resolveAuthLoginContextName()
-		if err := saveLoginContext(ctxName, server, result); err != nil {
+		if err := saveLoginContext(ctxName, server, mode, username, password, result); err != nil {
 			return err
 		}
 
@@ -106,7 +111,7 @@ var authLoginCmd = &cobra.Command{
 	},
 }
 
-func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecret, password string, err error) {
+func resolveAuthLoginInputs(cmd *cobra.Command, savedCtx config.Context) (mode, username, keyID, keySecret, password string, err error) {
 	username = strings.TrimSpace(authLoginUsername)
 	if username == "" {
 		username = strings.TrimSpace(os.Getenv("AEGIS_USERNAME"))
@@ -117,12 +122,26 @@ func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecre
 		keyID = strings.TrimSpace(os.Getenv("AEGIS_KEY_ID"))
 	}
 
+	// Fall back to saved context only if no credentials were supplied via
+	// flags or env. We pick whichever auth-type the saved context already
+	// uses; we never combine username and key-id from different sources.
+	if username == "" && keyID == "" {
+		switch {
+		case strings.TrimSpace(savedCtx.Username) != "" && strings.TrimSpace(savedCtx.Password) != "":
+			return "password", savedCtx.Username, "", "", savedCtx.Password, nil
+		case strings.TrimSpace(savedCtx.KeyID) != "":
+			// Saved context has a key-id but no secret — operator must
+			// re-supply the secret via flag or env.
+			keyID = savedCtx.KeyID
+		}
+	}
+
 	if username != "" && keyID != "" {
 		return "", "", "", "", "", usageErrorf("choose either username/password login or api-key login, not both")
 	}
 
 	if username != "" {
-		password, err = resolvePasswordInput(cmd)
+		password, err = resolvePasswordInput(cmd, savedCtx)
 		if err != nil {
 			return "", "", "", "", "", err
 		}
@@ -130,7 +149,7 @@ func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecre
 	}
 
 	if keyID == "" {
-		return "", "", "", "", "", usageErrorf("either --username or --key-id is required")
+		return "", "", "", "", "", usageErrorf("either --username or --key-id is required (or store credentials in the saved context)")
 	}
 
 	keySecret = authLoginKeySecret
@@ -144,7 +163,7 @@ func resolveAuthLoginInputs(cmd *cobra.Command) (mode, username, keyID, keySecre
 	return "api_key", "", keyID, keySecret, "", nil
 }
 
-func resolvePasswordInput(cmd *cobra.Command) (string, error) {
+func resolvePasswordInput(cmd *cobra.Command, savedCtx config.Context) (string, error) {
 	filePath := strings.TrimSpace(authLoginPasswordFile)
 	if filePath == "" {
 		filePath = strings.TrimSpace(os.Getenv("AEGIS_PASSWORD_FILE"))
@@ -176,9 +195,15 @@ func resolvePasswordInput(cmd *cobra.Command) (string, error) {
 		return sanitizePassword(string(data))
 	case envPassword != "":
 		return sanitizePassword(envPassword)
-	default:
-		return "", usageErrorf("password is required via --password-stdin, --password-file, AEGIS_PASSWORD, or AEGIS_PASSWORD_FILE")
 	}
+
+	// Last resort: a password previously persisted into the saved context
+	// (matches the AEGIS_KEY_SECRET-via-env pattern but for passwords).
+	if stored := savedCtx.Password; stored != "" {
+		return stored, nil
+	}
+
+	return "", usageErrorf("password is required via --password-stdin, --password-file, AEGIS_PASSWORD, AEGIS_PASSWORD_FILE, or a saved context")
 }
 
 func readPassword(r io.Reader) (string, error) {
@@ -205,7 +230,7 @@ func resolveAuthLoginContextName() string {
 	return ctxName
 }
 
-func saveLoginContext(ctxName, server string, result *client.LoginResult) error {
+func saveLoginContext(ctxName, server, mode, username, password string, result *client.LoginResult) error {
 	if cfg.Contexts == nil {
 		cfg.Contexts = make(map[string]config.Context)
 	}
@@ -213,8 +238,25 @@ func saveLoginContext(ctxName, server string, result *client.LoginResult) error 
 	ctx.Server = server
 	ctx.Token = result.Token
 	ctx.AuthType = result.AuthType
-	ctx.KeyID = result.KeyID
 	ctx.TokenExpiry = result.ExpiresAt
+
+	// Persist credentials of the auth-type we just used. Do NOT clear the
+	// stored creds for the other auth-type — operators sometimes keep both
+	// in the same context and switch between them.
+	switch mode {
+	case "password":
+		if username != "" {
+			ctx.Username = username
+		}
+		if password != "" {
+			ctx.Password = password
+		}
+	case "api_key":
+		if result.KeyID != "" {
+			ctx.KeyID = result.KeyID
+		}
+	}
+
 	cfg.Contexts[ctxName] = ctx
 	cfg.CurrentContext = ctxName
 

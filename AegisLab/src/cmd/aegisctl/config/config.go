@@ -17,11 +17,18 @@ type Config struct {
 }
 
 // Context represents a named connection context.
+//
+// Username and Password are optional, plaintext stored credentials used for
+// unattended re-login when the bearer token expires. They mirror the existing
+// KeyID / key-secret env-var workflow and have the same security posture as
+// any other secret in this file.
 type Context struct {
 	Server         string    `yaml:"server"`
 	Token          string    `yaml:"token,omitempty"`
 	AuthType       string    `yaml:"auth-type,omitempty"`
 	KeyID          string    `yaml:"key-id,omitempty"`
+	Username       string    `yaml:"username,omitempty"`
+	Password       string    `yaml:"password,omitempty"`
 	DefaultProject string    `yaml:"default-project,omitempty"`
 	TokenExpiry    time.Time `yaml:"token-expiry,omitempty"`
 }
@@ -32,6 +39,8 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 		Token          string    `yaml:"token,omitempty"`
 		AuthType       string    `yaml:"auth-type,omitempty"`
 		KeyID          string    `yaml:"key-id,omitempty"`
+		Username       string    `yaml:"username,omitempty"`
+		Password       string    `yaml:"password,omitempty"`
 		DefaultProject string    `yaml:"default-project,omitempty"`
 		TokenExpiry    time.Time `yaml:"token-expiry,omitempty"`
 	}
@@ -45,6 +54,8 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 	c.Token = raw.Token
 	c.AuthType = raw.AuthType
 	c.KeyID = raw.KeyID
+	c.Username = raw.Username
+	c.Password = raw.Password
 	c.DefaultProject = raw.DefaultProject
 	c.TokenExpiry = raw.TokenExpiry
 	return nil
