@@ -278,14 +278,16 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 			}
 			continue
 		}
-		// No timestamps: fall back to (UpdatedAt + max guided duration +
+		// No timestamps: fall back to (CreatedAt + max guided duration +
 		// grace). This covers the round-3 byte-cluster case where the
 		// worker died between CRD-add and CRD-success and updateInjectionTimestamp
-		// was never called.
-		threshold := inj.UpdatedAt.Add(time.Duration(guidedDuration)*time.Minute + stuckGraceWindow)
+		// was never called. CreatedAt is the immutable INSERT timestamp
+		// — UpdatedAt is auto-bumped by GORM on any subsequent write
+		// (UpdateInjectionState, etc.) and would shift the window.
+		threshold := inj.CreatedAt.Add(time.Duration(guidedDuration)*time.Minute + stuckGraceWindow)
 		if now.Before(threshold) {
 			logEntry.WithField("inj_name", inj.Name).
-				Debug("FaultInjection.UpdatedAt + duration still in future, skipping")
+				Debug("FaultInjection.CreatedAt + duration still in future, skipping")
 			return false, nil
 		}
 	}
@@ -304,15 +306,17 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 		logEntry.WithError(err).Warn("update injection state failed (continuing)")
 	}
 
-	// On a fresh FaultInjection row UpdatedAt is the *start* of the
-	// injection (the row is written when the chaos CRD is created and
-	// updateInjectionTimestamp hasn't yet run). The fault then runs
-	// forward from that point for `guidedDuration` minutes, so the
-	// abnormal window is [UpdatedAt, UpdatedAt + duration] — emphatically
-	// NOT the [UpdatedAt - duration, UpdatedAt] form an earlier draft
-	// used. Stored StartTime/EndTime override both.
-	startTime := chosen.UpdatedAt
-	endTime := chosen.UpdatedAt.Add(time.Duration(guidedDuration) * time.Minute)
+	// CreatedAt is the row INSERT timestamp, written exactly once when
+	// the chaos CRD is created — that's "fault start" within seconds.
+	// UpdatedAt would be tempting (it's set to the same value at INSERT
+	// on a fresh row) but GORM auto-bumps it on every save, including
+	// the UpdateInjectionState call a few lines up, so by the time we
+	// hit synthesis here UpdatedAt no longer corresponds to fault start.
+	// The fault runs forward from CreatedAt for `guidedDuration` minutes,
+	// so the abnormal window is [CreatedAt, CreatedAt + duration].
+	// Stored StartTime/EndTime override both when present.
+	startTime := chosen.CreatedAt
+	endTime := chosen.CreatedAt.Add(time.Duration(guidedDuration) * time.Minute)
 	if chosen.StartTime != nil {
 		startTime = *chosen.StartTime
 	}
@@ -321,12 +325,21 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 	}
 	updatedItem, err := r.store.updateInjectionTimestamp(ctx, chosen.Name, startTime, endTime)
 	if err != nil {
-		// Non-fatal — the FaultInjection row may already have timestamps
-		// (the post-CRD-success path wrote them). Build a synthetic item
-		// from the row we already have.
-		logEntry.WithError(err).Warn("update injection timestamps failed, falling back to existing record")
-		fallback := dto.NewInjectionItem(chosen)
-		updatedItem = &fallback
+		// Non-fatal — even if the persist failed, BuildDatapack still
+		// needs a valid time window or it will query CH for an empty
+		// range and produce an empty datapack. dto.NewInjectionItem
+		// would copy chosen.StartTime/EndTime, which are nil in the
+		// stuck-trace fallback case. Build the item directly from the
+		// already-computed [startTime, endTime] (anchored to CreatedAt
+		// or to the stored timestamps if they were present).
+		logEntry.WithError(err).Warn("update injection timestamps failed, falling back to computed window")
+		updatedItem = &dto.InjectionItem{
+			ID:          chosen.ID,
+			Name:        chosen.Name,
+			PreDuration: chosen.PreDuration,
+			StartTime:   startTime,
+			EndTime:     endTime,
+		}
 	}
 
 	mergedEnvVars := mergeBenchmarkEnvVars(r.containerRepo, benchmark.ID, namespace, logEntry)

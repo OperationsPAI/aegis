@@ -174,6 +174,12 @@ func makeStuckFixture(t *testing.T, db *gorm.DB, lastEvent consts.EventType, dur
 		UpdatedAt: stuckAt,
 	}).Error)
 
+	// Set CreatedAt explicitly: it's the immutable "fault start" anchor
+	// the reconciler now uses for both the duration gate and the
+	// synthesized abnormal window. UpdatedAt is left as auto-now to
+	// reflect production semantics — GORM bumps it on every save (e.g.
+	// UpdateInjectionState), so a test that pinned UpdatedAt to stuckAt
+	// would mask the very bug we're guarding against.
 	injectionName := "fi-" + uuid.NewString()
 	require.NoError(t, db.Create(&model.FaultInjection{
 		Name:      injectionName,
@@ -181,7 +187,7 @@ func makeStuckFixture(t *testing.T, db *gorm.DB, lastEvent consts.EventType, dur
 		TaskID:    &faultTaskID,
 		State:     consts.DatapackInitial,
 		Status:    consts.CommonEnabled,
-		UpdatedAt: stuckAt,
+		CreatedAt: stuckAt,
 	}).Error)
 	if hybrid {
 		require.NoError(t, db.Create(&model.FaultInjection{
@@ -190,7 +196,7 @@ func makeStuckFixture(t *testing.T, db *gorm.DB, lastEvent consts.EventType, dur
 			TaskID:    &faultTaskID,
 			State:     consts.DatapackInitial,
 			Status:    consts.CommonEnabled,
-			UpdatedAt: stuckAt.Add(time.Second),
+			CreatedAt: stuckAt.Add(time.Second),
 		}).Error)
 	}
 
@@ -459,29 +465,29 @@ func TestMaxGuidedDurationMinutes_PicksLargest(t *testing.T) {
 }
 
 // TestReconciler_SynthesizesAbnormalWindowForward pins the regression for
-// Copilot's time-math comment on stuck_trace_reconciler.go:296. When a
+// Copilot's time-math comment on stuck_trace_reconciler.go. When a
 // FaultInjection row is missing both StartTime and EndTime, the reconciler
-// must derive [UpdatedAt, UpdatedAt + duration]. UpdatedAt at row creation
-// is the *start* of the injection (the row is written when the chaos CRD
-// is created); the fault then runs forward for `duration` minutes. The
-// earlier draft inverted this and produced [UpdatedAt - duration,
-// UpdatedAt], which made BuildDatapack query a window shifted entirely
-// before the actual fault.
+// must derive [CreatedAt, CreatedAt + duration]. CreatedAt is the immutable
+// row-INSERT timestamp written when the chaos CRD is created; the fault
+// then runs forward for `duration` minutes. UpdatedAt would be wrong here
+// because GORM bumps it on every save (e.g. UpdateInjectionState a few
+// lines earlier), so anchoring synthesis to UpdatedAt would shift the
+// window forward by however long the unrelated state-write took.
 func TestReconciler_SynthesizesAbnormalWindowForward(t *testing.T) {
 	db := newReconcilerTestDB(t)
 	const durationMin = 5
 	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, durationMin, 30*time.Minute, false)
 
-	// Mirror the fixture's stuck_at exactly so the assertion reads the
+	// Mirror the fixture's CreatedAt exactly so the assertion reads the
 	// synthesized window without timing fuzz.
 	var row model.FaultInjection
 	require.NoError(t, db.Where("name = ?", fix.injectionName).First(&row).Error)
 	require.Nil(t, row.StartTime, "fixture must NOT set StartTime; this test exercises the synthesis path")
 	require.Nil(t, row.EndTime, "fixture must NOT set EndTime; this test exercises the synthesis path")
-	stuckAt := row.UpdatedAt
+	createdAt := row.CreatedAt
 
 	owner := newFakeInjectionOwner([]model.FaultInjection{
-		{ID: row.ID, Name: fix.injectionName, TaskID: &fix.faultTaskID, UpdatedAt: stuckAt},
+		{ID: row.ID, Name: fix.injectionName, TaskID: &fix.faultTaskID, CreatedAt: createdAt},
 	})
 
 	submitter := taskSubmitter(func(_ context.Context, _ *gorm.DB, _ *redis.Gateway, _ *dto.UnifiedTask) error {
@@ -494,14 +500,14 @@ func TestReconciler_SynthesizesAbnormalWindowForward(t *testing.T) {
 
 	require.Len(t, owner.timestampUpdates, 1)
 	got := owner.timestampUpdates[0]
-	wantStart := stuckAt
-	wantEnd := stuckAt.Add(durationMin * time.Minute)
+	wantStart := createdAt
+	wantEnd := createdAt.Add(durationMin * time.Minute)
 	require.True(t, got.StartTime.Equal(wantStart),
-		"start_time must equal UpdatedAt (%s), got %s", wantStart, got.StartTime)
+		"start_time must equal CreatedAt (%s), got %s", wantStart, got.StartTime)
 	require.True(t, got.EndTime.Equal(wantEnd),
-		"end_time must equal UpdatedAt + duration (%s), got %s", wantEnd, got.EndTime)
+		"end_time must equal CreatedAt + duration (%s), got %s", wantEnd, got.EndTime)
 	require.True(t, got.EndTime.After(got.StartTime),
-		"window must run forward from UpdatedAt, not backward")
+		"window must run forward from CreatedAt, not backward")
 }
 
 // TestReconciler_PrefersStoredTimestampsOverSynthesis verifies that stored
@@ -636,4 +642,81 @@ func TestReconciler_ResolveIntervalRespectsConfig(t *testing.T) {
 		time.Duration(consts.DefaultStuckTraceReconcileIntervalSecs)*time.Second,
 		r.resolveInterval(),
 		"non-positive config must fall through to the default")
+}
+
+// TestReconciler_GatesAndSynthesisIgnoreUpdatedAtBumps reproduces the
+// production failure mode the CreatedAt switch is closing.
+//
+// Setup: a FaultInjection row born well past the fault window
+// (CreatedAt = now - 30min, guidedDuration = 5min, so the window
+// [CreatedAt, CreatedAt + 5min] ended ~25min ago). Then an unrelated
+// control-plane write — modeled here by a GORM Save that flips State —
+// auto-bumps UpdatedAt to ~now via autoUpdateTime. This is exactly what
+// UpdateInjectionState does in production once the chaos-mesh
+// informer fires.
+//
+// Pre-fix behavior: the duration gate read inj.UpdatedAt (~now), so
+// threshold = now + 5min + grace, the gate said "still in window",
+// and the trace was kept stuck across ticks even though the fault
+// completed half an hour ago. Recovery would never fire until the
+// trace fell out of the scan window.
+//
+// Post-fix behavior: the gate reads inj.CreatedAt (now - 30min), so
+// threshold = now - 23min, the gate correctly says "past window", and
+// the reconciler proceeds. The synthesis path then anchors start/end
+// to CreatedAt, not UpdatedAt — so BuildDatapack queries the correct
+// abnormal window even though UpdatedAt is far in the future relative
+// to the actual fault.
+func TestReconciler_GatesAndSynthesisIgnoreUpdatedAtBumps(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	const durationMin = 5
+	const stalenessMin = 30
+	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, durationMin, stalenessMin*time.Minute, false)
+
+	// Simulate the unrelated state write that happens in production
+	// (UpdateInjectionState et al.). Use a real GORM Save so
+	// autoUpdateTime bumps UpdatedAt to ~now — exactly what bites the
+	// reconciler. CreatedAt stays at the fixture's stuckAt.
+	var row model.FaultInjection
+	require.NoError(t, db.Where("name = ?", fix.injectionName).First(&row).Error)
+	originalCreatedAt := row.CreatedAt
+	row.State = consts.DatapackInjectSuccess
+	require.NoError(t, db.Save(&row).Error)
+
+	var afterBump model.FaultInjection
+	require.NoError(t, db.Where("name = ?", fix.injectionName).First(&afterBump).Error)
+	require.True(t, afterBump.CreatedAt.Equal(originalCreatedAt),
+		"GORM Save must preserve CreatedAt; got %s want %s",
+		afterBump.CreatedAt, originalCreatedAt)
+	require.True(t, afterBump.UpdatedAt.After(originalCreatedAt.Add(time.Duration(stalenessMin-1)*time.Minute)),
+		"GORM autoUpdateTime must have bumped UpdatedAt to ~now (>= %d min after CreatedAt); got UpdatedAt=%s CreatedAt=%s",
+		stalenessMin-1, afterBump.UpdatedAt, originalCreatedAt)
+
+	owner := newFakeInjectionOwner([]model.FaultInjection{afterBump})
+	var captured []*dto.UnifiedTask
+	submitter := taskSubmitter(func(_ context.Context, _ *gorm.DB, _ *redis.Gateway, t *dto.UnifiedTask) error {
+		captured = append(captured, t)
+		return nil
+	})
+
+	r := newReconcilerForTest(t, db, owner, submitter)
+	processed, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, processed,
+		"duration gate anchored to CreatedAt must let the trace finalize: "+
+			"row was created %dmin ago and the %dmin fault window has long since elapsed",
+		stalenessMin, durationMin)
+	require.Len(t, captured, 1)
+
+	// Synthesis must use CreatedAt, not the auto-bumped UpdatedAt.
+	require.Len(t, owner.timestampUpdates, 1)
+	got := owner.timestampUpdates[0]
+	require.True(t, got.StartTime.Equal(originalCreatedAt),
+		"synthesized start_time must equal CreatedAt (%s), got %s — "+
+			"if this asserts UpdatedAt the synthesis is reading the "+
+			"auto-bumped field and BuildDatapack will query the wrong window",
+		originalCreatedAt, got.StartTime)
+	require.True(t, got.EndTime.Equal(originalCreatedAt.Add(durationMin*time.Minute)),
+		"synthesized end_time must equal CreatedAt + duration; got %s",
+		got.EndTime)
 }
