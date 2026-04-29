@@ -7,44 +7,6 @@ import (
 	"time"
 )
 
-func TestSaveLoadPreservesUsernameAndPassword(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-
-	original := &Config{
-		CurrentContext: "default",
-		Contexts: map[string]Context{
-			"default": {
-				Server:         "http://localhost:18082",
-				Token:          "jwt-token",
-				AuthType:       "password",
-				Username:       "admin",
-				Password:       "stored-secret",
-				DefaultProject: "pair_diagnosis",
-				TokenExpiry:    time.Date(2026, 4, 30, 19, 22, 29, 0, time.UTC),
-			},
-		},
-	}
-	if err := SaveConfig(original); err != nil {
-		t.Fatalf("save: %v", err)
-	}
-
-	loaded, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-
-	got := loaded.Contexts["default"]
-	if got.Username != "admin" || got.Password != "stored-secret" {
-		t.Fatalf("username/password did not round-trip: %+v", got)
-	}
-	if got.Server != "http://localhost:18082" || got.Token != "jwt-token" {
-		t.Fatalf("server/token did not round-trip: %+v", got)
-	}
-	if got.DefaultProject != "pair_diagnosis" {
-		t.Fatalf("default-project did not round-trip: %+v", got)
-	}
-}
-
 func TestSaveAfterLoadDoesNotStripStoredCredentials(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

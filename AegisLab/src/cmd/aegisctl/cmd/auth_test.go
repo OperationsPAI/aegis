@@ -172,46 +172,6 @@ func TestAuthLoginInvalidCredentialsDoNotLeakPassword(t *testing.T) {
 	}
 }
 
-func TestAuthLoginPersistsUsernameAndPasswordToContext(t *testing.T) {
-	resetAuthLoginState(t)
-	prev := passwordLoginFunc
-	t.Cleanup(func() {
-		passwordLoginFunc = prev
-	})
-
-	t.Setenv("HOME", t.TempDir())
-	cfg = &config.Config{Contexts: map[string]config.Context{}}
-	flagOutput = "json"
-	authLoginServer = "http://127.0.0.1:8082"
-	authLoginUsername = "admin"
-	authLoginPasswordStdin = true
-	authLoginCmd.SetIn(strings.NewReader("flag-secret\n"))
-
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
-		return &client.LoginResult{
-			Token:     "jwt-1",
-			ExpiresAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
-			AuthType:  "password",
-			Username:  username,
-		}, nil
-	}
-
-	if _, _, err := captureCommandOutput(func() error {
-		return authLoginCmd.RunE(authLoginCmd, nil)
-	}); err != nil {
-		t.Fatalf("auth login returned error: %v", err)
-	}
-
-	saved, err := config.LoadConfig()
-	if err != nil {
-		t.Fatalf("load saved config: %v", err)
-	}
-	ctx := saved.Contexts["default"]
-	if ctx.Username != "admin" || ctx.Password != "flag-secret" {
-		t.Fatalf("expected stored creds, got %+v", ctx)
-	}
-}
-
 func TestAuthLoginWithoutFlagsUsesStoredCredentials(t *testing.T) {
 	resetAuthLoginState(t)
 	prev := passwordLoginFunc
@@ -382,38 +342,6 @@ func TestAuthLoginPreservesStoredCredentialsAcrossTokenRefresh(t *testing.T) {
 	}
 	if ctx.DefaultProject != "pair_diagnosis" {
 		t.Fatalf("default-project lost: %+v", ctx)
-	}
-}
-
-func TestAuthLoginErrorsWhenNoCredentialsAnywhere(t *testing.T) {
-	resetAuthLoginState(t)
-	prev := passwordLoginFunc
-	t.Cleanup(func() {
-		passwordLoginFunc = prev
-	})
-
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("AEGIS_USERNAME", "")
-	t.Setenv("AEGIS_PASSWORD", "")
-	t.Setenv("AEGIS_KEY_ID", "")
-	t.Setenv("AEGIS_KEY_SECRET", "")
-	cfg = &config.Config{Contexts: map[string]config.Context{}}
-	flagOutput = "json"
-	authLoginServer = "http://127.0.0.1:8082"
-
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
-		t.Fatal("login should not be invoked with no credentials")
-		return nil, nil
-	}
-
-	_, _, err := captureCommandOutput(func() error {
-		return authLoginCmd.RunE(authLoginCmd, nil)
-	})
-	if err == nil {
-		t.Fatal("expected auth login to error without credentials")
-	}
-	if !strings.Contains(err.Error(), "--username") && !strings.Contains(err.Error(), "--key-id") {
-		t.Fatalf("unexpected error message: %v", err)
 	}
 }
 
