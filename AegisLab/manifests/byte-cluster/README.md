@@ -43,15 +43,40 @@ kubectl create namespace exp --dry-run=client -o yaml | kubectl apply -f -
 
 ## 1. Install Chaos Mesh
 
+We use the **OperationsPAI fork** of chaos-mesh (`pair-cn-shanghai.cr.volces.com/opspai/chaos-mesh:20260425-517f3df`,
+mirrored from `docker.io/opspai/*`). The fork carries patches we need —
+notably the `RuntimeMutatorChaos` controller for JVM mutator-agent injection
+that upstream v2.8.0 does not have. The matching helm chart is published at
+`https://operationspai.github.io/chaos-mesh/`, but its `index.yaml` `urls:`
+fields point to a stale `lgu-se-internal.github.io` host and 404 — fetch the
+chart tarball from the working `operationspai.github.io` host directly:
+
 ```bash
-helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh   --namespace chaos-mesh   --create-namespace   --version 2.8.0   -f AegisLab/manifests/byte-cluster/chaos-mesh.values.yaml   --wait --timeout 10m
+mkdir -p /tmp/chaos-mesh-install && cd /tmp/chaos-mesh-install
+curl -sfL https://operationspai.github.io/chaos-mesh/chaos-mesh-0.0.1-test.tgz \
+  -o chaos-mesh-0.0.1-test.tgz
+tar -xzf chaos-mesh-0.0.1-test.tgz
+helm install chaos-mesh ./chaos-mesh \
+  --namespace chaos-mesh --create-namespace \
+  -f /path/to/aegis/AegisLab/manifests/byte-cluster/chaos-mesh.values.yaml \
+  --wait --timeout 10m
 ```
 
-Verify:
+Why a chart-only path (no `helm repo add`): the published `index.yaml` lies
+about tarball URLs, so `helm pull` against the repo fails. Pinning the
+tarball download by URL keeps the install deterministic until the index is
+fixed upstream.
+
+Verify — controller-manager pods Running with **0** restarts and **24**
+chaos-mesh CRDs (the upstream chart only ships 23; the 24th is
+`runtimemutatorchaos.chaos-mesh.org`, which is what unblocks the JVM
+mutator-agent path). If you see only 23 CRDs after install, the wrong chart
+was used:
 
 ```bash
 kubectl get pods -n chaos-mesh
-kubectl get crd | grep chaos-mesh
+kubectl get crd | grep -c chaos-mesh   # expect 24
+kubectl get crd runtimemutatorchaos.chaos-mesh.org
 ```
 
 ## 2. Install ClickStack / ClickHouse
