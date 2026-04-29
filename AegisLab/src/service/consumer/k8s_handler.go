@@ -12,6 +12,7 @@ import (
 	"aegis/dto"
 	k8s "aegis/infra/k8s"
 	redis "aegis/infra/redis"
+	"aegis/model"
 	container "aegis/module/container"
 	"aegis/service/common"
 	"aegis/utils"
@@ -299,8 +300,22 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 
 		datapack, err := h.store.updateInjectionTimestamp(taskCtx, injectionName, startTime, endTime)
 		if err != nil {
-			errCtx.Warn(nil, "update injection timestamps failed", err)
-			return
+			// The timestamp persist failed (DB blip, transient lock, etc.)
+			// but we already have the authoritative startTime/endTime
+			// from the chaos-mesh CRD callback args. Returning here used
+			// to drop the BuildDatapack submit and was the third candidate
+			// latent failure mode behind issue #293's stuck traces. Build
+			// a synthetic InjectionItem from the row we can still read +
+			// the args we received and continue. The stuck-trace
+			// reconciler will retry the timestamp persist on a later tick
+			// if it ends up needed for downstream queries.
+			errCtx.Warn(nil, "update injection timestamps failed; continuing with synthesized datapack", err)
+			fallback, lookupErr := buildFallbackInjectionItem(h.db, injectionName, startTime, endTime)
+			if lookupErr != nil {
+				errCtx.Warn(nil, "lookup injection for fallback datapack failed", lookupErr)
+				return
+			}
+			datapack = &fallback
 		}
 
 		// Seeded env vars (from container_version_env_vars) must reach the
@@ -364,6 +379,28 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 			postProcess(parsedLabels.batchID)
 		}
 	}
+}
+
+// buildFallbackInjectionItem produces the InjectionItem the BuildDatapack
+// payload needs when updateInjectionTimestamp can't persist. It reads the
+// FaultInjection row directly (we still need the ID + PreDuration) and
+// stamps the in-flight startTime/endTime from the chaos-mesh callback —
+// those are the authoritative values the timestamp persist would have
+// written anyway. Used by HandleCRDSucceeded to keep the BuildDatapack
+// chain alive when a transient DB error would otherwise drop the trace.
+func buildFallbackInjectionItem(db *gorm.DB, name string, startTime, endTime time.Time) (dto.InjectionItem, error) {
+	var row model.FaultInjection
+	if err := db.Where("name = ? AND status != ?", name, consts.CommonDeleted).
+		First(&row).Error; err != nil {
+		return dto.InjectionItem{}, err
+	}
+	return dto.InjectionItem{
+		ID:          row.ID,
+		Name:        row.Name,
+		PreDuration: row.PreDuration,
+		StartTime:   startTime,
+		EndTime:     endTime,
+	}, nil
 }
 
 func (h *k8sHandler) HandleJobAdd(name string, annotations map[string]string, labels map[string]string) {
