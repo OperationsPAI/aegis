@@ -63,13 +63,33 @@ func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namesp
 		row chrow.Row
 		ts  time.Time
 	)
+	// Why the Timestamp >= now() - INTERVAL 1 HOUR + max_partitions_to_read=2:
+	// otel.otel_traces is `PARTITION BY toDate(Timestamp) ORDER BY (ServiceName,
+	// SpanName, toDateTime(Timestamp))`. With Timestamp third in the sort key,
+	// `MAX(Timestamp)` cannot use a primary-key shortcut and degrades to reading
+	// per-part metadata across every active part. On byte-cluster (#289) this
+	// pushed p50 to ~3s and p95 past 50s with 400+ parts; concurrent K>=3
+	// freshness probes routinely tripped client deadlines and surfaced as
+	// `Code 394 QUERY_WAS_CANCELLED`. The 1-hour predicate (a) prunes to at
+	// most today's plus the immediately-prior partition (max_partitions_to_read=2
+	// covers the midnight rollover) and (b) restricts per-part scanning to
+	// recent granules. Probe semantics are unchanged: the freshness deadline
+	// is always within seconds of now(), so any ingest lag <1h is still
+	// detected, and a namespace with zero recent ingest still returns a zero
+	// timestamp (treated as "not fresh") exactly as before.
 	if namespace != "" {
 		row = conn.QueryRow(ctx,
-			"SELECT max(Timestamp) FROM otel.otel_traces WHERE ResourceAttributes['service.namespace'] = ?",
+			"SELECT max(Timestamp) FROM otel.otel_traces "+
+				"WHERE ResourceAttributes['service.namespace'] = ? "+
+				"AND Timestamp >= now() - INTERVAL 1 HOUR "+
+				"SETTINGS max_partitions_to_read = 2",
 			namespace,
 		)
 	} else {
-		row = conn.QueryRow(ctx, "SELECT max(Timestamp) FROM otel.otel_traces")
+		row = conn.QueryRow(ctx,
+			"SELECT max(Timestamp) FROM otel.otel_traces "+
+				"WHERE Timestamp >= now() - INTERVAL 1 HOUR "+
+				"SETTINGS max_partitions_to_read = 2")
 	}
 	if err := row.Scan(&ts); err != nil {
 		return time.Time{}, false, fmt.Errorf("clickhouse query max(Timestamp): %w", err)
