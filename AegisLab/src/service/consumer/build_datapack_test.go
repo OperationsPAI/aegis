@@ -163,7 +163,8 @@ func withFastFreshnessBackoff(t *testing.T) {
 // not keep probing.
 func TestWaitForCHFreshness_ReturnsNilOnceFresh(t *testing.T) {
 	withFastFreshnessBackoff(t)
-	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	// Use a recent abnormalEnd so the retro-recovery fast-path is not triggered.
+	abnormalEnd := time.Now()
 	watermark := 30 * time.Second
 	stale := abnormalEnd.Add(-2 * time.Minute) // < deadline (= abnormalEnd-30s)
 	fresh := abnormalEnd.Add(-10 * time.Second) // >= deadline
@@ -191,7 +192,8 @@ func TestWaitForCHFreshness_ReturnsNilOnceFresh(t *testing.T) {
 // reschedule, NOT to datapack.build.failed).
 func TestWaitForCHFreshness_TimesOut(t *testing.T) {
 	withFastFreshnessBackoff(t)
-	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	// Use a recent abnormalEnd so the retro-recovery fast-path is not triggered.
+	abnormalEnd := time.Now()
 	stale := abnormalEnd.Add(-5 * time.Minute)
 	probe := &fakeFreshnessProbe{
 		responses: []freshnessProbeResponse{{ts: stale, ok: true}},
@@ -218,7 +220,8 @@ func TestWaitForCHFreshness_TimesOut(t *testing.T) {
 // the task) instead of being swallowed by the retry loop.
 func TestWaitForCHFreshness_PropagatesProbeError(t *testing.T) {
 	withFastFreshnessBackoff(t)
-	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	// Use a recent abnormalEnd so the retro-recovery fast-path is not triggered.
+	abnormalEnd := time.Now()
 	probeErr := errors.New("clickhouse: connection refused")
 	probe := &fakeFreshnessProbe{
 		responses: []freshnessProbeResponse{{err: probeErr}},
@@ -246,10 +249,55 @@ func TestWaitForCHFreshness_PropagatesProbeError(t *testing.T) {
 // executor. This is the safety hatch — no probe, no race-fix, but also
 // no regression vs. the pre-PR behavior.
 func TestWaitForCHFreshness_NoOpWhenProbeNil(t *testing.T) {
-	abnormalEnd := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	abnormalEnd := time.Now()
 	logEntry := logrus.NewEntry(logrus.StandardLogger())
 	if err := waitForCHFreshness(context.Background(), nil, "ts0", abnormalEnd, 30*time.Second, 5*time.Second, logEntry); err != nil {
 		t.Fatalf("nil probe should be a no-op, got %v", err)
+	}
+}
+
+// TestWaitForCHFreshness_SkipsProbeForRetroRecovery covers issue #295:
+// reconciler-recovered traces with abnormalEnd > 1h ago must not loop
+// forever. The probe's Timestamp >= now()-1h predicate filters out all
+// data for such traces, returning a zero timestamp on every call. The
+// retro-recovery fast path must bypass the probe entirely and return nil
+// so BuildDatapack proceeds immediately.
+func TestWaitForCHFreshness_SkipsProbeForRetroRecovery(t *testing.T) {
+	// abnormalEnd 2 hours in the past — well beyond freshnessProbeRetroGrace.
+	abnormalEnd := time.Now().Add(-2 * time.Hour)
+	probe := &fakeFreshnessProbe{
+		// Responses would always be zero (probe's 1h window filters them
+		// out), but the probe must NOT be called at all.
+		responses: []freshnessProbeResponse{{ok: false}},
+	}
+	logEntry := logrus.NewEntry(logrus.StandardLogger())
+	err := waitForCHFreshness(context.Background(), probe, "ts0", abnormalEnd, 30*time.Second, 5*time.Second, logEntry)
+	if err != nil {
+		t.Fatalf("retro-recovery trace should skip probe and return nil, got %v", err)
+	}
+	if got := probe.callCount(); got != 0 {
+		t.Fatalf("probe call count = %d, want 0 (probe must be skipped for old abnormalEnd)", got)
+	}
+}
+
+// TestWaitForCHFreshness_ProbesWhenAbnormalEndWithinGrace ensures live
+// traces whose abnormalEnd is within the grace window still go through the
+// probe loop, preserving the original freshness-waiting behaviour.
+func TestWaitForCHFreshness_ProbesWhenAbnormalEndWithinGrace(t *testing.T) {
+	withFastFreshnessBackoff(t)
+	// abnormalEnd 30 minutes in the past — within freshnessProbeRetroGrace.
+	abnormalEnd := time.Now().Add(-30 * time.Minute)
+	fresh := abnormalEnd.Add(-10 * time.Second) // >= deadline (abnormalEnd - watermark)
+	probe := &fakeFreshnessProbe{
+		responses: []freshnessProbeResponse{{ts: fresh, ok: true}},
+	}
+	logEntry := logrus.NewEntry(logrus.StandardLogger())
+	err := waitForCHFreshness(context.Background(), probe, "ts0", abnormalEnd, 30*time.Second, 5*time.Second, logEntry)
+	if err != nil {
+		t.Fatalf("waitForCHFreshness: %v", err)
+	}
+	if got := probe.callCount(); got < 1 {
+		t.Fatalf("probe call count = %d, want >= 1 (probe must run within grace window)", got)
 	}
 }
 

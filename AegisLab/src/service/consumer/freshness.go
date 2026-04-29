@@ -135,6 +135,15 @@ func orDefaultStr(s, def string) string {
 	return s
 }
 
+// freshnessProbeRetroGrace is the age threshold beyond which the freshness
+// probe is skipped for retro-recovery traces. It matches the 1-hour
+// Timestamp predicate in MaxTraceTimestamp: once abnormalEnd is older than
+// this, the probe's SELECT window filters out all relevant data and would
+// return a zero timestamp forever, causing pointless rescheduling (issue
+// #295). Any trace whose abnormalEnd is further in the past than this grace
+// period has already had its OTel exporter flush complete.
+const freshnessProbeRetroGrace = 1 * time.Hour
+
 // waitForCHFreshness blocks until ClickHouse has spans freshly ingested up
 // to (abnormalEnd − watermark), bounded by maxWait. Closes the race
 // documented in issue #210: BuildDatapack used to fire `prepare_inputs.py`
@@ -148,6 +157,8 @@ func orDefaultStr(s, def string) string {
 //
 // Return contract:
 //   - nil when the namespace is fresh enough (max(Timestamp) >= deadline).
+//   - nil when abnormalEnd is older than freshnessProbeRetroGrace (retro
+//     recovery fast-path: the OTel exporter has long since caught up).
 //   - context error if ctx is cancelled.
 //   - errFreshnessTimeout when maxWait is exhausted; the caller is expected
 //     to bump the task into the retry queue (rescheduleBuildDatapackTask)
@@ -170,6 +181,19 @@ func waitForCHFreshness(
 	}
 	if logEntry == nil {
 		logEntry = logrus.NewEntry(logrus.StandardLogger())
+	}
+	// Retro-recovery fast path (issue #295): if abnormalEnd is older than
+	// freshnessProbeRetroGrace, the probe's Timestamp >= now()-1h predicate
+	// would filter out all relevant CH data and return a zero timestamp,
+	// causing the probe loop to run until timeout and reschedule forever.
+	// The OTel exporter has long since flushed for such old traces, so skip
+	// the probe entirely.
+	if time.Since(abnormalEnd) > freshnessProbeRetroGrace {
+		logEntry.WithFields(logrus.Fields{
+			"namespace":    namespace,
+			"abnormal_end": abnormalEnd.UTC().Format(time.RFC3339),
+		}).Info("abnormalEnd is past probe lookback window; skipping freshness probe")
+		return nil
 	}
 	deadlineTs := abnormalEnd.Add(-watermark)
 	probeBudget := time.Now().Add(maxWait)
