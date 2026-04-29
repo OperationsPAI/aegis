@@ -4,10 +4,6 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
-from drain3 import TemplateMiner
-from drain3.drain import LogCluster
-from drain3.file_persistence import FilePersistence
-from drain3.template_miner_config import TemplateMinerConfig
 
 from ...sdk.datasets.rcabench import get_service_names
 from ...sdk.logging import logger, timeit
@@ -247,7 +243,7 @@ class Converter:
         return df
 
     def logs(self, src: Path) -> pl.DataFrame:
-        """Convert log parquet to standardized format with template extraction"""
+        """Convert log parquet to standardized format"""
         lf = pl.scan_parquet(src).select(
             "Timestamp",
             "TraceId",
@@ -291,76 +287,12 @@ class Converter:
         lf = lf.sort("time")
         df = lf.collect()
 
-        # Extract templates
-        unique_messages = df.select("message").unique()
-
-        if unique_messages.height > 0:
-            logger.info(f"Processing {unique_messages.height} unique log messages for template extraction")
-
-            import os
-
-            input_path = os.getenv("INPUT_PATH")
-            template_base = (
-                Path(input_path).parent / "drain_template" if input_path else src.parent.parent / "drain_template"
-            )
-
-            config_path = template_base / "drain_ts.ini"
-            persistence_path = template_base / "drain_ts.bin"
-
-            if not config_path.exists():
-                logger.warning(f"drain_template config missing at {config_path}; skipping log template extraction")
-                return df.with_columns(
-                    [
-                        pl.lit(None, dtype=pl.UInt16).alias("attr.template_id"),
-                        pl.lit(None, dtype=pl.String).alias("attr.log_template"),
-                    ]
-                )
-
-            logger.info(f"Using template paths: config={config_path}, persistence={persistence_path}")
-
-            template_miner = create_template_miner(config_path, persistence_path)
-
-            message_mappings = []
-            for message in unique_messages["message"].to_list():
-                if message:
-                    result = template_miner.add_log_message(message)
-                    template_id = result["cluster_id"]
-                    cluster = template_miner.drain.id_to_cluster.get(template_id)
-                    log_template = cluster.get_template() if isinstance(cluster, LogCluster) else ""
-
-                    message_mappings.append(
-                        {
-                            "message": message,
-                            "template_id": template_id,
-                            "log_template": log_template,
-                        }
-                    )
-
-            del template_miner
-
-            template_mapping_df = pl.DataFrame(
-                message_mappings,
-                schema={
-                    "message": pl.String,
-                    "template_id": pl.UInt16,
-                    "log_template": pl.String,
-                },
-            )
-
-            df = (
-                df.join(template_mapping_df, on="message", how="left")
-                .with_columns(
-                    [
-                        pl.col("template_id").alias("attr.template_id"),
-                        pl.col("log_template").alias("attr.log_template"),
-                    ]
-                )
-                .drop(["template_id", "log_template"])
-            )
-
-            del template_mapping_df, unique_messages
-
-        return df
+        return df.with_columns(
+            [
+                pl.lit(None, dtype=pl.UInt16).alias("attr.template_id"),
+                pl.lit(None, dtype=pl.String).alias("attr.log_template"),
+            ]
+        )
 
     def data(self) -> dict[str, Any]:
         mapping: dict[str, Callable] = {
@@ -443,14 +375,6 @@ class RCABenchDatapackLoader(DatapackLoader):
             ans.update(result)
 
         return ans
-
-
-def create_template_miner(config_path: Path, persistence_path: Path) -> TemplateMiner:
-    """Create Drain3 template miner with file persistence"""
-    persistence = FilePersistence(str(persistence_path))
-    miner_config = TemplateMinerConfig()
-    miner_config.load(str(config_path))
-    return TemplateMiner(persistence, config=miner_config)
 
 
 def extract_unique_log_messages(src_root: Path, datapacks: list[str]) -> pl.DataFrame:
