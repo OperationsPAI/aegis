@@ -386,10 +386,10 @@ func TestReconciler_StuckAtFaultInjectionStartedFinalizesAfterDuration(t *testin
 	require.Len(t, captured, 1)
 }
 
-// TestReconciler_TolersatesStateUpdateError verifies the reconciler does not
+// TestReconciler_ToleratesStateUpdateError verifies the reconciler does not
 // fail closed when the injection state update fails — postProcess in
 // k8s_handler.go uses errCtx.Warn for this exact case, so we must mirror.
-func TestReconciler_TolersatesStateUpdateError(t *testing.T) {
+func TestReconciler_ToleratesStateUpdateError(t *testing.T) {
 	db := newReconcilerTestDB(t)
 	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 1, 30*time.Minute, false)
 
@@ -456,4 +456,184 @@ func TestMaxGuidedDurationMinutes_PicksLargest(t *testing.T) {
 			require.Equal(t, tc.want, got)
 		})
 	}
+}
+
+// TestReconciler_SynthesizesAbnormalWindowForward pins the regression for
+// Copilot's time-math comment on stuck_trace_reconciler.go:296. When a
+// FaultInjection row is missing both StartTime and EndTime, the reconciler
+// must derive [UpdatedAt, UpdatedAt + duration]. UpdatedAt at row creation
+// is the *start* of the injection (the row is written when the chaos CRD
+// is created); the fault then runs forward for `duration` minutes. The
+// earlier draft inverted this and produced [UpdatedAt - duration,
+// UpdatedAt], which made BuildDatapack query a window shifted entirely
+// before the actual fault.
+func TestReconciler_SynthesizesAbnormalWindowForward(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	const durationMin = 5
+	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, durationMin, 30*time.Minute, false)
+
+	// Mirror the fixture's stuck_at exactly so the assertion reads the
+	// synthesized window without timing fuzz.
+	var row model.FaultInjection
+	require.NoError(t, db.Where("name = ?", fix.injectionName).First(&row).Error)
+	require.Nil(t, row.StartTime, "fixture must NOT set StartTime; this test exercises the synthesis path")
+	require.Nil(t, row.EndTime, "fixture must NOT set EndTime; this test exercises the synthesis path")
+	stuckAt := row.UpdatedAt
+
+	owner := newFakeInjectionOwner([]model.FaultInjection{
+		{ID: row.ID, Name: fix.injectionName, TaskID: &fix.faultTaskID, UpdatedAt: stuckAt},
+	})
+
+	submitter := taskSubmitter(func(_ context.Context, _ *gorm.DB, _ *redis.Gateway, _ *dto.UnifiedTask) error {
+		return nil
+	})
+	r := newReconcilerForTest(t, db, owner, submitter)
+	processed, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, processed)
+
+	require.Len(t, owner.timestampUpdates, 1)
+	got := owner.timestampUpdates[0]
+	wantStart := stuckAt
+	wantEnd := stuckAt.Add(durationMin * time.Minute)
+	require.True(t, got.StartTime.Equal(wantStart),
+		"start_time must equal UpdatedAt (%s), got %s", wantStart, got.StartTime)
+	require.True(t, got.EndTime.Equal(wantEnd),
+		"end_time must equal UpdatedAt + duration (%s), got %s", wantEnd, got.EndTime)
+	require.True(t, got.EndTime.After(got.StartTime),
+		"window must run forward from UpdatedAt, not backward")
+}
+
+// TestReconciler_PrefersStoredTimestampsOverSynthesis verifies that stored
+// StartTime/EndTime on the FaultInjection row override the synthesis path.
+// This is the post-CRD-success case: the per-leaf updateInjectionTimestamp
+// landed in the DB but BuildDatapack never got submitted.
+func TestReconciler_PrefersStoredTimestampsOverSynthesis(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 5, 30*time.Minute, false)
+
+	storedStart := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	storedEnd := storedStart.Add(7 * time.Minute)
+	require.NoError(t, db.Model(&model.FaultInjection{}).
+		Where("name = ?", fix.injectionName).
+		Updates(map[string]any{"start_time": storedStart, "end_time": storedEnd}).Error)
+
+	owner := newFakeInjectionOwner([]model.FaultInjection{
+		{ID: 1, Name: fix.injectionName, TaskID: &fix.faultTaskID, StartTime: &storedStart, EndTime: &storedEnd},
+	})
+	submitter := taskSubmitter(func(_ context.Context, _ *gorm.DB, _ *redis.Gateway, _ *dto.UnifiedTask) error {
+		return nil
+	})
+	r := newReconcilerForTest(t, db, owner, submitter)
+	processed, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, processed)
+
+	require.Len(t, owner.timestampUpdates, 1)
+	got := owner.timestampUpdates[0]
+	require.True(t, got.StartTime.Equal(storedStart), "stored StartTime must win over synthesis")
+	require.True(t, got.EndTime.Equal(storedEnd), "stored EndTime must win over synthesis")
+}
+
+// TestReconciler_ConcurrentTicksSubmitOnce simulates two reconciler replicas
+// running tick() concurrently against the same stuck trace. The transaction
+// + recheck must guarantee exactly one BuildDatapack lands. Without the
+// FOR UPDATE / re-check coupling this races and submits twice.
+func TestReconciler_ConcurrentTicksSubmitOnce(t *testing.T) {
+	// Use a shared in-memory DSN so both goroutines and the orchestrator
+	// see the same SQLite database. The default ":memory:" form gives
+	// each connection its own isolated DB, which would let the race
+	// "succeed" trivially even under buggy code.
+	db, err := gorm.Open(
+		sqlite.Open("file:reconciler_race?mode=memory&cache=shared"),
+		&gorm.Config{Logger: logger.Default.LogMode(logger.Silent)},
+	)
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Trace{}, &model.Task{}, &model.FaultInjection{}))
+	t.Cleanup(func() {
+		sql, err := db.DB()
+		if err == nil {
+			_ = sql.Close()
+		}
+	})
+
+	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 1, 30*time.Minute, false)
+	rowSnapshot := model.FaultInjection{ID: 1, Name: fix.injectionName, TaskID: &fix.faultTaskID}
+
+	// The submitter persists a child Task row inside the same tx the
+	// reconciler hands it. This is what the production submitter (
+	// common.SubmitTaskWithDB) does, and it's what the in-tx idempotency
+	// recheck on the second goroutine needs to observe.
+	persistChild := func(_ context.Context, tx *gorm.DB, _ *redis.Gateway, task *dto.UnifiedTask) error {
+		row := &model.Task{
+			ID:           uuid.NewString(),
+			Type:         task.Type,
+			TraceID:      task.TraceID,
+			ParentTaskID: task.ParentTaskID,
+			Payload:      "{}",
+			State:        consts.TaskPending,
+			Status:       consts.CommonEnabled,
+		}
+		return tx.Create(row).Error
+	}
+
+	tickOnce := func() (int, error) {
+		owner := newFakeInjectionOwner([]model.FaultInjection{rowSnapshot})
+		r := newReconcilerForTest(t, db, owner, persistChild)
+		return r.tick(context.Background())
+	}
+
+	var wg sync.WaitGroup
+	results := make([]int, 2)
+	errs := make([]error, 2)
+	wg.Add(2)
+	start := make(chan struct{})
+	for i := 0; i < 2; i++ {
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			results[i], errs[i] = tickOnce()
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+
+	for i, err := range errs {
+		require.NoError(t, err, "goroutine %d", i)
+	}
+	require.Equal(t, 1, results[0]+results[1],
+		"exactly one of the racing reconcilers must observe a successful submit; got %v", results)
+
+	// Belt-and-braces: the DB itself must hold exactly one BuildDatapack
+	// child row.
+	var n int64
+	require.NoError(t, db.Model(&model.Task{}).
+		Where("parent_task_id = ? AND type = ?", fix.faultTaskID, consts.TaskTypeBuildDatapack).
+		Count(&n).Error)
+	require.Equal(t, int64(1), n, "exactly one BuildDatapack child must exist after concurrent ticks")
+}
+
+// TestReconciler_ResolveIntervalRespectsConfig pins the ticker plumbing
+// (Copilot comment on Run): the reconciler must read interval-from-config
+// on every cycle so an etcd push at runtime is honored without a worker
+// restart. Resolution is unit-tested directly; the live ticker.Reset is
+// exercised by integration suites — running a real ticker in unit tests
+// is racy and adds no signal.
+func TestReconciler_ResolveIntervalRespectsConfig(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	r := newReconcilerForTest(t, db, newFakeInjectionOwner(nil), nil)
+
+	configured := 7
+	r.intervalSeconds = func() int { return configured }
+	require.Equal(t, 7*time.Second, r.resolveInterval())
+
+	configured = 30
+	require.Equal(t, 30*time.Second, r.resolveInterval(),
+		"resolveInterval must re-read the config getter, not cache")
+
+	configured = 0
+	require.Equal(t,
+		time.Duration(consts.DefaultStuckTraceReconcileIntervalSecs)*time.Second,
+		r.resolveInterval(),
+		"non-positive config must fall through to the default")
 }

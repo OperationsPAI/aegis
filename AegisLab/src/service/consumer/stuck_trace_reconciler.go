@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"aegis/config"
 	"aegis/consts"
@@ -82,20 +83,23 @@ func NewStuckTraceReconciler(
 // initial sleep is a full interval so a fresh worker doesn't immediately
 // stomp the just-arrived CRD-success path; the bug we're closing only
 // matters for traces that have been stuck longer than the threshold anyway.
+//
+// Interval changes pushed via etcd at runtime are picked up at the next tick
+// by re-reading r.intervalSeconds() and calling ticker.Reset when the value
+// has changed — no worker restart required.
 func (r *StuckTraceReconciler) Run(ctx context.Context) {
 	if r == nil || r.db == nil {
 		logrus.Warn("StuckTraceReconciler.Run skipped: missing db")
 		return
 	}
+	currentInterval := r.resolveInterval()
+	ticker := time.NewTicker(currentInterval)
+	defer ticker.Stop()
 	for {
-		interval := time.Duration(r.intervalSeconds()) * time.Second
-		if interval <= 0 {
-			interval = time.Duration(consts.DefaultStuckTraceReconcileIntervalSecs) * time.Second
-		}
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(interval):
+		case <-ticker.C:
 		}
 		processed, err := r.tick(ctx)
 		if err != nil {
@@ -106,7 +110,19 @@ func (r *StuckTraceReconciler) Run(ctx context.Context) {
 		if r.tickHook != nil {
 			r.tickHook(processed, err)
 		}
+		if next := r.resolveInterval(); next != currentInterval {
+			ticker.Reset(next)
+			currentInterval = next
+		}
 	}
+}
+
+func (r *StuckTraceReconciler) resolveInterval() time.Duration {
+	v := time.Duration(r.intervalSeconds()) * time.Second
+	if v <= 0 {
+		v = time.Duration(consts.DefaultStuckTraceReconcileIntervalSecs) * time.Second
+	}
+	return v
 }
 
 // tick runs one reconcile sweep and returns the number of traces it
@@ -127,6 +143,8 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, error) {
 			cutoff,
 			consts.CommonDeleted,
 		).
+		Order("updated_at ASC").
+		Order("id ASC").
 		Limit(r.maxBatchPerTick).
 		Find(&traces).Error
 	if err != nil {
@@ -181,10 +199,11 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 		return false, fmt.Errorf("lookup fault-injection task: %w", err)
 	}
 
-	// Idempotency: if a BuildDatapack child task already exists, the
-	// CRD-success path raced us to the punch. Bail out — the next tick
-	// will see the trace in TraceRunning with last_event=datapack.* and
-	// skip it cleanly.
+	// Cheap fast-path idempotency check: if a BuildDatapack child task
+	// already exists, we don't need to bother re-deriving payloads or
+	// updating timestamps. The authoritative check still runs inside the
+	// per-parent-row transaction in submitIfNoChild — this is just an
+	// early exit to skip the work in the common already-advanced case.
 	var existingDatapackCount int64
 	if err := r.db.WithContext(ctx).
 		Model(&model.Task{}).
@@ -285,8 +304,15 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 		logEntry.WithError(err).Warn("update injection state failed (continuing)")
 	}
 
-	startTime := chosen.UpdatedAt.Add(-time.Duration(guidedDuration) * time.Minute)
-	endTime := chosen.UpdatedAt
+	// On a fresh FaultInjection row UpdatedAt is the *start* of the
+	// injection (the row is written when the chaos CRD is created and
+	// updateInjectionTimestamp hasn't yet run). The fault then runs
+	// forward from that point for `guidedDuration` minutes, so the
+	// abnormal window is [UpdatedAt, UpdatedAt + duration] — emphatically
+	// NOT the [UpdatedAt - duration, UpdatedAt] form an earlier draft
+	// used. Stored StartTime/EndTime override both.
+	startTime := chosen.UpdatedAt
+	endTime := chosen.UpdatedAt.Add(time.Duration(guidedDuration) * time.Minute)
 	if chosen.StartTime != nil {
 		startTime = *chosen.StartTime
 	}
@@ -331,13 +357,93 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 	if r.submitTask == nil {
 		return false, fmt.Errorf("submitTask not configured")
 	}
-	if err := r.submitTask(ctx, r.db, r.redisGateway, buildTask); err != nil {
-		return false, fmt.Errorf("submit recovered BuildDatapack task: %w", err)
+
+	// Replica-safe submit. Two reconciler ticks (across replicas or even
+	// the same replica racing on a slow submit) can both observe zero
+	// BuildDatapack children at the unsynchronized count. Serialize via
+	// a row-level write lock on the parent FaultInjection task and
+	// re-check inside the transaction; whichever transaction commits
+	// first wins and the other one's recheck-zero collapses to "child
+	// already exists, bail out". On dialects without FOR UPDATE (sqlite
+	// in our tests) the per-DB serial-write lock gives the same effect.
+	submitted, err := r.submitIfNoChild(ctx, &fiTask, buildTask, logEntry)
+	if err != nil {
+		return false, err
+	}
+	if !submitted {
+		return false, nil
 	}
 
 	logEntry.WithField("fault_injection_task_id", fiTask.ID).
 		Info("stuck trace reconciled: BuildDatapack task submitted")
 	return true, nil
+}
+
+// submitIfNoChild atomically rechecks "does this FaultInjection task already
+// have a BuildDatapack child?" under a row-level write lock on the parent
+// task, and only submits the recovery task if not. Returns (true, nil) iff
+// it actually submitted; (false, nil) means the CRD-success path or another
+// reconciler replica beat us to it.
+func (r *StuckTraceReconciler) submitIfNoChild(
+	ctx context.Context,
+	parent *model.Task,
+	buildTask *dto.UnifiedTask,
+	logEntry *logrus.Entry,
+) (bool, error) {
+	submitted := false
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		lockedQuery := tx.Model(&model.Task{}).
+			Where("id = ?", parent.ID)
+		if r.supportsRowLock() {
+			lockedQuery = lockedQuery.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		var locked model.Task
+		if err := lockedQuery.First(&locked).Error; err != nil {
+			return fmt.Errorf("lock parent task: %w", err)
+		}
+
+		var existingDatapackCount int64
+		if err := tx.Model(&model.Task{}).
+			Where("parent_task_id = ? AND type = ? AND status != ?",
+				parent.ID,
+				consts.TaskTypeBuildDatapack,
+				consts.CommonDeleted,
+			).
+			Count(&existingDatapackCount).Error; err != nil {
+			return fmt.Errorf("idempotency check: %w", err)
+		}
+		if existingDatapackCount > 0 {
+			logEntry.Debug("BuildDatapack task already exists for fault-injection task, skipping")
+			return nil
+		}
+
+		if err := r.submitTask(ctx, tx, r.redisGateway, buildTask); err != nil {
+			return fmt.Errorf("submit recovered BuildDatapack task: %w", err)
+		}
+		submitted = true
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return submitted, nil
+}
+
+// supportsRowLock returns true on dialects that honor SELECT ... FOR UPDATE
+// (MySQL, Postgres). SQLite — the in-memory test driver — has implicit
+// per-connection serialization for writes and rejects FOR UPDATE syntax
+// outright, so we drop the clause there. The transaction itself still
+// gives us the recheck-and-submit atomicity we need.
+func (r *StuckTraceReconciler) supportsRowLock() bool {
+	if r.db == nil || r.db.Dialector == nil {
+		return false
+	}
+	switch r.db.Dialector.Name() {
+	case "mysql", "postgres":
+		return true
+	default:
+		return false
+	}
 }
 
 // stuckGraceWindow is added on top of the inject duration to absorb the
