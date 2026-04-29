@@ -172,6 +172,251 @@ func TestAuthLoginInvalidCredentialsDoNotLeakPassword(t *testing.T) {
 	}
 }
 
+func TestAuthLoginPersistsUsernameAndPasswordToContext(t *testing.T) {
+	resetAuthLoginState(t)
+	prev := passwordLoginFunc
+	t.Cleanup(func() {
+		passwordLoginFunc = prev
+	})
+
+	t.Setenv("HOME", t.TempDir())
+	cfg = &config.Config{Contexts: map[string]config.Context{}}
+	flagOutput = "json"
+	authLoginServer = "http://127.0.0.1:8082"
+	authLoginUsername = "admin"
+	authLoginPasswordStdin = true
+	authLoginCmd.SetIn(strings.NewReader("flag-secret\n"))
+
+	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+		return &client.LoginResult{
+			Token:     "jwt-1",
+			ExpiresAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+			AuthType:  "password",
+			Username:  username,
+		}, nil
+	}
+
+	if _, _, err := captureCommandOutput(func() error {
+		return authLoginCmd.RunE(authLoginCmd, nil)
+	}); err != nil {
+		t.Fatalf("auth login returned error: %v", err)
+	}
+
+	saved, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("load saved config: %v", err)
+	}
+	ctx := saved.Contexts["default"]
+	if ctx.Username != "admin" || ctx.Password != "flag-secret" {
+		t.Fatalf("expected stored creds, got %+v", ctx)
+	}
+}
+
+func TestAuthLoginWithoutFlagsUsesStoredCredentials(t *testing.T) {
+	resetAuthLoginState(t)
+	prev := passwordLoginFunc
+	t.Cleanup(func() {
+		passwordLoginFunc = prev
+	})
+
+	t.Setenv("HOME", t.TempDir())
+	cfg = &config.Config{Contexts: map[string]config.Context{
+		"default": {
+			Server:   "http://127.0.0.1:8082",
+			Username: "admin",
+			Password: "stored-secret",
+		},
+	}}
+	flagOutput = "json"
+	authLoginServer = "http://127.0.0.1:8082"
+
+	var calledWith struct {
+		username string
+		password string
+	}
+	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+		calledWith.username = username
+		calledWith.password = password
+		return &client.LoginResult{
+			Token:     "jwt-stored",
+			ExpiresAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+			AuthType:  "password",
+			Username:  username,
+		}, nil
+	}
+
+	if _, _, err := captureCommandOutput(func() error {
+		return authLoginCmd.RunE(authLoginCmd, nil)
+	}); err != nil {
+		t.Fatalf("auth login returned error: %v", err)
+	}
+	if calledWith.username != "admin" || calledWith.password != "stored-secret" {
+		t.Fatalf("login not called with stored creds: %+v", calledWith)
+	}
+
+	saved, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("load saved config: %v", err)
+	}
+	ctx := saved.Contexts["default"]
+	if ctx.Username != "admin" || ctx.Password != "stored-secret" {
+		t.Fatalf("stored creds erased: %+v", ctx)
+	}
+	if ctx.Token != "jwt-stored" {
+		t.Fatalf("token not refreshed: %+v", ctx)
+	}
+}
+
+func TestAuthLoginFlagsOverrideAndUpdateStoredCredentials(t *testing.T) {
+	resetAuthLoginState(t)
+	prev := passwordLoginFunc
+	t.Cleanup(func() {
+		passwordLoginFunc = prev
+	})
+
+	t.Setenv("HOME", t.TempDir())
+	cfg = &config.Config{Contexts: map[string]config.Context{
+		"default": {
+			Server:   "http://127.0.0.1:8082",
+			Username: "old-user",
+			Password: "old-secret",
+		},
+	}}
+	flagOutput = "json"
+	authLoginServer = "http://127.0.0.1:8082"
+	authLoginUsername = "new-user"
+	authLoginPasswordStdin = true
+	authLoginCmd.SetIn(strings.NewReader("new-secret\n"))
+
+	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+		if username != "new-user" || password != "new-secret" {
+			t.Fatalf("flags didn't override stored creds: %s/%s", username, password)
+		}
+		return &client.LoginResult{
+			Token:     "jwt-rotated",
+			ExpiresAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+			AuthType:  "password",
+			Username:  username,
+		}, nil
+	}
+
+	if _, _, err := captureCommandOutput(func() error {
+		return authLoginCmd.RunE(authLoginCmd, nil)
+	}); err != nil {
+		t.Fatalf("auth login returned error: %v", err)
+	}
+
+	saved, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("load saved config: %v", err)
+	}
+	ctx := saved.Contexts["default"]
+	if ctx.Username != "new-user" || ctx.Password != "new-secret" {
+		t.Fatalf("flag-supplied creds not persisted: %+v", ctx)
+	}
+}
+
+func TestAuthLoginPreservesStoredCredentialsAcrossTokenRefresh(t *testing.T) {
+	resetAuthLoginState(t)
+	prev := passwordLoginFunc
+	t.Cleanup(func() {
+		passwordLoginFunc = prev
+	})
+
+	t.Setenv("HOME", t.TempDir())
+	// Seed the on-disk config with stored creds, mirroring what an
+	// operator does today via `yq` on ~/.aegisctl/config.yaml.
+	seedCfg := &config.Config{
+		CurrentContext: "default",
+		Contexts: map[string]config.Context{
+			"default": {
+				Server:         "http://127.0.0.1:8082",
+				Token:          "old-jwt",
+				AuthType:       "password",
+				Username:       "admin",
+				Password:       "stored-secret",
+				DefaultProject: "pair_diagnosis",
+			},
+		},
+	}
+	if err := config.SaveConfig(seedCfg); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+	loaded, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("reload seed: %v", err)
+	}
+	cfg = loaded
+
+	flagOutput = "json"
+	authLoginServer = "http://127.0.0.1:8082"
+	authLoginUsername = "admin"
+	authLoginPasswordStdin = true
+	authLoginCmd.SetIn(strings.NewReader("stored-secret\n"))
+
+	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+		return &client.LoginResult{
+			Token:     "refreshed-jwt",
+			ExpiresAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+			AuthType:  "password",
+			Username:  username,
+		}, nil
+	}
+
+	if _, _, err := captureCommandOutput(func() error {
+		return authLoginCmd.RunE(authLoginCmd, nil)
+	}); err != nil {
+		t.Fatalf("auth login returned error: %v", err)
+	}
+
+	final, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("load final config: %v", err)
+	}
+	ctx := final.Contexts["default"]
+	if ctx.Username != "admin" || ctx.Password != "stored-secret" {
+		t.Fatalf("stored creds dropped after re-login: %+v", ctx)
+	}
+	if ctx.Token != "refreshed-jwt" {
+		t.Fatalf("token not refreshed: %+v", ctx)
+	}
+	if ctx.DefaultProject != "pair_diagnosis" {
+		t.Fatalf("default-project lost: %+v", ctx)
+	}
+}
+
+func TestAuthLoginErrorsWhenNoCredentialsAnywhere(t *testing.T) {
+	resetAuthLoginState(t)
+	prev := passwordLoginFunc
+	t.Cleanup(func() {
+		passwordLoginFunc = prev
+	})
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("AEGIS_USERNAME", "")
+	t.Setenv("AEGIS_PASSWORD", "")
+	t.Setenv("AEGIS_KEY_ID", "")
+	t.Setenv("AEGIS_KEY_SECRET", "")
+	cfg = &config.Config{Contexts: map[string]config.Context{}}
+	flagOutput = "json"
+	authLoginServer = "http://127.0.0.1:8082"
+
+	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+		t.Fatal("login should not be invoked with no credentials")
+		return nil, nil
+	}
+
+	_, _, err := captureCommandOutput(func() error {
+		return authLoginCmd.RunE(authLoginCmd, nil)
+	})
+	if err == nil {
+		t.Fatal("expected auth login to error without credentials")
+	}
+	if !strings.Contains(err.Error(), "--username") && !strings.Contains(err.Error(), "--key-id") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+}
+
 func captureCommandOutput(fn func() error) (stdout, stderr string, err error) {
 	origStdout := os.Stdout
 	origStderr := os.Stderr

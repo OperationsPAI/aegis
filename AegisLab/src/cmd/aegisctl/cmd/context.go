@@ -19,6 +19,8 @@ var contextCmd = &cobra.Command{
 var contextSetName string
 var contextSetServer string
 var contextSetDefaultProject string
+var contextSetUsername string
+var contextSetPasswordStdin bool
 
 var contextSetCmd = &cobra.Command{
 	Use:   "set",
@@ -38,6 +40,16 @@ var contextSetCmd = &cobra.Command{
 		}
 		if contextSetDefaultProject != "" {
 			ctx.DefaultProject = contextSetDefaultProject
+		}
+		if contextSetUsername != "" {
+			ctx.Username = contextSetUsername
+		}
+		if contextSetPasswordStdin {
+			password, err := readPassword(cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
+			ctx.Password = password
 		}
 
 		cfg.Contexts[contextSetName] = ctx
@@ -110,6 +122,8 @@ func init() {
 	contextSetCmd.Flags().StringVar(&contextSetName, "name", "", "Context name (required)")
 	contextSetCmd.Flags().StringVar(&contextSetServer, "server", "", "Server URL")
 	contextSetCmd.Flags().StringVar(&contextSetDefaultProject, "default-project", "", "Default project ID")
+	contextSetCmd.Flags().StringVar(&contextSetUsername, "username", "", "Stored username for unattended re-login")
+	contextSetCmd.Flags().BoolVar(&contextSetPasswordStdin, "password-stdin", false, "Read stored password from stdin (paired with --username)")
 
 	contextCmd.AddCommand(contextSetCmd)
 	contextCmd.AddCommand(contextUseCmd)
