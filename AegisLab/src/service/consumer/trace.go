@@ -172,6 +172,25 @@ func tryUpdateTraceStateCore(redisGateway *redis.Gateway, ctx context.Context, d
 		}
 	}
 
+	// Issue #312: when a task transitions to TaskRescheduled (e.g.
+	// BuildDatapack waiting for a token / ClickHouse freshness, or
+	// RestartPedestal waiting for a free namespace), inferTraceState
+	// counts the task as Pending and falls through to Priority 4, which
+	// re-asserts the *previous* leaf event (e.g. fault.injection.completed)
+	// as last_event. Without this surface, a trace whose BD child has been
+	// rescheduling for many minutes still reports last_event=
+	// fault.injection.completed and is indistinguishable from a trace
+	// whose CRD-success path never submitted BD at all (which is what
+	// the stuck-trace reconciler from #309 is meant to repair). Prefer
+	// the explicit streamEvent.EventName so the trace reflects that the
+	// child task has actually been attempted; trace state classification
+	// (Failed/Completed) is left to inferTraceState.
+	if newState == consts.TaskRescheduled && streamEvent != nil && streamEvent.EventName != "" {
+		inferredEventType = streamEvent.EventName
+		logEntry.Debugf("using explicit event from rescheduled %s task: %s",
+			consts.GetTaskTypeName(updatedTask.Type), inferredEventType)
+	}
+
 	logEntry.Debugf("inferred trace state: %s, event: %s (triggered by task %s: %s)",
 		consts.GetTraceStateName(inferredState),
 		inferredEventType,
