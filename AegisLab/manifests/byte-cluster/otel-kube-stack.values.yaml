@@ -608,20 +608,11 @@ instrumentation:
     - name: OTEL_EXPORTER_OTLP_SPAN_INSECURE
       value: '"true"'
 
-  # Java agent: OTLP HTTP/protobuf to :4318. Switched off gRPC :4317 because
-  # the Java agent v2.23.0 rejects the `dns:///` URL scheme used to fix #300
-  # for the Go SDK (loadgenerator + otel-demo wrapper) -- so the
-  # client-side-LB workaround that lets a Go gRPC client survive HPA churn
-  # cannot be applied to Java. HTTP/1.1 instead has no multiplexed long-lived
-  # connection, so an HPA-driven pod churn on the deployment collector cannot
-  # deadlock a Java exporter in the way #300 documented for gRPC.
   java:
     image: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-operator-autoinstrumentation-java:2.23.0
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4318
-      - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: http/protobuf
+        value: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
 
   nodejs: {}
 
