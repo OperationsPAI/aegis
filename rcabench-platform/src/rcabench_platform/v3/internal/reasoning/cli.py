@@ -1181,5 +1181,128 @@ def batch(
     return 0
 
 
+_FILTER_REQUIRED_PARQUETS = (
+    "abnormal_traces.parquet",
+    "normal_traces.parquet",
+    "abnormal_metrics.parquet",
+    "abnormal_metrics_histogram.parquet",
+    "abnormal_metrics_sum.parquet",
+)
+_FILTER_EXTERNAL_SERVICES = {"mysql", "redis", "postgres", "mongodb", "kafka", "rabbitmq"}
+
+
+def _classify_case(
+    case_dir: Path,
+    min_services: int,
+    max_gap_seconds: float,
+) -> tuple[str, str]:
+    """Return (verdict, detail). verdict ∈ {clean, missing_parquet, no_engine_config,
+    loadgen_only, gt_no_spans, large_gap, read_error}."""
+    inj_path = case_dir / "injection.json"
+    if not inj_path.exists():
+        return ("missing_parquet", "injection.json")
+    missing = [f for f in _FILTER_REQUIRED_PARQUETS if not (case_dir / f).exists()]
+    if missing:
+        return ("missing_parquet", missing[0])
+
+    import json as _json
+
+    import polars as pl
+
+    try:
+        inj = _json.loads(inj_path.read_text())
+    except Exception as exc:
+        return ("read_error", f"injection.json: {type(exc).__name__}")
+
+    eng = inj.get("engine_config") or inj.get("engine_config_summary") or []
+    if not eng:
+        return ("no_engine_config", "")
+
+    try:
+        ab = pl.read_parquet(case_dir / "abnormal_traces.parquet")
+        nm = pl.read_parquet(case_dir / "normal_traces.parquet")
+    except Exception as exc:
+        return ("read_error", f"traces: {type(exc).__name__}")
+
+    ab_svcs = set(ab["service_name"].unique().to_list()) if len(ab) else set()
+    if len(ab_svcs) < min_services:
+        return ("loadgen_only", f"{len(ab_svcs)} services")
+
+    gt: set[str] = set()
+    for entry in inj.get("ground_truth", []) or []:
+        for s in entry.get("service", []) or []:
+            gt.add(s)
+    gt_internal = (gt - _FILTER_EXTERNAL_SERVICES) or gt
+    missing_gt = [s for s in gt_internal if s not in ab_svcs]
+    if missing_gt:
+        return ("gt_no_spans", ",".join(missing_gt))
+
+    if len(nm) and len(ab):
+        from datetime import datetime as _dt
+
+        ab_min = ab["time"].min()
+        nm_max = nm["time"].max()
+        if isinstance(ab_min, _dt) and isinstance(nm_max, _dt):
+            gap = (ab_min - nm_max).total_seconds()
+            if gap > max_gap_seconds:
+                return ("large_gap", f"{gap:.0f}s")
+
+    return ("clean", "")
+
+
+@app.command()
+def filter_clean(
+    data_base_dir: str = typer.Option(..., help="Base directory containing case folders"),
+    min_services: int = typer.Option(3, help="Minimum distinct services in abnormal_traces"),
+    max_gap_seconds: float = typer.Option(30.0, help="Max normal_end → abnormal_start gap (seconds)"),
+    output: str = typer.Option("-", help="Output path for clean case names ('-' = stdout)"),
+    summary: bool = typer.Option(True, help="Print dirty-reason breakdown to stderr"),
+) -> int:
+    """Filter datapacks by data quality. Prints clean case names (one per line).
+
+    Reject criteria: missing required parquet, no engine_config, fewer than
+    `min_services` distinct services in abnormal_traces, any GT internal
+    service with zero spans in abnormal_traces, or normal-to-abnormal time
+    gap > max_gap_seconds.
+    """
+    import sys
+    from collections import Counter
+
+    base_path = Path(data_base_dir)
+    if not base_path.is_dir():
+        typer.echo(f"error: {base_path} is not a directory", err=True)
+        raise typer.Exit(2)
+
+    clean: list[str] = []
+    reasons: Counter[str] = Counter()
+    details: list[tuple[str, str, str]] = []
+
+    for case_dir in sorted(base_path.iterdir()):
+        if not case_dir.is_dir():
+            continue
+        verdict, detail = _classify_case(case_dir, min_services, max_gap_seconds)
+        if verdict == "clean":
+            clean.append(case_dir.name)
+        else:
+            reasons[verdict] += 1
+            details.append((case_dir.name, verdict, detail))
+
+    out_stream = sys.stdout if output == "-" else open(output, "w")
+    try:
+        for name in clean:
+            out_stream.write(name + "\n")
+    finally:
+        if out_stream is not sys.stdout:
+            out_stream.close()
+
+    if summary:
+        total = len(clean) + sum(reasons.values())
+        print(f"clean: {len(clean)}/{total}", file=sys.stderr)
+        for reason, n in reasons.most_common():
+            print(f"  {n:4} {reason}", file=sys.stderr)
+
+    return 0
+
+
 if __name__ == "__main__":
     app()
