@@ -1,6 +1,8 @@
 package container
 
 import (
+	"fmt"
+
 	"aegis/framework"
 	"aegis/model"
 
@@ -46,7 +48,7 @@ func preMigrateParameterConfigsSystemScope(db *gorm.DB) error {
 		// without colliding on the legacy 3-column constraint.
 		if db.Migrator().HasIndex(&model.ParameterConfig{}, "idx_unique_config") {
 			if err := db.Migrator().DropIndex(&model.ParameterConfig{}, "idx_unique_config"); err != nil {
-				logrus.Warnf("preMigrate parameter_configs: drop legacy idx_unique_config: %v", err)
+				return fmt.Errorf("preMigrate parameter_configs: drop legacy idx_unique_config: %w", err)
 			}
 		}
 		return nil
@@ -67,7 +69,7 @@ func preMigrateParameterConfigsSystemScope(db *gorm.DB) error {
 			  AND INDEX_NAME = 'idx_unique_config'`).Scan(&cols).Error
 		if len(cols) > 0 && len(cols) < 4 {
 			if err := db.Migrator().DropIndex(&model.ParameterConfig{}, "idx_unique_config"); err != nil {
-				logrus.Warnf("preMigrate parameter_configs: drop legacy idx_unique_config: %v", err)
+				return fmt.Errorf("preMigrate parameter_configs: drop legacy idx_unique_config: %w", err)
 			}
 		}
 	}
@@ -93,34 +95,32 @@ func backfillParameterConfigSystemID(db *gorm.DB) error {
 	if db.Dialector.Name() != "mysql" {
 		return nil
 	}
-	updateSQL := `
+	// Stamp system_id only when a parameter_config has exactly one owner across
+	// the UNION of both link tables (helm_config_values + container_version_env_vars).
+	// A row that's single-owner via one link but multi-owner via the other is
+	// ambiguous (cluster-wide / shared) and stays NULL — preserving the
+	// invariant documented above backfillParameterConfigSystemID.
+	unionSQL := `
 		UPDATE parameter_configs pc
 		JOIN (
-			SELECT pcv.parameter_config_id AS pid, MIN(cv.container_id) AS cid, MAX(cv.container_id) AS cmax
-			FROM helm_config_values hcv
-			JOIN helm_configs hc ON hc.id = hcv.helm_config_id
-			JOIN container_versions cv ON cv.id = hc.container_version_id
-			GROUP BY hcv.parameter_config_id
-			HAVING MIN(cv.container_id) = MAX(cv.container_id)
-		) pcv ON pcv.pid = pc.id
-		SET pc.system_id = pcv.cid
+			SELECT pid, MIN(cid) AS cid
+			FROM (
+				SELECT hcv.parameter_config_id AS pid, cv.container_id AS cid
+				FROM helm_config_values hcv
+				JOIN helm_configs hc ON hc.id = hcv.helm_config_id
+				JOIN container_versions cv ON cv.id = hc.container_version_id
+				UNION
+				SELECT cvev.parameter_config_id AS pid, cv.container_id AS cid
+				FROM container_version_env_vars cvev
+				JOIN container_versions cv ON cv.id = cvev.container_version_id
+			) links
+			GROUP BY pid
+			HAVING MIN(cid) = MAX(cid)
+		) owned ON owned.pid = pc.id
+		SET pc.system_id = owned.cid
 		WHERE pc.system_id IS NULL`
-	if err := db.Exec(updateSQL).Error; err != nil {
-		logrus.Warnf("preMigrate parameter_configs: backfill via helm_config_values: %v", err)
-	}
-	envSQL := `
-		UPDATE parameter_configs pc
-		JOIN (
-			SELECT cvev.parameter_config_id AS pid, MIN(cv.container_id) AS cid, MAX(cv.container_id) AS cmax
-			FROM container_version_env_vars cvev
-			JOIN container_versions cv ON cv.id = cvev.container_version_id
-			GROUP BY cvev.parameter_config_id
-			HAVING MIN(cv.container_id) = MAX(cv.container_id)
-		) cvev ON cvev.pid = pc.id
-		SET pc.system_id = cvev.cid
-		WHERE pc.system_id IS NULL`
-	if err := db.Exec(envSQL).Error; err != nil {
-		logrus.Warnf("preMigrate parameter_configs: backfill via container_version_env_vars: %v", err)
+	if err := db.Exec(unionSQL).Error; err != nil {
+		logrus.Warnf("preMigrate parameter_configs: backfill system_id: %v", err)
 	}
 	return nil
 }
