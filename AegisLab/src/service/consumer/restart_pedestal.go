@@ -496,8 +496,9 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			// the operator can see the stuck-resource list rather than
 			// silently rolling forward into a doomed inject. The pedestal
 			// restart timeout is fixed at consts.FixedPedestalRestartTimeoutSeconds
-			// (6 min) — DSB systems with longer cold-start chains will fail
-			// this gate instead of silently extending the schedule.
+			// (25 min) — sized for cold DSB systems without pre-warm;
+			// pre-warmed pedestals settle in 30-90 s so the timeout is
+			// a ceiling, not a target.
 			publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
 				TaskID:    task.TaskID,
 				TaskType:  consts.TaskTypeRestartPedestal,
