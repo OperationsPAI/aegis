@@ -107,6 +107,16 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
+// mustExec runs a setup INSERT/UPDATE and fails the test on error. Setup
+// failures (schema/constraint drift) otherwise surface as opaque
+// downstream assertions.
+func mustExec(t *testing.T, db *gorm.DB, sql string, args ...any) {
+	t.Helper()
+	if err := db.Exec(sql, args...).Error; err != nil {
+		t.Fatalf("setup exec failed: %v\n  sql: %s", err, sql)
+	}
+}
+
 // writeSeedFile dumps a minimal InitialData YAML to a temp file and returns
 // its path. Keeps tests self-contained — we don't share the production
 // data.yaml fixture because it's too rich and gets updated out-of-band.
@@ -244,9 +254,9 @@ containers:
 // is surfaced as a skipped action so operators see it.
 func TestReseedChartDriftOnExistingVersionNotApplied(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'ts', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (chart_name, version, container_version_id, repo_url, repo_name) VALUES ('trainticket', '0.1.0', 10, 'https://x', 'r')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'ts', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (chart_name, version, container_version_id, repo_url, repo_name) VALUES ('trainticket', '0.1.0', 10, 'https://x', 'r')`)
 
 	// data.yaml bumps chart_name but keeps the container_version name.
 	seed := writeSeedFile(t, `
@@ -291,9 +301,9 @@ containers:
 
 func TestReseedBackfillsHelmValuesOnExistingVersion(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'sockshop', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.1.1', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (20, 'sockshop', '1.1.1', 10, 'https://x', 'r')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'sockshop', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.1.1', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (20, 'sockshop', '1.1.1', 10, 'https://x', 'r')`)
 
 	seed := writeSeedFile(t, `
 containers:
@@ -370,8 +380,8 @@ containers:
 
 func TestReseedBackfillsEnvVarsOnExistingVersion(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'clickhouse', 1, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.0.0', 1, 0, 1)`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'clickhouse', 1, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.0.0', 1, 0, 1)`)
 
 	ns := "ts0"
 	if err := db.Create(&model.ParameterConfig{
@@ -823,9 +833,9 @@ containers:
 // existing parameter_configs.default_value, NEVER overwrite — log + report.
 func TestReseedHelmConfigForVersionPreservesDefaultValueDrift(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`)
 
 	manuallyEdited := "operator-mirrored.example.com/busybox"
 	cfg := &model.ParameterConfig{
@@ -900,9 +910,9 @@ containers:
 // the seed YAML. The parameter_configs row is intentionally NOT deleted.
 func TestReseedHelmConfigForVersionPruneDeletesMissingLinks(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`)
 
 	staleVal := "deprecated"
 	stale := &model.ParameterConfig{
@@ -997,12 +1007,12 @@ func TestReseedTwoSystemsSameKeyDifferentDefault(t *testing.T) {
 	db := newReseedTestDB(t)
 	// Two pre-existing systems sharing a DSB-style chart family that uses
 	// the same `global.otel.endpoint` value path.
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'hs', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (2, 'sn', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (20, '0.1.0', 2, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (100, 'hs', '0.1.0', 10, 'https://x', 'r')`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (200, 'sn', '0.1.0', 20, 'https://x', 'r')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'hs', 2, 1)`)
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (2, 'sn', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (20, '0.1.0', 2, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (100, 'hs', '0.1.0', 10, 'https://x', 'r')`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (200, 'sn', '0.1.0', 20, 'https://x', 'r')`)
 
 	seed := writeSeedFile(t, `
 containers:
