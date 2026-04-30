@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -51,6 +52,42 @@ func TestHelmFileStoreSaveChartAndValueFile(t *testing.T) {
 	}
 	if string(valueContent) != "key: value\n" {
 		t.Fatalf("unexpected values content: %s", string(valueContent))
+	}
+}
+
+func TestSaveValueFile_RejectsEmptyMultipartUpload(t *testing.T) {
+	tmpDir := t.TempDir()
+	store := &HelmFileStore{basePath: tmpDir}
+
+	emptyHeader := newMultipartFileHeader(t, "values.yaml", []byte{})
+	if emptyHeader.Size != 0 {
+		t.Fatalf("expected multipart header size 0, got %d", emptyHeader.Size)
+	}
+
+	_, err := store.SaveValueFile("pedestal", emptyHeader, "")
+	if err == nil {
+		t.Fatalf("expected SaveValueFile to reject 0-byte multipart upload")
+	}
+	if !strings.Contains(err.Error(), "0 bytes") {
+		t.Fatalf("expected 0-byte rejection error, got %v", err)
+	}
+}
+
+func TestSaveValueFile_RejectsEmptySourcePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	store := &HelmFileStore{basePath: tmpDir}
+
+	srcPath := filepath.Join(tmpDir, "src-empty.yaml")
+	if err := os.WriteFile(srcPath, []byte{}, 0o644); err != nil {
+		t.Fatalf("write empty source: %v", err)
+	}
+
+	_, err := store.SaveValueFile("pedestal", nil, srcPath)
+	if err == nil {
+		t.Fatalf("expected SaveValueFile to reject 0-byte source file path")
+	}
+	if !strings.Contains(err.Error(), "0 bytes") {
+		t.Fatalf("expected 0-byte rejection error, got %v", err)
 	}
 }
 
