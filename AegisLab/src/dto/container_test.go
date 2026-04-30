@@ -43,7 +43,7 @@ func TestGetValuesMap_EmptyValueFile_NoPanic(t *testing.T) {
 // non-fatal load error, root stays empty, DynamicValues merge proceeds.
 func TestGetValuesMap_NonexistentValueFile_FallsThrough(t *testing.T) {
 	hci := &HelmConfigItem{
-		ValueFile: "/tmp/this-file-does-not-exist-aegis-315.yaml",
+		ValueFile: filepath.Join(t.TempDir(), "does-not-exist.yaml"),
 		DynamicValues: []ParameterItem{
 			{Key: "replicas", Value: 2},
 		},
