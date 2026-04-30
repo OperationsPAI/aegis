@@ -173,16 +173,27 @@ func IsAllowedPath(path string) bool {
 	return err == nil && !strings.Contains(rel, "..")
 }
 
-// LoadYAMLFile reads a YAML file and returns it as a map
+// LoadYAMLFile reads a YAML file and returns it as a map. An empty file, or a
+// file whose top-level YAML node is not a mapping (e.g. a scalar or sequence),
+// yields an empty map rather than a nil result so callers can safely write to
+// the returned map without nil-checks.
 func LoadYAMLFile(filePath string) (map[string]any, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
 
+	if len(data) == 0 {
+		return make(map[string]any), nil
+	}
+
 	var result map[string]any
 	if err := yaml.Unmarshal(data, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML file %s: %w", filePath, err)
+	}
+
+	if result == nil {
+		return make(map[string]any), nil
 	}
 
 	return result, nil
