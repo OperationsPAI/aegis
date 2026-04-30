@@ -75,6 +75,18 @@ func (bm *FaultBatchManager) isFinished(batchID string) bool {
 	return count >= len(injectionNames)
 }
 
+// snapshotBatchProgress returns (count, expected) for batchID under read
+// lock. Used by HandleCRDSucceeded to log per-leaf progress so a hybrid
+// batch stuck waiting on a leaf whose CRD informer never fires (issue
+// #305) is observable rather than silent.
+func (bm *FaultBatchManager) snapshotBatchProgress(batchID string) (int, int) {
+	bm.mu.RLock()
+	defer bm.mu.RUnlock()
+	count := bm.batchCounts[batchID]
+	expected := len(bm.batchInjections[batchID])
+	return count, expected
+}
+
 func (bm *FaultBatchManager) setBatchInjections(batchID string, injectionNames []string) {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
