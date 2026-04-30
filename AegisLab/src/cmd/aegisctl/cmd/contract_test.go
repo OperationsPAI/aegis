@@ -81,8 +81,6 @@ func resetCLIState() {
 	guidedApplyPedestalTag = ""
 	guidedApplyBenchmarkName = ""
 	guidedApplyBenchmarkTag = ""
-	guidedApplyInterval = 0
-	guidedApplyPreDuration = 0
 
 	waitTimeout = 0
 	waitInterval = 0

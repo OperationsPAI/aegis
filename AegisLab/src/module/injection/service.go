@@ -291,7 +291,7 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 	allocations := make(map[int]allocatedSlot, len(guidedSpecs))
 	if req.AutoAllocate {
 		// Sized to comfortably cover restart + injection + a slack buffer.
-		lockEndTime := time.Now().Add(time.Duration(req.Interval+10) * time.Minute)
+		lockEndTime := time.Now().Add(time.Duration(consts.FixedIntervalMinutes+10) * time.Minute)
 		probe := defaultWorkloadProbe()
 		allocOpts := AllocateOptions{
 			AllowBootstrap: req.AllowBootstrap,
@@ -416,7 +416,7 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 	for _, item := range uniqueItems {
 		injectPayload := map[string]any{
 			consts.InjectBenchmark:     benchmarkVersionItem,
-			consts.InjectPreDuration:   req.PreDuration,
+			consts.InjectPreDuration:   consts.FixedNormalWindowMinutes,
 			consts.InjectLabels:        req.Labels,
 			consts.InjectSystem:        pedestalItem.ContainerName,
 			consts.InjectGuidedConfigs: item.guidedConfigs,
@@ -424,8 +424,8 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 		payload := map[string]any{
 			consts.RestartPedestal:      pedestalItem,
 			consts.RestartHelmConfig:    helmConfig,
-			consts.RestartIntarval:      req.Interval,
-			consts.RestartFaultDuration: item.faultDuration,
+			consts.RestartIntarval:      consts.FixedIntervalMinutes,
+			consts.RestartFaultDuration: consts.FixedAbnormalWindowMinutes,
 			consts.RestartInjectPayload: injectPayload,
 			consts.RestartSkipInstall:   req.SkipRestartPedestal,
 		}

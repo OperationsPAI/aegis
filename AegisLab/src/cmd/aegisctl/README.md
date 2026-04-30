@@ -40,8 +40,7 @@ printf %s\n "$AEGIS_PASSWORD" | ./bin/aegisctl auth login \
 ./bin/aegisctl inject guided --apply --dry-run \
   --project pair_diagnosis \
   --pedestal-name ts --pedestal-tag 1.0.0 \
-  --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 \
-  --interval 10 --pre-duration 5
+  --benchmark-name otel-demo-bench --benchmark-tag 1.0.0
 
 # 5. Submit algorithm execution against a datapack or dataset
 ./bin/aegisctl execute create --project pair_diagnosis --input ./execution.yaml -o json

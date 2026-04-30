@@ -392,15 +392,18 @@ func (spec GuidedSpec) GuidedConfig() guidedcli.GuidedConfig {
 // SubmitInjectionReq represents a request to submit fault injection tasks with
 // parallel fault support. Each element in Specs represents a batch of guided
 // configs to be injected in parallel within a single experiment.
+//
+// Time windows (warmup, normal, abnormal, restart timeout) are pinned in
+// the backend (see consts.Fixed*) and are intentionally NOT part of this
+// request. Any per-spec `duration` shipped by callers is overridden
+// server-side; loop agents and external clients cannot retune the schedule.
 type SubmitInjectionReq struct {
-	ProjectName string              `json:"project_name" binding:"omitempty"`      // Project name
-	Pedestal    *dto.ContainerSpec  `json:"pedestal" binding:"required"`           // Pedestal (workload) configuration
-	Benchmark   *dto.ContainerSpec  `json:"benchmark" binding:"required"`          // Benchmark (detector) configuration
-	Interval    int                 `json:"interval" binding:"required,min=1"`     // Total experiment interval in minutes
-	PreDuration int                 `json:"pre_duration" binding:"required,min=1"` // Normal data collection duration before fault injection
-	Specs       [][]GuidedSpec      `json:"specs" binding:"required"`              // GuidedConfig batches for fault injection
-	Algorithms  []dto.ContainerSpec `json:"algorithms" binding:"omitempty"`        // RCA algorithms to execute (optional)
-	Labels      []dto.LabelItem     `json:"labels" binding:"omitempty"`            // Labels to attach to the injection
+	ProjectName string              `json:"project_name" binding:"omitempty"` // Project name
+	Pedestal    *dto.ContainerSpec  `json:"pedestal" binding:"required"`      // Pedestal (workload) configuration
+	Benchmark   *dto.ContainerSpec  `json:"benchmark" binding:"required"`     // Benchmark (detector) configuration
+	Specs       [][]GuidedSpec      `json:"specs" binding:"required"`         // GuidedConfig batches for fault injection
+	Algorithms  []dto.ContainerSpec `json:"algorithms" binding:"omitempty"`   // RCA algorithms to execute (optional)
+	Labels      []dto.LabelItem     `json:"labels" binding:"omitempty"`       // Labels to attach to the injection
 	// SkipRestartPedestal hints the RestartPedestal step to skip the helm
 	// install when the target release is already deployed and healthy. Namespace
 	// locking, index extraction, and the FaultInjection handoff still run as
@@ -453,9 +456,6 @@ func (req *SubmitInjectionReq) Validate() error {
 	if req.Benchmark == nil {
 		return fmt.Errorf("benchmark must not be nil")
 	}
-	if req.Interval <= req.PreDuration {
-		return fmt.Errorf("interval must be greater than pre_duration")
-	}
 	if len(req.Specs) == 0 {
 		return fmt.Errorf("specs must not be empty")
 	}
@@ -463,32 +463,27 @@ func (req *SubmitInjectionReq) Validate() error {
 		if len(batch) == 0 {
 			return fmt.Errorf("specs[%d] must contain at least one guided config", i)
 		}
-		for j, spec := range batch {
+		for j := range batch {
+			spec := &batch[j]
 			if strings.TrimSpace(spec.ChaosType) == "" {
 				return fmt.Errorf("specs[%d][%d].chaos_type is required", i, j)
 			}
-			// Issue #176: distinguish "resolver never set Duration" from
-			// "resolver set Duration to a bad value". The chaos-experiment
-			// guidedcli's finalizeOrRequest only runs normalizeDuration on
-			// the success branch, so a nil Duration on the wire means the
-			// resolver bailed out (builder error: missing JVM method, unset
-			// mem_type, decode failure, ...) and shipped an un-normalized
-			// config. Surface that hypothesis instead of regurgitating a
-			// generic "duration > 0" message that hides the real cause.
-			// Defense-in-depth: aegisctl already short-circuits on
-			// response.Errors before reaching here, but a non-aegisctl
-			// caller (or a future bug in the CLI) would otherwise still
-			// hit the misleading message.
+			// Backend pins the abnormal window. We deliberately overwrite
+			// any caller-supplied `duration` rather than rejecting it, so
+			// existing CLI bodies keep working while loop agents lose the
+			// ability to drift it. A nil pointer here would still indicate
+			// the chaos-experiment resolver bailed out before normalizing
+			// the rest of the config (issue #176), so keep that diagnostic.
 			if spec.Duration == nil {
 				return fmt.Errorf(
 					"specs[%d][%d].duration is missing for chaos_type=%q — the chaos-experiment guided resolver typically default-fills duration on success, "+
 						"so a missing duration usually means the resolver hit a builder error (missing required field, JVM method not in cache, mem_type decode failure, ...) "+
-						"and shipped an un-normalized config; re-run the guided session and check the resolver's `errors` field, or pass `duration` explicitly",
+						"and shipped an un-normalized config; re-run the guided session and check the resolver's `errors` field",
 					i, j, strings.TrimSpace(spec.ChaosType))
 			}
-			if *spec.Duration <= 0 {
-				return fmt.Errorf("specs[%d][%d].duration must be greater than 0 (got %d)", i, j, *spec.Duration)
-			}
+			fixed := consts.FixedAbnormalWindowMinutes
+			spec.Duration = &fixed
+			req.Specs[i][j] = *spec
 		}
 	}
 

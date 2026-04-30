@@ -19,6 +19,41 @@ const (
 	DefaultTimeUnit         = time.Minute
 )
 
+// Fault-injection time windows are pinned in code so loop agents and
+// external callers cannot drift them. Every active injection follows the
+// same schedule:
+//
+//	[restart] → [warmup] → [normal] → [abnormal]
+//	  25 min     2 min      5 min       5 min
+//
+// Interval (= normal + abnormal) is the namespace-lock window after the
+// pedestal becomes Ready; it does NOT include the restart or warmup phases.
+//
+// Restart timeout is sized for cold DSB systems (TrainTicket /
+// HotelReservation / SocialNetwork / MediaMicroservices) without
+// pre-warm: ts/sn/mm/hs cold pull-and-init runs 12-22 min in observed
+// data, so 25 min keeps a margin while still failing fast on
+// genuine readiness regressions. Pre-warmed pedestals settle in
+// 30-90 s — the timeout is a ceiling, not a target.
+const (
+	FixedPedestalRestartTimeoutSeconds = 25 * 60 // 25 min
+	FixedPedestalWarmupSeconds         = 2 * 60  // 2 min
+	FixedNormalWindowSeconds           = 5 * 60  // 5 min (was pre_duration)
+	FixedAbnormalWindowSeconds         = 5 * 60  // 5 min (was per-spec duration)
+	FixedIntervalSeconds               = FixedNormalWindowSeconds + FixedAbnormalWindowSeconds
+)
+
+// Minute-denominated views of the fixed windows, for the legacy payload
+// fields (consts.InjectPreDuration, consts.RestartIntarval, consts.RestartFaultDuration)
+// that downstream code expects in minute units.
+const (
+	FixedPedestalRestartTimeoutMinutes = FixedPedestalRestartTimeoutSeconds / 60
+	FixedPedestalWarmupMinutes         = FixedPedestalWarmupSeconds / 60
+	FixedNormalWindowMinutes           = FixedNormalWindowSeconds / 60
+	FixedAbnormalWindowMinutes         = FixedAbnormalWindowSeconds / 60
+	FixedIntervalMinutes               = FixedIntervalSeconds / 60
+)
+
 // monitoring related constants
 const (
 	// Set of all monitored namespaces

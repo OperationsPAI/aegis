@@ -116,14 +116,15 @@ var injectCmd = &cobra.Command{
 
 The canonical submission path is the guided flow:
 
-  # Step through a guided session; apply when the config is ready
+  # Step through a guided session; apply when the config is ready.
+  # Time windows (warmup, normal, abnormal) are pinned in the backend
+  # and intentionally not exposed as flags.
   aegisctl inject guided --reset-config --no-save-config
   aegisctl inject guided --next otel-demo0 --next frontend
   aegisctl inject guided --apply \
     --project pair_diagnosis \
     --pedestal-name ts --pedestal-tag 1.0.0 \
-    --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 \
-    --interval 10 --pre-duration 5
+    --benchmark-name otel-demo-bench --benchmark-tag 1.0.0
 
 Read-only / listing commands:
 

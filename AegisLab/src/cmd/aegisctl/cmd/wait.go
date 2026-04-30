@@ -47,8 +47,7 @@ EXAMPLES:
   # JSON response)
   aegisctl inject guided --apply --project my_project \
     --pedestal-name ts --pedestal-tag 1.0.0 \
-    --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 \
-    --interval 10 --pre-duration 5 | \
+    --benchmark-name otel-demo-bench --benchmark-tag 1.0.0 | \
     jq -r '.items[0].trace_id' | xargs aegisctl wait`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdinItems("wait", "wait <trace-id|task-id>", args, stdinOptions{
