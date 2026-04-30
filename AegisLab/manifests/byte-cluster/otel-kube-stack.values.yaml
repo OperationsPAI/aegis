@@ -560,6 +560,144 @@ collectors:
             processors: [memory_limiter, k8sattributes, transform/service_namespace, batch]
             receivers: [otlp]
 
+  # Per-system collector for the train-ticket benchmark (#303).
+  #
+  # Single-pod deployment, no HPA, no PDB. The shared `deploy:` pool above
+  # remains in place as the default for systems not yet migrated, but ts
+  # workloads (Java services + Go loadgenerator + caddy ui-dashboard) point
+  # their `OTEL_EXPORTER_OTLP_ENDPOINT` at this collector's Service via the
+  # ts seed in `initial-data/data.yaml` (`global.otelcollector` →
+  # opentelemetry-kube-stack-deployment-ts-collector.monitoring:4317).
+  #
+  # Why replicas: 1 (not 2): even at 2, kube-proxy round-robin LB across
+  # the pair re-introduces the gRPC HTTP/2 long-lived-connection-pinning
+  # shape that #300 documented — a single pod restart still deadlocks
+  # exporters pinned to it. One pod per system → no LB ambiguity → no
+  # churn-induced deadlock.
+  #
+  # Why 64Gi mem request: ts under K=12 hybrid load drove the shared 12Gi
+  # collector to 60-68% target in #300. At 64Gi (~5x headroom) a single
+  # ts pod absorbs bursts without scale events. Cluster has 36 × 120Gi
+  # nodes; per-system reservation fits comfortably (currently 28-36% used).
+  #
+  # No `presets.kubernetesEvents` or `presets.clusterMetrics`: those are
+  # leader-elected cluster-wide receivers that belong on the shared
+  # deployment collector, not duplicated per system.
+  deploy-ts:
+    suffix: deployment-ts
+    mode: deployment
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 8000m
+        memory: 98304Mi
+      requests:
+        cpu: 2000m
+        memory: 65536Mi
+    config:
+      exporters:
+        clickhouse:
+          endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
+          database: otel
+          ttl: 72h
+          logs_table_name: otel_logs
+          traces_table_name: otel_traces
+          metrics_table_name: otel_metrics
+          timeout: 5s
+          retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_interval: 30s
+            max_elapsed_time: 300s
+      processors:
+        batch:
+          timeout: 5s
+          send_batch_size: 2000
+          send_batch_max_size: 4000
+        memory_limiter:
+          check_interval: 1s
+          limit_percentage: 75
+          spike_limit_percentage: 15
+        k8sattributes:
+          auth_type: serviceAccount
+          passthrough: false
+          extract:
+            metadata:
+              - k8s.pod.name
+              - k8s.pod.uid
+              - k8s.deployment.name
+              - k8s.namespace.name
+              - k8s.node.name
+              - k8s.pod.start_time
+              - service.name
+              - service.version
+              - service.instance.id
+            labels:
+              - tag_name: app.label.component
+                key: app.kubernetes.io/component
+                from: pod
+              - tag_name: service.name
+                key: app.kubernetes.io/name
+                from: pod
+              - tag_name: service.name
+                key: app
+                from: pod
+              - tag_name: service.name
+                key: name
+                from: pod
+            otel_annotations: true
+          pod_association:
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.ip
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.uid
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.name
+                - from: resource_attribute
+                  name: k8s.namespace.name
+            - sources:
+                - from: connection
+        transform/service_namespace:
+          trace_statements:
+            - context: resource
+              statements:
+                - set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
+          metric_statements:
+            - context: resource
+              statements:
+                - set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
+          log_statements:
+            - context: resource
+              statements:
+                - set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
+      connectors:
+        spanmetrics: {}
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+      service:
+        pipelines:
+          logs:
+            exporters: [clickhouse]
+            processors: [memory_limiter, k8sattributes, transform/service_namespace, batch]
+            receivers: [otlp]
+          metrics:
+            exporters: [clickhouse]
+            processors: [memory_limiter, k8sattributes, transform/service_namespace, batch]
+            receivers: [otlp, spanmetrics]
+          traces:
+            exporters: [spanmetrics, clickhouse]
+            processors: [memory_limiter, k8sattributes, transform/service_namespace, batch]
+            receivers: [otlp]
+
 clusterRole:
   enabled: true
   annotations: {}

@@ -44,7 +44,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 1.0.1
+      # Bumped 1.0.1 → 1.0.2 to retarget OTel exporter to the per-system
+      # ts collector (#303). Reseed honors the immutability contract on
+      # already-seeded versions, so the values below would not propagate
+      # to the DB without bumping the version name.
+      - name: 1.0.2
         github_link: OperationsPAI/train-ticket
         status: 1
         helm_config:
@@ -59,11 +63,23 @@ containers:
               value_type: 1
               template_string: 31%03d
               overridable: false
+            # Per-system collector (#303): all ts workloads (Java services
+            # + Go loadgen + caddy ui-dashboard) export to the dedicated
+            # `opentelemetry-kube-stack-deployment-ts-collector` Service
+            # instead of the shared `deployment-collector`. Single-pod
+            # deployment with 64Gi mem, no HPA — no cross-pod LB → no
+            # gRPC HTTP/2 churn deadlock that motivated #300.
             - key: global.otelcollector
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              default_value: http://opentelemetry-kube-stack-deployment-ts-collector.monitoring.svc.cluster.local:4317
+              overridable: true
+            - key: loadgenerator.opentelemetry.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-ts-collector.monitoring:4317
               overridable: true
           status: 1
   - type: 2
