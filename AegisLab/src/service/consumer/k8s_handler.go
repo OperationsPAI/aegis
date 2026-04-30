@@ -365,6 +365,7 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 	}
 
 	if !parsedLabels.IsHybrid {
+		logEntry.WithField("crd_name", name).Info("HandleCRDSucceeded: single-leaf, submitting BuildDatapack")
 		postProcess(name)
 	} else {
 		bm := h.batchManager
@@ -373,10 +374,27 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 			return
 		}
 		bm.incrementBatchCount(parsedLabels.batchID)
+		count, expected := bm.snapshotBatchProgress(parsedLabels.batchID)
+		batchEntry := logEntry.WithFields(logrus.Fields{
+			"batch_id":      parsedLabels.batchID,
+			"crd_name":      name,
+			"batch_count":   count,
+			"batch_size":    expected,
+			"batch_finished": bm.isFinished(parsedLabels.batchID),
+		})
 
 		if bm.isFinished(parsedLabels.batchID) {
 			bm.deleteBatch(parsedLabels.batchID)
+			batchEntry.Info("HandleCRDSucceeded: hybrid batch complete, submitting BuildDatapack")
 			postProcess(parsedLabels.batchID)
+		} else {
+			// Hybrid batch incomplete: log progress so we can see _which_
+			// leaf CRD callbacks landed and which are still outstanding.
+			// The silent failure mode in #305 was a hybrid batch where
+			// one leaf's CRD informer never fired (RuntimeMutatorChaos
+			// missing from chaos-experiment GetCRDMapping), so we'd sit
+			// here forever with no visibility.
+			batchEntry.Info("HandleCRDSucceeded: hybrid batch leaf received, awaiting more")
 		}
 	}
 }

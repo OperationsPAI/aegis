@@ -244,7 +244,7 @@ func TestReconciler_RecoversTraceStuckAtFaultInjectionCompleted(t *testing.T) {
 	})
 
 	r := newReconcilerForTest(t, db, owner, submitter)
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed)
 	require.Len(t, captured, 1)
@@ -292,7 +292,7 @@ func TestReconciler_IsIdempotent(t *testing.T) {
 		return nil
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 0, processed)
 	require.Equal(t, 0, called)
@@ -314,9 +314,40 @@ func TestReconciler_RespectsStuckThreshold(t *testing.T) {
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
 	r.stuckThresholdSeconds = func() int { return 600 }
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 0, processed)
+}
+
+// TestReconciler_TickReportsCandidateCount pins the observability contract
+// that closes issue #305. Before this change, tick returned only `processed`
+// — when stuck candidates existed but every one was skipped (threshold not
+// yet hit, idempotency win, etc.) the reconciler logged nothing and was
+// indistinguishable from a goroutine that never started. The heartbeat in
+// Run() depends on tick reporting the candidate count truthfully.
+func TestReconciler_TickReportsCandidateCount(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	// Fresh trace inside the threshold window: it is a candidate per the
+	// SQL filter (state=Running, last_event matches, status active) only
+	// AFTER the threshold has elapsed. With a 10-second age and a 1-second
+	// threshold, the SELECT picks it up; the per-row threshold check then
+	// keeps it (CreatedAt + duration is far in the future).
+	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 60, 10*time.Second, false)
+	_ = fix
+
+	owner := newFakeInjectionOwner([]model.FaultInjection{
+		{ID: 1, Name: fix.injectionName, TaskID: &fix.faultTaskID, PreDuration: 1},
+	})
+	submitter := taskSubmitter(func(context.Context, *gorm.DB, *redis.Gateway, *dto.UnifiedTask) error {
+		t.Fatal("submit must not be called for fresh in-window trace")
+		return nil
+	})
+	r := newReconcilerForTest(t, db, owner, submitter)
+	r.stuckThresholdSeconds = func() int { return 1 }
+	processed, candidates, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 0, processed, "in-window trace must not be processed")
+	require.Equal(t, 1, candidates, "candidate count must report the SELECT row count, not just submits — silent reconciler regression guard for #305")
 }
 
 // TestReconciler_HybridBatchRecoversWithoutBatchManager covers the
@@ -338,7 +369,7 @@ func TestReconciler_HybridBatchRecoversWithoutBatchManager(t *testing.T) {
 		return nil
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed, "hybrid batch must recover with exactly one BuildDatapack submit")
 	require.Len(t, captured, 1)
@@ -362,7 +393,7 @@ func TestReconciler_StuckAtFaultInjectionStartedRespectsDuration(t *testing.T) {
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
 	r.stuckThresholdSeconds = func() int { return 60 } // pull trace into scan
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 0, processed)
 }
@@ -386,7 +417,7 @@ func TestReconciler_StuckAtFaultInjectionStartedFinalizesAfterDuration(t *testin
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
 	r.stuckThresholdSeconds = func() int { return 60 }
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed)
 	require.Len(t, captured, 1)
@@ -429,7 +460,7 @@ func TestReconciler_StuckAtFaultInjectionCompletedDoesNotReadvanceParent(t *test
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
 	r.stuckThresholdSeconds = func() int { return 60 }
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed)
 
@@ -457,7 +488,7 @@ func TestReconciler_ToleratesStateUpdateError(t *testing.T) {
 		return nil
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed, "state-update warning must not block BuildDatapack submission")
 	require.Len(t, captured, 1)
@@ -541,7 +572,7 @@ func TestReconciler_SynthesizesAbnormalWindowForward(t *testing.T) {
 		return nil
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed)
 
@@ -578,7 +609,7 @@ func TestReconciler_PrefersStoredTimestampsOverSynthesis(t *testing.T) {
 		return nil
 	})
 	r := newReconcilerForTest(t, db, owner, submitter)
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed)
 
@@ -633,7 +664,8 @@ func TestReconciler_ConcurrentTicksSubmitOnce(t *testing.T) {
 	tickOnce := func() (int, error) {
 		owner := newFakeInjectionOwner([]model.FaultInjection{rowSnapshot})
 		r := newReconcilerForTest(t, db, owner, persistChild)
-		return r.tick(context.Background())
+		processed, _, err := r.tick(context.Background())
+		return processed, err
 	}
 
 	var wg sync.WaitGroup
@@ -747,7 +779,7 @@ func TestReconciler_GatesAndSynthesisIgnoreUpdatedAtBumps(t *testing.T) {
 	})
 
 	r := newReconcilerForTest(t, db, owner, submitter)
-	processed, err := r.tick(context.Background())
+	processed, _, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, processed,
 		"duration gate anchored to CreatedAt must let the trace finalize: "+

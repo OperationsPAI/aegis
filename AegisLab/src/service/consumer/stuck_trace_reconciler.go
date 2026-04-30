@@ -93,25 +93,53 @@ func NewStuckTraceReconciler(
 // Interval changes pushed via etcd at runtime are picked up at the next tick
 // by re-reading r.intervalSeconds() and calling ticker.Reset when the value
 // has changed — no worker restart required.
+//
+// A startup INFO log + per-tick heartbeat (issue #305) makes a silent
+// reconciler immediately visible in worker logs — previously the only
+// signal was "tick recovered N" which logs only when N>0, so a quiet
+// reconciler was indistinguishable from a never-launched goroutine.
 func (r *StuckTraceReconciler) Run(ctx context.Context) {
 	if r == nil || r.db == nil {
 		logrus.Warn("StuckTraceReconciler.Run skipped: missing db")
 		return
 	}
 	currentInterval := r.resolveInterval()
+	stuckSecs := r.stuckThresholdSeconds()
+	if stuckSecs <= 0 {
+		stuckSecs = consts.DefaultStuckTraceReconcileStuckSecs
+	}
+	logrus.WithFields(logrus.Fields{
+		"interval_seconds":        int(currentInterval / time.Second),
+		"stuck_threshold_seconds": stuckSecs,
+		"max_batch_per_tick":      r.maxBatchPerTick,
+	}).Info("StuckTraceReconciler started")
 	ticker := time.NewTicker(currentInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
+			logrus.Info("StuckTraceReconciler stopping: context cancelled")
 			return
 		case <-ticker.C:
 		}
-		processed, err := r.tick(ctx)
-		if err != nil {
-			logrus.WithError(err).Warn("stuck trace reconcile tick failed")
-		} else if processed > 0 {
-			logrus.Infof("stuck trace reconcile tick recovered %d trace(s)", processed)
+		processed, candidates, err := r.runTickSafely(ctx)
+		fields := logrus.Fields{
+			"candidates": candidates,
+			"processed":  processed,
+		}
+		switch {
+		case err != nil:
+			logrus.WithFields(fields).WithError(err).Warn("stuck trace reconcile tick failed")
+		case processed > 0:
+			logrus.WithFields(fields).Infof("stuck trace reconcile tick recovered %d trace(s)", processed)
+		case candidates > 0:
+			// Candidates existed but none recovered (all skipped by
+			// threshold/idempotency check). Surface as INFO so the
+			// "reconciler quiet but stuck candidates exist" failure
+			// mode (issue #305) is immediately visible.
+			logrus.WithFields(fields).Info("stuck trace reconcile tick: no recoveries")
+		default:
+			logrus.WithFields(fields).Debug("stuck trace reconcile tick: no candidates")
 		}
 		if r.tickHook != nil {
 			r.tickHook(processed, err)
@@ -123,6 +151,20 @@ func (r *StuckTraceReconciler) Run(ctx context.Context) {
 	}
 }
 
+// runTickSafely wraps tick() so a panic during recovery doesn't kill the
+// reconciler goroutine for the rest of the worker's lifetime (issue #305:
+// a silent reconciler is a worse failure than a noisy one).
+func (r *StuckTraceReconciler) runTickSafely(ctx context.Context) (processed, candidates int, err error) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			logrus.WithField("panic", rec).Error("StuckTraceReconciler.tick panicked, continuing loop")
+			err = fmt.Errorf("tick panic: %v", rec)
+		}
+	}()
+	processed, candidates, err = r.tick(ctx)
+	return
+}
+
 func (r *StuckTraceReconciler) resolveInterval() time.Duration {
 	v := time.Duration(r.intervalSeconds()) * time.Second
 	if v <= 0 {
@@ -131,9 +173,13 @@ func (r *StuckTraceReconciler) resolveInterval() time.Duration {
 	return v
 }
 
-// tick runs one reconcile sweep and returns the number of traces it
-// successfully recovered.
-func (r *StuckTraceReconciler) tick(ctx context.Context) (int, error) {
+// tick runs one reconcile sweep and returns (processed, candidates, err).
+// processed = traces for which a BuildDatapack was actually submitted;
+// candidates = stuck-trace rows the SELECT returned. Reporting both lets
+// the heartbeat distinguish "no rows match" from "rows match but were
+// skipped" — without that, a silent reconciler with stuck rows in the DB
+// looks identical to a working one with nothing to do (issue #305).
+func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 	stuckSecs := r.stuckThresholdSeconds()
 	if stuckSecs <= 0 {
 		stuckSecs = consts.DefaultStuckTraceReconcileStuckSecs
@@ -154,7 +200,7 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, error) {
 		Limit(r.maxBatchPerTick).
 		Find(&traces).Error
 	if err != nil {
-		return 0, fmt.Errorf("query stuck traces: %w", err)
+		return 0, 0, fmt.Errorf("query stuck traces: %w", err)
 	}
 
 	processed := 0
@@ -171,7 +217,7 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, error) {
 			processed++
 		}
 	}
-	return processed, nil
+	return processed, len(traces), nil
 }
 
 // recoverTrace handles a single stuck trace. Returns (true, nil) iff a
