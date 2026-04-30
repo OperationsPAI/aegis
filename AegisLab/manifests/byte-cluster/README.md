@@ -232,10 +232,15 @@ kubectl describe hpa -n monitoring opentelemetry-kube-stack-deployment-collector
 Expected:
 - one daemon collector per node (handles per-node pod prometheus scrape +
   kubelet/cAdvisor + filelog — sharded by node, no cross-replica duplication)
-- one deployment collector pool of `4–12` replicas (HPA bounded by
+- one deployment collector pool of `8–24` replicas (HPA bounded by
   `autoscaler.minReplicas`/`maxReplicas`; carries OTLP push + leader-elected
   k8s_cluster / k8sobjects only — no prometheus scrape, so memory pressure
-  no longer scales with cluster pod count)
+  no longer scales with cluster pod count). The previous 4–12 / 6 GiB
+  request was too tight: the pool sat permanently at maxReplicas with
+  memory 68%/60% target and HPA scaled a fresh pod every 20–90 minutes
+  under campaign load. Each scale event broke a long-lived OTLP gRPC
+  connection from a workload exporter pinned to the churned pod, and the
+  Go SDK's exporter goroutine deadlocked — see #300.
 - CPU and memory targets both present on the HPA
 
 History note: the deployment pool used to run prometheus pod scrape too, and

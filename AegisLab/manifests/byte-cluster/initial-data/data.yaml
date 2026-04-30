@@ -59,11 +59,31 @@ containers:
               value_type: 1
               template_string: 31%03d
               overridable: false
+            # Java services use the OTel Java agent v2.23.0, which rejects
+            # the `dns:///` URL scheme (config metadata requires http/https)
+            # — so the Go-SDK fix from #300 cannot be reused here. Instead
+            # switch the Java exporter from gRPC :4317 to HTTP/protobuf :4318:
+            # HTTP/1.1 has no long-lived multiplexed connection to deadlock
+            # when an HPA churn closes a single pod's socket, so the failure
+            # mode behind #300 cannot reproduce. The matching protocol env
+            # (`OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`) is set on the
+            # Instrumentation CR's java block in otel-kube-stack.values.yaml.
             - key: global.otelcollector
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+            # Loadgenerator is a Go binary using the OTLP/gRPC SDK, which
+            # does support `dns:///` for client-side LB. Targeting the
+            # operator-rendered headless Service spreads the loadgen's
+            # exporter goroutines across all collector pods, so a single
+            # HPA churn cannot deadlock the loadgen the way it did in #300.
+            - key: loadgenerator.opentelemetry.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: dns:///opentelemetry-kube-stack-deployment-collector-headless.monitoring.svc.cluster.local:4317
               overridable: true
           status: 1
   - type: 2
@@ -157,11 +177,16 @@ containers:
               value_type: 0
               default_value: monitoring/opentelemetry-kube-stack
               overridable: true
+            # Coherence/Helidon Java OTel agent — switched to HTTP/protobuf
+            # :4318 to bypass the gRPC HPA-churn deadlock from #300 (the
+            # `dns:///` workaround used for the Go SDK is rejected by the
+            # Java agent v2.23.0). Protocol env injected by the
+            # Instrumentation CR java block.
             - key: otel.collectorEndpoint
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
@@ -330,11 +355,16 @@ containers:
               value_type: 0
               default_value: 20260423-2b3fd43
               overridable: true
+            # TeaStore Java OTel agent — switched to HTTP/protobuf :4318 to
+            # bypass the gRPC HPA-churn deadlock from #300. Java agent v2.23.0
+            # rejects `dns:///`, so the Go-SDK approach used for the ts
+            # loadgenerator does not apply. Protocol env injected by the
+            # Instrumentation CR java block.
             - key: opentelemetry.otlpEndpoint
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
               overridable: true
             # 0.1.1 parameterizes the inject-<language> annotation from these
             # two values (previously hardcoded to "monitoring/opentelemetry-kube-stack").
