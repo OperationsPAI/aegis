@@ -74,6 +74,7 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 		`CREATE TABLE parameter_configs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			system_id INTEGER,
+			system_id_key INTEGER NOT NULL DEFAULT 0,
 			config_key TEXT NOT NULL,
 			type INTEGER NOT NULL,
 			category INTEGER NOT NULL,
@@ -83,7 +84,7 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 			template_string TEXT,
 			required INTEGER NOT NULL DEFAULT 0,
 			overridable INTEGER NOT NULL DEFAULT 1,
-			UNIQUE(system_id, config_key, type, category)
+			UNIQUE(system_id_key, config_key, type, category)
 		)`,
 		`CREATE TABLE container_version_env_vars (
 			container_version_id INTEGER NOT NULL,

@@ -223,8 +223,15 @@ func (h *HelmConfig) BeforeCreate(tx *gorm.DB) error {
 // — see issue #314 for the DSB-family hs/sn/media collision that motivated
 // scoping the index.
 type ParameterConfig struct {
-	ID             int                      `gorm:"primaryKey;autoIncrement"`
-	SystemID       *int                     `gorm:"column:system_id;index;uniqueIndex:idx_unique_config"`
+	ID       int  `gorm:"primaryKey;autoIncrement"`
+	SystemID *int `gorm:"column:system_id;index"`
+	// SystemIDKey shadows SystemID with COALESCE(system_id, 0) so the unique
+	// index on (system_id_key, config_key, type, category) actually enforces
+	// uniqueness for cluster-wide rows. MySQL/SQLite/Postgres treat NULLs as
+	// distinct in unique indexes, which would otherwise let two cluster-wide
+	// rows share the same (config_key, type, category) tuple. Maintained by
+	// BeforeSave below.
+	SystemIDKey    int                      `gorm:"column:system_id_key;not null;default:0;uniqueIndex:idx_unique_config"`
 	Key            string                   `gorm:"column:config_key;not null;size:128;uniqueIndex:idx_unique_config"`
 	Type           consts.ParameterType     `gorm:"not null;default:0;uniqueIndex:idx_unique_config"`
 	Category       consts.ParameterCategory `gorm:"not null;uniqueIndex:idx_unique_config"`
@@ -234,6 +241,15 @@ type ParameterConfig struct {
 	TemplateString *string                  `gorm:"type:text"`
 	Required       bool                     `gorm:"not null;default:false"`
 	Overridable    bool                     `gorm:"not null;default:true"`
+}
+
+func (p *ParameterConfig) BeforeSave(tx *gorm.DB) error {
+	if p.SystemID == nil {
+		p.SystemIDKey = 0
+	} else {
+		p.SystemIDKey = *p.SystemID
+	}
+	return nil
 }
 
 func (p *ParameterConfig) BeforeCreate(tx *gorm.DB) error {

@@ -67,7 +67,18 @@ func preMigrateParameterConfigsSystemScope(db *gorm.DB) error {
 			WHERE TABLE_SCHEMA = DATABASE()
 			  AND TABLE_NAME = 'parameter_configs'
 			  AND INDEX_NAME = 'idx_unique_config'`).Scan(&cols).Error
-		if len(cols) > 0 && len(cols) < 4 {
+		// Drop unless the index already covers system_id_key — the new
+		// shadow column that lets cluster-wide rows (system_id NULL)
+		// stay unique. Legacy 3-column and intermediate 4-column-with-
+		// system_id shapes both need to be replaced.
+		hasSystemIDKey := false
+		for _, c := range cols {
+			if c.ColumnName == "system_id_key" {
+				hasSystemIDKey = true
+				break
+			}
+		}
+		if len(cols) > 0 && !hasSystemIDKey {
 			if err := db.Migrator().DropIndex(&model.ParameterConfig{}, "idx_unique_config"); err != nil {
 				return fmt.Errorf("preMigrate parameter_configs: drop legacy idx_unique_config: %w", err)
 			}
@@ -121,6 +132,15 @@ func backfillParameterConfigSystemID(db *gorm.DB) error {
 		WHERE pc.system_id IS NULL`
 	if err := db.Exec(unionSQL).Error; err != nil {
 		logrus.Warnf("preMigrate parameter_configs: backfill system_id: %v", err)
+	}
+	// Sync system_id_key (the non-null shadow used by idx_unique_config) for
+	// pre-existing rows. AutoMigrate adds the column with default 0; rows
+	// with system_id NOT NULL need their key brought into agreement before
+	// the unique index lands.
+	if db.Migrator().HasColumn(&model.ParameterConfig{}, "system_id_key") {
+		if err := db.Exec(`UPDATE parameter_configs SET system_id_key = COALESCE(system_id, 0)`).Error; err != nil {
+			logrus.Warnf("preMigrate parameter_configs: sync system_id_key: %v", err)
+		}
 	}
 	return nil
 }
