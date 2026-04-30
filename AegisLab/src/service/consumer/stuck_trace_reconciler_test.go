@@ -298,6 +298,74 @@ func TestReconciler_IsIdempotent(t *testing.T) {
 	require.Equal(t, 0, called)
 }
 
+// TestReconciler_DoesNotStarveNewCandidatesByOldHaveBDRows is the regression
+// guard for the byte-cluster K=12 ts loop incident: when ≥ maxBatchPerTick
+// traces are stuck at last_event=fault.injection.* AND already have a
+// BuildDatapack child (BD ran and failed/cancelled but trace.last_event was
+// never advanced), the LIMIT-50 oldest-first SELECT used to fill its budget
+// entirely with these "data-corrupt" rows. Every recoverTrace then bailed
+// out via the per-row idempotency check, brand-new genuinely-stuck traces
+// (no BD child) ordered after them by updated_at ASC and never surfaced —
+// the reconciler reported "candidates=50, processed=0" indefinitely while
+// recoverable traces piled up.
+//
+// Pre-fix: this test sees candidates == 50, processed == 0, the 5 fresh
+// traces are starved.
+// Post-fix: the SQL anti-join filters the 50 have-BD rows out of the SELECT,
+// candidates == 5, processed == 5.
+func TestReconciler_DoesNotStarveNewCandidatesByOldHaveBDRows(t *testing.T) {
+	db := newReconcilerTestDB(t)
+
+	// 50 traces with a non-deleted BuildDatapack child task already
+	// present. They match the WHERE clause (state=Running, last_event
+	// matches, past threshold, status active) but should be filtered out
+	// by the anti-join. updated_at on these is set further in the past
+	// than the fresh traces below so the ASC ordering would surface them
+	// first if they weren't filtered.
+	for i := 0; i < 50; i++ {
+		fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 1, 60*time.Minute, false)
+		require.NoError(t, db.Create(&model.Task{
+			ID:           uuid.NewString(),
+			Type:         consts.TaskTypeBuildDatapack,
+			TraceID:      fix.traceID,
+			ParentTaskID: &fix.faultTaskID,
+			Payload:      "{}",
+			State:        consts.TaskError,
+			Status:       consts.CommonEnabled,
+		}).Error)
+	}
+
+	// 5 fresh genuinely-stuck traces with NO BuildDatapack child — these
+	// are the rows the reconciler must surface. updated_at is more recent
+	// than the 50 above so they would otherwise sort after them under
+	// "ORDER BY updated_at ASC".
+	freshTraceIDs := make(map[string]bool, 5)
+	for i := 0; i < 5; i++ {
+		fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 1, 30*time.Minute, false)
+		freshTraceIDs[fix.traceID] = true
+	}
+
+	owner := newFakeInjectionOwner(nil)
+	var captured []*dto.UnifiedTask
+	submitter := taskSubmitter(func(_ context.Context, _ *gorm.DB, _ *redis.Gateway, t *dto.UnifiedTask) error {
+		captured = append(captured, t)
+		return nil
+	})
+	r := newReconcilerForTest(t, db, owner, submitter)
+	processed, candidates, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 5, candidates,
+		"candidate query must exclude traces that already have a non-deleted BuildDatapack child; "+
+			"got candidates=%d (would be 50 under pre-fix starvation)", candidates)
+	require.Equal(t, 5, processed, "all 5 fresh stuck traces must be recovered")
+	require.Len(t, captured, 5)
+	for _, ct := range captured {
+		require.True(t, freshTraceIDs[ct.TraceID],
+			"recovered trace %s must be one of the fresh no-BD-child traces; "+
+				"submitting against a have-BD trace would be the pre-fix bug", ct.TraceID)
+	}
+}
+
 // TestReconciler_RespectsStuckThreshold guards against the reconciler
 // stealing in-flight traces that are still inside their fault window.
 // updated_at within the stuck threshold must be left alone.
