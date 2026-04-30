@@ -186,6 +186,18 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 	}
 	cutoff := r.now().Add(-time.Duration(stuckSecs) * time.Second)
 
+	// Anti-join out traces that already have a non-deleted BuildDatapack
+	// task. Without this filter the candidate set is starved on busy
+	// clusters: any trace whose last_event was never advanced past
+	// fault.injection.* (e.g. BD ran and failed but the trace-state-update
+	// silently dropped — see follow-up to #305) keeps reappearing in the
+	// oldest-first scan, fills the LIMIT 50 budget every tick, and the
+	// per-row idempotency check inside recoverTrace returns (false, nil)
+	// for all of them. Newer genuinely-stuck traces (no BD child) are
+	// ordered by updated_at ASC after the broken-state old rows and never
+	// surface. The recoverTrace idempotency check stays as a defensive
+	// race-condition guard but should never fire in practice once this
+	// filter is in place.
 	var traces []model.Trace
 	err := r.db.WithContext(ctx).
 		Model(&model.Trace{}).
@@ -194,6 +206,14 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 			[]consts.EventType{consts.EventFaultInjectionStarted, consts.EventFaultInjectionCompleted},
 			cutoff,
 			consts.CommonDeleted,
+		).
+		Where("NOT EXISTS (?)",
+			r.db.Model(&model.Task{}).
+				Select("1").
+				Where("tasks.trace_id = traces.id AND tasks.type = ? AND tasks.status != ?",
+					consts.TaskTypeBuildDatapack,
+					consts.CommonDeleted,
+				),
 		).
 		Order("updated_at ASC").
 		Order("id ASC").
