@@ -87,7 +87,6 @@ var (
 	guidedListBatch  bool
 	guidedBatchPath  string
 
-	guidedDuration        int
 	guidedMemorySize      int
 	guidedMemWorker       int
 	guidedTimeOffset      int
@@ -109,13 +108,14 @@ var (
 	guidedStatusCode      int
 
 	// --apply envelope flags: mirror the injection YAML contract so a finished
-	// guided session can be shipped to /inject with a single invocation.
+	// guided session can be shipped to /inject with a single invocation. The
+	// fault-injection time windows (warmup, normal, abnormal, restart timeout)
+	// are pinned server-side and intentionally not exposed here — see
+	// consts.Fixed*.
 	guidedApplyPedestalName  string
 	guidedApplyPedestalTag   string
 	guidedApplyBenchmarkName string
 	guidedApplyBenchmarkTag  string
-	guidedApplyInterval      int
-	guidedApplyPreDuration   int
 )
 
 // injectGuidedCmd is the AegisLab-aware wrapper around the chaos-experiment
@@ -274,7 +274,8 @@ current stage's selection, and --apply to submit the finalized config.`,
 				*dst = &tmp
 			}
 		}
-		setInt(&cliCfg.Duration, guidedDuration, false)
+		// Per-spec duration is pinned server-side (consts.FixedAbnormalWindowSeconds);
+		// we deliberately omit a CLI flag for it so loop agents can't drift it.
 		setInt(&cliCfg.MemorySize, guidedMemorySize, false)
 		setInt(&cliCfg.MemWorker, guidedMemWorker, false)
 		setInt(&cliCfg.TimeOffset, guidedTimeOffset, true)
@@ -453,8 +454,6 @@ func init() {
 	f.StringVar(&guidedApplyPedestalTag, "pedestal-tag", "", "Pedestal container version/tag (required with --apply)")
 	f.StringVar(&guidedApplyBenchmarkName, "benchmark-name", "", "Benchmark container name (required with --apply)")
 	f.StringVar(&guidedApplyBenchmarkTag, "benchmark-tag", "", "Benchmark container version/tag (required with --apply)")
-	f.IntVar(&guidedApplyInterval, "interval", 0, "Total experiment interval in minutes (required with --apply)")
-	f.IntVar(&guidedApplyPreDuration, "pre-duration", 0, "Normal-data collection duration in minutes (required with --apply)")
 
 	f.BoolVar(&guidedStage, "stage", false, "Append the current ready_to_apply config to the batch stage file and reset the working session (does not submit). Use with --apply --batch later to submit every staged spec as one parallel batch.")
 	f.BoolVar(&guidedBatch, "batch", false, "With --apply, submit every staged spec from the batch file as a single parallel batch (cleared on success). Without --apply, used by --list-batch to point at the stage file.")
@@ -462,7 +461,6 @@ func init() {
 	f.BoolVar(&guidedListBatch, "list-batch", false, "Print the contents of the batch stage file as JSON and exit (mutually exclusive with --apply / --stage / --reset-batch)")
 	f.StringVar(&guidedBatchPath, "batch-config", "", "Path to the batch stage file (default ~/.aegisctl/inject-guided-batch.yaml)")
 
-	f.IntVar(&guidedDuration, "duration", 0, "Duration in minutes (default 5)")
 	f.IntVar(&guidedMemorySize, "memory-size", 0, "Memory size in MiB")
 	f.IntVar(&guidedMemWorker, "mem-worker", 0, "Memory stress worker count")
 	f.IntVar(&guidedTimeOffset, "time-offset", 0, "Time offset in seconds")
@@ -562,12 +560,6 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 	if guidedApplyPedestalName == "" || guidedApplyPedestalTag == "" || guidedApplyBenchmarkName == "" || guidedApplyBenchmarkTag == "" {
 		return usageErrorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
 	}
-	if guidedApplyInterval <= 0 || guidedApplyPreDuration <= 0 {
-		return usageErrorf("--apply requires --interval and --pre-duration (positive minutes)")
-	}
-	if guidedApplyInterval <= guidedApplyPreDuration {
-		return usageErrorf("--interval must be greater than --pre-duration")
-	}
 	if len(cfgs) > 1 {
 		if err := validateBatchCompat(cfgs); err != nil {
 			return err
@@ -597,8 +589,6 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 		PedestalTag:   guidedApplyPedestalTag,
 		BenchmarkName: guidedApplyBenchmarkName,
 		BenchmarkTag:  guidedApplyBenchmarkTag,
-		Interval:      guidedApplyInterval,
-		PreDuration:   guidedApplyPreDuration,
 	}
 	pid, err := resolveProjectIDForApply(flagProject)
 	if err != nil {
@@ -613,9 +603,7 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 			"name":    opts.BenchmarkName,
 			"version": opts.BenchmarkTag,
 		},
-		"interval":     opts.Interval,
-		"pre_duration": opts.PreDuration,
-		"specs":        [][]guidedcli.GuidedConfig{cfgs},
+		"specs": [][]guidedcli.GuidedConfig{cfgs},
 	}
 	if guidedSkipRestartPedestal {
 		envelope["skip_restart_pedestal"] = true
@@ -659,8 +647,6 @@ type guidedApplyOptions struct {
 	PedestalTag   string
 	BenchmarkName string
 	BenchmarkTag  string
-	Interval      int
-	PreDuration   int
 }
 
 func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions) (*client.APIResponse[injectSubmitResponse], error) {
@@ -669,12 +655,6 @@ func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedCon
 	}
 	if opts.PedestalName == "" || opts.PedestalTag == "" || opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
 		return nil, fmt.Errorf("--apply requires --pedestal-name, --pedestal-tag, --benchmark-name, and --benchmark-tag")
-	}
-	if opts.Interval <= 0 || opts.PreDuration <= 0 {
-		return nil, fmt.Errorf("--apply requires --interval and --pre-duration (positive minutes)")
-	}
-	if opts.Interval <= opts.PreDuration {
-		return nil, fmt.Errorf("--interval must be greater than --pre-duration")
 	}
 
 	pid, err := resolveProjectIDForApply(projectName)
@@ -691,9 +671,7 @@ func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedCon
 			"name":    opts.BenchmarkName,
 			"version": opts.BenchmarkTag,
 		},
-		"interval":     opts.Interval,
-		"pre_duration": opts.PreDuration,
-		"specs":        [][]guidedcli.GuidedConfig{cfgs},
+		"specs": [][]guidedcli.GuidedConfig{cfgs},
 	}
 	if guidedSkipRestartPedestal {
 		envelope["skip_restart_pedestal"] = true

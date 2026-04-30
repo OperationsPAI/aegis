@@ -3,8 +3,10 @@ package injection
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
+	"aegis/consts"
 	"aegis/dto"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
@@ -29,11 +31,9 @@ func sampleGuidedConfig() guidedcli.GuidedConfig {
 func validSubmitInjectionReq() *SubmitInjectionReq {
 	cfg := GuidedSpec(sampleGuidedConfig())
 	return &SubmitInjectionReq{
-		Pedestal:    &dto.ContainerSpec{ContainerRef: dto.ContainerRef{Name: "ts", Version: "1.0.0"}},
-		Benchmark:   &dto.ContainerSpec{ContainerRef: dto.ContainerRef{Name: "bench", Version: "1.0.0"}},
-		Interval:    10,
-		PreDuration: 1,
-		Specs:       [][]GuidedSpec{{cfg}},
+		Pedestal:  &dto.ContainerSpec{ContainerRef: dto.ContainerRef{Name: "ts", Version: "1.0.0"}},
+		Benchmark: &dto.ContainerSpec{ContainerRef: dto.ContainerRef{Name: "bench", Version: "1.0.0"}},
+		Specs:     [][]GuidedSpec{{cfg}},
 	}
 }
 
@@ -100,18 +100,26 @@ func TestSubmitInjectionReqValidateRejectsMissingDuration(t *testing.T) {
 	require.NotContains(t, msg, "duration must be greater than 0")
 }
 
-// TestSubmitInjectionReqValidateRejectsNonPositiveDuration covers the case
-// where the resolver did normalize duration but a caller explicitly set it
-// to a non-positive value. The old "must be greater than 0" message is
-// still the right one here (it's accurate now); we keep the assertion to
-// guard against the two error paths swapping again.
-func TestSubmitInjectionReqValidateRejectsNonPositiveDuration(t *testing.T) {
-	req := validSubmitInjectionReq()
-	zero := 0
-	req.Specs[0][0].Duration = &zero
+// TestSubmitInjectionReqValidateOverridesCallerSuppliedDuration is the
+// hardcoded-time-window guarantee: any non-nil per-spec duration shipped by
+// the caller (loop agent, manual curl, ...) is silently overwritten with
+// consts.FixedAbnormalWindowMinutes so external clients can't drift the
+// abnormal window. The chaos-experiment resolver's own default-fill keeps
+// the legacy code path producing a non-nil pointer even when the CLI used
+// to set --duration explicitly.
+func TestSubmitInjectionReqValidateOverridesCallerSuppliedDuration(t *testing.T) {
+	for _, in := range []int{0, 1, 9999} {
+		t.Run(fmt.Sprintf("input=%d", in), func(t *testing.T) {
+			req := validSubmitInjectionReq()
+			v := in
+			req.Specs[0][0].Duration = &v
 
-	err := req.Validate()
-	require.ErrorContains(t, err, "duration must be greater than 0")
+			require.NoError(t, req.Validate())
+			require.NotNil(t, req.Specs[0][0].Duration)
+			require.Equal(t, consts.FixedAbnormalWindowMinutes, *req.Specs[0][0].Duration,
+				"per-spec duration must be pinned to consts.FixedAbnormalWindowMinutes")
+		})
+	}
 }
 
 func TestParseBatchGuidedSpecs(t *testing.T) {

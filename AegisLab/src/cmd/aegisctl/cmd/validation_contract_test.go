@@ -428,15 +428,11 @@ func TestSubmitGuidedApplyDryRunJSON(t *testing.T) {
 	oldPedestalTag := guidedApplyPedestalTag
 	oldBenchmarkName := guidedApplyBenchmarkName
 	oldBenchmarkTag := guidedApplyBenchmarkTag
-	oldInterval := guidedApplyInterval
-	oldPreDuration := guidedApplyPreDuration
 	t.Cleanup(func() {
 		guidedApplyPedestalName = oldPedestalName
 		guidedApplyPedestalTag = oldPedestalTag
 		guidedApplyBenchmarkName = oldBenchmarkName
 		guidedApplyBenchmarkTag = oldBenchmarkTag
-		guidedApplyInterval = oldInterval
-		guidedApplyPreDuration = oldPreDuration
 	})
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -473,8 +469,6 @@ func TestSubmitGuidedApplyDryRunJSON(t *testing.T) {
 	guidedApplyPedestalTag = "1.0.0"
 	guidedApplyBenchmarkName = "otel-demo-bench"
 	guidedApplyBenchmarkTag = "1.0.0"
-	guidedApplyInterval = 10
-	guidedApplyPreDuration = 5
 
 	stdout, _, err := captureStdIO(t, func() error {
 		return submitGuidedApply(guidedcli.GuidedConfig{
@@ -495,7 +489,10 @@ func TestSubmitGuidedApplyDryRunJSON(t *testing.T) {
 		t.Fatalf("expected project_id=9, got %v", plan["project_id"])
 	}
 	spec := plan["spec"].(map[string]any)
-	if spec["interval"] != float64(10) {
-		t.Fatalf("expected interval=10, got %v", spec["interval"])
+	if _, ok := spec["interval"]; ok {
+		t.Fatalf("interval must not appear in dry-run envelope (it is pinned server-side)")
+	}
+	if _, ok := spec["pre_duration"]; ok {
+		t.Fatalf("pre_duration must not appear in dry-run envelope (it is pinned server-side)")
 	}
 }

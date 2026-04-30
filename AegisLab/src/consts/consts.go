@@ -19,6 +19,34 @@ const (
 	DefaultTimeUnit         = time.Minute
 )
 
+// Fault-injection time windows are pinned in code so loop agents and
+// external callers cannot drift them. Every active injection follows the
+// same schedule:
+//
+//	[restart] → [warmup] → [normal] → [abnormal]
+//	  6 min      2 min      5 min       5 min
+//
+// Interval (= normal + abnormal) is the namespace-lock window after the
+// pedestal becomes Ready; it does NOT include the restart or warmup phases.
+const (
+	FixedPedestalRestartTimeoutSeconds = 6 * 60 // 6 min
+	FixedPedestalWarmupSeconds         = 2 * 60 // 2 min
+	FixedNormalWindowSeconds           = 5 * 60 // 5 min (was pre_duration)
+	FixedAbnormalWindowSeconds         = 5 * 60 // 5 min (was per-spec duration)
+	FixedIntervalSeconds               = FixedNormalWindowSeconds + FixedAbnormalWindowSeconds
+)
+
+// Minute-denominated views of the fixed windows, for the legacy payload
+// fields (consts.InjectPreDuration, consts.RestartIntarval, consts.RestartFaultDuration)
+// that downstream code expects in minute units.
+const (
+	FixedPedestalRestartTimeoutMinutes = FixedPedestalRestartTimeoutSeconds / 60
+	FixedPedestalWarmupMinutes         = FixedPedestalWarmupSeconds / 60
+	FixedNormalWindowMinutes           = FixedNormalWindowSeconds / 60
+	FixedAbnormalWindowMinutes         = FixedAbnormalWindowSeconds / 60
+	FixedIntervalMinutes               = FixedIntervalSeconds / 60
+)
+
 // monitoring related constants
 const (
 	// Set of all monitored namespaces

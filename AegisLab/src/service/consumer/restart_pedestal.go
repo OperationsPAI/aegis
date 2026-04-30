@@ -72,12 +72,11 @@ func restartWorkloadReadyTimeout() time.Duration {
 	return timeout
 }
 
+// restartPostReadySoakDuration is the warmup window between workload-Ready and
+// the start of the normal-data window. Pinned in code so loop agents and
+// ops can't tune it (see consts.FixedPedestalWarmupSeconds).
 func restartPostReadySoakDuration() time.Duration {
-	soak := 20 * time.Second
-	if v := config.GetInt("restart_pedestal.post_ready_soak_seconds"); v >= 0 {
-		soak = time.Duration(v) * time.Second
-	}
-	return soak
+	return time.Duration(consts.FixedPedestalWarmupSeconds) * time.Second
 }
 
 func extractPreDuration(injectPayload map[string]any) time.Duration {
@@ -135,7 +134,7 @@ func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, nam
 	}
 
 	if readinessTimeout <= 0 {
-		readinessTimeout = time.Duration(config.DefaultReadinessTimeoutSeconds) * time.Second
+		readinessTimeout = time.Duration(consts.FixedPedestalRestartTimeoutSeconds) * time.Second
 	}
 	if err := gateway.WaitNamespaceReady(ctx, namespace, readinessTimeout); err != nil {
 		return time.Time{}, err
@@ -490,15 +489,15 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		tokens.warming = true
 		logEntry.Infof("acquired warming token for ns %s", namespace)
 
-		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace, cfg.ReadinessTimeout())
+		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace, time.Duration(consts.FixedPedestalRestartTimeoutSeconds)*time.Second)
 		if err != nil {
 			toReleased = true
 			// Surface the failure as a restart.pedestal.failed trace event so
 			// the operator can see the stuck-resource list rather than
-			// silently rolling forward into a doomed inject. Per-system
-			// `readiness_timeout_seconds` (default 900) controls how long we
-			// wait — DSB systems should bump this to 1200–1500 to absorb
-			// their cold-start init-container chains.
+			// silently rolling forward into a doomed inject. The pedestal
+			// restart timeout is fixed at consts.FixedPedestalRestartTimeoutSeconds
+			// (6 min) — DSB systems with longer cold-start chains will fail
+			// this gate instead of silently extending the schedule.
 			publishEvent(redisGateway, childCtx, fmt.Sprintf(consts.StreamTraceLogKey, task.TraceID), dto.TraceStreamEvent{
 				TaskID:    task.TaskID,
 				TaskType:  consts.TaskTypeRestartPedestal,
