@@ -44,7 +44,11 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 1.0.0
+      # Bumped 1.0.0 → 1.0.1 for #300 fix (Java OTLP gRPC :4317 → HTTP :4318
+      # + loadgenerator gRPC dns:///headless). Reseed honors the immutability
+      # contract on already-seeded versions, so the values below would not
+      # propagate to the DB without bumping the version name.
+      - name: 1.0.1
         github_link: OperationsPAI/train-ticket
         status: 1
         helm_config:
@@ -135,7 +139,10 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 1.1.1
+      # Bumped 1.1.1 → 1.1.2 for #300 fix (Coherence/Helidon Java OTLP
+      # gRPC :4317 → HTTP :4318). Reseed honors the immutability contract
+      # on already-seeded versions.
+      - name: 1.1.2
         github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
         status: 1
         # Chart is now self-hosted in the fork's gh-pages site. For the Byte
@@ -334,7 +341,10 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.4
+      # Bumped 0.1.4 → 0.1.5 for #300 fix (TeaStore Java OTLP
+      # gRPC :4317 → HTTP :4318). Reseed honors the immutability contract
+      # on already-seeded versions.
+      - name: 0.1.5
         github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
