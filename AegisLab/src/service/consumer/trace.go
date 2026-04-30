@@ -172,6 +172,43 @@ func tryUpdateTraceStateCore(redisGateway *redis.Gateway, ctx context.Context, d
 		}
 	}
 
+	// Issue #312: when a task transitions to TaskRescheduled (e.g.
+	// BuildDatapack waiting for a token / ClickHouse freshness, or
+	// RestartPedestal waiting for a free namespace), inferTraceState
+	// counts the task as Pending and falls through to Priority 4, which
+	// re-asserts the *previous* leaf event (e.g. fault.injection.completed)
+	// as last_event. Without this surface, a trace whose BD child has been
+	// rescheduling for many minutes still reports last_event=
+	// fault.injection.completed and is indistinguishable from a trace
+	// whose CRD-success path never submitted BD at all (which is what
+	// the stuck-trace reconciler from #309 is meant to repair). Prefer
+	// the explicit streamEvent.EventName so the trace reflects that the
+	// child task has actually been attempted; trace state classification
+	// (Failed/Completed) is left to inferTraceState.
+	//
+	// Race guard (Copilot review on #313): updateTraceState runs in a
+	// goroutine, so a stale TaskRescheduled call can land *after* a
+	// later Running/Completed call wrote a terminal event. Without the
+	// guard, the late-arriving stale event would overwrite a completed
+	// trace's last_event with no.token.available — strictly worse than
+	// the original bug. Three checks:
+	//   1. updatedTask.State == TaskRescheduled — DB still says
+	//      rescheduled, so the override reflects current persisted state.
+	//   2. streamEvent.TaskID == taskID — the streamEvent describes the
+	//      same task transition we're processing, not a separate event
+	//      that happens to ride the same channel.
+	//   3. streamEvent.TaskType == updatedTask.Type — defensive consistency
+	//      check; should always hold but cheap to enforce.
+	if newState == consts.TaskRescheduled &&
+		updatedTask.State == consts.TaskRescheduled &&
+		streamEvent != nil && streamEvent.EventName != "" &&
+		streamEvent.TaskID == taskID &&
+		streamEvent.TaskType == updatedTask.Type {
+		inferredEventType = streamEvent.EventName
+		logEntry.Debugf("using explicit event from rescheduled %s task: %s",
+			consts.GetTaskTypeName(updatedTask.Type), inferredEventType)
+	}
+
 	logEntry.Debugf("inferred trace state: %s, event: %s (triggered by task %s: %s)",
 		consts.GetTraceStateName(inferredState),
 		inferredEventType,
