@@ -73,6 +73,7 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 		)`,
 		`CREATE TABLE parameter_configs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			system_id INTEGER,
 			config_key TEXT NOT NULL,
 			type INTEGER NOT NULL,
 			category INTEGER NOT NULL,
@@ -82,7 +83,7 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 			template_string TEXT,
 			required INTEGER NOT NULL DEFAULT 0,
 			overridable INTEGER NOT NULL DEFAULT 1,
-			UNIQUE(config_key, type, category)
+			UNIQUE(system_id, config_key, type, category)
 		)`,
 		`CREATE TABLE container_version_env_vars (
 			container_version_id INTEGER NOT NULL,
@@ -983,6 +984,114 @@ containers:
 	}
 	if !pruneApplied {
 		t.Fatalf("expected applied prune action, got %+v", report.Actions)
+	}
+}
+
+// TestReseedTwoSystemsSameKeyDifferentDefault pins issue #314: two systems
+// declaring the same chart value path with different default_values must
+// each land in DB as their own parameter_configs row with their own
+// helm_config_values link, instead of colliding on the legacy 3-column
+// unique index where only the first system's value would survive.
+func TestReseedTwoSystemsSameKeyDifferentDefault(t *testing.T) {
+	db := newReseedTestDB(t)
+	// Two pre-existing systems sharing a DSB-style chart family that uses
+	// the same `global.otel.endpoint` value path.
+	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'hs', 2, 1)`).Error
+	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (2, 'sn', 2, 1)`).Error
+	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`).Error
+	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (20, '0.1.0', 2, 0, 1)`).Error
+	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (100, 'hs', '0.1.0', 10, 'https://x', 'r')`).Error
+	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (200, 'sn', '0.1.0', 20, 'https://x', 'r')`).Error
+
+	seed := writeSeedFile(t, `
+containers:
+  - type: 2
+    name: hs
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        helm_config:
+          version: 0.1.0
+          chart_name: hs
+          repo_name: r
+          repo_url: https://x
+          values:
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+  - type: 2
+    name: sn
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        helm_config:
+          version: 0.1.0
+          chart_name: sn
+          repo_name: r
+          repo_url: https://x
+          values:
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-sn-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+`)
+
+	if _, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed}); err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	// Two distinct parameter_configs rows must exist for the same key — one
+	// per owning system.
+	type row struct {
+		ID           int
+		SystemID     *int
+		DefaultValue *string
+	}
+	var rows []row
+	if err := db.Raw(`SELECT id, system_id, default_value FROM parameter_configs WHERE config_key = 'global.otel.endpoint' ORDER BY system_id`).Scan(&rows).Error; err != nil {
+		t.Fatalf("list parameter_configs: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("want 2 parameter_configs rows for global.otel.endpoint, got %d (%+v)", len(rows), rows)
+	}
+
+	// helm_config_values link must point hs's helm_config at hs's row, sn's at sn's.
+	var hsLinked, snLinked string
+	if err := db.Raw(`
+		SELECT pc.default_value
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		WHERE hcv.helm_config_id = 100 AND pc.config_key = 'global.otel.endpoint'`).Scan(&hsLinked).Error; err != nil {
+		t.Fatalf("hs linked: %v", err)
+	}
+	if err := db.Raw(`
+		SELECT pc.default_value
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		WHERE hcv.helm_config_id = 200 AND pc.config_key = 'global.otel.endpoint'`).Scan(&snLinked).Error; err != nil {
+		t.Fatalf("sn linked: %v", err)
+	}
+	if hsLinked != "opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318" {
+		t.Fatalf("hs helm_config resolved wrong default: %q", hsLinked)
+	}
+	if snLinked != "opentelemetry-kube-stack-deployment-sn-collector.monitoring.svc.cluster.local:4318" {
+		t.Fatalf("sn helm_config resolved wrong default: %q", snLinked)
+	}
+
+	// Idempotent: rerun produces no new actions.
+	r2, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("second reseed: %v", err)
+	}
+	if len(r2.Actions) != 0 {
+		t.Fatalf("expected clean idempotent rerun for two-system seed, got %+v", r2.Actions)
 	}
 }
 

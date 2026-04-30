@@ -215,8 +215,16 @@ func (h *HelmConfig) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// ParameterConfig is a (system_id, config_key, type, category)-scoped row.
+// SystemID is the owning containers.id; nullable rows are cluster-wide
+// (no single owning system, e.g. legitimately shared cross-system params).
+// The unique index uses (system_id, config_key, type, category) so two
+// systems can declare the same chart value path with different defaults
+// — see issue #314 for the DSB-family hs/sn/media collision that motivated
+// scoping the index.
 type ParameterConfig struct {
 	ID             int                      `gorm:"primaryKey;autoIncrement"`
+	SystemID       *int                     `gorm:"column:system_id;index;uniqueIndex:idx_unique_config"`
 	Key            string                   `gorm:"column:config_key;not null;size:128;uniqueIndex:idx_unique_config"`
 	Type           consts.ParameterType     `gorm:"not null;default:0;uniqueIndex:idx_unique_config"`
 	Category       consts.ParameterCategory `gorm:"not null;uniqueIndex:idx_unique_config"`

@@ -28,6 +28,19 @@ func NewService(repo *Repository, build *BuildGateway, helmFiles *HelmFileStore,
 	return &Service{repo: repo, build: build, helmFiles: helmFiles, labels: labels, redis: redis}
 }
 
+// paramConfigMapKey is the dedup key used when batch-resolving parameter
+// configs back to their persisted IDs. Includes system_id so two systems'
+// rows for the same chart value path are kept distinct (issue #314).
+// A nil systemID maps to "*" so cluster-wide rows don't collide with
+// system-scoped rows that happen to share the same (key, type, category).
+func paramConfigMapKey(systemID *int, key string, typ, category int) string {
+	sid := "*"
+	if systemID != nil {
+		sid = fmt.Sprintf("%d", *systemID)
+	}
+	return fmt.Sprintf("%s|%s:%d:%d", sid, key, typ, category)
+}
+
 func (s *Service) CreateContainer(_ context.Context, req *CreateContainerReq, userID int) (*ContainerResp, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request cannot be nil")
@@ -232,7 +245,7 @@ func (s *Service) CreateContainerVersion(_ context.Context, req *CreateContainer
 	var createdVersion *model.ContainerVersion
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
-		versions, err := s.createContainerVersionsCore(repo, []model.ContainerVersion{*version})
+		versions, err := s.createContainerVersionsCore(repo, []model.ContainerVersion{*version}, &containerID)
 		if err != nil {
 			return fmt.Errorf("failed to create container version: %w", err)
 		}
@@ -511,7 +524,7 @@ func (s *Service) createContainerCore(repo *Repository, container *model.Contain
 			container.Versions[i].UserID = userID
 		}
 
-		if _, err := s.createContainerVersionsCore(repo, container.Versions); err != nil {
+		if _, err := s.createContainerVersionsCore(repo, container.Versions, &container.ID); err != nil {
 			return nil, fmt.Errorf("failed to create container versions: %w", err)
 		}
 	}
@@ -519,7 +532,13 @@ func (s *Service) createContainerCore(repo *Repository, container *model.Contain
 	return container, nil
 }
 
-func (s *Service) createContainerVersionsCore(repo *Repository, versions []model.ContainerVersion) ([]model.ContainerVersion, error) {
+// createContainerVersionsCore inserts versions and their (env_var,
+// helm_value) parameter_configs. systemID, when non-nil, is the owning
+// containers.id stamped onto every parameter_configs row created here so
+// that two systems declaring the same chart value path each get their own
+// row (issue #314). Pass nil only for cluster-wide parameter rows that
+// genuinely should be shared across systems.
+func (s *Service) createContainerVersionsCore(repo *Repository, versions []model.ContainerVersion, systemID *int) ([]model.ContainerVersion, error) {
 	if len(versions) == 0 {
 		return nil, nil
 	}
@@ -547,6 +566,7 @@ func (s *Service) createContainerVersionsCore(repo *Repository, versions []model
 		envVars := make([]model.ParameterConfig, len(envVarsWithIdx))
 		for i, item := range envVarsWithIdx {
 			envVars[i] = item.envVar
+			envVars[i].SystemID = systemID
 		}
 
 		if err := repo.batchCreateOrFindParameterConfigs(envVars); err != nil {
@@ -560,14 +580,14 @@ func (s *Service) createContainerVersionsCore(repo *Repository, versions []model
 
 		configMap := make(map[string]int, len(actualEnvVars))
 		for _, cfg := range actualEnvVars {
-			key := fmt.Sprintf("%s:%d:%d", cfg.Key, cfg.Type, cfg.Category)
+			key := paramConfigMapKey(cfg.SystemID, cfg.Key, int(cfg.Type), int(cfg.Category))
 			configMap[key] = cfg.ID
 		}
 
 		relations := make([]model.ContainerVersionEnvVar, 0, len(envVarsWithIdx))
 		for _, item := range envVarsWithIdx {
 			cfg := item.envVar
-			key := fmt.Sprintf("%s:%d:%d", cfg.Key, cfg.Type, cfg.Category)
+			key := paramConfigMapKey(systemID, cfg.Key, int(cfg.Type), int(cfg.Category))
 			paramID, ok := configMap[key]
 			if !ok {
 				return nil, fmt.Errorf("parameter config not found after creation: %s", key)
@@ -621,6 +641,7 @@ func (s *Service) createContainerVersionsCore(repo *Repository, versions []model
 	helmValues := make([]model.ParameterConfig, len(helmValuesWithIdx))
 	for i, item := range helmValuesWithIdx {
 		helmValues[i] = item.value
+		helmValues[i].SystemID = systemID
 	}
 
 	if err := repo.batchCreateOrFindParameterConfigs(helmValues); err != nil {
@@ -634,14 +655,14 @@ func (s *Service) createContainerVersionsCore(repo *Repository, versions []model
 
 	configMap := make(map[string]int, len(actualHelmValues))
 	for _, cfg := range actualHelmValues {
-		key := fmt.Sprintf("%s:%d:%d", cfg.Key, cfg.Type, cfg.Category)
+		key := paramConfigMapKey(cfg.SystemID, cfg.Key, int(cfg.Type), int(cfg.Category))
 		configMap[key] = cfg.ID
 	}
 
 	relations := make([]model.HelmConfigValue, 0, len(helmValuesWithIdx))
 	for _, item := range helmValuesWithIdx {
 		cfg := item.value
-		key := fmt.Sprintf("%s:%d:%d", cfg.Key, cfg.Type, cfg.Category)
+		key := paramConfigMapKey(systemID, cfg.Key, int(cfg.Type), int(cfg.Category))
 		paramID, ok := configMap[key]
 		if !ok {
 			return nil, fmt.Errorf("helm parameter config not found after creation: %s", key)

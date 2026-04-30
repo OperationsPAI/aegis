@@ -52,6 +52,11 @@ func centralEntities() []interface{} {
 }
 
 func migrate(db *gorm.DB, contribs []framework.MigrationRegistrar) {
+	for _, hook := range framework.FlattenPreMigrates(contribs) {
+		if err := hook(db); err != nil {
+			logrus.Fatalf("Failed pre-migrate hook: %v", err)
+		}
+	}
 	entities := centralEntities()
 	entities = append(entities, framework.FlattenMigrations(contribs)...)
 	if err := db.AutoMigrate(entities...); err != nil {
