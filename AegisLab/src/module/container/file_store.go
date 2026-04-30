@@ -95,7 +95,7 @@ func (s *HelmFileStore) SaveValueFile(containerName string, srcFileHeader *multi
 		return "", fmt.Errorf("failed to stat saved helm values file %s: %w", targetPath, err)
 	} else if info.Size() == 0 {
 		_ = os.Remove(targetPath)
-		return "", fmt.Errorf("saved helm values file %s ended up 0 bytes; removed to prevent downstream GetValuesMap panic", targetPath)
+		return "", fmt.Errorf("saved helm values file %s ended up 0 bytes; removed to prevent downstream use of an empty or invalid values file", targetPath)
 	}
 
 	logrus.WithField("file_path", targetPath).Info("Helm values file uploaded successfully")
