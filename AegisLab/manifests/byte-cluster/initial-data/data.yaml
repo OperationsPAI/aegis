@@ -87,7 +87,12 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.6
+      # Bumped 0.1.6 → 0.1.7 to retarget OTel exporter to the per-system
+      # otel-demo collector (#303 step 2b). The wrapper otel-collector inside
+      # the demo chart forwards to `global.clusterCollector.service`, which
+      # we now point at the dedicated single-pod deployment-otel-demo
+      # collector instead of the shared deployment-collector.
+      - name: 0.1.7
         github_link: open-telemetry/opentelemetry-demo
         status: 1
         helm_config:
@@ -95,6 +100,13 @@ containers:
           chart_name: otel-demo-aegis
           repo_name: opspai
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          values:
+            - key: global.clusterCollector.service
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-otel-demo-collector.monitoring.svc.cluster.local
+              overridable: true
           status: 1
   - type: 2
     name: ob
@@ -131,7 +143,10 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 1.1.2
+      # Bumped 1.1.2 → 1.1.3 to retarget OTel exporter and Instrumentation
+      # CR at the per-system sockshop collector (#303 step 2b). Reseed honors
+      # the immutability contract on already-seeded versions.
+      - name: 1.1.3
         github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
         status: 1
         # Chart is now self-hosted in the fork's gh-pages site. For the Byte
@@ -171,13 +186,13 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: monitoring/opentelemetry-kube-stack
+              default_value: monitoring/otel-instr-sockshop
               overridable: true
             - key: otel.collectorEndpoint
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              default_value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring.svc.cluster.local:4317
               overridable: true
           status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
@@ -208,7 +223,9 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.3
+      # Bumped 0.1.3 → 0.1.4 to retarget `global.otel.endpoint` at the
+      # per-system hs collector (#303 step 2b).
+      - name: 0.1.4
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
@@ -239,7 +256,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
+              default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -247,7 +264,9 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.4
+      # Bumped 0.1.4 → 0.1.5 to retarget `global.otel.endpoint` at the
+      # per-system sn collector (#303 step 2b).
+      - name: 0.1.5
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
@@ -278,7 +297,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
+              default_value: opentelemetry-kube-stack-deployment-sn-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -286,7 +305,9 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.4
+      # Bumped 0.1.4 → 0.1.5 to retarget `global.otel.endpoint` at the
+      # per-system media collector (#303 step 2b).
+      - name: 0.1.5
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
@@ -317,7 +338,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4318
+              default_value: opentelemetry-kube-stack-deployment-media-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -325,7 +346,10 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.5
+      # Bumped 0.1.5 → 0.1.6 to retarget OTel exporter and Instrumentation
+      # CR at the per-system teastore collector (#303 step 2b). Reseed honors
+      # the immutability contract on already-seeded versions.
+      - name: 0.1.6
         github_link: LGU-SE-Internal/TeaStore
         status: 1
         helm_config:
@@ -350,7 +374,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://opentelemetry-kube-stack-deployment-collector.monitoring.svc.cluster.local:4317
+              default_value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring.svc.cluster.local:4317
               overridable: true
             # 0.1.1 parameterizes the inject-<language> annotation from these
             # two values (previously hardcoded to "monitoring/opentelemetry-kube-stack").
@@ -365,7 +389,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: opentelemetry-kube-stack
+              default_value: otel-instr-teastore
               overridable: true
             # 0.1.2 makes the busybox image used by jmeter's wait-for-registry
             # init container configurable (LGU-SE-Internal/TeaStore#8). The Byte
