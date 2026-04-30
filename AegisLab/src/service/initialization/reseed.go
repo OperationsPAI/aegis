@@ -470,16 +470,25 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 		return fmt.Errorf("list helm values for %s@%s: %w", systemName, versionName, err)
 	}
 
-	have := make(map[string]struct{}, len(existing))
+	have := make(map[string]*model.ParameterConfig, len(existing))
 	for i := range existing {
-		have[parameterConfigIdentity(&existing[i])] = struct{}{}
+		have[parameterConfigIdentity(&existing[i])] = &existing[i]
 	}
 
 	for _, valueSeed := range seed.Values {
 		cfg := valueSeed.ConvertToDBParameterConfig()
 		cfg.SystemID = ownerID
 		key := parameterConfigIdentity(cfg)
-		if _, ok := have[key]; ok {
+		existingCfg, present := have[key]
+
+		// Detect mismatched ownership / default_value: the helm_config is
+		// linked to a parameter_configs row that doesn't belong to this
+		// system or carries a stale default. This is the issue #314 failure
+		// mode — pre-fix, two systems would land on a single shared row.
+		// Re-resolve to the per-system row and relink, so reseed actually
+		// repairs bad links instead of silently skipping.
+		mismatch := present && (!systemIDsEqual(existingCfg.SystemID, ownerID) || !defaultValuesEqual(existingCfg.DefaultValue, cfg.DefaultValue))
+		if present && !mismatch {
 			continue
 		}
 
@@ -491,6 +500,10 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 			NewValue: parameterConfigSummary(cfg),
 			Note:     note,
 		}
+		if mismatch {
+			act.OldValue = parameterConfigSummary(existingCfg)
+			act.Note = "relink: ownership/default mismatch"
+		}
 		if dryRun {
 			report.Actions = append(report.Actions, act)
 			continue
@@ -499,6 +512,17 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 		actualCfg, err := findOrCreateParameterConfig(db, cfg)
 		if err != nil {
 			return fmt.Errorf("resolve helm value %s for %s@%s: %w", cfg.Key, systemName, versionName, err)
+		}
+
+		if mismatch && actualCfg.ID != existingCfg.ID {
+			// Drop the stale link before creating the correct one — the
+			// (helm_config_id, parameter_config_id) PK would otherwise be
+			// fine, but leaving the wrong link around makes future reseed /
+			// helm-value-resolution see two competing rows for the same key.
+			if err := db.Where("helm_config_id = ? AND parameter_config_id = ?", helm.ID, existingCfg.ID).
+				Delete(&model.HelmConfigValue{}).Error; err != nil {
+				return fmt.Errorf("drop stale helm link %s for %s@%s: %w", cfg.Key, systemName, versionName, err)
+			}
 		}
 
 		rel := model.HelmConfigValue{
@@ -511,10 +535,17 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 
 		act.Applied = true
 		report.Actions = append(report.Actions, act)
-		have[key] = struct{}{}
+		have[key] = actualCfg
 	}
 
 	return nil
+}
+
+func systemIDsEqual(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 // reseedOneDynamicConfig reconciles a single dynamic_configs row + its etcd
