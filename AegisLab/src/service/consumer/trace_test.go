@@ -158,3 +158,71 @@ func TestTryUpdateTraceStateCore_BDFailureAdvancesLastEvent(t *testing.T) {
 	require.NoError(t, db.First(&got, "id = ?", traceID).Error)
 	require.Equal(t, consts.EventDatapackBuildFailed, got.LastEvent)
 }
+
+// TestTryUpdateTraceStateCore_StaleRescheduleDoesNotOverwriteTerminal pins
+// the race-guard added per Copilot review on PR #313. Setup: BD task has
+// already advanced to TaskCompleted in the DB (a later updateTraceState
+// goroutine wrote the terminal state), but a stale TaskRescheduled call is
+// arriving late on the same channel with newState=TaskRescheduled and a
+// reschedule streamEvent. Without the guard, the override would overwrite
+// the trace's terminal last_event with no.token.available — strictly
+// worse than the original #312 corruption. With the guard, the persisted
+// task state (TaskCompleted) wins and inferTraceState's normal path
+// produces the correct terminal event.
+func TestTryUpdateTraceStateCore_StaleRescheduleDoesNotOverwriteTerminal(t *testing.T) {
+	db := newTraceStateTestDB(t)
+
+	traceID := uuid.NewString()
+	faultTaskID := uuid.NewString()
+	bdTaskID := uuid.NewString()
+	now := time.Now()
+
+	require.NoError(t, db.Create(&model.Trace{
+		ID:        traceID,
+		Type:      consts.TraceTypeFullPipeline,
+		LastEvent: consts.EventFaultInjectionCompleted,
+		State:     consts.TraceRunning,
+		Status:    consts.CommonEnabled,
+		LeafNum:   1,
+		StartTime: now.Add(-15 * time.Minute),
+		UpdatedAt: now.Add(-5 * time.Minute),
+	}).Error)
+	require.NoError(t, db.Create(&model.Task{
+		ID:       faultTaskID,
+		Type:     consts.TaskTypeFaultInjection,
+		TraceID:  traceID,
+		Payload:  "{}",
+		State:    consts.TaskCompleted,
+		Status:   consts.CommonEnabled,
+		Level:    1,
+		Sequence: 0,
+	}).Error)
+	// BD persisted as TaskCompleted — the later goroutine has already won.
+	require.NoError(t, db.Create(&model.Task{
+		ID:       bdTaskID,
+		Type:     consts.TaskTypeBuildDatapack,
+		TraceID:  traceID,
+		Payload:  "{}",
+		State:    consts.TaskCompleted,
+		Status:   consts.CommonEnabled,
+		Level:    2,
+		Sequence: 0,
+	}).Error)
+
+	staleStreamEvent := &dto.TraceStreamEvent{
+		TaskID:    bdTaskID,
+		TaskType:  consts.TaskTypeBuildDatapack,
+		EventName: consts.EventNoTokenAvailable,
+	}
+
+	// Late-arriving stale reschedule call — newState input still says
+	// TaskRescheduled because that was the value at goroutine spawn.
+	err := tryUpdateTraceStateCore(nil, context.Background(), db, traceID, bdTaskID,
+		consts.TaskRescheduled, staleStreamEvent)
+	require.NoError(t, err)
+
+	var got model.Trace
+	require.NoError(t, db.First(&got, "id = ?", traceID).Error)
+	require.NotEqual(t, consts.EventNoTokenAvailable, got.LastEvent,
+		"stale reschedule event must not overwrite a trace whose BD task already persisted as TaskCompleted")
+}

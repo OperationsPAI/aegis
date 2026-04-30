@@ -185,7 +185,25 @@ func tryUpdateTraceStateCore(redisGateway *redis.Gateway, ctx context.Context, d
 	// the explicit streamEvent.EventName so the trace reflects that the
 	// child task has actually been attempted; trace state classification
 	// (Failed/Completed) is left to inferTraceState.
-	if newState == consts.TaskRescheduled && streamEvent != nil && streamEvent.EventName != "" {
+	//
+	// Race guard (Copilot review on #313): updateTraceState runs in a
+	// goroutine, so a stale TaskRescheduled call can land *after* a
+	// later Running/Completed call wrote a terminal event. Without the
+	// guard, the late-arriving stale event would overwrite a completed
+	// trace's last_event with no.token.available — strictly worse than
+	// the original bug. Three checks:
+	//   1. updatedTask.State == TaskRescheduled — DB still says
+	//      rescheduled, so the override reflects current persisted state.
+	//   2. streamEvent.TaskID == taskID — the streamEvent describes the
+	//      same task transition we're processing, not a separate event
+	//      that happens to ride the same channel.
+	//   3. streamEvent.TaskType == updatedTask.Type — defensive consistency
+	//      check; should always hold but cheap to enforce.
+	if newState == consts.TaskRescheduled &&
+		updatedTask.State == consts.TaskRescheduled &&
+		streamEvent != nil && streamEvent.EventName != "" &&
+		streamEvent.TaskID == taskID &&
+		streamEvent.TaskType == updatedTask.Type {
 		inferredEventType = streamEvent.EventName
 		logEntry.Debugf("using explicit event from rescheduled %s task: %s",
 			consts.GetTaskTypeName(updatedTask.Type), inferredEventType)
