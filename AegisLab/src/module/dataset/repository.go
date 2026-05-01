@@ -381,7 +381,7 @@ func (r *Repository) clearDatasetVersionInjections(datasetVersionIDs []int, inje
 }
 
 func (r *Repository) ListInjectionsByDatasetVersionID(versionID int, includeLabels bool) ([]model.FaultInjection, error) {
-	query := r.db.Model(&model.FaultInjection{})
+	query := r.db.Model(&model.FaultInjection{}).Preload("Pedestal.Container")
 	if includeLabels {
 		query = query.Preload("Labels")
 	}

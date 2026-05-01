@@ -315,6 +315,14 @@ func getAlgoJobEnvVars(taskID string, executionID int, datapackPathPrefix, expPa
 		{Name: "EXECUTION_ID", Value: strconv.Itoa(executionID)},
 	}
 
+	// BENCHMARK_SYSTEM is consumed by the detector entrypoint to choose the
+	// pedestal-specific entrance service. Without this, the detector silently
+	// defaults to "ts" and fails on every non-train-ticket datapack with
+	// "No entrance traffic found in normal or abnormal trace data".
+	if payload.datapack.Pedestal != "" {
+		jobEnvVars = append(jobEnvVars, corev1.EnvVar{Name: "BENCHMARK_SYSTEM", Value: payload.datapack.Pedestal})
+	}
+
 	envNameIndexMap := make(map[string]int, len(jobEnvVars))
 	for index, jobEnvVar := range jobEnvVars {
 		envNameIndexMap[jobEnvVar.Name] = index
