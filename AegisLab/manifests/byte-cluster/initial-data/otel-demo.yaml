@@ -83,6 +83,15 @@ opentelemetry-demo:
         # round-trips it as float and chart schema rejects it.
         tag: 17.6-bookworm
 
+    # Disable optional LLM + product-reviews components. They were added
+    # in upstream otel-demo 2.2.0 and chart 0.1.8 enables them by default.
+    # We don't run AI/LLM workloads in the RCA benchmark — keeping them off
+    # avoids two extra mirrored images and two extra Pods per ns.
+    llm:
+      enabled: false
+    product-reviews:
+      enabled: false
+
   opentelemetry-collector:
     image:
       repository: pair-cn-shanghai.cr.volces.com/opspai/otel-demo-opentelemetry-collector-contrib
