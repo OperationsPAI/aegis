@@ -122,7 +122,7 @@ func (r *Repository) batchGetContainerVersions(containerType consts.ContainerTyp
 	query := r.db.Table("container_versions cv").
 		Preload("Container").
 		Where("cv.status = ?", consts.CommonEnabled).
-		Order("cv.container_id DESC, cv.name_major DESC, cv.name_minor DESC, cv.name_patch DESC")
+		Order("cv.container_id DESC, cv.name_major DESC, cv.name_minor DESC, cv.name_patch DESC, cv.id DESC")
 
 	query = query.Joins("INNER JOIN containers c ON c.id = cv.container_id").
 		Where("c.type = ? AND c.name IN (?) AND c.status = ?", containerType, containerNames, consts.CommonEnabled)
