@@ -27,6 +27,12 @@ from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
+from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+from rcabench_platform.v3.internal.reasoning.manifests.registry import (
+    ManifestRegistry,
+    get_default_registry,
+    set_default_registry,
+)
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperGraph, PlaceKind
 from rcabench_platform.v3.internal.reasoning.models.injection import InjectionNodeResolver
 from rcabench_platform.v3.internal.reasoning.models.propagation import (
@@ -43,6 +49,40 @@ from rcabench_platform.v3.sdk.utils.serde import save_json
 
 logger = logging.getLogger(__name__)
 app = typer.Typer(name="reason", help="Fault propagation reasoning engine CLI")
+
+
+# Default manifest directory: package-relative ``manifests/fault_types/``.
+# Phase 1 ships zero manifests (apart from the example referenced in tests),
+# so the default is "registry empty → fall back to generic rules everywhere".
+_DEFAULT_MANIFEST_DIR = (
+    Path(__file__).resolve().parent / "manifests" / "fault_types"
+)
+
+
+def _init_manifest_registry(manifest_dir: str | None) -> None:
+    """Build and install the process-wide manifest registry.
+
+    Phase 1 keeps the generic-rule path as the default: an empty registry
+    or a missing directory both result in ``registry.get(name) is None``
+    for every fault type, which is the documented "fall back" signal.
+    """
+    target = Path(manifest_dir) if manifest_dir else _DEFAULT_MANIFEST_DIR
+    if not target.exists():
+        logger.info(
+            "manifest dir %s does not exist; using empty registry "
+            "(generic rules everywhere)",
+            target,
+        )
+        set_default_registry(ManifestRegistry({}))
+        return
+    registry = ManifestRegistry.from_directory(target, strict=True)
+    logger.info(
+        "loaded %d manifest(s) from %s: %s",
+        len(registry),
+        target,
+        ", ".join(registry.names()) or "(none)",
+    )
+    set_default_registry(registry)
 
 
 # =============================================================================
@@ -559,6 +599,25 @@ def run_single_case(
             f"[{case_name}] Resolved injection: {resolved.fault_type_name} -> "
             f"{resolved.start_kind} ({resolved.resolution_method}): {resolved.injection_nodes}"
         )
+
+        # Bind the active manifest (if any) for downstream Phase-3 gates.
+        # Phase 1 logs the binding and discards the context — production
+        # code paths still use the generic 18-rule pipeline. Phase 3 will
+        # forward this context into ManifestEntryGate / ManifestLayerGate.
+        _registry = get_default_registry()
+        _manifest = _registry.get(resolved.fault_type_name)
+        _ = ReasoningContext(
+            fault_type_name=resolved.fault_type_name,
+            manifest=_manifest,
+        )
+        if _manifest is None:
+            logger.info(
+                "no manifest for %s, using generic rules", resolved.fault_type_name
+            )
+        else:
+            logger.debug(
+                "manifest %s bound for case %s", resolved.fault_type_name, case_name
+            )
 
         physical_node_ids: list[int] = []
         for injection_node in actual_injection_nodes:
@@ -1083,9 +1142,19 @@ def _log_batch_summary(stats: dict[str, int], total_time: float) -> None:
 def run(
     data_dir: str = typer.Option(..., help="Directory containing parquet data files"),
     max_hops: int = typer.Option(15, help="Maximum propagation hops"),
+    manifest_dir: str | None = typer.Option(
+        None,
+        "--manifest-dir",
+        help=(
+            "Directory of fault manifest YAMLs. Defaults to the package-shipped "
+            "``manifests/fault_types/``. An empty / missing directory keeps the "
+            "generic-rule fallback for every fault type."
+        ),
+    ),
 ) -> int:
     """Run fault propagation analysis for a single case."""
     setup_logging(verbose=True)
+    _init_manifest_registry(manifest_dir)
     total_start = time.time()
 
     data_path = Path(data_dir)
@@ -1149,7 +1218,17 @@ def batch(
     max_hops: int = typer.Option(15, help="Maximum propagation hops"),
     force: bool = typer.Option(False, "--force", help="Force reprocess all cases"),
     retry_no_paths: bool = typer.Option(False, "--retry-no-paths", help="Only retry no_paths cases"),
+    manifest_dir: str | None = typer.Option(
+        None,
+        "--manifest-dir",
+        help=(
+            "Directory of fault manifest YAMLs. Defaults to the package-shipped "
+            "``manifests/fault_types/``. An empty / missing directory keeps the "
+            "generic-rule fallback for every fault type."
+        ),
+    ),
 ) -> int:
+    _init_manifest_registry(manifest_dir)
     output_path = Path("output/batch_runs")
     output_path.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
