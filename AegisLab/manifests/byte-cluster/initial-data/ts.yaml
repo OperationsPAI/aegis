@@ -1,22 +1,15 @@
 global:
+  # Tag for ts-* service images. Seed only overrides global.image.repository
+  # (pair-cn-shanghai mirror), not the tag, so v1.2.9 lives here.
   image:
-    repository: pair-diag-cn-guangzhou.cr.volces.com/pair
     tag: "v1.2.9"
   security:
     allowInsecureImages: true
 
-mysql:
-  image:
-    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/mysql
-
-rabbitmq:
-  image:
-    registry: pair-diag-cn-guangzhou.cr.volces.com/pair
-    repository: rabbitmq
-
-loadgenerator:
-  image:
-    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/loadgenerator
-    tag: "023"
-  initContainer:
-    image: pair-diag-cn-guangzhou.cr.volces.com/pair/netshoot:v0.14
+# NOTE: mysql / rabbitmq / loadgenerator image overrides removed — they're now
+# in data.yaml's ts@1.0.6 helm_config.values (#326). Keeping them here was
+# DOUBLE-SETTING the values: seed overrode `repository`, but the legacy
+# `rabbitmq.image.registry: pair-diag.../pair` in this file silently composed
+# with seed's repository to produce the broken
+# `pair-diag/pair/pair-cn-shanghai/opspai/rabbitmq` ImagePullBackOff on every
+# new ts ns.
