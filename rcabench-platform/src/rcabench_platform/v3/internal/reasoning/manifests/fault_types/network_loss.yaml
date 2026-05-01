@@ -1,0 +1,85 @@
+fault_type_name: NetworkLoss
+target_kind: pod
+seed_tier: degraded
+description: |
+  Pod-level packet loss injected via netem. A configured fraction of
+  packets on the targeted interface are dropped; TCP recovers via
+  retransmission, producing moderate latency increase plus a non-trivial
+  timeout rate. Sample injections in the dataset use loss percentages
+  ranging 53–97%, so the dominant signature is a clear timeout/error
+  band on top of the latency lift, NOT pure latency. This is the most
+  severe of the trio (Loss > Corrupt > Duplicate).
+
+# Direction handling identical to network_delay.yaml:
+#   "from" → egress; "to" → ingress; "both" → both.
+# Symptom is on adjacent spans either way. Pod-level features (cpu,
+# memory, throttle) do NOT fire; this is purely a transport-layer fault.
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.3, .inf]
+      magnitude_source: empirical
+  optional_features:
+    - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: empirical
+  optional_min_match: 0
+
+# Layer 1: directly-called services see the timeout/latency. Layer 2:
+# transitive callers absorb retries; tail still propagates as elevated
+# error rate when retry budget exhausts.
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes, routes_to]
+    edge_directions: [forward, forward, backward]
+    expected_features:
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.7
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+# Within-family hand-off: when loss saturates (≥95%), recovery via
+# retransmit is impossible and the link is functionally partitioned.
+# Verification continues under NetworkPartition. No cross-family
+# hand-offs are added — universal triggers (`silent`, `error_rate>0.2`)
+# are already covered by HTTPResponseAbort/NetworkPartition manifests.
+hand_offs:
+  - to: NetworkPartition
+    trigger:
+      kind: span
+      feature: timeout_rate
+      threshold: 0.5
+    on_layer: 1
+    rationale: |
+      When configured loss approaches 100% (sample injections include
+      loss=97), TCP retransmits never succeed within window; adjacent
+      spans show timeout_rate ≥ 0.5 indistinguishable from outright
+      partition. Hand off so layer-2 verification reuses partition's
+      silence-aware derivation.
+
+terminals: []

@@ -1,0 +1,74 @@
+fault_type_name: NetworkDuplicate
+target_kind: pod
+seed_tier: degraded
+description: |
+  Pod-level packet duplication injected via netem. A configured fraction
+  of packets are sent twice; TCP de-duplicates at the receiver via
+  sequence numbers, so the protocol-level recovery is essentially free.
+  Net effect is a small bandwidth/CPU overhead and a slight latency
+  bump. Of the three packet-disturbance faults, this is the LEAST
+  severe (Loss > Corrupt > Duplicate); bands are correspondingly
+  loosest, reflecting that duplicate packets are mostly tolerated.
+
+# Direction handling: same egress/ingress dispatch as other network
+# faults via display_config.direction. The injecting pod is reachable;
+# pod-level resource features (cpu/mem/throttle) do NOT fire.
+#
+# NOTE: the dataset contains zero `*-duplicate-*` cases at writing time
+# (verified via `ls /home/ddq/AoyangSpace/dataset/rca/ | grep duplicate`).
+# All bands here are theoretical, derived from the netem mechanism +
+# the by-construction severity ordering (lower-bound each band slightly
+# below NetworkCorrupt's lower-bound). Once empirical samples land,
+# revisit and tighten.
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.15, .inf]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: timeout_rate
+      band: [0.02, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: latency_p50_ratio
+      band: [1.1, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+# Cascade is the shallowest of the network family. TCP de-dup is local;
+# transitive callers are essentially shielded. We keep layer 2 narrow
+# and do not extend to layer 3.
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes, routes_to]
+    edge_directions: [forward, forward, backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.1, .inf]
+        magnitude_decay: 0.7
+      - kind: span
+        feature: latency_p50_ratio
+        band: [1.05, .inf]
+        magnitude_decay: 0.7
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.05, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []

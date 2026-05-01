@@ -1,0 +1,70 @@
+fault_type_name: NetworkCorrupt
+target_kind: pod
+seed_tier: degraded
+description: |
+  Pod-level packet corruption injected via netem. A configured fraction
+  of packets have random bit-flips applied before transmission; TCP
+  checksums detect the corruption and the receiver discards the packet,
+  forcing retransmit. Behaviorally similar to packet loss but slightly
+  cheaper to recover (no MAC/PHY-layer retry overhead). Severity ranks
+  Loss > Corrupt > Duplicate. Sample injections in the dataset use
+  corruption percentages 47–84%.
+
+# Direction handling identical to other network faults — read
+# display_config.direction from injection.json:
+#   "from" → egress; "to" → ingress; "both" → both. Symptom is on
+# adjacent spans regardless of direction. Pod-level resource counters
+# (cpu/mem/throttle) do NOT fire.
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: timeout_rate
+      band: [0.04, 1.0]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.25, .inf]
+      magnitude_source: empirical
+  optional_features:
+    - kind: span
+      feature: error_rate
+      band: [0.04, 1.0]
+      magnitude_source: empirical
+  optional_min_match: 0
+
+# Layer structure mirrors NetworkLoss but with slightly looser bounds
+# reflecting reduced severity (Loss > Corrupt). Cascade is shallow;
+# layer 3 omitted because retransmit recovery normally bounds blast
+# radius within two hops.
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes, routes_to]
+    edge_directions: [forward, forward, backward]
+    expected_features:
+      - kind: span
+        feature: timeout_rate
+        band: [0.04, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.18, .inf]
+        magnitude_decay: 0.7
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.04, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []

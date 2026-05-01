@@ -1,0 +1,95 @@
+fault_type_name: NetworkPartition
+target_kind: pod
+seed_tier: silent
+description: |
+  Pod-level full network isolation via chaos-mesh networkchaos
+  (action=partition). All traffic on the configured direction is
+  blackholed: no SYN/ACK, no RST, no ICMP. This is the strongest
+  network fault — the pod becomes silent on the impaired link, and
+  callers exhaust timeout budgets without recovery. Distinct from
+  NetworkLoss (which still permits TCP retransmit) and from PodFailure
+  (which kills the process; here the process is alive but unreachable).
+
+# Direction handling — read display_config.direction:
+#   "from" → egress: pod cannot send → outbound RPCs from pod silent.
+#   "to"   → ingress: pod cannot receive → callers' RPCs to pod time out.
+#   "both" → full isolation; both sides observed.
+# Entry uses pod.silent (Layer 1 service.silent) per Family-D spec; this
+# is the ONLY network fault that legitimately fires the silent feature
+# at pod/service granularity.
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: pod
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: timeout_rate
+      band: [0.5, 1.0]
+      magnitude_source: empirical
+    - kind: span
+      feature: error_rate
+      band: [0.3, 1.0]
+      magnitude_source: empirical
+    - kind: pod
+      feature: unavailable
+      band: [1.0, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+# Layer 1: service.silent — full traffic isolation seen at the service
+# rollup of the partitioned pod. Layer 2: caller spans show high
+# timeout/error because the partitioned link cannot complete RPCs.
+# Layer 3: transitive callers see error_rate as retry budgets collapse;
+# decay is mild because partitions are "all-or-nothing" rather than
+# attenuating.
+derivation_layers:
+  - layer: 1
+    edge_kinds: [routes_to, includes]
+    edge_directions: [backward, forward]
+    expected_features:
+      - kind: service
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: timeout_rate
+        band: [0.5, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: error_rate
+        band: [0.3, 1.0]
+        magnitude_decay: null
+    max_fanout: 32
+  - layer: 3
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.1, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.1, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+# No hand-offs. Cross-family triggers (`silent`, `error_rate>0.2`)
+# would point right back at NetworkPartition / HTTPResponseAbort, which
+# is circular. Within-family, NetworkPartition is the terminal node of
+# the network severity ordering — there is nowhere "stronger" to escalate.
+hand_offs: []
+
+terminals: []
