@@ -446,11 +446,19 @@ containers:
     versions:
       # Bumped 0.1.3 → 0.1.4 to retarget `global.otel.endpoint` at the
       # per-system hs collector (#303 step 2b).
-      - name: 0.1.4
+      #
+      # Bumped 0.1.4 → 0.1.5 to pick up hotel-reservation chart 0.1.5
+      # (LGU-SE-Internal/DeathStarBench#56 + #57): adds wait-for-consul
+      # init container to all 9 Go service Deployments using
+      # `global.infraDockerRegistry` (already set to pair-cn-shanghai
+      # opspai mirror below). Resolves the cold-start CrashLoopBackOff
+      # surfaced by aegis#353 — services no longer crash on consul DNS
+      # lookup before kube-dns picks up the consul Service.
+      - name: 0.1.5
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
-          version: 0.1.3
+          version: 0.1.5
           chart_name: hotel-reservation
           repo_name: lgu-dsb
           repo_url: https://lgu-se-internal.github.io/DeathStarBench
