@@ -1,9 +1,28 @@
 """ManifestEntryGate — checks v_root features against the entry signature.
 
-Phase 1 stub. Phase 3 implements the actual feature-band check against
-real telemetry. The gate is *intentionally not* added to
-``default_gates()`` so production pipelines never hit
-``NotImplementedError`` — opt-in only.
+This is the manifest-driven replacement for the role InjectTimeGate plays
+in the generic pipeline. Where InjectTimeGate guards "did *something*
+happen at the injection point in the right window?", ManifestEntryGate
+guards the stronger claim "did the *fault-type-specific* signature appear
+at v_root within ``entry_window_sec`` of t0?".
+
+The gate is per-injection (not per-path): it inspects the
+``ReasoningContext`` directly and ignores the candidate path. A failure
+short-circuits verification of every candidate — there is no path
+worth looking at if the entry signature did not fire. ``evaluate``
+therefore returns the same ``GateResult`` for every path; callers
+typically run the gate once and skip per-path evaluation when it fails.
+
+Pass criterion (per SCHEMA.md "Entry signature"):
+
+* Every ``required_features`` band matches.
+* At least ``optional_min_match`` of ``optional_features`` match.
+
+Bands are evaluated against ``reasoning_ctx.feature_samples`` — the IR
+runner pre-populates this map from the relevant timelines / metrics. A
+missing sample is treated as "feature did not match" (the IR adapter
+knows it could not extract the feature, which is the same as the value
+being out of band).
 """
 
 from __future__ import annotations
@@ -14,35 +33,131 @@ from rcabench_platform.v3.internal.reasoning.algorithms.gates.base import (
 )
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath
 from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+from rcabench_platform.v3.internal.reasoning.manifests.schema import FeatureMatch
+
+
+def _band_match(value: float | None, fm: FeatureMatch) -> bool:
+    """Return True iff ``value`` lies in ``fm.band`` (semi-open ``[lo, hi)``).
+
+    A ``None`` value (sample missing) does not match. Following SCHEMA.md
+    "Magnitude band semantics", ``high`` is exclusive — but ``+inf`` is a
+    common terminator and should match any finite upper end. Treat
+    ``hi == inf`` as inclusive of any finite value.
+    """
+    if value is None:
+        return False
+    lo, hi = fm.band
+    if value < lo:
+        return False
+    if hi == float("inf"):
+        return True
+    return value < hi
 
 
 class ManifestEntryGate:
-    """Verify that ``v_root`` matches ``manifest.entry_signature``.
+    """Verify ``v_root`` features satisfy ``manifest.entry_signature``.
 
-    Pass criterion (Phase 3): all ``required_features`` match within the
-    ``entry_window_sec`` window AND at least ``optional_min_match``
-    optional features match. Magnitude bands evaluated against
-    measured-value timelines.
-
-    Phase 1: stub. Construction is allowed (so registry / wiring code
-    can reference it); calling :meth:`evaluate` raises
-    ``NotImplementedError`` so any premature wiring fails loudly.
+    The gate consults ``reasoning_ctx`` (passed at construction) and so
+    is a constant function of the candidate path. A path-by-path call
+    cost is avoided in production by the manifest-aware pipeline, which
+    runs the gate once and short-circuits all paths if it fails. The
+    Gate protocol is preserved here so the gate can still be plugged in
+    via ``evaluate_path``.
     """
 
     name = "manifest_entry"
 
-    def __init__(self, reasoning_ctx: ReasoningContext | None = None) -> None:
+    def __init__(self, reasoning_ctx: ReasoningContext) -> None:
         self._reasoning_ctx = reasoning_ctx
 
     @property
-    def reasoning_ctx(self) -> ReasoningContext | None:
+    def reasoning_ctx(self) -> ReasoningContext:
         return self._reasoning_ctx
 
     def evaluate(self, path: CandidatePath, ctx: GateContext) -> GateResult:
-        raise NotImplementedError(
-            "ManifestEntryGate is a Phase 1 stub; Phase 3 implements feature-band "
-            "matching. Do not add this gate to default_gates() until then."
+        del path, ctx  # gate is per-injection, not per-path
+        rctx = self._reasoning_ctx
+        manifest = rctx.manifest
+        if manifest is None:
+            # No manifest registered — this gate should not have been
+            # added to the pipeline; treat as soft pass.
+            return GateResult(
+                gate_name=self.name,
+                passed=True,
+                evidence={"skipped": True, "reason": "no manifest registered"},
+            )
+
+        v_root = rctx.v_root_node_id
+        if v_root is None:
+            return GateResult(
+                gate_name=self.name,
+                passed=False,
+                evidence={"reason": "v_root_node_id is None"},
+                reason="entry signature requires a v_root node id",
+            )
+
+        sig = manifest.entry_signature
+        required_evidence: list[dict[str, object]] = []
+        all_required_pass = True
+        for fm in sig.required_features:
+            value = rctx.sample(v_root, fm.kind, fm.feature)
+            ok = _band_match(value, fm)
+            required_evidence.append(
+                {
+                    "kind": fm.kind.value,
+                    "feature": fm.feature.value,
+                    "band": list(fm.band),
+                    "value": value,
+                    "matched": ok,
+                }
+            )
+            if not ok:
+                all_required_pass = False
+
+        optional_evidence: list[dict[str, object]] = []
+        optional_matched = 0
+        for fm in sig.optional_features:
+            value = rctx.sample(v_root, fm.kind, fm.feature)
+            ok = _band_match(value, fm)
+            if ok:
+                optional_matched += 1
+            optional_evidence.append(
+                {
+                    "kind": fm.kind.value,
+                    "feature": fm.feature.value,
+                    "band": list(fm.band),
+                    "value": value,
+                    "matched": ok,
+                }
+            )
+
+        optional_pass = optional_matched >= sig.optional_min_match
+        passed = all_required_pass and optional_pass
+
+        if all_required_pass and optional_pass:
+            reason = ""
+        elif not all_required_pass:
+            n_failed = sum(1 for e in required_evidence if not e["matched"])
+            reason = f"{n_failed} required feature(s) missed entry-signature band"
+        else:
+            reason = (
+                f"only {optional_matched}/{sig.optional_min_match} required "
+                f"optional features matched"
+            )
+
+        return GateResult(
+            gate_name=self.name,
+            passed=passed,
+            evidence={
+                "fault_type_name": manifest.fault_type_name,
+                "v_root_node_id": v_root,
+                "required_features": required_evidence,
+                "optional_features": optional_evidence,
+                "optional_matched": optional_matched,
+                "optional_min_match": sig.optional_min_match,
+            },
+            reason=reason,
         )
 
 
-__all__ = ["ManifestEntryGate"]
+__all__ = ["ManifestEntryGate", "_band_match"]

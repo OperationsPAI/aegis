@@ -1,15 +1,41 @@
-"""TemporalGate: per-edge picked_onset[i+1] >= picked_onset[i] - epsilon_eff."""
+"""TemporalGate: per-edge picked_onset[i+1] >= picked_onset[i] - clock_skew.
+
+Phase 3 (FORGE rework, §3.3) simplifies the per-edge predicate:
+
+* Forward propagation delay is governed by ``edge_epsilon_seconds(edge_kind)``
+  alone (5s for synchronous channels, 10s for ``routes_to``, 60s for
+  lifecycle channels) — onset-resolution noise compensation is now
+  absorbed into the manifest's magnitude bands.
+* Reversed-order tolerance is a fixed 1s clock-skew allowance
+  (``REVERSED_ORDER_TOLERANCE_SECONDS``) — independent of edge kind.
+
+The gate enforces the looser of the two: ``dst_onset >= src_onset - 1``.
+That is, a downstream onset may slip up to 1s before its upstream onset
+without rejection (NTP-bounded clock skew between control plane and
+trace collectors). Forward delay is bounded by the topology + temporal
+admission window in ``find_admissible_window``; the gate is the
+canonical post-build assertion that the picked window respects causal
+ordering.
+"""
 
 from __future__ import annotations
 
 from rcabench_platform.v3.internal.reasoning.algorithms.gates.base import GateContext, GateResult
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath
-from rcabench_platform.v3.internal.reasoning.algorithms.policy import epsilon_eff_seconds
+from rcabench_platform.v3.internal.reasoning.algorithms.policy import (
+    REVERSED_ORDER_TOLERANCE_SECONDS,
+    edge_epsilon_seconds,
+)
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind
 
 
 class TemporalGate:
-    """Each edge respects the §7.5 tolerant lower bound on downstream onset."""
+    """Each edge respects ``dst_onset >= src_onset - 1`` (clock-skew tolerance).
+
+    Forward delay is left to ``find_admissible_window``; the gate's job is
+    to guard against picked-window selections that violate causal
+    ordering by more than a clock-skew tick.
+    """
 
     name = "temporal"
 
@@ -23,9 +49,9 @@ class TemporalGate:
             src_onset = path.picked_state_start_times[i]
             dst_onset = path.picked_state_start_times[i + 1]
             edge_kind = _parse_edge_kind(path.edge_descs[i])
-            eps = epsilon_eff_seconds(src_state, dst_state, edge_kind)
+            forward_budget = edge_epsilon_seconds(edge_kind)
             delay = dst_onset - src_onset
-            ok = dst_onset >= src_onset - eps
+            ok = dst_onset >= src_onset - REVERSED_ORDER_TOLERANCE_SECONDS
             if not ok:
                 all_pass = False
             edges_evidence.append(
@@ -37,7 +63,8 @@ class TemporalGate:
                     "src_onset": src_onset,
                     "dst_onset": dst_onset,
                     "delay": delay,
-                    "epsilon_eff": eps,
+                    "edge_epsilon": forward_budget,
+                    "reversed_order_tolerance": REVERSED_ORDER_TOLERANCE_SECONDS,
                     "ok": ok,
                 }
             )
