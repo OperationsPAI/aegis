@@ -79,7 +79,9 @@ opentelemetry-demo:
     postgresql:
       imageOverride:
         repository: pair-cn-shanghai.cr.volces.com/opspai/postgres
-        tag: "17.6"
+        # See data.yaml: must be non-numeric or backend's yaml renderer
+        # round-trips it as float and chart schema rejects it.
+        tag: 17.6-bookworm
 
   opentelemetry-collector:
     image:
