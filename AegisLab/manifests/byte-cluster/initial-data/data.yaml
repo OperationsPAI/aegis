@@ -124,18 +124,18 @@ containers:
     is_public: true
     status: 1
     versions:
-      # Bumped 0.1.7 → 0.1.8 to pick up otel-demo-aegis chart 0.1.7 which
-      # disables ALL ClusterRole-triggering presets (clusterMetrics,
-      # kubeletMetrics, kubernetesEvents, annotationDiscovery.*, plus
-      # clusterRole.create=false) — fixes the parallel-install collision
-      # where every otel-demoN beyond the first failed with "ClusterRole
-      # otel-collector exists, invalid ownership metadata". Previous chart
-      # 0.1.6 only disabled kubernetesAttributes which was insufficient.
-      - name: 0.1.8
+      # Bumped 0.1.8 → 0.1.9 to pick up otel-demo-aegis chart 0.1.8 which
+      # mirrors busybox + kafka images via docker.io/opspai/* so the volces
+      # auto-mirror can serve them on byte-cluster nodes that can't reach
+      # docker.io / ghcr.io directly. Without this, every otel-demoN namespace
+      # had wait-for-kafka init containers stuck in ImagePullBackOff and the
+      # kafka pod itself failed to pull, blocking accounting/cart/checkout/
+      # fraud-detection from ever starting.
+      - name: 0.1.9
         github_link: open-telemetry/opentelemetry-demo
         status: 1
         helm_config:
-          version: 0.1.7
+          version: 0.1.8
           chart_name: otel-demo-aegis
           repo_name: opspai
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
