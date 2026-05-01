@@ -56,6 +56,15 @@ opentelemetry-demo:
       # flagd main image — chart leaves this at upstream `ghcr.io/open-feature/flagd`.
       # Mirrored to opspai on 2026-05-01, and now available via the
       # pair-cn-shanghai mirror.
+      #
+      # NB: the chart also injects a `flagd-ui` sidecar in the same Deployment,
+      # rendered as `<default.image.repository>:<chart appVersion>-flagd-ui`
+      # (i.e. `pair-cn-shanghai.cr.volces.com/opspai/open-telemetry-demo:2.2.0-flagd-ui`).
+      # That tag is NOT a default upstream demo image — it must be mirrored
+      # separately from `ghcr.io/open-telemetry/demo:<appVersion>-flagd-ui`
+      # (mirrored 2026-05-01). When chart appVersion bumps, mirror the new
+      # `-flagd-ui` tag too or every otel-demo install hits ImagePullBackOff
+      # on the flagd Deployment.
       imageOverride:
         repository: pair-cn-shanghai.cr.volces.com/opspai/flagd
         tag: "v0.12.9"
