@@ -4,8 +4,15 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 1.0.0
-        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:latest
+      # Bumped 1.0.0 → 1.0.1 to pin a specific image tag (was floating on
+      # `:latest`). Tag `byte-20260501-system` ships #339: backend now sets
+      # BENCHMARK_SYSTEM env when dispatching the detector job, the
+      # entrypoint requires it and passes `--system $BENCHMARK_SYSTEM`,
+      # and the Python entrypoint refuses to default to `ts`. Without this
+      # combo, every non-ts datapack silently failed at "No entrance traffic"
+      # because the detector looked for ts-ui-dashboard everywhere.
+      - name: 1.0.1
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260501-system
         command: bash /entrypoint.sh
   - type: 0
     name: random
