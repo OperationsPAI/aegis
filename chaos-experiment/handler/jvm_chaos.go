@@ -36,6 +36,8 @@ type JVMLatencySpec struct {
 	System          int `range:"0-0" dynamic:"true" description:"String"`
 	MethodIdx       int `range:"0-0" dynamic:"true" description:"Flattened app+method index"`
 	LatencyDuration int `range:"1-5000" description:"Latency in ms"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMLatencySpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -90,6 +92,8 @@ type JVMReturnSpec struct {
 	MethodIdx      int           `range:"0-0" dynamic:"true" description:"Flattened app+method index"`
 	ReturnType     JVMReturnType `range:"1-2" description:"Return Type (1=String, 2=Int)"`
 	ReturnValueOpt int           `range:"0-1" description:"Return value option (0=Default, 1=Random)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMReturnSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -158,6 +162,8 @@ type JVMExceptionSpec struct {
 	System       int `range:"0-0" dynamic:"true" description:"String"`
 	MethodIdx    int `range:"0-0" dynamic:"true" description:"Flattened app+method index"`
 	ExceptionOpt int `range:"0-1" description:"Exception option (0=Default, 1=Random)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMExceptionSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -225,6 +231,8 @@ type JVMGCSpec struct {
 	Duration int `range:"1-60" description:"Time Unit Minute"`
 	System   int `range:"0-0" dynamic:"true" description:"String"`
 	AppIdx   int `range:"0-0" dynamic:"true" description:"App Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMGCSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -268,6 +276,8 @@ type JVMCPUStressSpec struct {
 	System    int `range:"0-0" dynamic:"true" description:"String"`
 	MethodIdx int `range:"0-0" dynamic:"true" description:"Flattened app+method index"`
 	CPUCount  int `range:"1-8" description:"Number of CPU cores to stress"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMCPUStressSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -321,6 +331,8 @@ type JVMMemoryStressSpec struct {
 	System    int           `range:"0-0" dynamic:"true" description:"Namespace Index (0-based)"`
 	MethodIdx int           `range:"0-0" dynamic:"true" description:"Flattened app+method index"`
 	MemType   JVMMemoryType `range:"1-2" description:"Memory Type (1=Heap, 2=Stack)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMMemoryStressSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -399,6 +411,8 @@ type JVMMySQLLatencySpec struct {
 	System      int `range:"0-0" dynamic:"true" description:"String"`
 	DatabaseIdx int `range:"0-0" dynamic:"true" description:"Flattened app+database+table index"`
 	LatencyMs   int `range:"10-5000" description:"Latency in ms"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMMySQLLatencySpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -452,6 +466,8 @@ type JVMMySQLExceptionSpec struct {
 	Duration    int `range:"1-60" description:"Time Unit Minute"`
 	System      int `range:"0-0" dynamic:"true" description:"String"`
 	DatabaseIdx int `range:"0-0" dynamic:"true" description:"Flattened app+database+table index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMMySQLExceptionSpec) Create(cli cli.Client, opts ...Option) (string, error) {

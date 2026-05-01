@@ -16,6 +16,8 @@ type JVMRuntimeMutatorSpec struct {
 	Duration         int `range:"1-60" description:"Time Unit Minute"`
 	System           int `range:"0-0" dynamic:"true" description:"System Index"`
 	MutatorTargetIdx int `range:"0-0" dynamic:"true" description:"Flattened valid runtime mutator injection index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *JVMRuntimeMutatorSpec) Create(cli cli.Client, opts ...Option) (string, error) {

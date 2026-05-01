@@ -14,6 +14,9 @@ type PodFailureSpec struct {
 	Duration int `range:"1-60" description:"Time Unit Minute"`
 	System   int `range:"0-0" dynamic:"true" description:"String"`
 	AppIdx   int `range:"0-0" dynamic:"true" description:"App Index"`
+	// Namespace is the caller-resolved Kubernetes namespace (e.g. "hs28"). When
+	// empty, GetGroundtruth falls back to the system pool head for back-compat.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *PodFailureSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -55,6 +58,8 @@ type PodKillSpec struct {
 	Duration int `range:"1-60" description:"Time Unit Minute"`
 	System   int `range:"0-0" dynamic:"true" description:"String"`
 	AppIdx   int `range:"0-0" dynamic:"true" description:"App Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *PodKillSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -95,6 +100,8 @@ type ContainerKillSpec struct {
 	Duration     int `range:"1-60" description:"Time Unit Minute"`
 	System       int `range:"0-0" dynamic:"true" description:"String"`
 	ContainerIdx int `range:"0-0" dynamic:"true" description:"Container Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *ContainerKillSpec) Create(cli cli.Client, opts ...Option) (string, error) {

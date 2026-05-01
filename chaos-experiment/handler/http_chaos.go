@@ -17,6 +17,8 @@ type HTTPRequestAbortSpec struct {
 	Duration    int `range:"1-60" description:"Time Unit Minute"`
 	System      int `range:"0-0" dynamic:"true" description:"String"`
 	EndpointIdx int `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPRequestAbortSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -77,6 +79,8 @@ type HTTPResponseAbortSpec struct {
 	Duration    int `range:"1-60" description:"Time Unit Minute"`
 	System      int `range:"0-0" dynamic:"true" description:"String"`
 	EndpointIdx int `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPResponseAbortSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -138,6 +142,8 @@ type HTTPRequestDelaySpec struct {
 	System        int `range:"0-0" dynamic:"true" description:"String"`
 	EndpointIdx   int `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
 	DelayDuration int `range:"10-5000" description:"Delay in milliseconds"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPRequestDelaySpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -199,6 +205,8 @@ type HTTPResponseDelaySpec struct {
 	System        int `range:"0-0" dynamic:"true" description:"String"`
 	EndpointIdx   int `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
 	DelayDuration int `range:"10-5000" description:"Delay in milliseconds"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPResponseDelaySpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -268,6 +276,8 @@ type HTTPResponseReplaceBodySpec struct {
 	System      int             `range:"0-0" dynamic:"true" description:"Namespace Index (0-based)"`
 	EndpointIdx int             `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
 	BodyType    ReplaceBodyType `range:"0-1" description:"Body Type (0=Empty, 1=Random)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPResponseReplaceBodySpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -333,6 +343,8 @@ type HTTPResponsePatchBodySpec struct {
 	Duration    int `range:"1-60" description:"Time Unit Minute"`
 	System      int `range:"0-0" dynamic:"true" description:"String"`
 	EndpointIdx int `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPResponsePatchBodySpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -392,6 +404,8 @@ type HTTPRequestReplacePathSpec struct {
 	Duration    int `range:"1-60" description:"Time Unit Minute"`
 	System      int `range:"0-0" dynamic:"true" description:"String"`
 	EndpointIdx int `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPRequestReplacePathSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -453,6 +467,8 @@ type HTTPRequestReplaceMethodSpec struct {
 	System        int `range:"0-0" dynamic:"true" description:"Namespace Index (0-based)"`
 	EndpointIdx   int `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
 	ReplaceMethod int `range:"0-6" description:"HTTP Method index (filtered, excluding original method)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPRequestReplaceMethodSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -517,6 +533,8 @@ type HTTPResponseReplaceCodeSpec struct {
 	System      int            `range:"0-0" dynamic:"true" description:"Namespace Index (0-based)"`
 	EndpointIdx int            `range:"0-0" dynamic:"true" description:"Flattened HTTP Endpoint Index"`
 	StatusCode  HTTPStatusCode `range:"0-9" description:"HTTP Status Code to replace with"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *HTTPResponseReplaceCodeSpec) Create(cli cli.Client, opts ...Option) (string, error) {

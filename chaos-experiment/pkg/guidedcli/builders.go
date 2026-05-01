@@ -16,7 +16,7 @@ func buildPodKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.PodKillSpec{Duration: duration, System: systemIdx, AppIdx: appIdx}
+	spec := &handler.PodKillSpec{Duration: duration, System: systemIdx, AppIdx: appIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{PodKill: spec}, payload("PodKill", map[string]any{
 		"Duration": duration,
 		"System":   systemIdx,
@@ -30,7 +30,7 @@ func buildPodFailure(ctx context.Context, cfg GuidedConfig, systemType systemcon
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.PodFailureSpec{Duration: duration, System: systemIdx, AppIdx: appIdx}
+	spec := &handler.PodFailureSpec{Duration: duration, System: systemIdx, AppIdx: appIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{PodFailure: spec}, payload("PodFailure", map[string]any{
 		"Duration": duration,
 		"System":   systemIdx,
@@ -44,7 +44,7 @@ func buildJVMGarbageCollector(ctx context.Context, cfg GuidedConfig, systemType 
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.JVMGCSpec{Duration: duration, System: systemIdx, AppIdx: appIdx}
+	spec := &handler.JVMGCSpec{Duration: duration, System: systemIdx, AppIdx: appIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{JVMGarbageCollector: spec}, payload("JVMGarbageCollector", map[string]any{
 		"Duration": duration,
 		"System":   systemIdx,
@@ -58,7 +58,7 @@ func buildContainerKill(ctx context.Context, cfg GuidedConfig, systemType system
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.ContainerKillSpec{Duration: duration, System: systemIdx, ContainerIdx: containerIdx}
+	spec := &handler.ContainerKillSpec{Duration: duration, System: systemIdx, ContainerIdx: containerIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{ContainerKill: spec}, payload("ContainerKill", map[string]any{
 		"Duration":     duration,
 		"System":       systemIdx,
@@ -82,6 +82,7 @@ func buildCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconf
 		ContainerIdx: containerIdx,
 		CPULoad:      *cfg.CPULoad,
 		CPUWorker:    *cfg.CPUWorker,
+		Namespace:    cfg.Namespace,
 	}
 	return handler.InjectionConf{CPUStress: spec}, payload("CPUStress", map[string]any{
 		"Duration":     duration,
@@ -108,6 +109,7 @@ func buildMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemc
 		ContainerIdx: containerIdx,
 		MemorySize:   *cfg.MemorySize,
 		MemWorker:    *cfg.MemWorker,
+		Namespace:    cfg.Namespace,
 	}
 	return handler.InjectionConf{MemoryStress: spec}, payload("MemoryStress", map[string]any{
 		"Duration":     duration,
@@ -133,6 +135,7 @@ func buildTimeSkew(ctx context.Context, cfg GuidedConfig, systemType systemconfi
 		System:       systemIdx,
 		ContainerIdx: containerIdx,
 		TimeOffset:   *cfg.TimeOffset,
+		Namespace:    cfg.Namespace,
 	}
 	return handler.InjectionConf{TimeSkew: spec}, payload("TimeSkew", map[string]any{
 		"Duration":     duration,
@@ -148,7 +151,7 @@ func buildHTTPRequestAbort(ctx context.Context, cfg GuidedConfig, systemType sys
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.HTTPRequestAbortSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx}
+	spec := &handler.HTTPRequestAbortSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{HTTPRequestAbort: spec}, payload("HTTPRequestAbort", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
@@ -162,7 +165,7 @@ func buildHTTPResponseAbort(ctx context.Context, cfg GuidedConfig, systemType sy
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.HTTPResponseAbortSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx}
+	spec := &handler.HTTPResponseAbortSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{HTTPResponseAbort: spec}, payload("HTTPResponseAbort", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
@@ -185,6 +188,7 @@ func buildHTTPRequestDelay(ctx context.Context, cfg GuidedConfig, systemType sys
 		System:        systemIdx,
 		EndpointIdx:   endpointIdx,
 		DelayDuration: *cfg.DelayDuration,
+		Namespace:     cfg.Namespace,
 	}
 	return handler.InjectionConf{HTTPRequestDelay: spec}, payload("HTTPRequestDelay", map[string]any{
 		"Duration":      duration,
@@ -209,6 +213,7 @@ func buildHTTPResponseDelay(ctx context.Context, cfg GuidedConfig, systemType sy
 		System:        systemIdx,
 		EndpointIdx:   endpointIdx,
 		DelayDuration: *cfg.DelayDuration,
+		Namespace:     cfg.Namespace,
 	}
 	return handler.InjectionConf{HTTPResponseDelay: spec}, payload("HTTPResponseDelay", map[string]any{
 		"Duration":      duration,
@@ -237,6 +242,7 @@ func buildHTTPResponseReplaceBody(ctx context.Context, cfg GuidedConfig, systemT
 		System:      systemIdx,
 		EndpointIdx: endpointIdx,
 		BodyType:    handler.ReplaceBodyType(bodyType),
+		Namespace:   cfg.Namespace,
 	}
 	return handler.InjectionConf{HTTPResponseReplaceBody: spec}, payload("HTTPResponseReplaceBody", map[string]any{
 		"Duration":    duration,
@@ -252,7 +258,7 @@ func buildHTTPResponsePatchBody(ctx context.Context, cfg GuidedConfig, systemTyp
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.HTTPResponsePatchBodySpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx}
+	spec := &handler.HTTPResponsePatchBodySpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{HTTPResponsePatchBody: spec}, payload("HTTPResponsePatchBody", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
@@ -266,7 +272,7 @@ func buildHTTPRequestReplacePath(ctx context.Context, cfg GuidedConfig, systemTy
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.HTTPRequestReplacePathSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx}
+	spec := &handler.HTTPRequestReplacePathSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{HTTPRequestReplacePath: spec}, payload("HTTPRequestReplacePath", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
@@ -294,6 +300,7 @@ func buildHTTPRequestReplaceMethod(ctx context.Context, cfg GuidedConfig, system
 		System:        systemIdx,
 		EndpointIdx:   endpointIdx,
 		ReplaceMethod: methodCode,
+		Namespace:     cfg.Namespace,
 	}
 	return handler.InjectionConf{HTTPRequestReplaceMethod: spec}, payload("HTTPRequestReplaceMethod", map[string]any{
 		"Duration":      duration,
@@ -323,6 +330,7 @@ func buildHTTPResponseReplaceCode(ctx context.Context, cfg GuidedConfig, systemT
 		System:      systemIdx,
 		EndpointIdx: endpointIdx,
 		StatusCode:  handler.HTTPStatusCode(statusCode),
+		Namespace:   cfg.Namespace,
 	}
 	return handler.InjectionConf{HTTPResponseReplaceCode: spec}, payload("HTTPResponseReplaceCode", map[string]any{
 		"Duration":    duration,
@@ -338,7 +346,7 @@ func buildDNSError(ctx context.Context, cfg GuidedConfig, systemType systemconfi
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.DNSErrorSpec{Duration: duration, System: systemIdx, DNSEndpointIdx: dnsIdx}
+	spec := &handler.DNSErrorSpec{Duration: duration, System: systemIdx, DNSEndpointIdx: dnsIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{DNSError: spec}, payload("DNSError", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
@@ -352,7 +360,7 @@ func buildDNSRandom(ctx context.Context, cfg GuidedConfig, systemType systemconf
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.DNSRandomSpec{Duration: duration, System: systemIdx, DNSEndpointIdx: dnsIdx}
+	spec := &handler.DNSRandomSpec{Duration: duration, System: systemIdx, DNSEndpointIdx: dnsIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{DNSRandom: spec}, payload("DNSRandom", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
@@ -375,6 +383,7 @@ func buildNetworkPartition(ctx context.Context, cfg GuidedConfig, systemType sys
 		System:         systemIdx,
 		NetworkPairIdx: pairIdx,
 		Direction:      direction,
+		Namespace:      cfg.Namespace,
 	}
 	return handler.InjectionConf{NetworkPartition: spec}, payload("NetworkPartition", map[string]any{
 		"Duration":       duration,
@@ -402,6 +411,7 @@ func buildNetworkDelay(ctx context.Context, cfg GuidedConfig, systemType systemc
 		Correlation:    *cfg.Correlation,
 		Jitter:         *cfg.Jitter,
 		Direction:      direction,
+		Namespace:      cfg.Namespace,
 	}
 	return handler.InjectionConf{NetworkDelay: spec}, payload("NetworkDelay", map[string]any{
 		"Duration":       duration,
@@ -430,6 +440,7 @@ func buildNetworkLoss(ctx context.Context, cfg GuidedConfig, systemType systemco
 		Loss:           *cfg.Loss,
 		Correlation:    *cfg.Correlation,
 		Direction:      direction,
+		Namespace:      cfg.Namespace,
 	}
 	return handler.InjectionConf{NetworkLoss: spec}, payload("NetworkLoss", map[string]any{
 		"Duration":       duration,
@@ -458,6 +469,7 @@ func buildNetworkDuplicate(ctx context.Context, cfg GuidedConfig, systemType sys
 		Duplicate:      *cfg.Duplicate,
 		Correlation:    *cfg.Correlation,
 		Direction:      direction,
+		Namespace:      cfg.Namespace,
 	}
 	return handler.InjectionConf{NetworkDuplicate: spec}, payload("NetworkDuplicate", map[string]any{
 		"Duration":       duration,
@@ -486,6 +498,7 @@ func buildNetworkCorrupt(ctx context.Context, cfg GuidedConfig, systemType syste
 		Corrupt:        *cfg.Corrupt,
 		Correlation:    *cfg.Correlation,
 		Direction:      direction,
+		Namespace:      cfg.Namespace,
 	}
 	return handler.InjectionConf{NetworkCorrupt: spec}, payload("NetworkCorrupt", map[string]any{
 		"Duration":       duration,
@@ -515,6 +528,7 @@ func buildNetworkBandwidth(ctx context.Context, cfg GuidedConfig, systemType sys
 		Limit:          *cfg.Limit,
 		Buffer:         *cfg.Buffer,
 		Direction:      direction,
+		Namespace:      cfg.Namespace,
 	}
 	return handler.InjectionConf{NetworkBandwidth: spec}, payload("NetworkBandwidth", map[string]any{
 		"Duration":       duration,
@@ -542,6 +556,7 @@ func buildJVMLatency(ctx context.Context, cfg GuidedConfig, systemType systemcon
 		System:          systemIdx,
 		MethodIdx:       methodIdx,
 		LatencyDuration: *cfg.LatencyDuration,
+		Namespace:       cfg.Namespace,
 	}
 	return handler.InjectionConf{JVMLatency: spec}, payload("JVMLatency", map[string]any{
 		"Duration":        duration,
@@ -576,6 +591,7 @@ func buildJVMReturn(ctx context.Context, cfg GuidedConfig, systemType systemconf
 		MethodIdx:      methodIdx,
 		ReturnType:     handler.JVMReturnType(returnType),
 		ReturnValueOpt: returnValueOpt,
+		Namespace:      cfg.Namespace,
 	}
 	return handler.InjectionConf{JVMReturn: spec}, payload("JVMReturn", map[string]any{
 		"Duration":       duration,
@@ -606,6 +622,7 @@ func buildJVMException(ctx context.Context, cfg GuidedConfig, systemType systemc
 		System:       systemIdx,
 		MethodIdx:    methodIdx,
 		ExceptionOpt: exceptionOpt,
+		Namespace:    cfg.Namespace,
 	}
 	return handler.InjectionConf{JVMException: spec}, payload("JVMException", map[string]any{
 		"Duration":     duration,
@@ -629,6 +646,7 @@ func buildJVMCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemc
 		System:    systemIdx,
 		MethodIdx: methodIdx,
 		CPUCount:  *cfg.CPUCount,
+		Namespace: cfg.Namespace,
 	}
 	return handler.InjectionConf{JVMCPUStress: spec}, payload("JVMCPUStress", map[string]any{
 		"Duration":  duration,
@@ -658,6 +676,7 @@ func buildJVMMemoryStress(ctx context.Context, cfg GuidedConfig, systemType syst
 		System:    systemIdx,
 		MethodIdx: methodIdx,
 		MemType:   handler.JVMMemoryType(memType),
+		Namespace: cfg.Namespace,
 	}
 	return handler.InjectionConf{JVMMemoryStress: spec}, payload("JVMMemoryStress", map[string]any{
 		"Duration":  duration,
@@ -682,6 +701,7 @@ func buildJVMMySQLLatency(ctx context.Context, cfg GuidedConfig, systemType syst
 		System:      systemIdx,
 		DatabaseIdx: databaseIdx,
 		LatencyMs:   *cfg.LatencyMs,
+		Namespace:   cfg.Namespace,
 	}
 	return handler.InjectionConf{JVMMySQLLatency: spec}, payload("JVMMySQLLatency", map[string]any{
 		"Duration":    duration,
@@ -701,6 +721,7 @@ func buildJVMMySQLException(ctx context.Context, cfg GuidedConfig, systemType sy
 		Duration:    duration,
 		System:      systemIdx,
 		DatabaseIdx: databaseIdx,
+		Namespace:   cfg.Namespace,
 	}
 	return handler.InjectionConf{JVMMySQLException: spec}, payload("JVMMySQLException", map[string]any{
 		"Duration":    duration,
@@ -719,7 +740,7 @@ func buildJVMRuntimeMutator(ctx context.Context, cfg GuidedConfig, systemType sy
 		return handler.InjectionConf{}, nil, err
 	}
 
-	spec := &handler.JVMRuntimeMutatorSpec{Duration: duration, System: systemIdx, MutatorTargetIdx: targetIdx}
+	spec := &handler.JVMRuntimeMutatorSpec{Duration: duration, System: systemIdx, MutatorTargetIdx: targetIdx, Namespace: cfg.Namespace}
 	return handler.InjectionConf{JVMRuntimeMutator: spec}, payload("JVMRuntimeMutator", map[string]any{
 		"Duration":         duration,
 		"System":           systemIdx,

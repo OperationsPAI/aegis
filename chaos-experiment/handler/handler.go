@@ -481,6 +481,13 @@ func parseInjection(ctx context.Context, instance Injection) (map[string]any, er
 	systemCache := resourcelookup.GetSystemCache(system)
 
 	for i := range instanceValue.NumField() {
+		// Skip non-numeric fields (e.g. the per-spec Namespace string used by
+		// GetGroundtruth). They aren't part of the action-space the display config
+		// surfaces.
+		if isNonActionField(instanceType.Field(i).Type) {
+			continue
+		}
+
 		key := utils.ToSnakeCase(instanceType.Field(i).Name)
 
 		index, err := getIntValue(instanceValue.Field(i))

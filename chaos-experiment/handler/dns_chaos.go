@@ -15,6 +15,8 @@ type DNSErrorSpec struct {
 	Duration       int `range:"1-60" description:"Time Unit Minute"`
 	System         int `range:"0-0" dynamic:"true" description:"String"`
 	DNSEndpointIdx int `range:"0-0" dynamic:"true" description:"DNS Endpoint Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *DNSErrorSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -58,6 +60,8 @@ type DNSRandomSpec struct {
 	Duration       int `range:"1-60" description:"Time Unit Minute"`
 	System         int `range:"0-0" dynamic:"true" description:"String"`
 	DNSEndpointIdx int `range:"0-0" dynamic:"true" description:"DNS Endpoint Index"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *DNSRandomSpec) Create(cli cli.Client, opts ...Option) (string, error) {

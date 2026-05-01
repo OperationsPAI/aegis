@@ -62,6 +62,17 @@ type Groundtruth struct {
 	Span      []string `json:"span,omitempty"`
 }
 
+// resolveSpecNamespace returns the per-spec namespace if set by the builder,
+// otherwise falls back to the system pool head. The fallback preserves the
+// pre-PR behavior for callers (e.g. legacy tests, JSON payloads from older
+// pipelines) that construct specs without the Namespace field.
+func resolveSpecNamespace(system systemconfig.SystemType, specNamespace string) (string, error) {
+	if specNamespace != "" {
+		return specNamespace, nil
+	}
+	return systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+}
+
 // GetGroundtruthFromAppIdx returns a Groundtruth object for a given app index
 func GetGroundtruthFromAppIdx(ctx context.Context, system systemconfig.SystemType, namespace string, appIdx int) (Groundtruth, error) {
 	systemCache := resourcelookup.GetSystemCache(system)
@@ -390,7 +401,7 @@ func GetGroundtruthFromDatabaseIdx(ctx context.Context, system systemconfig.Syst
 
 func (s *PodFailureSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -399,7 +410,7 @@ func (s *PodFailureSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error
 
 func (s *PodKillSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -408,7 +419,7 @@ func (s *PodKillSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 
 func (s *ContainerKillSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -417,7 +428,7 @@ func (s *ContainerKillSpec) GetGroundtruth(ctx context.Context) (Groundtruth, er
 
 func (s *MemoryStressChaosSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -432,7 +443,7 @@ func (s *MemoryStressChaosSpec) GetGroundtruth(ctx context.Context) (Groundtruth
 
 func (s *CPUStressChaosSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -447,7 +458,7 @@ func (s *CPUStressChaosSpec) GetGroundtruth(ctx context.Context) (Groundtruth, e
 
 func (s *TimeSkewSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -456,7 +467,7 @@ func (s *TimeSkewSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) 
 
 func (s *DNSErrorSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -465,7 +476,7 @@ func (s *DNSErrorSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) 
 
 func (s *DNSRandomSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -474,7 +485,7 @@ func (s *DNSRandomSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error)
 
 func (s *HTTPRequestAbortSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -483,7 +494,7 @@ func (s *HTTPRequestAbortSpec) GetGroundtruth(ctx context.Context) (Groundtruth,
 
 func (s *HTTPResponseAbortSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -492,7 +503,7 @@ func (s *HTTPResponseAbortSpec) GetGroundtruth(ctx context.Context) (Groundtruth
 
 func (s *HTTPRequestDelaySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -507,7 +518,7 @@ func (s *HTTPRequestDelaySpec) GetGroundtruth(ctx context.Context) (Groundtruth,
 
 func (s *HTTPResponseDelaySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -522,7 +533,7 @@ func (s *HTTPResponseDelaySpec) GetGroundtruth(ctx context.Context) (Groundtruth
 
 func (s *HTTPResponseReplaceBodySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -531,7 +542,7 @@ func (s *HTTPResponseReplaceBodySpec) GetGroundtruth(ctx context.Context) (Groun
 
 func (s *HTTPResponsePatchBodySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -540,7 +551,7 @@ func (s *HTTPResponsePatchBodySpec) GetGroundtruth(ctx context.Context) (Groundt
 
 func (s *HTTPRequestReplacePathSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -549,7 +560,7 @@ func (s *HTTPRequestReplacePathSpec) GetGroundtruth(ctx context.Context) (Ground
 
 func (s *HTTPRequestReplaceMethodSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -558,7 +569,7 @@ func (s *HTTPRequestReplaceMethodSpec) GetGroundtruth(ctx context.Context) (Grou
 
 func (s *HTTPResponseReplaceCodeSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -567,7 +578,7 @@ func (s *HTTPResponseReplaceCodeSpec) GetGroundtruth(ctx context.Context) (Groun
 
 func (s *NetworkDelaySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -582,7 +593,7 @@ func (s *NetworkDelaySpec) GetGroundtruth(ctx context.Context) (Groundtruth, err
 
 func (s *NetworkLossSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -591,7 +602,7 @@ func (s *NetworkLossSpec) GetGroundtruth(ctx context.Context) (Groundtruth, erro
 
 func (s *NetworkDuplicateSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -600,7 +611,7 @@ func (s *NetworkDuplicateSpec) GetGroundtruth(ctx context.Context) (Groundtruth,
 
 func (s *NetworkCorruptSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -609,7 +620,7 @@ func (s *NetworkCorruptSpec) GetGroundtruth(ctx context.Context) (Groundtruth, e
 
 func (s *NetworkBandwidthSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -618,7 +629,7 @@ func (s *NetworkBandwidthSpec) GetGroundtruth(ctx context.Context) (Groundtruth,
 
 func (s *NetworkPartitionSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -628,7 +639,7 @@ func (s *NetworkPartitionSpec) GetGroundtruth(ctx context.Context) (Groundtruth,
 // JVM chaos GetGroundtruth implementations
 func (s *JVMLatencySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -643,7 +654,7 @@ func (s *JVMLatencySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error
 
 func (s *JVMReturnSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -652,7 +663,7 @@ func (s *JVMReturnSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error)
 
 func (s *JVMExceptionSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -661,7 +672,7 @@ func (s *JVMExceptionSpec) GetGroundtruth(ctx context.Context) (Groundtruth, err
 
 func (s *JVMGCSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -670,7 +681,7 @@ func (s *JVMGCSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 
 func (s *JVMCPUStressSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -685,7 +696,7 @@ func (s *JVMCPUStressSpec) GetGroundtruth(ctx context.Context) (Groundtruth, err
 
 func (s *JVMMemoryStressSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -700,7 +711,7 @@ func (s *JVMMemoryStressSpec) GetGroundtruth(ctx context.Context) (Groundtruth, 
 
 func (s *JVMMySQLLatencySpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -715,7 +726,7 @@ func (s *JVMMySQLLatencySpec) GetGroundtruth(ctx context.Context) (Groundtruth, 
 
 func (s *JVMMySQLExceptionSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}
@@ -724,7 +735,7 @@ func (s *JVMMySQLExceptionSpec) GetGroundtruth(ctx context.Context) (Groundtruth
 
 func (s *JVMRuntimeMutatorSpec) GetGroundtruth(ctx context.Context) (Groundtruth, error) {
 	system := systemconfig.GetAllSystemTypes()[s.System]
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	namespace, err := resolveSpecNamespace(system, s.Namespace)
 	if err != nil {
 		return Groundtruth{}, err
 	}

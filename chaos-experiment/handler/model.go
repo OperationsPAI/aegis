@@ -232,6 +232,13 @@ func buildNode(rt reflect.Type, fieldName string, rootNode *Node) (*Node, error)
 		for i := range rt.NumField() {
 			field := rt.Field(i)
 
+			// Skip non-numeric fields (e.g. the per-spec Namespace string used by
+			// GetGroundtruth). The action-space serializer is index/range-based and
+			// only meaningful for numeric fields.
+			if isNonActionField(field.Type) {
+				continue
+			}
+
 			child, err := buildFieldNode(field, rootNode)
 			if err != nil {
 				return nil, err
@@ -512,6 +519,16 @@ func getValueRange(field reflect.StructField, rootNode *Node) (int, int, error) 
 	}
 
 	return start, end, err
+}
+
+// isNonActionField reports whether a struct field belongs to the action-space
+// (numeric range) or is metadata threaded through to GetGroundtruth such as
+// the per-spec Namespace.
+func isNonActionField(t reflect.Type) bool {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.Kind() == reflect.String
 }
 
 func parseRangeTag(tag string) (int, int, error) {

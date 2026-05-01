@@ -15,6 +15,8 @@ type CPUStressChaosSpec struct {
 	ContainerIdx int `range:"0-0" dynamic:"true" description:"Container Index"`
 	CPULoad      int `range:"1-100" description:"CPU Load Percentage"`
 	CPUWorker    int `range:"1-3" description:"CPU Stress Threads"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *CPUStressChaosSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -63,6 +65,8 @@ type MemoryStressChaosSpec struct {
 	ContainerIdx int `range:"0-0" dynamic:"true" description:"Container Index"`
 	MemorySize   int `range:"1-1024" description:"Memory Size Unit MB"`
 	MemWorker    int `range:"1-4" description:"Memory Stress Threads"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *MemoryStressChaosSpec) Create(cli cli.Client, opts ...Option) (string, error) {
