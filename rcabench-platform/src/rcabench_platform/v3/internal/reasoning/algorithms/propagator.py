@@ -25,11 +25,18 @@ from rcabench_platform.v3.internal.reasoning.algorithms.gates import (
     default_gates,
     evaluate_path,
 )
+from rcabench_platform.v3.internal.reasoning.algorithms.gates.manifest_entry import (
+    ManifestEntryGate,
+)
+from rcabench_platform.v3.internal.reasoning.algorithms.manifest_path_builder import (
+    ManifestAwarePathBuilder,
+)
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath, PathBuilder
 from rcabench_platform.v3.internal.reasoning.algorithms.rule_matcher import RuleMatcher
 from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import TemporalValidator
 from rcabench_platform.v3.internal.reasoning.algorithms.topology_explorer import TopologyExplorer
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
+from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
 from rcabench_platform.v3.internal.reasoning.models.graph import HyperGraph, is_structural_mediator
 from rcabench_platform.v3.internal.reasoning.models.propagation import (
     PropagationPath,
@@ -75,6 +82,7 @@ class FaultPropagator:
         max_hops: int = 5,
         injection_window: tuple[int, int] | None = None,
         gates: list[Gate] | None = None,
+        reasoning_ctx: ReasoningContext | None = None,
     ) -> None:
         """Initialize the fault propagator.
 
@@ -96,6 +104,7 @@ class FaultPropagator:
         self.max_hops = max_hops
         self.injection_window = injection_window if injection_window is not None else (0, 2**62)
         self.gates: list[Gate] = gates if gates is not None else default_gates()
+        self.reasoning_ctx = reasoning_ctx
 
         self.rule_matcher = RuleMatcher(rules)
         self.rule_index = self.rule_matcher.rule_index
@@ -118,6 +127,23 @@ class FaultPropagator:
         for injection_node_id in injection_node_ids:
             if self.graph.get_node_by_id(injection_node_id) is None:
                 raise ValueError(f"Injection node {injection_node_id} not found in graph")
+
+        # Phase 5: when a manifest is registered for the active fault
+        # type the manifest-aware path builder drives expansion in-build
+        # (replacing the post-filter mode that the generic builder +
+        # ManifestLayerGate combination implemented in Phase 3). Falls
+        # back to the generic post-filter path when no manifest is
+        # registered — keeps the unmanifested fault types working
+        # exactly as before.
+        if (
+            self.reasoning_ctx is not None
+            and self.reasoning_ctx.manifest is not None
+            and self.reasoning_ctx.v_root_node_id is not None
+        ):
+            return self._propagate_manifest_driven(
+                injection_node_ids=injection_node_ids,
+                alarm_nodes=alarm_nodes,
+            )
 
         def edge_filter(src_id: int, dst_id: int, is_first_hop: bool) -> bool:
             src_states = self._states_for_node(src_id)
@@ -240,6 +266,138 @@ class FaultPropagator:
             visited_nodes=visited_nodes,
             max_hops_reached=max_hops,
             subgraph_edges=subgraph_edges,
+            warnings=warnings,
+            rejected_paths=rejected_paths,
+        )
+
+    def _propagate_manifest_driven(
+        self,
+        injection_node_ids: list[int],
+        alarm_nodes: set[int],
+    ) -> PropagationResult:
+        """Manifest-driven expansion path (Phase 5).
+
+        Replaces the generic ``corridor → extract_paths → PathBuilder
+        → gate post-filter`` pipeline with layer-by-layer expansion
+        rooted at ``v_root``. The ``ManifestEntryGate`` runs once on
+        ``v_root`` before any expansion; if it fails, no paths are
+        produced (the entry signature short-circuits the whole case).
+        Otherwise the per-edge gates (TemporalGate, InjectTimeGate,
+        and a defensive ManifestLayerGate when present) run on each
+        materialised :class:`CandidatePath`.
+        """
+        rctx = self.reasoning_ctx
+        assert rctx is not None and rctx.manifest is not None  # caller guarded
+        v_root = rctx.v_root_node_id
+        assert v_root is not None  # caller guarded
+
+        warnings: list[str] = []
+
+        # Entry-signature short-circuit. We construct an empty
+        # CandidatePath / GateContext just to drive the gate's verdict
+        # — the gate itself is per-injection, ignores the path.
+        entry_gate = ManifestEntryGate(rctx)
+        ctx = GateContext(
+            graph=self.graph,
+            timelines=self.timelines,
+            rules=self.rules,
+            rule_matcher=self.rule_matcher,
+            injection_window=self.injection_window,
+            injection_node_ids=frozenset(injection_node_ids),
+        )
+        empty_path = CandidatePath(
+            node_ids=[v_root],
+            all_states=[["unknown"]],
+            picked_states=["unknown"],
+            picked_state_start_times=[rctx.t0 if rctx.t0 is not None else 0],
+            edge_descs=[],
+            rule_ids=[],
+            rule_confidences=[],
+            propagation_delays=[],
+        )
+        entry_result = entry_gate.evaluate(empty_path, ctx)
+        if not entry_result.passed:
+            warnings.append(f"manifest entry signature failed: {entry_result.reason}")
+            logger.info(
+                "[manifest-driven] entry signature failed for fault_type=%s v_root=%d: %s",
+                rctx.manifest.fault_type_name,
+                v_root,
+                entry_result.reason,
+            )
+            return PropagationResult(
+                injection_node_ids=injection_node_ids,
+                injection_states=["unknown"] * len(injection_node_ids),
+                paths=[],
+                visited_nodes={v_root},
+                max_hops_reached=0,
+                subgraph_edges=[],
+                warnings=warnings,
+                rejected_paths=[],
+            )
+
+        # Build paths via the manifest-driven expander.
+        builder = ManifestAwarePathBuilder(
+            graph=self.graph,
+            timelines=self.timelines,
+            temporal_validator=self.temporal_validator,
+            reasoning_ctx=rctx,
+        )
+        build = builder.build_all(v_root)
+
+        if build.rejected_handoffs:
+            for nid, ft in build.rejected_handoffs:
+                warnings.append(f"hand-off cap/cycle hit at node={nid} target={ft}")
+
+        valid_paths: list[PropagationPath] = []
+        rejected_paths: list[RejectedPath] = []
+
+        # Per-path gates: TemporalGate / InjectTimeGate / defensive
+        # ManifestLayerGate (entry gate already ran above; skip it
+        # here so we don't pay for it once per path). We honour any
+        # gate the caller injected via ``self.gates`` other than the
+        # entry gate.
+        per_path_gates = [g for g in self.gates if not isinstance(g, ManifestEntryGate)]
+
+        for candidate in build.paths:
+            gate_results = evaluate_path(candidate, ctx, per_path_gates)
+            if all(g.passed for g in gate_results):
+                confidence = 1.0
+                for c in candidate.rule_confidences:
+                    confidence *= c
+                valid_paths.append(
+                    PropagationPath(
+                        nodes=list(candidate.node_ids),
+                        states=list(candidate.all_states),
+                        edges=list(candidate.edge_descs),
+                        rules=list(candidate.rule_ids),
+                        confidence=confidence if candidate.rule_confidences else 1.0,
+                        state_start_times=list(candidate.picked_state_start_times),
+                        propagation_delays=list(candidate.propagation_delays),
+                        gate_results=gate_results,
+                    )
+                )
+                for rule_id in candidate.rule_ids:
+                    self.rule_stats.record_rule_use(rule_id)
+            else:
+                rejected_paths.append(RejectedPath(node_ids=list(candidate.node_ids), gate_results=gate_results))
+
+        logger.debug(
+            "[manifest-driven] fault_type=%s v_root=%d: built=%d valid=%d rejected=%d max_hops=%d",
+            rctx.manifest.fault_type_name,
+            v_root,
+            len(build.paths),
+            len(valid_paths),
+            len(rejected_paths),
+            build.max_hops_reached,
+        )
+
+        return PropagationResult(
+            injection_node_ids=injection_node_ids,
+            injection_states=["unknown"] * len(injection_node_ids),
+            paths=valid_paths,
+            visited_nodes=build.visited_nodes,
+            max_hops_reached=build.max_hops_reached,
+            subgraph_edges=[],
             warnings=warnings,
             rejected_paths=rejected_paths,
         )

@@ -764,6 +764,7 @@ def run_single_case(
                 max_hops=max_hops,
                 injection_window=injection_window,
                 gates=manifest_aware_gates(reasoning_ctx),
+                reasoning_ctx=reasoning_ctx,
             )
             result = propagator.propagate_from_injection(
                 injection_node_ids=injection_node_ids,
