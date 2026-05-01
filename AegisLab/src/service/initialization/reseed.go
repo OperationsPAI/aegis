@@ -267,8 +267,10 @@ func backfillContainerVersionEnvVars(db *gorm.DB, version *model.ContainerVersio
 		have[parameterConfigIdentity(&existing[i])] = struct{}{}
 	}
 
+	ownerID := version.ContainerID
 	for _, envSeed := range seed.EnvVars {
 		cfg := envSeed.ConvertToDBParameterConfig()
+		cfg.SystemID = &ownerID
 		key := parameterConfigIdentity(cfg)
 		if _, ok := have[key]; ok {
 			continue
@@ -308,9 +310,20 @@ func backfillContainerVersionEnvVars(db *gorm.DB, version *model.ContainerVersio
 	return nil
 }
 
+// findOrCreateParameterConfig looks up the parameter_configs row for the
+// given (system_id, config_key, type, category) tuple and inserts it when
+// missing. seed.SystemID must be set (or explicitly nil for cluster-wide
+// rows) by the caller — the row's owner is part of its identity (issue
+// #314).
 func findOrCreateParameterConfig(db *gorm.DB, seed *model.ParameterConfig) (*model.ParameterConfig, error) {
 	var existing model.ParameterConfig
-	err := db.Where("config_key = ? AND type = ? AND category = ?", seed.Key, seed.Type, seed.Category).First(&existing).Error
+	q := db.Where("config_key = ? AND type = ? AND category = ?", seed.Key, seed.Type, seed.Category)
+	if seed.SystemID == nil {
+		q = q.Where("system_id IS NULL")
+	} else {
+		q = q.Where("system_id = ?", *seed.SystemID)
+	}
+	err := q.First(&existing).Error
 	switch {
 	case err == nil:
 		return &existing, nil
@@ -324,8 +337,51 @@ func findOrCreateParameterConfig(db *gorm.DB, seed *model.ParameterConfig) (*mod
 	return seed, nil
 }
 
+// parameterConfigIdentity is the (key, type, category) tuple used to dedupe
+// parameter_configs *within an already system-scoped query result*. The
+// helm_config_values / container_version_env_vars joins above scope the
+// existing-row list to one helm_config (and thus one owning system), so the
+// SystemID column is intentionally NOT part of this identity — including it
+// would miss legacy NULL-system_id rows linked to a single owner via the
+// join table.
 func parameterConfigIdentity(cfg *model.ParameterConfig) string {
 	return fmt.Sprintf("%s:%d:%d", cfg.Key, cfg.Type, cfg.Category)
+}
+
+// resolveSystemIDForHelmConfig returns the owning containers.id for a
+// helm_configs row by joining through container_versions. The pointer is
+// addressable so callers can stamp it onto ParameterConfig.SystemID. We
+// require helm.ID > 0 (a persisted row); for synthetic dry-run helm configs
+// (helm.ID == 0) we use ContainerVersionID directly when set, else nil.
+// A nil return means "cluster-wide" — leave parameter_configs.system_id
+// NULL.
+func resolveSystemIDForHelmConfig(db *gorm.DB, helm *model.HelmConfig) (*int, error) {
+	if helm == nil {
+		return nil, nil
+	}
+	versionID := helm.ContainerVersionID
+	if versionID == 0 && helm.ID != 0 {
+		var hc model.HelmConfig
+		if err := db.Select("container_version_id").Where("id = ?", helm.ID).First(&hc).Error; err != nil {
+			return nil, err
+		}
+		versionID = hc.ContainerVersionID
+	}
+	if versionID == 0 {
+		return nil, nil
+	}
+	var cv model.ContainerVersion
+	if err := db.Select("container_id").Where("id = ?", versionID).First(&cv).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if cv.ContainerID == 0 {
+		return nil, nil
+	}
+	id := cv.ContainerID
+	return &id, nil
 }
 
 func parameterConfigSummary(cfg *model.ParameterConfig) string {
@@ -401,6 +457,11 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 		return nil
 	}
 
+	ownerID, err := resolveSystemIDForHelmConfig(db, helm)
+	if err != nil {
+		return fmt.Errorf("resolve owning system for helm value reseed %s@%s: %w", systemName, versionName, err)
+	}
+
 	var existing []model.ParameterConfig
 	if err := db.Table("parameter_configs").
 		Joins("JOIN helm_config_values ON helm_config_values.parameter_config_id = parameter_configs.id").
@@ -409,15 +470,25 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 		return fmt.Errorf("list helm values for %s@%s: %w", systemName, versionName, err)
 	}
 
-	have := make(map[string]struct{}, len(existing))
+	have := make(map[string]*model.ParameterConfig, len(existing))
 	for i := range existing {
-		have[parameterConfigIdentity(&existing[i])] = struct{}{}
+		have[parameterConfigIdentity(&existing[i])] = &existing[i]
 	}
 
 	for _, valueSeed := range seed.Values {
 		cfg := valueSeed.ConvertToDBParameterConfig()
+		cfg.SystemID = ownerID
 		key := parameterConfigIdentity(cfg)
-		if _, ok := have[key]; ok {
+		existingCfg, present := have[key]
+
+		// Detect mismatched ownership / default_value: the helm_config is
+		// linked to a parameter_configs row that doesn't belong to this
+		// system or carries a stale default. This is the issue #314 failure
+		// mode — pre-fix, two systems would land on a single shared row.
+		// Re-resolve to the per-system row and relink, so reseed actually
+		// repairs bad links instead of silently skipping.
+		mismatch := present && (!systemIDsEqual(existingCfg.SystemID, ownerID) || !defaultValuesEqual(existingCfg.DefaultValue, cfg.DefaultValue))
+		if present && !mismatch {
 			continue
 		}
 
@@ -429,6 +500,10 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 			NewValue: parameterConfigSummary(cfg),
 			Note:     note,
 		}
+		if mismatch {
+			act.OldValue = parameterConfigSummary(existingCfg)
+			act.Note = "relink: ownership/default mismatch"
+		}
 		if dryRun {
 			report.Actions = append(report.Actions, act)
 			continue
@@ -437,6 +512,17 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 		actualCfg, err := findOrCreateParameterConfig(db, cfg)
 		if err != nil {
 			return fmt.Errorf("resolve helm value %s for %s@%s: %w", cfg.Key, systemName, versionName, err)
+		}
+
+		if mismatch && actualCfg.ID != existingCfg.ID {
+			// Drop the stale link before creating the correct one — the
+			// (helm_config_id, parameter_config_id) PK would otherwise be
+			// fine, but leaving the wrong link around makes future reseed /
+			// helm-value-resolution see two competing rows for the same key.
+			if err := db.Where("helm_config_id = ? AND parameter_config_id = ?", helm.ID, existingCfg.ID).
+				Delete(&model.HelmConfigValue{}).Error; err != nil {
+				return fmt.Errorf("drop stale helm link %s for %s@%s: %w", cfg.Key, systemName, versionName, err)
+			}
 		}
 
 		rel := model.HelmConfigValue{
@@ -449,10 +535,17 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 
 		act.Applied = true
 		report.Actions = append(report.Actions, act)
-		have[key] = struct{}{}
+		have[key] = actualCfg
 	}
 
 	return nil
+}
+
+func systemIDsEqual(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 // reseedOneDynamicConfig reconciles a single dynamic_configs row + its etcd
@@ -886,6 +979,10 @@ func warnHelmValueDefaultDrift(db *gorm.DB, helm *model.HelmConfig, versionName 
 	if helm == nil || seed == nil || len(seed.Values) == 0 || helm.ID == 0 {
 		return nil
 	}
+	ownerID, err := resolveSystemIDForHelmConfig(db, helm)
+	if err != nil {
+		return fmt.Errorf("resolve owning system for drift check %s@%s: %w", systemName, versionName, err)
+	}
 	// Pull the parameter_configs that this helm_config currently points at.
 	var existing []model.ParameterConfig
 	if err := db.Table("parameter_configs").
@@ -900,6 +997,7 @@ func warnHelmValueDefaultDrift(db *gorm.DB, helm *model.HelmConfig, versionName 
 	}
 	for _, vs := range seed.Values {
 		want := vs.ConvertToDBParameterConfig()
+		want.SystemID = ownerID
 		key := parameterConfigIdentity(want)
 		got, ok := have[key]
 		if !ok {
@@ -949,9 +1047,14 @@ func pruneHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName stri
 	if helm == nil || helm.ID == 0 {
 		return nil
 	}
+	ownerID, err := resolveSystemIDForHelmConfig(db, helm)
+	if err != nil {
+		return fmt.Errorf("resolve owning system for prune %s@%s: %w", systemName, versionName, err)
+	}
 	wanted := make(map[string]struct{}, len(seed.Values))
 	for _, v := range seed.Values {
 		cfg := v.ConvertToDBParameterConfig()
+		cfg.SystemID = ownerID
 		wanted[parameterConfigIdentity(cfg)] = struct{}{}
 	}
 

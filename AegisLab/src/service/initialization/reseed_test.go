@@ -73,6 +73,8 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 		)`,
 		`CREATE TABLE parameter_configs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			system_id INTEGER,
+			system_id_key INTEGER NOT NULL DEFAULT 0,
 			config_key TEXT NOT NULL,
 			type INTEGER NOT NULL,
 			category INTEGER NOT NULL,
@@ -82,7 +84,7 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 			template_string TEXT,
 			required INTEGER NOT NULL DEFAULT 0,
 			overridable INTEGER NOT NULL DEFAULT 1,
-			UNIQUE(config_key, type, category)
+			UNIQUE(system_id_key, config_key, type, category)
 		)`,
 		`CREATE TABLE container_version_env_vars (
 			container_version_id INTEGER NOT NULL,
@@ -103,6 +105,16 @@ func newReseedTestDB(t *testing.T) *gorm.DB {
 		}
 	}
 	return db
+}
+
+// mustExec runs a setup INSERT/UPDATE and fails the test on error. Setup
+// failures (schema/constraint drift) otherwise surface as opaque
+// downstream assertions.
+func mustExec(t *testing.T, db *gorm.DB, sql string, args ...any) {
+	t.Helper()
+	if err := db.Exec(sql, args...).Error; err != nil {
+		t.Fatalf("setup exec failed: %v\n  sql: %s", err, sql)
+	}
 }
 
 // writeSeedFile dumps a minimal InitialData YAML to a temp file and returns
@@ -242,9 +254,9 @@ containers:
 // is surfaced as a skipped action so operators see it.
 func TestReseedChartDriftOnExistingVersionNotApplied(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'ts', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (chart_name, version, container_version_id, repo_url, repo_name) VALUES ('trainticket', '0.1.0', 10, 'https://x', 'r')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'ts', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (chart_name, version, container_version_id, repo_url, repo_name) VALUES ('trainticket', '0.1.0', 10, 'https://x', 'r')`)
 
 	// data.yaml bumps chart_name but keeps the container_version name.
 	seed := writeSeedFile(t, `
@@ -289,9 +301,9 @@ containers:
 
 func TestReseedBackfillsHelmValuesOnExistingVersion(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'sockshop', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.1.1', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (20, 'sockshop', '1.1.1', 10, 'https://x', 'r')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'sockshop', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.1.1', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (20, 'sockshop', '1.1.1', 10, 'https://x', 'r')`)
 
 	seed := writeSeedFile(t, `
 containers:
@@ -368,8 +380,8 @@ containers:
 
 func TestReseedBackfillsEnvVarsOnExistingVersion(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'clickhouse', 1, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.0.0', 1, 0, 1)`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'clickhouse', 1, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.0.0', 1, 0, 1)`)
 
 	ns := "ts0"
 	if err := db.Create(&model.ParameterConfig{
@@ -821,9 +833,9 @@ containers:
 // existing parameter_configs.default_value, NEVER overwrite — log + report.
 func TestReseedHelmConfigForVersionPreservesDefaultValueDrift(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`)
 
 	manuallyEdited := "operator-mirrored.example.com/busybox"
 	cfg := &model.ParameterConfig{
@@ -898,9 +910,9 @@ containers:
 // the seed YAML. The parameter_configs row is intentionally NOT deleted.
 func TestReseedHelmConfigForVersionPruneDeletesMissingLinks(t *testing.T) {
 	db := newReseedTestDB(t)
-	_ = db.Exec(`INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`).Error
-	_ = db.Exec(`INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`).Error
-	_ = db.Exec(`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`).Error
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'tea', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (62, '0.1.2', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (90, 'teastore', '0.1.2', 62, 'https://x', 'lgu-tea')`)
 
 	staleVal := "deprecated"
 	stale := &model.ParameterConfig{
@@ -983,6 +995,114 @@ containers:
 	}
 	if !pruneApplied {
 		t.Fatalf("expected applied prune action, got %+v", report.Actions)
+	}
+}
+
+// TestReseedTwoSystemsSameKeyDifferentDefault pins issue #314: two systems
+// declaring the same chart value path with different default_values must
+// each land in DB as their own parameter_configs row with their own
+// helm_config_values link, instead of colliding on the legacy 3-column
+// unique index where only the first system's value would survive.
+func TestReseedTwoSystemsSameKeyDifferentDefault(t *testing.T) {
+	db := newReseedTestDB(t)
+	// Two pre-existing systems sharing a DSB-style chart family that uses
+	// the same `global.otel.endpoint` value path.
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'hs', 2, 1)`)
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (2, 'sn', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (20, '0.1.0', 2, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (100, 'hs', '0.1.0', 10, 'https://x', 'r')`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (200, 'sn', '0.1.0', 20, 'https://x', 'r')`)
+
+	seed := writeSeedFile(t, `
+containers:
+  - type: 2
+    name: hs
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        helm_config:
+          version: 0.1.0
+          chart_name: hs
+          repo_name: r
+          repo_url: https://x
+          values:
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+  - type: 2
+    name: sn
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        helm_config:
+          version: 0.1.0
+          chart_name: sn
+          repo_name: r
+          repo_url: https://x
+          values:
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-sn-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+`)
+
+	if _, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed}); err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	// Two distinct parameter_configs rows must exist for the same key — one
+	// per owning system.
+	type row struct {
+		ID           int
+		SystemID     *int
+		DefaultValue *string
+	}
+	var rows []row
+	if err := db.Raw(`SELECT id, system_id, default_value FROM parameter_configs WHERE config_key = 'global.otel.endpoint' ORDER BY system_id`).Scan(&rows).Error; err != nil {
+		t.Fatalf("list parameter_configs: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("want 2 parameter_configs rows for global.otel.endpoint, got %d (%+v)", len(rows), rows)
+	}
+
+	// helm_config_values link must point hs's helm_config at hs's row, sn's at sn's.
+	var hsLinked, snLinked string
+	if err := db.Raw(`
+		SELECT pc.default_value
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		WHERE hcv.helm_config_id = 100 AND pc.config_key = 'global.otel.endpoint'`).Scan(&hsLinked).Error; err != nil {
+		t.Fatalf("hs linked: %v", err)
+	}
+	if err := db.Raw(`
+		SELECT pc.default_value
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		WHERE hcv.helm_config_id = 200 AND pc.config_key = 'global.otel.endpoint'`).Scan(&snLinked).Error; err != nil {
+		t.Fatalf("sn linked: %v", err)
+	}
+	if hsLinked != "opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318" {
+		t.Fatalf("hs helm_config resolved wrong default: %q", hsLinked)
+	}
+	if snLinked != "opentelemetry-kube-stack-deployment-sn-collector.monitoring.svc.cluster.local:4318" {
+		t.Fatalf("sn helm_config resolved wrong default: %q", snLinked)
+	}
+
+	// Idempotent: rerun produces no new actions.
+	r2, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("second reseed: %v", err)
+	}
+	if len(r2.Actions) != 0 {
+		t.Fatalf("expected clean idempotent rerun for two-system seed, got %+v", r2.Actions)
 	}
 }
 

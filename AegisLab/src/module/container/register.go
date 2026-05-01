@@ -382,10 +382,12 @@ func (s *Service) registerInsertVersion(repo *Repository, req *RegisterContainer
 
 	// Populate env vars (benchmark form only, optional).
 	if req.Form == "benchmark" && len(req.EnvVars) > 0 {
+		ownerID := containerID
 		params := make([]model.ParameterConfig, 0, len(req.EnvVars))
 		for _, e := range req.EnvVars {
 			val := e.Value
 			params = append(params, model.ParameterConfig{
+				SystemID:     &ownerID,
 				Key:          e.Key,
 				Type:         consts.ParameterTypeFixed,
 				Category:     consts.ParameterCategoryEnvVars,

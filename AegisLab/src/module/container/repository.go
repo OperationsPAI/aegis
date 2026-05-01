@@ -295,6 +295,10 @@ func (r *Repository) batchCreateOrFindParameterConfigs(params []model.ParameterC
 	return nil
 }
 
+// listParameterConfigsByKeys returns parameter_configs rows matching each
+// (system_id, config_key, type, category) tuple. A nil SystemID on the input
+// matches a row with NULL system_id (cluster-wide); a non-nil SystemID
+// matches only rows owned by that system.
 func (r *Repository) listParameterConfigsByKeys(configs []model.ParameterConfig) ([]model.ParameterConfig, error) {
 	if len(configs) == 0 {
 		return []model.ParameterConfig{}, nil
@@ -304,7 +308,13 @@ func (r *Repository) listParameterConfigsByKeys(configs []model.ParameterConfig)
 	query := r.db.Model(&model.ParameterConfig{})
 	conditions := r.db.Where("1 = 0")
 	for _, cfg := range configs {
-		conditions = conditions.Or(r.db.Where("config_key = ? AND type = ? AND category = ?", cfg.Key, cfg.Type, cfg.Category))
+		base := r.db.Where("config_key = ? AND type = ? AND category = ?", cfg.Key, cfg.Type, cfg.Category)
+		if cfg.SystemID == nil {
+			base = base.Where("system_id IS NULL")
+		} else {
+			base = base.Where("system_id = ?", *cfg.SystemID)
+		}
+		conditions = conditions.Or(base)
 	}
 	if err := query.Where(conditions).Find(&results).Error; err != nil {
 		return nil, fmt.Errorf("failed to list parameter configs by keys: %w", err)
