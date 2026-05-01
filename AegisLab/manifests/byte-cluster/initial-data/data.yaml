@@ -249,30 +249,16 @@ containers:
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/open-telemetry-demo
               overridable: true
-            - key: opentelemetry-demo.components.accounting.initContainers[0].image
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
-              overridable: true
-            - key: opentelemetry-demo.components.cart.initContainers[0].image
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
-              overridable: true
-            - key: opentelemetry-demo.components.checkout.initContainers[0].image
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
-              overridable: true
-            - key: opentelemetry-demo.components.fraud-detection.initContainers[0].image
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
-              overridable: true
+            # NOTE: per-component `initContainers[0].image` overrides removed.
+            # Helm `--set` against an indexed array slot REPLACES the whole
+            # array (not field-merge), so setting only `[0].image` clears the
+            # `[0].name` and `[0].command` from the chart default, and k8s
+            # rejects every Deployment with
+            #   spec.template.spec.initContainers[0].name: Required value
+            # The sidecar overlay (`AegisLab/manifests/byte-cluster/initial-
+            # data/otel-demo.yaml`) carries the full init-container objects
+            # (name + image + command), so dropping these seed keys lets the
+            # overlay -f win, and the mirror image lands cleanly.
             - key: opentelemetry-demo.components.kafka.imageOverride.repository
               type: 0
               category: 1
@@ -297,12 +283,8 @@ containers:
               value_type: 0
               default_value: v0.12.9
               overridable: true
-            - key: opentelemetry-demo.components.flagd.initContainers[0].image
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
-              overridable: true
+            # flagd init container override also removed — same reason as the
+            # accounting/cart/checkout/fraud-detection block above.
             - key: opentelemetry-demo.components.postgresql.imageOverride.repository
               type: 0
               category: 1
