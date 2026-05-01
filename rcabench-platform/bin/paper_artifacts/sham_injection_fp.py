@@ -109,7 +109,10 @@ def _run_one_sham(
     produced by the pipeline against the sham injection; ``error`` is set
     on resolver / IR pipeline failure.
     """
-    from rcabench_platform.v3.internal.reasoning.algorithms.gates import INJECT_TIME_TOLERANCE_SECONDS
+    from rcabench_platform.v3.internal.reasoning.algorithms.gates import (
+        INJECT_TIME_TOLERANCE_SECONDS,
+        manifest_aware_gates,
+    )
     from rcabench_platform.v3.internal.reasoning.algorithms.label_classifier import classify
     from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultPropagator
     from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
@@ -120,6 +123,13 @@ def _run_one_sham(
         _filter_alarms_by_surface,
         _latest_abnormal_seconds,
         _resolve_alarm_nodes,
+    )
+    from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+    from rcabench_platform.v3.internal.reasoning.manifests.extractors.feature_extractor import (
+        extract_feature_samples,
+    )
+    from rcabench_platform.v3.internal.reasoning.manifests.registry import (
+        get_default_registry,
     )
     from rcabench_platform.v3.internal.reasoning.config.slo_surface import SLOSurface
     from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
@@ -247,12 +257,43 @@ def _run_one_sham(
 
         delta_t = max(0, abnormal_window_end - injection_at)
         injection_window = (injection_at, injection_at + delta_t + INJECT_TIME_TOLERANCE_SECONDS)
+
+        # Wire the manifest-driven gates and PathBuilder. The sham harness
+        # tests "would the manifest pipeline fire on a non-GT target under
+        # baseline noise?" — so we honestly invoke the same code path as
+        # cli.run_single_case (cli.py:728-767), with the sham node as
+        # v_root but holding the real fault_type_name (we are testing the
+        # manifest's specificity, not its category routing).
+        v_root_id: int | None = (
+            injection_node_ids[0] if injection_node_ids else physical_node_ids[0]
+        )
+        feature_samples = extract_feature_samples(
+            graph=graph,
+            baseline_traces=baseline_traces,
+            abnormal_traces=abnormal_traces,
+            abnormal_window_start=injection_at,
+            abnormal_window_end=abnormal_window_end,
+            timelines=timelines,
+        )
+        registry = get_default_registry()
+        manifest = registry.get(resolved_real.fault_type_name)
+        reasoning_ctx = ReasoningContext(
+            fault_type_name=resolved_real.fault_type_name,
+            manifest=manifest,
+            v_root_node_id=v_root_id,
+            t0=injection_at,
+            feature_samples=feature_samples,
+            registry=registry,
+        )
+
         propagator = FaultPropagator(
             graph=graph,
             rules=rules,
             timelines=timelines,
             max_hops=max_hops,
             injection_window=injection_window,
+            gates=manifest_aware_gates(reasoning_ctx),
+            reasoning_ctx=reasoning_ctx,
         )
         result = propagator.propagate_from_injection(
             injection_node_ids=injection_node_ids,
