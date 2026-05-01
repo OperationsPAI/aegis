@@ -11,8 +11,13 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
+import pytest
 
 from rcabench_platform.v3.internal.reasoning import cli as reasoning_cli
+from rcabench_platform.v3.internal.reasoning.manifests import (
+    ManifestRegistry,
+    set_default_registry,
+)
 from rcabench_platform.v3.internal.reasoning.models.graph import (
     CallsEdgeData,
     DepKind,
@@ -21,6 +26,24 @@ from rcabench_platform.v3.internal.reasoning.models.graph import (
     Node,
     PlaceKind,
 )
+
+
+@pytest.fixture(autouse=True)
+def _empty_manifest_registry():
+    """Force generic-rule path for these synthetic-graph tests.
+
+    ``get_default_registry`` lazy-loads the bundled manifests when nobody
+    has installed an explicit registry. The synthetic stubs in this
+    module don't carry realistic feature samples, so manifest-aware
+    gates would (correctly) reject the path. Pin an empty registry for
+    the duration of each test, then restore the previous one.
+    """
+    from rcabench_platform.v3.internal.reasoning.manifests import registry as _reg
+
+    prev = _reg._DEFAULT_REGISTRY
+    set_default_registry(ManifestRegistry({}))
+    yield
+    _reg._DEFAULT_REGISTRY = prev
 
 
 def _make_graph_with_calls_chain() -> tuple[HyperGraph, dict[str, int]]:

@@ -187,16 +187,44 @@ def set_default_registry(registry: ManifestRegistry) -> None:
 
 
 def get_default_registry() -> ManifestRegistry:
-    """Return the process-wide registry, or an empty one if uninitialised.
+    """Return the process-wide registry, lazy-loading the bundled manifests.
 
-    An empty registry is a valid state — every ``get()`` returns ``None``
-    so callers fall back to generic rules unconditionally. This is the
-    behaviour required by Phase 1's "generic-rule path stays default
-    when manifest is missing" rule.
+    When ``set_default_registry`` has not been called explicitly, this
+    falls back to loading the package-shipped
+    ``manifests/fault_types/`` directory (the same default
+    ``cli._init_manifest_registry`` uses). This makes batch drivers that
+    invoke :func:`run_single_case` directly, without going through the
+    ``forge run`` CLI entry point (e.g. ablation drivers under
+    ``bin/paper_artifacts``), get manifest-aware behaviour by default
+    rather than silently falling through to generic rules.
+
+    Tests and CLI commands that need an explicitly empty registry must
+    call ``set_default_registry(ManifestRegistry({}))`` before any
+    consumer hits this function.
     """
     global _DEFAULT_REGISTRY
     if _DEFAULT_REGISTRY is None:
-        _DEFAULT_REGISTRY = ManifestRegistry({})
+        # Package default: rcabench_platform/v3/internal/reasoning/manifests/fault_types
+        default_dir = Path(__file__).resolve().parent / "fault_types"
+        if default_dir.exists():
+            try:
+                _DEFAULT_REGISTRY = ManifestRegistry.from_directory(default_dir, strict=True)
+                logger.info(
+                    "lazy-loaded %d manifest(s) from default dir %s",
+                    len(_DEFAULT_REGISTRY),
+                    default_dir,
+                )
+            except ManifestLoadError:
+                # Don't crash on bad manifests at lazy-init time; tests
+                # may be running an in-tree subset. Fall back to empty.
+                logger.warning(
+                    "failed to lazy-load default manifest registry from %s; "
+                    "using empty registry",
+                    default_dir,
+                )
+                _DEFAULT_REGISTRY = ManifestRegistry({})
+        else:
+            _DEFAULT_REGISTRY = ManifestRegistry({})
     return _DEFAULT_REGISTRY
 
 
