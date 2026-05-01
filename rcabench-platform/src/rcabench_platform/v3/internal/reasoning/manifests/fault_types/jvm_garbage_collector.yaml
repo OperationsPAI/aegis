@@ -1,0 +1,72 @@
+# JVMGarbageCollector — explicit forced GC pause via Byteman.
+#
+# Zero JVMGarbageCollector (fault_type 26) cases exist in the 500-case
+# canonical dataset, so all bands are theoretical. The dataset also
+# does not surface jvm.gc.duration directly (only jvm.cpu.* and
+# jvm.memory.*); the JvmAugmenterAdapter already implements the
+# frequent_gc label off jvm.gc.duration / jvm.gc.collection.elapsed
+# (see ir/adapters/jvm.py:GC_DURATION_METRICS), so the feature exists
+# in the platform contract even though no dataset sample exercises it.
+fault_type_name: JVMGarbageCollector
+target_kind: container
+seed_tier: slow
+description: |
+  Forced GC invocation via Byteman: synchronous full-GC inside the
+  targeted method causes a stop-the-world pause that is
+  user-visible as latency on inbound spans handled during the pause
+  window. JvmAugmenterAdapter labels sustained GC time as
+  pod.DEGRADED + frequent_gc.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: container
+      feature: gc_pause_ratio
+      band: [0.3, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [2.0, .inf]
+      magnitude_source: theoretical
+    - kind: container
+      feature: cpu_throttle_ratio
+      band: [1.5, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [runs, routes_to, includes]
+    edge_directions: [backward, backward, forward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [2.0, .inf]
+        magnitude_decay: 0.7
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.4, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+    max_fanout: 32
+
+hand_offs:
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: timeout_rate
+      threshold: 0.3
+    on_layer: 2
+    rationale: |
+      Stop-the-world GC pauses lasting beyond the upstream timeout
+      budget surface as response-abort at far-downstream callers.
+
+terminals: []

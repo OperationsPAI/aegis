@@ -1,0 +1,75 @@
+# JVMCPUStress — Byteman/JVM-level CPU saturation on a method.
+#
+# Empirical bands from n=2 cases (only 2 in canonical dataset);
+# marked theoretical+ to acknowledge the small sample. Both observed
+# cases drive k8s.pod.cpu_limit_utilization to saturation (1.0) at
+# 10x and 328x baseline; container.cpu.usage hits the limit (5.0).
+# Memory is unaffected (memory_usage_ratio ~ baseline).
+fault_type_name: JVMCPUStress
+target_kind: container
+seed_tier: degraded
+description: |
+  JVM-level CPU saturation injected via Byteman, burning user-mode
+  cycles inside the target method. Manifests as cpu_limit_utilization
+  saturation at the cgroup boundary even though no cgroup throttle
+  was configured. K8sMetricsAdapter labels the resulting state as
+  pod.DEGRADED + high_cpu (see ir/adapters/k8s_metrics.py).
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: container
+      feature: cpu_throttle_ratio
+      band: [3.0, .inf]
+      magnitude_source: empirical
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
+      magnitude_source: empirical
+    - kind: container
+      feature: gc_pause_ratio
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [runs, routes_to, includes]
+    edge_directions: [backward, backward, forward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.5, .inf]
+        magnitude_decay: 0.7
+      - kind: pod
+        feature: cpu_throttle_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 1.0
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+    max_fanout: 32
+
+hand_offs:
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: timeout_rate
+      threshold: 0.3
+    on_layer: 2
+    rationale: |
+      JVM-level CPU burn inside the targeted method blocks request
+      handling; persistent upstream latency past timeout budget
+      surfaces as response-abort at far-downstream callers.
+
+terminals: []

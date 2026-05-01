@@ -1,0 +1,79 @@
+# MemoryStress — cgroup memory pressure on a container.
+#
+# No MemoryStress (fault_type 3) cases exist in the 500-case canonical
+# dataset, so all bands are theoretical. Bands are corroborated by the
+# 65 JVMMemoryStress cases: peak k8s.pod.memory_limit_utilization
+# clusters at 0.78-0.81 (3.0-3.6x baseline). The cgroup-level fault
+# is mechanistically similar but typically pushes higher because there
+# is no JVM heap cap to bound the working set early.
+fault_type_name: MemoryStress
+target_kind: container
+seed_tier: degraded
+description: |
+  Container-level memory pressure injected via cgroup memory ballast.
+  Pushes working_set toward limit; on saturation the kernel may
+  invoke OOM-killer, which the IR adapter records as
+  container.UNAVAILABLE with the oom_killed specialization label
+  (see ir/adapters/jvm.py).
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: container
+      feature: memory_usage_ratio
+      band: [0.85, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
+      magnitude_source: theoretical
+    - kind: container
+      feature: gc_pause_ratio
+      band: [0.2, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [runs, routes_to, includes]
+    edge_directions: [backward, backward, forward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.5, .inf]
+        magnitude_decay: 0.7
+      - kind: pod
+        feature: memory_usage_ratio
+        band: [0.85, 1.0]
+        magnitude_decay: 1.0
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+    max_fanout: 32
+
+hand_offs:
+  - to: ContainerKill
+    trigger:
+      kind: container
+      feature: memory_usage_ratio
+      threshold: 0.98
+    on_layer: 1
+    rationale: |
+      When memory pressure saturates the cgroup limit, the kernel
+      OOM-killer terminates the container. The IR's JvmAugmenterAdapter
+      emits container.UNAVAILABLE with the oom_killed specialization
+      label (see ir/adapters/jvm.py:OOM_METRICS), which is the entry
+      signature of ContainerKill. This hand-off models the cascade
+      MemoryStress -> OOM -> container kill explicitly.
+
+terminals: []
