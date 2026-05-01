@@ -216,32 +216,107 @@ class ManifestAwarePathBuilder:
         # Seed frame: v_root carries no parent edge, no rule, and
         # picked-state derived from its own timeline (best-effort —
         # downstream gates only consult the per-edge entries).
-        seed_state, seed_states_all, seed_time = self._pick_root_state(v_root_id)
+        seed_frame = self._make_seed_frame(v_root_id, manifest.fault_type_name)
+        result.visited_nodes.add(v_root_id)
+
+        # Structural descent: when v_root's kind doesn't have direct
+        # edges of the manifest's layer-1 ``edge_kinds`` (e.g., a
+        # service v_root with a manifest whose first layer expects
+        # ``calls`` edges, which only exist between spans), descend
+        # one structural hop via ``includes``/``runs``/``routes_to``
+        # to attach proxy seeds on the spans/pods/containers v_root
+        # owns. Paths emitted from these proxies still anchor at
+        # v_root through ``_emit_path_to``.
+        proxy_seeds = self._descend_proxy_seeds(seed_frame, manifest)
+        for proxy in proxy_seeds:
+            result.visited_nodes.add(proxy.node_id)
+        seed_frames = [seed_frame, *proxy_seeds]
+
+        # Recurse into the seed manifest. Each derivation may emit
+        # multiple leaves; hand-offs spawn extra sub-derivations.
+        self._expand_manifest(
+            manifest,
+            seed_frames,
+            result,
+        )
+
+        return result
+
+    def _make_seed_frame(self, node_id: int, manifest_name: str) -> _Frame:
+        """Construct a seed ``_Frame`` rooted at ``node_id``."""
+        seed_state, seed_states_all, seed_time = self._pick_root_state(node_id)
         seed_chain = HandOffChain()
-        seed_chain.record_seed(v_root_id, manifest.fault_type_name)
-        seed_frame = _Frame(
-            node_id=v_root_id,
+        seed_chain.record_seed(node_id, manifest_name)
+        return _Frame(
+            node_id=node_id,
             parent=None,
             edge_desc="",
             rule_id="",
-            manifest_name=manifest.fault_type_name,
+            manifest_name=manifest_name,
             layer_index=None,
             picked_state=seed_state,
             picked_states_all=seed_states_all,
             picked_time=seed_time,
             handoff_chain=seed_chain,
         )
-        result.visited_nodes.add(v_root_id)
 
-        # Recurse into the seed manifest. Each derivation may emit
-        # multiple leaves; hand-offs spawn extra sub-derivations.
-        self._expand_manifest(
-            manifest,
-            seed_frame,
-            result,
-        )
+    def _descend_proxy_seeds(
+        self,
+        seed_frame: _Frame,
+        manifest: FaultManifest,
+    ) -> list[_Frame]:
+        """Add proxy seeds for v_root's owned descendants.
 
-        return result
+        Triggered when v_root's direct edges don't admit any of
+        ``layer1.edge_kinds`` (e.g., a service node with a manifest
+        whose layer 1 walks ``calls`` — calls edges live between
+        spans, not on services). We follow one structural hop via
+        ``includes``/``runs``/``routes_to`` to children whose own
+        edges match layer-1 kinds, and emit one extra seed frame per
+        admitted descendant.
+        """
+        if not manifest.derivation_layers:
+            return []
+        layer1_kinds = set(manifest.derivation_layers[0].edge_kinds)
+        if self._has_edge_of_kinds(seed_frame.node_id, layer1_kinds):
+            return []  # v_root is already on the right plane.
+        structural_kinds = {"includes", "runs", "routes_to"}
+        proxies: list[_Frame] = []
+        for _, dst_id, key in self.graph._graph.out_edges(  # type: ignore[call-arg]
+            seed_frame.node_id, keys=True
+        ):
+            edge_data = self.graph._graph.get_edge_data(
+                seed_frame.node_id, dst_id, key
+            )
+            if not edge_data:
+                continue
+            edge_ref: Edge | None = edge_data.get("ref")
+            if edge_ref is None:
+                continue
+            if edge_ref.kind.value not in structural_kinds:
+                continue
+            if not self._has_edge_of_kinds(dst_id, layer1_kinds):
+                continue
+            proxies.append(self._make_seed_frame(dst_id, manifest.fault_type_name))
+        return proxies
+
+    def _has_edge_of_kinds(self, node_id: int, kinds: set[str]) -> bool:
+        """True iff ``node_id`` has any in/out edge whose ``kind`` is in ``kinds``."""
+        if not kinds:
+            return False
+        for _, _, _, d in self.graph._graph.out_edges(  # type: ignore[call-arg]
+            node_id, keys=True, data=True
+        ):
+            ref = d.get("ref")
+            if ref is not None and ref.kind.value in kinds:
+                return True
+        for _, _, _, d in self.graph._graph.in_edges(  # type: ignore[call-arg]
+            node_id, keys=True, data=True
+        ):
+            ref = d.get("ref")
+            if ref is not None and ref.kind.value in kinds:
+                return True
+        return False
 
     # ---------------------------------------------------------------
     # Per-manifest expansion (recursive across hand-offs)
@@ -250,15 +325,14 @@ class ManifestAwarePathBuilder:
     def _expand_manifest(
         self,
         manifest: FaultManifest,
-        seed_frame: _Frame,
+        seed_frames: list[_Frame] | _Frame,
         result: ManifestPathBuildResult,
     ) -> None:
-        """Walk ``manifest.derivation_layers`` rooted at ``seed_frame``.
+        """Walk ``manifest.derivation_layers`` rooted at one or more seed frames.
 
-        Emits a :class:`CandidatePath` per admitted leaf at the deepest
-        layer it could reach (paths that cannot extend any further than
-        layer ``k`` are still emitted at depth ``k``, since each layer
-        admission is a complete causal claim).
+        Multiple seeds occur when ``_descend_proxy_seeds`` adds owned
+        descendants of v_root; the layer expansion treats them as a
+        wider initial frontier.
         """
         layers = list(manifest.derivation_layers)
         if not layers:
@@ -266,7 +340,10 @@ class ManifestAwarePathBuilder:
 
         # Frontier per layer. Each entry: parent _Frame, used to build the
         # next frame and to gate the path back to v_root.
-        frontier: list[_Frame] = [seed_frame]
+        if isinstance(seed_frames, _Frame):
+            frontier: list[_Frame] = [seed_frames]
+        else:
+            frontier = list(seed_frames)
 
         # Track per-handoff potential so we don't re-attempt the same
         # hand-off from the same node within this manifest's pass.
@@ -441,7 +518,7 @@ class ManifestAwarePathBuilder:
         :class:`ManifestLayerGate`.
         """
         for fm in layer.expected_features:
-            value = self.rctx.sample(dst_id, fm.kind, fm.feature)
+            value = self.rctx.aggregate_feature(dst_id, fm.kind, fm.feature)
             if _band_match(value, fm):
                 return True
         return False
@@ -523,7 +600,7 @@ class ManifestAwarePathBuilder:
     def _handoff_trigger_fires(self, node_id: int, handoff: HandOff) -> bool:
         """Hand-off trigger uses ``threshold`` (>=), not a band."""
         trig = handoff.trigger
-        value = self.rctx.sample(node_id, trig.kind, trig.feature)
+        value = self.rctx.aggregate_feature(node_id, trig.kind, trig.feature)
         if value is None:
             return False
         return value >= trig.threshold

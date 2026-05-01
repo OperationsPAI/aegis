@@ -740,6 +740,7 @@ def run_single_case(
             t0=injection_at,
             feature_samples=feature_samples,
             registry=_registry,
+            graph=graph,
         )
         if _manifest is not None:
             logger.info(

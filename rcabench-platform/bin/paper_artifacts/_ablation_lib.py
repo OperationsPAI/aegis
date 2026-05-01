@@ -382,6 +382,7 @@ def run_one_case(
             t0=injection_at,
             feature_samples=feature_samples,
             registry=registry,
+            graph=graph,
         )
 
         if config_name == "skip_screen":

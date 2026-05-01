@@ -37,12 +37,13 @@ from rcabench_platform.v3.internal.reasoning.manifests.schema import FeatureMatc
 
 
 def _band_match(value: float | None, fm: FeatureMatch) -> bool:
-    """Return True iff ``value`` lies in ``fm.band`` (semi-open ``[lo, hi)``).
+    """Return True iff ``value`` lies in ``fm.band`` (closed ``[lo, hi]``).
 
-    A ``None`` value (sample missing) does not match. Following SCHEMA.md
-    "Magnitude band semantics", ``high`` is exclusive — but ``+inf`` is a
-    common terminator and should match any finite upper end. Treat
-    ``hi == inf`` as inclusive of any finite value.
+    A ``None`` value (sample missing) does not match. SCHEMA.md uses
+    closed-interval semantics so that bands like ``[0.2, 1.0]`` for
+    rate features (which cap at 1.0) match the natural maximum
+    instead of silently excluding it. ``+inf`` upper still matches
+    any finite value — that case stays explicit for readability.
     """
     if value is None:
         return False
@@ -51,7 +52,7 @@ def _band_match(value: float | None, fm: FeatureMatch) -> bool:
         return False
     if hi == float("inf"):
         return True
-    return value < hi
+    return value <= hi
 
 
 class ManifestEntryGate:
@@ -100,7 +101,7 @@ class ManifestEntryGate:
         required_evidence: list[dict[str, object]] = []
         all_required_pass = True
         for fm in sig.required_features:
-            value = rctx.sample(v_root, fm.kind, fm.feature)
+            value = rctx.aggregate_feature(v_root, fm.kind, fm.feature)
             ok = _band_match(value, fm)
             required_evidence.append(
                 {
@@ -117,7 +118,7 @@ class ManifestEntryGate:
         optional_evidence: list[dict[str, object]] = []
         optional_matched = 0
         for fm in sig.optional_features:
-            value = rctx.sample(v_root, fm.kind, fm.feature)
+            value = rctx.aggregate_feature(v_root, fm.kind, fm.feature)
             ok = _band_match(value, fm)
             if ok:
                 optional_matched += 1

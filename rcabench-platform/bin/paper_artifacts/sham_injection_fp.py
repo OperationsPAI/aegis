@@ -284,6 +284,7 @@ def _run_one_sham(
             t0=injection_at,
             feature_samples=feature_samples,
             registry=registry,
+            graph=graph,
         )
 
         propagator = FaultPropagator(

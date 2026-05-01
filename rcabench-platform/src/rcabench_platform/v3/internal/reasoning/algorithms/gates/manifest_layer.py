@@ -74,7 +74,7 @@ def _node_matches_any_expected(
     evidence: list[dict[str, object]] = []
     any_match = False
     for fm in expected:
-        value = rctx.sample(node_id, fm.kind, fm.feature)
+        value = rctx.aggregate_feature(node_id, fm.kind, fm.feature)
         ok = _band_match(value, fm)
         if ok:
             any_match = True
