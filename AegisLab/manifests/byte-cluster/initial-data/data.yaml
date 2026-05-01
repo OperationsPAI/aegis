@@ -213,13 +213,18 @@ containers:
     is_public: true
     status: 1
     versions:
-      # Bumped 0.1.8 → 0.1.9 to pick up otel-demo-aegis chart 0.1.8 which
-      # mirrors busybox + kafka images via docker.io/opspai/* so the volces
-      # auto-mirror can serve them on byte-cluster nodes that can't reach
-      # docker.io / ghcr.io directly. Without this, every otel-demoN namespace
-      # had wait-for-kafka init containers stuck in ImagePullBackOff and the
-      # kafka pod itself failed to pull, blocking accounting/cart/checkout/
-      # fraud-detection from ever starting.
+      # Bumped 0.1.8 -> 0.1.9 to pick up otel-demo-aegis chart 0.1.8 and to
+      # seed the byte-cluster image-rewrite overrides in DB, not just in the
+      # sidecar values file. Before this fix the live DB only carried
+      # `global.clusterCollector.service`, so RestartPedestal re-installs
+      # merged a stale value_file with almost no helm_config_values and fell
+      # back to bad defaults / dead image refs:
+      #   - app images resolved to pair-diag `pair/open-telemetry-demo:*`,
+      #     but the 2.2.0-* tags are not published there;
+      #   - kafka resolved to docker.io/opspai/otel-demo-kafka:2.2.0, which
+      #     byte-cluster nodes cannot reach directly.
+      # Keep the collector retargeting override, and pin the verified byte-
+      # cluster mirrors for app images, kafka, and the in-namespace collector.
       - name: 0.1.9
         github_link: open-telemetry/opentelemetry-demo
         status: 1
@@ -234,6 +239,102 @@ containers:
               category: 1
               value_type: 0
               default_value: opentelemetry-kube-stack-deployment-otel-demo-collector.monitoring.svc.cluster.local
+              overridable: true
+            - key: opentelemetry-demo.default.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/open-telemetry-demo
+              overridable: true
+            - key: opentelemetry-demo.components.accounting.initContainers[0].image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
+              overridable: true
+            - key: opentelemetry-demo.components.cart.initContainers[0].image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
+              overridable: true
+            - key: opentelemetry-demo.components.checkout.initContainers[0].image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
+              overridable: true
+            - key: opentelemetry-demo.components.fraud-detection.initContainers[0].image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
+              overridable: true
+            - key: opentelemetry-demo.components.kafka.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/otel-demo-kafka
+              overridable: true
+            - key: opentelemetry-demo.components.kafka.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "2.2.0"
+              overridable: true
+            - key: opentelemetry-demo.components.flagd.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/flagd
+              overridable: true
+            - key: opentelemetry-demo.components.flagd.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: v0.12.9
+              overridable: true
+            - key: opentelemetry-demo.components.flagd.initContainers[0].image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
+              overridable: true
+            - key: opentelemetry-demo.components.postgresql.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/postgres
+              overridable: true
+            - key: opentelemetry-demo.components.postgresql.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "17.6"
+              overridable: true
+            - key: opentelemetry-demo.components.valkey-cart.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/valkey
+              overridable: true
+            - key: opentelemetry-demo.components.valkey-cart.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 9.0.1-alpine3.23
+              overridable: true
+            - key: opentelemetry-demo.opentelemetry-collector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/otel-demo-opentelemetry-collector-contrib
+              overridable: true
+            - key: opentelemetry-demo.opentelemetry-collector.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "0.135.0"
               overridable: true
           status: 1
   - type: 2
