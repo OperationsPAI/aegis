@@ -4,7 +4,7 @@ global:
 images:
   rcabench:
     name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260501-groundtruth-fix
+    tag: byte-20260501-system
     pullPolicy: IfNotPresent
   jaeger:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/jaeger
