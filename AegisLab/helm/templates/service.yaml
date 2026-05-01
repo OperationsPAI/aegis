@@ -165,6 +165,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}-api-gateway
+  {{- with .Values.microservices.apiGateway.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   {{- if eq .Values.configmap.system.env_mode "staging" }}
   type: NodePort

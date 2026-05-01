@@ -211,6 +211,15 @@ microservices:
     service:
       type: ClusterIP
       nodePort: 32082
+      # Annotations rendered onto the api-gateway Service. Kept in chart
+      # values (not just stamped out-of-band) so `helm upgrade` doesn't
+      # silently drop them — on byte-cluster the Volcengine LB controller
+      # uses these to bind a stable EIP to the underlying CLB; if helm
+      # reapplies the Service without them the controller re-creates the
+      # CLB and the EIP changes, breaking external clients. Override per
+      # environment; empty `{}` for environments without external LB
+      # (kind, dev). See manifests/byte-cluster/values.yaml.
+      annotations: {}
     httpPort: 8082
     # Port for the runtime-intake gRPC server (runtime-worker -> api-gateway).
     intakeGrpcPort: 9096
