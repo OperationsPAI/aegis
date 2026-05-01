@@ -19,12 +19,12 @@ description: |
 # adjacent to the pod. Pod silent / unavailable should NOT fire.
 entry_signature:
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: span
       feature: latency_p99_ratio
       band: [1.5, .inf]
       magnitude_source: empirical
-  optional_features:
     - kind: span
       feature: latency_p50_ratio
       band: [1.3, .inf]
@@ -33,7 +33,7 @@ entry_signature:
       feature: timeout_rate
       band: [0.02, 1.0]
       magnitude_source: empirical
-  optional_min_match: 0
+  optional_min_match: 1
 
 # Cascade is shallow. Latency propagates one or two hops via synchronous
 # RPC; deeper callers usually absorb via concurrency. Layer 2 only fires

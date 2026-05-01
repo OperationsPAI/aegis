@@ -9,9 +9,18 @@ description: |
   faster than PodKill because no rescheduling is required.
 
 entry_signature:
+  # Disjunction-of-symptoms (see pod_kill.yaml rationale). ContainerKill
+  # leaves the pod scheduled, so the cleanest signal is container/pod
+  # restart_count delta; service/span silence and call-side errors also
+  # admit cases where the chaos window crosses a kubelet restart cycle.
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: container
+      feature: restart_count
+      band: [1.0, .inf]
+      magnitude_source: empirical
+    - kind: pod
       feature: restart_count
       band: [1.0, .inf]
       magnitude_source: empirical
@@ -19,7 +28,10 @@ entry_signature:
       feature: silent
       band: [1.0, .inf]
       magnitude_source: empirical
-  optional_features:
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
     - kind: span
       feature: error_rate
       band: [0.1, 1.0]
@@ -28,7 +40,7 @@ entry_signature:
       feature: connection_refused_rate
       band: [0.1, 1.0]
       magnitude_source: empirical
-  optional_min_match: 0
+  optional_min_match: 1
 
 derivation_layers:
   - layer: 1

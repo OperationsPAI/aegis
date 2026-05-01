@@ -16,8 +16,11 @@ description: |
 # adjacent spans regardless of direction. Pod-level resource counters
 # (cpu/mem/throttle) do NOT fire.
 entry_signature:
+  # Disjunction (see network_loss.yaml rationale). Bands sit slightly looser
+  # than NetworkLoss reflecting reduced severity (Loss > Corrupt).
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: span
       feature: timeout_rate
       band: [0.04, 1.0]
@@ -26,12 +29,11 @@ entry_signature:
       feature: latency_p99_ratio
       band: [1.25, .inf]
       magnitude_source: empirical
-  optional_features:
     - kind: span
       feature: error_rate
       band: [0.04, 1.0]
       magnitude_source: empirical
-  optional_min_match: 0
+  optional_min_match: 1
 
 # Layer structure mirrors NetworkLoss but with slightly looser bounds
 # reflecting reduced severity (Loss > Corrupt). Cascade is shallow;

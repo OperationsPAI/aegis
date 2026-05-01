@@ -37,13 +37,16 @@ description: |
   effects until vocabulary is extended.
 
 entry_signature:
+  # Disjunction. Bandwidth cap is bimodal: requests either pile up (huge
+  # latency, timeout) or fail fast (request_count collapses). Either branch
+  # admits, but neither always fires — hence min_match: 1.
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: span
       feature: request_count_ratio
       band: [0.0, 0.6]
       magnitude_source: empirical
-  optional_features:
     - kind: span
       feature: latency_p99_ratio
       band: [1.5, .inf]
@@ -52,7 +55,11 @@ entry_signature:
       feature: timeout_rate
       band: [0.05, 1.0]
       magnitude_source: theoretical
-  optional_min_match: 0
+    - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 1
 
 derivation_layers:
   - layer: 1

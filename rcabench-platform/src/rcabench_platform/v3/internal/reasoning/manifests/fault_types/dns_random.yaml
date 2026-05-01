@@ -14,23 +14,27 @@ description: |
 # connection_refused / timeout downstream of the bogus IP.
 entry_signature:
   entry_window_sec: 30
-  required_features:
-    - kind: span
-      feature: error_rate
-      band: [0.1, 1.0]
-      magnitude_source: theoretical
+  required_features: []
   optional_features:
     - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: span
       feature: connection_refused_rate
-      band: [0.1, 1.0]
+      band: [0.05, 1.0]
       magnitude_source: theoretical
     - kind: span
       feature: timeout_rate
-      band: [0.1, 1.0]
+      band: [0.05, 1.0]
       magnitude_source: theoretical
     - kind: span
       feature: dns_failure_rate
       band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
       magnitude_source: theoretical
   optional_min_match: 1
 

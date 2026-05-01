@@ -22,12 +22,12 @@ description: |
 # revisit and tighten.
 entry_signature:
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: span
       feature: latency_p99_ratio
       band: [1.15, .inf]
       magnitude_source: theoretical
-  optional_features:
     - kind: span
       feature: timeout_rate
       band: [0.02, 1.0]
@@ -36,7 +36,7 @@ entry_signature:
       feature: latency_p50_ratio
       band: [1.1, .inf]
       magnitude_source: theoretical
-  optional_min_match: 0
+  optional_min_match: 1
 
 # Cascade is the shallowest of the network family. TCP de-dup is local;
 # transitive callers are essentially shielded. We keep layer 2 narrow

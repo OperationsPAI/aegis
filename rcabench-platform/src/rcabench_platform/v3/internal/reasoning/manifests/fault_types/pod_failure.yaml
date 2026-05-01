@@ -8,8 +8,13 @@ description: |
   on the inbound channel for the duration of the injection.
 
 entry_signature:
+  # Disjunction-of-symptoms (see pod_kill.yaml rationale). PodFailure
+  # differs from PodKill in producing no restart event, but the inbound
+  # symptoms are otherwise identical, so the entry signature mirrors PodKill
+  # minus restart_count.
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: pod
       feature: unavailable
       band: [1.0, .inf]
@@ -18,7 +23,10 @@ entry_signature:
       feature: silent
       band: [1.0, .inf]
       magnitude_source: empirical
-  optional_features:
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
     - kind: span
       feature: connection_refused_rate
       band: [0.1, 1.0]
@@ -27,7 +35,11 @@ entry_signature:
       feature: error_rate
       band: [0.1, 1.0]
       magnitude_source: empirical
-  optional_min_match: 0
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: empirical
+  optional_min_match: 1
 
 derivation_layers:
   - layer: 1

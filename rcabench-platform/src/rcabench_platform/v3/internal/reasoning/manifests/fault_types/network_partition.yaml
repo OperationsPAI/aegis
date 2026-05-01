@@ -19,23 +19,27 @@ description: |
 # at pod/service granularity.
 entry_signature:
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: pod
       feature: unavailable
       band: [1.0, .inf]
       magnitude_source: theoretical
-  optional_features:
     - kind: service
       feature: silent
       band: [1.0, .inf]
       magnitude_source: theoretical
     - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: theoretical
+    - kind: span
       feature: timeout_rate
-      band: [0.5, 1.0]
+      band: [0.3, 1.0]
       magnitude_source: empirical
     - kind: span
       feature: error_rate
-      band: [0.3, 1.0]
+      band: [0.2, 1.0]
       magnitude_source: empirical
   optional_min_match: 1
 

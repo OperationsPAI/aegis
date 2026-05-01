@@ -9,8 +9,15 @@ description: |
   callers observe immediate connection failures rather than slowdowns.
 
 entry_signature:
+  # Disjunction-of-symptoms: any one suffices. PodKill can present as
+  # pod.unavailable (kubelet observed), service.silent (endpoint removed),
+  # span.silent (caller-side observation), connection_refused (caller hits
+  # closed port), or elevated error_rate (in-flight aborts). Phase 4-真-final
+  # showed required-AND structure dropped recall to 0/75; loosen to template
+  # used successfully by JVMMemoryStress.
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: pod
       feature: unavailable
       band: [1.0, .inf]
@@ -19,7 +26,10 @@ entry_signature:
       feature: silent
       band: [1.0, .inf]
       magnitude_source: empirical
-  optional_features:
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
     - kind: span
       feature: connection_refused_rate
       band: [0.1, 1.0]
@@ -28,7 +38,11 @@ entry_signature:
       feature: error_rate
       band: [0.1, 1.0]
       magnitude_source: empirical
-  optional_min_match: 0
+    - kind: pod
+      feature: restart_count
+      band: [1.0, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 1
 
 derivation_layers:
   - layer: 1
