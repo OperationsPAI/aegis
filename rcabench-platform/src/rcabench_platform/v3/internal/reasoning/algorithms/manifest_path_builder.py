@@ -92,6 +92,7 @@ from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator impor
     _effective_onset,
 )
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
+from rcabench_platform.v3.internal.reasoning.manifests.features import Feature
 from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
     DerivationLayer,
@@ -537,6 +538,7 @@ class ManifestAwarePathBuilder:
                 edge_kind=edge_ref.kind,
                 src_state=parent_frame.picked_state,
                 src_time=parent_frame.picked_time,
+                layer=layer,
             )
             if picked is None:
                 continue
@@ -560,6 +562,30 @@ class ManifestAwarePathBuilder:
             )
         return admitted
 
+    def _manifest_admits_silent(self, layer: DerivationLayer | None) -> bool:
+        """True iff the manifest semantically expects victims to go silent.
+
+        Inspects the active layer's ``expected_features`` and the
+        manifest's ``entry_signature.optional_features`` for the
+        ``silent`` :class:`Feature`. Either declaration counts: layer-
+        level is the narrow signal (PodKill/PodFailure/ContainerKill/
+        NetworkPartition), entry-level the broader (NetworkLoss/
+        TimeSkew). Fault classes whose authors did NOT declare silent
+        anywhere — latency, exception, response-patch — return False
+        and the strict no-timeline drop applies.
+        """
+        if layer is not None:
+            for fm in layer.expected_features:
+                if fm.feature == Feature.silent:
+                    return True
+        manifest = self.rctx.manifest
+        if manifest is None:
+            return False
+        for fm in manifest.entry_signature.optional_features:
+            if fm.feature == Feature.silent:
+                return True
+        return False
+
     def _dst_features_match(self, dst_id: int, layer: DerivationLayer) -> bool:
         """Layer-feature OR-check against ``ReasoningContext.feature_samples``.
 
@@ -580,6 +606,7 @@ class ManifestAwarePathBuilder:
         edge_kind: DepKind,
         src_state: str,
         src_time: int,
+        layer: DerivationLayer | None = None,
     ) -> tuple[str, tuple[str, ...], int] | None:
         """Resolve a ``(picked_state, all_states, picked_time)`` triple.
 
@@ -604,6 +631,22 @@ class ManifestAwarePathBuilder:
             # downstream gates have a coherent triple to consume.
             if _is_structural_kind(dst_node.kind):
                 return ("unknown", ("unknown",), src_time)
+            # Span / service / container with no timeline: only admit
+            # as "silent victim" when the manifest's author has
+            # explicitly modeled "the chaos *makes* the dst go silent"
+            # — declared by the presence of ``silent`` in either the
+            # active layer's ``expected_features`` or the manifest's
+            # ``entry_signature.optional_features``. Layer-level is the
+            # narrow signal (NetworkPartition / PodKill / PodFailure /
+            # ContainerKill have it directly); entry-level is the
+            # broader signal (NetworkLoss / TimeSkew declare silent in
+            # entry only — the layer expansion still expects to
+            # propagate the silence outward). For other fault classes
+            # (latency, exception, response-patch) the absence of a
+            # timeline is just an unobserved span, not a fault signal —
+            # keep the strict drop to avoid sham FP.
+            if self._manifest_admits_silent(layer):
+                return ("silent", ("silent",), src_time)
             return None
 
         all_states = tuple(sorted({w.state for w in dst_tl.windows}))
