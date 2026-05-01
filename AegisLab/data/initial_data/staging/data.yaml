@@ -173,7 +173,13 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      # Bumped 0.1.0 → 0.1.1 to drop the `http://` scheme from the OTel
+      # endpoint (DSB Go SDK auto-prefixes `http://`, double-prefix kills
+      # all spans) and to swap from the dead seed key
+      # `global.services.environments.OTEL_EXPORTER_OTLP_ENDPOINT` (which
+      # the upstream hotel-reservation chart ignores) to the chart's
+      # actual `global.otel.endpoint` knob. Closes #323.
+      - name: 0.1.1
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
@@ -194,11 +200,11 @@ containers:
               value_type: 0
               default_value: 20260423-61074ea
               overridable: true
-            - key: global.services.environments.OTEL_EXPORTER_OTLP_ENDPOINT
+            - key: global.otel.endpoint
               type: 0
               category: 1
               value_type: 0
-              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              default_value: otel-collector.otel.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -206,7 +212,10 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      # Bumped 0.1.0 → 0.1.1 to drop the `http://` scheme from the OTel
+      # endpoint (DSB Go SDK auto-prefixes `http://`, double-prefix kills
+      # all spans). Closes #323.
+      - name: 0.1.1
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
@@ -231,7 +240,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              default_value: otel-collector.otel.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
@@ -239,7 +248,10 @@ containers:
     is_public: true
     status: 1
     versions:
-      - name: 0.1.0
+      # Bumped 0.1.0 → 0.1.1 to drop the `http://` scheme from the OTel
+      # endpoint (DSB Go SDK auto-prefixes `http://`, double-prefix kills
+      # all spans). Closes #323.
+      - name: 0.1.1
         github_link: LGU-SE-Internal/DeathStarBench
         status: 1
         helm_config:
@@ -264,7 +276,7 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: http://otel-collector.otel.svc.cluster.local:4318
+              default_value: otel-collector.otel.svc.cluster.local:4318
               overridable: true
           status: 1
   - type: 2
