@@ -877,10 +877,23 @@ def platform_convert(
 def run(
     in_p: Path | None = None,
     ou_p: Path | None = None,
-    system: str = "ts",
+    system: str | None = None,
     convert: bool = False,
     online: bool = False,
 ) -> AnalysisResult | None:
+    # Resolve pedestal from --system, then BENCHMARK_SYSTEM env var. Refuse to
+    # silently default to "ts": doing so mis-routes every non-train-ticket
+    # datapack (hs / otel-demo / sn / media / sockshop / teastore) to the
+    # ts-ui-dashboard entrance-service check and emits a misleading
+    # "No entrance traffic found" failure.
+    if system is None:
+        system = os.environ.get("BENCHMARK_SYSTEM") or ""
+    if not system:
+        raise ValueError(
+            "detector run: pedestal system not provided. "
+            "Pass --system <name> or set BENCHMARK_SYSTEM env var "
+            "(e.g. ts, hs, otel-demo)."
+        )
     start_time = datetime.now()
     input_path, output_path = setup_paths_and_validation(in_p, ou_p)
     _, is_valid = valid(input_path)

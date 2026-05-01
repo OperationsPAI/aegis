@@ -36,7 +36,7 @@ func (r *Repository) loadInjection(id int) (*model.FaultInjection, error) {
 }
 
 func (r *Repository) findInjectionByName(name string, preload bool) (*model.FaultInjection, error) {
-	query := r.db
+	query := r.db.Preload("Pedestal.Container")
 	if preload {
 		query = query.Preload("Labels")
 	}
