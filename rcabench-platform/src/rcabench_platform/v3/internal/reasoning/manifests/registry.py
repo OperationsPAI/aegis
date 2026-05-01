@@ -48,11 +48,11 @@ _CATEGORY_TO_TARGET_KINDS: Final[dict[str, frozenset[TargetKind]]] = {
     "pod_lifecycle": frozenset({"pod", "container"}),
     "container_resource": frozenset({"container", "pod"}),
     "http_span": frozenset({"span", "service"}),
-    "dns": frozenset({"service", "span"}),
+    "dns": frozenset({"pod", "service", "span"}),
     "time": frozenset({"pod", "container"}),
     "network": frozenset({"service", "pod"}),
     "jvm_method": frozenset({"span", "container"}),
-    "jvm_database": frozenset({"span", "service"}),
+    "jvm_database": frozenset({"span", "service", "container"}),
 }
 
 

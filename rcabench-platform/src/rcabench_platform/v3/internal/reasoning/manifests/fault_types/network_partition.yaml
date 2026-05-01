@@ -21,10 +21,14 @@ entry_signature:
   entry_window_sec: 30
   required_features:
     - kind: pod
-      feature: silent
+      feature: unavailable
       band: [1.0, .inf]
       magnitude_source: theoretical
   optional_features:
+    - kind: service
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: theoretical
     - kind: span
       feature: timeout_rate
       band: [0.5, 1.0]
@@ -33,10 +37,6 @@ entry_signature:
       feature: error_rate
       band: [0.3, 1.0]
       magnitude_source: empirical
-    - kind: pod
-      feature: unavailable
-      band: [1.0, .inf]
-      magnitude_source: theoretical
   optional_min_match: 1
 
 # Layer 1: service.silent — full traffic isolation seen at the service
