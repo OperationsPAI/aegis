@@ -309,11 +309,18 @@ containers:
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/postgres
               overridable: true
+            # NOTE: tag must NOT be a YAML float (e.g. "17.6") because the
+            # backend's seed→helm-values renderer Go-yaml-marshals string
+            # values back, and `17.6` round-trips as float, then Helm's
+            # opentelemetry-demo schema rejects it with
+            # `'/components/postgresql/imageOverride/tag': got number, want string`.
+            # Use a non-numeric tag suffix (`-bookworm`) so the value stays a
+            # string through the render path.
             - key: opentelemetry-demo.components.postgresql.imageOverride.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: "17.6"
+              default_value: 17.6-bookworm
               overridable: true
             - key: opentelemetry-demo.components.valkey-cart.imageOverride.repository
               type: 0
