@@ -288,45 +288,50 @@ class ManifestAwarePathBuilder:
         if self._has_edge_of_kinds(seed_frame.node_id, layer1_kinds):
             return []  # v_root is already on the right plane.
         structural_kinds = {"includes", "runs", "routes_to"}
+        # BFS up to 3 hops along structural edges in either direction; admit
+        # the first reached node whose own edges match layer-1 kinds. Multi-
+        # hop is required for JVM*-style manifests where layer-1 is on the
+        # span/service plane (calls/includes) while v_root is a container —
+        # one structural hop reaches the pod (no calls/includes), two hops
+        # reach the service (has includes), three hops reach the spans.
         proxies: list[_Frame] = []
-        seen: set[int] = set()
-        # Outgoing structural edges
-        for _, dst_id, key in self.graph._graph.out_edges(  # type: ignore[call-arg]
-            seed_frame.node_id, keys=True
-        ):
-            edge_data = self.graph._graph.get_edge_data(
-                seed_frame.node_id, dst_id, key
-            )
-            if not edge_data:
-                continue
-            edge_ref: Edge | None = edge_data.get("ref")
-            if edge_ref is None or edge_ref.kind.value not in structural_kinds:
-                continue
-            if dst_id in seen:
-                continue
-            if not self._has_edge_of_kinds(dst_id, layer1_kinds):
-                continue
-            seen.add(dst_id)
-            proxies.append(self._make_seed_frame(dst_id, manifest.fault_type_name))
-        # Incoming structural edges (e.g. container ← pod via runs)
-        for src_id, _, key in self.graph._graph.in_edges(  # type: ignore[call-arg]
-            seed_frame.node_id, keys=True
-        ):
-            edge_data = self.graph._graph.get_edge_data(
-                src_id, seed_frame.node_id, key
-            )
-            if not edge_data:
-                continue
-            edge_ref = edge_data.get("ref")
-            if edge_ref is None or edge_ref.kind.value not in structural_kinds:
-                continue
-            if src_id in seen:
-                continue
-            if not self._has_edge_of_kinds(src_id, layer1_kinds):
-                continue
-            seen.add(src_id)
-            proxies.append(self._make_seed_frame(src_id, manifest.fault_type_name))
+        seen: set[int] = {seed_frame.node_id}
+        frontier: list[int] = [seed_frame.node_id]
+        for _ in range(3):
+            next_frontier: list[int] = []
+            for nid in frontier:
+                for src_id, dst_id, key, in_dir in self._iter_structural_edges(nid):
+                    other_id = dst_id if in_dir == "out" else src_id
+                    if other_id in seen:
+                        continue
+                    edge_data = self.graph._graph.get_edge_data(src_id, dst_id, key)
+                    if not edge_data:
+                        continue
+                    edge_ref: Edge | None = edge_data.get("ref")
+                    if edge_ref is None or edge_ref.kind.value not in structural_kinds:
+                        continue
+                    seen.add(other_id)
+                    if self._has_edge_of_kinds(other_id, layer1_kinds):
+                        proxies.append(
+                            self._make_seed_frame(other_id, manifest.fault_type_name)
+                        )
+                    else:
+                        next_frontier.append(other_id)
+            frontier = next_frontier
+            if not frontier:
+                break
         return proxies
+
+    def _iter_structural_edges(self, node_id: int):  # type: ignore[no-untyped-def]
+        """Yield (src, dst, key, direction) for each in/out edge of ``node_id``."""
+        for _, dst_id, key in self.graph._graph.out_edges(  # type: ignore[call-arg]
+            node_id, keys=True
+        ):
+            yield node_id, dst_id, key, "out"
+        for src_id, _, key in self.graph._graph.in_edges(  # type: ignore[call-arg]
+            node_id, keys=True
+        ):
+            yield src_id, node_id, key, "in"
 
     def _has_edge_of_kinds(self, node_id: int, kinds: set[str]) -> bool:
         """True iff ``node_id`` has any in/out edge whose ``kind`` is in ``kinds``."""
