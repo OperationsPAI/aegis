@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -163,6 +164,37 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			groundtruths = append(groundtruths, *model.NewDBGroundtruth(&chaosGroundtruth))
 		}
 
+		// Re-capture groundtruth right before applying CRDs. The first pass
+		// above runs at the top of the FI handler — by the time annotations,
+		// labels, and the batch ID are wired up, RestartPedestal's helm-upgrade
+		// may have rolled the targeted pod and renamed it (the chaos-mesh CRD
+		// selector is label-based so the FI still lands, but the DB-recorded
+		// GT.Pod was the OLD name). Re-resolving here pins fresh pod / container
+		// names without changing the action-space (service-level groundtruth is
+		// expected to be stable; a service mismatch is logged but we proceed
+		// with the fresh values — the CRD is what's actually about to run).
+		for i, conf := range injectionConfs {
+			confCopy := conf
+			fresh, mismatch, err := recaptureGroundtruth(childCtx, func(ctx context.Context) (chaos.Groundtruth, error) {
+				return confCopy.GetGroundtruth(ctx)
+			}, groundtruths[i])
+			if err != nil {
+				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to re-capture groundtruth for guided config %d", i), err)
+			}
+			if mismatch {
+				logEntry.WithFields(logrus.Fields{
+					"index":           i,
+					"prior_service":   groundtruths[i].Service,
+					"fresh_service":   fresh.Service,
+					"prior_pod":       groundtruths[i].Pod,
+					"fresh_pod":       fresh.Pod,
+					"prior_container": groundtruths[i].Container,
+					"fresh_container": fresh.Container,
+				}).Warn("groundtruth service set changed between submit and CRD apply; persisting fresh values")
+			}
+			groundtruths[i] = fresh
+		}
+
 		// Marshal display config as array
 		displayData, err := json.Marshal(displayMaps)
 		if err != nil {
@@ -245,6 +277,63 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		toReleased = false
 		return nil
 	})
+}
+
+// recaptureGroundtruth re-invokes getter at fault-injection time and returns
+// the freshly-resolved groundtruth plus a serviceMismatch flag. Callers persist
+// the fresh value; mismatch only signals that the action's service set changed
+// between the early loop-time call and CRD apply (a known-bad sign that one of
+// the layers below — pod-listing, container-name resolution — saw a different
+// state). The chaos-mesh selector is label-based so the CRD still lands; the
+// fresh GT is what consumers like the datapack builder should record.
+//
+// Extracted as a getter-typed helper so unit tests can drive both passes
+// without standing up a real cluster (the K8s-touching work all lives inside
+// the spec's GetGroundtruth).
+func recaptureGroundtruth(ctx context.Context, getter func(context.Context) (chaos.Groundtruth, error), prior model.Groundtruth) (model.Groundtruth, bool, error) {
+	fresh, err := getter(ctx)
+	if err != nil {
+		return model.Groundtruth{}, false, err
+	}
+	freshDB := *model.NewDBGroundtruth(&fresh)
+	return freshDB, !sameStringSet(prior.Service, freshDB.Service), nil
+}
+
+// sameStringSet returns true when a and b contain the same elements ignoring
+// order and duplicates. Used by recaptureGroundtruth to detect cross-pass
+// service-set drift (which is structural, not a pod-rename).
+func sameStringSet(a, b []string) bool {
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	as := append([]string(nil), a...)
+	bs := append([]string(nil), b...)
+	sort.Strings(as)
+	sort.Strings(bs)
+	as = dedupSorted(as)
+	bs = dedupSorted(bs)
+	if len(as) != len(bs) {
+		return false
+	}
+	for i := range as {
+		if as[i] != bs[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func dedupSorted(s []string) []string {
+	if len(s) < 2 {
+		return s
+	}
+	out := s[:1]
+	for _, v := range s[1:] {
+		if v != out[len(out)-1] {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // parseInjectionPayload extracts and validates the guided-config payload from

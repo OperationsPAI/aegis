@@ -32,6 +32,8 @@ type NetworkPartitionSpec struct {
 	System         int `range:"0-0" dynamic:"true" description:"String"`
 	NetworkPairIdx int `range:"0-0" dynamic:"true" description:"Flattened network pair index"`
 	Direction      int `range:"1-3" description:"Direction (1=to, 2=from, 3=both)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *NetworkPartitionSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -87,6 +89,8 @@ type NetworkDelaySpec struct {
 	Correlation    int `range:"0-100" description:"Correlation percentage"`
 	Jitter         int `range:"0-1000" description:"Jitter in milliseconds"`
 	Direction      int `range:"1-3" description:"Direction (1=to, 2=from, 3=both)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *NetworkDelaySpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -146,6 +150,8 @@ type NetworkLossSpec struct {
 	Loss           int `range:"1-100" description:"Packet loss percentage"`
 	Correlation    int `range:"0-100" description:"Correlation percentage"`
 	Direction      int `range:"1-3" description:"Direction (1=to, 2=from, 3=both)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *NetworkLossSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -204,6 +210,8 @@ type NetworkDuplicateSpec struct {
 	Duplicate      int `range:"1-100" description:"Packet duplication percentage"`
 	Correlation    int `range:"0-100" description:"Correlation percentage"`
 	Direction      int `range:"1-3" description:"Direction (1=to, 2=from, 3=both)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *NetworkDuplicateSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -262,6 +270,8 @@ type NetworkCorruptSpec struct {
 	Corrupt        int `range:"1-100" description:"Packet corruption percentage"`
 	Correlation    int `range:"0-100" description:"Correlation percentage"`
 	Direction      int `range:"1-3" description:"Direction (1=to, 2=from, 3=both)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *NetworkCorruptSpec) Create(cli cli.Client, opts ...Option) (string, error) {
@@ -321,6 +331,8 @@ type NetworkBandwidthSpec struct {
 	Limit          int `range:"1-10000" description:"Number of bytes that can be queued"`
 	Buffer         int `range:"1-10000" description:"Maximum amount of bytes available instantaneously"`
 	Direction      int `range:"1-3" description:"Direction (1=to, 2=from, 3=both)"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *NetworkBandwidthSpec) Create(cli cli.Client, opts ...Option) (string, error) {

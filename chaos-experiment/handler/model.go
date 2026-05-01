@@ -222,8 +222,7 @@ func buildNode(rt reflect.Type, fieldName string, rootNode *Node) (*Node, error)
 	}
 
 	node := &Node{
-		Name:  typeName(rt, fieldName),
-		Range: []int{0, rt.NumField() - 1},
+		Name: typeName(rt, fieldName),
 	}
 
 	node.Children = make(map[string]*Node)
@@ -232,6 +231,13 @@ func buildNode(rt reflect.Type, fieldName string, rootNode *Node) (*Node, error)
 		for i := range rt.NumField() {
 			field := rt.Field(i)
 
+			// Skip non-action fields (e.g. the per-spec Namespace string used by
+			// GetGroundtruth). The action-space serializer is index/range-based and
+			// only meaningful for integer fields.
+			if isNonActionField(field.Type) {
+				continue
+			}
+
 			child, err := buildFieldNode(field, rootNode)
 			if err != nil {
 				return nil, err
@@ -239,6 +245,16 @@ func buildNode(rt reflect.Type, fieldName string, rootNode *Node) (*Node, error)
 
 			node.Children[strconv.Itoa(i)] = child
 		}
+	}
+
+	// Range bounds the chooser's selection to indices that actually have a
+	// child entry. Skipped fields (Namespace, future metadata) must not be
+	// reachable, so derive the upper bound from the included child count
+	// rather than rt.NumField()-1.
+	if len(node.Children) > 0 {
+		node.Range = []int{0, len(node.Children) - 1}
+	} else {
+		node.Range = []int{0, 0}
 	}
 
 	return node, nil
@@ -512,6 +528,25 @@ func getValueRange(field reflect.StructField, rootNode *Node) (int, int, error) 
 	}
 
 	return start, end, err
+}
+
+// isNonActionField reports whether a struct field should be excluded from the
+// action-space machinery. Only integer-typed fields participate in the
+// action-space; metadata such as the per-spec Namespace and any other
+// non-integer scalar kinds do not. Nested struct fields (InjectionConf's
+// chaos-type pointers) are intentionally NOT excluded -- they recurse into
+// buildNode/buildFieldNode where their own children get filtered.
+func isNonActionField(t reflect.Type) bool {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Struct:
+		return false
+	default:
+		return true
+	}
 }
 
 func parseRangeTag(tag string) (int, int, error) {

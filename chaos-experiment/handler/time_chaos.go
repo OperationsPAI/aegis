@@ -15,6 +15,8 @@ type TimeSkewSpec struct {
 	System       int `range:"0-0" dynamic:"true"`
 	ContainerIdx int `range:"0-0" dynamic:"true" description:"Container Index"`
 	TimeOffset   int `range:"-600-600" description:"Time offset in seconds"`
+	// Namespace: see PodFailureSpec.Namespace.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 func (s *TimeSkewSpec) Create(cli cli.Client, opts ...Option) (string, error) {

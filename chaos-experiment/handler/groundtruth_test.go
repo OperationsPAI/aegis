@@ -85,6 +85,36 @@ func TestSelectContainerByIndex_NegativeIndexHandled(t *testing.T) {
 	}
 }
 
+// TestResolveSpecNamespace_PrefersSpecNamespace pins the regression where every
+// *Spec.GetGroundtruth used GetNamespaceByIndex(system, defaultStartIndex)
+// instead of the caller-provided namespace. Guided submits with --namespace hs28
+// (or any non-zero pool slot) used to fail with "no containers found ... in
+// namespace hs0" because the spec dropped the operator's namespace on the floor.
+func TestResolveSpecNamespace_PrefersSpecNamespace(t *testing.T) {
+	got, err := resolveSpecNamespace(systemconfig.SystemHotelReservation, "hs28")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "hs28" {
+		t.Errorf("got %q, want %q (the spec's per-call namespace, not the pool head)", got, "hs28")
+	}
+}
+
+func TestResolveSpecNamespace_FallsBackToPoolHeadWhenUnset(t *testing.T) {
+	// Legacy callers that build specs without setting Namespace must keep working.
+	got, err := resolveSpecNamespace(systemconfig.SystemHotelReservation, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want, err := systemconfig.GetNamespaceByIndex(systemconfig.SystemHotelReservation, defaultStartIndex)
+	if err != nil {
+		t.Fatalf("unexpected error from pool head: %v", err)
+	}
+	if got != want {
+		t.Errorf("fallback got %q, want %q", got, want)
+	}
+}
+
 func TestSelectContainerByIndex_ValidIndexReturnsEntry(t *testing.T) {
 	containers := []resourcelookup.ContainerInfo{
 		{PodName: "p1", AppLabel: "front-end", ContainerName: "front-end"},

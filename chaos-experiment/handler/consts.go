@@ -12,6 +12,7 @@ const (
 
 const (
 	keySystem      = "System"
+	keyNamespace   = "Namespace"
 	keyApp         = "AppIdx"
 	keyMethod      = "MethodIdx"
 	keyTarget      = "MutatorTargetIdx"
