@@ -87,16 +87,18 @@ containers:
     is_public: true
     status: 1
     versions:
-      # Bumped 0.1.6 → 0.1.7 to retarget OTel exporter to the per-system
-      # otel-demo collector (#303 step 2b). The wrapper otel-collector inside
-      # the demo chart forwards to `global.clusterCollector.service`, which
-      # we now point at the dedicated single-pod deployment-otel-demo
-      # collector instead of the shared deployment-collector.
-      - name: 0.1.7
+      # Bumped 0.1.7 → 0.1.8 to pick up otel-demo-aegis chart 0.1.7 which
+      # disables ALL ClusterRole-triggering presets (clusterMetrics,
+      # kubeletMetrics, kubernetesEvents, annotationDiscovery.*, plus
+      # clusterRole.create=false) — fixes the parallel-install collision
+      # where every otel-demoN beyond the first failed with "ClusterRole
+      # otel-collector exists, invalid ownership metadata". Previous chart
+      # 0.1.6 only disabled kubernetesAttributes which was insufficient.
+      - name: 0.1.8
         github_link: open-telemetry/opentelemetry-demo
         status: 1
         helm_config:
-          version: 0.1.6
+          version: 0.1.7
           chart_name: otel-demo-aegis
           repo_name: opspai
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
