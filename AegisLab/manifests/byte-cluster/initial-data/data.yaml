@@ -87,12 +87,23 @@ containers:
           repo_name: train-ticket
           repo_url: https://operationspai.github.io/train-ticket
           values:
-            - key: services.tsUiDashboard.nodePort
-              type: 1
+            # Pin ts-ui-dashboard to ClusterIP. Chart default is
+            # `NodePort` with `nodePort: 30080`; we previously templated a
+            # per-namespace `31%03d` to spread allocations across ts0..ts99,
+            # but with mysql also defaulted to NodePort (now pinned to
+            # ClusterIP above), the deterministic 31xxx range collided with
+            # mysql's randomly-assigned NodePort whenever k8s happened to land
+            # mysql in 31000-31099 (e.g. ts7 mysql at 31003 blocked ts3
+            # ts-ui-dashboard install). Easiest: drop the NodePort entirely —
+            # ts-ui-dashboard has no out-of-cluster consumers in the
+            # benchmark loop (RP queries it via in-cluster DNS), and external
+            # access can be done with `kubectl port-forward` if ever needed.
+            - key: services.tsUiDashboard.type
+              type: 0
               category: 1
-              value_type: 1
-              template_string: 31%03d
-              overridable: false
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
             # Skip the Bitnami rabbitmq subchart's image-recognition check
             # so helm install proceeds with the mirrored rabbitmq image.
             - key: global.security.allowInsecureImages
