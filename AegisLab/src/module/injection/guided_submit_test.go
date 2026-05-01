@@ -3,7 +3,6 @@ package injection
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"aegis/consts"
@@ -79,40 +78,25 @@ func TestSubmitInjectionReqValidateRejectsEmptyBatch(t *testing.T) {
 	require.ErrorContains(t, err, "must contain at least one guided config")
 }
 
-// TestSubmitInjectionReqValidateRejectsMissingDuration is the issue-#176
-// defense-in-depth assertion: when the resolver fails to default-fill
-// Duration (i.e. the chaos-experiment builder errored and shipped an
-// un-normalized config), the validator must point at the resolver as the
-// likely cause, NOT regurgitate the generic "duration > 0" message.
-func TestSubmitInjectionReqValidateRejectsMissingDuration(t *testing.T) {
-	req := validSubmitInjectionReq()
-	req.Specs[0][0].Duration = nil
-	req.Specs[0][0].ChaosType = "JVMMemoryStress"
-
-	err := req.Validate()
-	require.Error(t, err)
-	msg := err.Error()
-	require.Contains(t, msg, "duration is missing")
-	require.Contains(t, msg, "JVMMemoryStress")
-	require.Contains(t, msg, "guided resolver")
-	// Crucially: must NOT say "must be greater than 0" for the nil case —
-	// that's the misleading message that issue #176 traced to.
-	require.NotContains(t, msg, "duration must be greater than 0")
-}
-
-// TestSubmitInjectionReqValidateOverridesCallerSuppliedDuration is the
-// hardcoded-time-window guarantee: any non-nil per-spec duration shipped by
-// the caller (loop agent, manual curl, ...) is silently overwritten with
-// consts.FixedAbnormalWindowMinutes so external clients can't drift the
-// abnormal window. The chaos-experiment resolver's own default-fill keeps
-// the legacy code path producing a non-nil pointer even when the CLI used
-// to set --duration explicitly.
-func TestSubmitInjectionReqValidateOverridesCallerSuppliedDuration(t *testing.T) {
-	for _, in := range []int{0, 1, 9999} {
-		t.Run(fmt.Sprintf("input=%d", in), func(t *testing.T) {
+// TestSubmitInjectionReqValidatePinsDuration is the hardcoded-time-window
+// guarantee: any per-spec duration (including nil from a resolver that
+// errored before normalizing) is silently pinned to
+// consts.FixedAbnormalWindowMinutes. Issue #321: rejecting nil broke
+// guided submits whenever the chaos-experiment builder errored.
+func TestSubmitInjectionReqValidatePinsDuration(t *testing.T) {
+	cases := []struct {
+		name string
+		in   *int
+	}{
+		{"nil", nil},
+		{"zero", guidedDurationPtr(0)},
+		{"one", guidedDurationPtr(1)},
+		{"large", guidedDurationPtr(9999)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 			req := validSubmitInjectionReq()
-			v := in
-			req.Specs[0][0].Duration = &v
+			req.Specs[0][0].Duration = tc.in
 
 			require.NoError(t, req.Validate())
 			require.NotNil(t, req.Specs[0][0].Duration)
