@@ -31,10 +31,9 @@ images:
     tag: buildx-stable-1
     pullPolicy: IfNotPresent
   caddy:
-    # NOTE: image still needs to be mirrored to a Volcengine-reachable
-    # registry. Until then, this pulls from docker.io and may be slow or
-    # fail in air-gapped environments.
-    name: docker.io/opspai/caddy
+    # Mirrored docker.io/library/caddy:2-alpine -> docker.io/opspai/caddy:2-alpine
+    # on 2026-05-01; volces auto-mirror serves it as pair-cn-shanghai/opspai/caddy.
+    name: pair-cn-shanghai.cr.volces.com/opspai/caddy
     tag: "2-alpine"
     pullPolicy: IfNotPresent
 
