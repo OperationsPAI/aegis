@@ -17,12 +17,16 @@ description: |
 
 entry_signature:
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: container
       feature: cpu_throttle_ratio
-      band: [3.0, .inf]
+      band: [2.0, .inf]
       magnitude_source: empirical
-  optional_features:
+    - kind: pod
+      feature: cpu_throttle_ratio
+      band: [2.0, .inf]
+      magnitude_source: empirical
     - kind: span
       feature: latency_p99_ratio
       band: [1.5, .inf]
@@ -31,7 +35,7 @@ entry_signature:
       feature: gc_pause_ratio
       band: [0.1, 1.0]
       magnitude_source: theoretical
-  optional_min_match: 0
+  optional_min_match: 1
 
 derivation_layers:
   - layer: 1

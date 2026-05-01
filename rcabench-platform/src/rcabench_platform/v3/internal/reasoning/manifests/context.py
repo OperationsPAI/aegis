@@ -90,40 +90,76 @@ class ReasoningContext:
         root_id: int,
         kind: FeatureKind,
         feature: Feature,
+        max_hops: int = 3,
     ) -> float | None:
-        """Resolve a feature value at ``root_id``, aggregating across owned nodes.
+        """Resolve a feature value at ``root_id``, aggregating across topologically-related nodes.
 
-        When the manifest's ``target_kind`` (e.g., service) differs from a
+        When the manifest's ``target_kind`` (e.g., pod) differs from a
         feature's ``kind`` (e.g., span — error_rate is per-span by
-        construction), a direct ``feature_samples[root_id, kind, feature]``
-        lookup will miss because the extractor stores per-kind samples at
-        the matching node. This helper falls back to a max-aggregation
-        across nodes of ``kind`` that the graph identifies as owned by
-        ``root_id`` (by uniq-name convention; see ``_name_owns``).
+        construction), a direct lookup at ``root_id`` will miss because
+        the extractor stores per-kind samples on the matching node. This
+        helper walks the structural-edge subgraph (``routes_to``, ``runs``,
+        ``includes``, ``manages``, ``owns``) up to ``max_hops`` in either
+        direction, collecting ``feature_samples`` on visited nodes whose
+        kind matches ``kind``, and returns their max.
 
-        Returns ``None`` if neither the direct lookup nor any owned node
-        produces a sample.
+        Walks both directions because topology is not symmetric in
+        edge orientation: e.g., service ``routes_to`` pod (forward), but
+        from a pod root we need to reach the service via the *reverse*
+        ``routes_to`` edge to then walk ``includes`` forward to spans.
+
+        Returns ``None`` if neither the direct lookup nor any reachable
+        node produces a sample.
         """
         direct = self.feature_samples.get((root_id, kind, feature))
         if direct is not None:
             return direct
         if self.graph is None:
             return None
-        root_node = self.graph.get_node_by_id(root_id)  # type: ignore[attr-defined]
-        if root_node is None:
-            return None
-        owned_values: list[float] = []
-        for (nid, k, f), v in self.feature_samples.items():
-            if k is not kind or f is not feature:
-                continue
-            node = self.graph.get_node_by_id(nid)  # type: ignore[attr-defined]
-            if node is None:
-                continue
-            if _name_owns(node.self_name, root_node.self_name):
-                owned_values.append(v)
-        if not owned_values:
-            return None
-        return max(owned_values)
+
+        graph = self.graph._graph  # type: ignore[attr-defined]
+        # Structural edges that carry feature aggregation semantics. Excludes
+        # ``owns`` (namespace → service) because that admits sibling-service
+        # traversal which would pollute aggregates across unrelated services.
+        structural = {"routes_to", "runs", "includes", "manages"}
+
+        # BFS along structural edges in both directions, up to max_hops.
+        visited: set[int] = {root_id}
+        frontier: list[int] = [root_id]
+        target_kind_str = kind.value if hasattr(kind, "value") else str(kind)
+        values: list[float] = []
+        for _ in range(max_hops):
+            next_frontier: list[int] = []
+            for nid in frontier:
+                # outgoing edges
+                for _, dst_id, _, d in graph.out_edges(nid, keys=True, data=True):
+                    if dst_id in visited:
+                        continue
+                    edge_ref = d.get("ref")
+                    if edge_ref is None or edge_ref.kind.value not in structural:
+                        continue
+                    visited.add(dst_id)
+                    next_frontier.append(dst_id)
+                    sample = self.feature_samples.get((dst_id, kind, feature))
+                    if sample is not None:
+                        values.append(sample)
+                # incoming edges
+                for src_id, _, _, d in graph.in_edges(nid, keys=True, data=True):
+                    if src_id in visited:
+                        continue
+                    edge_ref = d.get("ref")
+                    if edge_ref is None or edge_ref.kind.value not in structural:
+                        continue
+                    visited.add(src_id)
+                    next_frontier.append(src_id)
+                    sample = self.feature_samples.get((src_id, kind, feature))
+                    if sample is not None:
+                        values.append(sample)
+            frontier = next_frontier
+            if not frontier:
+                break
+
+        return max(values) if values else None
 
 
 __all__ = ["FeatureSample", "ReasoningContext"]

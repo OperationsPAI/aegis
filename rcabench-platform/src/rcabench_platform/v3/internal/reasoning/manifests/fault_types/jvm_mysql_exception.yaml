@@ -12,17 +12,21 @@ description: |
 
 entry_signature:
   entry_window_sec: 30
-  required_features:
+  required_features: []
+  optional_features:
     - kind: span
       feature: error_rate
-      band: [0.30, 1.0]
+      band: [0.10, 1.0]
       magnitude_source: theoretical
-  optional_features:
     - kind: span
       feature: latency_p99_ratio
       band: [1.5, .inf]
       magnitude_source: theoretical
-  optional_min_match: 0
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 1
 
 derivation_layers:
   - layer: 1
