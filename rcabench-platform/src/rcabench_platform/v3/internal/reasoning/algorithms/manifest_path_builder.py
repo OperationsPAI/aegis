@@ -265,15 +265,22 @@ class ManifestAwarePathBuilder:
         seed_frame: _Frame,
         manifest: FaultManifest,
     ) -> list[_Frame]:
-        """Add proxy seeds for v_root's owned descendants.
+        """Add proxy seeds for v_root's structurally-related neighbors.
 
         Triggered when v_root's direct edges don't admit any of
         ``layer1.edge_kinds`` (e.g., a service node with a manifest
         whose layer 1 walks ``calls`` — calls edges live between
-        spans, not on services). We follow one structural hop via
-        ``includes``/``runs``/``routes_to`` to children whose own
-        edges match layer-1 kinds, and emit one extra seed frame per
-        admitted descendant.
+        spans, not on services; or a container whose only edge is the
+        incoming ``runs`` from its pod). We follow one structural hop
+        via ``includes``/``runs``/``routes_to`` in **either direction**
+        to neighbors whose own edges match layer-1 kinds, and emit one
+        seed frame per admitted neighbor.
+
+        Walking incoming edges is required when v_root is structurally
+        a leaf (e.g., container has only incoming ``runs``). Without it
+        ContainerKill / JVM* manifests root at a container that has
+        zero out-edges, the descent finds nothing, and 0 paths come
+        out of the builder.
         """
         if not manifest.derivation_layers:
             return []
@@ -282,6 +289,8 @@ class ManifestAwarePathBuilder:
             return []  # v_root is already on the right plane.
         structural_kinds = {"includes", "runs", "routes_to"}
         proxies: list[_Frame] = []
+        seen: set[int] = set()
+        # Outgoing structural edges
         for _, dst_id, key in self.graph._graph.out_edges(  # type: ignore[call-arg]
             seed_frame.node_id, keys=True
         ):
@@ -291,13 +300,32 @@ class ManifestAwarePathBuilder:
             if not edge_data:
                 continue
             edge_ref: Edge | None = edge_data.get("ref")
-            if edge_ref is None:
+            if edge_ref is None or edge_ref.kind.value not in structural_kinds:
                 continue
-            if edge_ref.kind.value not in structural_kinds:
+            if dst_id in seen:
                 continue
             if not self._has_edge_of_kinds(dst_id, layer1_kinds):
                 continue
+            seen.add(dst_id)
             proxies.append(self._make_seed_frame(dst_id, manifest.fault_type_name))
+        # Incoming structural edges (e.g. container ← pod via runs)
+        for src_id, _, key in self.graph._graph.in_edges(  # type: ignore[call-arg]
+            seed_frame.node_id, keys=True
+        ):
+            edge_data = self.graph._graph.get_edge_data(
+                src_id, seed_frame.node_id, key
+            )
+            if not edge_data:
+                continue
+            edge_ref = edge_data.get("ref")
+            if edge_ref is None or edge_ref.kind.value not in structural_kinds:
+                continue
+            if src_id in seen:
+                continue
+            if not self._has_edge_of_kinds(src_id, layer1_kinds):
+                continue
+            seen.add(src_id)
+            proxies.append(self._make_seed_frame(src_id, manifest.fault_type_name))
         return proxies
 
     def _has_edge_of_kinds(self, node_id: int, kinds: set[str]) -> bool:
