@@ -1,0 +1,78 @@
+fault_type_name: CPUStress
+target_kind: container
+seed_tier: degraded
+description: |
+  Container-level CPU contention injected via cgroup CPU throttle.
+  Throttling causes thread queue buildup, GC pressure (on JVM), and
+  visible P99 latency increase on inbound spans handled by the
+  affected container.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: container
+      feature: cpu_throttle_ratio
+      band: [3.0, .inf]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: container
+      feature: thread_queue_depth
+      band: [2.0, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [2.0, .inf]
+      magnitude_source: empirical
+  optional_min_match: 1
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [runs, routes_to, includes]
+    edge_directions: [backward, backward, forward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.5, .inf]
+        magnitude_decay: 0.7
+      - kind: pod
+        feature: cpu_throttle_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 1.0
+    max_fanout: 32
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+    max_fanout: 32
+  - layer: 3
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.1, .inf]
+        magnitude_decay: 0.3
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+    max_fanout: 16
+
+hand_offs:
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: timeout_rate
+      threshold: 0.3
+    on_layer: 2
+    rationale: |
+      Persistent upstream latency past timeout budget produces
+      response-abort symptoms at far-downstream callers.
+
+terminals: []
