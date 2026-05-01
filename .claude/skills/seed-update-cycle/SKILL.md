@@ -103,7 +103,23 @@ DELETE FROM parameter_configs WHERE config_key='<key>';"
 
 6. **`status=1` zombie container_versions break the pedestal selector**. The selector picks among `status=1` rows. Old rows like `hs@0.1.1` (chart never published) hang around with `status=1` and the `(name_major, name_minor, name_patch)` ordering ties at `(0,0,0)` because legacy rows have unpopulated semver fields. PR #330 added `id DESC` tie-breaker. If you see `helm pull` 404s for a chart version that doesn't exist, check `SELECT * FROM container_versions WHERE container_id=<X>` and SQL set old rows `status=-1`.
 
-7. **Stuck RP tasks (state=2) accumulate as zombies**. Backend's stuck-task reconciler doesn't catch RP tasks that lost their namespace (e.g. mid-install ns nuke). Pile-up saturates the RP token bucket and starves new submits. Drain with:
+7. **`helm_configs.value_file` is a FROZEN snapshot, not a CM mount** (#360). When you bump `pedestal_version` in `data.yaml`, the `value_file` column points to a path like `/var/lib/rcabench/dataset/helm-values/<system>_values_<timestamp>.yaml` inside the api-gateway PVC. The file is captured at first-register / new-version INSERT (producer.go:275, reseed.go:227); existing-version reseed is drift-detect-only and explicitly preserves the path (`upsertHelmConfigForReseed` in reseed.go:897). It DOES NOT update when you `kubectl create cm` the overlay. Sink (`dto/container.go::GetValuesMap:59`) reads ValueFile from disk at install time and silently treats missing/0-byte as "no overlay". Symptom: helm install doesn't include overlay content (e.g. otel-demo init containers, llm disable). Verify per-version:
+   ```bash
+   kubectl -n exp exec rcabench-mysql-0 -- mysql -uroot -pyourpassword rcabench -e \
+     "SELECT cv.name, hc.value_file FROM container_versions cv
+        JOIN helm_configs hc ON hc.container_version_id=cv.id
+        WHERE cv.container_id IN (SELECT id FROM containers WHERE name='<sys>')
+          AND cv.status=1;"
+   ```
+   Quick fix: overwrite the file in-place via api-gateway pod:
+   ```bash
+   POD=$(kubectl -n exp get pods -l app=rcabench-api-gateway -o jsonpath='{.items[0].metadata.name}')
+   cat AegisLab/manifests/byte-cluster/initial-data/<sys>.yaml | \
+     kubectl -n exp exec -i $POD -c api-gateway -- tee <value_file_path> > /dev/null
+   ```
+   Then nuke + re-install affected ns. Long-term: re-snapshot on reseed when overlay bytes change (#360 fix A, ~40 LOC).
+
+8. **Stuck RP tasks (state=2) accumulate as zombies**. Backend's stuck-task reconciler doesn't catch RP tasks that lost their namespace (e.g. mid-install ns nuke). Pile-up saturates the RP token bucket and starves new submits. Drain with:
    ```sql
    UPDATE tasks SET state=-1, updated_at=NOW()
      WHERE type=1 AND state=2 AND updated_at < NOW() - INTERVAL 30 MINUTE;
