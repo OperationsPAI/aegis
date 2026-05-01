@@ -44,11 +44,28 @@ containers:
     is_public: true
     status: 1
     versions:
-      # Bumped 1.0.1 → 1.0.2 to retarget OTel exporter to the per-system
-      # ts collector (#303). Reseed honors the immutability contract on
-      # already-seeded versions, so the values below would not propagate
-      # to the DB without bumping the version name.
-      - name: 1.0.2
+      # Bumped 1.0.2 → 1.0.4 to consolidate three out-of-band defaults that
+      # ts ns previously got via per-namespace `helm upgrade --set` but which
+      # weren't in the DB seed (so any RestartPedestal flow that re-installed
+      # the chart from the seed alone would miss them):
+      #   1. global.security.allowInsecureImages=true — the upstream Bitnami
+      #      rabbitmq subchart bundled by trainticket@0.2.0 hardcodes an
+      #      "image recognition" check (NOTES.txt:165) that fails helm
+      #      install with `Original containers have been substituted for
+      #      unrecognized ones` whenever the rabbitmq image is anything
+      #      other than the bitnami official set. Our cluster pulls the
+      #      mirrored image from pair-diag-cn-guangzhou.cr.volces.com/pair/
+      #      so the check ALWAYS fires unless explicitly bypassed. The
+      #      bypass is safe — image is known-good (rabbitmq pods ran fine
+      #      under the previous out-of-band overrides for weeks).
+      #   2. loadgenerator.image.tag=024 — built from
+      #      OperationsPAI/loadgenerator main HEAD (sync notes in earlier
+      #      ts seed bumps).
+      #   3. loadgenerator.image.repository=pair-cn-shanghai.cr.volces.com/
+      #      opspai/loadgenerator — volces shanghai mirror so byte-cluster
+      #      pulls don't egress to docker.io.
+      # Plus carries forward the per-system collector retargeting from #303.
+      - name: 1.0.4
         github_link: OperationsPAI/train-ticket
         status: 1
         helm_config:
@@ -63,6 +80,14 @@ containers:
               value_type: 1
               template_string: 31%03d
               overridable: false
+            # Skip the Bitnami rabbitmq subchart's image-recognition check
+            # so helm install proceeds with the mirrored rabbitmq image.
+            - key: global.security.allowInsecureImages
+              type: 0
+              category: 1
+              value_type: 2
+              default_value: "true"
+              overridable: true
             # Per-system collector (#303): all ts workloads (Java services
             # + Go loadgen + caddy ui-dashboard) export to the dedicated
             # `opentelemetry-kube-stack-deployment-ts-collector` Service
@@ -80,6 +105,18 @@ containers:
               category: 1
               value_type: 0
               default_value: opentelemetry-kube-stack-deployment-ts-collector.monitoring:4317
+              overridable: true
+            - key: loadgenerator.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
+              overridable: true
+            - key: loadgenerator.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "024"
               overridable: true
           status: 1
   - type: 2
