@@ -284,8 +284,17 @@ class ManifestAwarePathBuilder:
         """
         if not manifest.derivation_layers:
             return []
-        layer1_kinds = set(manifest.derivation_layers[0].edge_kinds)
-        if self._has_edge_of_kinds(seed_frame.node_id, layer1_kinds):
+        layer1 = manifest.derivation_layers[0]
+        # Pair (kind, direction) so the terminator only admits a proxy
+        # seed if its incident edge is in the direction layer-1 will
+        # actually walk. A direction-blind check admits, e.g., a service
+        # for an ``includes backward`` manifest because service has
+        # ``includes`` outgoing — but layer-1 expansion needs the
+        # incoming direction, which exists at spans, not services. The
+        # direction-aware terminator pushes BFS one more hop to reach
+        # the correct plane (spans, in that example).
+        layer1_pairs = set(zip(layer1.edge_kinds, layer1.edge_directions, strict=False))
+        if self._has_edge_of_kind_dir(seed_frame.node_id, layer1_pairs):
             return []  # v_root is already on the right plane.
         structural_kinds = {"includes", "runs", "routes_to"}
         # BFS up to 3 hops along structural edges in either direction; admit
@@ -311,7 +320,7 @@ class ManifestAwarePathBuilder:
                     if edge_ref is None or edge_ref.kind.value not in structural_kinds:
                         continue
                     seen.add(other_id)
-                    if self._has_edge_of_kinds(other_id, layer1_kinds):
+                    if self._has_edge_of_kind_dir(other_id, layer1_pairs):
                         proxies.append(
                             self._make_seed_frame(other_id, manifest.fault_type_name)
                         )
@@ -333,21 +342,30 @@ class ManifestAwarePathBuilder:
         ):
             yield src_id, node_id, key, "in"
 
-    def _has_edge_of_kinds(self, node_id: int, kinds: set[str]) -> bool:
-        """True iff ``node_id`` has any in/out edge whose ``kind`` is in ``kinds``."""
-        if not kinds:
+    def _has_edge_of_kind_dir(
+        self, node_id: int, kind_dirs: set[tuple[str, str]]
+    ) -> bool:
+        """True iff ``node_id`` has an edge matching one of ``(kind, direction)``.
+
+        Direction follows :class:`_admit_layer_children` semantics:
+        ``forward`` ↔ outgoing edge, ``backward`` ↔ incoming edge. This
+        mirrors what the layer expansion will actually traverse, so the
+        proxy descent only stops at a node where layer-1 admission can
+        produce children.
+        """
+        if not kind_dirs:
             return False
         for _, _, _, d in self.graph._graph.out_edges(  # type: ignore[call-arg]
             node_id, keys=True, data=True
         ):
             ref = d.get("ref")
-            if ref is not None and ref.kind.value in kinds:
+            if ref is not None and (ref.kind.value, _DIRECTION_FORWARD) in kind_dirs:
                 return True
         for _, _, _, d in self.graph._graph.in_edges(  # type: ignore[call-arg]
             node_id, keys=True, data=True
         ):
             ref = d.get("ref")
-            if ref is not None and ref.kind.value in kinds:
+            if ref is not None and (ref.kind.value, _DIRECTION_BACKWARD) in kind_dirs:
                 return True
         return False
 
