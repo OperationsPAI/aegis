@@ -20,26 +20,44 @@ description: |
   JvmAugmenterAdapter). Concurrent CPU burn from allocation-walk
   pushes cpu_limit_utilization up as well.
 
+# Entry signature uses a disjunction — JVMMemoryStress can manifest at
+# five observation points depending on whether the byteman-injected
+# method is actually exercised during the chaos window:
+#   1. method runs & allocates → container/pod memory_usage_ratio rises
+#   2. allocation pressure exceeds heap → frequent GC
+#   3. allocation walk burns CPU → cpu_throttle_ratio rises
+#   4. heap exhaustion → cgroup OOM-kill → pod restart_count delta ≥ 1
+#   5. method itself slows down → span.latency_p99_ratio rises
+# Phase 4 diagnosis: in 50/65 cases the method was rarely called and
+# signals (1)+(5) stayed flat; restart and CPU burn carried the entry.
 entry_signature:
-  entry_window_sec: 30
-  required_features:
+  entry_window_sec: 60
+  required_features: []
+  optional_features:
     - kind: container
       feature: memory_usage_ratio
-      band: [0.7, 1.0]
+      band: [0.5, 1.0]
       magnitude_source: empirical
-  optional_features:
+    - kind: pod
+      feature: memory_usage_ratio
+      band: [0.5, 1.0]
+      magnitude_source: empirical
     - kind: container
       feature: cpu_throttle_ratio
       band: [3.0, .inf]
-      magnitude_source: empirical
-    - kind: span
-      feature: latency_p99_ratio
-      band: [1.5, .inf]
       magnitude_source: empirical
     - kind: container
       feature: gc_pause_ratio
       band: [0.1, 1.0]
       magnitude_source: theoretical
+    - kind: pod
+      feature: restart_count
+      band: [1.0, .inf]
+      magnitude_source: theoretical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
+      magnitude_source: empirical
   optional_min_match: 1
 
 derivation_layers:
