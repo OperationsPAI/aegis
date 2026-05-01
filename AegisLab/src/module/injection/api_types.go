@@ -468,19 +468,6 @@ func (req *SubmitInjectionReq) Validate() error {
 			if strings.TrimSpace(spec.ChaosType) == "" {
 				return fmt.Errorf("specs[%d][%d].chaos_type is required", i, j)
 			}
-			// Backend pins the abnormal window. We deliberately overwrite
-			// any caller-supplied `duration` rather than rejecting it, so
-			// existing CLI bodies keep working while loop agents lose the
-			// ability to drift it. A nil pointer here would still indicate
-			// the chaos-experiment resolver bailed out before normalizing
-			// the rest of the config (issue #176), so keep that diagnostic.
-			if spec.Duration == nil {
-				return fmt.Errorf(
-					"specs[%d][%d].duration is missing for chaos_type=%q — the chaos-experiment guided resolver typically default-fills duration on success, "+
-						"so a missing duration usually means the resolver hit a builder error (missing required field, JVM method not in cache, mem_type decode failure, ...) "+
-						"and shipped an un-normalized config; re-run the guided session and check the resolver's `errors` field",
-					i, j, strings.TrimSpace(spec.ChaosType))
-			}
 			fixed := consts.FixedAbnormalWindowMinutes
 			spec.Duration = &fixed
 			req.Specs[i][j] = *spec
