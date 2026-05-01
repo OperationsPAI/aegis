@@ -65,7 +65,20 @@ containers:
       #      opspai/loadgenerator — volces shanghai mirror so byte-cluster
       #      pulls don't egress to docker.io.
       # Plus carries forward the per-system collector retargeting from #303.
-      - name: 1.0.4
+      #
+      # Bumped 1.0.4 → 1.0.5 to redirect every chart-default docker.io image
+      # through the volces shanghai mirror (`pair-cn-shanghai.cr.volces.com/
+      # opspai/*`). byte-cluster nodes can NOT egress to docker.io, so the
+      # chart's defaults — `global.image.repository=docker.io/opspai`,
+      # `mysql.image.repository=docker.io/library/mysql`, `rabbitmq.image.
+      # repository=bitnamilegacy/rabbitmq`, and the loadgen `wait-for-
+      # services` init container `docker.io/nicolaka/netshoot:v0.14` — all
+      # ImagePullBackOff'd on every newly allocated ts namespace after
+      # backend RP triggered helm install. Manually mirrored to opspai
+      # dockerhub (volces auto-mirrors docker.io/opspai/* to the pair-cn-
+      # shanghai path), then pinned the new mirror paths via the four extra
+      # helm values below.
+      - name: 1.0.5
         github_link: OperationsPAI/train-ticket
         status: 1
         helm_config:
@@ -87,6 +100,41 @@ containers:
               category: 1
               value_type: 2
               default_value: "true"
+              overridable: true
+            # Repository for ts-* service images and the chart's
+            # `init-otel-agent` (autoinstrumentation-java) initContainer.
+            # Chart default `docker.io/opspai` is unreachable from byte-
+            # cluster nodes; the volces shanghai mirror is.
+            - key: global.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            # mysql + rabbitmq subcharts: chart defaults reach docker.io
+            # directly. Mirror both to opspai (manually pulled + pushed
+            # 2026-05-01: docker.io/library/mysql:5.7 and docker.io/
+            # bitnamilegacy/rabbitmq:4.0.7-debian-12-r0).
+            - key: mysql.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/mysql
+              overridable: true
+            - key: rabbitmq.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/rabbitmq
+              overridable: true
+            # loadgen `wait-for-services` init container — chart hardcodes
+            # docker.io/nicolaka/netshoot:v0.14 in values.yaml:394. Mirror
+            # pushed to opspai/netshoot:v0.14 on 2026-05-01.
+            - key: loadgenerator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/netshoot:v0.14
               overridable: true
             # Per-system collector (#303): all ts workloads (Java services
             # + Go loadgen + caddy ui-dashboard) export to the dedicated
