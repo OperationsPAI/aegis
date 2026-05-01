@@ -1,0 +1,82 @@
+fault_type_name: DNSRandom
+target_kind: pod
+seed_tier: silent
+description: |
+  Pod-level DNS chaos that returns RANDOM IP addresses instead of failing.
+  Caller dials a wrong target: connection-refused (no listener), timeout
+  (silent black hole), or rare success (collision). Symptom on caller is
+  variable: dns lookup itself succeeds but downstream connect fails.
+  Like DNSError, this is outbound-isolation (Class E) — the pod still
+  serves inbound traffic.
+
+# Entry signature is looser than DNSError. dns_failure_rate may be LOW
+# (DNS lookup "succeeded"); the failure surfaces as
+# connection_refused / timeout downstream of the bogus IP.
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: error_rate
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: connection_refused_rate
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: timeout_rate
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: dns_failure_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes]
+    edge_directions: [forward, forward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.1, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: connection_refused_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.5, .inf]
+        magnitude_decay: 0.7
+    max_fanout: 16
+
+hand_offs:
+  - to: NetworkPartition
+    trigger:
+      kind: span
+      feature: silent
+      threshold: 1.0
+    on_layer: 1
+    rationale: |
+      When random IPs land on unreachable hosts and connections silently
+      time out, the layer 1 caller pattern collapses into the same silent
+      egress signature as a partition; verification may continue under
+      NetworkPartition.
+
+terminals: []
