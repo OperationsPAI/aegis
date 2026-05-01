@@ -473,15 +473,26 @@ func parseInjection(ctx context.Context, instance Injection) (map[string]any, er
 		}
 	}
 
-	namespace, err := systemconfig.GetNamespaceByIndex(system, defaultStartIndex)
+	var specNamespace string
+	for i := range instanceValue.NumField() {
+		if instanceType.Field(i).Name == keyNamespace {
+			f := instanceValue.Field(i)
+			if f.Kind() == reflect.String {
+				specNamespace = f.String()
+			}
+			break
+		}
+	}
+
+	namespace, err := resolveSpecNamespace(system, specNamespace)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get namespace for system %s: %v", system, err)
+		return nil, fmt.Errorf("failed to resolve namespace for system %s: %v", system, err)
 	}
 
 	systemCache := resourcelookup.GetSystemCache(system)
 
 	for i := range instanceValue.NumField() {
-		// Skip non-numeric fields (e.g. the per-spec Namespace string used by
+		// Skip non-action fields (e.g. the per-spec Namespace string used by
 		// GetGroundtruth). They aren't part of the action-space the display config
 		// surfaces.
 		if isNonActionField(instanceType.Field(i).Type) {
