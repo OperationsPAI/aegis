@@ -166,6 +166,20 @@ containers:
               value_type: 0
               default_value: "024"
               overridable: true
+            # Pin mysql Service to ClusterIP. trainticket@0.2.0 chart default
+            # is `NodePort` with no `nodePort` value, so kubernetes auto-assigns
+            # a random port from 30000-32767 per release. With ~12 ts ns running
+            # in parallel, that range frequently collides with the deterministic
+            # `services.tsUiDashboard.nodePort=31%03d` allocation (range 31000-
+            # 31099): observed `ts7` mysql at 31003 blocking `ts3` ts-ui-dashboard
+            # install. mysql has no out-of-cluster consumers anyway, so ClusterIP
+            # is the right type.
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
           status: 1
   - type: 2
     name: otel-demo
