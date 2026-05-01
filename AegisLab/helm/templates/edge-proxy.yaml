@@ -1,0 +1,77 @@
+{{- if .Values.edgeProxy.enabled }}
+# Edge proxy: stable Service to anchor the external LoadBalancer EIP.
+# The LB controller annotations live here (not on the api-gateway Service)
+# so routine api-gateway upgrades don't churn the EIP.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-edge-proxy-config
+data:
+  Caddyfile: |
+    {
+        admin off
+        auto_https off
+    }
+    :{{ .Values.microservices.apiGateway.httpPort }} {
+        reverse_proxy {{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.httpPort }}
+    }
+    :{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }} {
+        reverse_proxy h2c://{{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-edge-proxy
+spec:
+  replicas: {{ .Values.edgeProxy.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-edge-proxy
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-edge-proxy
+    spec:
+      containers:
+        - name: caddy
+          image: {{ include "helm.image" (dict "imageConfig" .Values.images.caddy "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.images.caddy.pullPolicy }}"
+          args: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.microservices.apiGateway.httpPort }}
+            - name: intake-grpc
+              containerPort: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caddy
+          {{- with .Values.edgeProxy.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-edge-proxy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-edge-proxy
+  {{- with .Values.edgeProxy.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.edgeProxy.service.type | default "ClusterIP" }}
+  selector:
+    app: {{ .Release.Name }}-edge-proxy
+  ports:
+    - name: http
+      port: {{ .Values.microservices.apiGateway.httpPort }}
+      targetPort: http
+    - name: intake-grpc
+      port: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+      targetPort: intake-grpc
+{{- end }}
