@@ -61,6 +61,10 @@ entry_signature:
   optional_min_match: 1
 
 derivation_layers:
+  # Layer-1 admission: any of {span p99, pod/container memory, CPU saturation,
+  # pod restart} suffices. Phase 6 audit found CPU and restart are the strongest
+  # signals on real cases (CPU 2-596× baseline, restarts on byteman-targeted
+  # OOM); listing only memory + p99 dropped 23/65 admissible cases on layer-1.
   - layer: 1
     edge_kinds: [runs, routes_to, includes]
     edge_directions: [backward, backward, forward]
@@ -71,7 +75,23 @@ derivation_layers:
         magnitude_decay: 0.7
       - kind: pod
         feature: memory_usage_ratio
-        band: [0.7, 1.0]
+        band: [0.5, 1.0]
+        magnitude_decay: 1.0
+      - kind: container
+        feature: memory_usage_ratio
+        band: [0.5, 1.0]
+        magnitude_decay: 1.0
+      - kind: pod
+        feature: cpu_throttle_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 0.7
+      - kind: container
+        feature: cpu_throttle_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 0.7
+      - kind: pod
+        feature: restart_count
+        band: [1.0, .inf]
         magnitude_decay: 1.0
     max_fanout: 32
   - layer: 2
