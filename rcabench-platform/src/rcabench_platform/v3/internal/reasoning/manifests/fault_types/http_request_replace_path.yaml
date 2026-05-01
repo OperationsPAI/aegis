@@ -1,0 +1,38 @@
+fault_type_name: HTTPRequestReplacePath
+target_kind: service
+seed_tier: erroring
+description: |
+  Inbound HTTP request path mangled by the chaos sidecar so the target
+  service routes to a non-existent endpoint and returns 4xx.
+  Errors are immediate; latency is unchanged.
+  No span-level 4xx-specific feature exists in the bootstrap vocabulary,
+  so we fall back to error_rate alone (documented in evidence MD).
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: error_rate
+      band: [0.3, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [0.0, 2.0]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.2, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []

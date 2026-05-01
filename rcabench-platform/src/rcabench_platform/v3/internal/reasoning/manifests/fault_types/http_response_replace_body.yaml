@@ -1,0 +1,39 @@
+fault_type_name: HTTPResponseReplaceBody
+target_kind: service
+seed_tier: erroring
+description: |
+  Outbound response body replaced wholesale by the chaos sidecar.
+  Effect is ambiguous: the HTTP status code remains 2xx, so callers that
+  do not deserialize / validate the payload may report success while
+  callers that do parse it raise an application-level error. We expect
+  modest error_rate uplift on caller spans, but this manifest is
+  intentionally low-confidence and may not match every case.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: error_rate
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [0.0, 3.0]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []

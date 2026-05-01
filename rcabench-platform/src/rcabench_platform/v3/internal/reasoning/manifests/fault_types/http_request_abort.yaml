@@ -1,0 +1,45 @@
+fault_type_name: HTTPRequestAbort
+target_kind: service
+seed_tier: erroring
+description: |
+  Inbound HTTP request aborted before the target service can process it.
+  Caller observes the connection drop / abort as an immediate error, so the
+  affected service's inbound spans show high error_rate without latency
+  inflation. Container/pod resources stay healthy.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: error_rate
+      band: [0.5, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: connection_refused_rate
+      band: [0.3, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: request_count_ratio
+      band: [0.0, 0.8]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.2, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []

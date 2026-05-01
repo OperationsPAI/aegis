@@ -1,0 +1,38 @@
+fault_type_name: HTTPResponseReplaceCode
+target_kind: service
+seed_tier: erroring
+description: |
+  Outbound HTTP status code forced to a non-2xx value (e.g., 500, 503) by
+  the chaos sidecar. Caller-side spans see immediate error_rate uplift;
+  latency is unaffected. The entry threshold accepts error_rate >= 0.2 so
+  cross-family universal-trigger hand-offs (span.error_rate > 0.2) can
+  land on this manifest as the canonical "downstream failed" destination.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: error_rate
+      band: [0.2, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [0.0, 2.0]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.1, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []

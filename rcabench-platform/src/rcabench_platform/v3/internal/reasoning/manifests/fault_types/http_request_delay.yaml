@@ -1,0 +1,45 @@
+fault_type_name: HTTPRequestDelay
+target_kind: service
+seed_tier: slow
+description: |
+  Inbound HTTP request held by the chaos sidecar before being passed to
+  the target service. The affected service's inbound spans show inflated
+  P99 latency with low error rate; resource counters at the container/pod
+  level are unaffected.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [5.0, .inf]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: latency_p50_ratio
+      band: [3.0, .inf]
+      magnitude_source: theoretical
+    - kind: span
+      feature: error_rate
+      band: [0.0, 0.2]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [2.5, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []

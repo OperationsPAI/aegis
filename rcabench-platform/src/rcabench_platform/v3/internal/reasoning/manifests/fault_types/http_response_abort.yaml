@@ -1,0 +1,47 @@
+fault_type_name: HTTPResponseAbort
+target_kind: service
+seed_tier: erroring
+description: |
+  Outbound HTTP response aborted by the chaos sidecar after the target
+  service has processed the request. Caller observes a connection reset /
+  truncated response and counts it as an error span. Errors dominate;
+  latency is irrelevant. The entry threshold accepts error_rate >= 0.2 so
+  cross-family universal-trigger hand-offs (span.error_rate > 0.2) can
+  land on this manifest.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: error_rate
+      band: [0.2, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: connection_refused_rate
+      band: [0.2, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.1, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs: []
+
+terminals: []
