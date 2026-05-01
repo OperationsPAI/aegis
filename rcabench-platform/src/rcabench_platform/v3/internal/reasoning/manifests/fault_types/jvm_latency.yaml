@@ -1,0 +1,80 @@
+fault_type_name: JVMLatency
+target_kind: container
+seed_tier: slow
+description: |
+  JVM method-level latency injection: a specific Java method on the affected
+  container is wrapped with an artificial sleep (display_config field
+  latency_duration, in milliseconds, observed range 600-3600 ms in dataset).
+  Spans whose call path crosses the patched method see large P99 latency
+  inflation; spans on other methods of the same service are unaffected.
+  Manifest matches at service granularity since the IR does not (yet) expose
+  per-operation span buckets.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [5.0, .inf]
+      magnitude_source: empirical
+  optional_features:
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: empirical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes]
+    edge_directions: [backward, backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [2.0, .inf]
+        magnitude_decay: 0.4
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.3, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs:
+  - to: HTTPResponseDelay
+    trigger:
+      kind: span
+      feature: latency_p99_ratio
+      threshold: 10.0
+    on_layer: 1
+    rationale: |
+      When upstream method latency is sustained at >=10x baseline, downstream
+      callers experience timeout-budget exhaustion which presents as a
+      response-delay fault from far-downstream observers.
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.2
+    on_layer: 2
+    rationale: |
+      Universal cross-family trigger: persistent downstream error rate above
+      0.2 reads as response-abort symptoms regardless of the upstream root.
+
+terminals: []

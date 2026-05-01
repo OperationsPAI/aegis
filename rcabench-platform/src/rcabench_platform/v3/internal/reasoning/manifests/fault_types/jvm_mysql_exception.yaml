@@ -1,0 +1,73 @@
+fault_type_name: JVMMySQLException
+target_kind: container
+seed_tier: erroring
+description: |
+  JVM-side JDBC exception injection: only spans crossing the JDBC call
+  boundary on the affected container raise a SQLException-class error.
+  Services on the same call path that do not touch the DB observe nothing
+  directly; their effect appears via cascading JVMException-shaped errors at
+  the caller layer when they fail to handle the JDBC error. Bands are
+  theoretical because zero dataset cases of fault_type=30 exist as of
+  authoring; signature is mechanism-derived.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: span
+      feature: error_rate
+      band: [0.30, 1.0]
+      magnitude_source: theoretical
+  optional_features:
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes]
+    edge_directions: [backward, backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.10, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.6
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs:
+  - to: JVMException
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.3
+    on_layer: 1
+    rationale: |
+      Caller services that do not catch the SQLException re-raise as a
+      RuntimeException at their own boundary, which is observationally
+      identical to a directly-injected JVMException at the caller. Within-
+      family hand-off; identical observable to JVMException at the caller.
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.5
+    on_layer: 2
+    rationale: |
+      Saturated downstream error rate trips the universal cross-family
+      response-abort trigger.
+
+terminals: []
