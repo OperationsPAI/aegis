@@ -148,11 +148,14 @@ containers:
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/mysql
               overridable: true
+            # Keep this as a repository suffix because the chart also carries
+            # `rabbitmq.image.registry`. The final rendered image should be
+            # `pair-cn-shanghai.cr.volces.com/opspai/rabbitmq:<tag>`.
             - key: rabbitmq.image.repository
               type: 0
               category: 1
               value_type: 0
-              default_value: pair-cn-shanghai.cr.volces.com/opspai/rabbitmq
+              default_value: opspai/rabbitmq
               overridable: true
             # loadgen `wait-for-services` init container — chart hardcodes
             # docker.io/nicolaka/netshoot:v0.14 in values.yaml:394. Mirror
