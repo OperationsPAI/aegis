@@ -3,12 +3,12 @@ entries:
   rcabench:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-04-26T10:16:21.304724539Z"
+    created: "2026-05-01T00:57:22.964646203Z"
     description: A Helm chart for Kubernetes
-    digest: 78646d11b3c21a4c40921002b60c40a309171aa34c2e211d446e5b74ca51579a
+    digest: eefc862255a56d38bd6c2391e7df5c9ac5ed96964f244854f61144c38be17e3b
     name: rcabench
     type: application
     urls:
     - https://operationspai.github.io/aegis/rcabench-0.1.0.tgz
     version: 0.1.0
-generated: "2026-04-26T10:16:21.303379808Z"
+generated: "2026-05-01T00:57:22.96330567Z"
