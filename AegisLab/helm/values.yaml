@@ -50,6 +50,30 @@ images:
     name: grafana/grafana
     tag: "12.3.0"
     pullPolicy: IfNotPresent
+  caddy:
+    name: caddy
+    tag: "2-alpine"
+    pullPolicy: IfNotPresent
+
+# Edge proxy: thin reverse-proxy Service that anchors the external LB EIP.
+# Disabled by default; enable per environment that has an external
+# LoadBalancer controller (e.g. Volcengine on byte-cluster). When enabled,
+# move the LB-binding annotations onto `edgeProxy.service.annotations` and
+# leave `microservices.apiGateway.service.annotations` empty so api-gateway
+# upgrades stop churning the EIP.
+edgeProxy:
+  enabled: false
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 buildkit:
   enabled: true

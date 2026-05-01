@@ -30,6 +30,13 @@ images:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/buildkit
     tag: buildx-stable-1
     pullPolicy: IfNotPresent
+  caddy:
+    # NOTE: image still needs to be mirrored to a Volcengine-reachable
+    # registry. Until then, this pulls from docker.io and may be slow or
+    # fail in air-gapped environments.
+    name: docker.io/opspai/caddy
+    tag: "2-alpine"
+    pullPolicy: IfNotPresent
 
 buildkit:
   enabled: false
@@ -91,30 +98,48 @@ microservices:
   apiGateway:
     service:
       type: ClusterIP
-      # Volcengine LB controller annotations: bind a stable EIP via a CLB
-      # the controller materializes from these knobs. Kept in chart values
-      # (not stamped out-of-band) so `helm upgrade rcabench` doesn't drop
-      # them — without these, the controller re-creates the CLB and the
-      # bound EIP changes, breaking external clients.
-      # The CLB ID surfaces in the live Service annotations as
-      # `service.beta.kubernetes.io/system-volcengine-loadbalancer-create-response-id`
-      # after the controller's first reconcile; that's the controller's
-      # OUTPUT and is intentionally NOT in this map (helm would clobber it
-      # on upgrade if it were).
-      annotations:
-        service.beta.kubernetes.io/volcengine-loadbalancer-address-type: PUBLIC
-        service.beta.kubernetes.io/volcengine-loadbalancer-bandwidth: "200"
-        service.beta.kubernetes.io/volcengine-loadbalancer-billing-type: "2"
-        service.beta.kubernetes.io/volcengine-loadbalancer-eip-billing-type: "3"
-        service.beta.kubernetes.io/volcengine-loadbalancer-health-check-flag: "off"
-        service.beta.kubernetes.io/volcengine-loadbalancer-ip-version: ipv4
-        service.beta.kubernetes.io/volcengine-loadbalancer-isp-type: BGP
-        service.beta.kubernetes.io/volcengine-loadbalancer-name: pair-lb
-        service.beta.kubernetes.io/volcengine-loadbalancer-pass-through: "true"
-        service.beta.kubernetes.io/volcengine-loadbalancer-project-name: default
-        service.beta.kubernetes.io/volcengine-loadbalancer-scheduler: wrr
-        service.beta.kubernetes.io/volcengine-loadbalancer-spec: small_1
-        service.beta.kubernetes.io/volcengine-loadbalancer-subnet-id: subnet-33g6ke6jw1b0g6k70bpphvvjn
+      # LB-binding annotations live on the edge-proxy Service (see
+      # `edgeProxy.service.annotations` below), not here. Keeping this
+      # empty means routine api-gateway upgrades no longer touch any
+      # object the Volcengine LB controller cares about, so the bound
+      # EIP stays stable across `helm upgrade rcabench`.
+      annotations: {}
+
+edgeProxy:
+  enabled: true
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    # Volcengine LB controller annotations: bind a stable EIP via a CLB
+    # the controller materializes from these knobs. Anchored on the
+    # edge-proxy Service (which is rarely mutated) so `helm upgrade
+    # rcabench` doesn't churn the EIP. The CLB ID surfaces in the live
+    # Service annotations as
+    # `service.beta.kubernetes.io/system-volcengine-loadbalancer-create-response-id`
+    # after the controller's first reconcile; that's the controller's
+    # OUTPUT and is intentionally NOT in this map (helm would clobber it
+    # on upgrade if it were).
+    annotations:
+      service.beta.kubernetes.io/volcengine-loadbalancer-address-type: PUBLIC
+      service.beta.kubernetes.io/volcengine-loadbalancer-bandwidth: "200"
+      service.beta.kubernetes.io/volcengine-loadbalancer-billing-type: "2"
+      service.beta.kubernetes.io/volcengine-loadbalancer-eip-billing-type: "3"
+      service.beta.kubernetes.io/volcengine-loadbalancer-health-check-flag: "off"
+      service.beta.kubernetes.io/volcengine-loadbalancer-ip-version: ipv4
+      service.beta.kubernetes.io/volcengine-loadbalancer-isp-type: BGP
+      service.beta.kubernetes.io/volcengine-loadbalancer-name: pair-lb
+      service.beta.kubernetes.io/volcengine-loadbalancer-pass-through: "true"
+      service.beta.kubernetes.io/volcengine-loadbalancer-project-name: default
+      service.beta.kubernetes.io/volcengine-loadbalancer-scheduler: wrr
+      service.beta.kubernetes.io/volcengine-loadbalancer-spec: small_1
+      service.beta.kubernetes.io/volcengine-loadbalancer-subnet-id: subnet-33g6ke6jw1b0g6k70bpphvvjn
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
     # CPU requests are required for HPA targetCPUUtilizationPercentage to work.
     resources:
       requests:
