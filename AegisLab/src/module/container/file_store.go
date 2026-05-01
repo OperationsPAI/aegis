@@ -68,17 +68,34 @@ func (s *HelmFileStore) SaveValueFile(containerName string, srcFileHeader *multi
 
 	switch {
 	case srcFileHeader != nil:
+		if srcFileHeader.Size == 0 {
+			return "", fmt.Errorf("refusing to save empty helm values file for %s (uploaded source is 0 bytes)", containerName)
+		}
 		targetPath = filepath.Join(targetDir, fmt.Sprintf("%s_values_%d%s", containerName, timestamp, filepath.Ext(srcFileHeader.Filename)))
 		if err := utils.CopyFileFromFileHeader(srcFileHeader, targetPath); err != nil {
 			return "", fmt.Errorf("failed to save file: %w", err)
 		}
 	case srcFilePath != "":
+		info, statErr := os.Stat(srcFilePath)
+		if statErr != nil {
+			return "", fmt.Errorf("failed to stat source values file %s: %w", srcFilePath, statErr)
+		}
+		if info.Size() == 0 {
+			return "", fmt.Errorf("refusing to save empty helm values file for %s (source path %s is 0 bytes)", containerName, srcFilePath)
+		}
 		targetPath = filepath.Join(targetDir, fmt.Sprintf("%s_values_%d%s", containerName, timestamp, filepath.Ext(srcFilePath)))
 		if err := utils.CopyFile(srcFilePath, targetPath); err != nil {
 			return "", fmt.Errorf("failed to save file: %w", err)
 		}
 	default:
 		return "", fmt.Errorf("either source file header or source file path is required")
+	}
+
+	if info, err := os.Stat(targetPath); err != nil {
+		return "", fmt.Errorf("failed to stat saved helm values file %s: %w", targetPath, err)
+	} else if info.Size() == 0 {
+		_ = os.Remove(targetPath)
+		return "", fmt.Errorf("saved helm values file %s ended up 0 bytes; removed to prevent downstream use of an empty or invalid values file", targetPath)
 	}
 
 	logrus.WithField("file_path", targetPath).Info("Helm values file uploaded successfully")

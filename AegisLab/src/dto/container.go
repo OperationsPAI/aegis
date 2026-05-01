@@ -57,9 +57,12 @@ func (hci *HelmConfigItem) GetValuesMap() map[string]any {
 	root := make(map[string]any)
 
 	if hci.ValueFile != "" {
-		if fileValues, err := utils.LoadYAMLFile(hci.ValueFile); err == nil {
+		if fileValues, err := utils.LoadYAMLFile(hci.ValueFile); err == nil && fileValues != nil {
 			root = fileValues
 		}
+	}
+	if root == nil {
+		root = make(map[string]any)
 	}
 
 	for _, item := range hci.DynamicValues {
