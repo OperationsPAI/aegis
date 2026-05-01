@@ -1,0 +1,78 @@
+fault_type_name: ContainerKill
+target_kind: container
+seed_tier: unavailable
+description: |
+  A single container inside a pod is terminated by chaos-mesh. The pod
+  itself stays scheduled and the kubelet restarts the container, so
+  k8s.container.restarts increments by at least 1 within the window.
+  In-flight requests against the dying container abort, but recovery is
+  faster than PodKill because no rescheduling is required.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features:
+    - kind: container
+      feature: restart_count
+      band: [1.0, .inf]
+      magnitude_source: empirical
+    - kind: service
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
+  optional_features:
+    - kind: span
+      feature: error_rate
+      band: [0.1, 1.0]
+      magnitude_source: empirical
+    - kind: span
+      feature: connection_refused_rate
+      band: [0.1, 1.0]
+      magnitude_source: empirical
+  optional_min_match: 0
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [routes_to, includes]
+    edge_directions: [backward, forward]
+    expected_features:
+      - kind: service
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: connection_refused_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 32
+
+hand_offs:
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.2
+    on_layer: 2
+    rationale: |
+      In-flight requests routed to the dying container are aborted
+      mid-response; far-downstream callers observe these as response-abort
+      semantics rather than connection failures, since the TCP connection
+      was already established before the SIGKILL.
+
+terminals: []
