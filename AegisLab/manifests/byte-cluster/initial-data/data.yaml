@@ -78,11 +78,20 @@ containers:
       # dockerhub (volces auto-mirrors docker.io/opspai/* to the pair-cn-
       # shanghai path), then pinned the new mirror paths via the four extra
       # helm values below.
-      - name: 1.0.5
+      #
+      # Bumped 1.0.5 → 1.0.6 to pick up trainticket chart 0.2.1
+      # (OperationsPAI/train-ticket#23) which honors `services.<svc>.type=
+      # ClusterIP` overrides by skipping the `nodePort:` field. Without it,
+      # our `services.tsUiDashboard.type=ClusterIP` seed override (#332) was
+      # silently broken — chart 0.2.0 still emitted nodePort:30080, k8s
+      # rejected the Service, ts-ui-dashboard never came up. Reseed honors
+      # the immutability contract on existing 1.0.5; new container_versions
+      # row picks up chart 0.2.1.
+      - name: 1.0.6
         github_link: OperationsPAI/train-ticket
         status: 1
         helm_config:
-          version: 0.2.0
+          version: 0.2.1
           chart_name: trainticket
           repo_name: train-ticket
           repo_url: https://operationspai.github.io/train-ticket
