@@ -65,6 +65,14 @@ derivation_layers:
         magnitude_decay: null
     max_fanout: 32
   - layer: 2
+    # Add `silent` here: the deterministic surface of TCP retransmit-driven
+    # slowdown at the upstream caller is a span-emission stall (request
+    # volume drop or trace SDK queue clogged on the slow upstream RPC).
+    # Real data: alarm spans 2 hops upstream consistently show silent=1.0
+    # with error_rate/timeout_rate at zero (caller's retry succeeded),
+    # so an error/timeout-only band leaves the cascade dead at layer 2.
+    # Path-level FP control comes from the alarm-terminate filter — only
+    # paths that land on a real alarm node survive.
     edge_kinds: [calls]
     edge_directions: [backward]
     expected_features:
@@ -76,6 +84,14 @@ derivation_layers:
         feature: timeout_rate
         band: [0.02, 1.0]
         magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.5
     max_fanout: 16
 
 # Within-family hand-off: when loss saturates (≥95%), recovery via

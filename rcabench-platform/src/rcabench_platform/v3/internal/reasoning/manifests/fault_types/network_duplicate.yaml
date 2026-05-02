@@ -21,6 +21,11 @@ description: |
 # below NetworkCorrupt's lower-bound). Once empirical samples land,
 # revisit and tighten.
 entry_signature:
+  # Disjunction. NetworkDuplicate's protocol-level recovery is essentially
+  # free (TCP de-dup at receiver), so the dominant abnormal-window signal
+  # is request-volume drop / span silence rather than latency / timeout.
+  # Bands sit slightly looser than NetworkCorrupt reflecting Loss >
+  # Corrupt > Duplicate severity ordering.
   entry_window_sec: 30
   required_features: []
   optional_features:
@@ -36,6 +41,10 @@ entry_signature:
       feature: latency_p50_ratio
       band: [1.1, .inf]
       magnitude_source: theoretical
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: theoretical
   optional_min_match: 1
 
 # Cascade is the shallowest of the network family. TCP de-dup is local;
@@ -43,6 +52,11 @@ entry_signature:
 # and do not extend to layer 3.
 derivation_layers:
   - layer: 1
+    # Add `silent` as a cascade signal: even though TCP de-dup is local,
+    # the bandwidth/CPU overhead of receiving 2x the packet rate slows
+    # the network stack enough to stall trace-SDK emission on adjacent
+    # RPCs. Empirically this is the most reliable signature given the
+    # latency and error bands are at the noise floor for this fault.
     edge_kinds: [calls, includes, routes_to]
     edge_directions: [forward, forward, backward]
     expected_features:
@@ -54,8 +68,15 @@ derivation_layers:
         feature: latency_p50_ratio
         band: [1.05, .inf]
         magnitude_decay: 0.7
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
     max_fanout: 32
   - layer: 2
+    # Same physics-based addition as layer 1: trace-SDK stall on the slow
+    # upstream RPC produces silence at the deeper caller; latency and
+    # timeout bands are kept as parallel signals.
     edge_kinds: [calls]
     edge_directions: [backward]
     expected_features:
@@ -66,6 +87,10 @@ derivation_layers:
       - kind: span
         feature: timeout_rate
         band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
         magnitude_decay: null
     max_fanout: 16
 
