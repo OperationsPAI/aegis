@@ -15,39 +15,14 @@ from ..logging import logger, timeit
 from ..utils.serde import load_json
 from .spec import DatasetAnalyzer, build_service_graph
 
-FAULT_TYPES: list[str] = [
-    "PodKill",
-    "PodFailure",
-    "ContainerKill",
-    "MemoryStress",
-    "CPUStress",
-    "HTTPRequestAbort",
-    "HTTPResponseAbort",
-    "HTTPRequestDelay",
-    "HTTPResponseDelay",
-    "HTTPResponseReplaceBody",
-    "HTTPResponsePatchBody",
-    "HTTPRequestReplacePath",
-    "HTTPRequestReplaceMethod",
-    "HTTPResponseReplaceCode",
-    "DNSError",
-    "DNSRandom",
-    "TimeSkew",
-    "NetworkDelay",
-    "NetworkLoss",
-    "NetworkDuplicate",
-    "NetworkCorrupt",
-    "NetworkBandwidth",
-    "NetworkPartition",
-    "JVMLatency",
-    "JVMReturn",
-    "JVMException",
-    "JVMGarbageCollector",
-    "JVMCPUStress",
-    "JVMMemoryStress",
-    "JVMMySQLLatency",
-    "JVMMySQLException",
-]
+# Re-export the canonical FAULT_TYPES list from the reasoning models.
+# Previously this module duplicated the list and drifted (it was missing
+# JVMRuntimeMutator, the chaos-mesh runtime bytecode mutator added to
+# the catalog later). Single source of truth lives in
+# ``models/injection.py`` alongside ``FAULT_TYPE_CATEGORIES`` and
+# ``FAULT_TYPE_TO_SEED_TIER``; importing here keeps SDK callers
+# automatically in sync with the reasoning side.
+from rcabench_platform.v3.internal.reasoning.models.injection import FAULT_TYPES  # noqa: E402, F401
 
 HTTP_REPLACE_METHODS: list[str] = [
     "GET",

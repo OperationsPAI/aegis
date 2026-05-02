@@ -137,6 +137,55 @@ HTTP_RESPONSE_FAULT_TYPES: set[int] = {
 }
 
 
+def _assert_fault_catalog_consistency() -> None:
+    """Verify the three fault-type structures cover the same set.
+
+    Three independent structures index the chaos-mesh fault catalog:
+
+    * ``FAULT_TYPES`` (this module) — int → name.
+    * ``FAULT_TYPE_CATEGORIES`` (this module) — int → resolution
+      category (``container_resource``, ``http_span``, ``network``,
+      ...).
+    * ``FAULT_TYPE_TO_SEED_TIER`` (``models/fault_seed.py``) — name →
+      canonical seed tier (``unavailable`` / ``erroring`` / ``slow``
+      / ``degraded`` / ``silent``).
+
+    They MUST cover the same set of fault names. Any drift (e.g., a
+    new chaos-mesh fault type added to ``FAULT_TYPES`` without a
+    corresponding entry in the other two) is a manifest-load-time
+    error, not a silent fallback. Called once at import time so
+    misconfiguration surfaces immediately rather than on the first
+    run.
+    """
+    # Local import to dodge the circular import at module init time
+    # (fault_seed already imports from this module).
+    from rcabench_platform.v3.internal.reasoning.models.fault_seed import (
+        FAULT_TYPE_TO_SEED_TIER,
+    )
+    names_from_types = set(FAULT_TYPES)
+    names_from_categories = {FAULT_TYPES[i] for i in FAULT_TYPE_CATEGORIES}
+    names_from_seed_tier = set(FAULT_TYPE_TO_SEED_TIER.keys())
+    if names_from_types != names_from_categories:
+        missing = names_from_types - names_from_categories
+        extra = names_from_categories - names_from_types
+        raise RuntimeError(
+            f"FAULT_TYPES and FAULT_TYPE_CATEGORIES disagree: "
+            f"missing-from-categories={sorted(missing)} "
+            f"extra-in-categories={sorted(extra)}"
+        )
+    if names_from_types != names_from_seed_tier:
+        missing = names_from_types - names_from_seed_tier
+        extra = names_from_seed_tier - names_from_types
+        raise RuntimeError(
+            f"FAULT_TYPES and FAULT_TYPE_TO_SEED_TIER disagree: "
+            f"missing-from-seed-tier={sorted(missing)} "
+            f"extra-in-seed-tier={sorted(extra)}"
+        )
+
+
+_assert_fault_catalog_consistency()
+
+
 def get_fault_category(fault_type: int, category: str) -> str:
     """Get granular fault category for downstream StartingPointResolver.
 
