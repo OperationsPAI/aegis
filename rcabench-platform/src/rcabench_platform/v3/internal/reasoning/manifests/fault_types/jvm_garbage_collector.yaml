@@ -70,3 +70,12 @@ hand_offs:
       budget surface as response-abort at far-downstream callers.
 
 terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256
+
+corroborator:
+  kind: span
+  feature: request_count_ratio
+  band: [0.0, 0.7]

@@ -95,3 +95,7 @@ hand_offs:
       was already established before the SIGKILL.
 
 terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256

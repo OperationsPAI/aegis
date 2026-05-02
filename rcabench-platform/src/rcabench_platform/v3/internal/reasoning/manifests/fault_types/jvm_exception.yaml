@@ -71,3 +71,8 @@ hand_offs:
       universal cross-family trigger.
 
 terminals: []
+
+extension:
+  max_extra_hops: 4
+  max_frontier: 256
+  requires_strict_anchor: true

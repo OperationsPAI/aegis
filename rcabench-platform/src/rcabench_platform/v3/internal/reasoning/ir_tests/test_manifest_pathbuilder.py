@@ -30,8 +30,10 @@ from rcabench_platform.v3.internal.reasoning.manifests import (
     ReasoningContext,
 )
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
+    CorroboratorConfig,
     DerivationLayer,
     EntrySignature,
+    ExtensionConfig,
     FaultManifest,
     FeatureMatch,
     HandOff,
@@ -164,10 +166,33 @@ def _make_manifest(
             )
         )
 
+    # Extension defaults mirror the per-tier YAML presets used in
+    # ``manifests/fault_types/*.yaml``: erroring tier requires a
+    # strict-anchor and relaxes per-edge admission past the boundary;
+    # silent / unavailable / slow run a band-driven extension; degraded
+    # tier ships no extension.
+    tier = FAULT_TYPE_TO_SEED_TIER[fault_type_name]
+    extension: ExtensionConfig | None
+    corroborator: CorroboratorConfig | None = None
+    if tier == "erroring":
+        extension = ExtensionConfig(
+            max_extra_hops=4, max_frontier=256, requires_strict_anchor=True
+        )
+    elif tier in {"silent", "unavailable", "slow"}:
+        extension = ExtensionConfig(max_extra_hops=6, max_frontier=256)
+        if tier == "slow":
+            corroborator = CorroboratorConfig(
+                kind=FeatureKind.span,
+                feature=Feature.request_count_ratio,
+                band=(0.0, 0.7),
+            )
+    else:
+        extension = None
+
     return FaultManifest(
         fault_type_name=fault_type_name,
         target_kind="span",
-        seed_tier=FAULT_TYPE_TO_SEED_TIER[fault_type_name],
+        seed_tier=tier,
         description="synthetic test manifest",
         entry_signature=EntrySignature(
             entry_window_sec=30,
@@ -183,6 +208,8 @@ def _make_manifest(
         ),
         derivation_layers=layers,
         hand_offs=handoffs,
+        extension=extension,
+        corroborator=corroborator,
     )
 
 

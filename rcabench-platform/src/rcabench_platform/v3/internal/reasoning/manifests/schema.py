@@ -201,6 +201,82 @@ class HandOff(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Optional manifest blocks (extension, corroborator, multi_v_root)
+# ---------------------------------------------------------------------------
+
+
+class ExtensionConfig(BaseModel):
+    """Past-the-last-layer cascade extension parameters.
+
+    SCHEMA.md notes that "the manifest's last layer is the
+    authoritative envelope for everything beyond" — when the cascade
+    physics drives the symptom past the manifest author's chosen
+    layer count, the path-builder re-applies the last layer's
+    edge-kind admission for up to ``max_extra_hops`` extra hops.
+    Previously these knobs were Python-level constants (one set for
+    slow-tier, an override for erroring); moving them onto the
+    manifest gives each fault type author the say.
+
+    ``requires_strict_anchor=True`` — used by erroring-tier — gates
+    the extension on at least one strict-band admission inside the
+    declared layers. Without that anchor the extension is skipped.
+
+    Defaults are tuned per tier; overriding in YAML is rare.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    max_extra_hops: int = Field(default=0, ge=0, le=16)
+    max_frontier: int = Field(default=256, ge=1, le=4096)
+    requires_strict_anchor: bool = False
+
+
+class CorroboratorConfig(BaseModel):
+    """OR-channel feature evaluated when expected_features all miss.
+
+    Slow-tier physics: a depressed throughput at a downstream caller
+    is a deterministic alternative channel for the same upstream
+    delay (the caller's timeout/circuit-breaker chops requests
+    against the injected latency, or TCP back-pressure absorbs
+    bandwidth-cap throughput). Manifest authors who want this OR-
+    channel declare it here; otherwise the layer-feature band check
+    is the only admission rule.
+
+    The corroborator is consulted ONLY when the layer's
+    ``expected_features`` band all miss for a destination. It does
+    not relax the magnitude predicate; it adds a parallel one.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: FeatureKind
+    feature: Feature
+    band: tuple[float, float]
+
+    @field_validator("band", mode="before")
+    @classmethod
+    def _coerce_band(cls, v: Any) -> tuple[float, float]:
+        if not isinstance(v, list | tuple) or len(v) != 2:
+            raise ValueError("band must be a [low, high] pair")
+        return (_coerce_float(v[0]), _coerce_float(v[1]))
+
+    @model_validator(mode="after")
+    def _check(self) -> CorroboratorConfig:
+        lo, hi = self.band
+        if math.isnan(lo) or math.isnan(hi):
+            raise ValueError("band endpoints must not be NaN")
+        if lo > hi:
+            raise ValueError(f"band low ({lo}) must be <= band high ({hi})")
+        meta = FEATURE_METADATA[self.feature]
+        if self.kind not in meta.kinds:
+            raise ValueError(
+                f"corroborator feature {self.feature.value!r} not defined "
+                f"for kind {self.kind.value!r}"
+            )
+        return self
+
+
+# ---------------------------------------------------------------------------
 # Top-level FaultManifest
 # ---------------------------------------------------------------------------
 
@@ -220,6 +296,18 @@ class FaultManifest(BaseModel):
     derivation_layers: list[DerivationLayer] = Field(min_length=1)
     hand_offs: list[HandOff] = Field(default_factory=list)
     terminals: list[FeatureMatch] = Field(default_factory=list)
+    extension: ExtensionConfig | None = None
+    corroborator: CorroboratorConfig | None = None
+    # ``multi_v_root`` flags fault types whose chaos-mesh injection
+    # spans MORE than one v_root by physics (network faults: chaos-mesh
+    # networkchaos affects the edge between two services, so the
+    # injection_set carries both endpoints). The propagator uses this
+    # to switch from "single v_root, fail closed" to "any v_root passes
+    # entry, cascade from all". Distinct from ``injection_node_ids``
+    # cardinality at runtime: a non-network fault may also resolve to
+    # multiple nodes (e.g., a JVM mutator's container plus its app
+    # container) without being a multi-root cascade.
+    multi_v_root: bool = False
 
     @model_validator(mode="after")
     def _check_top_level(self) -> FaultManifest:
@@ -268,9 +356,11 @@ class FaultManifest(BaseModel):
 
 
 __all__ = [
+    "CorroboratorConfig",
     "DerivationLayer",
     "EdgeDirection",
     "EntrySignature",
+    "ExtensionConfig",
     "FaultManifest",
     "FeatureMatch",
     "HandOff",

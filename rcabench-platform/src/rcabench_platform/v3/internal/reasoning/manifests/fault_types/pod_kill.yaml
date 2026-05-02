@@ -97,3 +97,7 @@ derivation_layers:
 hand_offs: []
 
 terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256

@@ -101,3 +101,14 @@ hand_offs:
       (universal cross-family trigger).
 
 terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256
+
+corroborator:
+  kind: span
+  feature: request_count_ratio
+  band: [0.0, 0.7]
+
+multi_v_root: true

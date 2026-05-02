@@ -116,43 +116,17 @@ logger = logging.getLogger(__name__)
 # Direction strings as used by manifest YAML are lower-case; PathBuilder
 # stamps edge_descs with PropagationDirection's enum value (lower-case).
 _DIRECTION_FORWARD = "forward"
-
-
-# Slow-tier corroboration band. When seed_tier is `slow`, a depressed
-# request-count at a candidate caller is a deterministic consequence of
-# upstream throttling: either the caller's own timeout/circuit-breaker
-# clipped requests against the injected delay, or TCP-level back-pressure
-# absorbed bandwidth-cap throughput. Either path produces the same
-# observable: ``request_count_ratio`` falls below baseline. We OR this
-# with the layer's declared expected_features so slow-tier cascades that
-# *manifest as throughput drop rather than latency rise* still admit.
-# 0.7 mirrors the entry signature in network_bandwidth.yaml; chosen
-# because it's well below the natural noise floor (real cases show
-# ratios <0.3 routinely while organic baseline is >0.85).
-_SLOW_TIER_REQ_COUNT_LOW: tuple[float, float] = (0.0, 0.7)
-
-# Slow-tier path-depth extension. Slow-tier manifests today declare 1-2
-# derivation layers, but real cascades often reach the SLO surface 5-7
-# hops above v_root because each "hop" in the span topology is a single
-# call edge -- one inter-service call typically requires 2 hops to
-# traverse (caller's outbound HTTP span -> callee's inbound HTTP span ->
-# callee's controller method). The phase-3 SCHEMA.md note reads "the
-# manifest's last layer is the authoritative envelope for everything
-# beyond"; we implement that by re-applying the last layer's spec for
-# up to N extra hops when seed_tier is `slow`. The extension is
-# bounded above by (a) the last layer's ``max_fanout`` per frontier
-# node, (b) the alarm-terminate filter at the propagator level,
-# (c) this constant, and (d) ``_SLOW_TIER_MAX_FRONTIER`` which stops
-# the extension once an extra hop produces too many candidates (cuts
-# the BFS off before fanout * fanout * fanout * ... explodes the
-# admission cost).
-# 6 chosen empirically: TrainTicket / hotelReservation alarm spans
-# sit at the gateway service, which is 5-7 span hops above any
-# backend service in the call tree (HTTP-server-span +
-# controller-method-span pair per service * 3-4 services).
-_SLOW_TIER_EXTRA_HOPS: int = 6
-_SLOW_TIER_MAX_FRONTIER: int = 256
 _DIRECTION_BACKWARD = "backward"
+
+# All tier-specific knobs (extension max_extra_hops / max_frontier,
+# slow-tier corroborator band, requires_strict_anchor) now live on
+# the manifest itself via ``ExtensionConfig`` and ``CorroboratorConfig``
+# in ``manifests/schema.py``. The path-builder reads them through
+# ``manifest.extension`` / ``manifest.corroborator`` and never
+# branches on the tier-name string. Defaults applied here are
+# conservative no-ops: ``extension=None`` skips the past-the-last-
+# layer hop loop entirely; ``corroborator=None`` disables the OR-
+# channel.
 
 
 @dataclass(frozen=True, slots=True)
@@ -638,120 +612,104 @@ class ManifestAwarePathBuilder:
                 break
             frontier = next_frontier
 
-        # Erroring-tier deep-cascade extension. The explicit layers
-        # encode the observable boundary of the cascade: v_root produces
-        # a bad response and the immediate caller observes it via
-        # error_rate / timeout_rate. Beyond that boundary the original
-        # error keeps propagating along the same call chain, but
-        # observability decays (Spring/Java try-catch, client-library
-        # retry-and-succeed). The cascade is real — the SLO surface
-        # eventually fires — but strict band admission cuts it off at
-        # the first observability gap. Relax admission for up to 4
-        # extra hops, but ONLY after at least one strict layer admit
-        # has anchored the cascade (the corroboration anchor; sham /
-        # negative-control cases fail the entry signature one stage
-        # earlier and never reach this code).
-        if (
-            manifest.seed_tier == "erroring"
-            and strict_admit_observed
-            and extension_seeds
-            and layers
-        ):
-            self._extend_erroring_cascade(
-                frontier=extension_seeds,
-                last_layer=layers[-1],
-                manifest_name=manifest.fault_type_name,
-                result=result,
-            )
-
-        # Path-depth extension for tiers whose cascade depth is bounded
-        # by caller behaviour rather than by the manifest author's
-        # choice of layer count. Per SCHEMA.md "the manifest's last
-        # layer is the authoritative envelope for everything beyond";
-        # we re-apply the last layer's spec for up to
-        # ``_SLOW_TIER_EXTRA_HOPS`` extra hops with the standard
-        # admission envelope.
+        # Past-the-last-layer cascade extension. SCHEMA.md notes "the
+        # manifest's last layer is the authoritative envelope for
+        # everything beyond"; the extension re-applies the last layer's
+        # edge-kind admission for up to ``manifest.extension.max_extra_hops``
+        # extra hops. The path-builder reads those knobs from the YAML
+        # rather than branching on the tier name — manifests without
+        # an ``extension`` block skip this loop entirely (default
+        # ``extension=None``).
         #
-        # Applies to:
-        #   * ``slow`` — caller's transitive p99 / request_count drop
-        #     decays slowly, often beyond a 2-3 layer manifest.
-        #   * ``silent`` / ``unavailable`` — destructive faults whose
-        #     structural cascade reaches the SLO surface in N hops
-        #     where N depends on the call-tree depth between v_root
-        #     and the alarm (NetworkPartition between two backend
-        #     services often needs 4+ hops to reach a frontend root
-        #     span). ``_dst_features_match`` already returns True for
-        #     these tiers so admission is purely structural here.
-        # Pure depth-ceiling lift, not magnitude-ceiling lift; the
-        # alarm-terminate filter at the propagator level still drops
-        # paths that don't reach an SLO node.
-        if (
-            frontier
-            and manifest.seed_tier in {"slow", "silent", "unavailable"}
-            and _SLOW_TIER_EXTRA_HOPS > 0
-            and layers
-        ):
-            last_layer = layers[-1]
-            last_layer_index = len(layers) - 1
-            for _extra_hop in range(_SLOW_TIER_EXTRA_HOPS):
-                next_frontier: list[_Frame] = []
-                for parent_frame in frontier:
-                    admitted_children = self._admit_layer_children(
-                        parent_frame=parent_frame,
-                        layer=last_layer,
-                        layer_index=last_layer_index,
-                        manifest_name=manifest.fault_type_name,
-                    )
-                    for child in admitted_children:
-                        next_frontier.append(child)
-                        result.visited_nodes.add(child.node_id)
-                        self._emit_path_to(child, result)
-                if not next_frontier:
-                    break
-                # Fanout guard: 6 hops at full fanout 16 would produce
-                # 16^6 ≈ 16M candidates; cap the frontier at 256 to
-                # keep gate-evaluation tractable.
-                if len(next_frontier) > _SLOW_TIER_MAX_FRONTIER:
-                    break
-                frontier = next_frontier
+        # ``requires_strict_anchor=True`` (used by erroring-tier YAMLs)
+        # demands at least one strict-band admission inside the explicit
+        # layers before the extension fires. The anchor confirms the
+        # cascade is real before we relax magnitude admission for the
+        # extra hops; sham injections fail the entry signature one stage
+        # earlier and never reach this code.
+        #
+        # ``relaxed_features`` mirrors the requires_strict_anchor flag:
+        # when an anchor is required, the extension's per-edge feature
+        # admission is relaxed (any structurally-connected dst admits)
+        # since the cascade beyond the boundary may decay below the
+        # observability floor (Spring/Java try-catch, client-library
+        # retry-and-succeed). When no anchor is required (slow / silent
+        # / unavailable tiers), the extension still calls
+        # ``_dst_features_match`` so admission stays band-driven.
+        ext = manifest.extension
+        if ext is not None and ext.max_extra_hops > 0 and layers:
+            anchor_ok = (
+                strict_admit_observed if ext.requires_strict_anchor else True
+            )
+            launch = (
+                extension_seeds if ext.requires_strict_anchor else frontier
+            )
+            if anchor_ok and launch:
+                self._extend_cascade(
+                    frontier=launch,
+                    last_layer=layers[-1],
+                    manifest_name=manifest.fault_type_name,
+                    result=result,
+                    max_extra_hops=ext.max_extra_hops,
+                    max_frontier=ext.max_frontier,
+                    relaxed_features=ext.requires_strict_anchor,
+                )
 
-    def _extend_erroring_cascade(
+    def _extend_cascade(
         self,
         frontier: list[_Frame],
         last_layer: DerivationLayer,
         manifest_name: str,
         result: ManifestPathBuildResult,
-        max_extra_hops: int = 4,
+        *,
+        max_extra_hops: int,
+        max_frontier: int,
+        relaxed_features: bool,
     ) -> None:
-        """Continue an erroring-tier cascade past the manifest's last
-        explicit layer, with relaxed feature admission.
+        """Continue a cascade past the manifest's last explicit layer.
 
-        The strict layers anchored the cascade at the observable
-        boundary; this routine continues the structural propagation
-        outward along the same edge_kinds the last layer modeled. Each
-        extension hop's ``rule_id`` is stamped as
+        Configuration is supplied entirely by ``manifest.extension``;
+        the method is tier-name-agnostic. ``relaxed_features=True``
+        skips per-edge band admission (used when the manifest's
+        ``requires_strict_anchor`` is set, i.e., the explicit layers
+        have already corroborated the cascade and observability past
+        the boundary may decay). ``relaxed_features=False`` keeps
+        band admission so admission stays magnitude-driven.
+
+        Each extension hop's ``rule_id`` is stamped as
         ``manifest:{ft}:Lext`` so :class:`ManifestLayerGate` recognizes
-        it as a tier-relaxed extension and passes.
+        it as an extension edge and applies the same relaxation.
         """
         rule_id_ext = f"manifest:{manifest_name}:Lext"
+        layer_index = len(self.rctx.manifest.derivation_layers) - 1  # type: ignore[union-attr]
         for _ in range(max_extra_hops):
             next_frontier: list[_Frame] = []
             for parent_frame in frontier:
                 admitted_children = self._admit_layer_children(
                     parent_frame=parent_frame,
                     layer=last_layer,
-                    layer_index=len(self.rctx.manifest.derivation_layers) - 1,  # type: ignore[union-attr]
+                    layer_index=layer_index,
                     manifest_name=manifest_name,
                     rule_id_override=rule_id_ext,
-                    relaxed_features=True,
+                    relaxed_features=relaxed_features,
                 )
                 for child in admitted_children:
-                    if child.node_id in result.visited_nodes:
+                    if relaxed_features and child.node_id in result.visited_nodes:
+                        # Relaxed extensions (erroring) dedupe to keep
+                        # the cascade DAG; band-driven extensions
+                        # (slow / silent / unavailable) revisit nodes
+                        # whose admission depends on the layer they
+                        # came from.
                         continue
                     next_frontier.append(child)
                     result.visited_nodes.add(child.node_id)
                     self._emit_path_to(child, result)
             if not next_frontier:
+                break
+            # Fanout guard: 6 hops at full fanout 16 would produce
+            # 16^6 candidates; stop the BFS once the frontier exceeds
+            # ``manifest.extension.max_frontier``.
+            if len(next_frontier) > max_frontier:
                 break
             frontier = next_frontier
 
@@ -916,13 +874,13 @@ class ManifestAwarePathBuilder:
           go silent" declare ``silent`` in the layer's expected_features,
           so this single iteration covers both visible-feature and
           silent admission for every tier without per-tier branching.
-        * ``seed_tier == slow`` keeps an additional corroborator: a
-          depressed ``request_count_ratio`` at the destination is a
-          deterministic consequence of upstream throttling. We OR this
-          with the layer's declared ``expected_features`` so cascades
-          that manifest as throughput drop rather than latency rise
-          still admit. This is *not* a relaxation — it's a second
-          channel for the same physics.
+        * ``manifest.corroborator`` (optional) declares an OR-channel
+          feature evaluated when the layer's bands all miss. Slow-tier
+          manifests use it to admit cascades that manifest as throughput
+          drop rather than latency rise (a depressed
+          ``request_count_ratio`` is the second channel for the same
+          upstream-delay physics). Manifests without a corroborator
+          block skip this OR-step.
 
         ``relaxed=True`` is the explicit per-call override used by
         :meth:`_extend_erroring_cascade`; it short-circuits to True
@@ -937,25 +895,23 @@ class ManifestAwarePathBuilder:
             if _band_match(value, fm):
                 return True
         manifest = self.rctx.manifest
-        if manifest is not None and manifest.seed_tier == "slow":
-            return self._slow_tier_corroborates(dst_id)
+        if manifest is not None and manifest.corroborator is not None:
+            return self._corroborator_matches(dst_id, manifest.corroborator)
         return False
 
-    def _slow_tier_corroborates(self, dst_id: int) -> bool:
-        """OR-band: ``request_count_ratio`` low corroborates slow-tier cascade.
+    def _corroborator_matches(self, dst_id: int, corr) -> bool:  # type: ignore[no-untyped-def]
+        """OR-channel band check declared by ``manifest.corroborator``.
 
-        See ``_SLOW_TIER_REQ_COUNT_LOW`` for the threshold rationale.
-        Returns True iff the dst has a measured ``request_count_ratio``
-        in the band ``[0.0, 0.7]``. A missing sample fails-closed (same
-        convention as the per-layer band check) so the relaxation never
-        flips a "no signal" dst into an admit.
+        Returns True iff the dst has a measured value for
+        ``(corr.kind, corr.feature)`` inside ``corr.band``. A missing
+        sample fails-closed (same convention as the per-layer band
+        check) so the corroborator never flips a "no signal" dst into
+        an admit.
         """
-        v = self.rctx.aggregate_feature(
-            dst_id, FeatureKind.span, Feature.request_count_ratio
-        )
+        v = self.rctx.aggregate_feature(dst_id, corr.kind, corr.feature)
         if v is None:
             return False
-        lo, hi = _SLOW_TIER_REQ_COUNT_LOW
+        lo, hi = corr.band
         return lo <= v <= hi
 
     def _pick_dst_window(

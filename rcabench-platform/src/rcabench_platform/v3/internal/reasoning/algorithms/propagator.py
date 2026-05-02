@@ -188,17 +188,21 @@ class FaultPropagator:
 
         warnings: list[str] = []
 
-        # All injection nodes are candidate seeds. For non-network
-        # faults the resolver returns a single node; for network faults
-        # (NetworkPartition / NetworkLoss / NetworkCorrupt /
-        # NetworkDuplicate / NetworkDelay / NetworkBandwidth) it
-        # returns BOTH endpoints because chaos-mesh networkchaos
-        # affects the edge between two services. Cascading from each
-        # endpoint independently lets the path-builder discover the
-        # affected call set even when the captured trace graph is
-        # missing the direct ``src→tgt`` edge (e.g., partition cut all
-        # relevant calls before the abnormal trace window started).
-        candidate_v_roots = list(injection_node_ids) or [primary_v_root]
+        # Candidate seed set. Manifests carrying ``multi_v_root: true``
+        # (network fault types: chaos-mesh networkchaos affects the
+        # edge BETWEEN two services, so the resolver returns both
+        # endpoints) cascade from every injection node independently;
+        # this lets the path-builder discover the affected call set
+        # even when the captured trace graph is missing the direct
+        # src→tgt edge (e.g., partition cut all relevant calls before
+        # the abnormal trace window started). Single-root manifests
+        # (everything else) cascade from ``primary_v_root`` only — if
+        # the resolver returned a list the extra entries are
+        # disambiguation candidates, not parallel cascade roots.
+        if rctx.manifest.multi_v_root:
+            candidate_v_roots = list(injection_node_ids) or [primary_v_root]
+        else:
+            candidate_v_roots = [primary_v_root]
 
         # Entry-signature short-circuit. The gate is per-injection,
         # ignores the path. Evaluate once per v_root candidate; pass

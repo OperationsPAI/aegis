@@ -81,3 +81,8 @@ hand_offs:
       0.2 surfaces as response-abort at far callers.
 
 terminals: []
+
+extension:
+  max_extra_hops: 4
+  max_frontier: 256
+  requires_strict_anchor: true

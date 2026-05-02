@@ -90,3 +90,7 @@ hand_offs:
       legitimately continue under NetworkPartition's manifest.
 
 terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256

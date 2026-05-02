@@ -168,3 +168,5 @@ hand_offs:
       silence-aware derivation.
 
 terminals: []
+
+multi_v_root: true

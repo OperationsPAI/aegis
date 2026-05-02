@@ -32,34 +32,26 @@ from rcabench_platform.v3.internal.reasoning.algorithms.gates.base import (
 from rcabench_platform.v3.internal.reasoning.algorithms.gates.manifest_entry import _band_match
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath
 from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
-from rcabench_platform.v3.internal.reasoning.manifests.features import (
-    Feature,
-    FeatureKind,
-)
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
+    CorroboratorConfig,
     DerivationLayer,
     FeatureMatch,
 )
 
-# Mirror of ``manifest_path_builder._SLOW_TIER_REQ_COUNT_LOW``. Kept
-# duplicated to avoid the gates package importing the path-builder.
-_SLOW_TIER_REQ_COUNT_LOW: tuple[float, float] = (0.0, 0.7)
 
-
-def _slow_tier_corroborates(
-    node_id: int, rctx: ReasoningContext
+def _corroborator_matches(
+    node_id: int, rctx: ReasoningContext, corr: CorroboratorConfig
 ) -> tuple[bool, float | None]:
-    """Slow-tier corroborator: ``request_count_ratio`` low at the dst.
+    """Apply ``manifest.corroborator`` to a destination.
 
-    Mirrors :func:`manifest_path_builder.ManifestAwarePathBuilder._slow_tier_corroborates`.
-    Returns ``(matched, value)``. A missing sample fails-closed.
+    Mirrors :meth:`manifest_path_builder.ManifestAwarePathBuilder._corroborator_matches`.
+    Returns ``(matched, value)``. A missing sample fails-closed (same
+    convention as :func:`_band_match`).
     """
-    v = rctx.aggregate_feature(
-        node_id, FeatureKind.span, Feature.request_count_ratio
-    )
+    v = rctx.aggregate_feature(node_id, corr.kind, corr.feature)
     if v is None:
         return False, None
-    lo, hi = _SLOW_TIER_REQ_COUNT_LOW
+    lo, hi = corr.band
     return (lo <= v <= hi), v
 
 
@@ -210,11 +202,12 @@ class ManifestLayerGate:
         # ``_band_match`` handles the silent-as-feature special case
         # (None value matches when feature == silent), so silent-tier
         # cascades admit through the same band check as every other
-        # tier — no per-tier global relaxation here. ``slow`` keeps a
-        # corroborator for the throughput-drop channel; ``erroring``
-        # extension edges (rule_id ``:Lext``) are still per-edge relaxed
-        # in the loop below.
-        slow_tier_corroborate = manifest.seed_tier == "slow"
+        # tier — no per-tier global relaxation here. ``manifest.corroborator``
+        # adds a parallel OR-channel evaluated when the layer's bands
+        # all miss (slow tier uses request_count_ratio for the
+        # throughput-drop channel). Erroring extension edges (rule_id
+        # ``:Lext``) are still per-edge relaxed in the loop below.
+        corroborator = manifest.corroborator
         n_edges = len(path.edge_descs)
         layer_indices = _assign_layers_from_rule_ids(path.rule_ids, layers)
         for i in range(n_edges):
@@ -256,13 +249,13 @@ class ManifestLayerGate:
             features_ok, feature_evidence = _node_matches_any_expected(
                 dst_id, list(layer.expected_features), rctx
             )
-            slow_corroborated = False
-            slow_corroborator_value: float | None = None
-            if not features_ok and slow_tier_corroborate:
-                slow_corroborated, slow_corroborator_value = _slow_tier_corroborates(
-                    dst_id, rctx
+            corroborated = False
+            corroborator_value: float | None = None
+            if not features_ok and corroborator is not None:
+                corroborated, corroborator_value = _corroborator_matches(
+                    dst_id, rctx, corroborator
                 )
-            features_admitted = features_ok or relax_features or slow_corroborated
+            features_admitted = features_ok or relax_features or corroborated
             edge_passed = edge_ok and features_admitted
             if not edge_passed:
                 all_pass = False
@@ -279,9 +272,9 @@ class ManifestLayerGate:
                 "expected_features": feature_evidence,
                 "passed": edge_passed,
             }
-            if slow_tier_corroborate:
-                evidence_entry["slow_tier_corroborated"] = slow_corroborated
-                evidence_entry["slow_tier_request_count_ratio"] = slow_corroborator_value
+            if corroborator is not None:
+                evidence_entry["corroborated"] = corroborated
+                evidence_entry["corroborator_value"] = corroborator_value
             edges_evidence.append(evidence_entry)
 
         if all_pass:

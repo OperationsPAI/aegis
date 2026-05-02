@@ -104,3 +104,7 @@ hand_offs:
       symptoms. Universal cross-family trigger; mirrors JVMException.
 
 terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256
