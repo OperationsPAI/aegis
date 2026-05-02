@@ -242,6 +242,16 @@ containers:
               value_type: 0
               default_value: ClusterIP
               overridable: true
+            # Override sidecar otel-collector image to the volces mirror.
+            # trainticket@0.3.0 default is `otel/opentelemetry-collector-contrib`
+            # which forces a docker.io pull — byte-cluster nodes can't egress
+            # docker.io directly. Same volces auto-mirror as other opspai images.
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
           status: 1
   - type: 2
     name: otel-demo
@@ -376,7 +386,16 @@ containers:
           chart_name: otel-demo-aegis
           repo_name: opspai
           repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
-          values: []
+          values:
+            # Pin sidecar collector image to volces mirror (chart default
+            # is docker.io/opspai/... which still forces a docker.io HEAD
+            # request from byte-cluster kubelet).
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
           status: 1
   - type: 2
     name: ob
@@ -569,6 +588,15 @@ containers:
               category: 1
               value_type: 0
               default_value: otel-collector:4318
+              overridable: true
+            # Pin sidecar collector image to volces mirror (chart default
+            # is docker.io/opspai/... which still forces a docker.io HEAD
+            # request from byte-cluster kubelet).
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
           status: 1
   - type: 2
