@@ -55,8 +55,12 @@ entry_signature:
       band: [1.0, .inf]
       magnitude_source: theoretical
     - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
+    - kind: span
       feature: latency_p99_ratio
-      band: [1.5, .inf]
+      band: [1.15, .inf]
       magnitude_source: empirical
   optional_min_match: 1
 
@@ -70,8 +74,16 @@ derivation_layers:
     edge_directions: [backward, backward, forward]
     expected_features:
       - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: service
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
         feature: latency_p99_ratio
-        band: [1.5, .inf]
+        band: [1.15, .inf]
         magnitude_decay: 0.7
       - kind: pod
         feature: memory_usage_ratio
@@ -99,13 +111,36 @@ derivation_layers:
     edge_directions: [backward]
     expected_features:
       - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
         feature: latency_p99_ratio
-        band: [1.2, .inf]
+        band: [1.1, .inf]
         magnitude_decay: 0.5
       - kind: span
         feature: error_rate
         band: [0.05, 1.0]
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
     max_fanout: 32
+  - layer: 3
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.05, .inf]
+        magnitude_decay: 0.3
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+    max_fanout: 16
 
 hand_offs:
   - to: ContainerKill

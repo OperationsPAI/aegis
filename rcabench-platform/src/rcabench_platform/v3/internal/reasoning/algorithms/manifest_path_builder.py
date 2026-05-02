@@ -233,8 +233,19 @@ class ManifestAwarePathBuilder:
     # Public entry point
     # ---------------------------------------------------------------
 
-    def build_all(self, v_root_id: int) -> ManifestPathBuildResult:
-        """Drive layer-by-layer expansion from ``v_root_id``.
+    def build_all(self, v_root_ids: int | list[int]) -> ManifestPathBuildResult:
+        """Drive layer-by-layer expansion from one or more ``v_root_ids``.
+
+        Accepts a single int (back-compat) or a list. Multiple roots are
+        used by network faults: chaos-mesh networkchaos partitions /
+        loss / corrupt / duplicate / delay / bandwidth all affect the
+        edge **between** two services, so the resolver returns both
+        endpoints (``injection_nodes = [service|src, service|tgt]``).
+        Cascading from each endpoint independently lets the path
+        builder discover the affected call set even when the captured
+        graph is missing the direct ``src→tgt`` edge (e.g., partition
+        already cut all relevant calls before the abnormal trace
+        window started).
 
         Returns a :class:`ManifestPathBuildResult` whose ``paths`` are
         :class:`CandidatePath` objects in the same shape as
@@ -244,42 +255,34 @@ class ManifestAwarePathBuilder:
 
         ``ManifestEntryGate`` is **not** invoked here — it remains in
         the gate stack and runs once per case at the propagator level.
-        That keeps the responsibility split clear: this builder owns
-        the expansion shape, the gate owns the v_root entry-signature
-        verdict, and the propagator wires them together.
         """
         manifest = self.rctx.manifest
         assert manifest is not None  # guarded in __init__
 
+        if isinstance(v_root_ids, int):
+            v_root_ids = [v_root_ids]
+        if not v_root_ids:
+            return ManifestPathBuildResult()
+
         result = ManifestPathBuildResult()
 
-        # Seed frame: v_root carries no parent edge, no rule, and
-        # picked-state derived from its own timeline (best-effort —
-        # downstream gates only consult the per-edge entries).
-        seed_frame = self._make_seed_frame(v_root_id, manifest.fault_type_name)
-        result.visited_nodes.add(v_root_id)
+        # One seed frame (and any proxy seeds) per v_root. Proxy
+        # descent bridges a v_root whose kind lacks the manifest's
+        # layer-1 edges to a structurally-related plane that has them
+        # (e.g., container v_root → pod proxy when layer-1 walks
+        # ``runs backward``). Paths emitted from any proxy still
+        # anchor at its corresponding v_root via ``_emit_path_to``.
+        seed_frames: list[_Frame] = []
+        for v_root_id in v_root_ids:
+            seed_frame = self._make_seed_frame(v_root_id, manifest.fault_type_name)
+            result.visited_nodes.add(v_root_id)
+            proxy_seeds = self._descend_proxy_seeds(seed_frame, manifest)
+            for proxy in proxy_seeds:
+                result.visited_nodes.add(proxy.node_id)
+            seed_frames.append(seed_frame)
+            seed_frames.extend(proxy_seeds)
 
-        # Structural descent: when v_root's kind doesn't have direct
-        # edges of the manifest's layer-1 ``edge_kinds`` (e.g., a
-        # service v_root with a manifest whose first layer expects
-        # ``calls`` edges, which only exist between spans), descend
-        # one structural hop via ``includes``/``runs``/``routes_to``
-        # to attach proxy seeds on the spans/pods/containers v_root
-        # owns. Paths emitted from these proxies still anchor at
-        # v_root through ``_emit_path_to``.
-        proxy_seeds = self._descend_proxy_seeds(seed_frame, manifest)
-        for proxy in proxy_seeds:
-            result.visited_nodes.add(proxy.node_id)
-        seed_frames = [seed_frame, *proxy_seeds]
-
-        # Recurse into the seed manifest. Each derivation may emit
-        # multiple leaves; hand-offs spawn extra sub-derivations.
-        self._expand_manifest(
-            manifest,
-            seed_frames,
-            result,
-        )
-
+        self._expand_manifest(manifest, seed_frames, result)
         return result
 
     def _make_seed_frame(self, node_id: int, manifest_name: str) -> _Frame:
@@ -661,21 +664,30 @@ class ManifestAwarePathBuilder:
                 result=result,
             )
 
-        # Slow-tier path-depth extension. Per SCHEMA.md "the manifest's
-        # last layer is the authoritative envelope for everything
-        # beyond"; for slow-tier physics the cascade depth is bounded
-        # by caller behaviour (timeout / circuit-breaker / async
-        # fan-out), not by the manifest author's choice of layer count.
-        # Re-apply the last layer's spec for up to
+        # Path-depth extension for tiers whose cascade depth is bounded
+        # by caller behaviour rather than by the manifest author's
+        # choice of layer count. Per SCHEMA.md "the manifest's last
+        # layer is the authoritative envelope for everything beyond";
+        # we re-apply the last layer's spec for up to
         # ``_SLOW_TIER_EXTRA_HOPS`` extra hops with the standard
-        # envelope (edge kinds + per-feature bands + slow-tier
-        # request-count corroborator inside ``_dst_features_match``).
+        # admission envelope.
+        #
+        # Applies to:
+        #   * ``slow`` — caller's transitive p99 / request_count drop
+        #     decays slowly, often beyond a 2-3 layer manifest.
+        #   * ``silent`` / ``unavailable`` — destructive faults whose
+        #     structural cascade reaches the SLO surface in N hops
+        #     where N depends on the call-tree depth between v_root
+        #     and the alarm (NetworkPartition between two backend
+        #     services often needs 4+ hops to reach a frontend root
+        #     span). ``_dst_features_match`` already returns True for
+        #     these tiers so admission is purely structural here.
         # Pure depth-ceiling lift, not magnitude-ceiling lift; the
         # alarm-terminate filter at the propagator level still drops
         # paths that don't reach an SLO node.
         if (
             frontier
-            and manifest.seed_tier == "slow"
+            and manifest.seed_tier in {"slow", "silent", "unavailable"}
             and _SLOW_TIER_EXTRA_HOPS > 0
             and layers
         ):

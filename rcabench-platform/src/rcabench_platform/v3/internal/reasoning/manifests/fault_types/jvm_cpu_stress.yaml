@@ -1,10 +1,12 @@
 # JVMCPUStress — Byteman/JVM-level CPU saturation on a method.
 #
-# Empirical bands from n=2 cases (only 2 in canonical dataset);
-# marked theoretical+ to acknowledge the small sample. Both observed
-# cases drive k8s.pod.cpu_limit_utilization to saturation (1.0) at
-# 10x and 328x baseline; container.cpu.usage hits the limit (5.0).
-# Memory is unaffected (memory_usage_ratio ~ baseline).
+# Same OR-of-channels cascade pattern as CPUStress: silent | p99 | error
+# | timeout. The cgroup-level cpu_throttle still anchors entry; the
+# difference vs CPUStress is the saturation is JVM-internal so the
+# entry uses optional cpu_throttle (not strictly required) — the
+# Byteman injection may not always trip cgroup throttle if no limit
+# was configured, and the IR adapter still labels the pod DEGRADED
+# from cpu_limit_utilization.
 fault_type_name: JVMCPUStress
 target_kind: container
 seed_tier: degraded
@@ -28,8 +30,12 @@ entry_signature:
       band: [2.0, .inf]
       magnitude_source: empirical
     - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: empirical
+    - kind: span
       feature: latency_p99_ratio
-      band: [1.5, .inf]
+      band: [1.15, .inf]
       magnitude_source: empirical
     - kind: container
       feature: gc_pause_ratio
@@ -43,8 +49,16 @@ derivation_layers:
     edge_directions: [backward, backward, forward]
     expected_features:
       - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: service
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
         feature: latency_p99_ratio
-        band: [1.5, .inf]
+        band: [1.15, .inf]
         magnitude_decay: 0.7
       - kind: pod
         feature: cpu_throttle_ratio
@@ -56,13 +70,36 @@ derivation_layers:
     edge_directions: [backward]
     expected_features:
       - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
         feature: latency_p99_ratio
-        band: [1.2, .inf]
+        band: [1.1, .inf]
         magnitude_decay: 0.5
       - kind: span
         feature: timeout_rate
         band: [0.05, 1.0]
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
     max_fanout: 32
+  - layer: 3
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.05, .inf]
+        magnitude_decay: 0.3
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+    max_fanout: 16
 
 hand_offs:
   - to: HTTPResponseAbort

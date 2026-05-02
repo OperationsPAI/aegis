@@ -157,9 +157,14 @@ FAULT_TYPE_TO_SEED_TIER: Final[dict[str, SeedTier]] = {
     "JVMMySQLLatency": "slow",
     "JVMMySQLException": "erroring",
     # JVM runtime-level method mutator: chaos-mesh's JVMRuntimeMutator
-    # rewrites bytecode to alter return / throw — observationally identical
-    # to JVMException at the span plane, so the canonical seed tier matches.
-    "JVMRuntimeMutator": "erroring",
+    # rewrites bytecode to short-circuit / alter return / throw. The
+    # dominant observation in real datasets is the affected service's
+    # outbound RPC fan-out collapsing — both inbound and outbound spans
+    # on the service plane go silent in abnormal — so the canonical
+    # tier is silent. Throw-mutations look like erroring at the entry
+    # but downstream the cascade is observability-bounded the same way;
+    # silent's structural cascade admission handles both.
+    "JVMRuntimeMutator": "silent",
 }
 
 

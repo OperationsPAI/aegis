@@ -183,14 +183,27 @@ class FaultPropagator:
         """
         rctx = self.reasoning_ctx
         assert rctx is not None and rctx.manifest is not None  # caller guarded
-        v_root = rctx.v_root_node_id
-        assert v_root is not None  # caller guarded
+        primary_v_root = rctx.v_root_node_id
+        assert primary_v_root is not None  # caller guarded
 
         warnings: list[str] = []
 
-        # Entry-signature short-circuit. We construct an empty
-        # CandidatePath / GateContext just to drive the gate's verdict
-        # — the gate itself is per-injection, ignores the path.
+        # All injection nodes are candidate seeds. For non-network
+        # faults the resolver returns a single node; for network faults
+        # (NetworkPartition / NetworkLoss / NetworkCorrupt /
+        # NetworkDuplicate / NetworkDelay / NetworkBandwidth) it
+        # returns BOTH endpoints because chaos-mesh networkchaos
+        # affects the edge between two services. Cascading from each
+        # endpoint independently lets the path-builder discover the
+        # affected call set even when the captured trace graph is
+        # missing the direct ``src→tgt`` edge (e.g., partition cut all
+        # relevant calls before the abnormal trace window started).
+        candidate_v_roots = list(injection_node_ids) or [primary_v_root]
+
+        # Entry-signature short-circuit. The gate is per-injection,
+        # ignores the path. Evaluate once per v_root candidate; pass
+        # if ANY satisfies the signature — for network the partition
+        # signal may be observable on either source or target side.
         entry_gate = ManifestEntryGate(rctx)
         ctx = GateContext(
             graph=self.graph,
@@ -200,44 +213,61 @@ class FaultPropagator:
             injection_window=self.injection_window,
             injection_node_ids=frozenset(injection_node_ids),
         )
-        empty_path = CandidatePath(
-            node_ids=[v_root],
-            all_states=[["unknown"]],
-            picked_states=["unknown"],
-            picked_state_start_times=[rctx.t0 if rctx.t0 is not None else 0],
-            edge_descs=[],
-            rule_ids=[],
-            rule_confidences=[],
-            propagation_delays=[],
-        )
-        entry_result = entry_gate.evaluate(empty_path, ctx)
-        if not entry_result.passed:
-            warnings.append(f"manifest entry signature failed: {entry_result.reason}")
+        entry_passed = False
+        entry_reasons: list[str] = []
+        winning_v_root = primary_v_root
+        # ReasoningContext is frozen; iterate by building a per-v_root
+        # variant via dataclasses.replace and re-binding the entry gate.
+        from dataclasses import replace as _dc_replace
+
+        for v_root in candidate_v_roots:
+            v_rctx = _dc_replace(rctx, v_root_node_id=v_root)
+            v_gate = ManifestEntryGate(v_rctx)
+            empty_path = CandidatePath(
+                node_ids=[v_root],
+                all_states=[["unknown"]],
+                picked_states=["unknown"],
+                picked_state_start_times=[rctx.t0 if rctx.t0 is not None else 0],
+                edge_descs=[],
+                rule_ids=[],
+                rule_confidences=[],
+                propagation_delays=[],
+            )
+            r = v_gate.evaluate(empty_path, ctx)
+            if r.passed:
+                entry_passed = True
+                winning_v_root = v_root
+                break
+            entry_reasons.append(f"v_root={v_root}: {r.reason}")
+        if not entry_passed:
+            joined = "; ".join(entry_reasons)
+            warnings.append(f"manifest entry signature failed: {joined}")
             logger.info(
-                "[manifest-driven] entry signature failed for fault_type=%s v_root=%d: %s",
+                "[manifest-driven] entry signature failed for fault_type=%s candidates=%s: %s",
                 rctx.manifest.fault_type_name,
-                v_root,
-                entry_result.reason,
+                candidate_v_roots,
+                joined,
             )
             return PropagationResult(
                 injection_node_ids=injection_node_ids,
                 injection_states=["unknown"] * len(injection_node_ids),
                 paths=[],
-                visited_nodes={v_root},
+                visited_nodes=set(candidate_v_roots),
                 max_hops_reached=0,
                 subgraph_edges=[],
                 warnings=warnings,
                 rejected_paths=[],
             )
 
-        # Build paths via the manifest-driven expander.
+        # Build paths via the manifest-driven expander, seeded from
+        # every candidate v_root.
         builder = ManifestAwarePathBuilder(
             graph=self.graph,
             timelines=self.timelines,
             temporal_validator=self.temporal_validator,
             reasoning_ctx=rctx,
         )
-        build = builder.build_all(v_root)
+        build = builder.build_all(candidate_v_roots)
 
         if build.rejected_handoffs:
             for nid, ft in build.rejected_handoffs:
