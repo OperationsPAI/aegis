@@ -68,6 +68,10 @@ derivation_layers:
     edge_directions: [backward]
     expected_features:
       - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
         feature: error_rate
         band: [0.05, 1.0]
         magnitude_decay: null
@@ -80,6 +84,10 @@ derivation_layers:
     edge_kinds: [calls]
     edge_directions: [backward]
     expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
       - kind: span
         feature: error_rate
         band: [0.05, 1.0]

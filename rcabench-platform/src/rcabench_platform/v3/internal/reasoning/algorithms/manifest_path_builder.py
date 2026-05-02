@@ -905,28 +905,24 @@ class ManifestAwarePathBuilder:
         the feature) is "did not match", same convention as
         :class:`ManifestLayerGate`.
 
-        Tier-driven relaxation:
+        Uniform deviation predicate (paper §3.3 condition (i)):
 
-        * ``seed_tier ∈ {unavailable, silent}`` — cascade is structurally
-          deterministic (destructive fault propagates regardless of how
-          the effect surfaces). Admit any structurally-connected dst.
-        * ``seed_tier == slow`` — cascade is observability-bounded but
-          two-channel by physics: the caller either accumulates the
-          injected delay (latency p99/p50 rise: declared per-layer) OR
-          its request volume drops as the local timeout/circuit-breaker
-          chops requests against the injected delay (or TCP back-pressure
-          absorbs bandwidth-cap throughput). We OR a low
-          ``request_count_ratio`` signal with the layer's declared
-          ``expected_features`` so cascades that manifest as throughput
-          drop rather than latency rise still admit.
-        * ``seed_tier == erroring`` — strict band at the explicit layers
-          (the boundary where the bad response is observed); past that
-          boundary the deep-cascade extension calls this with
-          ``relaxed=True`` after a strict admission has anchored the
-          cascade (corroboration anchor; sham injections fail the entry
-          signature one stage earlier and never reach the extension).
-        * ``seed_tier == degraded`` — strict band check. Cascade depth
-          depends on caller observability with no generic OR-rule.
+        * Iterate the layer's ``expected_features`` and admit on the
+          first band match. ``_band_match`` honours the silent-as-feature
+          special case — when ``feature == silent`` and the destination
+          has no measured value (the IR adapter extracted no observation
+          in the abnormal window), absence-of-signal IS the silent
+          signal. Manifest authors who model "the chaos *makes* the dst
+          go silent" declare ``silent`` in the layer's expected_features,
+          so this single iteration covers both visible-feature and
+          silent admission for every tier without per-tier branching.
+        * ``seed_tier == slow`` keeps an additional corroborator: a
+          depressed ``request_count_ratio`` at the destination is a
+          deterministic consequence of upstream throttling. We OR this
+          with the layer's declared ``expected_features`` so cascades
+          that manifest as throughput drop rather than latency rise
+          still admit. This is *not* a relaxation — it's a second
+          channel for the same physics.
 
         ``relaxed=True`` is the explicit per-call override used by
         :meth:`_extend_erroring_cascade`; it short-circuits to True
@@ -936,13 +932,11 @@ class ManifestAwarePathBuilder:
         """
         if relaxed:
             return True
-        manifest = self.rctx.manifest
-        if manifest is not None and manifest.seed_tier in {"unavailable", "silent"}:
-            return True
         for fm in layer.expected_features:
             value = self.rctx.aggregate_feature(dst_id, fm.kind, fm.feature)
             if _band_match(value, fm):
                 return True
+        manifest = self.rctx.manifest
         if manifest is not None and manifest.seed_tier == "slow":
             return self._slow_tier_corroborates(dst_id)
         return False

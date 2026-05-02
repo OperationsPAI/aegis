@@ -206,23 +206,14 @@ class ManifestLayerGate:
         # cascade for any infra-fault manifest whose v_root sits on a
         # different plane than its layer-2 edge_kinds (PodFailure,
         # ContainerKill, CPUStress, MemoryStress, JVMMemoryStress, etc.).
-        # Tier-driven relaxation: ``unavailable``/``silent`` faults have
-        # a structurally deterministic cascade — observability gaps at
-        # intermediate callers (retry-and-succeed silently, error
-        # swallowed, low-traffic windows below the 5% band) are
-        # downstream noise, not absence of the causal effect. The path
-        # builder admits any structurally-connected dst in those tiers;
-        # we mirror that here so the defensive gate doesn't reject what
-        # the builder accepted. Magnitude evidence is still recorded
-        # for audit. Other tiers keep strict admission.
-        #
-        # ``slow`` tier is corroborator-based, not tier-relaxed: the
-        # gate still requires either a layer band match OR the
-        # request_count_ratio drop signal that the path builder uses
-        # in ``_slow_tier_corroborates``. ``erroring`` tier is per-edge
-        # relaxed only on extension edges (rule_id ``:Lext``) — handled
+        # Uniform deviation predicate (paper §3.3 condition (i)).
+        # ``_band_match`` handles the silent-as-feature special case
+        # (None value matches when feature == silent), so silent-tier
+        # cascades admit through the same band check as every other
+        # tier — no per-tier global relaxation here. ``slow`` keeps a
+        # corroborator for the throughput-drop channel; ``erroring``
+        # extension edges (rule_id ``:Lext``) are still per-edge relaxed
         # in the loop below.
-        relax_features_global = manifest.seed_tier in {"unavailable", "silent"}
         slow_tier_corroborate = manifest.seed_tier == "slow"
         n_edges = len(path.edge_descs)
         layer_indices = _assign_layers_from_rule_ids(path.rule_ids, layers)
@@ -259,7 +250,7 @@ class ManifestLayerGate:
             is_extension_edge = (
                 i < len(path.rule_ids) and path.rule_ids[i].endswith(":Lext")
             )
-            relax_features = relax_features_global or is_extension_edge
+            relax_features = is_extension_edge
 
             edge_ok = _edge_admitted_by_layer(edge_desc, layer)
             features_ok, feature_evidence = _node_matches_any_expected(
@@ -284,11 +275,7 @@ class ManifestLayerGate:
                 "features_admitted": features_admitted,
                 "features_match_band": features_ok,
                 "tier_relaxed": relax_features and not features_ok,
-                "tier_relax_source": (
-                    "extension"
-                    if is_extension_edge
-                    else ("global" if relax_features_global else None)
-                ),
+                "tier_relax_source": "extension" if is_extension_edge else None,
                 "expected_features": feature_evidence,
                 "passed": edge_passed,
             }

@@ -33,20 +33,33 @@ from rcabench_platform.v3.internal.reasoning.algorithms.gates.base import (
 )
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath
 from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+from rcabench_platform.v3.internal.reasoning.manifests.features import Feature
 from rcabench_platform.v3.internal.reasoning.manifests.schema import FeatureMatch
 
 
 def _band_match(value: float | None, fm: FeatureMatch) -> bool:
     """Return True iff ``value`` lies in ``fm.band`` (closed ``[lo, hi]``).
 
-    A ``None`` value (sample missing) does not match. SCHEMA.md uses
-    closed-interval semantics so that bands like ``[0.2, 1.0]`` for
-    rate features (which cap at 1.0) match the natural maximum
-    instead of silently excluding it. ``+inf`` upper still matches
-    any finite value — that case stays explicit for readability.
+    A ``None`` value (sample missing) does not match for general
+    features. SCHEMA.md uses closed-interval semantics so that bands
+    like ``[0.2, 1.0]`` for rate features (which cap at 1.0) match the
+    natural maximum instead of silently excluding it. ``+inf`` upper
+    still matches any finite value — that case stays explicit for
+    readability.
+
+    Silent-as-feature special case: when ``fm.feature == Feature.silent``
+    and ``value is None``, the absence of the signal IS the silent
+    signal. SCHEMA.md §3.E and the silent-tier manifests model "the
+    chaos *makes* the dst go silent" by declaring ``silent`` as an
+    expected feature; a destination with no timeline (the IR adapter
+    extracted no observation in the abnormal window) corroborates that
+    expectation directly. This mirrors the absence-as-signal predicate
+    in ``manifest_path_builder._pick_dst_window``: silent admission is
+    a single uniform deviation predicate rather than a per-tier
+    relaxation.
     """
     if value is None:
-        return False
+        return fm.feature == Feature.silent
     lo, hi = fm.band
     if value < lo:
         return False
