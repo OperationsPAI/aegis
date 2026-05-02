@@ -118,6 +118,16 @@ logger = logging.getLogger(__name__)
 _DIRECTION_FORWARD = "forward"
 _DIRECTION_BACKWARD = "backward"
 
+# Safety cap for the structural-descent BFS in
+# :meth:`ManifestAwarePathBuilder._descend_proxy_seeds` and
+# :meth:`_lift_frontier_to_pairs`. The descent walks structural edges
+# (``runs`` / ``includes`` / ``routes_to``) until a layer-1-supporting
+# node is reached; in practice that takes 1-3 hops on the demo systems
+# we ship for (trainticket / hotelres / otel-demo). The cap exists only
+# to protect runaway-graph cases (mis-ingested topology with cycles in
+# structural edges, etc.); the typical case finishes well before 8.
+_PROXY_DESCENT_HOP_CAP: int = 8
+
 # All tier-specific knobs (extension max_extra_hops / max_frontier,
 # slow-tier corroborator band, requires_strict_anchor) now live on
 # the manifest itself via ``ExtensionConfig`` and ``CorroboratorConfig``
@@ -321,16 +331,18 @@ class ManifestAwarePathBuilder:
         if self._has_edge_of_kind_dir(seed_frame.node_id, layer1_pairs):
             return []  # v_root is already on the right plane.
         structural_kinds = {"includes", "runs", "routes_to"}
-        # BFS up to 3 hops along structural edges in either direction; admit
-        # the first reached node whose own edges match layer-1 kinds. Multi-
-        # hop is required for JVM*-style manifests where layer-1 is on the
-        # span/service plane (calls/includes) while v_root is a container —
-        # one structural hop reaches the pod (no calls/includes), two hops
-        # reach the service (has includes), three hops reach the spans.
+        # Topology-bounded BFS: keep walking structural edges until
+        # either (i) a layer-1-supporting node is reached or (ii) no
+        # more structural neighbours are reachable. A safety cap
+        # (_PROXY_DESCENT_HOP_CAP) bounds runaway-graph cases without
+        # cutting off the typical span discovery. The previous code
+        # capped at 3 hops, which was tuned for trainticket / hotelres
+        # depths but failed on stacks with longer container→pod→service
+        # →span chains.
         proxies: list[_Frame] = []
         seen: set[int] = {seed_frame.node_id}
         frontier: list[int] = [seed_frame.node_id]
-        for _ in range(3):
+        for _ in range(_PROXY_DESCENT_HOP_CAP):
             next_frontier: list[int] = []
             for nid in frontier:
                 for src_id, dst_id, key, in_dir in self._iter_structural_edges(nid):
@@ -371,7 +383,7 @@ class ManifestAwarePathBuilder:
         frontier: list[_Frame],
         target_pairs: set[tuple[str, str]],
         manifest_name: str,
-        max_hops: int = 3,
+        max_hops: int = _PROXY_DESCENT_HOP_CAP,
     ) -> list[_Frame]:
         """Bridge between-layer plane gap by descending structural edges.
 
