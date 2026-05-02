@@ -602,11 +602,41 @@ class InjectionNodeResolver:
         point: InjectionPoint,
         metadata: InjectionMetadata,
     ) -> tuple[list[str], str]:
-        """Resolve pod lifecycle fault (PodKill, PodFailure, ContainerKill)."""
+        """Resolve pod lifecycle fault (PodKill, PodFailure, ContainerKill).
+
+        Variant B: when a resolved pod/container node has out_degree == 0
+        (e.g., the killed pod produced no spans, so no `<gt>` is in the
+        abnormal subgraph), prefer a `service|<gt>` node with out_degree > 0
+        so the forward BFS does not die at a dead-end.
+        """
+
+        def _has_outgoing(uniq_name: str) -> bool:
+            node = self.graph.get_node_by_name(uniq_name)
+            if node is None or node.id is None:
+                return False
+            try:
+                return self.graph._graph.out_degree(node.id) > 0  # type: ignore[no-any-return]
+            except Exception:
+                return False
+
+        def _live_service_fallback() -> tuple[list[str], str] | None:
+            """Return service-fallback only if it points at a node with out_degree>0."""
+            svc_nodes, svc_method = self._resolve_service_fallback(metadata)
+            if not svc_nodes:
+                return None
+            if any(_has_outgoing(n) for n in svc_nodes):
+                return svc_nodes, svc_method
+            return None
+
         # For ContainerKill (fault_type 2), prefer container node
         if metadata.fault_type == 2:
             nodes, method = self._resolve_container(point, metadata)
             if nodes:
+                # Variant B: if container node is a dead-end, prefer a live service
+                if not any(_has_outgoing(n) for n in nodes):
+                    live = _live_service_fallback()
+                    if live is not None:
+                        return live[0], f"container_skipped_dead_end_then_{live[1]}"
                 return nodes, f"container_kill_{method}"
 
         # For PodKill/PodFailure, try pod node
@@ -617,16 +647,33 @@ class InjectionNodeResolver:
         if pod_name:
             pod_node = self.graph.get_node_by_name(f"pod|{pod_name}")
             if pod_node:
-                return [pod_node.uniq_name], "exact_pod_match"
-
-            # Try partial match
-            for node in self.graph.get_nodes_by_kind(PlaceKind.pod):
-                if pod_name in node.self_name:
-                    return [node.uniq_name], "partial_pod_match"
+                # Variant B: if pod node is dead-end, fall through
+                if not _has_outgoing(pod_node.uniq_name):
+                    live = _live_service_fallback()
+                    if live is not None:
+                        return live[0], f"pod_skipped_dead_end_then_{live[1]}"
+                else:
+                    return [pod_node.uniq_name], "exact_pod_match"
+            else:
+                # Try partial match
+                for node in self.graph.get_nodes_by_kind(PlaceKind.pod):
+                    if pod_name in node.self_name:
+                        if not _has_outgoing(node.uniq_name):
+                            live = _live_service_fallback()
+                            if live is not None:
+                                return live[0], f"pod_skipped_dead_end_then_{live[1]}"
+                        else:
+                            return [node.uniq_name], "partial_pod_match"
+                        break
 
         # Fallback to container
         nodes, method = self._resolve_container(point, metadata)
         if nodes:
+            # Variant B: container fallback may also be a dead-end
+            if not any(_has_outgoing(n) for n in nodes):
+                live = _live_service_fallback()
+                if live is not None:
+                    return live[0], f"container_skipped_dead_end_then_{live[1]}"
             return nodes, f"fallback_{method}"
 
         # Final fallback to service (prefer internal services)
