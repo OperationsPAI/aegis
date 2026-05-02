@@ -92,7 +92,10 @@ from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator impor
     _effective_onset,
 )
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
-from rcabench_platform.v3.internal.reasoning.manifests.features import Feature
+from rcabench_platform.v3.internal.reasoning.manifests.features import (
+    Feature,
+    FeatureKind,
+)
 from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
     DerivationLayer,
@@ -113,6 +116,42 @@ logger = logging.getLogger(__name__)
 # Direction strings as used by manifest YAML are lower-case; PathBuilder
 # stamps edge_descs with PropagationDirection's enum value (lower-case).
 _DIRECTION_FORWARD = "forward"
+
+
+# Slow-tier corroboration band. When seed_tier is `slow`, a depressed
+# request-count at a candidate caller is a deterministic consequence of
+# upstream throttling: either the caller's own timeout/circuit-breaker
+# clipped requests against the injected delay, or TCP-level back-pressure
+# absorbed bandwidth-cap throughput. Either path produces the same
+# observable: ``request_count_ratio`` falls below baseline. We OR this
+# with the layer's declared expected_features so slow-tier cascades that
+# *manifest as throughput drop rather than latency rise* still admit.
+# 0.7 mirrors the entry signature in network_bandwidth.yaml; chosen
+# because it's well below the natural noise floor (real cases show
+# ratios <0.3 routinely while organic baseline is >0.85).
+_SLOW_TIER_REQ_COUNT_LOW: tuple[float, float] = (0.0, 0.7)
+
+# Slow-tier path-depth extension. Slow-tier manifests today declare 1-2
+# derivation layers, but real cascades often reach the SLO surface 5-7
+# hops above v_root because each "hop" in the span topology is a single
+# call edge -- one inter-service call typically requires 2 hops to
+# traverse (caller's outbound HTTP span -> callee's inbound HTTP span ->
+# callee's controller method). The phase-3 SCHEMA.md note reads "the
+# manifest's last layer is the authoritative envelope for everything
+# beyond"; we implement that by re-applying the last layer's spec for
+# up to N extra hops when seed_tier is `slow`. The extension is
+# bounded above by (a) the last layer's ``max_fanout`` per frontier
+# node, (b) the alarm-terminate filter at the propagator level,
+# (c) this constant, and (d) ``_SLOW_TIER_MAX_FRONTIER`` which stops
+# the extension once an extra hop produces too many candidates (cuts
+# the BFS off before fanout * fanout * fanout * ... explodes the
+# admission cost).
+# 6 chosen empirically: TrainTicket / hotelReservation alarm spans
+# sit at the gateway service, which is 5-7 span hops above any
+# backend service in the call tree (HTTP-server-span +
+# controller-method-span pair per service * 3-4 services).
+_SLOW_TIER_EXTRA_HOPS: int = 6
+_SLOW_TIER_MAX_FRONTIER: int = 256
 _DIRECTION_BACKWARD = "backward"
 
 
@@ -597,33 +636,18 @@ class ManifestAwarePathBuilder:
             frontier = next_frontier
 
         # Erroring-tier deep-cascade extension. The explicit layers
-        # encode the observable boundary of the cascade: v_root
-        # produces a bad response and the immediate caller observes it
-        # via error_rate / timeout_rate. Beyond that boundary, the
-        # original error keeps propagating along the same call chain
-        # (the request that failed at v_root was made on behalf of
-        # something further up, which is now also failed), but the
-        # observation gets lossy: any caller that catches+stubs the
-        # exception (a pervasive Spring/Java idiom) zeros our
-        # error_rate signal at that node and beyond. Retry-and-succeed
-        # at the client library has the same effect. The cascade is
-        # still real — the SLO surface eventually fires — but strict
-        # band admission cuts it off at the first such caller.
-        #
-        # Physics: for the erroring tier, the cascade outward from the
-        # corroborated immediate boundary is structurally guaranteed
-        # by the request graph; observability is the only thing that
-        # decays. Mirror unavailable/silent's relaxation, but only AFTER
-        # at least one strict layer admission has anchored the cascade
-        # against manifest mis-binding (equivalent to "we have a real
-        # cascade, not a coincidence").
-        #
-        # Bounded by: (a) the propagator's alarm-terminate filter
-        # forces the path tail to land on an SLO node, (b) the last
-        # layer's max_fanout caps per-frame branching, and (c) a fixed
-        # extension hop budget keeps total path length finite. Sham /
-        # negative-control cases can never reach this code path: their
-        # entry signature fails one stage earlier and 0 paths are built.
+        # encode the observable boundary of the cascade: v_root produces
+        # a bad response and the immediate caller observes it via
+        # error_rate / timeout_rate. Beyond that boundary the original
+        # error keeps propagating along the same call chain, but
+        # observability decays (Spring/Java try-catch, client-library
+        # retry-and-succeed). The cascade is real — the SLO surface
+        # eventually fires — but strict band admission cuts it off at
+        # the first observability gap. Relax admission for up to 4
+        # extra hops, but ONLY after at least one strict layer admit
+        # has anchored the cascade (the corroboration anchor; sham /
+        # negative-control cases fail the entry signature one stage
+        # earlier and never reach this code).
         if (
             manifest.seed_tier == "erroring"
             and strict_admit_observed
@@ -637,6 +661,48 @@ class ManifestAwarePathBuilder:
                 result=result,
             )
 
+        # Slow-tier path-depth extension. Per SCHEMA.md "the manifest's
+        # last layer is the authoritative envelope for everything
+        # beyond"; for slow-tier physics the cascade depth is bounded
+        # by caller behaviour (timeout / circuit-breaker / async
+        # fan-out), not by the manifest author's choice of layer count.
+        # Re-apply the last layer's spec for up to
+        # ``_SLOW_TIER_EXTRA_HOPS`` extra hops with the standard
+        # envelope (edge kinds + per-feature bands + slow-tier
+        # request-count corroborator inside ``_dst_features_match``).
+        # Pure depth-ceiling lift, not magnitude-ceiling lift; the
+        # alarm-terminate filter at the propagator level still drops
+        # paths that don't reach an SLO node.
+        if (
+            frontier
+            and manifest.seed_tier == "slow"
+            and _SLOW_TIER_EXTRA_HOPS > 0
+            and layers
+        ):
+            last_layer = layers[-1]
+            last_layer_index = len(layers) - 1
+            for _extra_hop in range(_SLOW_TIER_EXTRA_HOPS):
+                next_frontier: list[_Frame] = []
+                for parent_frame in frontier:
+                    admitted_children = self._admit_layer_children(
+                        parent_frame=parent_frame,
+                        layer=last_layer,
+                        layer_index=last_layer_index,
+                        manifest_name=manifest.fault_type_name,
+                    )
+                    for child in admitted_children:
+                        next_frontier.append(child)
+                        result.visited_nodes.add(child.node_id)
+                        self._emit_path_to(child, result)
+                if not next_frontier:
+                    break
+                # Fanout guard: 6 hops at full fanout 16 would produce
+                # 16^6 ≈ 16M candidates; cap the frontier at 256 to
+                # keep gate-evaluation tractable.
+                if len(next_frontier) > _SLOW_TIER_MAX_FRONTIER:
+                    break
+                frontier = next_frontier
+
     def _extend_erroring_cascade(
         self,
         frontier: list[_Frame],
@@ -648,21 +714,14 @@ class ManifestAwarePathBuilder:
         """Continue an erroring-tier cascade past the manifest's last
         explicit layer, with relaxed feature admission.
 
-        Physics: see :meth:`_expand_manifest`. The strict layers anchored
-        the cascade at the observable boundary; this routine continues
-        the structural propagation outward along the same edge_kinds the
-        last layer modeled, and lets each emitted leaf still have to
-        survive the propagator's alarm-terminate filter to make it into
-        the final result. Each extension hop's ``rule_id`` is stamped as
-        ``manifest:{ft}:Lext`` so :class:`ManifestLayerGate` can recognize
-        it as a tier-relaxed extension and pass.
+        The strict layers anchored the cascade at the observable
+        boundary; this routine continues the structural propagation
+        outward along the same edge_kinds the last layer modeled. Each
+        extension hop's ``rule_id`` is stamped as
+        ``manifest:{ft}:Lext`` so :class:`ManifestLayerGate` recognizes
+        it as a tier-relaxed extension and passes.
         """
         rule_id_ext = f"manifest:{manifest_name}:Lext"
-        # Use the last explicit layer's edge_kinds and fanout as the
-        # extension predicate. Reusing the layer object keeps SCHEMA.md's
-        # "deepest layer is the authoritative envelope" note honest:
-        # the manifest's last layer remains the contract for everything
-        # past the explicit cascade depth.
         for _ in range(max_extra_hops):
             next_frontier: list[_Frame] = []
             for parent_frame in frontier:
@@ -675,9 +734,6 @@ class ManifestAwarePathBuilder:
                     relaxed_features=True,
                 )
                 for child in admitted_children:
-                    # Avoid revisiting a node already in the frontier of
-                    # an earlier layer or extension hop, which would
-                    # produce duplicate / cyclic paths.
                     if child.node_id in result.visited_nodes:
                         continue
                     next_frontier.append(child)
@@ -837,25 +893,34 @@ class ManifestAwarePathBuilder:
         the feature) is "did not match", same convention as
         :class:`ManifestLayerGate`.
 
-        Tier-driven relaxation: for ``seed_tier ∈ {unavailable, silent}``
-        the cascade is structurally deterministic (a destructive fault
-        propagates through every caller regardless of how the effect
-        surfaces — retry-and-succeed silently, exception-swallowed,
-        caller-also-silent, low-traffic windows where errors don't reach
-        a 5% band). We admit any structurally-connected dst in those
-        tiers; magnitude evidence still surfaces in :class:`ManifestLayerGate`
-        for audit but no longer gates admission.
+        Tier-driven relaxation:
 
-        Slow/degraded keep strict band admission because their cascade
-        depth depends on caller observability and there is no
-        corroboration anchor.
+        * ``seed_tier ∈ {unavailable, silent}`` — cascade is structurally
+          deterministic (destructive fault propagates regardless of how
+          the effect surfaces). Admit any structurally-connected dst.
+        * ``seed_tier == slow`` — cascade is observability-bounded but
+          two-channel by physics: the caller either accumulates the
+          injected delay (latency p99/p50 rise: declared per-layer) OR
+          its request volume drops as the local timeout/circuit-breaker
+          chops requests against the injected delay (or TCP back-pressure
+          absorbs bandwidth-cap throughput). We OR a low
+          ``request_count_ratio`` signal with the layer's declared
+          ``expected_features`` so cascades that manifest as throughput
+          drop rather than latency rise still admit.
+        * ``seed_tier == erroring`` — strict band at the explicit layers
+          (the boundary where the bad response is observed); past that
+          boundary the deep-cascade extension calls this with
+          ``relaxed=True`` after a strict admission has anchored the
+          cascade (corroboration anchor; sham injections fail the entry
+          signature one stage earlier and never reach the extension).
+        * ``seed_tier == degraded`` — strict band check. Cascade depth
+          depends on caller observability with no generic OR-rule.
 
-        ``relaxed=True`` is the explicit per-call override used by the
-        erroring-tier deep-cascade extension (see
-        :meth:`_extend_erroring_cascade`). The extension only runs after
-        a strict admission has corroborated the immediate-boundary
-        observation, so passing ``relaxed=True`` is a contract that
-        the caller has verified the corroboration anchor.
+        ``relaxed=True`` is the explicit per-call override used by
+        :meth:`_extend_erroring_cascade`; it short-circuits to True
+        before any band/tier check. Magnitude evidence still surfaces
+        in :class:`ManifestLayerGate` for audit; the relaxation is
+        policy-level.
         """
         if relaxed:
             return True
@@ -866,7 +931,26 @@ class ManifestAwarePathBuilder:
             value = self.rctx.aggregate_feature(dst_id, fm.kind, fm.feature)
             if _band_match(value, fm):
                 return True
+        if manifest is not None and manifest.seed_tier == "slow":
+            return self._slow_tier_corroborates(dst_id)
         return False
+
+    def _slow_tier_corroborates(self, dst_id: int) -> bool:
+        """OR-band: ``request_count_ratio`` low corroborates slow-tier cascade.
+
+        See ``_SLOW_TIER_REQ_COUNT_LOW`` for the threshold rationale.
+        Returns True iff the dst has a measured ``request_count_ratio``
+        in the band ``[0.0, 0.7]``. A missing sample fails-closed (same
+        convention as the per-layer band check) so the relaxation never
+        flips a "no signal" dst into an admit.
+        """
+        v = self.rctx.aggregate_feature(
+            dst_id, FeatureKind.span, Feature.request_count_ratio
+        )
+        if v is None:
+            return False
+        lo, hi = _SLOW_TIER_REQ_COUNT_LOW
+        return lo <= v <= hi
 
     def _pick_dst_window(
         self,
