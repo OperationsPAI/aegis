@@ -93,6 +93,60 @@ derivation_layers:
         band: [1.2, .inf]
         magnitude_decay: 0.5
     max_fanout: 16
+  - layer: 3
+    # Layer 3 reaches the SLO surface in deep service trees (e.g., otel-demo
+    # has frontend-proxy → frontend → checkout, so the alarm at frontend-proxy
+    # is 3-4 hops from a checkout-side injection). The cascade signature stays
+    # the same: silence + latency lift at the ingress span, with error/
+    # timeout firing only when the entry point itself surfaces a 5xx. Fanout
+    # is tighter (8) because layer-2 already disambiguated.
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.15, .inf]
+        magnitude_decay: 0.4
+    max_fanout: 8
+  - layer: 4
+    # Layer 4 covers gateway/ingress alarms in systems with Next.js-style
+    # route handlers (otel-demo: frontend-proxy → frontend POST → frontend
+    # executing api route → frontend grpc). The fanout is tightest (4)
+    # because at this depth the call graph has fanned in to the entry
+    # span. Alarm-terminate filter at the propagator level drops any path
+    # whose terminal isn't a real alarm node.
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.1, .inf]
+        magnitude_decay: 0.3
+    max_fanout: 4
 
 # Within-family hand-off: when loss saturates (≥95%), recovery via
 # retransmit is impossible and the link is functionally partitioned.
