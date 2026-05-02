@@ -500,7 +500,7 @@ func resnapshotHelmValueFileIfDrifted(db *gorm.DB, version *model.ContainerVersi
 		System:   systemName,
 		Key:      version.Name,
 		OldValue: helm.ValueFile,
-		NewValue: srcPath,
+		NewValue: "<new snapshot from " + srcPath + ">",
 		Note:     "value_file overlay drift; re-snapshotting from CM source",
 	}
 	if dryRun {
