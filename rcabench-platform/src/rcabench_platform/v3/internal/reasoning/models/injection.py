@@ -21,6 +21,10 @@ if TYPE_CHECKING:
     from rcabench_platform.v3.internal.reasoning.models.graph import HyperGraph, Node
 
 from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
+from rcabench_platform.v3.internal.reasoning.models.system_adapters import (
+    EXTERNAL_SERVICE_NAMES,
+    service_name_matches,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -645,16 +649,16 @@ class InjectionNodeResolver:
         if span_node.id is None:
             return False
 
-        # Find service that includes this span
+        # Find service that includes this span. ``service_name_matches``
+        # consults ``models/system_adapters.SYSTEM_FINGERPRINTS`` to
+        # accept project-prefixed forms (``ts-`` for TrainTicket,
+        # ``hotel-reserv-`` for hotel-reservation) without baking those
+        # strings into the resolver itself.
         for src_id, _dst_id, edge_key in self.graph._graph.in_edges(span_node.id, keys=True):  # type: ignore[call-arg]
             if edge_key == DepKind.includes:
                 src_node = self.graph.get_node_by_id(src_id)
                 if src_node and src_node.kind == PlaceKind.service:
-                    # Check if service name matches (with or without 'service|' prefix)
-                    if src_node.self_name == service_name or src_node.self_name == f"ts-{service_name}":
-                        return True
-                    # Also check partial match for cases like "ts-preserve-service" matching "preserve-service"
-                    if service_name in src_node.self_name or src_node.self_name in service_name:
+                    if service_name_matches(src_node.self_name, service_name):
                         return True
         return False
 
@@ -685,9 +689,6 @@ class InjectionNodeResolver:
         app container). The ground-truth list pinpoints the exact
         container chaos-mesh kills, so we use it whenever it's present.
         """
-        external_services = {
-            "mysql", "redis", "postgres", "mongodb", "kafka", "rabbitmq", "memcached",
-        }
         # Build candidate list in priority order. Each candidate is a
         # tuple ``(name, source)`` so the resolution_method label tells
         # us which source won.
@@ -695,7 +696,7 @@ class InjectionNodeResolver:
         if point.container_name:
             candidates.append((point.container_name, "container_name"))
         if metadata.ground_truth_containers:
-            internal = [c for c in metadata.ground_truth_containers if c not in external_services]
+            internal = [c for c in metadata.ground_truth_containers if c not in EXTERNAL_SERVICE_NAMES]
             for c in internal or metadata.ground_truth_containers:
                 if (c, "ground_truth") not in candidates:
                     candidates.append((c, "ground_truth"))
@@ -826,9 +827,7 @@ class InjectionNodeResolver:
 
         # Fallback to service (prefer app service over external mysql)
         if metadata.ground_truth_services:
-            # Filter out external database services
-            external_services = {"mysql", "redis", "postgres", "mongodb"}
-            app_services = [s for s in metadata.ground_truth_services if s not in external_services]
+            app_services = [s for s in metadata.ground_truth_services if s not in EXTERNAL_SERVICE_NAMES]
             if app_services:
                 return [f"service|{app_services[0]}"], "fallback_to_app_service"
             return [f"service|{metadata.ground_truth_services[0]}"], "fallback_to_service"
@@ -888,10 +887,7 @@ class InjectionNodeResolver:
 
         # Fallback to ground_truth services, excluding external services
         if metadata.ground_truth_services:
-            # Filter out common external services
-            external_services = {"mysql", "redis", "postgres", "mongodb", "kafka", "rabbitmq"}
-            internal_services = [s for s in metadata.ground_truth_services if s not in external_services]
-
+            internal_services = [s for s in metadata.ground_truth_services if s not in EXTERNAL_SERVICE_NAMES]
             if internal_services:
                 return [f"service|{internal_services[0]}"], "fallback_to_internal_service"
             # If only external services exist, use the first one anyway
@@ -947,10 +943,7 @@ class InjectionNodeResolver:
         Prioritizes internal services over external services (mysql, redis, etc.).
         """
         if metadata.ground_truth_services:
-            # Filter out common external services
-            external_services = {"mysql", "redis", "postgres", "mongodb", "kafka", "rabbitmq"}
-            internal_services = [s for s in metadata.ground_truth_services if s not in external_services]
-
+            internal_services = [s for s in metadata.ground_truth_services if s not in EXTERNAL_SERVICE_NAMES]
             if internal_services:
                 return [f"service|{internal_services[0]}"], "service_fallback_internal"
             # If only external services exist, use the first one anyway
