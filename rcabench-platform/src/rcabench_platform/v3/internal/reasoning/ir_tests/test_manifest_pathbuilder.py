@@ -239,10 +239,17 @@ def test_manifest_path_builder_emits_only_manifest_conformant_paths() -> None:
 
 
 def test_manifest_path_builder_rejects_nodes_outside_band() -> None:
-    """Nodes whose ``latency_p99_ratio`` is below the band are not admitted."""
+    """Nodes whose ``latency_p99_ratio`` is below the band are not admitted.
+
+    Uses ``HTTPRequestDelay`` (seed_tier=slow) so strict-band semantics
+    apply at every layer: the cascade really must stop where the band
+    fails. The erroring tier intentionally relaxes this (see
+    :func:`test_manifest_path_builder_extends_erroring_cascade_past_band`).
+    """
     g, timelines, node_ids = _make_chain(n_spans=4)
     v_root = node_ids[0]
-    manifest = _make_manifest(n_layers=3)
+    # HTTPRequestDelay has seed_tier=slow → strict bands all the way down.
+    manifest = _make_manifest(n_layers=3, fault_type_name="HTTPRequestDelay")
     # Only the immediate caller (node_ids[1]) is in band; node_ids[2]
     # and node_ids[3] are below — chain should stop at depth 1.
     samples: dict = {}
@@ -272,6 +279,60 @@ def test_manifest_path_builder_rejects_nodes_outside_band() -> None:
     assert all(len(p.node_ids) == 2 for p in out.paths)
     # The single admitted child must be node_ids[1].
     assert all(p.node_ids[1] == node_ids[1] for p in out.paths)
+
+
+def test_manifest_path_builder_extends_erroring_cascade_past_band() -> None:
+    """Erroring tier: once a strict admission has anchored the cascade at
+    layer 1, deeper hops are admitted structurally even when the strict
+    band fails.
+
+    Encodes the per-physics rule for the erroring tier: the bad response
+    really did propagate to every transitive caller along the request
+    graph, but Spring/Java exception swallowing silences error_rate
+    observations partway up the chain. The strict layer-1 admission is
+    the corroboration anchor; the deep-cascade extension picks up where
+    the strict bands stop firing.
+
+    Mirror of :func:`test_manifest_path_builder_rejects_nodes_outside_band`
+    but with ``JVMException`` (seed_tier=erroring): the band-failed depth-2
+    and depth-3 nodes are now admitted via the extension.
+    """
+    g, timelines, node_ids = _make_chain(n_spans=4)
+    v_root = node_ids[0]
+    # JVMException has seed_tier=erroring → deep-cascade extension runs.
+    manifest = _make_manifest(n_layers=3, fault_type_name="JVMException")
+    samples: dict = {}
+    for nid in node_ids:
+        samples[(nid, FeatureKind.span, Feature.error_rate)] = 0.1
+    samples[(node_ids[1], FeatureKind.span, Feature.latency_p99_ratio)] = 2.0
+    samples[(node_ids[2], FeatureKind.span, Feature.latency_p99_ratio)] = 0.5
+    samples[(node_ids[3], FeatureKind.span, Feature.latency_p99_ratio)] = 0.5
+
+    rctx = ReasoningContext(
+        fault_type_name=manifest.fault_type_name,
+        manifest=manifest,
+        v_root_node_id=v_root,
+        t0=900,
+        feature_samples=samples,
+    )
+    builder = ManifestAwarePathBuilder(
+        graph=g,
+        timelines=timelines,
+        temporal_validator=TemporalValidator(timelines),
+        reasoning_ctx=rctx,
+    )
+    out = builder.build_all(v_root)
+
+    # The cascade reached node_ids[3] (depth 3) despite the band miss.
+    deepest = max(len(p.node_ids) for p in out.paths) if out.paths else 0
+    assert deepest >= 4, (
+        f"erroring-tier extension should reach depth >=3 (4 nodes), "
+        f"got deepest={deepest}"
+    )
+    # The deeper hops carry the ``Lext`` rule_id stamp.
+    assert any(
+        any(rid.endswith(":Lext") for rid in p.rule_ids) for p in out.paths
+    ), "expected at least one path edge tagged as the erroring extension"
 
 
 # ---------------------------------------------------------------------------

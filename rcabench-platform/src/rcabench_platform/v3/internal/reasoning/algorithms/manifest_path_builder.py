@@ -474,6 +474,27 @@ class ManifestAwarePathBuilder:
         # hand-off from the same node within this manifest's pass.
         handoffs_by_layer = self._handoffs_by_layer(manifest)
 
+        # Track whether any explicit layer admitted a strict-band child.
+        # For the erroring tier, this corroborates that the immediate
+        # boundary observed the bad response (the per-physics anchor
+        # that lets the deep-cascade extension safely relax). Without
+        # at least one strict admission we cannot distinguish a real
+        # cascade from a manifest mis-binding, so the extension stays
+        # off.
+        strict_admit_observed = False
+
+        # Accumulate every frame that ever participated in the explicit
+        # cascade — the initial seeds (v_root + proxy descendants) and
+        # every layer's admitted children. The erroring-tier extension
+        # uses this broader set as its launch pad: the cascade physics
+        # is per-endpoint within v_root's plane, but observability gaps
+        # at sibling endpoints (er=0 because Spring caught the
+        # exception) shouldn't gate the extension once the corroboration
+        # anchor has fired anywhere. Deduplication on ``node_id`` keeps
+        # the extension launch deterministic.
+        extension_seeds: list[_Frame] = list(frontier)
+        seen_seed_ids: set[int] = {f.node_id for f in extension_seeds}
+
         for k_idx, layer in enumerate(layers):
             next_frontier: list[_Frame] = []
             for parent_frame in frontier:
@@ -486,6 +507,10 @@ class ManifestAwarePathBuilder:
                 for child in admitted_children:
                     next_frontier.append(child)
                     result.visited_nodes.add(child.node_id)
+                    strict_admit_observed = True
+                    if child.node_id not in seen_seed_ids:
+                        extension_seeds.append(child)
+                        seen_seed_ids.add(child.node_id)
 
                     # Emit a path now: each layer admission is a
                     # complete causal claim. If the child also extends
@@ -571,6 +596,97 @@ class ManifestAwarePathBuilder:
                 break
             frontier = next_frontier
 
+        # Erroring-tier deep-cascade extension. The explicit layers
+        # encode the observable boundary of the cascade: v_root
+        # produces a bad response and the immediate caller observes it
+        # via error_rate / timeout_rate. Beyond that boundary, the
+        # original error keeps propagating along the same call chain
+        # (the request that failed at v_root was made on behalf of
+        # something further up, which is now also failed), but the
+        # observation gets lossy: any caller that catches+stubs the
+        # exception (a pervasive Spring/Java idiom) zeros our
+        # error_rate signal at that node and beyond. Retry-and-succeed
+        # at the client library has the same effect. The cascade is
+        # still real — the SLO surface eventually fires — but strict
+        # band admission cuts it off at the first such caller.
+        #
+        # Physics: for the erroring tier, the cascade outward from the
+        # corroborated immediate boundary is structurally guaranteed
+        # by the request graph; observability is the only thing that
+        # decays. Mirror unavailable/silent's relaxation, but only AFTER
+        # at least one strict layer admission has anchored the cascade
+        # against manifest mis-binding (equivalent to "we have a real
+        # cascade, not a coincidence").
+        #
+        # Bounded by: (a) the propagator's alarm-terminate filter
+        # forces the path tail to land on an SLO node, (b) the last
+        # layer's max_fanout caps per-frame branching, and (c) a fixed
+        # extension hop budget keeps total path length finite. Sham /
+        # negative-control cases can never reach this code path: their
+        # entry signature fails one stage earlier and 0 paths are built.
+        if (
+            manifest.seed_tier == "erroring"
+            and strict_admit_observed
+            and extension_seeds
+            and layers
+        ):
+            self._extend_erroring_cascade(
+                frontier=extension_seeds,
+                last_layer=layers[-1],
+                manifest_name=manifest.fault_type_name,
+                result=result,
+            )
+
+    def _extend_erroring_cascade(
+        self,
+        frontier: list[_Frame],
+        last_layer: DerivationLayer,
+        manifest_name: str,
+        result: ManifestPathBuildResult,
+        max_extra_hops: int = 4,
+    ) -> None:
+        """Continue an erroring-tier cascade past the manifest's last
+        explicit layer, with relaxed feature admission.
+
+        Physics: see :meth:`_expand_manifest`. The strict layers anchored
+        the cascade at the observable boundary; this routine continues
+        the structural propagation outward along the same edge_kinds the
+        last layer modeled, and lets each emitted leaf still have to
+        survive the propagator's alarm-terminate filter to make it into
+        the final result. Each extension hop's ``rule_id`` is stamped as
+        ``manifest:{ft}:Lext`` so :class:`ManifestLayerGate` can recognize
+        it as a tier-relaxed extension and pass.
+        """
+        rule_id_ext = f"manifest:{manifest_name}:Lext"
+        # Use the last explicit layer's edge_kinds and fanout as the
+        # extension predicate. Reusing the layer object keeps SCHEMA.md's
+        # "deepest layer is the authoritative envelope" note honest:
+        # the manifest's last layer remains the contract for everything
+        # past the explicit cascade depth.
+        for _ in range(max_extra_hops):
+            next_frontier: list[_Frame] = []
+            for parent_frame in frontier:
+                admitted_children = self._admit_layer_children(
+                    parent_frame=parent_frame,
+                    layer=last_layer,
+                    layer_index=len(self.rctx.manifest.derivation_layers) - 1,  # type: ignore[union-attr]
+                    manifest_name=manifest_name,
+                    rule_id_override=rule_id_ext,
+                    relaxed_features=True,
+                )
+                for child in admitted_children:
+                    # Avoid revisiting a node already in the frontier of
+                    # an earlier layer or extension hop, which would
+                    # produce duplicate / cyclic paths.
+                    if child.node_id in result.visited_nodes:
+                        continue
+                    next_frontier.append(child)
+                    result.visited_nodes.add(child.node_id)
+                    self._emit_path_to(child, result)
+            if not next_frontier:
+                break
+            frontier = next_frontier
+
     # ---------------------------------------------------------------
     # Admission helpers
     # ---------------------------------------------------------------
@@ -581,6 +697,9 @@ class ManifestAwarePathBuilder:
         layer: DerivationLayer,
         layer_index: int,
         manifest_name: str,
+        *,
+        rule_id_override: str | None = None,
+        relaxed_features: bool = False,
     ) -> list[_Frame]:
         """Enumerate ``parent → v`` candidates allowed by ``layer``.
 
@@ -594,6 +713,13 @@ class ManifestAwarePathBuilder:
         4. For each candidate, attempt to admit via
            ``expected_features`` AND a temporal-validator window
            lookup. Drop if either fails.
+
+        ``rule_id_override`` lets a caller stamp a different rule_id on
+        admitted frames (used by the erroring-tier deep-cascade extension
+        to mark its hops so the layer gate can identify them).
+        ``relaxed_features=True`` skips the per-feature band check and
+        admits any structurally-connected dst (used by the same
+        extension; see :meth:`_extend_erroring_cascade`).
         """
         # 1. Gather (edge, direction, dst_id) candidates.
         admissible_pairs = list(zip(layer.edge_kinds, layer.edge_directions, strict=False))
@@ -638,7 +764,7 @@ class ManifestAwarePathBuilder:
         # 4. Per-candidate admission.
         admitted: list[_Frame] = []
         for edge_ref, direction, dst_id in cand_edges:
-            if not self._dst_features_match(dst_id, layer):
+            if not self._dst_features_match(dst_id, layer, relaxed=relaxed_features):
                 continue
             picked = self._pick_dst_window(
                 dst_id=dst_id,
@@ -652,7 +778,11 @@ class ManifestAwarePathBuilder:
             picked_state, picked_states_all, picked_time = picked
 
             edge_desc = f"{edge_ref.kind.value}_{direction}"
-            rule_id = f"manifest:{manifest_name}:L{layer.layer}"
+            rule_id = (
+                rule_id_override
+                if rule_id_override is not None
+                else f"manifest:{manifest_name}:L{layer.layer}"
+            )
             admitted.append(
                 _Frame(
                     node_id=dst_id,
@@ -693,7 +823,13 @@ class ManifestAwarePathBuilder:
                 return True
         return False
 
-    def _dst_features_match(self, dst_id: int, layer: DerivationLayer) -> bool:
+    def _dst_features_match(
+        self,
+        dst_id: int,
+        layer: DerivationLayer,
+        *,
+        relaxed: bool = False,
+    ) -> bool:
         """Layer-feature OR-check against ``ReasoningContext.feature_samples``.
 
         SCHEMA.md "expected_features": admit iff ≥1 expected feature
@@ -708,10 +844,21 @@ class ManifestAwarePathBuilder:
         caller-also-silent, low-traffic windows where errors don't reach
         a 5% band). We admit any structurally-connected dst in those
         tiers; magnitude evidence still surfaces in :class:`ManifestLayerGate`
-        for audit but no longer gates admission. Other tiers
-        (slow/erroring/degraded) keep strict band admission because
-        their cascade depth depends on caller observability.
+        for audit but no longer gates admission.
+
+        Slow/degraded keep strict band admission because their cascade
+        depth depends on caller observability and there is no
+        corroboration anchor.
+
+        ``relaxed=True`` is the explicit per-call override used by the
+        erroring-tier deep-cascade extension (see
+        :meth:`_extend_erroring_cascade`). The extension only runs after
+        a strict admission has corroborated the immediate-boundary
+        observation, so passing ``relaxed=True`` is a contract that
+        the caller has verified the corroboration anchor.
         """
+        if relaxed:
+            return True
         manifest = self.rctx.manifest
         if manifest is not None and manifest.seed_tier in {"unavailable", "silent"}:
             return True
