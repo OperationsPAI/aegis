@@ -663,32 +663,70 @@ class InjectionNodeResolver:
         point: InjectionPoint,
         metadata: InjectionMetadata,
     ) -> tuple[list[str], str]:
-        """Resolve container fault to container node."""
-        container_name = point.container_name or point.app_label or point.app_name
+        """Resolve container fault to container node.
 
-        if not container_name and metadata.ground_truth_containers:
-            # Filter out external services from container list
-            external_services = {"mysql", "redis", "postgres", "mongodb", "kafka", "rabbitmq"}
-            internal_containers = [c for c in metadata.ground_truth_containers if c not in external_services]
-            container_name = internal_containers[0] if internal_containers else metadata.ground_truth_containers[0]
+        Resolution priority (most authoritative first):
 
-        if not container_name:
-            # Final fallback to service
+        1. ``point.container_name`` — explicit canonical name from
+           legacy ``display_config.injection_point``.
+        2. ``metadata.ground_truth_containers`` — the AegisLab schema
+           encodes the precise container in ``ground_truth[i].container``;
+           it is authoritative for the kill target.
+        3. ``point.app_label`` / ``point.app_name`` — substring heuristic
+           from ``engine_config[i].app``; used only when neither of the
+           above is available.
+
+        Why this order matters: AegisLab pods (hotel-reserv, otel-demo,
+        ...) commonly host multiple containers per pod (the app plus a
+        memcached sidecar, an envoy sidecar, etc). When the engine
+        config only carries ``app: "profile"``, the substring heuristic
+        non-deterministically picks ``hotel-reserv-profile-mmc`` (the
+        memcached sidecar) over ``hotel-reserv-profile`` (the actual
+        app container). The ground-truth list pinpoints the exact
+        container chaos-mesh kills, so we use it whenever it's present.
+        """
+        external_services = {
+            "mysql", "redis", "postgres", "mongodb", "kafka", "rabbitmq", "memcached",
+        }
+        # Build candidate list in priority order. Each candidate is a
+        # tuple ``(name, source)`` so the resolution_method label tells
+        # us which source won.
+        candidates: list[tuple[str, str]] = []
+        if point.container_name:
+            candidates.append((point.container_name, "container_name"))
+        if metadata.ground_truth_containers:
+            internal = [c for c in metadata.ground_truth_containers if c not in external_services]
+            for c in internal or metadata.ground_truth_containers:
+                if (c, "ground_truth") not in candidates:
+                    candidates.append((c, "ground_truth"))
+        if point.app_label and not any(n == point.app_label for n, _ in candidates):
+            candidates.append((point.app_label, "app_label"))
+        if point.app_name and not any(n == point.app_name for n, _ in candidates):
+            candidates.append((point.app_name, "app_name"))
+
+        if not candidates:
             return self._resolve_service_fallback(metadata)
 
-        # Try exact container match
-        container_node = self.graph.get_node_by_name(f"container|{container_name}")
-        if container_node:
-            return [container_node.uniq_name], "exact_container_match"
+        # Try exact match against each candidate, in priority order.
+        for name, source in candidates:
+            node = self.graph.get_node_by_name(f"container|{name}")
+            if node:
+                return [node.uniq_name], f"exact_container_match[{source}]"
 
-        # Try partial match on container name
-        for node in self.graph.get_nodes_by_kind(PlaceKind.container):
-            if container_name in node.self_name:
-                return [node.uniq_name], "partial_container_match"
+        # No exact match: partial-match against the highest-priority
+        # candidate. To avoid the sidecar-vs-app ambiguity, sort
+        # matches by name length and pick the shortest — sidecar names
+        # almost always carry a suffix (``-mmc``, ``-envoy``, ``-proxy``)
+        # that makes them strictly longer than the app container.
+        primary, primary_source = candidates[0]
+        matches = [n for n in self.graph.get_nodes_by_kind(PlaceKind.container) if primary in n.self_name]
+        if matches:
+            matches.sort(key=lambda n: (len(n.self_name), n.self_name))
+            return [matches[0].uniq_name], f"partial_container_match[{primary_source}]"
 
         # Fallback to service
-        logger.debug(f"No container match for {container_name}, falling back to service")
-        return [f"service|{container_name}"], "fallback_to_service"
+        logger.debug(f"No container match for {primary}, falling back to service")
+        return [f"service|{primary}"], "fallback_to_service"
 
     def _resolve_pod_lifecycle(
         self,
