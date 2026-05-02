@@ -343,6 +343,79 @@ class ManifestAwarePathBuilder:
         ):
             yield src_id, node_id, key, "in"
 
+    def _lift_frontier_to_pairs(
+        self,
+        frontier: list[_Frame],
+        target_pairs: set[tuple[str, str]],
+        manifest_name: str,
+        max_hops: int = 3,
+    ) -> list[_Frame]:
+        """Bridge between-layer plane gap by descending structural edges.
+
+        For each frame in ``frontier``: if its node already supports any
+        ``(kind, direction)`` in ``target_pairs``, keep it as-is. Otherwise
+        BFS along structural edges (``runs``, ``routes_to``, ``includes``,
+        ``manages``) up to ``max_hops`` hops and emit a frame per
+        structural descendant that DOES support a pair in ``target_pairs``.
+        Each emitted descendant becomes a path-builder frame whose parent
+        chain points back through the structural transit nodes, so
+        ``_emit_path_to`` produces a topologically coherent chain.
+
+        Mirrors :meth:`_descend_proxy_seeds` but applied between layers
+        instead of just at the v_root seed. Required for infrastructure-
+        fault manifests whose layer-1 admits a service/pod (no ``calls``
+        edges) and whose layer-2 expects ``calls``: without the lift the
+        cascade dies at layer-1.
+        """
+        if not target_pairs:
+            return frontier
+
+        structural = {"includes", "runs", "routes_to", "manages"}
+        lifted: list[_Frame] = []
+        for frame in frontier:
+            if self._has_edge_of_kind_dir(frame.node_id, target_pairs):
+                lifted.append(frame)
+                continue
+            # BFS for descendants supporting target_pairs.
+            seen: set[int] = {frame.node_id}
+            # Each entry: (node_id, parent_frame_for_emission, hop)
+            stack: list[tuple[int, _Frame, int]] = [(frame.node_id, frame, 0)]
+            while stack:
+                nid, parent_for_emit, hop = stack.pop(0)
+                if hop >= max_hops:
+                    continue
+                for src_id, dst_id, key, in_dir in self._iter_structural_edges(nid):
+                    other_id = dst_id if in_dir == "out" else src_id
+                    if other_id in seen:
+                        continue
+                    edge_data = self.graph._graph.get_edge_data(src_id, dst_id, key)
+                    if not edge_data:
+                        continue
+                    edge_ref: Edge | None = edge_data.get("ref")
+                    if edge_ref is None or edge_ref.kind.value not in structural:
+                        continue
+                    seen.add(other_id)
+                    # Build a transit frame whose parent is parent_for_emit
+                    # so _emit_path_to walks: ..., frame, ..., other_id.
+                    direction = _DIRECTION_FORWARD if in_dir == "out" else _DIRECTION_BACKWARD
+                    transit_frame = _Frame(
+                        node_id=other_id,
+                        parent=parent_for_emit,
+                        edge_desc=f"{edge_ref.kind.value}_{direction}",
+                        rule_id=f"manifest:{manifest_name}:lift",
+                        manifest_name=manifest_name,
+                        layer_index=parent_for_emit.layer_index,
+                        picked_state=parent_for_emit.picked_state,
+                        picked_states_all=parent_for_emit.picked_states_all,
+                        picked_time=parent_for_emit.picked_time,
+                        handoff_chain=parent_for_emit.handoff_chain,
+                    )
+                    if self._has_edge_of_kind_dir(other_id, target_pairs):
+                        lifted.append(transit_frame)
+                    else:
+                        stack.append((other_id, transit_frame, hop + 1))
+        return lifted
+
     def _has_edge_of_kind_dir(
         self, node_id: int, kind_dirs: set[tuple[str, str]]
     ) -> bool:
@@ -420,6 +493,40 @@ class ManifestAwarePathBuilder:
                     # next loop iteration; both are valid (they are
                     # different cascade depths from the same seed).
                     self._emit_path_to(child, result)
+
+            # Inter-layer plane lift. After admitting this layer's dsts,
+            # check whether the next layer's edge_kinds can fire from
+            # those dsts. Infrastructure-fault manifests typically declare
+            # ``layer-1: routes_to/runs/includes`` (lifts a container/pod
+            # v_root to its service or owned span) followed by
+            # ``layer-2: calls`` (cascades along the trace tree). But
+            # ``calls`` edges live between **spans only**: when layer-1
+            # admits a service or pod node, the immediate dst has no
+            # ``calls`` edges, so layer-2 admission collapses to zero and
+            # the cascade dies before reaching the SLO surface. Apply the
+            # same proxy-descent semantics ``_descend_proxy_seeds`` uses
+            # at v_root to bridge the plane gap between layers.
+            #
+            # Lifted frames also need ``_emit_path_to`` so a lifted
+            # destination that happens to be an alarm node produces a
+            # path even when layer-(k+1) admission collapses (real-data
+            # cascade may stop here, e.g. caller-span error_rate=0 when
+            # the upstream client retried successfully). Without this,
+            # the alarm-terminate filter in the propagator drops the
+            # only candidate path.
+            if next_frontier and k_idx + 1 < len(layers):
+                next_layer = layers[k_idx + 1]
+                next_pairs = set(
+                    zip(next_layer.edge_kinds, next_layer.edge_directions, strict=False)
+                )
+                lifted_frontier = self._lift_frontier_to_pairs(
+                    next_frontier, next_pairs, manifest_name=manifest.fault_type_name
+                )
+                for lifted in lifted_frontier:
+                    if lifted.node_id not in result.visited_nodes:
+                        result.visited_nodes.add(lifted.node_id)
+                    self._emit_path_to(lifted, result)
+                next_frontier = lifted_frontier
 
             # Hand-offs at this layer: any admitted child whose
             # features satisfy a hand-off trigger forks a sub-derivation.
