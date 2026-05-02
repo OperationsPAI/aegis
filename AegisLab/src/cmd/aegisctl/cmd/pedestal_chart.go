@@ -174,12 +174,14 @@ func resolveProducerPod(namespace string) (string, error) {
 // --- chart install ---
 
 var (
-	pedestalChartInstallNamespace string
-	pedestalChartInstallTgz       string
-	pedestalChartInstallRepo      string
-	pedestalChartInstallChart     string
-	pedestalChartInstallVersion   string
-	pedestalChartInstallWait      bool
+	pedestalChartInstallNamespace          string
+	pedestalChartInstallTgz                string
+	pedestalChartInstallRepo               string
+	pedestalChartInstallChart              string
+	pedestalChartInstallVersion            string
+	pedestalChartInstallWait               bool
+	pedestalChartInstallApplyOverrides     bool
+	pedestalChartInstallFromPedestalVerArg string
 )
 
 var pedestalChartInstallCmd = &cobra.Command{
@@ -202,12 +204,22 @@ Chart source resolution (first match wins):
         local_path -> repo_url/chart_name -> error.
 
 The release name is set to the namespace (matches aegis's own
-installPedestal behavior so app labels line up).`,
+installPedestal behavior so app labels line up).
+
+By default the chart's value_file (raw YAML on the producer pod) is passed
+to helm as the only -f source, matching historical behaviour. Pass
+--apply-overrides to instead use the merged values map returned by
+/api/v2/systems/by-name/<code>/chart, which already overlays the
+helm_config_values DB rows on top of value_file (matching what the
+RestartPedestal pipeline does internally). Pin a specific pedestal
+container_version with --from-pedestal-version <ver>; otherwise the
+backend's latest active row wins.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runPedestalChartInstall(args[0], pedestalChartInstallNamespace,
 			pedestalChartInstallTgz, pedestalChartInstallRepo, pedestalChartInstallChart,
-			pedestalChartInstallVersion, pedestalChartInstallWait)
+			pedestalChartInstallVersion, pedestalChartInstallWait,
+			pedestalChartInstallApplyOverrides, pedestalChartInstallFromPedestalVerArg)
 	},
 }
 
@@ -216,16 +228,28 @@ installPedestal behavior so app labels line up).`,
 // URL, or chart name); `repo` is non-empty only when positional is a repo
 // chart name that needs --repo.
 type chartSource struct {
-	positional string
-	repo       string
-	version    string
-	valuesFile string
-	values     map[string]any
+	positional     string
+	repo           string
+	version        string
+	valuesFile     string
+	values         map[string]any
+	applyOverrides bool
+	pedestalTag    string
 }
 
-func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool) error {
+func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool, applyOverrides bool, fromPedestalVersion string) error {
 	if strings.TrimSpace(systemCode) == "" {
 		return usageErrorf("system short-code is required")
+	}
+
+	// --from-pedestal-version pins which container_versions.name the backend
+	// should resolve helm_config_values for. When set it takes precedence over
+	// --version for the `?version=` query string, but not over helm's own
+	// chart --version flag (those are independent semvers — chart version
+	// vs. container_version semver, see GetSystemChart docstring).
+	apiQueryVersion := strings.TrimSpace(fromPedestalVersion)
+	if apiQueryVersion == "" {
+		apiQueryVersion = version
 	}
 
 	if namespace == "" {
@@ -239,13 +263,22 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 		namespace = derived
 	}
 
-	src, err := resolveChartSource(systemCode, tgz, repo, chartName, version)
+	src, err := resolveChartSource(systemCode, tgz, repo, chartName, version, apiQueryVersion)
 	if err != nil {
 		return err
 	}
+	src.applyOverrides = applyOverrides
 
 	if _, err := chartRunner.LookPath("helm"); err != nil {
 		return missingEnvErrorf("helm not found on PATH; install helm or place it on PATH")
+	}
+
+	if applyOverrides {
+		tag := src.pedestalTag
+		if tag == "" {
+			tag = apiQueryVersion
+		}
+		output.PrintInfo(fmt.Sprintf("merged %d helm_config_values overrides for %s@%s", len(src.values), systemCode, tag))
 	}
 
 	helmArgs := []string{"install", namespace, src.positional, "-n", namespace, "--create-namespace"}
@@ -292,12 +325,14 @@ func isURL(s string) bool {
 // resolveChartSource picks the helm positional argument (and optional --repo)
 // based on the precedence documented on pedestalChartInstallCmd.Long. It falls
 // back to GET /api/v2/systems/by-name/<code>/chart when the operator didn't
-// pass a source explicitly.
-func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chartSource, error) {
+// pass a source explicitly. apiQueryVersion is the value passed as ?version=
+// (the container_version.name) and may differ from chartVersion (the helm
+// chart semver passed to `helm --version`) — see #372.
+func resolveChartSource(systemCode, tgz, repo, chartName, chartVersion, apiQueryVersion string) (chartSource, error) {
 	switch {
 	case tgz != "":
 		if isURL(tgz) {
-			return chartSource{positional: tgz, version: version}, nil
+			return chartSource{positional: tgz, version: chartVersion}, nil
 		}
 		if _, err := os.Stat(tgz); err != nil {
 			if os.IsNotExist(err) {
@@ -305,13 +340,13 @@ func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chart
 			}
 			return chartSource{}, fmt.Errorf("stat --tgz: %w", err)
 		}
-		return chartSource{positional: tgz, version: version}, nil
+		return chartSource{positional: tgz, version: chartVersion}, nil
 
 	case repo != "" && chartName != "":
 		if strings.HasPrefix(repo, "oci://") {
-			return chartSource{positional: buildOCIRef(repo, chartName), version: version}, nil
+			return chartSource{positional: buildOCIRef(repo, chartName), version: chartVersion}, nil
 		}
-		return chartSource{positional: chartName, repo: repo, version: version}, nil
+		return chartSource{positional: chartName, repo: repo, version: chartVersion}, nil
 
 	case repo != "" || chartName != "":
 		return chartSource{}, usageErrorf("--repo and --chart must be provided together")
@@ -323,17 +358,18 @@ func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chart
 	}
 	c := newClient()
 	var resp client.APIResponse[chartLookupResp]
-	// Pass --version through as a query string so the backend can return
-	// the helm_config_values for that specific container_version (issue
-	// #190). Empty version preserves the old "latest semver" behaviour.
+	// Pass apiQueryVersion through as a query string so the backend can
+	// return the helm_config_values for that specific container_version
+	// (issue #190 / #372). Empty value preserves the old "latest semver"
+	// behaviour.
 	chartPath := fmt.Sprintf("/api/v2/systems/by-name/%s/chart", systemCode)
-	if version != "" {
-		chartPath = fmt.Sprintf("%s?version=%s", chartPath, url.QueryEscape(version))
+	if apiQueryVersion != "" {
+		chartPath = fmt.Sprintf("%s?version=%s", chartPath, url.QueryEscape(apiQueryVersion))
 	}
 	if err := c.Get(chartPath, &resp); err != nil {
 		return chartSource{}, fmt.Errorf("lookup chart for system %q: %w (hint: pass --tgz or --repo/--chart explicitly)", systemCode, err)
 	}
-	backendVersion := version
+	backendVersion := chartVersion
 	if backendVersion == "" {
 		backendVersion = resp.Data.Version
 	}
@@ -342,34 +378,48 @@ func resolveChartSource(systemCode, tgz, repo, chartName, version string) (chart
 	if resp.Data.LocalPath != "" {
 		if _, err := os.Stat(resp.Data.LocalPath); err == nil {
 			return chartSource{
-				positional: resp.Data.LocalPath,
-				version:    backendVersion,
-				valuesFile: resp.Data.ValueFile,
-				values:     resp.Data.Values,
+				positional:  resp.Data.LocalPath,
+				version:     backendVersion,
+				valuesFile:  resp.Data.ValueFile,
+				values:      resp.Data.Values,
+				pedestalTag: resp.Data.PedestalTag,
 			}, nil
 		}
 	}
 	if resp.Data.RepoURL != "" && resp.Data.ChartName != "" {
 		if strings.HasPrefix(resp.Data.RepoURL, "oci://") {
 			return chartSource{
-				positional: buildOCIRef(resp.Data.RepoURL, resp.Data.ChartName),
-				version:    backendVersion,
-				valuesFile: resp.Data.ValueFile,
-				values:     resp.Data.Values,
+				positional:  buildOCIRef(resp.Data.RepoURL, resp.Data.ChartName),
+				version:     backendVersion,
+				valuesFile:  resp.Data.ValueFile,
+				values:      resp.Data.Values,
+				pedestalTag: resp.Data.PedestalTag,
 			}, nil
 		}
 		return chartSource{
-			positional: resp.Data.ChartName,
-			repo:       resp.Data.RepoURL,
-			version:    backendVersion,
-			valuesFile: resp.Data.ValueFile,
-			values:     resp.Data.Values,
+			positional:  resp.Data.ChartName,
+			repo:        resp.Data.RepoURL,
+			version:     backendVersion,
+			valuesFile:  resp.Data.ValueFile,
+			values:      resp.Data.Values,
+			pedestalTag: resp.Data.PedestalTag,
 		}, nil
 	}
 	return chartSource{}, notFoundErrorf("system %q has no installable chart source (no local_path, no repo_url); pass --tgz or --repo/--chart", systemCode)
 }
 
 func materializeChartValuesFile(src chartSource) (string, func(), error) {
+	// applyOverrides flips the precedence: prefer the merged values map
+	// (file YAML overlaid with helm_config_values DB rows by the backend)
+	// over the raw value_file path. Without this flag, the raw file wins
+	// even when DB overrides drift away from it — see #372.
+	if src.applyOverrides && len(src.values) > 0 {
+		data, err := yaml.Marshal(src.values)
+		if err != nil {
+			return "", func() {}, fmt.Errorf("marshal chart values: %w", err)
+		}
+		return writeTempChartValuesFile(data)
+	}
 	if src.valuesFile != "" {
 		if _, err := os.Stat(src.valuesFile); err == nil {
 			return src.valuesFile, func() {}, nil
@@ -571,6 +621,8 @@ func init() {
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallChart, "chart", "", "Chart name in the repo given by --repo")
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallVersion, "version", "", "Chart version (passed to helm --version)")
 	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallWait, "wait", false, "Pass --wait to helm install")
+	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallApplyOverrides, "apply-overrides", false, "Merge helm_config_values rows for the matched pedestal version into the values file before helm install (matches RestartPedestal behaviour). Default: false (current behaviour preserved).")
+	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallFromPedestalVerArg, "from-pedestal-version", "", "Pin which container_versions.name the backend should resolve helm_config_values for (default: latest status=1 row for this system).")
 
 	pedestalChartCmd.AddCommand(pedestalChartPushCmd)
 	pedestalChartCmd.AddCommand(pedestalChartInstallCmd)
