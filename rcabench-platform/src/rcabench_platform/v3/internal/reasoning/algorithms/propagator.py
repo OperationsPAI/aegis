@@ -358,7 +358,20 @@ class FaultPropagator:
         # entry gate.
         per_path_gates = [g for g in self.gates if not isinstance(g, ManifestEntryGate)]
 
+        # Mirror the generic-branch contract: ``PropagationResult.paths``
+        # are paths from the injection seed to an alarm node. The
+        # ``ManifestAwarePathBuilder`` emits a candidate at every layer
+        # admit (so layer-1 / layer-2 / layer-3 leaves all surface), but
+        # those intermediate emissions are not "the propagation chain"
+        # — only the ones whose terminal lands on a node in
+        # ``alarm_nodes`` are. The generic branch enforces this through
+        # ``TopologyExplorer.extract_paths(..., alarm_nodes)`` (paths
+        # "terminate strictly at alarm nodes"); the manifest-driven
+        # branch must enforce the same contract or downstream consumers
+        # (causal_graph, hop-distance metrics, evaluators) read garbage.
         for candidate in build.paths:
+            if alarm_nodes and (not candidate.node_ids or candidate.node_ids[-1] not in alarm_nodes):
+                continue
             gate_results = evaluate_path(candidate, ctx, per_path_gates)
             if all(g.passed for g in gate_results):
                 confidence = 1.0
