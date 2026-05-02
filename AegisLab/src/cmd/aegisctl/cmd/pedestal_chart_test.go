@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -168,21 +169,21 @@ func TestNsPatternToNamespace(t *testing.T) {
 // via TestNsPatternToNamespace.
 func TestPedestalChartInstallValidation(t *testing.T) {
 	t.Run("missing_code", func(t *testing.T) {
-		err := runPedestalChartInstall("", "ts0", "/tmp/x.tgz", "", "", "", false)
+		err := runPedestalChartInstall("", "ts0", "/tmp/x.tgz", "", "", "", false, false, "")
 		if err == nil || !strings.Contains(err.Error(), "short-code") {
 			t.Fatalf("want short-code error, got %v", err)
 		}
 	})
 
 	t.Run("repo_without_chart_rejected", func(t *testing.T) {
-		err := runPedestalChartInstall("ts", "ts0", "", "https://example.com/charts", "", "", false)
+		err := runPedestalChartInstall("ts", "ts0", "", "https://example.com/charts", "", "", false, false, "")
 		if err == nil || !strings.Contains(err.Error(), "--repo and --chart must be provided together") {
 			t.Fatalf("want repo/chart pairing error, got %v", err)
 		}
 	})
 
 	t.Run("tgz_not_found", func(t *testing.T) {
-		err := runPedestalChartInstall("ts", "ts0", "/does/not/exist.tgz", "", "", "", false)
+		err := runPedestalChartInstall("ts", "ts0", "/does/not/exist.tgz", "", "", "", false, false, "")
 		if err == nil || !strings.Contains(err.Error(), "not found") {
 			t.Fatalf("want not-found error, got %v", err)
 		}
@@ -195,7 +196,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "", false)
+		err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "", false, false, "")
 		if err == nil || !strings.Contains(err.Error(), "helm not found") {
 			t.Fatalf("want helm-missing error, got %v", err)
 		}
@@ -211,7 +212,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		}
 		withFakeRunner(t, f)
 		url := "https://example.com/charts/foo-0.1.0.tgz"
-		if err := runPedestalChartInstall("ts", "ts0", url, "", "", "", false); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", url, "", "", "", false, false, ""); err != nil {
 			t.Fatalf("url install failed: %v", err)
 		}
 		if len(got) == 0 || got[0] != "helm" || !containsArg(got, url) {
@@ -228,7 +229,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 			},
 		}
 		withFakeRunner(t, f)
-		if err := runPedestalChartInstall("ts", "ts0", "", "https://charts.example.com", "foo", "1.0.0", false); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "https://charts.example.com", "foo", "1.0.0", false, false, ""); err != nil {
 			t.Fatalf("repo install failed: %v", err)
 		}
 		if !containsArg(got, "--repo") || !containsArg(got, "https://charts.example.com") || !containsArg(got, "foo") {
@@ -247,7 +248,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		if err := os.WriteFile(tgz, []byte("pkg"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", true); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", tgz, "", "", "1.2.3", true, false, ""); err != nil {
 			t.Fatalf("install failed: %v", err)
 		}
 		if len(f.calls) != 1 {
@@ -300,7 +301,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		}
 		withFakeRunner(t, f)
 
-		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false); err != nil {
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, ""); err != nil {
 			t.Fatalf("backend chart install failed: %v", err)
 		}
 		var helmCalls [][]string
@@ -318,6 +319,161 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 		}
 		if !strings.Contains(gotValues, "allowInsecureImages: true") {
 			t.Fatalf("expected marshaled backend values, got %q", gotValues)
+		}
+	})
+}
+
+// TestPedestalChartInstallApplyOverrides covers the #372 flag wiring: with
+// --apply-overrides the merged values map (value_file + helm_config_values
+// rows, already overlaid by the backend) wins over the raw value_file path,
+// even when the file is locally accessible and would otherwise be passed to
+// helm as-is.
+func TestPedestalChartInstallApplyOverrides(t *testing.T) {
+	// Stale local value_file: the chart default that the byte-cluster ts
+	// case in #372 hit. Backend's `values` carries the corrected mirror.
+	staleFile := filepath.Join(t.TempDir(), "ts_values.yaml")
+	if err := os.WriteFile(staleFile, []byte("otelCollector:\n  image:\n    repository: otel/opentelemetry-collector-contrib\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mergedRepo := "pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib"
+
+	mockServer := func(version string) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/api/v2/systems/by-name/ts/chart" {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			body := fmt.Sprintf(`{"code":200,"message":"ok","data":{"system_name":"ts","chart_name":"trainticket","version":"0.1.0","repo_url":"https://operationspai.github.io/train-ticket","repo_name":"train-ticket","value_file":%q,"values":{"otelCollector":{"image":{"repository":%q}}},"pedestal_tag":%q}}`,
+				staleFile, mergedRepo, version)
+			_, _ = w.Write([]byte(body))
+		}))
+	}
+
+	captureValues := func(t *testing.T, capture *string) *fakeChartExec {
+		t.Helper()
+		return &fakeChartExec{
+			fallback: func(name string, args []string) ([]byte, error) {
+				for i := 0; i < len(args)-1; i++ {
+					if args[i] == "-f" {
+						data, err := os.ReadFile(args[i+1])
+						if err != nil {
+							t.Fatalf("read values file: %v", err)
+						}
+						*capture = string(data)
+					}
+				}
+				return []byte("ok"), nil
+			},
+		}
+	}
+
+	t.Run("default_preserves_stale_file_path", func(t *testing.T) {
+		oldServer, oldToken := flagServer, flagToken
+		t.Cleanup(func() { flagServer, flagToken = oldServer, oldToken })
+		ts := mockServer("1.0.7")
+		defer ts.Close()
+		flagServer = ts.URL
+		flagToken = "test-token"
+
+		var got string
+		f := captureValues(t, &got)
+		withFakeRunner(t, f)
+
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, false, ""); err != nil {
+			t.Fatalf("install: %v", err)
+		}
+		if !strings.Contains(got, "otel/opentelemetry-collector-contrib") {
+			t.Fatalf("default path should keep the raw value_file (stale image), got %q", got)
+		}
+		if strings.Contains(got, mergedRepo) {
+			t.Fatalf("default path must not include merged override, got %q", got)
+		}
+	})
+
+	t.Run("apply_overrides_uses_merged_values", func(t *testing.T) {
+		oldServer, oldToken := flagServer, flagToken
+		t.Cleanup(func() { flagServer, flagToken = oldServer, oldToken })
+		ts := mockServer("1.0.7")
+		defer ts.Close()
+		flagServer = ts.URL
+		flagToken = "test-token"
+
+		var got string
+		f := captureValues(t, &got)
+		withFakeRunner(t, f)
+
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, true, ""); err != nil {
+			t.Fatalf("install: %v", err)
+		}
+		if !strings.Contains(got, mergedRepo) {
+			t.Fatalf("apply-overrides should use merged values containing %q, got %q", mergedRepo, got)
+		}
+	})
+
+	t.Run("from_pedestal_version_passes_through_query", func(t *testing.T) {
+		oldServer, oldToken := flagServer, flagToken
+		t.Cleanup(func() { flagServer, flagToken = oldServer, oldToken })
+
+		var gotQuery string
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/api/v2/systems/by-name/ts/chart" {
+				http.NotFound(w, r)
+				return
+			}
+			gotQuery = r.URL.Query().Get("version")
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":200,"message":"ok","data":{"system_name":"ts","chart_name":"trainticket","version":"0.1.0","repo_url":"https://operationspai.github.io/train-ticket","repo_name":"train-ticket","values":{"x":1},"pedestal_tag":"1.0.7"}}`))
+		}))
+		defer ts.Close()
+		flagServer = ts.URL
+		flagToken = "test-token"
+
+		f := &fakeChartExec{fallback: func(name string, args []string) ([]byte, error) { return []byte("ok"), nil }}
+		withFakeRunner(t, f)
+
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, true, "1.0.7"); err != nil {
+			t.Fatalf("install: %v", err)
+		}
+		if gotQuery != "1.0.7" {
+			t.Fatalf("backend should receive ?version=1.0.7, got %q", gotQuery)
+		}
+	})
+
+	t.Run("apply_overrides_without_backend_values_is_noop", func(t *testing.T) {
+		// When the backend returns no values and no value_file (e.g. a
+		// pedestal that hasn't seeded helm_config_values yet), enabling
+		// --apply-overrides must not error and must not pass -f.
+		oldServer, oldToken := flagServer, flagToken
+		t.Cleanup(func() { flagServer, flagToken = oldServer, oldToken })
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/api/v2/systems/by-name/ts/chart" {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"code":200,"message":"ok","data":{"system_name":"ts","chart_name":"trainticket","version":"0.1.0","repo_url":"https://operationspai.github.io/train-ticket","repo_name":"train-ticket"}}`))
+		}))
+		defer ts.Close()
+		flagServer = ts.URL
+		flagToken = "test-token"
+
+		f := &fakeChartExec{fallback: func(name string, args []string) ([]byte, error) { return []byte("ok"), nil }}
+		withFakeRunner(t, f)
+
+		if err := runPedestalChartInstall("ts", "ts0", "", "", "", "", false, true, ""); err != nil {
+			t.Fatalf("install: %v", err)
+		}
+		var sawValuesFlag bool
+		for _, c := range f.calls {
+			for _, a := range c {
+				if a == "-f" {
+					sawValuesFlag = true
+				}
+			}
+		}
+		if sawValuesFlag {
+			t.Fatalf("apply-overrides with no backend values must not pass -f")
 		}
 	})
 }
