@@ -102,6 +102,10 @@ def _assign_layers_from_rule_ids(
       last layer's envelope, matching SCHEMA.md's "deepest layer is the
       authoritative envelope" note).
     - ``"manifest:{ft}:lift"`` → ``None`` (skip in layer check).
+    - ``"manifest:{ft}:Lext"`` → last layer's index (the erroring-tier
+      deep-cascade extension reuses the last layer's edge_kinds as the
+      structural envelope; per-edge feature admission is relaxed via the
+      ``Lext`` rule_id tag handled by ``evaluate``).
     - Anything else → falls back to positional index (legacy path-builder
       output, kept for compatibility with the few tests that craft
       CandidatePaths by hand).
@@ -112,6 +116,9 @@ def _assign_layers_from_rule_ids(
     for i, rid in enumerate(rule_ids):
         if rid.endswith(":lift"):
             out.append(None)
+            continue
+        if rid.endswith(":Lext"):
+            out.append(cap)
             continue
         marker = rid.rpartition(":L")[2]
         if marker.isdigit():
@@ -183,7 +190,7 @@ class ManifestLayerGate:
         # we mirror that here so the defensive gate doesn't reject what
         # the builder accepted. Magnitude evidence is still recorded
         # for audit. Other tiers keep strict admission.
-        relax_features = manifest.seed_tier in {"unavailable", "silent"}
+        relax_features_global = manifest.seed_tier in {"unavailable", "silent"}
         n_edges = len(path.edge_descs)
         layer_indices = _assign_layers_from_rule_ids(path.rule_ids, layers)
         for i in range(n_edges):
@@ -210,6 +217,17 @@ class ManifestLayerGate:
                 continue
             layer = layers[layer_idx]
 
+            # Per-edge tier-relax: erroring-tier deep-cascade extension
+            # edges (rule_id ``manifest:{ft}:Lext``) are tagged by the
+            # path builder when the strict-band corroboration anchor
+            # has already fired at an earlier layer. They mirror the
+            # builder's relaxation: ``relaxed=True`` for that edge only.
+            # See ``manifest_path_builder._extend_erroring_cascade``.
+            is_extension_edge = (
+                i < len(path.rule_ids) and path.rule_ids[i].endswith(":Lext")
+            )
+            relax_features = relax_features_global or is_extension_edge
+
             edge_ok = _edge_admitted_by_layer(edge_desc, layer)
             features_ok, feature_evidence = _node_matches_any_expected(
                 dst_id, list(layer.expected_features), rctx
@@ -228,6 +246,11 @@ class ManifestLayerGate:
                     "features_admitted": features_admitted,
                     "features_match_band": features_ok,
                     "tier_relaxed": relax_features and not features_ok,
+                    "tier_relax_source": (
+                        "extension"
+                        if is_extension_edge
+                        else ("global" if relax_features_global else None)
+                    ),
                     "expected_features": feature_evidence,
                     "passed": edge_passed,
                 }
