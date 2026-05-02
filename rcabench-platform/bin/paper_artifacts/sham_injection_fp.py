@@ -53,7 +53,7 @@ The paper's ``sec:appendix_precision_bound`` figure is reproduced by:
 ``abnormal``) so no real fault is present, and measures how often the
 4-gate pipeline still emits ``attributed``. The frozen artifact at
 ``bin/paper_artifacts/sham_fp/sham_fp_lite_v1.json`` records the most
-recent run (16/542 = 2.95%); regenerating with the same dataset + git sha
+recent run (28/637 = 4.40%); regenerating with the same dataset + git sha
 should reproduce that number bit-for-bit (sham target seed is deterministic
 per-case via the ``--seed`` argument).
 """

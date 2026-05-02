@@ -1,64 +1,100 @@
 {
   "dataset": "/home/ddq/AoyangSpace/dataset/openrca2_lite_v1",
-  "n_cases": 542,
+  "n_cases": 637,
   "trials_per_case": 1,
-  "n_trials_admitted": 542,
+  "n_trials_admitted": 637,
   "n_no_candidate": 0,
   "label_counts": {
-    "unexplained_impact": 271,
-    "ineffective": 255,
-    "attributed": 16
+    "ineffective": 269,
+    "unexplained_impact": 340,
+    "attributed": 28
   },
-  "joint_fp_rate": 0.02952029520295203,
-  "n_fp": 16,
+  "joint_fp_rate": 0.04395604395604396,
+  "n_fp": 28,
   "fp_cases": [
     {
-      "case": "hotel-reserv__NetworkPartition__batch-01KQJ3YJV7REPCFDRPAW4615JP"
+      "case": "hotel-reserv__NetworkDelay__batch-01KQJQE55BKGG6KH3Y675WJTHK"
     },
     {
-      "case": "hotel-reserv__NetworkPartition__hs2-frontend-partition-mczcm8"
+      "case": "hotel-reserv__NetworkPartition__batch-01KQKKWXPFYKAREMQHEP5M7WSH"
     },
     {
-      "case": "hotel-reserv__NetworkPartition__hs5-frontend-partition-stjlkh"
+      "case": "hotel-reserv__NetworkPartition__hs4-frontend-partition-46cmpz"
     },
     {
-      "case": "hotel-reserv__PodFailure__batch-01KQK6D68RK8K57FH15VSSSXDA"
+      "case": "hotel-reserv__PodFailure__batch-01KQK04AH9JSX2QAME0B6YEHSX"
     },
     {
-      "case": "hotel-reserv__PodFailure__batch-01KQKCTSC14YP6BSFBGCXW30Y6"
+      "case": "hotel-reserv__PodFailure__batch-01KQKNKGRS9VS5Z3D048GH3EYN"
     },
     {
-      "case": "hotel-reserv__PodFailure__hs0-geo-pod-failure-f6jqlw"
+      "case": "hotel-reserv__PodFailure__hs3-geo-pod-failure-8ttkdv"
     },
     {
-      "case": "otel-demo__PodKill__batch-01KQK6N27AT841YTJCBC1V2YF6"
+      "case": "otel-demo__NetworkCorrupt__batch-01KQKGC96M2D6YD6B8GQ0HC888"
     },
     {
-      "case": "trainticket__ContainerKill__ts4-ts-contacts-service-container-kill-v6jgcw"
+      "case": "otel-demo__NetworkLoss__batch-01KQKGEV7QNKJPZ64W0GV1FXGE"
     },
     {
-      "case": "trainticket__DNSError__ts8-ts-consign-service-dns-59shmq"
+      "case": "otel-demo__NetworkPartition__batch-01KQKYZVMC7JPGSX5S16TABEVF"
     },
     {
-      "case": "trainticket__JVMRuntimeMutator__batch-01KQJ6SK7V5KM3T6JGMH3D59MN"
+      "case": "otel-demo__NetworkPartition__batch-01KQM7NED44FVMHHMVEA58NC1T"
     },
     {
-      "case": "trainticket__JVMRuntimeMutator__batch-01KQJ6TQA7JDTKH89P9VE8SWBY"
+      "case": "otel-demo__NetworkPartition__batch-01KQMCQNSYDKHR8QW5WHPQDTPX"
     },
     {
-      "case": "trainticket__JVMRuntimeMutator__batch-01KQJB0Y7PW7M3SWMQ46AAQWTJ"
+      "case": "otel-demo__NetworkLoss__batch-01KQM2RRH6J8CZZKCJRV7FXZ8N"
+    },
+    {
+      "case": "otel-demo__NetworkPartition__otel-demo2-checkout-partition-svj7dt"
+    },
+    {
+      "case": "trainticket__JVMLatency__batch-01KQKFNFS3PJNP39G6R8CF87MG"
+    },
+    {
+      "case": "trainticket__JVMLatency__batch-01KQKMN1660X1HW1R2T49MXCJ3"
+    },
+    {
+      "case": "trainticket__JVMReturn__ts0-ts-inside-payment-service-return-7pjv29"
+    },
+    {
+      "case": "trainticket__JVMMySQLLatency__ts0-ts-travel-service-mysql-28wmss"
+    },
+    {
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJDN8F9ADT31NPH7CS7FZCP"
     },
     {
       "case": "trainticket__JVMRuntimeMutator__batch-01KQJB4CJXMJKTE1XM0AKJ3XK6"
     },
     {
-      "case": "trainticket__JVMRuntimeMutator__batch-01KQJB4DHSVS0R7C9X9ZY48BPR"
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJDQWEGTDFRE76QSNHXN8TA"
     },
     {
-      "case": "trainticket__NetworkDuplicate__ts10-ts-contacts-service-duplicate-8ljgts"
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJV0Y0S73EY3B1M5P842SH0"
     },
     {
-      "case": "trainticket__PodFailure__ts2-ts-travel-service-pod-failure-jqk2bj"
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJN30W02ZA2HH4486K5WN6Y"
+    },
+    {
+      "case": "trainticket__NetworkCorrupt__ts3-ts-config-service-corrupt-rvz9sf"
+    },
+    {
+      "case": "trainticket__NetworkCorrupt__ts3-ts-route-service-corrupt-rplmkr"
+    },
+    {
+      "case": "trainticket__NetworkCorrupt__ts4-ts-security-service-corrupt-rq5cgb"
+    },
+    {
+      "case": "trainticket__NetworkCorrupt__ts5-ts-order-service-corrupt-475z9v"
+    },
+    {
+      "case": "trainticket__NetworkLoss__ts3-ts-contacts-service-loss-6lcnb9"
+    },
+    {
+      "case": "trainticket__PodFailure__ts1-ts-train-service-pod-failure-5qwqdz"
     }
   ],
   "error_counts": {}
