@@ -10,6 +10,7 @@ import (
 	"aegis/consts"
 	"aegis/model"
 
+	"github.com/spf13/viper"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -1119,5 +1120,175 @@ func TestReseedHelmConfigForVersionMissingVersion(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected error for missing version_id, got nil")
+	}
+}
+
+// --- issue #360 regression: re-snapshot helm value_file on overlay drift ---
+//
+// Setup helper: pre-seeds a container + version + helm_config that points at
+// a "frozen" snapshot file under <basePath>/helm-values/. The basePath is the
+// jfs.dataset_path Viper key used by HelmFileStore for re-snapshot writes.
+func seedHelmValueFileFixture(t *testing.T, db *gorm.DB, basePath, system, snapshotBytes string) string {
+	t.Helper()
+	helmValuesDir := filepath.Join(basePath, "helm-values")
+	if err := os.MkdirAll(helmValuesDir, 0o755); err != nil {
+		t.Fatalf("mkdir helm-values: %v", err)
+	}
+	snapshotPath := filepath.Join(helmValuesDir, system+"_values_initial.yaml")
+	if err := os.WriteFile(snapshotPath, []byte(snapshotBytes), 0o644); err != nil {
+		t.Fatalf("write snapshot: %v", err)
+	}
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, ?, 2, 1)`, system)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`)
+	mustExec(t, db,
+		`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name, value_file) VALUES (20, ?, '0.1.0', 10, 'https://x', 'r', ?)`,
+		system, snapshotPath)
+	return snapshotPath
+}
+
+func writeOverlayBesideSeed(t *testing.T, seedPath, system, body string) {
+	t.Helper()
+	overlayPath := filepath.Join(filepath.Dir(seedPath), system+".yaml")
+	if err := os.WriteFile(overlayPath, []byte(body), 0o644); err != nil {
+		t.Fatalf("write overlay: %v", err)
+	}
+}
+
+func minimalSeedFor(system string) string {
+	return `
+containers:
+  - type: 2
+    name: ` + system + `
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0
+        helm_config:
+          version: 0.1.0
+          chart_name: ` + system + `
+          repo_name: r
+          repo_url: https://x
+`
+}
+
+func TestReseedResnapshotsHelmValueFileOnDrift(t *testing.T) {
+	db := newReseedTestDB(t)
+	basePath := t.TempDir()
+	viper.Set("jfs.dataset_path", basePath)
+	defer viper.Set("jfs.dataset_path", "")
+
+	system := "otel-demo"
+	oldSnapshot := seedHelmValueFileFixture(t, db, basePath, system, "imageTag: stale\n")
+
+	seed := writeSeedFile(t, minimalSeedFor(system))
+	writeOverlayBesideSeed(t, seed, system, "imageTag: fresh\n")
+
+	report, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	var got struct{ ValueFile string }
+	db.Raw(`SELECT value_file FROM helm_configs WHERE id = 20`).Scan(&got)
+	if got.ValueFile == oldSnapshot {
+		t.Fatalf("value_file not updated; still %s", got.ValueFile)
+	}
+	if got.ValueFile == "" {
+		t.Fatalf("value_file unexpectedly cleared")
+	}
+	newBytes, err := os.ReadFile(got.ValueFile)
+	if err != nil {
+		t.Fatalf("read new snapshot: %v", err)
+	}
+	if string(newBytes) != "imageTag: fresh\n" {
+		t.Fatalf("new snapshot bytes = %q, want %q", string(newBytes), "imageTag: fresh\n")
+	}
+
+	// Surfaced as an applied helm_configs action.
+	found := false
+	for _, a := range report.Actions {
+		if a.Layer == "helm_configs" && a.Applied && a.OldValue == oldSnapshot && a.Note == "value_file overlay drift; re-snapshotting from CM source" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected applied resnapshot action, got %+v", report.Actions)
+	}
+}
+
+func TestReseedResnapshotNoOpWhenBytesIdentical(t *testing.T) {
+	db := newReseedTestDB(t)
+	basePath := t.TempDir()
+	viper.Set("jfs.dataset_path", basePath)
+	defer viper.Set("jfs.dataset_path", "")
+
+	system := "otel-demo"
+	snapshot := seedHelmValueFileFixture(t, db, basePath, system, "imageTag: same\n")
+
+	seed := writeSeedFile(t, minimalSeedFor(system))
+	writeOverlayBesideSeed(t, seed, system, "imageTag: same\n")
+
+	report, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+
+	var got struct{ ValueFile string }
+	db.Raw(`SELECT value_file FROM helm_configs WHERE id = 20`).Scan(&got)
+	if got.ValueFile != snapshot {
+		t.Fatalf("value_file mutated on no-op: %s != %s", got.ValueFile, snapshot)
+	}
+	for _, a := range report.Actions {
+		if a.Layer == "helm_configs" && a.OldValue == snapshot {
+			t.Fatalf("unexpected resnapshot action on identical bytes: %+v", a)
+		}
+	}
+}
+
+func TestReseedResnapshotNoOpWhenOverlayMissing(t *testing.T) {
+	db := newReseedTestDB(t)
+	basePath := t.TempDir()
+	viper.Set("jfs.dataset_path", basePath)
+	defer viper.Set("jfs.dataset_path", "")
+
+	system := "otel-demo"
+	snapshot := seedHelmValueFileFixture(t, db, basePath, system, "imageTag: keep\n")
+
+	// No <system>.yaml overlay written next to the seed.
+	seed := writeSeedFile(t, minimalSeedFor(system))
+
+	if _, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed}); err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+	var got struct{ ValueFile string }
+	db.Raw(`SELECT value_file FROM helm_configs WHERE id = 20`).Scan(&got)
+	if got.ValueFile != snapshot {
+		t.Fatalf("value_file mutated when overlay absent: %s != %s", got.ValueFile, snapshot)
+	}
+}
+
+func TestReseedResnapshotNoOpWhenValueFileEmpty(t *testing.T) {
+	db := newReseedTestDB(t)
+	basePath := t.TempDir()
+	viper.Set("jfs.dataset_path", basePath)
+	defer viper.Set("jfs.dataset_path", "")
+
+	system := "otel-demo"
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, ?, 2, 1)`, system)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '0.1.0', 1, 0, 1)`)
+	mustExec(t, db,
+		`INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name, value_file) VALUES (20, ?, '0.1.0', 10, 'https://x', 'r', '')`,
+		system)
+
+	seed := writeSeedFile(t, minimalSeedFor(system))
+	writeOverlayBesideSeed(t, seed, system, "imageTag: fresh\n")
+
+	if _, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed}); err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+	var got struct{ ValueFile string }
+	db.Raw(`SELECT value_file FROM helm_configs WHERE id = 20`).Scan(&got)
+	if got.ValueFile != "" {
+		t.Fatalf("value_file populated when initially empty: %s", got.ValueFile)
 	}
 }
