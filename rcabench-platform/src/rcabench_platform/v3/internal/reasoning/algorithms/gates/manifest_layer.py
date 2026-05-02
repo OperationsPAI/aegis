@@ -234,14 +234,14 @@ class ManifestLayerGate:
                 continue
             layer = layers[layer_idx]
 
-            # Per-edge tier-relax: erroring-tier deep-cascade extension
-            # edges (rule_id ``manifest:{ft}:Lext``) are tagged by the
-            # path builder when the strict-band corroboration anchor
-            # has already fired at an earlier layer. They mirror the
-            # builder's relaxation: ``relaxed=True`` for that edge only.
-            # See ``manifest_path_builder._extend_erroring_cascade``.
+            # Per-edge tier-relax: extension edges that the path builder
+            # admitted with ``relaxed_features=True`` (erroring-tier
+            # past-the-anchor extension) carry ``per_edge_relaxed[i] ==
+            # True``. The gate honours that bool rather than parsing the
+            # rule_id string — rule_ids stay audit-only metadata
+            # (``manifest:{ft}:Lext`` is still the canonical tag).
             is_extension_edge = (
-                i < len(path.rule_ids) and path.rule_ids[i].endswith(":Lext")
+                i < len(path.per_edge_relaxed) and path.per_edge_relaxed[i]
             )
             relax_features = is_extension_edge
 

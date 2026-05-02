@@ -137,6 +137,12 @@ class _Frame:
     ``parent`` — preceding frame (or ``None`` for the seed v_root).
     ``edge_desc`` — ``"{kind}_{direction}"`` for the parent→self hop.
     ``rule_id`` — synthetic per-layer marker.
+    ``edge_relaxed`` — True iff the parent→self hop was admitted by the
+    past-the-last-layer extension's relaxed (non-band) admission.
+    Stamped by :meth:`_extend_cascade` when called with
+    ``relaxed_features=True``; copied to the
+    :attr:`CandidatePath.per_edge_relaxed` array by ``_emit_path_to`` so
+    :class:`ManifestLayerGate` can read it without parsing rule_ids.
     ``manifest_name`` — name of the manifest currently driving expansion.
     ``layer_index`` — 0-based index within ``manifest.derivation_layers``
     that admitted this node (``None`` for v_root).
@@ -156,6 +162,7 @@ class _Frame:
     picked_states_all: tuple[str, ...]
     picked_time: int
     handoff_chain: HandOffChain
+    edge_relaxed: bool = False
 
 
 @dataclass
@@ -821,6 +828,7 @@ class ManifestAwarePathBuilder:
                     picked_states_all=picked_states_all,
                     picked_time=picked_time,
                     handoff_chain=parent_frame.handoff_chain,
+                    edge_relaxed=relaxed_features,
                 )
             )
         return admitted
@@ -1039,6 +1047,7 @@ class ManifestAwarePathBuilder:
         rule_ids: list[str] = []
         rule_confs: list[float] = []
         delays: list[float] = []
+        per_edge_relaxed: list[bool] = []
 
         for idx, frame in enumerate(chain):
             node_ids.append(frame.node_id)
@@ -1052,6 +1061,7 @@ class ManifestAwarePathBuilder:
             rule_confs.append(1.0)
             prev_time = chain[idx - 1].picked_time
             delays.append(float(frame.picked_time - prev_time))
+            per_edge_relaxed.append(frame.edge_relaxed)
 
         path = CandidatePath(
             node_ids=node_ids,
@@ -1062,6 +1072,7 @@ class ManifestAwarePathBuilder:
             rule_ids=rule_ids,
             rule_confidences=rule_confs,
             propagation_delays=delays,
+            per_edge_relaxed=per_edge_relaxed,
         )
         result.paths.append(path)
         result.max_hops_reached = max(result.max_hops_reached, len(node_ids) - 1)

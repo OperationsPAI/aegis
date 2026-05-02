@@ -14,7 +14,7 @@ for the §7.5 admission predicate or the symbolic-onset fallback.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from rcabench_platform.v3.internal.reasoning.algorithms.rule_matcher import RuleMatcher
 from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import (
@@ -34,6 +34,14 @@ class CandidatePath:
     propagation. Field lengths:
       - per-node lists have ``len(node_ids)`` entries
       - per-edge lists have ``len(node_ids) - 1`` entries
+
+    ``per_edge_relaxed`` flags edges produced by the manifest path
+    builder's past-the-last-layer extension (rule_id stamped
+    ``manifest:{ft}:Lext`` in audit metadata). The ManifestLayerGate
+    reads this bool to decide whether to apply the per-edge relaxed
+    feature admission rather than parsing the rule_id string. Defaults
+    to all-False when omitted, so generic-builder paths skip the
+    extension semantics naturally. Same length as ``edge_descs``.
     """
 
     node_ids: list[int]
@@ -44,6 +52,7 @@ class CandidatePath:
     rule_ids: list[str]
     rule_confidences: list[float]
     propagation_delays: list[float]
+    per_edge_relaxed: list[bool] = field(default_factory=list)
 
 
 class PathBuilder:
