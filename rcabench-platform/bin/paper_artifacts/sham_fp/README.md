@@ -1,6 +1,6 @@
 # Joint FP measurement (paper §3.4 / Appendix `sec:appendix_precision_bound`)
 
-The paper claims a 4.40% joint false-positive rate for the 4-gate FORGE
+The paper claims a 5.67% joint false-positive rate for the 4-gate FORGE
 pipeline on fault-free windows. This directory holds the frozen result
 that anchors that claim and the exact command that produces it.
 
@@ -21,11 +21,11 @@ joint FP.
 
 | Field | Value |
 |---|---|
-| dataset | `/home/ddq/AoyangSpace/dataset/openrca2_lite_v1` (637 cases) |
+| dataset | `/home/ddq/AoyangSpace/dataset/openrca2_lite_v1` (635 cases) |
 | mode | `v2` (split-normal) |
-| n_trials_admitted | 637 |
-| **joint_fp_rate** | **4.40%** (28/637) |
-| label distribution | attributed=28, unexplained_impact=340, ineffective=269 |
+| n_trials_admitted | 635 |
+| **joint_fp_rate** | **5.67%** (36/635) |
+| label distribution | attributed=36, unexplained_impact=342, ineffective=257 |
 | errors | 0 |
 
 Run ~5–10 min on 12 workers. The sham target seed is deterministic per
