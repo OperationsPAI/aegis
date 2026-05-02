@@ -1,0 +1,65 @@
+{
+  "dataset": "/home/ddq/AoyangSpace/dataset/openrca2_lite_v1",
+  "n_cases": 542,
+  "trials_per_case": 1,
+  "n_trials_admitted": 542,
+  "n_no_candidate": 0,
+  "label_counts": {
+    "unexplained_impact": 271,
+    "ineffective": 255,
+    "attributed": 16
+  },
+  "joint_fp_rate": 0.02952029520295203,
+  "n_fp": 16,
+  "fp_cases": [
+    {
+      "case": "hotel-reserv__NetworkPartition__batch-01KQJ3YJV7REPCFDRPAW4615JP"
+    },
+    {
+      "case": "hotel-reserv__NetworkPartition__hs2-frontend-partition-mczcm8"
+    },
+    {
+      "case": "hotel-reserv__NetworkPartition__hs5-frontend-partition-stjlkh"
+    },
+    {
+      "case": "hotel-reserv__PodFailure__batch-01KQK6D68RK8K57FH15VSSSXDA"
+    },
+    {
+      "case": "hotel-reserv__PodFailure__batch-01KQKCTSC14YP6BSFBGCXW30Y6"
+    },
+    {
+      "case": "hotel-reserv__PodFailure__hs0-geo-pod-failure-f6jqlw"
+    },
+    {
+      "case": "otel-demo__PodKill__batch-01KQK6N27AT841YTJCBC1V2YF6"
+    },
+    {
+      "case": "trainticket__ContainerKill__ts4-ts-contacts-service-container-kill-v6jgcw"
+    },
+    {
+      "case": "trainticket__DNSError__ts8-ts-consign-service-dns-59shmq"
+    },
+    {
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJ6SK7V5KM3T6JGMH3D59MN"
+    },
+    {
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJ6TQA7JDTKH89P9VE8SWBY"
+    },
+    {
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJB0Y7PW7M3SWMQ46AAQWTJ"
+    },
+    {
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJB4CJXMJKTE1XM0AKJ3XK6"
+    },
+    {
+      "case": "trainticket__JVMRuntimeMutator__batch-01KQJB4DHSVS0R7C9X9ZY48BPR"
+    },
+    {
+      "case": "trainticket__NetworkDuplicate__ts10-ts-contacts-service-duplicate-8ljgts"
+    },
+    {
+      "case": "trainticket__PodFailure__ts2-ts-travel-service-pod-failure-jqk2bj"
+    }
+  ],
+  "error_counts": {}
+}

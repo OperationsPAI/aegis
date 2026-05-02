@@ -41,11 +41,21 @@ methodology-section number.
 
 Usage
 ~~~~~
+The paper's ``sec:appendix_precision_bound`` figure is reproduced by:
+
     uv run python bin/paper_artifacts/sham_injection_fp.py \\
-        --dataset /home/ddq/AoyangSpace/dataset/rca \\
-        --workers 12 \\
-        --trials-per-case 1 \\
-        --out output/sham_fp/sham_fp.json
+        --dataset /home/ddq/AoyangSpace/dataset/openrca2_lite_v1 \\
+        --workers 12 --mode v2 \\
+        --out bin/paper_artifacts/sham_fp/sham_fp_lite_v1.json
+
+``--mode v2`` is the reportable mode for the paper: it splits each case's
+``normal_traces`` in half (first half = baseline, second = synthetic
+``abnormal``) so no real fault is present, and measures how often the
+4-gate pipeline still emits ``attributed``. The frozen artifact at
+``bin/paper_artifacts/sham_fp/sham_fp_lite_v1.json`` records the most
+recent run (16/542 = 2.95%); regenerating with the same dataset + git sha
+should reproduce that number bit-for-bit (sham target seed is deterministic
+per-case via the ``--seed`` argument).
 """
 
 from __future__ import annotations
@@ -78,16 +88,20 @@ def _build_excluded_uniq_names(real_inj: dict[str, Any]) -> set[str]:
     the sham target cannot accidentally coincide with the actual cause.
     """
     excluded: set[str] = set()
-    gt = real_inj.get("ground_truth") or {}
-    for kind in ("container", "pod", "service", "span", "function"):
-        for name in gt.get(kind) or []:
-            if not name:
-                continue
-            excluded.add(f"{kind}|{name}")
-            # Span uniq_names may carry "service::endpoint" suffix; bare
-            # name match too.
-            if kind == "span":
-                excluded.add(f"span|{name}")
+    gt_raw = real_inj.get("ground_truth") or {}
+    # AegisLab hybrid schema stores ground_truth as a list of per-sub-injection
+    # dicts; rca_label schema stores it as a single dict. Normalise to a list.
+    gt_list = gt_raw if isinstance(gt_raw, list) else [gt_raw]
+    for gt in gt_list:
+        if not isinstance(gt, dict):
+            continue
+        for kind in ("container", "pod", "service", "span", "function"):
+            for name in gt.get(kind) or []:
+                if not name:
+                    continue
+                excluded.add(f"{kind}|{name}")
+                if kind == "span":
+                    excluded.add(f"span|{name}")
     return excluded
 
 
