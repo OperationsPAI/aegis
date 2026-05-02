@@ -92,7 +92,10 @@ from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator impor
     _effective_onset,
 )
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
-from rcabench_platform.v3.internal.reasoning.manifests.features import Feature
+from rcabench_platform.v3.internal.reasoning.manifests.features import (
+    Feature,
+    FeatureKind,
+)
 from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
     DerivationLayer,
@@ -113,6 +116,42 @@ logger = logging.getLogger(__name__)
 # Direction strings as used by manifest YAML are lower-case; PathBuilder
 # stamps edge_descs with PropagationDirection's enum value (lower-case).
 _DIRECTION_FORWARD = "forward"
+
+
+# Slow-tier corroboration band. When seed_tier is `slow`, a depressed
+# request-count at a candidate caller is a deterministic consequence of
+# upstream throttling: either the caller's own timeout/circuit-breaker
+# clipped requests against the injected delay, or TCP-level back-pressure
+# absorbed bandwidth-cap throughput. Either path produces the same
+# observable: ``request_count_ratio`` falls below baseline. We OR this
+# with the layer's declared expected_features so slow-tier cascades that
+# *manifest as throughput drop rather than latency rise* still admit.
+# 0.7 mirrors the entry signature in network_bandwidth.yaml; chosen
+# because it's well below the natural noise floor (real cases show
+# ratios <0.3 routinely while organic baseline is >0.85).
+_SLOW_TIER_REQ_COUNT_LOW: tuple[float, float] = (0.0, 0.7)
+
+# Slow-tier path-depth extension. Slow-tier manifests today declare 1-2
+# derivation layers, but real cascades often reach the SLO surface 5-7
+# hops above v_root because each "hop" in the span topology is a single
+# call edge -- one inter-service call typically requires 2 hops to
+# traverse (caller's outbound HTTP span -> callee's inbound HTTP span ->
+# callee's controller method). The phase-3 SCHEMA.md note reads "the
+# manifest's last layer is the authoritative envelope for everything
+# beyond"; we implement that by re-applying the last layer's spec for
+# up to N extra hops when seed_tier is `slow`. The extension is
+# bounded above by (a) the last layer's ``max_fanout`` per frontier
+# node, (b) the alarm-terminate filter at the propagator level,
+# (c) this constant, and (d) ``_SLOW_TIER_MAX_FRONTIER`` which stops
+# the extension once an extra hop produces too many candidates (cuts
+# the BFS off before fanout * fanout * fanout * ... explodes the
+# admission cost).
+# 6 chosen empirically: TrainTicket / hotelReservation alarm spans
+# sit at the gateway service, which is 5-7 span hops above any
+# backend service in the call tree (HTTP-server-span +
+# controller-method-span pair per service * 3-4 services).
+_SLOW_TIER_EXTRA_HOPS: int = 6
+_SLOW_TIER_MAX_FRONTIER: int = 256
 _DIRECTION_BACKWARD = "backward"
 
 
@@ -571,6 +610,57 @@ class ManifestAwarePathBuilder:
                 break
             frontier = next_frontier
 
+        # Slow-tier path-depth extension. SCHEMA.md states "the
+        # manifest's last layer is the authoritative envelope for
+        # everything beyond"; the per-tier physics for `slow` makes
+        # this concrete. A delay/latency/bandwidth fault adds time on
+        # the immediate callee's span and that effect propagates
+        # transitively through callers as long as the cascade isn't
+        # absorbed (timeout, circuit-breaker, async fan-out). The
+        # observability of *how deep* the cascade reaches is bounded
+        # by the caller's behaviour, not by the manifest author's
+        # choice of `derivation_layers` length. We therefore re-apply
+        # the last layer's spec for up to ``_SLOW_TIER_EXTRA_HOPS``
+        # extra hops when seed_tier is `slow`. Each extension hop
+        # honours the same `_admit_layer_children` envelope (edge
+        # kinds + per-feature bands + the slow-tier request-count
+        # corroborator) and the alarm-terminate filter at the
+        # propagator level still drops paths that don't reach an
+        # alarm node — so this is pure "lift the depth ceiling",
+        # not "lift the magnitude ceiling".
+        if (
+            frontier
+            and manifest.seed_tier == "slow"
+            and _SLOW_TIER_EXTRA_HOPS > 0
+            and layers
+        ):
+            last_layer = layers[-1]
+            last_layer_index = len(layers) - 1
+            for extra_hop in range(_SLOW_TIER_EXTRA_HOPS):
+                next_frontier: list[_Frame] = []
+                for parent_frame in frontier:
+                    admitted_children = self._admit_layer_children(
+                        parent_frame=parent_frame,
+                        layer=last_layer,
+                        layer_index=last_layer_index,
+                        manifest_name=manifest.fault_type_name,
+                    )
+                    for child in admitted_children:
+                        next_frontier.append(child)
+                        result.visited_nodes.add(child.node_id)
+                        self._emit_path_to(child, result)
+                if not next_frontier:
+                    break
+                # Guard: if the last layer's max_fanout times the previous
+                # frontier already produced >256 candidates, stop. This
+                # protects against pathological cascades where every hop
+                # admits the full fanout (e.g., a thoroughly-impacted
+                # service mesh) — without it, 6 hops at fanout 16 would
+                # generate 16M candidate paths to filter through gates.
+                if len(next_frontier) > _SLOW_TIER_MAX_FRONTIER:
+                    break
+                frontier = next_frontier
+
     # ---------------------------------------------------------------
     # Admission helpers
     # ---------------------------------------------------------------
@@ -701,16 +791,32 @@ class ManifestAwarePathBuilder:
         the feature) is "did not match", same convention as
         :class:`ManifestLayerGate`.
 
-        Tier-driven relaxation: for ``seed_tier ∈ {unavailable, silent}``
-        the cascade is structurally deterministic (a destructive fault
-        propagates through every caller regardless of how the effect
-        surfaces — retry-and-succeed silently, exception-swallowed,
-        caller-also-silent, low-traffic windows where errors don't reach
-        a 5% band). We admit any structurally-connected dst in those
-        tiers; magnitude evidence still surfaces in :class:`ManifestLayerGate`
-        for audit but no longer gates admission. Other tiers
-        (slow/erroring/degraded) keep strict band admission because
-        their cascade depth depends on caller observability.
+        Tier-driven relaxation:
+
+        * ``seed_tier ∈ {unavailable, silent}`` — cascade is structurally
+          deterministic (destructive fault propagates regardless of how
+          the effect surfaces). Admit any structurally-connected dst.
+        * ``seed_tier == slow`` — cascade is observability-bounded but
+          two-channel by physics: the caller either accumulates the
+          injected delay (latency p99/p50 rise: declared per-layer) OR
+          its request volume drops as the local timeout/circuit-breaker
+          chops requests against the injected delay (or TCP back-pressure
+          absorbs bandwidth-cap throughput). The drop manifests as
+          ``request_count_ratio`` low at the caller. We OR this signal
+          with the layer's declared expected_features so cascades that
+          *manifest as throughput drop rather than latency rise* still
+          admit. ``timeout_rate`` is the strictly-correct signal here
+          but the trace schema in both legacy and AegisLab datasets
+          omits ``status_message``, so the rate is uniformly None;
+          request-count drop is the available proxy with the same
+          physical root.
+        * ``seed_tier ∈ {erroring, degraded}`` — strict band check.
+          Their cascade depth depends on caller observability that the
+          slow-tier OR-rule does not generalise to (an erroring caller
+          is not constrained to drop request count).
+
+        Magnitude evidence still surfaces in :class:`ManifestLayerGate`
+        for audit; the relaxation is policy-level.
         """
         manifest = self.rctx.manifest
         if manifest is not None and manifest.seed_tier in {"unavailable", "silent"}:
@@ -719,7 +825,26 @@ class ManifestAwarePathBuilder:
             value = self.rctx.aggregate_feature(dst_id, fm.kind, fm.feature)
             if _band_match(value, fm):
                 return True
+        if manifest is not None and manifest.seed_tier == "slow":
+            return self._slow_tier_corroborates(dst_id)
         return False
+
+    def _slow_tier_corroborates(self, dst_id: int) -> bool:
+        """OR-band: ``request_count_ratio`` low corroborates slow-tier cascade.
+
+        See ``_SLOW_TIER_REQ_COUNT_LOW`` for the threshold rationale.
+        Returns True iff the dst has a measured ``request_count_ratio``
+        in the band ``[0.0, 0.7]``. A missing sample fails-closed (same
+        convention as the per-layer band check) so the relaxation never
+        flips a "no signal" dst into an admit.
+        """
+        v = self.rctx.aggregate_feature(
+            dst_id, FeatureKind.span, Feature.request_count_ratio
+        )
+        if v is None:
+            return False
+        lo, hi = _SLOW_TIER_REQ_COUNT_LOW
+        return lo <= v <= hi
 
     def _pick_dst_window(
         self,

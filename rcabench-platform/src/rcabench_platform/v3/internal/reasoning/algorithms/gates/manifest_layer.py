@@ -32,10 +32,35 @@ from rcabench_platform.v3.internal.reasoning.algorithms.gates.base import (
 from rcabench_platform.v3.internal.reasoning.algorithms.gates.manifest_entry import _band_match
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath
 from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+from rcabench_platform.v3.internal.reasoning.manifests.features import (
+    Feature,
+    FeatureKind,
+)
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
     DerivationLayer,
     FeatureMatch,
 )
+
+# Mirror of ``manifest_path_builder._SLOW_TIER_REQ_COUNT_LOW``. Kept
+# duplicated to avoid the gates package importing the path-builder.
+_SLOW_TIER_REQ_COUNT_LOW: tuple[float, float] = (0.0, 0.7)
+
+
+def _slow_tier_corroborates(
+    node_id: int, rctx: ReasoningContext
+) -> tuple[bool, float | None]:
+    """Slow-tier corroborator: ``request_count_ratio`` low at the dst.
+
+    Mirrors :func:`manifest_path_builder.ManifestAwarePathBuilder._slow_tier_corroborates`.
+    Returns ``(matched, value)``. A missing sample fails-closed.
+    """
+    v = rctx.aggregate_feature(
+        node_id, FeatureKind.span, Feature.request_count_ratio
+    )
+    if v is None:
+        return False, None
+    lo, hi = _SLOW_TIER_REQ_COUNT_LOW
+    return (lo <= v <= hi), v
 
 
 def _split_edge_desc(edge_desc: str) -> tuple[str, str]:
@@ -183,7 +208,17 @@ class ManifestLayerGate:
         # we mirror that here so the defensive gate doesn't reject what
         # the builder accepted. Magnitude evidence is still recorded
         # for audit. Other tiers keep strict admission.
+        #
+        # ``slow`` tier: cascade is observability-bounded but two-channel
+        # by physics — caller either accumulates the injected delay
+        # (latency p99/p50 rise) OR drops requests as its local timeout
+        # / circuit-breaker chops requests against the injected delay
+        # (or TCP back-pressure absorbs bandwidth-cap throughput),
+        # surfacing as ``request_count_ratio`` low. The path builder
+        # OR-includes this corroborator; the gate must mirror it or it
+        # rejects what the builder admitted.
         relax_features = manifest.seed_tier in {"unavailable", "silent"}
+        slow_tier_corroborate = manifest.seed_tier == "slow"
         n_edges = len(path.edge_descs)
         layer_indices = _assign_layers_from_rule_ids(path.rule_ids, layers)
         for i in range(n_edges):
@@ -214,24 +249,32 @@ class ManifestLayerGate:
             features_ok, feature_evidence = _node_matches_any_expected(
                 dst_id, list(layer.expected_features), rctx
             )
-            features_admitted = features_ok or relax_features
+            slow_corroborated = False
+            slow_corroborator_value: float | None = None
+            if not features_ok and slow_tier_corroborate:
+                slow_corroborated, slow_corroborator_value = _slow_tier_corroborates(
+                    dst_id, rctx
+                )
+            features_admitted = features_ok or relax_features or slow_corroborated
             edge_passed = edge_ok and features_admitted
             if not edge_passed:
                 all_pass = False
-            edges_evidence.append(
-                {
-                    "edge_index": i,
-                    "edge_desc": edge_desc,
-                    "layer": layer.layer,
-                    "dst_node_id": dst_id,
-                    "edge_admitted": edge_ok,
-                    "features_admitted": features_admitted,
-                    "features_match_band": features_ok,
-                    "tier_relaxed": relax_features and not features_ok,
-                    "expected_features": feature_evidence,
-                    "passed": edge_passed,
-                }
-            )
+            evidence_entry: dict[str, object] = {
+                "edge_index": i,
+                "edge_desc": edge_desc,
+                "layer": layer.layer,
+                "dst_node_id": dst_id,
+                "edge_admitted": edge_ok,
+                "features_admitted": features_admitted,
+                "features_match_band": features_ok,
+                "tier_relaxed": relax_features and not features_ok,
+                "expected_features": feature_evidence,
+                "passed": edge_passed,
+            }
+            if slow_tier_corroborate:
+                evidence_entry["slow_tier_corroborated"] = slow_corroborated
+                evidence_entry["slow_tier_request_count_ratio"] = slow_corroborator_value
+            edges_evidence.append(evidence_entry)
 
         if all_pass:
             reason = ""
