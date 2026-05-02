@@ -156,6 +156,10 @@ FAULT_TYPE_TO_SEED_TIER: Final[dict[str, SeedTier]] = {
     # JVM database-level
     "JVMMySQLLatency": "slow",
     "JVMMySQLException": "erroring",
+    # JVM runtime-level method mutator: chaos-mesh's JVMRuntimeMutator
+    # rewrites bytecode to alter return / throw — observationally identical
+    # to JVMException at the span plane, so the canonical seed tier matches.
+    "JVMRuntimeMutator": "erroring",
 }
 
 

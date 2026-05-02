@@ -90,6 +90,41 @@ def _node_matches_any_expected(
     return any_match, evidence
 
 
+def _assign_layers_from_rule_ids(
+    rule_ids: list[str], layers: list[DerivationLayer]
+) -> list[int | None]:
+    """Map each path edge to its layer index (or None for lift edges).
+
+    Reads the ``rule_id`` tag the path-builder stamps on each edge:
+
+    - ``"manifest:{ft}:L{k}"`` → layer index ``k - 1`` (clamped to
+      ``len(layers) - 1`` so paths deeper than the manifest reuse the
+      last layer's envelope, matching SCHEMA.md's "deepest layer is the
+      authoritative envelope" note).
+    - ``"manifest:{ft}:lift"`` → ``None`` (skip in layer check).
+    - Anything else → falls back to positional index (legacy path-builder
+      output, kept for compatibility with the few tests that craft
+      CandidatePaths by hand).
+    """
+    n = len(rule_ids)
+    cap = max(len(layers) - 1, 0)
+    out: list[int | None] = []
+    for i, rid in enumerate(rule_ids):
+        if rid.endswith(":lift"):
+            out.append(None)
+            continue
+        marker = rid.rpartition(":L")[2]
+        if marker.isdigit():
+            k = int(marker)
+            out.append(min(k - 1, cap) if k >= 1 else 0)
+        else:
+            out.append(min(i, cap))
+    # Pad in case rule_ids is shorter than edge_descs (defensive).
+    while len(out) < n:
+        out.append(min(len(out), cap))
+    return out
+
+
 class ManifestLayerGate:
     """Per-edge magnitude-band + edge-kind admission for manifest paths."""
 
@@ -124,19 +159,63 @@ class ManifestLayerGate:
         edges_evidence: list[dict[str, object]] = []
         all_pass = True
 
+        # Layer assignment is read from the path-builder's ``rule_ids``
+        # tagging convention rather than positional index. The
+        # ``ManifestAwarePathBuilder`` writes:
+        #   - ``manifest:{ft}:L{k}``  for normal layer-k admits
+        #   - ``manifest:{ft}:lift``  for structural transit edges that
+        #     bridge plane gaps between layer-k and layer-(k+1)
+        # Lift edges are not part of any layer's contract — they exist
+        # only to walk between planes (e.g., service→its-owned-span via
+        # ``includes`` so a layer-2 ``calls`` admission can fire). We
+        # skip them here. Without this skip, a positional ``layer[i]``
+        # mapping forces the lift edge into layer-(k+1)'s edge_kinds
+        # check, where it always fails — silently rejecting the entire
+        # cascade for any infra-fault manifest whose v_root sits on a
+        # different plane than its layer-2 edge_kinds (PodFailure,
+        # ContainerKill, CPUStress, MemoryStress, JVMMemoryStress, etc.).
+        # Tier-driven relaxation: ``unavailable``/``silent`` faults have
+        # a structurally deterministic cascade — observability gaps at
+        # intermediate callers (retry-and-succeed silently, error
+        # swallowed, low-traffic windows below the 5% band) are
+        # downstream noise, not absence of the causal effect. The path
+        # builder admits any structurally-connected dst in those tiers;
+        # we mirror that here so the defensive gate doesn't reject what
+        # the builder accepted. Magnitude evidence is still recorded
+        # for audit. Other tiers keep strict admission.
+        relax_features = manifest.seed_tier in {"unavailable", "silent"}
         n_edges = len(path.edge_descs)
+        layer_indices = _assign_layers_from_rule_ids(path.rule_ids, layers)
         for i in range(n_edges):
             edge_desc = path.edge_descs[i]
             dst_id = path.node_ids[i + 1]
-            # Layer index is 1-indexed in the schema; cap at the last layer
-            # so deep paths reuse the deepest envelope.
-            layer = layers[min(i, len(layers) - 1)]
+            layer_idx = layer_indices[i]
+            if layer_idx is None:
+                # Lift edge: structural bridge, skip the layer-bound
+                # check. The dst is a plane-aligned proxy whose own
+                # admissibility is verified by the next non-lift edge.
+                edges_evidence.append(
+                    {
+                        "edge_index": i,
+                        "edge_desc": edge_desc,
+                        "layer": None,
+                        "dst_node_id": dst_id,
+                        "edge_admitted": True,
+                        "features_admitted": True,
+                        "expected_features": [],
+                        "passed": True,
+                        "skipped": "lift",
+                    }
+                )
+                continue
+            layer = layers[layer_idx]
 
             edge_ok = _edge_admitted_by_layer(edge_desc, layer)
             features_ok, feature_evidence = _node_matches_any_expected(
                 dst_id, list(layer.expected_features), rctx
             )
-            edge_passed = edge_ok and features_ok
+            features_admitted = features_ok or relax_features
+            edge_passed = edge_ok and features_admitted
             if not edge_passed:
                 all_pass = False
             edges_evidence.append(
@@ -146,7 +225,9 @@ class ManifestLayerGate:
                     "layer": layer.layer,
                     "dst_node_id": dst_id,
                     "edge_admitted": edge_ok,
-                    "features_admitted": features_ok,
+                    "features_admitted": features_admitted,
+                    "features_match_band": features_ok,
+                    "tier_relaxed": relax_features and not features_ok,
                     "expected_features": feature_evidence,
                     "passed": edge_passed,
                 }

@@ -700,7 +700,21 @@ class ManifestAwarePathBuilder:
         matches. A missing sample (the IR adapter could not extract
         the feature) is "did not match", same convention as
         :class:`ManifestLayerGate`.
+
+        Tier-driven relaxation: for ``seed_tier ∈ {unavailable, silent}``
+        the cascade is structurally deterministic (a destructive fault
+        propagates through every caller regardless of how the effect
+        surfaces — retry-and-succeed silently, exception-swallowed,
+        caller-also-silent, low-traffic windows where errors don't reach
+        a 5% band). We admit any structurally-connected dst in those
+        tiers; magnitude evidence still surfaces in :class:`ManifestLayerGate`
+        for audit but no longer gates admission. Other tiers
+        (slow/erroring/degraded) keep strict band admission because
+        their cascade depth depends on caller observability.
         """
+        manifest = self.rctx.manifest
+        if manifest is not None and manifest.seed_tier in {"unavailable", "silent"}:
+            return True
         for fm in layer.expected_features:
             value = self.rctx.aggregate_feature(dst_id, fm.kind, fm.feature)
             if _band_match(value, fm):

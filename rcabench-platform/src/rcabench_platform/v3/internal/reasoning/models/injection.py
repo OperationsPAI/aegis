@@ -58,6 +58,7 @@ FAULT_TYPES: list[str] = [
     "JVMMemoryStress",  # 28
     "JVMMySQLLatency",  # 29
     "JVMMySQLException",  # 30
+    "JVMRuntimeMutator",  # 31
 ]
 
 
@@ -115,6 +116,10 @@ FAULT_TYPE_CATEGORIES: dict[int, str] = {
     # JVM database faults -> database span
     29: "jvm_database",  # JVMMySQLLatency
     30: "jvm_database",  # JVMMySQLException
+    # JVM runtime-level mutator (chaos-mesh JVMRuntimeMutator): rewrites a
+    # method's bytecode at runtime — symptomatically the same family as
+    # JVMException, so we reuse jvm_method routing.
+    31: "jvm_method",  # JVMRuntimeMutator
 }
 
 # HTTP Response fault types - where propagation semantically starts from caller
@@ -153,6 +158,59 @@ def get_fault_category(fault_type: int, category: str) -> str:
         return "jvm_database"
     # Keep network, dns, time as-is
     return category
+
+
+def _coalesce_engine_config(ec: dict) -> dict:
+    """Lift a single ``engine_config[i]`` entry into ``display_config`` shape.
+
+    AegisLab AutoHarness puts the chaos parameters flat on each
+    ``engine_config`` entry. Legacy parsing expects a nested
+    ``display_config.injection_point`` structure plus a few top-level
+    fields (``namespace``, ``direction``, fault-specific durations).
+    This helper builds an equivalent ``display_config`` dict so the
+    downstream extraction code can stay schema-agnostic.
+
+    Field mapping (AegisLab → display_config):
+      - app                     → injection_point.app_name + injection_point.app_label
+      - target_service          → injection_point.target_service
+      - source_service          → injection_point.source_service (defaults to ``app``)
+      - direction               → top-level ``direction``
+      - namespace               → top-level ``namespace``
+      - container_name          → injection_point.container_name
+      - pod_name                → injection_point.pod_name
+      - method / route / port   → injection_point.{method,route,server_port}
+      - class_name / method_name (JVM)   → injection_point.{class_name,method_name}
+      - db_name / table_name / operation_type → injection_point.{db_name,table_name,operation_type}
+      - domain                  → injection_point.domain
+      - latency / delay / memory_size → top-level for downstream consumers
+    """
+    ip: dict = {
+        "app_name": ec.get("app"),
+        "app_label": ec.get("app"),
+        "target_service": ec.get("target_service"),
+        "source_service": ec.get("source_service") or ec.get("app"),
+        "container_name": ec.get("container_name"),
+        "pod_name": ec.get("pod_name"),
+        "method": ec.get("method"),
+        "route": ec.get("route"),
+        "server_address": ec.get("server_address"),
+        "server_port": ec.get("server_port"),
+        "class_name": ec.get("class_name"),
+        "method_name": ec.get("method_name"),
+        "db_name": ec.get("db_name"),
+        "table_name": ec.get("table_name"),
+        "operation_type": ec.get("operation_type"),
+        "domain": ec.get("domain"),
+    }
+    return {
+        "injection_point": {k: v for k, v in ip.items() if v is not None},
+        "namespace": ec.get("namespace"),
+        "direction": ec.get("direction"),
+        "latency_ms": ec.get("latency"),
+        "delay_duration": ec.get("delay") or ec.get("duration"),
+        "latency_duration": ec.get("duration"),
+        "memory_size": ec.get("memory_size") or ec.get("memory"),
+    }
 
 
 class InjectionPoint(BaseModel):
@@ -213,9 +271,23 @@ class InjectionMetadata(BaseModel):
     def from_injection_json(cls, data: dict) -> InjectionMetadata:
         """Parse injection.json dict into InjectionMetadata.
 
-        Accepts ``fault_type`` as either an int index into ``FAULT_TYPES`` (legacy
-        rca_label datapacks) or a string like ``"PodKill"`` (current AegisLab schema).
+        Two schemas in the wild:
+
+        - **Legacy rca_label**: top-level ``fault_type`` is an int index into
+          ``FAULT_TYPES``; injection details live under
+          ``display_config`` (JSON string) with a nested ``injection_point``.
+        - **AegisLab AutoHarness**: top-level ``fault_type`` is a string —
+          either a ``FAULT_TYPES`` member like ``"PodKill"`` or the literal
+          ``"hybrid"`` for batches with multiple faults; injection details
+          live under ``engine_config`` (list[dict]; first entry is the
+          canonical signal for batch evaluation, mirroring the ground-truth
+          ordering convention).
+
+        We try the legacy schema first, then fall back to ``engine_config[0]``.
         """
+        # Step 1: parse top-level fault_type (int / FAULT_TYPES string).
+        # This is overridden below by ``engine_config[0].chaos_type`` when
+        # the top-level is unknown ("hybrid", -1, missing).
         raw = data.get("fault_type", -1)
         if isinstance(raw, str):
             try:
@@ -227,18 +299,39 @@ class InjectionMetadata(BaseModel):
                 fault_type = int(raw)
             except (TypeError, ValueError):
                 fault_type = -1
-        fault_type_name = FAULT_TYPES[fault_type] if 0 <= fault_type < len(FAULT_TYPES) else "Unknown"
 
-        # Parse display_config which is a JSON string
+        # Step 2: locate the canonical fault descriptor — display_config
+        # (legacy) preferred, else engine_config[0] (AegisLab).
         display_config: dict = {}
-        display_config_str = data.get("display_config", "{}")
-        if isinstance(display_config_str, str):
+        display_config_str = data.get("display_config", "")
+        if isinstance(display_config_str, str) and display_config_str.strip():
             try:
                 display_config = json.loads(display_config_str)
             except json.JSONDecodeError:
                 logger.warning(f"Failed to parse display_config: {display_config_str[:100]}")
+        elif isinstance(display_config_str, dict):
+            display_config = display_config_str
 
-        # Extract injection_point from display_config
+        engine_first: dict = {}
+        engine_config = data.get("engine_config")
+        if isinstance(engine_config, list) and engine_config:
+            head = engine_config[0]
+            if isinstance(head, dict):
+                engine_first = head
+
+        if not display_config and engine_first:
+            display_config = _coalesce_engine_config(engine_first)
+            # If top-level fault_type was unknown, refine from chaos_type.
+            if not (0 <= fault_type < len(FAULT_TYPES)):
+                chaos_type = engine_first.get("chaos_type")
+                if isinstance(chaos_type, str):
+                    try:
+                        fault_type = FAULT_TYPES.index(chaos_type)
+                    except ValueError:
+                        pass
+
+        fault_type_name = FAULT_TYPES[fault_type] if 0 <= fault_type < len(FAULT_TYPES) else "Unknown"
+
         injection_point_data = display_config.get("injection_point", {})
         injection_point = InjectionPoint(
             app_name=injection_point_data.get("app_name"),

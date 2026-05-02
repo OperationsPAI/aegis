@@ -1,0 +1,71 @@
+fault_type_name: JVMRuntimeMutator
+target_kind: container
+seed_tier: erroring
+description: |
+  JVM runtime mutator: chaos-mesh attaches a JVM agent to the affected
+  container's process and rewrites a target method's bytecode at runtime.
+  Behaviour at the span plane mirrors JVMException — inbound spans that
+  route through the patched method tag ERROR and/or experience elevated
+  p99 latency. Sibling methods on the same JVM are unaffected. Manifest
+  matches at service granularity because the IR does not currently
+  bucket spans by operation/method.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features: []
+  optional_features:
+    - kind: span
+      feature: error_rate
+      band: [0.10, 1.0]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.5, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: container
+      feature: cpu_throttle_ratio
+      band: [1.5, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 2
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes]
+    edge_directions: [backward, backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.10, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.2, .inf]
+        magnitude_decay: 0.6
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs:
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.5
+    on_layer: 1
+    rationale: |
+      When the rewritten method's error_rate saturates above 0.5 at a
+      caller layer, downstream observers see response-abort symptoms.
+      Universal cross-family trigger; mirrors JVMException.
+
+terminals: []

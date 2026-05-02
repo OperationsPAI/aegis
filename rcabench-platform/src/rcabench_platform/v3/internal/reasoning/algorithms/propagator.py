@@ -128,76 +128,26 @@ class FaultPropagator:
             if self.graph.get_node_by_id(injection_node_id) is None:
                 raise ValueError(f"Injection node {injection_node_id} not found in graph")
 
-        # Phase 5: when a manifest is registered for the active fault
-        # type the manifest-aware path builder drives expansion in-build
-        # (replacing the post-filter mode that the generic builder +
-        # ManifestLayerGate combination implemented in Phase 3). Falls
-        # back to the generic post-filter path when no manifest is
-        # registered — keeps the unmanifested fault types working
-        # exactly as before.
+        # Manifest-only: every chaos-tool fault type in the catalog has a
+        # registered manifest (see ``models/fault_seed.FAULT_TYPE_TO_SEED_TIER``
+        # vs ``manifests/fault_types/*.yaml``), so we always route through
+        # the manifest-driven path builder. Cases lacking a manifest /
+        # v_root return an empty result with a clear warning instead of
+        # silently producing garbage from rule-only propagation.
         if (
-            self.reasoning_ctx is not None
-            and self.reasoning_ctx.manifest is not None
-            and self.reasoning_ctx.v_root_node_id is not None
+            self.reasoning_ctx is None
+            or self.reasoning_ctx.manifest is None
+            or self.reasoning_ctx.v_root_node_id is None
         ):
-            return self._propagate_manifest_driven(
-                injection_node_ids=injection_node_ids,
-                alarm_nodes=alarm_nodes,
+            ft = (
+                self.reasoning_ctx.fault_type_name
+                if self.reasoning_ctx is not None
+                else "<no_ctx>"
             )
-
-        def edge_filter(src_id: int, dst_id: int, is_first_hop: bool) -> bool:
-            src_states = self._states_for_node(src_id)
-            dst_states = self._states_for_node(dst_id)
-            src_labels = self._labels_for_node(src_id)
-            return self.rule_matcher.edge_matches_any_rule(
-                src_id, dst_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
+            warning_msg = (
+                f"manifest-only propagator: skipping fault_type={ft} — "
+                f"no manifest registered or no v_root resolved"
             )
-
-        # §7.6 step 6 + §13.2 step 2.6 — bidirectional corridor + activity filter.
-        # corridor       = Reach_forward(injection_set, max_hops_fwd)
-        #                ∩ Reach_backward(alarm_set,    max_hops_bwd)
-        # relevant_nodes = corridor ∩ (deviating_set ∪ injection_set)
-        injection_set = set(injection_node_ids)
-
-        # Reverse-orientation filter for the backward reach pass: an edge
-        # (a, b) participates in backward reach from b iff (b → a) matches
-        # some rule's forward propagation direction. ``is_first_hop`` is set
-        # iff the neighbor we're stepping toward (which becomes the SRC of
-        # the forward-propagation rule) is in the original injection_set —
-        # see git blame on the previous revision for the asymmetry this fixes.
-        def backward_edge_filter(src_id: int, dst_id: int, is_first_hop_unused: bool) -> bool:
-            src_states = self._states_for_node(dst_id)
-            dst_states = self._states_for_node(src_id)
-            src_labels = self._labels_for_node(dst_id)
-            is_first_hop = dst_id in injection_set
-            return self.rule_matcher.edge_matches_any_rule(
-                dst_id, src_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
-            )
-
-        forward_edges = self.topology_explorer.find_reachable_subgraph(injection_node_ids, alarm_nodes, edge_filter)
-        forward_visited: set[int] = set(injection_set)
-        for s, d in forward_edges:
-            forward_visited.add(s)
-            forward_visited.add(d)
-
-        backward_edges = self.topology_explorer.find_reachable_subgraph(
-            list(alarm_nodes), set(injection_set), backward_edge_filter
-        )
-        backward_visited: set[int] = set(alarm_nodes)
-        for s, d in backward_edges:
-            backward_visited.add(s)
-            backward_visited.add(d)
-
-        corridor = forward_visited & backward_visited
-        deviating_set = self._compute_deviating_set()
-        relevant_nodes = corridor & (deviating_set | injection_set)
-
-        subgraph_edges = [(s, d) for s, d in forward_edges if s in relevant_nodes and d in relevant_nodes]
-        warnings: list[str] = []
-
-        if not subgraph_edges:
-            warning_msg = f"No reachable edges found from injection nodes {injection_node_ids}"
-            warnings.append(warning_msg)
             logger.warning(f"  [WARNING] {warning_msg}")
             return PropagationResult(
                 injection_node_ids=injection_node_ids,
@@ -206,68 +156,13 @@ class FaultPropagator:
                 visited_nodes=set(),
                 max_hops_reached=0,
                 subgraph_edges=[],
-                warnings=warnings,
+                warnings=[warning_msg],
+                rejected_paths=[],
             )
 
-        all_topology_paths = self.topology_explorer.extract_paths(subgraph_edges, injection_node_ids, alarm_nodes)
-
-        if not all_topology_paths:
-            warning_msg = f"No paths extracted from reachable subgraph ({len(subgraph_edges)} edges available)"
-            warnings.append(warning_msg)
-            logger.warning(f"  [WARNING] {warning_msg}")
-            return PropagationResult(
-                injection_node_ids=injection_node_ids,
-                injection_states=["unknown"] * len(injection_node_ids),
-                paths=[],
-                visited_nodes=set(),
-                max_hops_reached=0,
-                subgraph_edges=subgraph_edges,
-                warnings=warnings,
-            )
-
-        ctx = GateContext(
-            graph=self.graph,
-            timelines=self.timelines,
-            rules=self.rules,
-            rule_matcher=self.rule_matcher,
-            injection_window=self.injection_window,
-            injection_node_ids=frozenset(injection_node_ids),
-        )
-
-        valid_paths: list[PropagationPath] = []
-        rejected_paths: list[RejectedPath] = []
-        visited_nodes: set[int] = set()
-        max_hops = 0
-        for node_ids in all_topology_paths:
-            visited_nodes.update(node_ids)
-            max_hops = max(max_hops, len(node_ids) - 1)
-            admitted, gate_results, candidate = self._build_and_evaluate(node_ids, ctx)
-            if admitted is not None:
-                for rule_id in admitted.rules:
-                    self.rule_stats.record_rule_use(rule_id)
-                valid_paths.append(admitted)
-            elif candidate is not None:
-                rejected_paths.append(RejectedPath(node_ids=list(node_ids), gate_results=gate_results))
-
-        if self.rule_stats.rule_counts:
-            logger.info(self.rule_stats.get_summary())
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            injection_hash = hashlib.md5(str(sorted(injection_node_ids)).encode()).hexdigest()[:8]
-            stat_dir = Path("output/stat") / f"{timestamp}-{injection_hash}"
-            stat_dir.mkdir(parents=True, exist_ok=True)
-            stat_file = stat_dir / "rule_stats.json"
-            self.rule_stats.save_to_file(stat_file)
-            logger.info(f"Saved rule statistics to {stat_file}")
-
-        return PropagationResult(
+        return self._propagate_manifest_driven(
             injection_node_ids=injection_node_ids,
-            injection_states=["unknown"] * len(injection_node_ids),
-            paths=valid_paths,
-            visited_nodes=visited_nodes,
-            max_hops_reached=max_hops,
-            subgraph_edges=subgraph_edges,
-            warnings=warnings,
-            rejected_paths=rejected_paths,
+            alarm_nodes=alarm_nodes,
         )
 
     def _propagate_manifest_driven(

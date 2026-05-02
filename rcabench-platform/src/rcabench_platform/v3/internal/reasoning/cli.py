@@ -1024,15 +1024,28 @@ def _collect_batch_tasks(
         if max_cases > 0 and len(tasks) >= max_cases:
             break
 
-        data_dir = case_folder / "converted"
-        injection_file = data_dir / "injection.json"
-        if not injection_file.exists():
+        # Two layouts in the wild:
+        #   legacy:  case_folder/converted/{injection.json, parquet, ...}
+        #   aegis:   case_folder/{injection.json, parquet, ...}
+        # Pick whichever has injection.json so callers don't have to flag it.
+        legacy_dir = case_folder / "converted"
+        if (legacy_dir / "injection.json").exists():
+            data_dir = legacy_dir
+        elif (case_folder / "injection.json").exists():
+            data_dir = case_folder
+        else:
             logger.debug(f"[{case_folder.name}] Skipping: injection.json not found")
             continue
 
-        valid_marker = case_folder / ".valid"
-        if not valid_marker.exists():
-            logger.debug(f"[{case_folder.name}] Skipping: .valid marker not found")
+        # Validity marker: `.valid` (legacy) or any of the AegisLab markers.
+        # Empty marker files; their presence is the only signal.
+        if not any(
+            (case_folder / m).exists() or (data_dir / m).exists()
+            for m in (".valid", ".done", ".finished")
+        ):
+            logger.debug(
+                f"[{case_folder.name}] Skipping: no .valid/.done/.finished marker"
+            )
             continue
 
         case_output_folder = data_dir
@@ -1053,7 +1066,7 @@ def _collect_batch_tasks(
                 continue
 
         try:
-            with open(injection_file, encoding="utf-8") as f:
+            with open(data_dir / "injection.json", encoding="utf-8") as f:
                 injection_data = json.load(f)
 
             services = _extract_services_from_injection(injection_data)
