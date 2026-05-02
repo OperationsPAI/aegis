@@ -211,6 +211,38 @@ containers:
               default_value: ClusterIP
               overridable: true
           status: 1
+      # Bumped 1.0.6 → 1.0.7 to pick up trainticket chart 0.3.0
+      # (OperationsPAI/train-ticket#24) which adds a per-namespace OTel
+      # collector sidecar — each ts release ships its own otel-collector
+      # Deployment+Service+CM+SA, services point at same-ns short DNS
+      # `http://otel-collector:4317` instead of cross-ns shared collector.
+      # Fixes aegis #367 (shared ts collector ClickHouse-exporter
+      # sending_queue saturation, ~1830 spans/sec dropped → empty
+      # abnormal_traces.parquet). Inherits 1.0.6's full values block (rabbitmq,
+      # mysql, loadgenerator, ts-ui-dashboard ClusterIP pins) via reseed
+      # auto-backfill on the new container_versions row.
+      - name: 1.0.7
+        github_link: OperationsPAI/train-ticket
+        status: 1
+        helm_config:
+          version: 0.3.0
+          chart_name: trainticket
+          repo_name: train-ticket
+          repo_url: https://operationspai.github.io/train-ticket
+          values:
+            - key: services.tsUiDashboard.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+          status: 1
   - type: 2
     name: otel-demo
     is_public: true
@@ -328,6 +360,23 @@ containers:
               value_type: 0
               default_value: "0.135.0"
               overridable: true
+          status: 1
+      # Bumped 0.1.9 → 0.1.10 to pick up otel-demo-aegis chart 0.1.9
+      # (OperationsPAI/benchmark-charts#11) which adds a per-namespace
+      # `aegis-otel-collector` sidecar chained behind the upstream demo's
+      # in-ns `otel-collector` (preserves spanmetrics enrichment). New chart
+      # repoints the demo's `clusterCollector.service` to the same-ns
+      # `aegis-otel-collector:4317`. Inherits 0.1.9's full image-rewrite
+      # values block via reseed auto-backfill.
+      - name: 0.1.10
+        github_link: open-telemetry/opentelemetry-demo
+        status: 1
+        helm_config:
+          version: 0.1.9
+          chart_name: otel-demo-aegis
+          repo_name: opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          values: []
           status: 1
   - type: 2
     name: ob
@@ -486,6 +535,40 @@ containers:
               category: 1
               value_type: 0
               default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+          status: 1
+      # Bumped 0.1.5 → 0.1.6 to pick up hotel-reservation chart 0.2.0
+      # (LGU-SE-Internal/DeathStarBench#58) which adds a per-namespace OTel
+      # collector sidecar — services point at same-ns short DNS
+      # `otel-collector:4318` (HTTP, hs Go services use otlptracehttp).
+      # Repoints `global.otel.endpoint` from cross-ns shared collector to
+      # same-ns sidecar. Same architectural rationale as ts (#367).
+      - name: 0.1.6
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.0
+          chart_name: hotel-reservation
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
               overridable: true
           status: 1
   - type: 2
