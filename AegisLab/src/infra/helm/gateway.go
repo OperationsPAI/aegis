@@ -158,18 +158,23 @@ func (g *Gateway) installRelease(ctx context.Context, settings *cli.EnvSettings,
 		installAction.CreateNamespace = true
 		installAction.Version = version
 
-		chartPath, err := findCachedChart(settings, chartName)
+		chartPath, err := findCachedChart(settings, chartName, version)
 		if err != nil {
 			return err
 		}
 		if chartPath == "" {
-			logrus.Infof("Chart %s not found in cache, downloading...", chartName)
+			// Either no cached tgz exists, or the cached tgz is for a
+			// different version than requested. In both cases we let
+			// LocateChart re-resolve from the repo index so installAction.Version
+			// is honored — otherwise a stale `<chart>-<oldver>.tgz` shadows
+			// every subsequent version bump (issue #374).
+			logrus.Infof("Chart %s version %q not found in cache, downloading...", chartName, version)
 			chartPath, err = installAction.LocateChart(chartName, settings)
 			if err != nil {
 				return fmt.Errorf("failed to locate chart %s: %w", chartName, err)
 			}
 		} else {
-			logrus.Infof("Using cached chart for %s at %s", chartName, chartPath)
+			logrus.Infof("Using cached chart for %s version %q at %s", chartName, version, chartPath)
 		}
 
 		chart, err := loader.Load(chartPath)
@@ -259,7 +264,14 @@ func newRuntime(namespace string) (*cli.EnvSettings, *action.Configuration, erro
 	return settings, actionConfig, nil
 }
 
-func findCachedChart(settings *cli.EnvSettings, chartName string) (string, error) {
+// findCachedChart returns the path of a cached chart tgz (or local dir) that
+// matches both <chartName> and <version>. When <version> is non-empty, only an
+// exact <chartBaseName>-<version>.tgz match counts as a hit; an unversioned
+// glob would otherwise return e.g. trainticket-0.3.0.tgz when the caller asked
+// for 0.3.1, silently installing the stale chart (issue #374). When <version>
+// is empty (caller didn't pin a version), fall back to the legacy any-version
+// glob so installAction.LocateChart can resolve the latest from the repo.
+func findCachedChart(settings *cli.EnvSettings, chartName, version string) (string, error) {
 	if _, err := os.Stat(chartName); err == nil {
 		abs, err := filepath.Abs(chartName)
 		if err == nil {
@@ -269,21 +281,21 @@ func findCachedChart(settings *cli.EnvSettings, chartName string) (string, error
 	}
 
 	cacheDir := settings.RepositoryCache
-	var searchPatterns []string
+	chartBaseName := chartName
 	if strings.Contains(chartName, "/") {
 		parts := strings.Split(chartName, "/")
 		if len(parts) == 2 {
-			chartBaseName := parts[1]
-			searchPatterns = append(searchPatterns,
-				fmt.Sprintf("%s/*/%s-*.tgz", cacheDir, chartBaseName),
-				fmt.Sprintf("%s/%s-*.tgz", cacheDir, chartBaseName),
-			)
+			chartBaseName = parts[1]
 		}
-	} else {
-		searchPatterns = append(searchPatterns,
-			fmt.Sprintf("%s/*/%s-*.tgz", cacheDir, chartName),
-			fmt.Sprintf("%s/%s-*.tgz", cacheDir, chartName),
-		)
+	}
+
+	versionGlob := "*"
+	if version != "" {
+		versionGlob = version
+	}
+	searchPatterns := []string{
+		fmt.Sprintf("%s/*/%s-%s.tgz", cacheDir, chartBaseName, versionGlob),
+		fmt.Sprintf("%s/%s-%s.tgz", cacheDir, chartBaseName, versionGlob),
 	}
 
 	for _, pattern := range searchPatterns {
