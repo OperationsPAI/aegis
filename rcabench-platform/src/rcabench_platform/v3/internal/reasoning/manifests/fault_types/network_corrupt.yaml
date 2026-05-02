@@ -17,7 +17,12 @@ description: |
 # (cpu/mem/throttle) do NOT fire.
 entry_signature:
   # Disjunction (see network_loss.yaml rationale). Bands sit slightly looser
-  # than NetworkLoss reflecting reduced severity (Loss > Corrupt).
+  # than NetworkLoss reflecting reduced severity (Loss > Corrupt). Silent is
+  # added as an alternative entry signal: when corruption rate is high
+  # (sample injections include corrupt=84-100%), the few packets that get
+  # through can produce a faster p99 (less queuing) so the latency band
+  # paradoxically misses; the request-volume drop at adjacent spans is
+  # what then surfaces.
   entry_window_sec: 30
   required_features: []
   optional_features:
@@ -33,6 +38,10 @@ entry_signature:
       feature: error_rate
       band: [0.04, 1.0]
       magnitude_source: empirical
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: theoretical
   optional_min_match: 1
 
 # Layer structure mirrors NetworkLoss but with slightly looser bounds
@@ -41,6 +50,12 @@ entry_signature:
 # radius within two hops.
 derivation_layers:
   - layer: 1
+    # Add `silent` as a parallel cascade signal: TCP checksum-fail
+    # retransmits stall trace-SDK emission on the affected RPC, so the
+    # adjacent span often goes silent (request volume drop or missing
+    # span) within window. This mirrors the NetworkLoss layer-1 design
+    # and matches the empirical surface (silent=1.0 on every cascading
+    # span across both rca/ and detector_success_last13h datasets).
     edge_kinds: [calls, includes, routes_to]
     edge_directions: [forward, forward, backward]
     expected_features:
@@ -52,8 +67,16 @@ derivation_layers:
         feature: latency_p99_ratio
         band: [1.18, .inf]
         magnitude_decay: 0.7
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
     max_fanout: 32
   - layer: 2
+    # Same physics-based addition as layer 1: deeper callers in the
+    # cascade most often surface as silent + elevated p99 (the upstream
+    # span gives up waiting on the slow RPC), with error/timeout staying
+    # at zero because TCP eventually delivers.
     edge_kinds: [calls]
     edge_directions: [backward]
     expected_features:
@@ -65,7 +88,62 @@ derivation_layers:
         feature: timeout_rate
         band: [0.02, 1.0]
         magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.18, .inf]
+        magnitude_decay: 0.5
     max_fanout: 16
+  - layer: 3
+    # Layer 3 reaches the SLO surface in deep service trees (mirrors
+    # NetworkLoss layer-3 rationale; same physics, slightly looser bands
+    # tracking Loss > Corrupt severity ordering).
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.1, .inf]
+        magnitude_decay: 0.4
+    max_fanout: 8
+  - layer: 4
+    # Layer 4 mirrors NetworkLoss layer-4: covers gateway/ingress alarms
+    # in deep service trees (otel-demo). FP control via alarm-terminate.
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.02, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.05, .inf]
+        magnitude_decay: 0.3
+    max_fanout: 4
 
 hand_offs: []
 
