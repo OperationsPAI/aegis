@@ -1,6 +1,7 @@
 package initialization
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -179,6 +180,9 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir 
 			// contract.
 			if vSeed.HelmConfig != nil {
 				if err := compareHelmConfigDrift(db, existingVersion, vSeed.HelmConfig, seed.Name, dryRun, report); err != nil {
+					return err
+				}
+				if err := resnapshotHelmValueFileIfDrifted(db, existingVersion, seed.Name, valuesDir, dryRun, report); err != nil {
 					return err
 				}
 			}
@@ -449,6 +453,67 @@ func compareHelmConfigDrift(db *gorm.DB, version *model.ContainerVersion, seed *
 			Applied:  false,
 		})
 	}
+	return nil
+}
+
+// resnapshotHelmValueFileIfDrifted re-snapshots the helm value_file for an
+// existing container_version when the on-disk source overlay (under
+// valuesDir/<systemName>.yaml — same convention as the new-version branch
+// and InitializeProducer) differs from the bytes already pinned by
+// helm_configs.value_file. This closes issue #360: on system reseed --apply
+// for an already-seeded version, operators expect a CM update to the overlay
+// to take effect on the next helm install. Without this, the row keeps
+// pointing at the original timestamped snapshot and helm silently installs
+// stale values.
+//
+// No-op when: source overlay missing, current value_file empty, or bytes
+// identical. The new-version INSERT branch is left alone — it already takes
+// the same snapshot at row creation time.
+func resnapshotHelmValueFileIfDrifted(db *gorm.DB, version *model.ContainerVersion, systemName, valuesDir string, dryRun bool, report *ReseedReport) error {
+	var helm model.HelmConfig
+	if err := db.Where("container_version_id = ?", version.ID).First(&helm).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return fmt.Errorf("lookup helm_config for value_file resnapshot: %w", err)
+	}
+	if helm.ValueFile == "" {
+		return nil
+	}
+	srcPath := filepath.Join(valuesDir, fmt.Sprintf("%s.yaml", systemName))
+	srcBytes, err := os.ReadFile(srcPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("read source overlay %s: %w", srcPath, err)
+	}
+	curBytes, err := os.ReadFile(helm.ValueFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read current snapshot %s: %w", helm.ValueFile, err)
+	}
+	if err == nil && bytes.Equal(curBytes, srcBytes) {
+		return nil
+	}
+	act := ReseedAction{
+		Layer:    "helm_configs",
+		System:   systemName,
+		Key:      version.Name,
+		OldValue: helm.ValueFile,
+		NewValue: "<new snapshot from " + srcPath + ">",
+		Note:     "value_file overlay drift; re-snapshotting from CM source",
+	}
+	if dryRun {
+		report.Actions = append(report.Actions, act)
+		return nil
+	}
+	if err := containerrepo.NewRepository(db).UploadHelmValueFileFromPath(systemName, &helm, srcPath); err != nil {
+		return fmt.Errorf("upload re-snapshot for %s@%s: %w", systemName, version.Name, err)
+	}
+	act.NewValue = helm.ValueFile
+	act.Applied = true
+	report.Actions = append(report.Actions, act)
+	logrus.Infof("reseed %s: re-snapshotted helm value_file for version=%s old=%s new=%s", systemName, version.Name, act.OldValue, helm.ValueFile)
 	return nil
 }
 
@@ -854,6 +919,9 @@ func ReseedHelmConfigForVersion(ctx context.Context, db *gorm.DB, req ReseedHelm
 	helm, err := upsertHelmConfigForReseed(db, &version, seedVersion.HelmConfig, container.Name, req.DryRun, report)
 	if err != nil {
 		return report, fmt.Errorf("reseed helm_configs for %s@%s: %w", container.Name, version.Name, err)
+	}
+	if err := resnapshotHelmValueFileIfDrifted(db, &version, container.Name, filepath.Dir(req.DataPath), req.DryRun, report); err != nil {
+		return report, fmt.Errorf("re-snapshot helm value_file for %s@%s: %w", container.Name, version.Name, err)
 	}
 	if helm == nil {
 		// Dry-run path with no existing row: synthesize a placeholder so the
