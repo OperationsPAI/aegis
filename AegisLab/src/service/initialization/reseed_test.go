@@ -1123,6 +1123,24 @@ func TestReseedHelmConfigForVersionMissingVersion(t *testing.T) {
 	}
 }
 
+// setViperForTest sets a viper key for the duration of the test, restoring
+// the prior value (and IsSet state) on cleanup. Plain defer-set-to-"" leaks
+// state across tests when run in any order other than the one the author had
+// in mind.
+func setViperForTest(t *testing.T, key string, value any) {
+	t.Helper()
+	prior := viper.Get(key)
+	hadPrior := viper.IsSet(key)
+	viper.Set(key, value)
+	t.Cleanup(func() {
+		if hadPrior {
+			viper.Set(key, prior)
+		} else {
+			viper.Set(key, nil)
+		}
+	})
+}
+
 // --- issue #360 regression: re-snapshot helm value_file on overlay drift ---
 //
 // Setup helper: pre-seeds a container + version + helm_config that points at
@@ -1174,8 +1192,7 @@ containers:
 func TestReseedResnapshotsHelmValueFileOnDrift(t *testing.T) {
 	db := newReseedTestDB(t)
 	basePath := t.TempDir()
-	viper.Set("jfs.dataset_path", basePath)
-	defer viper.Set("jfs.dataset_path", "")
+	setViperForTest(t, "jfs.dataset_path", basePath)
 
 	system := "otel-demo"
 	oldSnapshot := seedHelmValueFileFixture(t, db, basePath, system, "imageTag: stale\n")
@@ -1219,8 +1236,7 @@ func TestReseedResnapshotsHelmValueFileOnDrift(t *testing.T) {
 func TestReseedResnapshotNoOpWhenBytesIdentical(t *testing.T) {
 	db := newReseedTestDB(t)
 	basePath := t.TempDir()
-	viper.Set("jfs.dataset_path", basePath)
-	defer viper.Set("jfs.dataset_path", "")
+	setViperForTest(t, "jfs.dataset_path", basePath)
 
 	system := "otel-demo"
 	snapshot := seedHelmValueFileFixture(t, db, basePath, system, "imageTag: same\n")
@@ -1248,8 +1264,7 @@ func TestReseedResnapshotNoOpWhenBytesIdentical(t *testing.T) {
 func TestReseedResnapshotNoOpWhenOverlayMissing(t *testing.T) {
 	db := newReseedTestDB(t)
 	basePath := t.TempDir()
-	viper.Set("jfs.dataset_path", basePath)
-	defer viper.Set("jfs.dataset_path", "")
+	setViperForTest(t, "jfs.dataset_path", basePath)
 
 	system := "otel-demo"
 	snapshot := seedHelmValueFileFixture(t, db, basePath, system, "imageTag: keep\n")
@@ -1270,8 +1285,7 @@ func TestReseedResnapshotNoOpWhenOverlayMissing(t *testing.T) {
 func TestReseedResnapshotNoOpWhenValueFileEmpty(t *testing.T) {
 	db := newReseedTestDB(t)
 	basePath := t.TempDir()
-	viper.Set("jfs.dataset_path", basePath)
-	defer viper.Set("jfs.dataset_path", "")
+	setViperForTest(t, "jfs.dataset_path", basePath)
 
 	system := "otel-demo"
 	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, ?, 2, 1)`, system)
