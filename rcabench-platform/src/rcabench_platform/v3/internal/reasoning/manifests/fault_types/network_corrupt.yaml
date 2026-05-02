@@ -27,7 +27,7 @@ entry_signature:
       magnitude_source: empirical
     - kind: span
       feature: latency_p99_ratio
-      band: [1.25, .inf]
+      band: [1.05, .inf]
       magnitude_source: empirical
     - kind: span
       feature: error_rate

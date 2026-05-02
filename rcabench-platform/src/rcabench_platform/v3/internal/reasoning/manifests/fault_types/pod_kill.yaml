@@ -42,7 +42,8 @@ entry_signature:
       feature: restart_count
       band: [1.0, .inf]
       magnitude_source: theoretical
-  optional_min_match: 1
+  # Real cases co-fire multiple features; sham single-silent FPs eliminated.
+  optional_min_match: 2
 
 derivation_layers:
   - layer: 1

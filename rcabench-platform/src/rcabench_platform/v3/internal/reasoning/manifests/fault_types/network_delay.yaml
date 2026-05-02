@@ -23,11 +23,11 @@ entry_signature:
   optional_features:
     - kind: span
       feature: latency_p99_ratio
-      band: [1.5, .inf]
+      band: [1.2, .inf]
       magnitude_source: empirical
     - kind: span
       feature: latency_p50_ratio
-      band: [1.3, .inf]
+      band: [1.1, .inf]
       magnitude_source: empirical
     - kind: span
       feature: timeout_rate
@@ -45,11 +45,11 @@ derivation_layers:
     expected_features:
       - kind: span
         feature: latency_p99_ratio
-        band: [1.3, .inf]
+        band: [1.2, .inf]
         magnitude_decay: 0.7
       - kind: span
         feature: latency_p50_ratio
-        band: [1.2, .inf]
+        band: [1.1, .inf]
         magnitude_decay: 0.7
     max_fanout: 32
   - layer: 2

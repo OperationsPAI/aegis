@@ -12,8 +12,8 @@ entry_signature:
   required_features:
     - kind: span
       feature: error_rate
-      band: [0.3, 1.0]
-      magnitude_source: theoretical
+      band: [0.08, 1.0]
+      magnitude_source: empirical
   optional_features:
     - kind: span
       feature: latency_p99_ratio
@@ -28,7 +28,7 @@ derivation_layers:
     expected_features:
       - kind: span
         feature: error_rate
-        band: [0.2, 1.0]
+        band: [0.08, 1.0]
         magnitude_decay: null
     max_fanout: 16
 

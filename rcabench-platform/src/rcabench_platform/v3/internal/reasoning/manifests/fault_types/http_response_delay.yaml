@@ -9,32 +9,51 @@ description: |
   counters at the container/pod level are unaffected.
 
 entry_signature:
+  # Disjunction: long-tailed baseline p99 compresses the ratio even for
+  # multi-second injections (observed 3.5x for 4.4s). p50 and timeout are
+  # cleaner signals. Any one of {p99, p50, timeout, error} suffices.
   entry_window_sec: 30
-  required_features:
-    - kind: span
-      feature: latency_p99_ratio
-      band: [5.0, .inf]
-      magnitude_source: theoretical
+  required_features: []
   optional_features:
     - kind: span
-      feature: latency_p50_ratio
+      feature: latency_p99_ratio
       band: [3.0, .inf]
-      magnitude_source: theoretical
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p50_ratio
+      band: [2.5, .inf]
+      magnitude_source: empirical
     - kind: span
       feature: timeout_rate
       band: [0.05, 1.0]
-      magnitude_source: theoretical
-  optional_min_match: 0
+      magnitude_source: empirical
+    - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: empirical
+  # Real cases co-fire ≥2 features (e.g., p50 + error, or p99 + timeout).
+  # Sham mode picks v_roots whose second-half normal happens to be slower
+  # on p99 alone (organic outlier); tightening rejects single-feature FPs.
+  optional_min_match: 2
 
 derivation_layers:
   - layer: 1
+    # Disjunction: see http_request_delay.yaml rationale.
     edge_kinds: [calls]
     edge_directions: [backward]
     expected_features:
       - kind: span
         feature: latency_p99_ratio
-        band: [2.5, .inf]
+        band: [2.0, .inf]
         magnitude_decay: 0.5
+      - kind: span
+        feature: latency_p50_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
       - kind: span
         feature: timeout_rate
         band: [0.05, 1.0]

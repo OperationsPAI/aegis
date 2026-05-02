@@ -40,7 +40,10 @@ entry_signature:
       feature: connection_refused_rate
       band: [0.1, 1.0]
       magnitude_source: empirical
-  optional_min_match: 1
+  # Real cases reliably co-fire ≥2 features (restart_count + silent or
+  # error). Sham mode picks low-traffic v_roots that look silent — single-
+  # feature FPs dominate. Tightening to 2 rejects them without losing real.
+  optional_min_match: 2
 
 derivation_layers:
   - layer: 1

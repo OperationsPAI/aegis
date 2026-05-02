@@ -41,7 +41,10 @@ entry_signature:
       feature: error_rate
       band: [0.2, 1.0]
       magnitude_source: empirical
-  optional_min_match: 1
+  # Real cases reliably co-fire ≥2 features (unavailable + silent, etc).
+  # Sham mode often picks a low-traffic v_root whose second-half-normal
+  # window is silent organically; tightening rejects single-feature FPs.
+  optional_min_match: 2
 
 # Layer 1: service.silent — full traffic isolation seen at the service
 # rollup of the partitioned pod. Layer 2: caller spans show high

@@ -14,8 +14,8 @@ entry_signature:
   required_features:
     - kind: span
       feature: error_rate
-      band: [0.1, 1.0]
-      magnitude_source: theoretical
+      band: [0.02, 1.0]
+      magnitude_source: empirical
   optional_features:
     - kind: span
       feature: latency_p99_ratio

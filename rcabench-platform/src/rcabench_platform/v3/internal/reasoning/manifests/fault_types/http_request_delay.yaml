@@ -8,32 +8,47 @@ description: |
   level are unaffected.
 
 entry_signature:
+  # Disjunction: dataset shows long-tailed baselines compress p99 ratio
+  # (observed 1.4-3.6x for 2.8-4.4s injections), while p50 and error are
+  # cleaner signals. Any one of {p99, p50, error_rate} suffices.
   entry_window_sec: 30
-  required_features:
-    - kind: span
-      feature: latency_p99_ratio
-      band: [5.0, .inf]
-      magnitude_source: theoretical
+  required_features: []
   optional_features:
     - kind: span
-      feature: latency_p50_ratio
+      feature: latency_p99_ratio
       band: [3.0, .inf]
-      magnitude_source: theoretical
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p50_ratio
+      band: [2.5, .inf]
+      magnitude_source: empirical
     - kind: span
       feature: error_rate
-      band: [0.0, 0.2]
-      magnitude_source: theoretical
-  optional_min_match: 0
+      band: [0.05, 1.0]
+      magnitude_source: empirical
+  # Real cases co-fire ≥2 features. Sham mode mostly fires p99 alone
+  # (organic baseline outliers); tightening rejects single-feature FPs.
+  optional_min_match: 2
 
 derivation_layers:
   - layer: 1
+    # Disjunction: callers' p99 ratio dilutes due to long-tailed baselines
+    # while p50 and error are cleaner. Mirror entry-signature alternatives.
     edge_kinds: [calls]
     edge_directions: [backward]
     expected_features:
       - kind: span
         feature: latency_p99_ratio
-        band: [2.5, .inf]
+        band: [2.0, .inf]
         magnitude_decay: 0.5
+      - kind: span
+        feature: latency_p50_ratio
+        band: [3.0, .inf]
+        magnitude_decay: 0.5
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
       - kind: span
         feature: timeout_rate
         band: [0.05, 1.0]

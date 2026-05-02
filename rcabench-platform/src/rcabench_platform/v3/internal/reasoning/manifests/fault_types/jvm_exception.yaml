@@ -29,7 +29,9 @@ entry_signature:
       feature: cpu_throttle_ratio
       band: [1.5, .inf]
       magnitude_source: theoretical
-  optional_min_match: 1
+  # Real cases co-fire ≥2 features (e.g., error + p99). Sham latency-alone
+  # FPs eliminated.
+  optional_min_match: 2
 
 derivation_layers:
   - layer: 1

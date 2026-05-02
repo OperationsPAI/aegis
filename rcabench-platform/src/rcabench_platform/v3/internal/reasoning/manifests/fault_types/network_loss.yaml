@@ -44,6 +44,10 @@ entry_signature:
 # error rate when retry budget exhausts.
 derivation_layers:
   - layer: 1
+    # Add `silent` as alternative: when loss saturates, the few packets
+    # that get through are FASTER (less queuing) so p99 ratio paradoxically
+    # drops below 1.0. Adjacent spans look silent (timeline empty) — that
+    # silence IS the cascade signal.
     edge_kinds: [calls, includes, routes_to]
     edge_directions: [forward, forward, backward]
     expected_features:
@@ -55,6 +59,10 @@ derivation_layers:
         feature: latency_p99_ratio
         band: [1.2, .inf]
         magnitude_decay: 0.7
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
     max_fanout: 32
   - layer: 2
     edge_kinds: [calls]
