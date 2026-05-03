@@ -12,7 +12,10 @@ import typer
 from tqdm import tqdm
 
 from rcabench_platform.v3.internal.reasoning._util import setup_logging
-from rcabench_platform.v3.internal.reasoning.algorithms.gates import INJECT_TIME_TOLERANCE_SECONDS
+from rcabench_platform.v3.internal.reasoning.algorithms.gates import (
+    INJECT_TIME_TOLERANCE_SECONDS,
+    manifest_aware_gates,
+)
 from rcabench_platform.v3.internal.reasoning.algorithms.label_classifier import classify
 from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultPropagator
 from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
@@ -27,6 +30,15 @@ from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
+from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+from rcabench_platform.v3.internal.reasoning.manifests.extractors import (
+    extract_feature_samples,
+)
+from rcabench_platform.v3.internal.reasoning.manifests.registry import (
+    ManifestRegistry,
+    get_default_registry,
+    set_default_registry,
+)
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, HyperGraph, PlaceKind
 from rcabench_platform.v3.internal.reasoning.models.injection import InjectionNodeResolver
 from rcabench_platform.v3.internal.reasoning.models.propagation import (
@@ -43,6 +55,37 @@ from rcabench_platform.v3.sdk.utils.serde import save_json
 
 logger = logging.getLogger(__name__)
 app = typer.Typer(name="reason", help="Fault propagation reasoning engine CLI")
+
+
+# Default manifest directory: package-relative ``manifests/fault_types/``.
+# Phase 1 ships zero manifests (apart from the example referenced in tests),
+# so the default is "registry empty → fall back to generic rules everywhere".
+_DEFAULT_MANIFEST_DIR = Path(__file__).resolve().parent / "manifests" / "fault_types"
+
+
+def _init_manifest_registry(manifest_dir: str | None) -> None:
+    """Build and install the process-wide manifest registry.
+
+    Phase 1 keeps the generic-rule path as the default: an empty registry
+    or a missing directory both result in ``registry.get(name) is None``
+    for every fault type, which is the documented "fall back" signal.
+    """
+    target = Path(manifest_dir) if manifest_dir else _DEFAULT_MANIFEST_DIR
+    if not target.exists():
+        logger.info(
+            "manifest dir %s does not exist; using empty registry (generic rules everywhere)",
+            target,
+        )
+        set_default_registry(ManifestRegistry({}))
+        return
+    registry = ManifestRegistry.from_directory(target, strict=True)
+    logger.info(
+        "loaded %d manifest(s) from %s: %s",
+        len(registry),
+        target,
+        ", ".join(registry.names()) or "(none)",
+    )
+    set_default_registry(registry)
 
 
 # =============================================================================
@@ -560,6 +603,17 @@ def run_single_case(
             f"{resolved.start_kind} ({resolved.resolution_method}): {resolved.injection_nodes}"
         )
 
+        # Bind the active manifest (if any) for downstream Phase-3 gates.
+        # The full ReasoningContext (with v_root_node_id, t0, and
+        # feature_samples) is built below once the IR pipeline has run;
+        # this early lookup just decides routing and logging.
+        _registry = get_default_registry()
+        _manifest = _registry.get(resolved.fault_type_name)
+        if _manifest is None:
+            logger.info("no manifest for %s, using generic rules", resolved.fault_type_name)
+        else:
+            logger.debug("manifest %s bound for case %s", resolved.fault_type_name, case_name)
+
         physical_node_ids: list[int] = []
         for injection_node in actual_injection_nodes:
             injection_node_obj = graph.get_node_by_name(injection_node)
@@ -656,6 +710,36 @@ def run_single_case(
 
         local_effect = _compute_local_effect(physical_node_ids, timelines, graph)
 
+        # Build the ReasoningContext for the manifest-aware gates. This
+        # uses the IR products that have just been computed (graph,
+        # timelines, traces) plus the resolved injection root.
+        v_root_id: int | None = (
+            injection_node_ids[0] if injection_node_ids else (physical_node_ids[0] if physical_node_ids else None)
+        )
+        feature_samples = extract_feature_samples(
+            graph=graph,
+            baseline_traces=baseline_traces,
+            abnormal_traces=abnormal_traces,
+            abnormal_window_start=injection_at,
+            abnormal_window_end=abnormal_window_end,
+            timelines=timelines,
+        )
+        reasoning_ctx = ReasoningContext(
+            fault_type_name=resolved.fault_type_name,
+            manifest=_manifest,
+            v_root_node_id=v_root_id,
+            t0=injection_at,
+            feature_samples=feature_samples,
+            registry=_registry,
+            graph=graph,
+        )
+        if _manifest is not None:
+            logger.info(
+                f"[{case_name}] manifest gates active: "
+                f"{len(feature_samples)} feature samples extracted "
+                f"(v_root={v_root_id})"
+            )
+
         propagator_graph = graph
         if slo_impact.detected:
             tau = (
@@ -671,6 +755,8 @@ def run_single_case(
                 timelines=timelines,
                 max_hops=max_hops,
                 injection_window=injection_window,
+                gates=manifest_aware_gates(reasoning_ctx),
+                reasoning_ctx=reasoning_ctx,
             )
             result = propagator.propagate_from_injection(
                 injection_node_ids=injection_node_ids,
@@ -929,15 +1015,23 @@ def _collect_batch_tasks(
         if max_cases > 0 and len(tasks) >= max_cases:
             break
 
-        data_dir = case_folder / "converted"
-        injection_file = data_dir / "injection.json"
-        if not injection_file.exists():
+        # Two layouts in the wild:
+        #   legacy:  case_folder/converted/{injection.json, parquet, ...}
+        #   aegis:   case_folder/{injection.json, parquet, ...}
+        # Pick whichever has injection.json so callers don't have to flag it.
+        legacy_dir = case_folder / "converted"
+        if (legacy_dir / "injection.json").exists():
+            data_dir = legacy_dir
+        elif (case_folder / "injection.json").exists():
+            data_dir = case_folder
+        else:
             logger.debug(f"[{case_folder.name}] Skipping: injection.json not found")
             continue
 
-        valid_marker = case_folder / ".valid"
-        if not valid_marker.exists():
-            logger.debug(f"[{case_folder.name}] Skipping: .valid marker not found")
+        # Validity marker: `.valid` (legacy) or any of the AegisLab markers.
+        # Empty marker files; their presence is the only signal.
+        if not any((case_folder / m).exists() or (data_dir / m).exists() for m in (".valid", ".done", ".finished")):
+            logger.debug(f"[{case_folder.name}] Skipping: no .valid/.done/.finished marker")
             continue
 
         case_output_folder = data_dir
@@ -958,7 +1052,7 @@ def _collect_batch_tasks(
                 continue
 
         try:
-            with open(injection_file, encoding="utf-8") as f:
+            with open(data_dir / "injection.json", encoding="utf-8") as f:
                 injection_data = json.load(f)
 
             services = _extract_services_from_injection(injection_data)
@@ -1083,9 +1177,19 @@ def _log_batch_summary(stats: dict[str, int], total_time: float) -> None:
 def run(
     data_dir: str = typer.Option(..., help="Directory containing parquet data files"),
     max_hops: int = typer.Option(15, help="Maximum propagation hops"),
+    manifest_dir: str | None = typer.Option(
+        None,
+        "--manifest-dir",
+        help=(
+            "Directory of fault manifest YAMLs. Defaults to the package-shipped "
+            "``manifests/fault_types/``. An empty / missing directory keeps the "
+            "generic-rule fallback for every fault type."
+        ),
+    ),
 ) -> int:
     """Run fault propagation analysis for a single case."""
     setup_logging(verbose=True)
+    _init_manifest_registry(manifest_dir)
     total_start = time.time()
 
     data_path = Path(data_dir)
@@ -1149,7 +1253,17 @@ def batch(
     max_hops: int = typer.Option(15, help="Maximum propagation hops"),
     force: bool = typer.Option(False, "--force", help="Force reprocess all cases"),
     retry_no_paths: bool = typer.Option(False, "--retry-no-paths", help="Only retry no_paths cases"),
+    manifest_dir: str | None = typer.Option(
+        None,
+        "--manifest-dir",
+        help=(
+            "Directory of fault manifest YAMLs. Defaults to the package-shipped "
+            "``manifests/fault_types/``. An empty / missing directory keeps the "
+            "generic-rule fallback for every fault type."
+        ),
+    ),
 ) -> int:
+    _init_manifest_registry(manifest_dir)
     output_path = Path("output/batch_runs")
     output_path.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

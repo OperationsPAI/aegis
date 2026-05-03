@@ -62,6 +62,7 @@ _FAULT_DEFAULT_KIND_AND_CATEGORY: dict[str, tuple[str, str]] = {
     "JVMMemoryStress": ("container", "jvm"),
     "JVMMySQLLatency": ("span", "jvm_database"),
     "JVMMySQLException": ("span", "jvm_database"),
+    "JVMRuntimeMutator": ("container", "jvm"),
 }
 
 

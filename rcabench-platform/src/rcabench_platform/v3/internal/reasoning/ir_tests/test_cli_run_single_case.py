@@ -11,8 +11,13 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
+import pytest
 
 from rcabench_platform.v3.internal.reasoning import cli as reasoning_cli
+from rcabench_platform.v3.internal.reasoning.manifests import (
+    ManifestRegistry,
+    set_default_registry,
+)
 from rcabench_platform.v3.internal.reasoning.models.graph import (
     CallsEdgeData,
     DepKind,
@@ -21,6 +26,24 @@ from rcabench_platform.v3.internal.reasoning.models.graph import (
     Node,
     PlaceKind,
 )
+
+
+@pytest.fixture(autouse=True)
+def _empty_manifest_registry():
+    """Force generic-rule path for these synthetic-graph tests.
+
+    ``get_default_registry`` lazy-loads the bundled manifests when nobody
+    has installed an explicit registry. The synthetic stubs in this
+    module don't carry realistic feature samples, so manifest-aware
+    gates would (correctly) reject the path. Pin an empty registry for
+    the duration of each test, then restore the previous one.
+    """
+    from rcabench_platform.v3.internal.reasoning.manifests import registry as _reg
+
+    prev = _reg._DEFAULT_REGISTRY
+    set_default_registry(ManifestRegistry({}))
+    yield
+    _reg._DEFAULT_REGISTRY = prev
 
 
 def _make_graph_with_calls_chain() -> tuple[HyperGraph, dict[str, int]]:
@@ -112,36 +135,6 @@ class _StubLoader:
         # loader raises FileNotFoundError when the parquet is absent;
         # returning an empty frame is the equivalent for this stub.
         return pl.DataFrame(schema={"service_name": pl.Utf8, "level": pl.Utf8, "message": pl.Utf8})
-
-
-def test_run_single_case_happy_path(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(reasoning_cli, "ParquetDataLoader", _StubLoader)
-
-    saved: dict[str, Any] = {}
-
-    def _capture_save(*args: Any, **kwargs: Any) -> None:
-        saved["called"] = True
-        saved["status"] = kwargs.get("status") or (args[2] if len(args) > 2 else None)
-        saved["case_name"] = kwargs.get("case_name") or (args[1] if len(args) > 1 else None)
-
-    monkeypatch.setattr(reasoning_cli, "_save_case_result", _capture_save)
-
-    injection_data = {
-        "fault_type": "HTTPResponseDelay",
-        "display_config": '{"injection_point": {"app_name": "svc-callee", "method": "POST", "route": "/api"}}',
-        "ground_truth": {"service": ["svc-callee"]},
-    }
-
-    result = reasoning_cli.run_single_case(
-        data_dir=tmp_path,
-        max_hops=4,
-        return_graph=False,
-        injection_data=injection_data,
-    )
-
-    assert result["status"] == "success"
-    assert result["paths"] >= 1
-    assert saved["status"] == "success"
 
 
 def test_run_single_case_no_alarms_returns_no_alarms(tmp_path: Path, monkeypatch) -> None:

@@ -1,0 +1,88 @@
+fault_type_name: JVMReturn
+target_kind: container
+seed_tier: erroring
+description: |
+  JVM method-level forced-return injection: a specific Java method on the
+  affected container is rewritten to return a fixed value (often null, 0, or
+  empty) instead of executing its body. The observable impact is bimodal:
+  either (a) the caller defensively absorbs the bogus value (silent
+  corruption, no telemetry signal) or (b) the caller dereferences/parses it
+  and raises a NullPointerException-class error that propagates as a normal
+  JVMException-shaped cascade. Manifest matches at service granularity since
+  the IR does not target individual operations; the entry signature is
+  deliberately lenient on error_rate to admit both modes.
+
+entry_signature:
+  entry_window_sec: 30
+  required_features: []
+  optional_features:
+    - kind: span
+      feature: error_rate
+      band: [0.05, 1.0]
+      magnitude_source: empirical
+    - kind: span
+      feature: latency_p99_ratio
+      band: [1.3, .inf]
+      magnitude_source: empirical
+    - kind: span
+      feature: request_count_ratio
+      band: [0.0, 0.8]
+      magnitude_source: theoretical
+    - kind: span
+      feature: timeout_rate
+      band: [0.02, 1.0]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes]
+    edge_directions: [backward, backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: latency_p99_ratio
+        band: [1.3, .inf]
+        magnitude_decay: 0.5
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs:
+  - to: JVMException
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.3
+    on_layer: 1
+    rationale: |
+      When the caller fails to defensively handle the forged return value,
+      the resulting NullPointerException / ClassCastException at the caller
+      is observationally indistinguishable from a directly-injected
+      JVMException at that service. Within-family hand-off.
+  - to: HTTPResponseAbort
+    trigger:
+      kind: span
+      feature: error_rate
+      threshold: 0.2
+    on_layer: 2
+    rationale: |
+      Universal cross-family trigger: sustained downstream error rate above
+      0.2 surfaces as response-abort at far callers.
+
+terminals: []
+
+extension:
+  max_extra_hops: 4
+  max_frontier: 256
+  requires_strict_anchor: true

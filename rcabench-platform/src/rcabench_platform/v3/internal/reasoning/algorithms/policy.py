@@ -165,15 +165,41 @@ def epsilon_eff_seconds(
     dst_state: str,
     edge_kind: DepKind,
 ) -> int:
-    """epsilon_eff = epsilon(edge_kind) + onset_resolution(src) + onset_resolution(dst).
+    """epsilon_eff = epsilon(edge_kind).
 
-    Per §7.5, this is the per-edge tolerance budget. When the destination
-    observation lands at most ``epsilon_eff`` seconds before the source
-    observation, the chain is still admitted as causal (measurement-noise
-    compensation).
+    Phase 3 (FORGE rework, §3.3): the per-edge tolerance is the
+    propagation-delay budget alone. The previous formulation added
+    ``onset_resolution(src) + onset_resolution(dst)`` to compensate for
+    measurement-noise on each onset. That stacked tolerance generously
+    enough to admit unrelated baseline drift across multi-hop chains
+    (joint observation window probability) — an 8.2% Joint FP measured
+    on sham harness with the old constants, dropping to 3.0% with tightened
+    bands but at the cost of recall.
+
+    The manifest-driven verification path replaces the lost
+    measurement-noise compensation with magnitude-band evidence: a
+    downstream node only admits if its observed feature lands inside the
+    layer's expected band, which already encodes the noise-vs-signal
+    trade-off for that fault type. The temporal predicate therefore only
+    needs the channel propagation budget.
+
+    Reversed-order tolerance for ``TemporalGate`` is now a fixed 1s
+    clock-skew allowance (see ``REVERSED_ORDER_TOLERANCE_SECONDS``) and
+    is no longer scaled with ``epsilon_eff``.
     """
-    return (
-        edge_epsilon_seconds(edge_kind)
-        + onset_resolution_seconds(src_state)
-        + onset_resolution_seconds(dst_state, src_state_for_missing=src_state)
-    )
+    # ``src_state`` / ``dst_state`` retained in the signature for backward
+    # compatibility with callers that pass them positionally; they no
+    # longer affect the result.
+    del src_state, dst_state
+    return edge_epsilon_seconds(edge_kind)
+
+
+REVERSED_ORDER_TOLERANCE_SECONDS: int = 1
+"""Fixed clock-skew tolerance for the TemporalGate reversed-order check.
+
+Per §3.3 of the FORGE rework, ``dst_onset >= src_onset - 1`` replaces the
+former ``dst_onset >= src_onset - epsilon_eff`` predicate. Per-edge
+propagation budget governs forward delay (``find_admissible_window``);
+the gate's reversed-order check is purely a clock-skew allowance and so
+gets a single second regardless of channel.
+"""

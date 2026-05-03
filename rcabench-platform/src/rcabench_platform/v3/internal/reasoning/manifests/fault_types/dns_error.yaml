@@ -1,0 +1,96 @@
+fault_type_name: DNSError
+target_kind: pod
+seed_tier: silent
+description: |
+  Pod-level DNS resolution failure (NXDOMAIN/SERVFAIL) injected via dnschaos.
+  Inbound traffic to the pod still succeeds; only outbound calls that perform
+  fresh DNS lookup fail fast. Symptom is observed on the CALLER side as DNS
+  error spans or aborted egress, NOT as pod silence.
+
+# DNS faults are outbound-isolation (Class E). The injecting pod is the
+# RESOLVER context (not the callee silence). Required signature is on
+# spans where the injecting pod is the SOURCE of the call (caller).
+# We do not require pod.silent: the pod still serves inbound.
+entry_signature:
+  entry_window_sec: 30
+  required_features: []
+  optional_features:
+    - kind: span
+      feature: dns_failure_rate
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: error_rate
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: connection_refused_rate
+      band: [0.1, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: timeout_rate
+      band: [0.05, 1.0]
+      magnitude_source: theoretical
+    - kind: span
+      feature: silent
+      band: [1.0, .inf]
+      magnitude_source: theoretical
+  optional_min_match: 1
+
+# Cascade is short. NXDOMAIN fails fast: callers that depend on the
+# blocked egress see immediate errors. Transitive callers (layer 2)
+# usually mask via retries; we keep layer 2 narrow.
+derivation_layers:
+  - layer: 1
+    edge_kinds: [calls, includes]
+    edge_directions: [forward, forward]
+    expected_features:
+      - kind: span
+        feature: dns_failure_rate
+        band: [0.1, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: error_rate
+        band: [0.1, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+  - layer: 2
+    edge_kinds: [calls]
+    edge_directions: [backward]
+    expected_features:
+      - kind: span
+        feature: silent
+        band: [1.0, .inf]
+        magnitude_decay: null
+      - kind: span
+        feature: error_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+      - kind: span
+        feature: timeout_rate
+        band: [0.05, 1.0]
+        magnitude_decay: null
+    max_fanout: 16
+
+hand_offs:
+  - to: NetworkPartition
+    trigger:
+      kind: span
+      feature: silent
+      threshold: 1.0
+    on_layer: 1
+    rationale: |
+      Sustained outbound-call silence at layer 1 caller spans (no DNS
+      response, no fallback resolver) is indistinguishable from a network
+      partition between caller and target; downstream verification can
+      legitimately continue under NetworkPartition's manifest.
+
+terminals: []
+
+extension:
+  max_extra_hops: 6
+  max_frontier: 256

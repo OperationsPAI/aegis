@@ -1417,8 +1417,34 @@ class ParquetDataLoader:
                 self._baseline_traces.select("service_name").unique().drop_nulls().to_series().to_list()
             )
 
-        # Union of all services from both periods
-        all_services = abnormal_services | baseline_services
+        # Index metrics by deployment.name → pod.name once. Used both
+        # as a secondary source for service→pod (routes_to) edges and
+        # as a source for service nodes that have no traces at all.
+        # The AegisLab AutoHarness schema does not populate
+        # ``attr.k8s.pod.name`` on traces; a chaos that silences the
+        # target's only replica produces zero traces with that
+        # ``service_name`` — yet metrics still record the deployment
+        # via cluster scrape. Without this source the service node
+        # never exists, so v_root resolved at pod or container kind
+        # cannot escape the runs/manages subtree to reach span-level
+        # signals at the SLO surface.
+        deployment_to_pods: dict[str, set[str]] = {}
+        for source_metrics in (self._baseline_metrics, self._abnormal_metrics):
+            if source_metrics is None:
+                continue
+            cols = source_metrics.columns
+            if "attr.k8s.deployment.name" not in cols or "attr.k8s.pod.name" not in cols:
+                continue
+            pairs = source_metrics.select(["attr.k8s.deployment.name", "attr.k8s.pod.name"]).drop_nulls().unique()
+            for dep, pod in pairs.iter_rows():
+                if not dep or not pod:
+                    continue
+                deployment_to_pods.setdefault(dep, set()).add(pod)
+
+        # Union services seen in traces with deployments seen in metrics:
+        # silenced services still need a node so the service-plane
+        # cascade is reachable from a pod/container v_root.
+        all_services = abnormal_services | baseline_services | set(deployment_to_pods.keys())
 
         logger.info(f"Extracting metrics for {len(all_services)} services...")
 
@@ -1438,6 +1464,14 @@ class ParquetDataLoader:
                 pod_names_set.update(
                     baseline_service_traces.select("attr.k8s.pod.name").drop_nulls().unique().to_series().to_list()
                 )
+
+            # Metrics-based fallback: deployment.name on a metric row
+            # matches the trace service_name in the AegisLab AutoHarness
+            # schema; the pod.name on the same row identifies a routed
+            # pod. This recovers service→pod when traces don't carry
+            # pod.name (see comment above).
+            if service_name in deployment_to_pods:
+                pod_names_set.update(deployment_to_pods[service_name])
 
             return service_name, baseline_metrics, abnormal_metrics, pod_names_set
 

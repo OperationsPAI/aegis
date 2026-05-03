@@ -1,8 +1,15 @@
-"""Temporal admission with measurement-noise tolerance (§7.5 + §12.4).
+"""Temporal admission with channel-only ε (§7.5 + FORGE rework §3.3).
 
 Covers ``policy.epsilon_eff_seconds`` arithmetic, the §7.5 trajectory rule
 (``onset_for_rule`` returns the EARLIEST matching transition), and the
 ε-tolerant ``find_admissible_window`` lower bound.
+
+Phase 3 (FORGE rework) drops the ``onset_resolution(state)`` term from
+``epsilon_eff``: the per-edge tolerance is now just
+``edge_epsilon_seconds(edge_kind)`` (5s for synchronous calls/includes,
+10s for routes_to, 60s for runs/schedules). The lost measurement-noise
+compensation is replaced by manifest magnitude-band evidence on the
+downstream node — see ``ManifestLayerGate``.
 """
 
 from __future__ import annotations
@@ -35,34 +42,31 @@ def _tl(node_key: str, *windows: TimelineWindow) -> StateTimeline:
 
 
 def test_epsilon_eff_calls_erroring_to_silent() -> None:
-    # ε(calls)=5 + onset_resolution(erroring)=3 + onset_resolution(silent)=30
-    assert epsilon_eff_seconds("erroring", "silent", DepKind.calls) == 5 + 3 + 30
+    # FORGE rework §3.3: ε is just ε(edge_kind) — no onset_resolution.
+    assert epsilon_eff_seconds("erroring", "silent", DepKind.calls) == 5
 
 
 def test_epsilon_eff_runs_unavailable_to_restarting() -> None:
     # Lifecycle channel — runs gets the 60s budget per §12.4.
-    assert epsilon_eff_seconds("unavailable", "restarting", DepKind.runs) == 60 + 1 + 1
+    assert epsilon_eff_seconds("unavailable", "restarting", DepKind.runs) == 60
 
 
 def test_epsilon_eff_routes_to_degraded_to_erroring() -> None:
-    # ε(routes_to)=10 + onset_resolution(degraded)=5 + onset_resolution(erroring)=3
-    assert epsilon_eff_seconds("degraded", "erroring", DepKind.routes_to) == 10 + 5 + 3
+    # ε(routes_to) = 10 (no onset_resolution add).
+    assert epsilon_eff_seconds("degraded", "erroring", DepKind.routes_to) == 10
 
 
 # ---------------------------------------------------------------------------
-# Test 2: MISSING inherits onset_resolution from src state.
+# Test 2: state arguments are accepted but no longer affect ε (§3.3).
 # ---------------------------------------------------------------------------
 
 
-def test_epsilon_eff_missing_inherits_src_onset_resolution() -> None:
-    # missing has no observed onset — it inherits onset_resolution(src).
-    # ε(calls)=5 + onset_resolution(erroring)=3 + onset_resolution(missing<-erroring)=3
-    assert epsilon_eff_seconds("erroring", "missing", DepKind.calls) == 5 + 3 + 3
-
-
-def test_epsilon_eff_missing_inherits_silent_onset_resolution() -> None:
-    # missing inherits the larger 30s when src=silent.
-    assert epsilon_eff_seconds("silent", "missing", DepKind.calls) == 5 + 30 + 30
+def test_epsilon_eff_state_arguments_are_ignored() -> None:
+    # Whatever the state pair, ε equals ε(edge_kind).
+    assert epsilon_eff_seconds("erroring", "missing", DepKind.calls) == 5
+    assert epsilon_eff_seconds("silent", "missing", DepKind.calls) == 5
+    assert epsilon_eff_seconds("healthy", "healthy", DepKind.includes) == 5
+    assert epsilon_eff_seconds("unknown", "unknown", DepKind.schedules) == 60
 
 
 # ---------------------------------------------------------------------------
@@ -111,14 +115,14 @@ def test_onset_for_rule_no_match_returns_none() -> None:
 
 
 def test_find_admissible_window_boundary_admit() -> None:
-    # ε_eff(erroring, erroring, calls) = 5 + 3 + 3 = 11
-    # src_onset=110, dst.start=100 → 100 >= 110 - 11 = 99 → ADMIT
+    # FORGE §3.3: ε_eff = ε(calls) = 5
+    # src_onset=104, dst.start=100 → 100 >= 104 - 5 = 99 → ADMIT
     tl = _tl("dst", _w(100, 200, "erroring"))
     tv = TemporalValidator({"dst": tl})
 
     admitted = tv.find_admissible_window(
         "dst",
-        src_onset=110,
+        src_onset=104,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"erroring"},
@@ -131,13 +135,13 @@ def test_find_admissible_window_boundary_admit() -> None:
 
 
 def test_find_admissible_window_boundary_reject() -> None:
-    # Same setup but src_onset=115 → 100 >= 115 - 11 = 104? 100 < 104 → REJECT
+    # Same setup but src_onset=110 → 100 >= 110 - 5 = 105? 100 < 105 → REJECT
     tl = _tl("dst", _w(100, 200, "erroring"))
     tv = TemporalValidator({"dst": tl})
 
     w = tv.find_admissible_window(
         "dst",
-        src_onset=115,
+        src_onset=110,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"erroring"},
@@ -152,7 +156,7 @@ def test_find_admissible_window_state_filter() -> None:
 
     w = tv.find_admissible_window(
         "dst",
-        src_onset=110,
+        src_onset=104,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"erroring"},
@@ -167,10 +171,10 @@ def test_find_admissible_window_state_filter() -> None:
 
 def test_find_admissible_window_picks_earliest_admissible() -> None:
     # Two SILENT windows: [40..70] and [80..120].
-    # ε_eff(erroring, silent, calls) = 5 + 3 + 30 = 38
-    # src_onset=90 → admissibility threshold = 90 - 38 = 52
-    #   first window start=40 < 52 → REJECT
-    #   second window start=80 >= 52 → ADMIT
+    # FORGE §3.3: ε_eff = ε(calls) = 5
+    # src_onset=84 → admissibility threshold = 84 - 5 = 79
+    #   first window start=40 < 79 → REJECT
+    #   second window start=80 >= 79 → ADMIT
     tl = _tl(
         "dst",
         _w(40, 70, "silent"),
@@ -180,7 +184,7 @@ def test_find_admissible_window_picks_earliest_admissible() -> None:
 
     admitted = tv.find_admissible_window(
         "dst",
-        src_onset=90,
+        src_onset=84,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"silent"},
@@ -191,12 +195,10 @@ def test_find_admissible_window_picks_earliest_admissible() -> None:
 
 
 def test_find_admissible_window_per_state_epsilon() -> None:
-    # ε_eff varies per candidate state.
-    # First window ERRORING at 100, second SILENT at 80.
-    # src_onset=130, src_state=erroring, dst_states={erroring, silent}.
-    #   For ERRORING window (start=100): ε_eff=5+3+3=11 → 100 >= 130-11=119? No → REJECT
-    #   For SILENT window (start=80):   ε_eff=5+3+30=38 → 80 >= 130-38=92? No → REJECT
-    # Both rejected.
+    # FORGE §3.3: ε is channel-only — no per-state variation.
+    # src_onset=110, ε(calls)=5, threshold=105.
+    #   First window SILENT (start=80) < 105 → REJECT
+    #   Second window ERRORING (start=100) < 105 → REJECT
     tl = _tl(
         "dst",
         _w(80, 99, "silent"),
@@ -206,24 +208,23 @@ def test_find_admissible_window_per_state_epsilon() -> None:
 
     w = tv.find_admissible_window(
         "dst",
-        src_onset=130,
+        src_onset=110,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"erroring", "silent"},
     )
     assert w is None
 
-    # Tighten src_onset so SILENT admits but ERRORING does not — earliest
-    # admissible wins (it's the first in start order).
-    # src_onset=110: ERRORING (start=100): 100 >= 110-11=99 → ADMIT (and earliest in iter order
-    # is SILENT at 80 → 80 >= 110-38=72 → ADMIT first).
+    # Tighten src_onset so the ERRORING window admits.
+    # src_onset=104: threshold=99. SILENT (80) < 99 → REJECT;
+    # ERRORING (100) >= 99 → ADMIT. Iteration order picks the ERRORING window.
     admitted2 = tv.find_admissible_window(
         "dst",
-        src_onset=110,
+        src_onset=104,
         edge_kind=DepKind.calls,
         src_state="erroring",
         dst_states={"erroring", "silent"},
     )
     assert admitted2 is not None
     w2, _ = admitted2
-    assert w2.start == 80 and w2.state == "silent"
+    assert w2.start == 100 and w2.state == "erroring"

@@ -25,11 +25,18 @@ from rcabench_platform.v3.internal.reasoning.algorithms.gates import (
     default_gates,
     evaluate_path,
 )
+from rcabench_platform.v3.internal.reasoning.algorithms.gates.manifest_entry import (
+    ManifestEntryGate,
+)
+from rcabench_platform.v3.internal.reasoning.algorithms.manifest_path_builder import (
+    ManifestAwarePathBuilder,
+)
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath, PathBuilder
 from rcabench_platform.v3.internal.reasoning.algorithms.rule_matcher import RuleMatcher
 from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator import TemporalValidator
 from rcabench_platform.v3.internal.reasoning.algorithms.topology_explorer import TopologyExplorer
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
+from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
 from rcabench_platform.v3.internal.reasoning.models.graph import HyperGraph, is_structural_mediator
 from rcabench_platform.v3.internal.reasoning.models.propagation import (
     PropagationPath,
@@ -75,6 +82,7 @@ class FaultPropagator:
         max_hops: int = 5,
         injection_window: tuple[int, int] | None = None,
         gates: list[Gate] | None = None,
+        reasoning_ctx: ReasoningContext | None = None,
     ) -> None:
         """Initialize the fault propagator.
 
@@ -96,6 +104,7 @@ class FaultPropagator:
         self.max_hops = max_hops
         self.injection_window = injection_window if injection_window is not None else (0, 2**62)
         self.gates: list[Gate] = gates if gates is not None else default_gates()
+        self.reasoning_ctx = reasoning_ctx
 
         self.rule_matcher = RuleMatcher(rules)
         self.rule_index = self.rule_matcher.rule_index
@@ -119,59 +128,21 @@ class FaultPropagator:
             if self.graph.get_node_by_id(injection_node_id) is None:
                 raise ValueError(f"Injection node {injection_node_id} not found in graph")
 
-        def edge_filter(src_id: int, dst_id: int, is_first_hop: bool) -> bool:
-            src_states = self._states_for_node(src_id)
-            dst_states = self._states_for_node(dst_id)
-            src_labels = self._labels_for_node(src_id)
-            return self.rule_matcher.edge_matches_any_rule(
-                src_id, dst_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
+        # Manifest-only: every chaos-tool fault type in the catalog has a
+        # registered manifest (see ``models/fault_seed.FAULT_TYPE_TO_SEED_TIER``
+        # vs ``manifests/fault_types/*.yaml``), so we always route through
+        # the manifest-driven path builder. Cases lacking a manifest /
+        # v_root return an empty result with a clear warning instead of
+        # silently producing garbage from rule-only propagation.
+        if (
+            self.reasoning_ctx is None
+            or self.reasoning_ctx.manifest is None
+            or self.reasoning_ctx.v_root_node_id is None
+        ):
+            ft = self.reasoning_ctx.fault_type_name if self.reasoning_ctx is not None else "<no_ctx>"
+            warning_msg = (
+                f"manifest-only propagator: skipping fault_type={ft} — no manifest registered or no v_root resolved"
             )
-
-        # §7.6 step 6 + §13.2 step 2.6 — bidirectional corridor + activity filter.
-        # corridor       = Reach_forward(injection_set, max_hops_fwd)
-        #                ∩ Reach_backward(alarm_set,    max_hops_bwd)
-        # relevant_nodes = corridor ∩ (deviating_set ∪ injection_set)
-        injection_set = set(injection_node_ids)
-
-        # Reverse-orientation filter for the backward reach pass: an edge
-        # (a, b) participates in backward reach from b iff (b → a) matches
-        # some rule's forward propagation direction. ``is_first_hop`` is set
-        # iff the neighbor we're stepping toward (which becomes the SRC of
-        # the forward-propagation rule) is in the original injection_set —
-        # see git blame on the previous revision for the asymmetry this fixes.
-        def backward_edge_filter(src_id: int, dst_id: int, is_first_hop_unused: bool) -> bool:
-            src_states = self._states_for_node(dst_id)
-            dst_states = self._states_for_node(src_id)
-            src_labels = self._labels_for_node(dst_id)
-            is_first_hop = dst_id in injection_set
-            return self.rule_matcher.edge_matches_any_rule(
-                dst_id, src_id, self.graph, src_states, dst_states, is_first_hop, src_labels=src_labels
-            )
-
-        forward_edges = self.topology_explorer.find_reachable_subgraph(injection_node_ids, alarm_nodes, edge_filter)
-        forward_visited: set[int] = set(injection_set)
-        for s, d in forward_edges:
-            forward_visited.add(s)
-            forward_visited.add(d)
-
-        backward_edges = self.topology_explorer.find_reachable_subgraph(
-            list(alarm_nodes), set(injection_set), backward_edge_filter
-        )
-        backward_visited: set[int] = set(alarm_nodes)
-        for s, d in backward_edges:
-            backward_visited.add(s)
-            backward_visited.add(d)
-
-        corridor = forward_visited & backward_visited
-        deviating_set = self._compute_deviating_set()
-        relevant_nodes = corridor & (deviating_set | injection_set)
-
-        subgraph_edges = [(s, d) for s, d in forward_edges if s in relevant_nodes and d in relevant_nodes]
-        warnings: list[str] = []
-
-        if not subgraph_edges:
-            warning_msg = f"No reachable edges found from injection nodes {injection_node_ids}"
-            warnings.append(warning_msg)
             logger.warning(f"  [WARNING] {warning_msg}")
             return PropagationResult(
                 injection_node_ids=injection_node_ids,
@@ -180,25 +151,58 @@ class FaultPropagator:
                 visited_nodes=set(),
                 max_hops_reached=0,
                 subgraph_edges=[],
-                warnings=warnings,
+                warnings=[warning_msg],
+                rejected_paths=[],
             )
 
-        all_topology_paths = self.topology_explorer.extract_paths(subgraph_edges, injection_node_ids, alarm_nodes)
+        return self._propagate_manifest_driven(
+            injection_node_ids=injection_node_ids,
+            alarm_nodes=alarm_nodes,
+        )
 
-        if not all_topology_paths:
-            warning_msg = f"No paths extracted from reachable subgraph ({len(subgraph_edges)} edges available)"
-            warnings.append(warning_msg)
-            logger.warning(f"  [WARNING] {warning_msg}")
-            return PropagationResult(
-                injection_node_ids=injection_node_ids,
-                injection_states=["unknown"] * len(injection_node_ids),
-                paths=[],
-                visited_nodes=set(),
-                max_hops_reached=0,
-                subgraph_edges=subgraph_edges,
-                warnings=warnings,
-            )
+    def _propagate_manifest_driven(
+        self,
+        injection_node_ids: list[int],
+        alarm_nodes: set[int],
+    ) -> PropagationResult:
+        """Manifest-driven expansion path (Phase 5).
 
+        Replaces the generic ``corridor → extract_paths → PathBuilder
+        → gate post-filter`` pipeline with layer-by-layer expansion
+        rooted at ``v_root``. The ``ManifestEntryGate`` runs once on
+        ``v_root`` before any expansion; if it fails, no paths are
+        produced (the entry signature short-circuits the whole case).
+        Otherwise the per-edge gates (TemporalGate, InjectTimeGate,
+        and a defensive ManifestLayerGate when present) run on each
+        materialised :class:`CandidatePath`.
+        """
+        rctx = self.reasoning_ctx
+        assert rctx is not None and rctx.manifest is not None  # caller guarded
+        primary_v_root = rctx.v_root_node_id
+        assert primary_v_root is not None  # caller guarded
+
+        warnings: list[str] = []
+
+        # Candidate seed set. Manifests carrying ``multi_v_root: true``
+        # (network fault types: chaos-mesh networkchaos affects the
+        # edge BETWEEN two services, so the resolver returns both
+        # endpoints) cascade from every injection node independently;
+        # this lets the path-builder discover the affected call set
+        # even when the captured trace graph is missing the direct
+        # src→tgt edge (e.g., partition cut all relevant calls before
+        # the abnormal trace window started). Single-root manifests
+        # (everything else) cascade from ``primary_v_root`` only — if
+        # the resolver returned a list the extra entries are
+        # disambiguation candidates, not parallel cascade roots.
+        if rctx.manifest.multi_v_root:
+            candidate_v_roots = list(injection_node_ids) or [primary_v_root]
+        else:
+            candidate_v_roots = [primary_v_root]
+
+        # Entry-signature short-circuit. The gate is per-injection,
+        # ignores the path. Evaluate once per v_root candidate; pass
+        # if ANY satisfies the signature — for network the partition
+        # signal may be observable on either source or target side.
         ctx = GateContext(
             graph=self.graph,
             timelines=self.timelines,
@@ -207,39 +211,129 @@ class FaultPropagator:
             injection_window=self.injection_window,
             injection_node_ids=frozenset(injection_node_ids),
         )
+        entry_passed = False
+        entry_reasons: list[str] = []
+        winning_v_root = primary_v_root
+        # ReasoningContext is frozen; iterate by building a per-v_root
+        # variant via dataclasses.replace and re-binding the entry gate.
+        from dataclasses import replace as _dc_replace
+
+        for v_root in candidate_v_roots:
+            v_rctx = _dc_replace(rctx, v_root_node_id=v_root)
+            v_gate = ManifestEntryGate(v_rctx)
+            empty_path = CandidatePath(
+                node_ids=[v_root],
+                all_states=[["unknown"]],
+                picked_states=["unknown"],
+                picked_state_start_times=[rctx.t0 if rctx.t0 is not None else 0],
+                edge_descs=[],
+                rule_ids=[],
+                rule_confidences=[],
+                propagation_delays=[],
+            )
+            r = v_gate.evaluate(empty_path, ctx)
+            if r.passed:
+                entry_passed = True
+                winning_v_root = v_root
+                break
+            entry_reasons.append(f"v_root={v_root}: {r.reason}")
+        if not entry_passed:
+            joined = "; ".join(entry_reasons)
+            warnings.append(f"manifest entry signature failed: {joined}")
+            logger.info(
+                "[manifest-driven] entry signature failed for fault_type=%s candidates=%s: %s",
+                rctx.manifest.fault_type_name,
+                candidate_v_roots,
+                joined,
+            )
+            return PropagationResult(
+                injection_node_ids=injection_node_ids,
+                injection_states=["unknown"] * len(injection_node_ids),
+                paths=[],
+                visited_nodes=set(candidate_v_roots),
+                max_hops_reached=0,
+                subgraph_edges=[],
+                warnings=warnings,
+                rejected_paths=[],
+            )
+
+        # Build paths via the manifest-driven expander, seeded from
+        # every candidate v_root.
+        builder = ManifestAwarePathBuilder(
+            graph=self.graph,
+            timelines=self.timelines,
+            temporal_validator=self.temporal_validator,
+            reasoning_ctx=rctx,
+        )
+        build = builder.build_all(candidate_v_roots)
+
+        if build.rejected_handoffs:
+            for nid, ft in build.rejected_handoffs:
+                warnings.append(f"hand-off cap/cycle hit at node={nid} target={ft}")
 
         valid_paths: list[PropagationPath] = []
         rejected_paths: list[RejectedPath] = []
-        visited_nodes: set[int] = set()
-        max_hops = 0
-        for node_ids in all_topology_paths:
-            visited_nodes.update(node_ids)
-            max_hops = max(max_hops, len(node_ids) - 1)
-            admitted, gate_results, candidate = self._build_and_evaluate(node_ids, ctx)
-            if admitted is not None:
-                for rule_id in admitted.rules:
-                    self.rule_stats.record_rule_use(rule_id)
-                valid_paths.append(admitted)
-            elif candidate is not None:
-                rejected_paths.append(RejectedPath(node_ids=list(node_ids), gate_results=gate_results))
 
-        if self.rule_stats.rule_counts:
-            logger.info(self.rule_stats.get_summary())
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            injection_hash = hashlib.md5(str(sorted(injection_node_ids)).encode()).hexdigest()[:8]
-            stat_dir = Path("output/stat") / f"{timestamp}-{injection_hash}"
-            stat_dir.mkdir(parents=True, exist_ok=True)
-            stat_file = stat_dir / "rule_stats.json"
-            self.rule_stats.save_to_file(stat_file)
-            logger.info(f"Saved rule statistics to {stat_file}")
+        # Per-path gates: TemporalGate / InjectTimeGate / defensive
+        # ManifestLayerGate (entry gate already ran above; skip it
+        # here so we don't pay for it once per path). We honour any
+        # gate the caller injected via ``self.gates`` other than the
+        # entry gate.
+        per_path_gates = [g for g in self.gates if not isinstance(g, ManifestEntryGate)]
+
+        # Mirror the generic-branch contract: ``PropagationResult.paths``
+        # are paths from the injection seed to an alarm node. The
+        # ``ManifestAwarePathBuilder`` emits a candidate at every layer
+        # admit (so layer-1 / layer-2 / layer-3 leaves all surface), but
+        # those intermediate emissions are not "the propagation chain"
+        # — only the ones whose terminal lands on a node in
+        # ``alarm_nodes`` are. The generic branch enforces this through
+        # ``TopologyExplorer.extract_paths(..., alarm_nodes)`` (paths
+        # "terminate strictly at alarm nodes"); the manifest-driven
+        # branch must enforce the same contract or downstream consumers
+        # (causal_graph, hop-distance metrics, evaluators) read garbage.
+        for candidate in build.paths:
+            if alarm_nodes and (not candidate.node_ids or candidate.node_ids[-1] not in alarm_nodes):
+                continue
+            gate_results = evaluate_path(candidate, ctx, per_path_gates)
+            if all(g.passed for g in gate_results):
+                confidence = 1.0
+                for c in candidate.rule_confidences:
+                    confidence *= c
+                valid_paths.append(
+                    PropagationPath(
+                        nodes=list(candidate.node_ids),
+                        states=list(candidate.all_states),
+                        edges=list(candidate.edge_descs),
+                        rules=list(candidate.rule_ids),
+                        confidence=confidence if candidate.rule_confidences else 1.0,
+                        state_start_times=list(candidate.picked_state_start_times),
+                        propagation_delays=list(candidate.propagation_delays),
+                        gate_results=gate_results,
+                    )
+                )
+                for rule_id in candidate.rule_ids:
+                    self.rule_stats.record_rule_use(rule_id)
+            else:
+                rejected_paths.append(RejectedPath(node_ids=list(candidate.node_ids), gate_results=gate_results))
+
+        logger.debug(
+            "[manifest-driven] fault_type=%s v_root=%d: built=%d valid=%d rejected=%d max_hops=%d",
+            rctx.manifest.fault_type_name,
+            winning_v_root,
+            len(build.paths),
+            len(valid_paths),
+            len(rejected_paths),
+            build.max_hops_reached,
+        )
 
         return PropagationResult(
             injection_node_ids=injection_node_ids,
             injection_states=["unknown"] * len(injection_node_ids),
             paths=valid_paths,
-            visited_nodes=visited_nodes,
-            max_hops_reached=max_hops,
-            subgraph_edges=subgraph_edges,
+            visited_nodes=build.visited_nodes,
+            max_hops_reached=build.max_hops_reached,
+            subgraph_edges=[],
             warnings=warnings,
             rejected_paths=rejected_paths,
         )

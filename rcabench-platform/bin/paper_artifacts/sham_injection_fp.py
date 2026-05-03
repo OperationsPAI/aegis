@@ -41,11 +41,21 @@ methodology-section number.
 
 Usage
 ~~~~~
+The paper's ``sec:appendix_precision_bound`` figure is reproduced by:
+
     uv run python bin/paper_artifacts/sham_injection_fp.py \\
-        --dataset /home/ddq/AoyangSpace/dataset/rca \\
-        --workers 12 \\
-        --trials-per-case 1 \\
-        --out output/sham_fp/sham_fp.json
+        --dataset /home/ddq/AoyangSpace/dataset/openrca2_lite_v1 \\
+        --workers 12 --mode v2 \\
+        --out bin/paper_artifacts/sham_fp/sham_fp_lite_v1.json
+
+``--mode v2`` is the reportable mode for the paper: it splits each case's
+``normal_traces`` in half (first half = baseline, second = synthetic
+``abnormal``) so no real fault is present, and measures how often the
+4-gate pipeline still emits ``attributed``. The frozen artifact at
+``bin/paper_artifacts/sham_fp/sham_fp_lite_v1.json`` records the most
+recent run (36/635 = 5.67%); regenerating with the same dataset + git sha
+should reproduce that number bit-for-bit (sham target seed is deterministic
+per-case via the ``--seed`` argument).
 """
 
 from __future__ import annotations
@@ -78,16 +88,20 @@ def _build_excluded_uniq_names(real_inj: dict[str, Any]) -> set[str]:
     the sham target cannot accidentally coincide with the actual cause.
     """
     excluded: set[str] = set()
-    gt = real_inj.get("ground_truth") or {}
-    for kind in ("container", "pod", "service", "span", "function"):
-        for name in gt.get(kind) or []:
-            if not name:
-                continue
-            excluded.add(f"{kind}|{name}")
-            # Span uniq_names may carry "service::endpoint" suffix; bare
-            # name match too.
-            if kind == "span":
-                excluded.add(f"span|{name}")
+    gt_raw = real_inj.get("ground_truth") or {}
+    # AegisLab hybrid schema stores ground_truth as a list of per-sub-injection
+    # dicts; rca_label schema stores it as a single dict. Normalise to a list.
+    gt_list = gt_raw if isinstance(gt_raw, list) else [gt_raw]
+    for gt in gt_list:
+        if not isinstance(gt, dict):
+            continue
+        for kind in ("container", "pod", "service", "span", "function"):
+            for name in gt.get(kind) or []:
+                if not name:
+                    continue
+                excluded.add(f"{kind}|{name}")
+                if kind == "span":
+                    excluded.add(f"span|{name}")
     return excluded
 
 
@@ -109,7 +123,10 @@ def _run_one_sham(
     produced by the pipeline against the sham injection; ``error`` is set
     on resolver / IR pipeline failure.
     """
-    from rcabench_platform.v3.internal.reasoning.algorithms.gates import INJECT_TIME_TOLERANCE_SECONDS
+    from rcabench_platform.v3.internal.reasoning.algorithms.gates import (
+        INJECT_TIME_TOLERANCE_SECONDS,
+        manifest_aware_gates,
+    )
     from rcabench_platform.v3.internal.reasoning.algorithms.label_classifier import classify
     from rcabench_platform.v3.internal.reasoning.algorithms.propagator import FaultPropagator
     from rcabench_platform.v3.internal.reasoning.algorithms.starting_point_resolver import StartingPointResolver
@@ -130,6 +147,13 @@ def _run_one_sham(
     )
     from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
     from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
+    from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+    from rcabench_platform.v3.internal.reasoning.manifests.extractors.feature_extractor import (
+        extract_feature_samples,
+    )
+    from rcabench_platform.v3.internal.reasoning.manifests.registry import (
+        get_default_registry,
+    )
     from rcabench_platform.v3.internal.reasoning.models.injection import InjectionNodeResolver
     from rcabench_platform.v3.internal.reasoning.rules.builtin_rules import get_builtin_rules
 
@@ -247,12 +271,42 @@ def _run_one_sham(
 
         delta_t = max(0, abnormal_window_end - injection_at)
         injection_window = (injection_at, injection_at + delta_t + INJECT_TIME_TOLERANCE_SECONDS)
+
+        # Wire the manifest-driven gates and PathBuilder. The sham harness
+        # tests "would the manifest pipeline fire on a non-GT target under
+        # baseline noise?" — so we honestly invoke the same code path as
+        # cli.run_single_case (cli.py:728-767), with the sham node as
+        # v_root but holding the real fault_type_name (we are testing the
+        # manifest's specificity, not its category routing).
+        v_root_id: int | None = injection_node_ids[0] if injection_node_ids else physical_node_ids[0]
+        feature_samples = extract_feature_samples(
+            graph=graph,
+            baseline_traces=baseline_traces,
+            abnormal_traces=abnormal_traces,
+            abnormal_window_start=injection_at,
+            abnormal_window_end=abnormal_window_end,
+            timelines=timelines,
+        )
+        registry = get_default_registry()
+        manifest = registry.get(resolved_real.fault_type_name)
+        reasoning_ctx = ReasoningContext(
+            fault_type_name=resolved_real.fault_type_name,
+            manifest=manifest,
+            v_root_node_id=v_root_id,
+            t0=injection_at,
+            feature_samples=feature_samples,
+            registry=registry,
+            graph=graph,
+        )
+
         propagator = FaultPropagator(
             graph=graph,
             rules=rules,
             timelines=timelines,
             max_hops=max_hops,
             injection_window=injection_window,
+            gates=manifest_aware_gates(reasoning_ctx),
+            reasoning_ctx=reasoning_ctx,
         )
         result = propagator.propagate_from_injection(
             injection_node_ids=injection_node_ids,
