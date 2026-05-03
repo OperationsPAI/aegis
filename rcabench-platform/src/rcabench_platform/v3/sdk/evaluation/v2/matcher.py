@@ -1,5 +1,6 @@
 """Type-aware matcher: pair each agent root_cause to a GT fault, plus
 service-level node / edge F1 against the ground-truth causal graph."""
+
 from __future__ import annotations
 
 from enum import Enum

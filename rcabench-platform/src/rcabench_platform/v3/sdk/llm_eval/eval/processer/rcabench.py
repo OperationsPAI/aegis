@@ -4,6 +4,7 @@ The agent emits an `AgentRCAOutput` JSON. Judging is fully mechanical for the
 deterministic axes (root_cause F1, overclaim, sql_executable) and uses an
 LLM-as-judge only for chain coherence.
 """
+
 import json
 import uuid
 from collections.abc import Callable

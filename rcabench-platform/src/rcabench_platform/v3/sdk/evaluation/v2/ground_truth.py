@@ -7,6 +7,7 @@ Two on-disk formats are supported:
      `fault_type` is numeric. We fall back to data.jsonl side-channel for the
      canonical chaos_type label, and read `ground_truth.service[0]` for the app.
 """
+
 from __future__ import annotations
 
 import json

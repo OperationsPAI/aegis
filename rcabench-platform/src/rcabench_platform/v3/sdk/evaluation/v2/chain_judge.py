@@ -6,6 +6,7 @@ AND consistent with the GT graph. Returns a 0–1 coherence score plus a short
 explanation. The score is informational; the deterministic outcome metrics
 remain primary.
 """
+
 from __future__ import annotations
 
 import json
@@ -58,9 +59,7 @@ Respond with strict JSON: {{"score": <float 0..1>, "reasoning": "<=80 words>"}}.
 """
 
 
-def _format_evidence_block(
-    agent: AgentRCAOutput, results: list[tuple[str, EvidenceVerifyResult]]
-) -> str:
+def _format_evidence_block(agent: AgentRCAOutput, results: list[tuple[str, EvidenceVerifyResult]]) -> str:
     """Pair each evidence with its verifier result; truncate sample rows."""
     if not results:
         return "(no evidence)"
@@ -84,12 +83,7 @@ def _format_gt_block(gt_graph: CausalGraph | None) -> str:
     edges = sorted(gt_graph.get_service_edges())
     roots = sorted(gt_graph.get_root_cause_services())
     alarms = sorted(gt_graph.get_alarm_services())
-    return (
-        f"services: {nodes}\n"
-        f"edges: {edges}\n"
-        f"root_cause_services: {roots}\n"
-        f"alarm_services: {alarms}"
-    )
+    return f"services: {nodes}\nedges: {edges}\nroot_cause_services: {roots}\nalarm_services: {alarms}"
 
 
 async def chain_coherence(

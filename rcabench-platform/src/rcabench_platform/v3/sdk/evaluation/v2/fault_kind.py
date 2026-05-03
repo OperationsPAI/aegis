@@ -1,4 +1,5 @@
 """Controlled fault-kind vocabulary + chaos_type mapping."""
+
 from __future__ import annotations
 
 from enum import Enum

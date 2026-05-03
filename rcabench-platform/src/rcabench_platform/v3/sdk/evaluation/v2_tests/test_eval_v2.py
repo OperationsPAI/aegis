@@ -5,6 +5,7 @@ and the resulting score so the contract reads top-to-bottom. The final test
 shows how a batch of mixed-quality outputs aggregates via the processer's
 `calculate_metrics`.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -35,6 +36,7 @@ from rcabench_platform.v3.sdk.evaluation.v2 import (
 # Fault-kind controlled vocabulary
 # ──────────────────────────────────────────────────────────────────────
 
+
 def test_map_chaos_type_known() -> None:
     assert map_chaos_type("NetworkDelay") is FaultKind.NETWORK_DELAY
     assert map_chaos_type("PodFailure") is FaultKind.POD_FAILURE
@@ -52,11 +54,11 @@ def test_map_chaos_type_unknown() -> None:
 # GT fault extraction (new + old format)
 # ──────────────────────────────────────────────────────────────────────
 
+
 def test_extract_gt_new_format_hybrid() -> None:
     inj = {
         "engine_config": [
-            {"app": "shipping", "chaos_type": "NetworkDelay",
-             "target_service": "quote", "direction": "to"},
+            {"app": "shipping", "chaos_type": "NetworkDelay", "target_service": "quote", "direction": "to"},
             {"app": "payment", "chaos_type": "CPUStress"},
         ],
         "start_time": "2026-05-02T08:00:00Z",
@@ -79,10 +81,14 @@ def test_extract_gt_new_format_hybrid() -> None:
 
 def test_extract_gt_jvm_method() -> None:
     inj = {
-        "engine_config": [{
-            "app": "ts-basic-service", "chaos_type": "JVMRuntimeMutator",
-            "class": "com.foo.BasicController", "method": "queryForX",
-        }]
+        "engine_config": [
+            {
+                "app": "ts-basic-service",
+                "chaos_type": "JVMRuntimeMutator",
+                "class": "com.foo.BasicController",
+                "method": "queryForX",
+            }
+        ]
     }
     ctx = extract_gt_faults(inj)
     assert ctx.faults[0].method == "com.foo.BasicController.queryForX"
@@ -112,7 +118,9 @@ def test_extract_gt_old_format_falls_back() -> None:
 # ──────────────────────────────────────────────────────────────────────
 
 _DUMMY_EV: dict[str, str] = {
-    "kind": "metric", "sql": "SELECT 1 FROM read_parquet('m.parquet')", "claim": "x",
+    "kind": "metric",
+    "sql": "SELECT 1 FROM read_parquet('m.parquet')",
+    "claim": "x",
 }
 
 
@@ -123,9 +131,15 @@ def _agent(rcs: list[dict[str, Any]], propagation: list[dict[str, Any]] | None =
 def test_match_perfect_single_fault() -> None:
     """Agent: 1 root_cause, kind+service correct → HIT, F1=1, case_correct=True."""
     gt = [GTFault(service="ts-basic-service", fault_kind=FaultKind.JVM_MUTATOR)]
-    agent = _agent([{
-        "service": "ts-basic-service", "fault_kind": "jvm_mutator", "evidence": [_DUMMY_EV],
-    }])
+    agent = _agent(
+        [
+            {
+                "service": "ts-basic-service",
+                "fault_kind": "jvm_mutator",
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     out = compute_outcome(agent, gt)
     assert out.root_cause_f1 == 1.0
     assert out.case_correct is True
@@ -134,23 +148,37 @@ def test_match_perfect_single_fault() -> None:
 
 def test_match_network_no_direction_is_wrong_direction() -> None:
     """Agent gets service+kind on Network* but skips direction → WRONG_DIRECTION."""
-    gt = [GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY,
-                  direction_src="shipping", direction_dst="quote")]
-    agent = _agent([{
-        "service": "shipping", "fault_kind": "network_delay", "evidence": [_DUMMY_EV],
-    }])
+    gt = [
+        GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY, direction_src="shipping", direction_dst="quote")
+    ]
+    agent = _agent(
+        [
+            {
+                "service": "shipping",
+                "fault_kind": "network_delay",
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     out = compute_outcome(agent, gt)
     assert out.per_fault[0].status is MatchStatus.WRONG_DIRECTION
     assert out.root_cause_f1 == 0.0
 
 
 def test_match_network_correct_direction() -> None:
-    gt = [GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY,
-                  direction_src="shipping", direction_dst="quote")]
-    agent = _agent([{
-        "service": "shipping", "fault_kind": "network_delay",
-        "direction": {"src": "shipping", "dst": "quote"}, "evidence": [_DUMMY_EV],
-    }])
+    gt = [
+        GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY, direction_src="shipping", direction_dst="quote")
+    ]
+    agent = _agent(
+        [
+            {
+                "service": "shipping",
+                "fault_kind": "network_delay",
+                "direction": {"src": "shipping", "dst": "quote"},
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     out = compute_outcome(agent, gt)
     assert out.per_fault[0].status is MatchStatus.HIT
     assert out.root_cause_f1 == 1.0
@@ -158,9 +186,15 @@ def test_match_network_correct_direction() -> None:
 
 def test_match_wrong_kind() -> None:
     gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
-    agent = _agent([{
-        "service": "payment", "fault_kind": "mem_stress", "evidence": [_DUMMY_EV],
-    }])
+    agent = _agent(
+        [
+            {
+                "service": "payment",
+                "fault_kind": "mem_stress",
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     out = compute_outcome(agent, gt)
     assert out.per_fault[0].status is MatchStatus.WRONG_KIND
     assert out.root_cause_f1 == 0.0
@@ -169,15 +203,22 @@ def test_match_wrong_kind() -> None:
 def test_match_partial_hybrid() -> None:
     """Hybrid GT (2 faults). Agent gets one right + an unrelated overclaim → F1=0.5."""
     gt = [
-        GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY,
-                direction_src="shipping", direction_dst="quote"),
+        GTFault(
+            service="shipping", fault_kind=FaultKind.NETWORK_DELAY, direction_src="shipping", direction_dst="quote"
+        ),
         GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS),
     ]
-    agent = _agent([
-        {"service": "shipping", "fault_kind": "network_delay",
-         "direction": {"src": "shipping", "dst": "quote"}, "evidence": [_DUMMY_EV]},
-        {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
-    ])
+    agent = _agent(
+        [
+            {
+                "service": "shipping",
+                "fault_kind": "network_delay",
+                "direction": {"src": "shipping", "dst": "quote"},
+                "evidence": [_DUMMY_EV],
+            },
+            {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
+        ]
+    )
     out = compute_outcome(agent, gt)
     assert out.root_cause_precision == 0.5
     assert out.root_cause_recall == 0.5
@@ -191,10 +232,12 @@ def test_match_partial_hybrid() -> None:
 def test_match_overclaim_drops_case_correct() -> None:
     """Agent finds the GT fault but adds an unrelated extra → case_correct=False."""
     gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
-    agent = _agent([
-        {"service": "payment", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
-        {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
-    ])
+    agent = _agent(
+        [
+            {"service": "payment", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
+            {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
+        ]
+    )
     out = compute_outcome(agent, gt)
     assert out.root_cause_recall == 1.0
     assert out.root_cause_precision == 0.5
@@ -212,22 +255,40 @@ def test_match_normalization_is_uniform_across_systems() -> None:
     """
     # Same name, different dash/underscore styling → still HIT.
     gt = [GTFault(service="ts-route-plan-service", fault_kind=FaultKind.POD_FAILURE)]
-    agent = _agent([{
-        "service": "ts_route_plan_service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV],
-    }])
+    agent = _agent(
+        [
+            {
+                "service": "ts_route_plan_service",
+                "fault_kind": "pod_failure",
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     assert compute_outcome(agent, gt).per_fault[0].status is MatchStatus.HIT
 
     # Mixed case → still HIT.
-    agent_caps = _agent([{
-        "service": "TS-Route-Plan-Service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV],
-    }])
+    agent_caps = _agent(
+        [
+            {
+                "service": "TS-Route-Plan-Service",
+                "fault_kind": "pod_failure",
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     assert compute_outcome(agent_caps, gt).per_fault[0].status is MatchStatus.HIT
 
     # Dropping the ts- prefix is now a MISS (the agent must use a name
     # that actually appears in the case data).
-    agent_stripped = _agent([{
-        "service": "route-plan-service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV],
-    }])
+    agent_stripped = _agent(
+        [
+            {
+                "service": "route-plan-service",
+                "fault_kind": "pod_failure",
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     assert compute_outcome(agent_stripped, gt).per_fault[0].status is MatchStatus.MISS
 
 
@@ -238,9 +299,15 @@ def test_match_service_only_f1_separates_from_kind_f1() -> None:
     nailed the service but missed the kind, service_f1=1.0 and root_cause_f1=0.0.
     """
     gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
-    agent = _agent([{
-        "service": "payment", "fault_kind": "mem_stress", "evidence": [_DUMMY_EV],
-    }])
+    agent = _agent(
+        [
+            {
+                "service": "payment",
+                "fault_kind": "mem_stress",
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
     out = compute_outcome(agent, gt)
     assert out.service_f1 == 1.0
     assert out.root_cause_f1 == 0.0
@@ -251,12 +318,15 @@ def test_match_service_only_f1_separates_from_kind_f1() -> None:
 # Graph metrics (agent's claimed graph vs GT causal_graph)
 # ──────────────────────────────────────────────────────────────────────
 
+
 def _gt_graph(nodes: list[str], edges: list[tuple[str, str]]) -> CausalGraph:
-    return CausalGraph.from_dict({
-        "nodes": [{"component": n} for n in nodes],
-        "edges": [{"source": s, "target": t} for s, t in edges],
-        "component_to_service": {n: n for n in nodes},
-    })
+    return CausalGraph.from_dict(
+        {
+            "nodes": [{"component": n} for n in nodes],
+            "edges": [{"source": s, "target": t} for s, t in edges],
+            "component_to_service": {n: n for n in nodes},
+        }
+    )
 
 
 def test_graph_metrics_perfect() -> None:
@@ -302,6 +372,7 @@ def test_graph_metrics_no_gt_marks_inapplicable() -> None:
 # DuckDB SQL evidence verification
 # ──────────────────────────────────────────────────────────────────────
 
+
 def _make_case(tmp_path: Path) -> Path:
     """Synthesize a tiny case dir with one trace + one metrics parquet."""
     times = pl.datetime_range(
@@ -310,19 +381,23 @@ def _make_case(tmp_path: Path) -> Path:
         "1m",
         eager=True,
     )
-    pl.DataFrame({
-        "time": times,
-        "metric": ["latency_p99"] * len(times),
-        "value": [10.0, 20.0, 30.0, 40.0, 50.0],
-        "service_name": ["shipping"] * len(times),
-    }).write_parquet(tmp_path / "abnormal_metrics.parquet")
-    pl.DataFrame({
-        "time": times,
-        "trace_id": ["t"] * len(times),
-        "span_id": [str(i) for i in range(len(times))],
-        "service_name": ["shipping"] * len(times),
-        "duration": [1000, 2000, 3000, 4000, 5000],
-    }).write_parquet(tmp_path / "abnormal_traces.parquet")
+    pl.DataFrame(
+        {
+            "time": times,
+            "metric": ["latency_p99"] * len(times),
+            "value": [10.0, 20.0, 30.0, 40.0, 50.0],
+            "service_name": ["shipping"] * len(times),
+        }
+    ).write_parquet(tmp_path / "abnormal_metrics.parquet")
+    pl.DataFrame(
+        {
+            "time": times,
+            "trace_id": ["t"] * len(times),
+            "span_id": [str(i) for i in range(len(times))],
+            "service_name": ["shipping"] * len(times),
+            "duration": [1000, 2000, 3000, 4000, 5000],
+        }
+    ).write_parquet(tmp_path / "abnormal_traces.parquet")
     return tmp_path
 
 
@@ -387,12 +462,17 @@ def test_sql_verify_sql_error_on_missing_table(tmp_path: Path) -> None:
 # axes (rc_f1, sql_executable_rate) stay decoupled from the judge.
 # ──────────────────────────────────────────────────────────────────────
 
+
 def _injection() -> dict[str, Any]:
     return {
-        "engine_config": [{
-            "app": "shipping", "chaos_type": "NetworkDelay",
-            "target_service": "quote", "direction": "to",
-        }],
+        "engine_config": [
+            {
+                "app": "shipping",
+                "chaos_type": "NetworkDelay",
+                "target_service": "quote",
+                "direction": "to",
+            }
+        ],
         "start_time": "2026-05-02T08:00:00Z",
         "end_time": "2026-05-02T08:05:00Z",
     }
@@ -440,21 +520,36 @@ class _StubLLMClient:
 def test_evaluate_v2_perfect(tmp_path: Path) -> None:
     """Perfect agent: rc_f1=1, sql=1, chain=1 (stub), headline=1."""
     case = _make_case(tmp_path)
-    agent = json.dumps({
-        "root_causes": [{
-            "service": "shipping", "fault_kind": "network_delay",
-            "direction": {"src": "shipping", "dst": "quote"},
-            "evidence": [{
-                "kind": "metric",
-                "sql": "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'",
-                "claim": "shipping latency rises",
-            }],
-        }],
-        "propagation": [],
-    })
-    res = asyncio.run(evaluate_v2(
-        agent, _injection(), case, gt_graph=None, llm_client=_StubLLMClient(score=1.0),
-    ))
+    agent = json.dumps(
+        {
+            "root_causes": [
+                {
+                    "service": "shipping",
+                    "fault_kind": "network_delay",
+                    "direction": {"src": "shipping", "dst": "quote"},
+                    "evidence": [
+                        {
+                            "kind": "metric",
+                            "sql": (
+                                "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'"
+                            ),
+                            "claim": "shipping latency rises",
+                        }
+                    ],
+                }
+            ],
+            "propagation": [],
+        }
+    )
+    res = asyncio.run(
+        evaluate_v2(
+            agent,
+            _injection(),
+            case,
+            gt_graph=None,
+            llm_client=_StubLLMClient(score=1.0),  # type: ignore[arg-type]
+        )
+    )
     assert res.root_cause_f1 == 1.0
     assert res.service_f1 == 1.0
     assert res.overclaim_rate == 0.0
@@ -469,21 +564,36 @@ def test_evaluate_v2_wrong_direction(tmp_path: Path) -> None:
     service_f1 stays at 1.0 because the service was correctly identified.
     """
     case = _make_case(tmp_path)
-    agent = json.dumps({
-        "root_causes": [{
-            "service": "shipping", "fault_kind": "network_delay",
-            "direction": {"src": "quote", "dst": "shipping"},  # flipped
-            "evidence": [{
-                "kind": "metric",
-                "sql": "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'",
-                "claim": "x",
-            }],
-        }],
-        "propagation": [],
-    })
-    res = asyncio.run(evaluate_v2(
-        agent, _injection(), case, gt_graph=None, llm_client=_StubLLMClient(score=0.5),
-    ))
+    agent = json.dumps(
+        {
+            "root_causes": [
+                {
+                    "service": "shipping",
+                    "fault_kind": "network_delay",
+                    "direction": {"src": "quote", "dst": "shipping"},  # flipped
+                    "evidence": [
+                        {
+                            "kind": "metric",
+                            "sql": (
+                                "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'"
+                            ),
+                            "claim": "x",
+                        }
+                    ],
+                }
+            ],
+            "propagation": [],
+        }
+    )
+    res = asyncio.run(
+        evaluate_v2(
+            agent,
+            _injection(),
+            case,
+            gt_graph=None,
+            llm_client=_StubLLMClient(score=0.5),  # type: ignore[arg-type]
+        )
+    )
     assert res.root_cause_f1 == 0.0
     assert res.service_f1 == 1.0
     assert res.headline == 0.0
@@ -494,9 +604,15 @@ def test_evaluate_v2_wrong_direction(tmp_path: Path) -> None:
 def test_evaluate_v2_unparseable_response(tmp_path: Path) -> None:
     """Parse-error path doesn't reach the chain judge, so llm_client is unused."""
     case = _make_case(tmp_path)
-    res = asyncio.run(evaluate_v2(
-        "NOT JSON", _injection(), case, gt_graph=None, llm_client=_StubLLMClient(),
-    ))
+    res = asyncio.run(
+        evaluate_v2(
+            "NOT JSON",
+            _injection(),
+            case,
+            gt_graph=None,
+            llm_client=_StubLLMClient(),  # type: ignore[arg-type]
+        )
+    )
     assert res.headline == 0.0
     assert res.parse_error is not None and "JSON" in res.parse_error
 
@@ -509,18 +625,27 @@ def test_evaluate_v2_requires_llm_client(tmp_path: Path) -> None:
     import pytest
 
     case = _make_case(tmp_path)
-    agent = json.dumps({
-        "root_causes": [{
-            "service": "shipping", "fault_kind": "network_delay",
-            "direction": {"src": "shipping", "dst": "quote"},
-            "evidence": [{
-                "kind": "metric",
-                "sql": "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'",
-                "claim": "x",
-            }],
-        }],
-        "propagation": [],
-    })
+    agent = json.dumps(
+        {
+            "root_causes": [
+                {
+                    "service": "shipping",
+                    "fault_kind": "network_delay",
+                    "direction": {"src": "shipping", "dst": "quote"},
+                    "evidence": [
+                        {
+                            "kind": "metric",
+                            "sql": (
+                                "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'"
+                            ),
+                            "claim": "x",
+                        }
+                    ],
+                }
+            ],
+            "propagation": [],
+        }
+    )
     with pytest.raises(ValueError, match="chain_coherence requires an LLM client"):
         asyncio.run(evaluate_v2(agent, _injection(), case, gt_graph=None, llm_client=None))
 
@@ -528,6 +653,7 @@ def test_evaluate_v2_requires_llm_client(tmp_path: Path) -> None:
 # ──────────────────────────────────────────────────────────────────────
 # Batch aggregation via RCABenchProcesser.calculate_metrics
 # ──────────────────────────────────────────────────────────────────────
+
 
 def test_calculate_metrics_aggregation() -> None:
     """4 stub samples → aggregate is the mean over the 3 successfully scored.
@@ -546,28 +672,55 @@ def test_calculate_metrics_aggregation() -> None:
             self.meta: dict[str, Any] = meta
 
     samples = [
-        _StubSample({"eval_v2": {
-            "service_f1": 1.0,
-            "root_cause_f1": 1.0, "overclaim_rate": 0.0,
-            "sql_executable_rate": 1.0, "chain_coherence": 1.0,
-            "node_f1": 1.0, "edge_f1": 1.0, "headline": 1.0,
-            "case_correct": True, "per_evidence": [{}],
-        }}),
-        _StubSample({"eval_v2": {
-            "service_f1": 0.7,
-            "root_cause_f1": 0.5, "overclaim_rate": 0.5,
-            "sql_executable_rate": 0.8, "chain_coherence": 0.6,
-            "node_f1": 0.4, "edge_f1": 0.2, "headline": 0.24,
-            "case_correct": False, "per_evidence": [{}],
-        }}),
-        _StubSample({"eval_v2": {
-            "service_f1": 0.0,
-            "root_cause_f1": 0.0, "overclaim_rate": 1.0,
-            "sql_executable_rate": 0.0, "chain_coherence": 0.0,
-            "node_f1": 0.0, "edge_f1": 0.0, "headline": 0.0,
-            "case_correct": False, "parse_error": "bad json",
-            "per_evidence": [],
-        }}),
+        _StubSample(
+            {
+                "eval_v2": {
+                    "service_f1": 1.0,
+                    "root_cause_f1": 1.0,
+                    "overclaim_rate": 0.0,
+                    "sql_executable_rate": 1.0,
+                    "chain_coherence": 1.0,
+                    "node_f1": 1.0,
+                    "edge_f1": 1.0,
+                    "headline": 1.0,
+                    "case_correct": True,
+                    "per_evidence": [{}],
+                }
+            }
+        ),
+        _StubSample(
+            {
+                "eval_v2": {
+                    "service_f1": 0.7,
+                    "root_cause_f1": 0.5,
+                    "overclaim_rate": 0.5,
+                    "sql_executable_rate": 0.8,
+                    "chain_coherence": 0.6,
+                    "node_f1": 0.4,
+                    "edge_f1": 0.2,
+                    "headline": 0.24,
+                    "case_correct": False,
+                    "per_evidence": [{}],
+                }
+            }
+        ),
+        _StubSample(
+            {
+                "eval_v2": {
+                    "service_f1": 0.0,
+                    "root_cause_f1": 0.0,
+                    "overclaim_rate": 1.0,
+                    "sql_executable_rate": 0.0,
+                    "chain_coherence": 0.0,
+                    "node_f1": 0.0,
+                    "edge_f1": 0.0,
+                    "headline": 0.0,
+                    "case_correct": False,
+                    "parse_error": "bad json",
+                    "per_evidence": [],
+                }
+            }
+        ),
         _StubSample({"eval_v2": {"error": "missing case dir"}}),
     ]
 

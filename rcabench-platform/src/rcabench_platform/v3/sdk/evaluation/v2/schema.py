@@ -6,6 +6,7 @@ ground-truth fault list extracted from injection.json.
 
 Each root_cause MUST carry at least one DuckDB-executable SQL evidence row.
 """
+
 from __future__ import annotations
 
 from enum import Enum

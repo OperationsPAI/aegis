@@ -15,6 +15,7 @@ Coherence checks (does the SQL actually back the claim, are the rows in the
 incident window, etc.) are the chain-coherence judge's job, not the
 verifier's — the verifier only certifies that the SQL is *runnable*.
 """
+
 from __future__ import annotations
 
 import os
@@ -49,7 +50,7 @@ def _mount_views(con: Any, parquet_dir: Path) -> None:
     for path in parquet_dir.glob("*.parquet"):
         view_name = path.stem.replace('"', '""')
         path_lit = str(path).replace("'", "''")
-        con.execute(f'CREATE VIEW "{view_name}" AS SELECT * FROM read_parquet(\'{path_lit}\')')
+        con.execute(f"CREATE VIEW \"{view_name}\" AS SELECT * FROM read_parquet('{path_lit}')")
 
 
 def verify_evidence(

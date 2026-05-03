@@ -8,6 +8,7 @@ Pipeline per case:
     5. LLM-as-judge over chain        → chain_coherence
     6. Compose 4 numbers + headline.
 """
+
 from __future__ import annotations
 
 import json
@@ -56,9 +57,7 @@ class EvaluationResultV2(BaseModel):
     node_f1: float = 0.0
     edge_f1: float = 0.0
 
-    headline: float = Field(
-        ..., description="root_cause_f1 × sql_executable_rate × chain_coherence"
-    )
+    headline: float = Field(..., description="root_cause_f1 × sql_executable_rate × chain_coherence")
     case_correct: bool = False
 
     service_precision: float = 0.0
