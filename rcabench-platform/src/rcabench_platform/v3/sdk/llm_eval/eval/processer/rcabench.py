@@ -141,11 +141,12 @@ class RCABenchProcesser(BaseMatchProcesser):
 
         meta["eval_v2"] = result.model_dump(mode="json")
 
-        reasoning_bits: list[str] = []
-        reasoning_bits.append(
+        chain_str = f"{result.chain_coherence:.2f}" if result.chain_coherence is not None else "n/a"
+        headline_str = f"{result.headline:.2f}" if result.headline is not None else "n/a"
+        reasoning_bits: list[str] = [
             f"rc_f1={result.root_cause_f1:.2f} sql={result.sql_executable_rate:.2f} "
-            f"chain={result.chain_coherence:.2f} headline={result.headline:.2f}"
-        )
+            f"chain={chain_str} headline={headline_str}"
+        ]
         if result.parse_error:
             reasoning_bits.append(f"parse_error={result.parse_error}")
         if result.chain_judge and result.chain_judge.reasoning:
@@ -154,7 +155,7 @@ class RCABenchProcesser(BaseMatchProcesser):
         sample.update(
             judged_response=None,
             correct=result.case_correct,
-            confidence=result.headline,
+            confidence=result.headline if result.headline is not None else 0.0,
             reasoning=" | ".join(reasoning_bits),
             extracted_final_answer=None,
             meta=meta,
@@ -208,14 +209,17 @@ class RCABenchProcesser(BaseMatchProcesser):
         rc_f1 = 0.0
         overclaim = 0.0
         sql_ok = 0.0
-        chain = 0.0
-        headline = 0.0
+        chain_sum = 0.0
+        chain_count = 0
+        headline_sum = 0.0
+        headline_count = 0
         node_f1 = 0.0
         edge_f1 = 0.0
         correct = 0
         with_eval = 0
         parse_errors = 0
         zero_evidence = 0
+        judge_failed = 0
 
         for s in samples:
             if not isinstance(s.meta, dict):
@@ -228,10 +232,22 @@ class RCABenchProcesser(BaseMatchProcesser):
             rc_f1 += float(ev.get("root_cause_f1") or 0.0)
             overclaim += float(ev.get("overclaim_rate") or 0.0)
             sql_ok += float(ev.get("sql_executable_rate") or 0.0)
-            chain += float(ev.get("chain_coherence") or 0.0)
-            headline += float(ev.get("headline") or 0.0)
             node_f1 += float(ev.get("node_f1") or 0.0)
             edge_f1 += float(ev.get("edge_f1") or 0.0)
+            # chain_coherence / headline are None when the LLM judge call
+            # failed (e.g. transient outage). Skip those samples in the
+            # average so a couple of network blips don't drag the score
+            # down — count them separately as `judge_failed`.
+            chain_val = ev.get("chain_coherence")
+            if chain_val is not None:
+                chain_sum += float(chain_val)
+                chain_count += 1
+            else:
+                judge_failed += 1
+            headline_val = ev.get("headline")
+            if headline_val is not None:
+                headline_sum += float(headline_val)
+                headline_count += 1
             if ev.get("case_correct"):
                 correct += 1
             if ev.get("parse_error"):
@@ -240,6 +256,8 @@ class RCABenchProcesser(BaseMatchProcesser):
                 zero_evidence += 1
 
         denom = max(1, with_eval)
+        chain_denom = max(1, chain_count)
+        headline_denom = max(1, headline_count)
         return {
             "benchmark": self.name,
             "total_samples": n,
@@ -250,10 +268,11 @@ class RCABenchProcesser(BaseMatchProcesser):
             "avg_root_cause_f1": round(rc_f1 / denom, 4),
             "avg_overclaim_rate": round(overclaim / denom, 4),
             "avg_sql_executable_rate": round(sql_ok / denom, 4),
-            "avg_chain_coherence": round(chain / denom, 4),
+            "avg_chain_coherence": round(chain_sum / chain_denom, 4),
             "avg_node_f1": round(node_f1 / denom, 4),
             "avg_edge_f1": round(edge_f1 / denom, 4),
-            "avg_headline": round(headline / denom, 4),
+            "avg_headline": round(headline_sum / headline_denom, 4),
+            "judge_failed": judge_failed,
             "parse_errors": parse_errors,
             "zero_evidence_outputs": zero_evidence,
         }

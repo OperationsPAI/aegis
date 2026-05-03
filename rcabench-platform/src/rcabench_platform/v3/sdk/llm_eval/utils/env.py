@@ -1,11 +1,51 @@
 import importlib.metadata
 import os
+import re
+from typing import Any
 
 from dotenv import find_dotenv, load_dotenv
 
 # Load .env file but don't override existing environment variables
 # This allows command-line env vars to take precedence
 load_dotenv(find_dotenv(raise_error_if_not_found=False), verbose=True, override=False)
+
+
+_ENV_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def _expand_one(value: str) -> str:
+    """Replace ``${VAR}`` references with the env var's value.
+
+    Unset references raise a ValueError so misconfiguration fails loudly
+    instead of being silently passed through to a downstream API client.
+    """
+
+    def repl(match: re.Match[str]) -> str:
+        key = match.group(1)
+        env = os.getenv(key)
+        if env is None:
+            raise ValueError(
+                f"Config references env var ${{{key}}} but it is not set (check your .env / shell environment)."
+            )
+        return env
+
+    return _ENV_REF_RE.sub(repl, value)
+
+
+def expand_env_refs(data: Any) -> Any:
+    """Recursively expand ``${VAR}`` references in any string leaves.
+
+    Walks dicts and lists; non-string scalars are passed through. Designed for
+    YAML-loaded config trees so users can write ``base_url: ${UTU_LLM_BASE_URL}``
+    in a config file and have it resolved at load time.
+    """
+    if isinstance(data, dict):
+        return {k: expand_env_refs(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [expand_env_refs(v) for v in data]
+    if isinstance(data, str):
+        return _expand_one(data)
+    return data
 
 
 class EnvUtils:
