@@ -4,6 +4,9 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+from drain3 import TemplateMiner
+from drain3.file_persistence import FilePersistence
+from drain3.template_miner_config import TemplateMinerConfig
 
 from ...sdk.datasets.rcabench import get_service_names
 from ...sdk.logging import logger, timeit
@@ -375,6 +378,14 @@ class RCABenchDatapackLoader(DatapackLoader):
             ans.update(result)
 
         return ans
+
+
+def create_template_miner(config_path: Path, persistence_path: Path) -> TemplateMiner:
+    """Create a Drain3 template miner with file persistence."""
+    persistence = FilePersistence(str(persistence_path))
+    miner_config = TemplateMinerConfig()
+    miner_config.load(str(config_path))
+    return TemplateMiner(persistence, config=miner_config)
 
 
 def extract_unique_log_messages(src_root: Path, datapacks: list[str]) -> pl.DataFrame:
