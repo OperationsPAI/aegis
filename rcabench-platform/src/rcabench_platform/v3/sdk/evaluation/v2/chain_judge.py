@@ -28,8 +28,25 @@ import re
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
+from ...llm_eval.utils import get_logger
 from .schema import AgentRCAOutput
 from .sql_verify import EvidenceVerifyResult
+
+# Logs flow through the shared `llm_eval` logger tree, which `setup_logging`
+# already wires to both a colored stream handler (level = $LLM_EVAL_LOG_LEVEL,
+# default WARNING) and a rotating file handler at $LLM_EVAL_LOG_DIR/llm_eval.log
+# (always DEBUG). So:
+#   • To see judge prompts + raw responses in the terminal, run with
+#     LLM_EVAL_LOG_LEVEL=DEBUG.
+#   • Otherwise tail logs/llm_eval.log — DEBUG-level records are always there.
+logger = get_logger("llm_eval.chain_judge")
+
+# Cap how much of the prompt and the raw response we drop into logs. Full
+# prompts can hit hundreds of KB once evidence rows are spliced in, so an
+# unbounded log line would balloon log files and risk leaking large case
+# payloads. 8 KB keeps DEBUG useful (you can read the first ~120 lines)
+# without turning the log into a data dump.
+_LOG_BODY_LIMIT = 8000
 
 
 class ChainJudgeResult(BaseModel):
@@ -150,11 +167,18 @@ def _format_evidence_block(agent: AgentRCAOutput, results: list[tuple[str, Evide
     return "\n".join(lines)
 
 
+def _truncate(s: str, limit: int = _LOG_BODY_LIMIT) -> str:
+    if len(s) <= limit:
+        return s
+    return f"{s[:limit]}... [+{len(s) - limit} bytes truncated]"
+
+
 async def chain_coherence(
     agent: AgentRCAOutput,
     evidence_results: list[tuple[str, EvidenceVerifyResult]],
     llm_client: AsyncOpenAI | None,
     model: str = "gpt-4o-mini",
+    case_name: str | None = None,
 ) -> ChainJudgeResult:
     """Judge whether agent claims are supported by their evidence SQL rows.
 
@@ -162,7 +186,12 @@ async def chain_coherence(
     ``ChainJudgeResult(score=None, ...)`` so callers can distinguish
     "couldn't judge" from "judged as incoherent". Aggregators are expected
     to drop None values from the average; do not silently coerce to 0.0.
+
+    ``case_name`` is purely a log correlation key — it tags every log
+    record this judge call emits so multi-case runs stay readable.
     """
+    tag = f"[case={case_name}]" if case_name else "[case=?]"
+
     if llm_client is None:
         raise ValueError(
             "chain_coherence requires an LLM client; configure judge_model in "
@@ -173,6 +202,7 @@ async def chain_coherence(
         agent_output=agent.model_dump_json(by_alias=True, indent=2),
         evidence_block=_format_evidence_block(agent, evidence_results),
     )
+    logger.debug("%s judge prompt (model=%s, len=%d):\n%s", tag, model, len(prompt), _truncate(prompt))
 
     try:
         response = await llm_client.chat.completions.create(
@@ -182,9 +212,11 @@ async def chain_coherence(
             max_tokens=400,
         )
     except Exception as exc:
+        logger.warning("%s judge call failed: %s", tag, exc)
         return ChainJudgeResult(score=None, reasoning=f"(judge error: {exc!s:.200})")
 
     content = response.choices[0].message.content or ""
+    logger.debug("%s judge raw response (len=%d):\n%s", tag, len(content), _truncate(content))
 
     # Try the cheap path first: model already obeyed and returned raw JSON.
     parsed: dict | None = None
@@ -200,6 +232,7 @@ async def chain_coherence(
     if parsed is None:
         extracted = _extract_json_object(content)
         if extracted is None:
+            logger.warning("%s judge returned no JSON object; raw=%r", tag, content[:200])
             return ChainJudgeResult(
                 score=None,
                 reasoning="(judge returned no JSON object)",
@@ -208,12 +241,14 @@ async def chain_coherence(
         try:
             candidate = json.loads(extracted)
         except json.JSONDecodeError as exc:
+            logger.warning("%s judge JSON parse failed: %s; raw=%r", tag, exc, content[:200])
             return ChainJudgeResult(
                 score=None,
                 reasoning=f"(judge JSON parse failed: {exc!s:.120})",
                 raw_response=content,
             )
         if not isinstance(candidate, dict):
+            logger.warning("%s judge JSON was not an object; raw=%r", tag, content[:200])
             return ChainJudgeResult(
                 score=None,
                 reasoning="(judge JSON was not an object)",
@@ -223,14 +258,17 @@ async def chain_coherence(
 
     raw_score = parsed.get("score")
     if raw_score is None:
+        logger.warning("%s judge omitted score; parsed=%r", tag, parsed)
         return ChainJudgeResult(score=None, reasoning="(judge omitted score)", raw_response=content)
     try:
         score = max(0.0, min(1.0, float(raw_score)))
     except (TypeError, ValueError):
+        logger.warning("%s judge score not numeric: %r", tag, raw_score)
         return ChainJudgeResult(
             score=None,
             reasoning=f"(judge score not numeric: {raw_score!r:.40})",
             raw_response=content,
         )
     reasoning = str(parsed.get("reasoning") or "")
+    logger.info("%s judge score=%.3f reasoning=%s", tag, score, _truncate(reasoning, 200))
     return ChainJudgeResult(score=score, reasoning=reasoning, raw_response=content)

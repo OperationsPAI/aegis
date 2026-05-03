@@ -181,6 +181,7 @@ async def evaluate_v2(
         evidence_results=sql_evidence_results,
         llm_client=llm_client,
         model=judge_model,
+        case_name=case_name,
     )
 
     if judge_result.score is None:
