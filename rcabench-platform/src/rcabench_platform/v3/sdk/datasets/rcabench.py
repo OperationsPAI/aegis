@@ -10,11 +10,6 @@ from typing import Any
 import networkx as nx
 import polars as pl
 
-from ..datasets.spec import get_datapack_folder
-from ..logging import logger, timeit
-from ..utils.serde import load_json
-from .spec import DatasetAnalyzer, build_service_graph
-
 # Re-export the canonical FAULT_TYPES list from the reasoning models.
 # Previously this module duplicated the list and drifted (it was missing
 # JVMRuntimeMutator, the chaos-mesh runtime bytecode mutator added to
@@ -23,6 +18,11 @@ from .spec import DatasetAnalyzer, build_service_graph
 # ``FAULT_TYPE_TO_SEED_TIER``; importing here keeps SDK callers
 # automatically in sync with the reasoning side.
 from rcabench_platform.v3.internal.reasoning.models.injection import FAULT_TYPES  # noqa: E402, F401
+
+from ..datasets.spec import get_datapack_folder
+from ..logging import logger, timeit
+from ..utils.serde import load_json
+from .spec import DatasetAnalyzer, build_service_graph
 
 HTTP_REPLACE_METHODS: list[str] = [
     "GET",

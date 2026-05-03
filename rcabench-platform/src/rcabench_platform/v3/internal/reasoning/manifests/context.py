@@ -126,7 +126,6 @@ class ReasoningContext:
         # BFS along structural edges in both directions, up to max_hops.
         visited: set[int] = {root_id}
         frontier: list[int] = [root_id]
-        target_kind_str = kind.value if hasattr(kind, "value") else str(kind)
         values: list[float] = []
         for _ in range(max_hops):
             next_frontier: list[int] = []

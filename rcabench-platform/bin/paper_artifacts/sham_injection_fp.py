@@ -138,13 +138,6 @@ def _run_one_sham(
         _latest_abnormal_seconds,
         _resolve_alarm_nodes,
     )
-    from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
-    from rcabench_platform.v3.internal.reasoning.manifests.extractors.feature_extractor import (
-        extract_feature_samples,
-    )
-    from rcabench_platform.v3.internal.reasoning.manifests.registry import (
-        get_default_registry,
-    )
     from rcabench_platform.v3.internal.reasoning.config.slo_surface import SLOSurface
     from rcabench_platform.v3.internal.reasoning.ir.adapter import AdapterContext
     from rcabench_platform.v3.internal.reasoning.ir.adapters.inferred_edges import enrich_with_inferred_edges
@@ -154,6 +147,13 @@ def _run_one_sham(
     )
     from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
     from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
+    from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
+    from rcabench_platform.v3.internal.reasoning.manifests.extractors.feature_extractor import (
+        extract_feature_samples,
+    )
+    from rcabench_platform.v3.internal.reasoning.manifests.registry import (
+        get_default_registry,
+    )
     from rcabench_platform.v3.internal.reasoning.models.injection import InjectionNodeResolver
     from rcabench_platform.v3.internal.reasoning.rules.builtin_rules import get_builtin_rules
 

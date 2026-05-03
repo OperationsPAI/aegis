@@ -92,11 +92,11 @@ from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator impor
     _effective_onset,
 )
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
+from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
 from rcabench_platform.v3.internal.reasoning.manifests.features import (
     Feature,
     FeatureKind,
 )
-from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningContext
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
     DerivationLayer,
     FaultManifest,

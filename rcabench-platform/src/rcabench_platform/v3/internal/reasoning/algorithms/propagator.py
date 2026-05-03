@@ -203,7 +203,6 @@ class FaultPropagator:
         # ignores the path. Evaluate once per v_root candidate; pass
         # if ANY satisfies the signature — for network the partition
         # signal may be observable on either source or target side.
-        entry_gate = ManifestEntryGate(rctx)
         ctx = GateContext(
             graph=self.graph,
             timelines=self.timelines,
@@ -214,7 +213,6 @@ class FaultPropagator:
         )
         entry_passed = False
         entry_reasons: list[str] = []
-        winning_v_root = primary_v_root
         # ReasoningContext is frozen; iterate by building a per-v_root
         # variant via dataclasses.replace and re-binding the entry gate.
         from dataclasses import replace as _dc_replace
@@ -235,7 +233,6 @@ class FaultPropagator:
             r = v_gate.evaluate(empty_path, ctx)
             if r.passed:
                 entry_passed = True
-                winning_v_root = v_root
                 break
             entry_reasons.append(f"v_root={v_root}: {r.reason}")
         if not entry_passed:

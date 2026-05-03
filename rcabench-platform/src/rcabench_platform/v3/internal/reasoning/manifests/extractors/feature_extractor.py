@@ -355,7 +355,7 @@ def _pod_unavailable(node: Node, t0: int | None, t1: int | None) -> float | None
 
 
 def _aggregate_trace_stats(
-    traces: "pl.DataFrame",
+    traces: pl.DataFrame,
     t0: int | None,
     t1: int | None,
 ) -> dict[str, dict[str, float]]:
@@ -535,7 +535,7 @@ def _extract_span_features(
 def _extract_silent_unavailable_from_timelines(
     out: dict[FeatureSample, float],
     graph: HyperGraph,
-    timelines: dict[str, "StateTimeline"] | None,
+    timelines: dict[str, StateTimeline] | None,
     t0: int | None,
     t1: int | None,
 ) -> None:
@@ -584,7 +584,7 @@ def extract_feature_samples(
     abnormal_traces: Any | None = None,
     abnormal_window_start: int | None = None,
     abnormal_window_end: int | None = None,
-    timelines: dict[str, "StateTimeline"] | None = None,
+    timelines: dict[str, StateTimeline] | None = None,
 ) -> dict[FeatureSample, float]:
     """Materialise the 14 canonical features into a feature_samples dict.
 
