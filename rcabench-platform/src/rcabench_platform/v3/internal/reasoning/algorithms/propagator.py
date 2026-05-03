@@ -213,6 +213,7 @@ class FaultPropagator:
         )
         entry_passed = False
         entry_reasons: list[str] = []
+        winning_v_root = primary_v_root
         # ReasoningContext is frozen; iterate by building a per-v_root
         # variant via dataclasses.replace and re-binding the entry gate.
         from dataclasses import replace as _dc_replace
@@ -233,6 +234,7 @@ class FaultPropagator:
             r = v_gate.evaluate(empty_path, ctx)
             if r.passed:
                 entry_passed = True
+                winning_v_root = v_root
                 break
             entry_reasons.append(f"v_root={v_root}: {r.reason}")
         if not entry_passed:
@@ -318,7 +320,7 @@ class FaultPropagator:
         logger.debug(
             "[manifest-driven] fault_type=%s v_root=%d: built=%d valid=%d rejected=%d max_hops=%d",
             rctx.manifest.fault_type_name,
-            v_root,
+            winning_v_root,
             len(build.paths),
             len(valid_paths),
             len(rejected_paths),

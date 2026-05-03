@@ -118,7 +118,7 @@ def test_extractor_populates_cpu_throttle_ratio_synthetic() -> None:
         FeatureKind.container,
         Feature.cpu_throttle_ratio,
     ) in samples
-    cont_ratio = samples[(cont.id, FeatureKind.container, Feature.cpu_throttle_ratio)]
+    cont_ratio = samples[(cont.id, FeatureKind.container, Feature.cpu_throttle_ratio)]  # type: ignore[arg-type]
     assert cont_ratio >= 3.0, f"expected CPU ratio >= 3.0 (CPUStress band lower edge), got {cont_ratio}"
 
 
@@ -136,7 +136,7 @@ def test_entry_gate_passes_with_extracted_samples_synthetic() -> None:
     # CPUStress requires container.cpu_throttle_ratio AND optional_min_match=1
     # of the optionals. Provide an optional match so the entry signature
     # passes — synthesise a thread_queue_depth sample.
-    samples[(cont.id, FeatureKind.container, Feature.thread_queue_depth)] = 5.0
+    samples[(cont.id, FeatureKind.container, Feature.thread_queue_depth)] = 5.0  # type: ignore[arg-type]
 
     rctx = ReasoningContext(
         fault_type_name=manifest.fault_type_name,
@@ -176,7 +176,7 @@ def test_entry_gate_fails_when_no_samples_extracted_synthetic() -> None:
         feature_samples=samples,
     )
     result = ManifestEntryGate(rctx).evaluate(
-        path=None,
+        path=None,  # type: ignore[arg-type]
         ctx=None,  # type: ignore[arg-type]
     )
     assert not result.passed

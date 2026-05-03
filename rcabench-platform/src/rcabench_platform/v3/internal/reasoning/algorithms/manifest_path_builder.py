@@ -99,6 +99,7 @@ from rcabench_platform.v3.internal.reasoning.manifests.features import (
 )
 from rcabench_platform.v3.internal.reasoning.manifests.schema import (
     DerivationLayer,
+    EdgeDirection,
     FaultManifest,
     HandOff,
 )
@@ -379,7 +380,7 @@ class ManifestAwarePathBuilder:
     def _lift_frontier_to_pairs(
         self,
         frontier: list[_Frame],
-        target_pairs: set[tuple[str, str]],
+        target_pairs: set[tuple[str, EdgeDirection]],
         manifest_name: str,
         max_hops: int = _PROXY_DESCENT_HOP_CAP,
     ) -> list[_Frame]:
@@ -449,7 +450,7 @@ class ManifestAwarePathBuilder:
                         stack.append((other_id, transit_frame, hop + 1))
         return lifted
 
-    def _has_edge_of_kind_dir(self, node_id: int, kind_dirs: set[tuple[str, str]]) -> bool:
+    def _has_edge_of_kind_dir(self, node_id: int, kind_dirs: set[tuple[str, EdgeDirection]]) -> bool:
         """True iff ``node_id`` has an edge matching one of ``(kind, direction)``.
 
         Direction follows :class:`_admit_layer_children` semantics:
