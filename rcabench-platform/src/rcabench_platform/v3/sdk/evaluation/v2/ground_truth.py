@@ -26,6 +26,7 @@ directly; the old format encodes the same information across `fault_type`
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -64,29 +65,36 @@ class GTContext(BaseModel):
     end_time_ns: int | None = None
 
 
-_LEGACY_INDEX_PATH = Path("/home/ddq/AoyangSpace/dataset/rca/data.jsonl")
+# Set RCABENCH_LEGACY_INDEX to the absolute path of a data.jsonl side-channel
+# (rows must carry `source`/`datapack_name` + `fault_type`) for old-format
+# cases whose injection.json is missing both `fault_type` and a decodable
+# `display_config`. Unset → side-channel disabled, which is the right default
+# for any environment that isn't the original FSE/openrca2 dump.
+_LEGACY_INDEX_ENV = "RCABENCH_LEGACY_INDEX"
 _LEGACY_INDEX_CACHE: dict[str, dict[str, Any]] | None = None
 
 
 def _load_legacy_index() -> dict[str, dict[str, Any]]:
-    """Last-resort fallback: read fault_type from data.jsonl.
-
-    Only consulted when injection.json itself is missing both `fault_type`
-    (numeric) and any decodable `display_config`.
+    """Last-resort fallback: read fault_type from a data.jsonl pointed at by
+    ``$RCABENCH_LEGACY_INDEX``. Only consulted when injection.json itself is
+    missing both `fault_type` (numeric) and any decodable `display_config`.
     """
     global _LEGACY_INDEX_CACHE
     if _LEGACY_INDEX_CACHE is None:
         idx: dict[str, dict[str, Any]] = {}
-        if _LEGACY_INDEX_PATH.exists():
-            with _LEGACY_INDEX_PATH.open() as f:
-                for line in f:
-                    try:
-                        row = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-                    key = row.get("source") or row.get("datapack_name")
-                    if key:
-                        idx[key] = row
+        env_path = os.environ.get(_LEGACY_INDEX_ENV, "").strip()
+        if env_path:
+            path = Path(env_path).expanduser()
+            if path.exists():
+                with path.open() as f:
+                    for line in f:
+                        try:
+                            row = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        key = row.get("source") or row.get("datapack_name")
+                        if key:
+                            idx[key] = row
         _LEGACY_INDEX_CACHE = idx
     return _LEGACY_INDEX_CACHE
 

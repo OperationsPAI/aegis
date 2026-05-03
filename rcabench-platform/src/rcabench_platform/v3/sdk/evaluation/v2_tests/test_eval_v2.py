@@ -922,17 +922,19 @@ def test_evaluate_v2_judge_failure_returns_none(tmp_path: Path) -> None:
 
 
 def test_calculate_metrics_aggregation() -> None:
-    """5 stub samples → aggregates split avg_chain/avg_headline (judge-aware).
+    """5 stub samples → aggregates use total-n denominators (judge-aware exception).
 
     Sample mix:
       [0] perfect      rc_f1=1.0  sql=1.0  chain=1.0   headline=1.0   correct=True
       [1] partial      rc_f1=0.5  sql=0.8  chain=0.6   headline=0.24
       [2] parse-err    zeros + parse_error=True
-      [3] judge-fail   rc_f1=1.0  sql=1.0  chain=None  headline=None
-      [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}  → excluded
-    The deterministic axes (rc_f1, sql, etc.) average over the 4 scored samples
-    (0,1,2,3). The judge-affected axes (chain, headline) average over the 3
-    that produced a real score (0,1,2) and report `judge_failed=1`.
+      [3] judge-fail   rc_f1=1.0  sql=1.0  chain=None  headline=None  correct=True
+      [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}  → still in denom
+    All score axes (rc_f1, sql, headline, …) divide by total `n=5` so eval-err
+    and parse-err samples count as 0 instead of being silently dropped from
+    the rate. `avg_chain_coherence` is the sole exception: judge outage is a
+    system failure that shouldn't be conflated with "judged as 0", so it stays
+    on the judged-only denominator and the gap is surfaced via `judge_failed`.
     """
     from rcabench_platform.v3.sdk.llm_eval.eval.processer.rcabench import RCABenchProcesser
 
@@ -1016,16 +1018,16 @@ def test_calculate_metrics_aggregation() -> None:
     assert metrics["total_samples"] == 5
     assert metrics["scored_samples"] == 4
     assert metrics["case_correct"] == 2
-    assert metrics["case_correct_rate"] == round(2 / 4, 4)
+    # Score axes divide by total n=5 (eval-err + parse-err count as 0).
+    assert metrics["case_correct_rate"] == round(2 / 5, 4)
     assert metrics["parse_errors"] == 1
     assert metrics["zero_evidence_outputs"] == 1
     assert metrics["judge_failed"] == 1
-    # Deterministic axes average over all 4 scored samples.
-    assert metrics["avg_service_f1"] == round((1.0 + 0.7 + 0.0 + 1.0) / 4, 4)
-    assert metrics["avg_root_cause_f1"] == round((1.0 + 0.5 + 0.0 + 1.0) / 4, 4)
-    assert metrics["avg_sql_executable_rate"] == round((1.0 + 0.8 + 0.0 + 1.0) / 4, 4)
-    assert metrics["avg_node_f1"] == round((1.0 + 0.4 + 0.0 + 1.0) / 4, 4)
-    assert metrics["avg_edge_f1"] == round((1.0 + 0.2 + 0.0 + 1.0) / 4, 4)
-    # Judge-affected axes average over only the 3 that produced a real score.
+    assert metrics["avg_service_f1"] == round((1.0 + 0.7 + 0.0 + 1.0) / 5, 4)
+    assert metrics["avg_root_cause_f1"] == round((1.0 + 0.5 + 0.0 + 1.0) / 5, 4)
+    assert metrics["avg_sql_executable_rate"] == round((1.0 + 0.8 + 0.0 + 1.0) / 5, 4)
+    assert metrics["avg_node_f1"] == round((1.0 + 0.4 + 0.0 + 1.0) / 5, 4)
+    assert metrics["avg_edge_f1"] == round((1.0 + 0.2 + 0.0 + 1.0) / 5, 4)
+    # judge-fail headline counts as 0 in /n; chain_coherence stays on /chain_count.
+    assert metrics["avg_headline"] == round((1.0 + 0.24 + 0.0) / 5, 4)
     assert metrics["avg_chain_coherence"] == round((1.0 + 0.6 + 0.0) / 3, 4)
-    assert metrics["avg_headline"] == round((1.0 + 0.24 + 0.0) / 3, 4)

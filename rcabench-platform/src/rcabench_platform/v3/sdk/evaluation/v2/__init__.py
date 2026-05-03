@@ -5,8 +5,11 @@ Public API:
     FaultKind, map_chaos_type — controlled fault-kind vocabulary
     extract_gt_faults — pull list[GTFault] from injection.json
     evaluate_v2 — async top-level scorer returning EvaluationResultV2
+    get_agent_contract_prompt — canonical enum+schema text integrators splice
+        into their own system prompt so the contract version follows the SDK
 """
 
+from .agent_contract import get_agent_contract_prompt
 from .chain_judge import ChainJudgeResult, chain_coherence
 from .evaluator import EvaluationResultV2, evaluate_v2
 from .fault_kind import FaultKind, map_chaos_type
@@ -45,4 +48,5 @@ __all__ = [
     "chain_coherence",
     "EvaluationResultV2",
     "evaluate_v2",
+    "get_agent_contract_prompt",
 ]

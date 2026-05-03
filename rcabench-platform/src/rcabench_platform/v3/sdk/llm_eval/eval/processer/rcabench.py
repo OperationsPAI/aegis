@@ -229,7 +229,6 @@ class RCABenchProcesser(BaseMatchProcesser):
         chain_sum = 0.0
         chain_count = 0
         headline_sum = 0.0
-        headline_count = 0
         node_f1 = 0.0
         edge_f1 = 0.0
         correct = 0
@@ -252,10 +251,12 @@ class RCABenchProcesser(BaseMatchProcesser):
             sql_ok += float(ev.get("sql_executable_rate") or 0.0)
             node_f1 += float(ev.get("node_f1") or 0.0)
             edge_f1 += float(ev.get("edge_f1") or 0.0)
-            # chain_coherence / headline are None when the LLM judge call
-            # failed (e.g. transient outage). Skip those samples in the
-            # average so a couple of network blips don't drag the score
-            # down — count them separately as `judge_failed`.
+            # chain_coherence is None when the LLM judge call itself failed
+            # (e.g. transient outage). Track judged-only count separately so
+            # `avg_chain_coherence` reflects the score of cases that were
+            # actually judged; surface the rest via `judge_failed`. headline
+            # for those cases counts as 0 in the per-n average below — judge
+            # outages do penalize the published score.
             chain_val = ev.get("chain_coherence")
             if chain_val is not None:
                 chain_sum += float(chain_val)
@@ -265,7 +266,6 @@ class RCABenchProcesser(BaseMatchProcesser):
             headline_val = ev.get("headline")
             if headline_val is not None:
                 headline_sum += float(headline_val)
-                headline_count += 1
             if ev.get("case_correct"):
                 correct += 1
             if ev.get("parse_error"):
@@ -273,9 +273,15 @@ class RCABenchProcesser(BaseMatchProcesser):
             if not ev.get("per_evidence"):
                 zero_evidence += 1
 
-        denom = max(1, with_eval)
+        # Score averages divide by total `n` so parse-failed / no-eval samples
+        # count as 0 — otherwise an agent that JSON-fails 90% of cases but gets
+        # the rest right would post the same case_correct_rate as one that
+        # parses every output. `avg_chain_coherence` keeps its judge-only
+        # denominator since "judge couldn't run" is a system failure that
+        # should not be conflated with "judged as 0", and is reported
+        # alongside `judge_failed` so the gap is visible.
+        denom = max(1, n)
         chain_denom = max(1, chain_count)
-        headline_denom = max(1, headline_count)
         return {
             "benchmark": self.name,
             "total_samples": n,
@@ -290,7 +296,7 @@ class RCABenchProcesser(BaseMatchProcesser):
             "avg_chain_coherence": round(chain_sum / chain_denom, 4),
             "avg_node_f1": round(node_f1 / denom, 4),
             "avg_edge_f1": round(edge_f1 / denom, 4),
-            "avg_headline": round(headline_sum / headline_denom, 4),
+            "avg_headline": round(headline_sum / denom, 4),
             "judge_failed": judge_failed,
             "parse_errors": parse_errors,
             "zero_evidence_outputs": zero_evidence,
