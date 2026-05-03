@@ -1,4 +1,4 @@
-# NOTE: template should include keys {question}
+# NOTE: template should include keys {question} OR ({reports}, {directory_path})
 
 default: |
   {question}
@@ -7,5 +7,82 @@ RCABench: |
   The following API endpoints are experiencing possible SLO violations and need investigation:
   {reports}
 
-  Please investigate the root cause of these SLO violations.
-  The telemetry data is stored in: `{directory_path}`
+  Telemetry parquets are stored in: `{directory_path}`
+  Available files: abnormal_metrics.parquet, abnormal_traces.parquet,
+  abnormal_logs.parquet, abnormal_metrics_histogram.parquet, abnormal_metrics_sum.parquet,
+  normal_metrics.parquet, normal_traces.parquet, normal_logs.parquet.
+
+  ## Task
+
+  Investigate and identify the root cause(s) of these SLO violations. You do
+  NOT know in advance whether this is a single fault or a hybrid (multiple
+  faults injected simultaneously) — list every root cause you find.
+
+  ## Output schema (return STRICT JSON, nothing else)
+
+  ```json
+  {{
+    "root_causes": [
+      {{
+        "service": "<canonical service name, e.g. ts-order-service>",
+        "fault_kind": "<one of the 14 enum values below>",
+        "direction": {{"src": "<service>", "dst": "<service>"}},
+        "method": "<class.method, optional>",
+        "confidence": 0.0,
+        "evidence": [
+          {{
+            "kind": "metric|trace|log",
+            "sql": "<DuckDB SQL re-executable on this case dir>",
+            "claim": "<what the SQL result demonstrates>"
+          }}
+        ]
+      }}
+    ],
+    "propagation": [
+      {{"from": "<service>", "to": "<service>", "evidence": [ ... ]}}
+    ]
+  }}
+  ```
+
+  ### `fault_kind` controlled vocabulary (pick exactly one per root cause)
+
+  - `pod_failure`     — pod kill / container kill / pod failure
+  - `cpu_stress`      — CPU pressure injection
+  - `mem_stress`      — memory pressure injection
+  - `network_delay`   — added latency on a link
+  - `network_loss`    — packet loss on a link
+  - `network_partition` — link partitioned
+  - `network_corrupt` — packet corruption on a link
+  - `network_duplicate` — packet duplication on a link
+  - `jvm_exception`   — JVM throws synthetic exception in a method
+  - `jvm_mutator`     — JVM mutates return value or runtime behavior
+  - `http_abort`      — HTTP request/response aborted by chaos
+  - `http_replace`    — HTTP method/code/body replaced by chaos
+  - `dns`             — DNS resolution chaos
+  - `time_skew`       — host clock skew
+
+  ### Field rules
+
+  - `direction` is REQUIRED for every `network_*` root cause; `src` is the
+    service the netem rule sits on, `dst` is the remote peer it shapes traffic
+    toward. Omit `direction` for non-network faults.
+  - `method` (`class.method`) is OPTIONAL bonus identification for `jvm_*` and
+    `http_*` faults; omit for the rest.
+  - Each `root_cause` AND each `propagation` edge MUST carry ≥1 `evidence`
+    item with a runnable DuckDB `sql` and a natural-language `claim`.
+
+  ### SQL constraints
+
+  - DuckDB dialect.
+  - Reference parquets via `read_parquet('<filename>.parquet')` — bare
+    filenames are resolved against this case dir; absolute paths or paths
+    containing `/` are rejected.
+  - SELECT only; DDL/DML/ATTACH/INSTALL/COPY/PRAGMA/SET are forbidden.
+  - One statement per `sql` field (no `;`-separated multi-statements).
+  - Use the column names: `time` (TIMESTAMP), `service_name`, `metric`,
+    `value`, `trace_id`, `span_id`, `parent_span_id`, `span_name`, `duration`,
+    `attr.status_code`, `level`, `message`.
+  - Restrict the time window using
+    `time BETWEEN TIMESTAMP '<start>' AND TIMESTAMP '<end>'`.
+
+  Return only the JSON object. No prose, no markdown fences.
