@@ -61,7 +61,9 @@ def test_map_chaos_type_unknown() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────
-# GT fault extraction (new + old format)
+# GT fault extraction. direction / method are still extracted — the
+# matcher no longer scores them, but they're surfaced on FaultMatchResult
+# for diagnostic display.
 # ──────────────────────────────────────────────────────────────────────
 
 
@@ -118,64 +120,16 @@ def test_extract_gt_old_format_decodes_fault_type_index() -> None:
                 "namespace": "ts",
             }
         ),
-        "ground_truth": {
-            "service": ["mysql", "ts-train-service"],
-            "function": None,
-        },
     }
-    ctx = extract_gt_faults(inj, case_name="ts0-mysql-partition-x")
+    ctx = extract_gt_faults(inj)
     assert len(ctx.faults) == 1
-    f = ctx.faults[0]
-    assert f.service == "mysql"
-    assert f.fault_kind is FaultKind.NETWORK_PARTITION
-    assert f.direction_src == "mysql"
-    assert f.direction_dst == "ts-train-service"
-    assert f.raw_chaos_type == "NetworkPartition"
-
-
-def test_extract_gt_old_format_jvm_method_from_display_config() -> None:
-    """JVM-class chaos in old format: method comes from display_config's
-    class_name + method_name (data.jsonl no longer needed)."""
-    inj = {
-        "engine_config": "{}",
-        "fault_type": 27,  # canonical[27] == "JVMCPUStress"
-        "display_config": json.dumps(
-            {
-                "injection_point": {
-                    "app_name": "ts-cancel-service",
-                    "class_name": "fdse.cancel.CancelImpl",
-                    "method_name": "cancelFromOrder",
-                },
-            }
-        ),
-        "ground_truth": {"service": ["ts-cancel-service"]},
-    }
-    ctx = extract_gt_faults(inj, case_name="x")
-    assert len(ctx.faults) == 1
-    f = ctx.faults[0]
-    assert f.service == "ts-cancel-service"
-    assert f.fault_kind is FaultKind.JVM_THREAD_CPU_STRESS  # JVMCPUStress
-    # method only attached for jvm/http kinds; JVM_THREAD_CPU_STRESS is
-    # resource-class so method stays None
-    assert f.method is None
-
-
-def test_extract_gt_old_format_no_fault_type_no_side_channel() -> None:
-    """No `fault_type` field and no data.jsonl entry → kind=UNKNOWN, but we
-    can still recover service from display_config so the case isn't dropped."""
-    inj = {
-        "engine_config": "{}",
-        "display_config": json.dumps({"injection_point": {"app_name": "service-x"}}),
-        "ground_truth": {"service": ["service-x"]},
-    }
-    ctx = extract_gt_faults(inj, case_name="<no-side-channel>")
-    assert len(ctx.faults) == 1
-    assert ctx.faults[0].service == "service-x"
-    assert ctx.faults[0].fault_kind is FaultKind.UNKNOWN
+    assert ctx.faults[0].fault_kind is FaultKind.NETWORK_PARTITION
+    assert ctx.faults[0].service == "mysql"
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Type-aware matcher — by example
+# Single-tier matcher. Status is HIT / WRONG_KIND / MISS — direction
+# and method are not part of the match key under the simplified contract.
 # ──────────────────────────────────────────────────────────────────────
 
 _DUMMY_EV: dict[str, str] = {
@@ -190,7 +144,6 @@ def _agent(rcs: list[dict[str, Any]], propagation: list[dict[str, Any]] | None =
 
 
 def test_match_perfect_single_fault() -> None:
-    """Agent: 1 root_cause, kind+service correct → HIT, F1=1, case_correct=True."""
     gt = [GTFault(service="ts-basic-service", fault_kind=FaultKind.JVM_METHOD_MUTATED)]
     agent = _agent(
         [
@@ -202,36 +155,39 @@ def test_match_perfect_single_fault() -> None:
         ]
     )
     out = compute_outcome(agent, gt)
-    assert out.root_cause_f1 == 1.0
-    assert out.root_cause_partial_f1 == 1.0
-    assert out.service_f1 == 1.0
-    assert out.case_correct is True
+    assert out.f1 == 1.0
+    assert out.precision == 1.0
+    assert out.recall == 1.0
+    assert out.exact_match is True
+    assert out.fault_kind_accuracy == 1.0
+    assert out.kind_accuracy_denom == 1
     assert out.per_fault[0].status is MatchStatus.HIT
 
 
-def test_match_partial_credit_wrong_kind() -> None:
-    """Service correct but kind wrong → WRONG_KIND, partial=0.5, strict=0.0."""
+def test_match_wrong_kind() -> None:
+    """Service correct but kind wrong → WRONG_KIND, f1=0, but contributes to
+    fault_kind_accuracy denominator (0/1 = 0.0)."""
     gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
     agent = _agent(
         [
             {
                 "service": "payment",
-                "fault_kind": "mem_stress",  # wrong kind
+                "fault_kind": "mem_stress",
                 "evidence": [_DUMMY_EV],
             }
         ]
     )
     out = compute_outcome(agent, gt)
     assert out.per_fault[0].status is MatchStatus.WRONG_KIND
-    assert out.service_f1 == 1.0  # service correct counts here
-    assert out.root_cause_partial_f1 == 0.5  # half credit
-    assert out.root_cause_f1 == 0.0  # strict zero
-    assert out.case_correct is False
+    assert out.f1 == 0.0
+    assert out.exact_match is False
+    assert out.fault_kind_accuracy == 0.0
+    assert out.kind_accuracy_denom == 1
 
 
-def test_match_partial_credit_wrong_direction() -> None:
-    """Network case: service+kind correct but direction flipped → WRONG_DIRECTION,
-    partial=0.5, strict=0.0."""
+def test_match_direction_is_diagnostic_only() -> None:
+    """Network fault: agent gives wrong direction → still HIT under the
+    simplified contract (matcher only checks service + fault_kind)."""
     gt = [
         GTFault(
             service="shipping",
@@ -245,104 +201,65 @@ def test_match_partial_credit_wrong_direction() -> None:
             {
                 "service": "shipping",
                 "fault_kind": "network_delay",
-                "direction": {"src": "quote", "dst": "shipping"},  # flipped
-                "evidence": [_DUMMY_EV],
-            }
-        ]
-    )
-    out = compute_outcome(agent, gt)
-    assert out.per_fault[0].status is MatchStatus.WRONG_DIRECTION
-    assert out.service_f1 == 1.0
-    assert out.root_cause_partial_f1 == 0.5
-    assert out.root_cause_f1 == 0.0
-    assert out.case_correct is False
-
-
-def test_match_network_no_direction_is_wrong_direction() -> None:
-    """Agent gets service+kind on Network* but skips direction → WRONG_DIRECTION."""
-    gt = [
-        GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY, direction_src="shipping", direction_dst="quote")
-    ]
-    agent = _agent(
-        [
-            {
-                "service": "shipping",
-                "fault_kind": "network_delay",
-                "evidence": [_DUMMY_EV],
-            }
-        ]
-    )
-    out = compute_outcome(agent, gt)
-    assert out.per_fault[0].status is MatchStatus.WRONG_DIRECTION
-    assert out.root_cause_f1 == 0.0
-
-
-def test_match_network_correct_direction() -> None:
-    gt = [
-        GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY, direction_src="shipping", direction_dst="quote")
-    ]
-    agent = _agent(
-        [
-            {
-                "service": "shipping",
-                "fault_kind": "network_delay",
-                "direction": {"src": "shipping", "dst": "quote"},
+                "direction": {"src": "quote", "dst": "shipping"},  # flipped — ignored
                 "evidence": [_DUMMY_EV],
             }
         ]
     )
     out = compute_outcome(agent, gt)
     assert out.per_fault[0].status is MatchStatus.HIT
-    assert out.root_cause_f1 == 1.0
+    assert out.f1 == 1.0
+    assert out.exact_match is True
 
 
-def test_match_wrong_kind() -> None:
-    gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
-    agent = _agent(
-        [
-            {
-                "service": "payment",
-                "fault_kind": "mem_stress",
-                "evidence": [_DUMMY_EV],
-            }
-        ]
-    )
-    out = compute_outcome(agent, gt)
-    assert out.per_fault[0].status is MatchStatus.WRONG_KIND
-    assert out.root_cause_f1 == 0.0
-
-
-def test_match_partial_hybrid() -> None:
-    """Hybrid GT (2 faults). Agent gets one right + an unrelated overclaim → F1=0.5."""
+def test_match_network_no_direction_still_hits() -> None:
+    """Network fault: agent omits direction entirely → HIT (direction unused)."""
     gt = [
         GTFault(
-            service="shipping", fault_kind=FaultKind.NETWORK_DELAY, direction_src="shipping", direction_dst="quote"
-        ),
-        GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS),
+            service="shipping",
+            fault_kind=FaultKind.NETWORK_DELAY,
+            direction_src="shipping",
+            direction_dst="quote",
+        )
     ]
     agent = _agent(
         [
             {
                 "service": "shipping",
                 "fault_kind": "network_delay",
-                "direction": {"src": "shipping", "dst": "quote"},
                 "evidence": [_DUMMY_EV],
-            },
+            }
+        ]
+    )
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.HIT
+
+
+def test_match_partial_hybrid() -> None:
+    """Hybrid GT (2 faults). Agent gets one right + an unrelated overclaim."""
+    gt = [
+        GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY),
+        GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS),
+    ]
+    agent = _agent(
+        [
+            {"service": "shipping", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]},
             {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
         ]
     )
     out = compute_outcome(agent, gt)
-    assert out.root_cause_precision == 0.5
-    assert out.root_cause_recall == 0.5
-    assert out.root_cause_f1 == 0.5
-    assert out.overclaim_rate == 0.5
-    assert out.case_correct is False
+    assert out.precision == 0.5
+    assert out.recall == 0.5
+    assert out.f1 == 0.5
+    assert out.exact_match is False
     statuses = sorted(r.status.value for r in out.per_fault)
     assert statuses == ["HIT", "MISS"]
+    # Overclaim's service is wrong, so it doesn't contribute to kind_accuracy denom.
+    assert out.kind_accuracy_denom == 1
 
 
-def test_match_overclaim_drops_case_correct() -> None:
-    """Agent finds the GT fault but adds an unrelated extra → case_correct=False."""
+def test_match_overclaim_drops_exact_match() -> None:
+    """Agent finds the GT fault but adds an unrelated extra → exact_match=False."""
     gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
     agent = _agent(
         [
@@ -351,79 +268,69 @@ def test_match_overclaim_drops_case_correct() -> None:
         ]
     )
     out = compute_outcome(agent, gt)
-    assert out.root_cause_recall == 1.0
-    assert out.root_cause_precision == 0.5
-    assert out.case_correct is False
-    assert out.overclaim_rate == 0.5
+    assert out.recall == 1.0
+    assert out.precision == 0.5
+    assert out.exact_match is False
+    assert out.overclaim_indices == [1]
 
 
-def test_match_normalization_is_uniform_across_systems() -> None:
-    """Service name normalization is the same across ts/hs/otel-demo: lowercase
-    + drop dashes and underscores. No system-specific prefix stripping.
-
-    The agent must use names that exist in the data (modulo case + dash/underscore
-    style). It does NOT get matching for free by dropping a `ts-` prefix that
-    the GT actually carries.
-    """
-    # Same name, different dash/underscore styling → still HIT.
-    gt = [GTFault(service="ts-route-plan-service", fault_kind=FaultKind.POD_FAILURE)]
-    agent = _agent(
+def test_match_multiset_two_same_service() -> None:
+    """Two GT faults on the same service → agent must HIT both to exact_match."""
+    gt = [
+        GTFault(service="cart", fault_kind=FaultKind.CPU_STRESS),
+        GTFault(service="cart", fault_kind=FaultKind.CPU_STRESS),
+    ]
+    agent_two = _agent(
         [
-            {
-                "service": "ts_route_plan_service",
-                "fault_kind": "pod_failure",
-                "evidence": [_DUMMY_EV],
-            }
+            {"service": "cart", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
+            {"service": "cart", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
         ]
     )
-    assert compute_outcome(agent, gt).per_fault[0].status is MatchStatus.HIT
+    out = compute_outcome(agent_two, gt)
+    assert out.f1 == 1.0
+    assert out.exact_match is True
 
-    # Mixed case → still HIT.
-    agent_caps = _agent(
-        [
-            {
-                "service": "TS-Route-Plan-Service",
-                "fault_kind": "pod_failure",
-                "evidence": [_DUMMY_EV],
-            }
-        ]
+    agent_one = _agent(
+        [{"service": "cart", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}],
     )
-    assert compute_outcome(agent_caps, gt).per_fault[0].status is MatchStatus.HIT
-
-    # Dropping the ts- prefix is now a MISS (the agent must use a name
-    # that actually appears in the case data).
-    agent_stripped = _agent(
-        [
-            {
-                "service": "route-plan-service",
-                "fault_kind": "pod_failure",
-                "evidence": [_DUMMY_EV],
-            }
-        ]
-    )
-    assert compute_outcome(agent_stripped, gt).per_fault[0].status is MatchStatus.MISS
+    out = compute_outcome(agent_one, gt)
+    assert out.recall == 0.5
+    assert out.exact_match is False  # one short of multiset
 
 
-def test_match_service_only_f1_separates_from_kind_f1() -> None:
-    """service_f1 counts a fault as matched whenever the agent picked the right
-    service, even if it got the kind wrong. root_cause_f1 (kind-level) only
-    counts HIT. Both share denominators, so on a 1-fault case where the agent
-    nailed the service but missed the kind, service_f1=1.0 and root_cause_f1=0.0.
-    """
+def test_match_kind_accuracy_denom_excludes_pure_misses() -> None:
+    """Agent rcs whose service doesn't match anyone don't count toward
+    fault_kind_accuracy denom (they're hallucinations, not service-correct)."""
     gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
     agent = _agent(
         [
-            {
-                "service": "payment",
-                "fault_kind": "mem_stress",
-                "evidence": [_DUMMY_EV],
-            }
+            {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
+            {"service": "elsewhere", "fault_kind": "mem_stress", "evidence": [_DUMMY_EV]},
         ]
     )
     out = compute_outcome(agent, gt)
-    assert out.service_f1 == 1.0
-    assert out.root_cause_f1 == 0.0
-    assert out.per_fault[0].status is MatchStatus.WRONG_KIND
+    assert out.kind_accuracy_denom == 0
+    # None signals "no service-correct rcs to grade"; aggregator skips this case.
+    assert out.fault_kind_accuracy is None
+
+
+def test_match_normalization_is_uniform_across_systems() -> None:
+    """Service name normalization is uniform: lowercase + drop dashes / underscores."""
+    gt = [GTFault(service="ts-route-plan-service", fault_kind=FaultKind.POD_FAILURE)]
+    agent = _agent(
+        [{"service": "ts_route_plan_service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+    )
+    assert compute_outcome(agent, gt).per_fault[0].status is MatchStatus.HIT
+
+    agent_caps = _agent(
+        [{"service": "TS-Route-Plan-Service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+    )
+    assert compute_outcome(agent_caps, gt).per_fault[0].status is MatchStatus.HIT
+
+    agent_stripped = _agent(
+        [{"service": "route-plan-service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+    )
+    assert compute_outcome(agent_stripped, gt).per_fault[0].status is MatchStatus.MISS
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -466,7 +373,7 @@ def test_graph_metrics_partial_recall_and_hallucination() -> None:
         ],
     )
     gm = compute_graph_metrics(agent, gt)
-    assert gm.node_precision == 1.0  # {a,b,c} ⊆ {a,b,c,d}
+    assert gm.node_precision == 1.0
     assert abs(gm.node_recall - 0.75) < 1e-9
     assert gm.edge_precision == 0.5
     assert abs(gm.edge_recall - 1 / 3) < 1e-9
@@ -486,7 +393,6 @@ def test_graph_metrics_no_gt_marks_inapplicable() -> None:
 
 
 def _make_case(tmp_path: Path) -> Path:
-    """Synthesize a tiny case dir with one trace + one metrics parquet."""
     times = pl.datetime_range(
         pl.datetime(2026, 5, 2, 8, 0, 0),
         pl.datetime(2026, 5, 2, 8, 4, 0),
@@ -514,8 +420,6 @@ def _make_case(tmp_path: Path) -> Path:
 
 
 def test_sql_verify_ok_via_view_name(tmp_path: Path) -> None:
-    """Each *.parquet in the case dir is mounted as a same-named view, so the
-    agent can use bare table names without an explicit read_parquet(...)."""
     case = _make_case(tmp_path)
     ev = Evidence(
         kind=EvidenceKind.METRIC,
@@ -528,8 +432,6 @@ def test_sql_verify_ok_via_view_name(tmp_path: Path) -> None:
 
 
 def test_sql_verify_ok_via_read_parquet(tmp_path: Path) -> None:
-    """Relative read_parquet('foo.parquet') paths resolve against the case dir
-    because the verifier chdirs into it before executing."""
     case = _make_case(tmp_path)
     ev = Evidence(
         kind=EvidenceKind.METRIC,
@@ -542,8 +444,6 @@ def test_sql_verify_ok_via_read_parquet(tmp_path: Path) -> None:
 
 
 def test_sql_verify_empty(tmp_path: Path) -> None:
-    """Query executes but matches no rows → EMPTY (still distinguishable from
-    SQL_ERROR, so the agent sees that the SQL parses but its filter is wrong)."""
     case = _make_case(tmp_path)
     ev = Evidence(
         kind=EvidenceKind.METRIC,
@@ -554,24 +454,21 @@ def test_sql_verify_empty(tmp_path: Path) -> None:
 
 
 def test_sql_verify_sql_error_on_bad_syntax(tmp_path: Path) -> None:
-    """Anything DuckDB can't run surfaces as SQL_ERROR — no curated allowlist."""
     case = _make_case(tmp_path)
     ev = Evidence(kind=EvidenceKind.METRIC, sql="SELECT FROM WHERE", claim="x")
     assert verify_evidence(ev, parquet_dir=case).status is EvidenceStatus.SQL_ERROR
 
 
 def test_sql_verify_sql_error_on_missing_table(tmp_path: Path) -> None:
-    """Reference to a parquet that isn't in the case dir → DuckDB raises a
-    catalog error, surfaced as SQL_ERROR."""
     case = _make_case(tmp_path)
     ev = Evidence(kind=EvidenceKind.METRIC, sql="SELECT * FROM nonexistent_table", claim="x")
     assert verify_evidence(ev, parquet_dir=case).status is EvidenceStatus.SQL_ERROR
 
 
 # ──────────────────────────────────────────────────────────────────────
-# End-to-end evaluator. chain_coherence requires an LLM client; tests
-# inject a tiny stub that always returns score=1.0 so the deterministic
-# axes (rc_f1, sql_executable_rate) stay decoupled from the judge.
+# End-to-end evaluator. Per-evidence judge requires an LLM client; tests
+# inject stubs that return fixed payloads so deterministic axes (f1,
+# sql_executable_rate) stay decoupled from judge behavior.
 # ──────────────────────────────────────────────────────────────────────
 
 
@@ -609,8 +506,10 @@ class _StubResponse:
 class _StubCompletions:
     def __init__(self, content: str) -> None:
         self._content = content
+        self.last_kwargs: dict[str, Any] = {}
 
-    async def create(self, **_kwargs: Any) -> _StubResponse:
+    async def create(self, **kwargs: Any) -> _StubResponse:
+        self.last_kwargs = kwargs
         return _StubResponse(self._content)
 
 
@@ -620,26 +519,24 @@ class _StubChat:
 
 
 class _StubLLMClient:
-    """Minimal AsyncOpenAI-compatible stub for the chain judge.
+    """Minimal AsyncOpenAI-compatible stub.
 
-    Returns a fixed JSON payload so deterministic axes can be tested without
-    flaky LLM behavior. Pass `score=1.0` for the perfect-case test, etc.
+    Returns a fixed JSON payload (default ``{"supported": true, ...}``) so
+    deterministic axes stay decoupled from judge content. Pass
+    ``supported=False`` for an unsupported-evidence test.
     """
 
-    def __init__(self, score: float = 1.0, reasoning: str = "stub") -> None:
-        self.chat = _StubChat(json.dumps({"score": score, "reasoning": reasoning}))
+    def __init__(self, supported: bool = True, reasoning: str = "stub") -> None:
+        self.chat = _StubChat(json.dumps({"supported": supported, "reasoning": reasoning}))
 
 
-def test_evaluate_v2_perfect(tmp_path: Path) -> None:
-    """Perfect agent: rc_f1=1, sql=1, chain=1 (stub), headline=1."""
-    case = _make_case(tmp_path)
-    agent = json.dumps(
+def _agent_perfect_payload() -> str:
+    return json.dumps(
         {
             "root_causes": [
                 {
                     "service": "shipping",
                     "fault_kind": "network_delay",
-                    "direction": {"src": "shipping", "dst": "quote"},
                     "evidence": [
                         {
                             "kind": "metric",
@@ -654,68 +551,52 @@ def test_evaluate_v2_perfect(tmp_path: Path) -> None:
             "propagation": [],
         }
     )
-    res = asyncio.run(
-        evaluate_v2(
-            agent,
-            _injection(),
-            case,
-            gt_graph=None,
-            llm_client=_StubLLMClient(score=1.0),  # type: ignore[arg-type]
-        )
-    )
-    assert res.root_cause_f1 == 1.0
-    assert res.service_f1 == 1.0
-    assert res.overclaim_rate == 0.0
-    assert res.sql_executable_rate == 1.0
-    assert res.chain_coherence == 1.0
-    assert res.headline == 1.0
-    assert res.case_correct is True
 
 
-def test_evaluate_v2_wrong_direction(tmp_path: Path) -> None:
-    """Service+kind right but direction flipped → rc_f1=0, headline=0.
-    service_f1 stays at 1.0 because the service was correctly identified.
-    """
+def test_evaluate_v2_perfect(tmp_path: Path) -> None:
+    """Perfect agent: f1=1, sql=1, every evidence judged supported, exact_match=True."""
     case = _make_case(tmp_path)
-    agent = json.dumps(
-        {
-            "root_causes": [
-                {
-                    "service": "shipping",
-                    "fault_kind": "network_delay",
-                    "direction": {"src": "quote", "dst": "shipping"},  # flipped
-                    "evidence": [
-                        {
-                            "kind": "metric",
-                            "sql": (
-                                "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'"
-                            ),
-                            "claim": "x",
-                        }
-                    ],
-                }
-            ],
-            "propagation": [],
-        }
-    )
     res = asyncio.run(
         evaluate_v2(
-            agent,
+            _agent_perfect_payload(),
             _injection(),
             case,
             gt_graph=None,
-            llm_client=_StubLLMClient(score=0.5),  # type: ignore[arg-type]
+            llm_client=_StubLLMClient(supported=True),  # type: ignore[arg-type]
         )
     )
-    assert res.root_cause_f1 == 0.0
-    assert res.service_f1 == 1.0
-    assert res.headline == 0.0
-    assert res.case_correct is False
-    assert res.per_fault[0].status is MatchStatus.WRONG_DIRECTION
+    assert res.f1 == 1.0
+    assert res.precision == 1.0
+    assert res.recall == 1.0
+    assert res.exact_match is True
+    assert res.fault_kind_accuracy == 1.0
+    assert res.sql_executable_rate == 1.0
+    assert res.evidence_support_rate == 1.0
+    assert res.n_evidence_judged == 1
+    assert res.n_evidence_judge_failed == 0
+
+
+def test_evaluate_v2_unsupported_evidence(tmp_path: Path) -> None:
+    """Judge says supported=False on every evidence → evidence_support_rate=0,
+    but f1 / sql_executable_rate stay at 1 (independent axes)."""
+    case = _make_case(tmp_path)
+    res = asyncio.run(
+        evaluate_v2(
+            _agent_perfect_payload(),
+            _injection(),
+            case,
+            gt_graph=None,
+            llm_client=_StubLLMClient(supported=False),  # type: ignore[arg-type]
+        )
+    )
+    assert res.f1 == 1.0
+    assert res.sql_executable_rate == 1.0
+    assert res.evidence_support_rate == 0.0
+    assert res.exact_match is True
 
 
 def test_evaluate_v2_unparseable_response(tmp_path: Path) -> None:
-    """Parse-error path doesn't reach the chain judge, so llm_client is unused."""
+    """Parse-error short-circuits the pipeline — judge is never called."""
     case = _make_case(tmp_path)
     res = asyncio.run(
         evaluate_v2(
@@ -726,41 +607,10 @@ def test_evaluate_v2_unparseable_response(tmp_path: Path) -> None:
             llm_client=_StubLLMClient(),  # type: ignore[arg-type]
         )
     )
-    assert res.headline == 0.0
+    assert res.f1 == 0.0
+    assert res.exact_match is False
     assert res.parse_error is not None and "JSON" in res.parse_error
-
-
-def test_evaluate_v2_requires_llm_client(tmp_path: Path) -> None:
-    """chain_coherence has no fallback now: passing llm_client=None on a
-    parseable agent output raises so misconfiguration fails loudly instead of
-    silently double-counting sql_executable_rate as the chain score.
-    """
-    import pytest
-
-    case = _make_case(tmp_path)
-    agent = json.dumps(
-        {
-            "root_causes": [
-                {
-                    "service": "shipping",
-                    "fault_kind": "network_delay",
-                    "direction": {"src": "shipping", "dst": "quote"},
-                    "evidence": [
-                        {
-                            "kind": "metric",
-                            "sql": (
-                                "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'"
-                            ),
-                            "claim": "x",
-                        }
-                    ],
-                }
-            ],
-            "propagation": [],
-        }
-    )
-    with pytest.raises(ValueError, match="chain_coherence requires an LLM client"):
-        asyncio.run(evaluate_v2(agent, _injection(), case, gt_graph=None, llm_client=None))
+    assert res.evidence_support_rate is None  # no evidence even attempted
 
 
 class _RaisingCompletions:
@@ -774,146 +624,112 @@ class _RaisingChat:
 
 
 class _StubLLMClientFails:
-    """Stub that raises on every call — simulates a judge outage so we can
-    verify the score=None / headline=None propagation path.
-    """
+    """Stub that raises on every call — simulates a judge outage."""
 
     def __init__(self) -> None:
         self.chat = _RaisingChat()
 
 
-class _BadRequestCompletions:
-    """Mimics a litellm gateway that 400s on response_format=json_object.
-
-    The new chain_judge no longer sends that flag, so this completions
-    stub should never see it; if a future regression re-introduces it,
-    inspecting captured kwargs in the test would catch the slip.
-    """
-
-    def __init__(self) -> None:
-        self.last_kwargs: dict[str, Any] = {}
-
-    async def create(self, **kwargs: Any) -> Any:
-        self.last_kwargs = kwargs
-        raise RuntimeError(
-            "Error code: 400 - {'error': {'message': 'litellm.BadRequestError: "
-            "OpenAIException - response_format json_object not supported'}}"
-        )
-
-
-class _BadRequestChat:
-    def __init__(self) -> None:
-        self.completions = _BadRequestCompletions()
-
-
-class _BadRequestLLMClient:
-    def __init__(self) -> None:
-        self.chat = _BadRequestChat()
-
-
-def test_chain_judge_no_response_format_param() -> None:
-    """Regression: the gateway-incompatible json_object flag must not be
-    sent. Caught one production gateway returning HTTP 400 with this
-    exact message; we now rely on prompt-only formatting + tolerant
-    extraction, so the request kwargs should not contain response_format.
-    """
-    from ..v2.chain_judge import chain_coherence
-    from ..v2.schema import AgentRCAOutput
-
-    client = _BadRequestLLMClient()
-    agent = AgentRCAOutput(root_causes=[], propagation=[])
-    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
-    # Judge raised → score is None (transient outage semantics).
-    assert res.score is None
-    # And we definitely didn't send the offending flag.
-    assert "response_format" not in client.chat.completions.last_kwargs
-
-
-def test_chain_judge_extracts_json_from_markdown_fence() -> None:
-    """Real models often wrap JSON in ```json ... ``` fences. Parser
-    must tolerate that instead of returning score=None on a syntactically
-    fine response.
-    """
-    from ..v2.chain_judge import chain_coherence
-    from ..v2.schema import AgentRCAOutput
-
-    fenced = '```json\n{"score": 0.7, "reasoning": "ok"}\n```'
-    client = type("C", (), {"chat": _StubChat(fenced)})()
-    agent = AgentRCAOutput(root_causes=[], propagation=[])
-    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
-    assert res.score == 0.7
-    assert res.reasoning == "ok"
-
-
-def test_chain_judge_extracts_json_after_prose_preamble() -> None:
-    """Some models prepend "Sure, here's the result: { ... }". Parser
-    must walk braces past the preamble.
-    """
-    from ..v2.chain_judge import chain_coherence
-    from ..v2.schema import AgentRCAOutput
-
-    preamble = 'Here is my judgement: {"score": 0.4, "reasoning": "partial"}'
-    client = type("C", (), {"chat": _StubChat(preamble)})()
-    agent = AgentRCAOutput(root_causes=[], propagation=[])
-    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
-    assert res.score == 0.4
-
-
-def test_chain_judge_non_numeric_score_returns_none() -> None:
-    """If the model emits a non-coercible score, fail loud (None) rather
-    than silently treat it as 0.0.
-    """
-    from ..v2.chain_judge import chain_coherence
-    from ..v2.schema import AgentRCAOutput
-
-    bad = '{"score": "high", "reasoning": "x"}'
-    client = type("C", (), {"chat": _StubChat(bad)})()
-    agent = AgentRCAOutput(root_causes=[], propagation=[])
-    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
-    assert res.score is None
-
-
-def test_evaluate_v2_judge_failure_returns_none(tmp_path: Path) -> None:
-    """When the judge call fails, chain_coherence and headline are None
-    (not 0.0). This lets aggregators distinguish 'couldn't judge' from
-    'judged poorly' instead of conflating both as a zero score.
-    """
+def test_evaluate_v2_judge_failure_isolates_per_evidence(tmp_path: Path) -> None:
+    """Judge raises on every evidence → per-evidence supported=None,
+    n_evidence_judge_failed counted; evidence_support_rate falls back to 0
+    (case scores 0 in the benchmark mean per README) but f1 / sql stay correct."""
     case = _make_case(tmp_path)
-    agent = json.dumps(
-        {
-            "root_causes": [
-                {
-                    "service": "shipping",
-                    "fault_kind": "network_delay",
-                    "direction": {"src": "shipping", "dst": "quote"},
-                    "evidence": [
-                        {
-                            "kind": "metric",
-                            "sql": (
-                                "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'"
-                            ),
-                            "claim": "x",
-                        }
-                    ],
-                }
-            ],
-            "propagation": [],
-        }
-    )
     res = asyncio.run(
         evaluate_v2(
-            agent,
+            _agent_perfect_payload(),
             _injection(),
             case,
             gt_graph=None,
             llm_client=_StubLLMClientFails(),  # type: ignore[arg-type]
         )
     )
-    assert res.root_cause_f1 == 1.0
+    assert res.f1 == 1.0
     assert res.sql_executable_rate == 1.0
-    assert res.chain_coherence is None
-    assert res.headline is None
-    assert res.case_correct is True
+    assert res.evidence_support_rate == 0.0
+    assert res.n_evidence == 1
+    assert res.n_evidence_judged == 0
+    assert res.n_evidence_judge_failed == 1
+    assert res.per_evidence[0].supported is None
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Per-evidence judge: JSON extraction tolerance + bool coercion
+# ──────────────────────────────────────────────────────────────────────
+
+
+def _judge_call(content: str) -> Any:
+    """Helper: run evidence_support against a stub that returns ``content``."""
+    from rcabench_platform.v3.sdk.evaluation.v2.chain_judge import evidence_support
+    from rcabench_platform.v3.sdk.evaluation.v2.schema import Evidence as Ev
+    from rcabench_platform.v3.sdk.evaluation.v2.sql_verify import EvidenceStatus, EvidenceVerifyResult
+
+    client = type("C", (), {"chat": _StubChat(content)})()
+    ev = Ev(kind=EvidenceKind.METRIC, sql="SELECT 1", claim="x")
+    vr = EvidenceVerifyResult(status=EvidenceStatus.OK, row_count=1, sample_rows=[{"x": 1}])
+    return asyncio.run(
+        evidence_support(
+            chain_summary="(empty chain)",
+            location="root_cause[0]",
+            label="rc[0].ev[0]",
+            evidence=ev,
+            verify_result=vr,
+            llm_client=client,  # type: ignore[arg-type]
+        )
+    )
+
+
+def test_evidence_judge_extracts_json_from_markdown_fence() -> None:
+    fenced = '```json\n{"supported": true, "reasoning": "ok"}\n```'
+    res = _judge_call(fenced)
+    assert res.supported is True
+    assert res.reasoning == "ok"
+
+
+def test_evidence_judge_extracts_json_after_prose_preamble() -> None:
+    preamble = 'Sure, here is my judgement: {"supported": false, "reasoning": "mismatch"}'
+    res = _judge_call(preamble)
+    assert res.supported is False
+
+
+def test_evidence_judge_coerces_string_booleans() -> None:
+    """Some models emit "true"/"false" strings instead of JSON booleans."""
+    res = _judge_call('{"supported": "yes", "reasoning": "x"}')
+    assert res.supported is True
+    res = _judge_call('{"supported": "no", "reasoning": "x"}')
+    assert res.supported is False
+
+
+def test_evidence_judge_unparseable_value_returns_none() -> None:
+    """Garbage in the supported field → supported=None (not silently coerced)."""
+    res = _judge_call('{"supported": "maybe", "reasoning": "x"}')
+    assert res.supported is None
+
+
+def test_evidence_judge_no_response_format_param() -> None:
+    """Regression: gateways like litellm 400 on response_format=json_object;
+    the judge must rely on prompt-only formatting, not that flag."""
+    from rcabench_platform.v3.sdk.evaluation.v2.chain_judge import evidence_support
+    from rcabench_platform.v3.sdk.evaluation.v2.schema import Evidence as Ev
+    from rcabench_platform.v3.sdk.evaluation.v2.sql_verify import EvidenceStatus, EvidenceVerifyResult
+
+    completions = _StubCompletions(json.dumps({"supported": True, "reasoning": "ok"}))
+    chat = type("Chat", (), {"completions": completions})()
+    client = type("C", (), {"chat": chat})()
+
+    ev = Ev(kind=EvidenceKind.METRIC, sql="SELECT 1", claim="x")
+    vr = EvidenceVerifyResult(status=EvidenceStatus.OK, row_count=1, sample_rows=[{"x": 1}])
+    asyncio.run(
+        evidence_support(
+            chain_summary="(empty chain)",
+            location="root_cause[0]",
+            label="rc[0].ev[0]",
+            evidence=ev,
+            verify_result=vr,
+            llm_client=client,  # type: ignore[arg-type]
+        )
+    )
+    assert "response_format" not in completions.last_kwargs
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -922,19 +738,16 @@ def test_evaluate_v2_judge_failure_returns_none(tmp_path: Path) -> None:
 
 
 def test_calculate_metrics_aggregation() -> None:
-    """5 stub samples → aggregates use total-n denominators (judge-aware exception).
+    """5 stub samples → aggregator divides by total n=5, except
+    ``avg_fault_kind_accuracy`` which uses ``kind_accuracy_denom`` (cases
+    that actually had service-correct rcs to grade).
 
     Sample mix:
-      [0] perfect      rc_f1=1.0  sql=1.0  chain=1.0   headline=1.0   correct=True
-      [1] partial      rc_f1=0.5  sql=0.8  chain=0.6   headline=0.24
-      [2] parse-err    zeros + parse_error=True
-      [3] judge-fail   rc_f1=1.0  sql=1.0  chain=None  headline=None  correct=True
-      [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}  → still in denom
-    All score axes (rc_f1, sql, headline, …) divide by total `n=5` so eval-err
-    and parse-err samples count as 0 instead of being silently dropped from
-    the rate. `avg_chain_coherence` is the sole exception: judge outage is a
-    system failure that shouldn't be conflated with "judged as 0", so it stays
-    on the judged-only denominator and the gap is surfaced via `judge_failed`.
+      [0] perfect      f1=1.0  exact=True  kind_acc=1.0  sql=1.0  ev_support=1.0
+      [1] partial      f1=0.5  exact=False kind_acc=0.5  sql=0.8  ev_support=0.6
+      [2] parse-err    zeros + parse_error=True (kind_acc=None → excluded)
+      [3] judge-fail   f1=1.0  ev_support=0.0  n_evidence_judge_failed=1
+      [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}
     """
     from rcabench_platform.v3.sdk.llm_eval.eval.processer.rcabench import RCABenchProcesser
 
@@ -946,15 +759,17 @@ def test_calculate_metrics_aggregation() -> None:
         _StubSample(
             {
                 "eval_v2": {
-                    "service_f1": 1.0,
-                    "root_cause_f1": 1.0,
-                    "overclaim_rate": 0.0,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1": 1.0,
+                    "exact_match": True,
+                    "fault_kind_accuracy": 1.0,
+                    "kind_accuracy_denom": 1,
                     "sql_executable_rate": 1.0,
-                    "chain_coherence": 1.0,
+                    "evidence_support_rate": 1.0,
                     "node_f1": 1.0,
                     "edge_f1": 1.0,
-                    "headline": 1.0,
-                    "case_correct": True,
+                    "n_evidence_judge_failed": 0,
                     "per_evidence": [{}],
                 }
             }
@@ -962,15 +777,17 @@ def test_calculate_metrics_aggregation() -> None:
         _StubSample(
             {
                 "eval_v2": {
-                    "service_f1": 0.7,
-                    "root_cause_f1": 0.5,
-                    "overclaim_rate": 0.5,
+                    "precision": 0.5,
+                    "recall": 0.5,
+                    "f1": 0.5,
+                    "exact_match": False,
+                    "fault_kind_accuracy": 0.5,
+                    "kind_accuracy_denom": 2,
                     "sql_executable_rate": 0.8,
-                    "chain_coherence": 0.6,
+                    "evidence_support_rate": 0.6,
                     "node_f1": 0.4,
                     "edge_f1": 0.2,
-                    "headline": 0.24,
-                    "case_correct": False,
+                    "n_evidence_judge_failed": 0,
                     "per_evidence": [{}],
                 }
             }
@@ -978,15 +795,17 @@ def test_calculate_metrics_aggregation() -> None:
         _StubSample(
             {
                 "eval_v2": {
-                    "service_f1": 0.0,
-                    "root_cause_f1": 0.0,
-                    "overclaim_rate": 1.0,
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "f1": 0.0,
+                    "exact_match": False,
+                    "fault_kind_accuracy": None,  # no service-correct rcs → excluded from mean
+                    "kind_accuracy_denom": 0,
                     "sql_executable_rate": 0.0,
-                    "chain_coherence": 0.0,
+                    "evidence_support_rate": 0.0,
                     "node_f1": 0.0,
                     "edge_f1": 0.0,
-                    "headline": 0.0,
-                    "case_correct": False,
+                    "n_evidence_judge_failed": 0,
                     "parse_error": "bad json",
                     "per_evidence": [],
                 }
@@ -995,15 +814,17 @@ def test_calculate_metrics_aggregation() -> None:
         _StubSample(
             {
                 "eval_v2": {
-                    "service_f1": 1.0,
-                    "root_cause_f1": 1.0,
-                    "overclaim_rate": 0.0,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1": 1.0,
+                    "exact_match": True,
+                    "fault_kind_accuracy": 1.0,
+                    "kind_accuracy_denom": 1,
                     "sql_executable_rate": 1.0,
-                    "chain_coherence": None,
+                    "evidence_support_rate": 0.0,
                     "node_f1": 1.0,
                     "edge_f1": 1.0,
-                    "headline": None,
-                    "case_correct": True,
+                    "n_evidence_judge_failed": 1,
                     "per_evidence": [{}],
                 }
             }
@@ -1017,17 +838,19 @@ def test_calculate_metrics_aggregation() -> None:
 
     assert metrics["total_samples"] == 5
     assert metrics["scored_samples"] == 4
-    assert metrics["case_correct"] == 2
-    # Score axes divide by total n=5 (eval-err + parse-err count as 0).
-    assert metrics["case_correct_rate"] == round(2 / 5, 4)
+    assert metrics["exact_match_count"] == 2
+    assert metrics["exact_match_rate"] == round(2 / 5, 4)
     assert metrics["parse_errors"] == 1
     assert metrics["zero_evidence_outputs"] == 1
     assert metrics["judge_failed"] == 1
-    assert metrics["avg_service_f1"] == round((1.0 + 0.7 + 0.0 + 1.0) / 5, 4)
-    assert metrics["avg_root_cause_f1"] == round((1.0 + 0.5 + 0.0 + 1.0) / 5, 4)
+    # All P/R/F1/sql/ev_support/node/edge averages divide by total n=5.
+    assert metrics["avg_precision"] == round((1.0 + 0.5 + 0.0 + 1.0) / 5, 4)
+    assert metrics["avg_recall"] == round((1.0 + 0.5 + 0.0 + 1.0) / 5, 4)
+    assert metrics["avg_f1"] == round((1.0 + 0.5 + 0.0 + 1.0) / 5, 4)
     assert metrics["avg_sql_executable_rate"] == round((1.0 + 0.8 + 0.0 + 1.0) / 5, 4)
+    assert metrics["avg_evidence_support_rate"] == round((1.0 + 0.6 + 0.0 + 0.0) / 5, 4)
     assert metrics["avg_node_f1"] == round((1.0 + 0.4 + 0.0 + 1.0) / 5, 4)
     assert metrics["avg_edge_f1"] == round((1.0 + 0.2 + 0.0 + 1.0) / 5, 4)
-    # judge-fail headline counts as 0 in /n; chain_coherence stays on /chain_count.
-    assert metrics["avg_headline"] == round((1.0 + 0.24 + 0.0) / 5, 4)
-    assert metrics["avg_chain_coherence"] == round((1.0 + 0.6 + 0.0) / 3, 4)
+    # fault_kind_accuracy excludes the parse-err case (denom=0); 3 cases contribute.
+    assert metrics["kind_accuracy_denom"] == 3
+    assert metrics["avg_fault_kind_accuracy"] == round((1.0 + 0.5 + 1.0) / 3, 4)

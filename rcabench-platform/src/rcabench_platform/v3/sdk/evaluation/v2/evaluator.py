@@ -203,7 +203,9 @@ async def evaluate_v2(
     if judge_inputs and llm_client is not None:
         chain_summary = _summarize_chain(agent)
 
-        async def _run(idx: int, label: str, location: str, ev: Evidence, vr: EvidenceVerifyResult) -> tuple[int, EvidenceJudgeResult]:
+        async def _run(
+            idx: int, label: str, location: str, ev: Evidence, vr: EvidenceVerifyResult
+        ) -> tuple[int, EvidenceJudgeResult]:
             try:
                 jr = await evidence_support(
                     chain_summary=chain_summary,

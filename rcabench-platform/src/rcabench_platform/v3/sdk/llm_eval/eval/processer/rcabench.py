@@ -150,16 +150,8 @@ class RCABenchProcesser(BaseMatchProcesser):
 
         meta["eval_v2"] = result.model_dump(mode="json")
 
-        kind_str = (
-            f"{result.fault_kind_accuracy:.2f}"
-            if result.fault_kind_accuracy is not None
-            else "n/a"
-        )
-        ev_str = (
-            f"{result.evidence_support_rate:.2f}"
-            if result.evidence_support_rate is not None
-            else "n/a"
-        )
+        kind_str = f"{result.fault_kind_accuracy:.2f}" if result.fault_kind_accuracy is not None else "n/a"
+        ev_str = f"{result.evidence_support_rate:.2f}" if result.evidence_support_rate is not None else "n/a"
         reasoning_bits: list[str] = [
             f"f1={result.f1:.2f} exact={int(result.exact_match)} "
             f"kind_acc={kind_str} sql={result.sql_executable_rate:.2f} "
@@ -168,9 +160,7 @@ class RCABenchProcesser(BaseMatchProcesser):
         if result.parse_error:
             reasoning_bits.append(f"parse_error={result.parse_error}")
         if result.n_evidence_judge_failed:
-            reasoning_bits.append(
-                f"judge_failed={result.n_evidence_judge_failed}/{result.n_evidence}"
-            )
+            reasoning_bits.append(f"judge_failed={result.n_evidence_judge_failed}/{result.n_evidence}")
 
         # Surface per-evidence judge reasoning lines on `judged_response` so
         # the dashboard can render them alongside the agent response. One
