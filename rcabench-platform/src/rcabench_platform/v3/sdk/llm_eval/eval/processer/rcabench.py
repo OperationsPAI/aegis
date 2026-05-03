@@ -110,38 +110,34 @@ class RCABenchProcesser(BaseMatchProcesser):
 
     @staticmethod
     def _extract_endpoint_from_component(component: str) -> str | None:
-        """Extract HTTP endpoint from a causal graph component identifier.
+        """Extract an endpoint identifier from a causal graph component.
 
-        Handles component formats like:
+        Handles both HTTP and RPC-style spans. Examples:
         - "span|loadgenerator::HTTP POST http://ts-ui-dashboard:8080/api/v1/..."
         - "span|ts-ui-dashboard::POST /api/v1/..."
-        - "span|HTTP POST http://ts-ui-dashboard:8080/api/v1/..."  (no :: separator)
-        - "span| http://ts-ui-dashboard:8080/api/v1/..."  (no :: separator, no method)
+        - "span|search::search.Search/Nearby"  (gRPC method)
+        - "span|HTTP POST http://ts-ui-dashboard:8080/..."  (no :: separator)
+
+        Non-span components (``service|``, ``pod|``, ``container|`` …) return
+        ``None`` because they do not name endpoints.
 
         Args:
             component: Component identifier string.
 
         Returns:
-            Extracted endpoint string (e.g. "HTTP POST http://..."), or None if
-            the component does not represent an HTTP endpoint.
+            Endpoint string (everything after ``::`` or ``|``), or ``None`` if
+            the component is not a span or has no body.
         """
+        if not component.startswith("span|"):
+            return None
+
         if "::" in component:
-            # Standard format: "span|service::ENDPOINT"
             endpoint = component.split("::", 1)[1].strip()
-        elif "|" in component:
-            # Fallback format: "span|ENDPOINT" (no :: separator)
-            endpoint = component.split("|", 1)[1].strip()
         else:
-            return None
+            # Fallback: "span|ENDPOINT" with no service prefix
+            endpoint = component.split("|", 1)[1].strip()
 
-        # Only keep entries that look like HTTP endpoints
-        if not any(
-            endpoint.startswith(method)
-            for method in ("HTTP ", "GET ", "POST ", "PUT ", "DELETE ", "PATCH ", "http://", "https://")
-        ):
-            return None
-
-        return endpoint
+        return endpoint or None
 
     @staticmethod
     def _extract_alarm_endpoints(source_path: Path) -> list[str]:
@@ -544,8 +540,19 @@ class RCABenchProcesser(BaseMatchProcesser):
         injection = self._load_injection_json(sample)
         if not injection:
             return None
-        services = injection.get("ground_truth", {}).get("service", [])
-        return set(services) if services else None
+        # ``ground_truth`` is either a dict (RCABench schema) or a list of dicts
+        # (AegisLab batch schema, used by OpenRCA-2.0). Normalise to a list so
+        # we can support both without branching every reader.
+        gt_raw = injection.get("ground_truth") or {}
+        gt_list = gt_raw if isinstance(gt_raw, list) else [gt_raw]
+        services: set[str] = set()
+        for gt in gt_list:
+            if not isinstance(gt, dict):
+                continue
+            for svc in gt.get("service") or []:
+                if svc:
+                    services.add(svc)
+        return services or None
 
     @staticmethod
     def _format_injection_context(injection: dict[str, Any]) -> str:
@@ -590,18 +597,25 @@ class RCABenchProcesser(BaseMatchProcesser):
             except (json.JSONDecodeError, TypeError):
                 pass
 
-        # Ground truth summary
-        gt = injection.get("ground_truth", {})
-        if gt:
-            gt_parts = []
-            if gt.get("service"):
-                gt_parts.append(f"service={gt['service']}")
-            if gt.get("function"):
-                gt_parts.append(f"function={gt['function']}")
-            if gt.get("metric"):
-                gt_parts.append(f"metric={gt['metric']}")
-            if gt_parts:
-                parts.append(f"Ground truth: {', '.join(gt_parts)}")
+        # Ground truth summary — accept dict or list-of-dicts (AegisLab schema).
+        gt_raw = injection.get("ground_truth") or {}
+        gt_list = gt_raw if isinstance(gt_raw, list) else [gt_raw]
+        for kind in ("service", "function", "metric"):
+            values: list[str] = []
+            seen: set[str] = set()
+            for gt in gt_list:
+                if not isinstance(gt, dict):
+                    continue
+                vs = gt.get(kind)
+                if not vs:
+                    continue
+                vs_iter = vs if isinstance(vs, list) else [vs]
+                for v in vs_iter:
+                    if v and v not in seen:
+                        seen.add(v)
+                        values.append(str(v))
+            if values:
+                parts.append(f"Ground truth {kind}: {values}")
 
         # Time window
         start = injection.get("start_time")
