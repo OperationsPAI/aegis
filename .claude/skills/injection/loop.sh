@@ -11,10 +11,14 @@
 #   loop.sh <system> [--rounds N] [--sleep SECS] [--engine claude|codex]
 #                    [--state-dir DIR] [--source-dir PATH]
 #                    [--extra-instruction TEXT] [--aegisctl-bin PATH]
+#                    [--escalate-after N] [--max-consecutive-failures N]
+#                    [--no-codex-daemon-restart] [--heartbeat-dir PATH]
 #
 # Defaults: rounds=999, sleep=900s, engine=claude,
 #           state-dir=~/.aegisctl/injection-author/<system>
 #           aegisctl-bin=/tmp/aegisctl
+#           escalate-after=3, max-consecutive-failures=6
+#           heartbeat-dir=<state-dir>
 #
 # 900s ≈ one inject→detect cycle, so the agent's next round can grade the
 # previous one retrospectively from aegisctl. Tune with --sleep if your
@@ -24,6 +28,16 @@
 # step 4 (read-the-system) — code-grounded judgment about fan-in callers,
 # retry/timeout policies, and cache fallbacks beats prior-only judgment.
 # When omitted, the agent has to fall back on memory.md + topology only.
+#
+# Failure detection (issue #377):
+# After N consecutive rc!=0 rounds (--escalate-after, default 3) the wrapper
+# emits a banner ERROR line and touches <heartbeat-dir>/unhealthy. If the
+# stderr matches `thread .* not found` or `failed to record rollout`, the
+# codex daemon is also kicked (kill + relaunch on next round) unless
+# --no-codex-daemon-restart was passed. After --max-consecutive-failures
+# (default 6) the loop exits non-zero so `ps` no longer finds it. Each
+# successful round touches <heartbeat-dir>/heartbeat for external
+# `find -mmin +30` style monitoring.
 
 set -euo pipefail
 
@@ -35,6 +49,10 @@ STATE_BASE="${HOME}/.aegisctl/injection-author"
 EXTRA_INSTRUCTION=""
 AEGISCTL_BIN="/tmp/aegisctl"
 SOURCE_DIR=""
+ESCALATE_AFTER=3
+MAX_CONSECUTIVE_FAILURES=6
+CODEX_DAEMON_RESTART=1
+HEARTBEAT_DIR=""
 
 usage() {
   sed -n '2,20p' "$0" >&2
@@ -50,6 +68,10 @@ while [[ $# -gt 0 ]]; do
     --extra-instruction) EXTRA_INSTRUCTION="$2"; shift 2 ;;
     --aegisctl-bin)      AEGISCTL_BIN="$2"; shift 2 ;;
     --source-dir)        SOURCE_DIR="$2"; shift 2 ;;
+    --escalate-after)    ESCALATE_AFTER="$2"; shift 2 ;;
+    --max-consecutive-failures) MAX_CONSECUTIVE_FAILURES="$2"; shift 2 ;;
+    --no-codex-daemon-restart)  CODEX_DAEMON_RESTART=0; shift ;;
+    --heartbeat-dir)     HEARTBEAT_DIR="$2"; shift 2 ;;
     -h|--help)           usage 0 ;;
     -*)                  echo "unknown flag: $1" >&2; usage 2 ;;
     *)
@@ -96,7 +118,32 @@ mkdir -p "${STATE_DIR}/rounds"
 LOG="${STATE_DIR}/loop.log"
 META="${STATE_DIR}/metadata.json"
 
+if [[ -z "$HEARTBEAT_DIR" ]]; then
+  HEARTBEAT_DIR="$STATE_DIR"
+fi
+mkdir -p "$HEARTBEAT_DIR"
+HEARTBEAT_FILE="${HEARTBEAT_DIR}/heartbeat"
+UNHEALTHY_FILE="${HEARTBEAT_DIR}/unhealthy"
+
 ts() { date -Iseconds; }
+
+# stderr-pattern matcher for codex-daemon thread loss (issue #377). Returns 0
+# when the captured stderr looks like the codex app-server lost the thread.
+codex_thread_lost() {
+  local stderr_path="$1"
+  [[ -s "$stderr_path" ]] || return 1
+  grep -qE 'thread .* not found|failed to record rollout' "$stderr_path"
+}
+
+restart_codex_daemon() {
+  # Best-effort: kill running codex/codex-app-server processes; the next round
+  # re-execs `codex exec` which will spawn a fresh daemon. Errors are non-fatal
+  # — if pkill finds nothing or codex isn't installed, we just continue.
+  pkill -f 'codex(\s|$)' 2>/dev/null || true
+  pkill -f 'codex-app-server' 2>/dev/null || true
+  pkill -f 'codex exec' 2>/dev/null || true
+  sleep 2
+}
 
 if [[ ! -f "$META" ]]; then
   cat > "$META" <<EOF
@@ -118,7 +165,9 @@ p.write_text(json.dumps(data, indent=2) + "\n")
 PY
 fi
 
-echo "[$(ts)] starting loop: system=${SYSTEM} engine=${ENGINE} rounds=${ROUNDS} sleep=${SLEEP}s state=${STATE_DIR}" | tee -a "$LOG"
+echo "[$(ts)] starting loop: system=${SYSTEM} engine=${ENGINE} rounds=${ROUNDS} sleep=${SLEEP}s state=${STATE_DIR} escalate_after=${ESCALATE_AFTER} max_consecutive_failures=${MAX_CONSECUTIVE_FAILURES}" | tee -a "$LOG"
+
+CONSECUTIVE_FAILURES=0
 
 for i in $(seq 1 "$ROUNDS"); do
   ROUND_TS="$(ts)"
@@ -165,12 +214,43 @@ ${EXTRA_LINE}
 EOF
 )
 
-  if "${ENGINE_CMD[@]}" "${PROMPT}" >>"$LOG" 2>&1; then
+  STDERR_TMP="$(mktemp -t loop-stderr.XXXXXX)"
+  rc=0
+  "${ENGINE_CMD[@]}" "${PROMPT}" >>"$LOG" 2>"$STDERR_TMP" || rc=$?
+  # Mirror captured stderr into the loop log so existing tail -f workflows
+  # still see engine errors. Keep the temp file around for pattern matching.
+  cat "$STDERR_TMP" >>"$LOG"
+
+  if (( rc == 0 )); then
     echo "[$(ts)] round ${i} ok" | tee -a "$LOG"
+    CONSECUTIVE_FAILURES=0
+    touch "$HEARTBEAT_FILE"
+    rm -f "$UNHEALTHY_FILE"
   else
-    rc=$?
-    echo "[$(ts)] round ${i} returned rc=${rc} (continuing)" | tee -a "$LOG"
+    CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
+    echo "[$(ts)] round ${i} returned rc=${rc} (consecutive_failures=${CONSECUTIVE_FAILURES}/${MAX_CONSECUTIVE_FAILURES})" | tee -a "$LOG"
+
+    STDERR_TAIL="$(tail -n 20 "$STDERR_TMP" 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
+
+    if (( CONSECUTIVE_FAILURES >= ESCALATE_AFTER )); then
+      echo "[$(ts)] [ERROR] [${SYSTEM}] ${CONSECUTIVE_FAILURES} consecutive rc!=0 — engine may be unhealthy. Last rc=${rc}, last stderr: ${STDERR_TAIL}" | tee -a "$LOG"
+      touch "$UNHEALTHY_FILE"
+
+      if [[ "$ENGINE" == "codex" ]] && (( CODEX_DAEMON_RESTART )) && codex_thread_lost "$STDERR_TMP"; then
+        echo "[$(ts)] [ERROR] [${SYSTEM}] codex thread loss detected — restarting codex daemon and resetting failure counter" | tee -a "$LOG"
+        restart_codex_daemon
+        CONSECUTIVE_FAILURES=0
+      fi
+    fi
+
+    if (( CONSECUTIVE_FAILURES >= MAX_CONSECUTIVE_FAILURES )); then
+      echo "[$(ts)] [FATAL] [${SYSTEM}] ${CONSECUTIVE_FAILURES} consecutive rc!=0 — exiting loop. Last stderr: ${STDERR_TAIL}" | tee -a "$LOG"
+      rm -f "$STDERR_TMP"
+      exit 1
+    fi
   fi
+
+  rm -f "$STDERR_TMP"
 
   if (( i < ROUNDS )); then
     echo "[$(ts)] sleeping ${SLEEP}s before round $((i+1))" | tee -a "$LOG"
