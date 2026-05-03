@@ -3654,7 +3654,7 @@ wheels = [
 
 [[package]]
 name = "rcabench-platform"
-version = "0.4.22"
+version = "0.4.23"
 source = { editable = "." }
 dependencies = [
     { name = "backports-strenum", marker = "python_full_version < '3.11'" },
