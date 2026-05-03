@@ -21,7 +21,7 @@ from rcabench_platform.v3.internal.reasoning.algorithms.temporal_validator impor
     TemporalValidator,
     _effective_onset,
 )
-from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
+from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline, TimelineWindow
 from rcabench_platform.v3.internal.reasoning.models.graph import DepKind, Edge, HyperGraph, PlaceKind
 from rcabench_platform.v3.internal.reasoning.rules.schema import PropagationDirection, PropagationRule
 
@@ -226,7 +226,7 @@ class PathBuilder:
         src_states_all = {w.state for w in src_tl.windows} if src_tl else set()
         rule_src_states = set(rule.src_states)
 
-        src_matching_window: TimelineWindow | None = None  # noqa: F821
+        src_matching_window: TimelineWindow | None = None
         if is_first_hop and rule_src_states and src_tl:
             for w in src_tl.windows:
                 if w.state in rule_src_states:

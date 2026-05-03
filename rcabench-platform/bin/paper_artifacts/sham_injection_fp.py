@@ -195,7 +195,7 @@ def _run_one_sham(
                 continue
             if node.uniq_name in excluded:
                 continue
-            if graph._graph.degree(node_id) == 0:
+            if graph._graph.degree(node_id) == 0:  # pyright: ignore[reportCallIssue]
                 continue
             candidates.append(node_id)
         if not candidates:
