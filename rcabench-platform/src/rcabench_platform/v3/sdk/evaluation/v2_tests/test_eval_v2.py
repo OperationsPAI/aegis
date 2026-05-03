@@ -202,14 +202,49 @@ def test_match_overclaim_drops_case_correct() -> None:
     assert out.overclaim_rate == 0.5
 
 
-def test_match_normalizes_ts_prefix_and_hyphens() -> None:
-    """Service name normalization: ts- prefix and hyphens are stripped."""
+def test_match_normalization_is_uniform_across_systems() -> None:
+    """Service name normalization is the same across ts/hs/otel-demo: lowercase
+    + drop dashes and underscores. No system-specific prefix stripping.
+
+    The agent must use names that exist in the data (modulo case + dash/underscore
+    style). It does NOT get matching for free by dropping a `ts-` prefix that
+    the GT actually carries.
+    """
+    # Same name, different dash/underscore styling → still HIT.
     gt = [GTFault(service="ts-route-plan-service", fault_kind=FaultKind.POD_FAILURE)]
     agent = _agent([{
-        "service": "RoutePlanService", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV],
+        "service": "ts_route_plan_service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV],
+    }])
+    assert compute_outcome(agent, gt).per_fault[0].status is MatchStatus.HIT
+
+    # Mixed case → still HIT.
+    agent_caps = _agent([{
+        "service": "TS-Route-Plan-Service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV],
+    }])
+    assert compute_outcome(agent_caps, gt).per_fault[0].status is MatchStatus.HIT
+
+    # Dropping the ts- prefix is now a MISS (the agent must use a name
+    # that actually appears in the case data).
+    agent_stripped = _agent([{
+        "service": "route-plan-service", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV],
+    }])
+    assert compute_outcome(agent_stripped, gt).per_fault[0].status is MatchStatus.MISS
+
+
+def test_match_service_only_f1_separates_from_kind_f1() -> None:
+    """service_f1 counts a fault as matched whenever the agent picked the right
+    service, even if it got the kind wrong. root_cause_f1 (kind-level) only
+    counts HIT. Both share denominators, so on a 1-fault case where the agent
+    nailed the service but missed the kind, service_f1=1.0 and root_cause_f1=0.0.
+    """
+    gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
+    agent = _agent([{
+        "service": "payment", "fault_kind": "mem_stress", "evidence": [_DUMMY_EV],
     }])
     out = compute_outcome(agent, gt)
-    assert out.per_fault[0].status is MatchStatus.HIT
+    assert out.service_f1 == 1.0
+    assert out.root_cause_f1 == 0.0
+    assert out.per_fault[0].status is MatchStatus.WRONG_KIND
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -291,58 +326,65 @@ def _make_case(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_sql_verify_ok(tmp_path: Path) -> None:
+def test_sql_verify_ok_via_view_name(tmp_path: Path) -> None:
+    """Each *.parquet in the case dir is mounted as a same-named view, so the
+    agent can use bare table names without an explicit read_parquet(...)."""
+    case = _make_case(tmp_path)
+    ev = Evidence(
+        kind=EvidenceKind.METRIC,
+        sql="SELECT * FROM abnormal_metrics WHERE service_name='shipping'",
+        claim="shipping latency rises",
+    )
+    r = verify_evidence(ev, parquet_dir=case)
+    assert r.status is EvidenceStatus.OK
+    assert r.row_count == 5
+
+
+def test_sql_verify_ok_via_read_parquet(tmp_path: Path) -> None:
+    """Relative read_parquet('foo.parquet') paths resolve against the case dir
+    because the verifier chdirs into it before executing."""
     case = _make_case(tmp_path)
     ev = Evidence(
         kind=EvidenceKind.METRIC,
         sql="SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'",
         claim="shipping latency rises",
     )
-    r = verify_evidence(ev, parquet_dir=case, allowed_services={"shipping"})
+    r = verify_evidence(ev, parquet_dir=case)
     assert r.status is EvidenceStatus.OK
     assert r.row_count == 5
 
 
-def test_sql_verify_unsafe_keyword(tmp_path: Path) -> None:
-    case = _make_case(tmp_path)
-    ev = Evidence(kind=EvidenceKind.METRIC, sql="DROP TABLE foo", claim="x")
-    assert verify_evidence(ev, parquet_dir=case).status is EvidenceStatus.UNSAFE_SQL
-
-
-def test_sql_verify_path_escape(tmp_path: Path) -> None:
-    case = _make_case(tmp_path)
-    ev = Evidence(
-        kind=EvidenceKind.METRIC,
-        sql="SELECT 1 FROM read_parquet('/etc/passwd')",
-        claim="x",
-    )
-    assert verify_evidence(ev, parquet_dir=case).status is EvidenceStatus.UNSAFE_SQL
-
-
 def test_sql_verify_empty(tmp_path: Path) -> None:
+    """Query executes but matches no rows → EMPTY (still distinguishable from
+    SQL_ERROR, so the agent sees that the SQL parses but its filter is wrong)."""
     case = _make_case(tmp_path)
     ev = Evidence(
         kind=EvidenceKind.METRIC,
-        sql="SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='nonexistent'",
+        sql="SELECT * FROM abnormal_metrics WHERE service_name='nonexistent'",
         claim="x",
     )
     assert verify_evidence(ev, parquet_dir=case).status is EvidenceStatus.EMPTY
 
 
-def test_sql_verify_service_mismatch(tmp_path: Path) -> None:
+def test_sql_verify_sql_error_on_bad_syntax(tmp_path: Path) -> None:
+    """Anything DuckDB can't run surfaces as SQL_ERROR — no curated allowlist."""
     case = _make_case(tmp_path)
-    ev = Evidence(
-        kind=EvidenceKind.METRIC,
-        sql="SELECT * FROM read_parquet('abnormal_metrics.parquet')",
-        claim="x",
-    )
-    r = verify_evidence(ev, parquet_dir=case, allowed_services={"unrelated_service"})
-    assert r.status is EvidenceStatus.SERVICE_MISMATCH
+    ev = Evidence(kind=EvidenceKind.METRIC, sql="SELECT FROM WHERE", claim="x")
+    assert verify_evidence(ev, parquet_dir=case).status is EvidenceStatus.SQL_ERROR
+
+
+def test_sql_verify_sql_error_on_missing_table(tmp_path: Path) -> None:
+    """Reference to a parquet that isn't in the case dir → DuckDB raises a
+    catalog error, surfaced as SQL_ERROR."""
+    case = _make_case(tmp_path)
+    ev = Evidence(kind=EvidenceKind.METRIC, sql="SELECT * FROM nonexistent_table", claim="x")
+    assert verify_evidence(ev, parquet_dir=case).status is EvidenceStatus.SQL_ERROR
 
 
 # ──────────────────────────────────────────────────────────────────────
-# End-to-end evaluator (no LLM client → chain_coherence falls back to
-# sql_executable_rate, so the headline = rc_f1 × sql × sql).
+# End-to-end evaluator. chain_coherence requires an LLM client; tests
+# inject a tiny stub that always returns score=1.0 so the deterministic
+# axes (rc_f1, sql_executable_rate) stay decoupled from the judge.
 # ──────────────────────────────────────────────────────────────────────
 
 def _injection() -> dict[str, Any]:
@@ -356,8 +398,47 @@ def _injection() -> dict[str, Any]:
     }
 
 
+class _StubChoiceMessage:
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+
+class _StubChoice:
+    def __init__(self, content: str) -> None:
+        self.message = _StubChoiceMessage(content)
+
+
+class _StubResponse:
+    def __init__(self, content: str) -> None:
+        self.choices = [_StubChoice(content)]
+
+
+class _StubCompletions:
+    def __init__(self, content: str) -> None:
+        self._content = content
+
+    async def create(self, **_kwargs: Any) -> _StubResponse:
+        return _StubResponse(self._content)
+
+
+class _StubChat:
+    def __init__(self, content: str) -> None:
+        self.completions = _StubCompletions(content)
+
+
+class _StubLLMClient:
+    """Minimal AsyncOpenAI-compatible stub for the chain judge.
+
+    Returns a fixed JSON payload so deterministic axes can be tested without
+    flaky LLM behavior. Pass `score=1.0` for the perfect-case test, etc.
+    """
+
+    def __init__(self, score: float = 1.0, reasoning: str = "stub") -> None:
+        self.chat = _StubChat(json.dumps({"score": score, "reasoning": reasoning}))
+
+
 def test_evaluate_v2_perfect(tmp_path: Path) -> None:
-    """Perfect agent: rc_f1=1, sql=1, chain=1 (fallback), headline=1."""
+    """Perfect agent: rc_f1=1, sql=1, chain=1 (stub), headline=1."""
     case = _make_case(tmp_path)
     agent = json.dumps({
         "root_causes": [{
@@ -371,8 +452,11 @@ def test_evaluate_v2_perfect(tmp_path: Path) -> None:
         }],
         "propagation": [],
     })
-    res = asyncio.run(evaluate_v2(agent, _injection(), case, gt_graph=None, llm_client=None))
+    res = asyncio.run(evaluate_v2(
+        agent, _injection(), case, gt_graph=None, llm_client=_StubLLMClient(score=1.0),
+    ))
     assert res.root_cause_f1 == 1.0
+    assert res.service_f1 == 1.0
     assert res.overclaim_rate == 0.0
     assert res.sql_executable_rate == 1.0
     assert res.chain_coherence == 1.0
@@ -381,7 +465,9 @@ def test_evaluate_v2_perfect(tmp_path: Path) -> None:
 
 
 def test_evaluate_v2_wrong_direction(tmp_path: Path) -> None:
-    """Service+kind right but direction flipped → rc_f1=0, headline=0."""
+    """Service+kind right but direction flipped → rc_f1=0, headline=0.
+    service_f1 stays at 1.0 because the service was correctly identified.
+    """
     case = _make_case(tmp_path)
     agent = json.dumps({
         "root_causes": [{
@@ -395,18 +481,48 @@ def test_evaluate_v2_wrong_direction(tmp_path: Path) -> None:
         }],
         "propagation": [],
     })
-    res = asyncio.run(evaluate_v2(agent, _injection(), case, gt_graph=None, llm_client=None))
+    res = asyncio.run(evaluate_v2(
+        agent, _injection(), case, gt_graph=None, llm_client=_StubLLMClient(score=0.5),
+    ))
     assert res.root_cause_f1 == 0.0
+    assert res.service_f1 == 1.0
     assert res.headline == 0.0
     assert res.case_correct is False
     assert res.per_fault[0].status is MatchStatus.WRONG_DIRECTION
 
 
 def test_evaluate_v2_unparseable_response(tmp_path: Path) -> None:
+    """Parse-error path doesn't reach the chain judge, so llm_client is unused."""
     case = _make_case(tmp_path)
-    res = asyncio.run(evaluate_v2("NOT JSON", _injection(), case, gt_graph=None, llm_client=None))
+    res = asyncio.run(evaluate_v2(
+        "NOT JSON", _injection(), case, gt_graph=None, llm_client=_StubLLMClient(),
+    ))
     assert res.headline == 0.0
     assert res.parse_error is not None and "JSON" in res.parse_error
+
+
+def test_evaluate_v2_requires_llm_client(tmp_path: Path) -> None:
+    """chain_coherence has no fallback now: passing llm_client=None on a
+    parseable agent output raises so misconfiguration fails loudly instead of
+    silently double-counting sql_executable_rate as the chain score.
+    """
+    import pytest
+
+    case = _make_case(tmp_path)
+    agent = json.dumps({
+        "root_causes": [{
+            "service": "shipping", "fault_kind": "network_delay",
+            "direction": {"src": "shipping", "dst": "quote"},
+            "evidence": [{
+                "kind": "metric",
+                "sql": "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'",
+                "claim": "x",
+            }],
+        }],
+        "propagation": [],
+    })
+    with pytest.raises(ValueError, match="chain_coherence requires an LLM client"):
+        asyncio.run(evaluate_v2(agent, _injection(), case, gt_graph=None, llm_client=None))
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -431,18 +547,21 @@ def test_calculate_metrics_aggregation() -> None:
 
     samples = [
         _StubSample({"eval_v2": {
+            "service_f1": 1.0,
             "root_cause_f1": 1.0, "overclaim_rate": 0.0,
             "sql_executable_rate": 1.0, "chain_coherence": 1.0,
             "node_f1": 1.0, "edge_f1": 1.0, "headline": 1.0,
             "case_correct": True, "per_evidence": [{}],
         }}),
         _StubSample({"eval_v2": {
+            "service_f1": 0.7,
             "root_cause_f1": 0.5, "overclaim_rate": 0.5,
             "sql_executable_rate": 0.8, "chain_coherence": 0.6,
             "node_f1": 0.4, "edge_f1": 0.2, "headline": 0.24,
             "case_correct": False, "per_evidence": [{}],
         }}),
         _StubSample({"eval_v2": {
+            "service_f1": 0.0,
             "root_cause_f1": 0.0, "overclaim_rate": 1.0,
             "sql_executable_rate": 0.0, "chain_coherence": 0.0,
             "node_f1": 0.0, "edge_f1": 0.0, "headline": 0.0,
@@ -462,6 +581,7 @@ def test_calculate_metrics_aggregation() -> None:
     assert metrics["case_correct_rate"] == round(1 / 3, 4)
     assert metrics["parse_errors"] == 1
     assert metrics["zero_evidence_outputs"] == 1
+    assert metrics["avg_service_f1"] == round((1.0 + 0.7 + 0.0) / 3, 4)
     assert metrics["avg_root_cause_f1"] == round((1.0 + 0.5 + 0.0) / 3, 4)
     assert metrics["avg_sql_executable_rate"] == round((1.0 + 0.8 + 0.0) / 3, 4)
     assert metrics["avg_chain_coherence"] == round((1.0 + 0.6 + 0.0) / 3, 4)

@@ -57,9 +57,25 @@ class GraphMetrics(BaseModel):
 
 
 class OutcomeResult(BaseModel):
+    """Two-tier outcome scoring derived from the same per_fault assignment.
+
+    `service_*` counts a fault matched if the agent picked the right service
+    (regardless of fault kind / direction). `root_cause_*` (kind-level) is
+    stricter: requires kind match and, for network_*, direction match too —
+    i.e. the per_fault status == HIT.
+
+    Both pairs share denominators: precision over n_agent_root_causes,
+    recall over n_gt_faults.
+    """
+
+    service_precision: float
+    service_recall: float
+    service_f1: float
+
     root_cause_precision: float
     root_cause_recall: float
     root_cause_f1: float
+
     overclaim_rate: float
     per_fault: list[FaultMatchResult] = Field(default_factory=list)
     overclaim_indices: list[int] = Field(default_factory=list)
@@ -67,12 +83,14 @@ class OutcomeResult(BaseModel):
 
 
 def _norm(name: str | None) -> str:
+    """Uniform service-name normalization used by both the matcher and the
+    SQL verifier. Lower-case, strip dashes and underscores. No system-specific
+    prefix stripping — agents may use various writings, but they must avoid
+    inventing names not present in the data.
+    """
     if not name:
         return ""
-    s = name.strip().lower()
-    if s.startswith("ts-"):
-        s = s[3:]
-    return s.replace("-", "").replace("_", "")
+    return name.strip().lower().replace("-", "").replace("_", "")
 
 
 def _service_eq(a: str | None, b: str | None) -> bool:
@@ -164,17 +182,30 @@ def compute_outcome(agent: AgentRCAOutput, gt_faults: list[GTFault]) -> OutcomeR
 
     overclaim_indices = [i for i in range(n_agent) if i not in assigned_agent]
 
-    n_hit = sum(1 for r in per_fault if r.status == MatchStatus.HIT)
-    precision = n_hit / n_agent if n_agent else (1.0 if n_gt == 0 else 0.0)
-    recall = n_hit / n_gt if n_gt else (1.0 if n_agent == 0 else 0.0)
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    # service-level: any matched assignment counts (status != MISS)
+    n_service_hit = sum(1 for r in per_fault if r.status != MatchStatus.MISS)
+    # kind-level (the strict reading): status must be HIT
+    n_kind_hit = sum(1 for r in per_fault if r.status == MatchStatus.HIT)
+
+    def _prf(hits: int) -> tuple[float, float, float]:
+        p = hits / n_agent if n_agent else (1.0 if n_gt == 0 else 0.0)
+        r = hits / n_gt if n_gt else (1.0 if n_agent == 0 else 0.0)
+        f = (2 * p * r / (p + r)) if (p + r) else 0.0
+        return p, r, f
+
+    sp, sr, sf = _prf(n_service_hit)
+    kp, kr, kf = _prf(n_kind_hit)
+
     overclaim_rate = len(overclaim_indices) / n_agent if n_agent else 0.0
-    case_correct = (n_hit == n_gt) and (len(overclaim_indices) == 0) and n_gt > 0
+    case_correct = (n_kind_hit == n_gt) and (len(overclaim_indices) == 0) and n_gt > 0
 
     return OutcomeResult(
-        root_cause_precision=precision,
-        root_cause_recall=recall,
-        root_cause_f1=f1,
+        service_precision=sp,
+        service_recall=sr,
+        service_f1=sf,
+        root_cause_precision=kp,
+        root_cause_recall=kr,
+        root_cause_f1=kf,
         overclaim_rate=overclaim_rate,
         per_fault=per_fault,
         overclaim_indices=overclaim_indices,

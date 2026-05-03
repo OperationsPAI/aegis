@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from ..causal_graph import CausalGraph
 from .schema import AgentRCAOutput
-from .sql_verify import EvidenceStatus, EvidenceVerifyResult
+from .sql_verify import EvidenceVerifyResult
 
 
 class ChainJudgeResult(BaseModel):
@@ -45,7 +45,7 @@ Score on a single 0.0–1.0 scale:
 You must NOT use any prior knowledge of which case this is. Judge only what is
 shown.
 
-Respond with strict JSON: {"score": <float 0..1>, "reasoning": "<≤80 words>"}.
+Respond with strict JSON: {{"score": <float 0..1>, "reasoning": "<=80 words>"}}.
 
 == Agent output ==
 {agent_output}
@@ -100,10 +100,10 @@ async def chain_coherence(
     model: str = "gpt-4o-mini",
 ) -> ChainJudgeResult:
     if llm_client is None:
-        ok = sum(1 for _, vr in evidence_results if vr.status == EvidenceStatus.OK)
-        total = len(evidence_results)
-        fallback = ok / total if total else 0.0
-        return ChainJudgeResult(score=fallback, reasoning="(no llm_client; fallback = sql_executable_rate)")
+        raise ValueError(
+            "chain_coherence requires an LLM client; configure judge_model in "
+            "the eval config so a non-None client is provided."
+        )
 
     prompt = _JUDGE_PROMPT.format(
         agent_output=agent.model_dump_json(by_alias=True, indent=2),

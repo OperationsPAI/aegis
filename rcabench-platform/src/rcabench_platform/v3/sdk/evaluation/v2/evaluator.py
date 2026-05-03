@@ -21,7 +21,7 @@ from ..causal_graph import CausalGraph
 from .chain_judge import ChainJudgeResult, chain_coherence
 from .ground_truth import GTContext, extract_gt_faults
 from .matcher import FaultMatchResult, GraphMetrics, OutcomeResult, compute_graph_metrics, compute_outcome
-from .schema import AgentRCAOutput, RootCauseClaim
+from .schema import AgentRCAOutput
 from .sql_verify import EvidenceStatus, EvidenceVerifyResult, verify_evidence
 
 
@@ -61,6 +61,10 @@ class EvaluationResultV2(BaseModel):
     )
     case_correct: bool = False
 
+    service_precision: float = 0.0
+    service_recall: float = 0.0
+    service_f1: float = 0.0
+
     root_cause_precision: float = 0.0
     root_cause_recall: float = 0.0
     node_precision: float = 0.0
@@ -90,13 +94,6 @@ def _parse_agent(raw: str | dict[str, Any] | None) -> tuple[AgentRCAOutput | Non
         return AgentRCAOutput.model_validate(data), None
     except ValidationError as exc:
         return None, f"schema validation error: {exc}"
-
-
-def _allowed_services_for(rc: RootCauseClaim) -> set[str]:
-    s: set[str] = {rc.service}
-    if rc.direction:
-        s.update({rc.direction.src, rc.direction.dst})
-    return {x for x in s if x}
 
 
 def _zero_result(parse_error: str, notes: list[str] | None = None) -> EvaluationResultV2:
@@ -138,16 +135,9 @@ async def evaluate_v2(
     sql_evidence_results: list[tuple[str, EvidenceVerifyResult]] = []
 
     for ri, rc in enumerate(agent.root_causes):
-        allowed = _allowed_services_for(rc)
         for ei, ev in enumerate(rc.evidence):
             label = f"rc[{ri}].ev[{ei}]"
-            vr = verify_evidence(
-                evidence=ev,
-                parquet_dir=parquet_dir,
-                start_time_ns=gt_ctx.start_time_ns,
-                end_time_ns=gt_ctx.end_time_ns,
-                allowed_services=allowed,
-            )
+            vr = verify_evidence(evidence=ev, parquet_dir=parquet_dir)
             per_evidence.append(
                 PerEvidenceRecord(
                     label=label,
@@ -162,16 +152,9 @@ async def evaluate_v2(
             sql_evidence_results.append((label, vr))
 
     for pi, prop in enumerate(agent.propagation):
-        allowed = {prop.from_, prop.to}
         for ei, ev in enumerate(prop.evidence):
             label = f"prop[{pi}].ev[{ei}]"
-            vr = verify_evidence(
-                evidence=ev,
-                parquet_dir=parquet_dir,
-                start_time_ns=gt_ctx.start_time_ns,
-                end_time_ns=gt_ctx.end_time_ns,
-                allowed_services=allowed,
-            )
+            vr = verify_evidence(evidence=ev, parquet_dir=parquet_dir)
             per_evidence.append(
                 PerEvidenceRecord(
                     label=label,
@@ -208,6 +191,9 @@ async def evaluate_v2(
         edge_f1=graph.edge_f1,
         headline=headline,
         case_correct=outcome.case_correct,
+        service_precision=outcome.service_precision,
+        service_recall=outcome.service_recall,
+        service_f1=outcome.service_f1,
         root_cause_precision=outcome.root_cause_precision,
         root_cause_recall=outcome.root_cause_recall,
         node_precision=graph.node_precision,

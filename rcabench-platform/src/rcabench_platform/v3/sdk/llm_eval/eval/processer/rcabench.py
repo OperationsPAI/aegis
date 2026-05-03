@@ -194,6 +194,7 @@ class RCABenchProcesser(BaseMatchProcesser):
                 "benchmark": self.name,
                 "total_samples": 0,
                 "case_correct_rate": 0.0,
+                "avg_service_f1": 0.0,
                 "avg_root_cause_f1": 0.0,
                 "avg_sql_executable_rate": 0.0,
                 "avg_chain_coherence": 0.0,
@@ -202,6 +203,7 @@ class RCABenchProcesser(BaseMatchProcesser):
             }
 
         n = len(samples)
+        service_f1 = 0.0
         rc_f1 = 0.0
         overclaim = 0.0
         sql_ok = 0.0
@@ -221,6 +223,7 @@ class RCABenchProcesser(BaseMatchProcesser):
             if not isinstance(ev, dict) or "error" in ev:
                 continue
             with_eval += 1
+            service_f1 += float(ev.get("service_f1") or 0.0)
             rc_f1 += float(ev.get("root_cause_f1") or 0.0)
             overclaim += float(ev.get("overclaim_rate") or 0.0)
             sql_ok += float(ev.get("sql_executable_rate") or 0.0)
@@ -242,6 +245,7 @@ class RCABenchProcesser(BaseMatchProcesser):
             "scored_samples": with_eval,
             "case_correct": correct,
             "case_correct_rate": round(correct / denom, 4),
+            "avg_service_f1": round(service_f1 / denom, 4),
             "avg_root_cause_f1": round(rc_f1 / denom, 4),
             "avg_overclaim_rate": round(overclaim / denom, 4),
             "avg_sql_executable_rate": round(sql_ok / denom, 4),
