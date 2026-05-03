@@ -102,7 +102,9 @@ def main() -> int:
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    json.dump({"summary": summary, "pipeline_miss": pipeline_miss, "all_detector_hit": detector_hit}, open(out, "w"), indent=2)
+    json.dump(
+        {"summary": summary, "pipeline_miss": pipeline_miss, "all_detector_hit": detector_hit}, open(out, "w"), indent=2
+    )
     print(f"\nwritten to {out}")
     return 0
 
