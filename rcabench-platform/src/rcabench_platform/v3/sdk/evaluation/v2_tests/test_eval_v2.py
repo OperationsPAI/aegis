@@ -484,8 +484,9 @@ class _StubChoiceMessage:
 
 
 class _StubChoice:
-    def __init__(self, content: str) -> None:
+    def __init__(self, content: str, finish_reason: str = "stop") -> None:
         self.message = _StubChoiceMessage(content)
+        self.finish_reason = finish_reason
 
 
 class _StubResponse:

@@ -106,7 +106,13 @@ def _evaluate_pair(rc: RootCauseClaim, gt: GTFault) -> tuple[MatchStatus, bool |
     if rc.fault_kind != gt.fault_kind:
         return MatchStatus.WRONG_KIND, None
 
-    if gt.fault_kind in NETWORK_KINDS:
+    if gt.fault_kind in NETWORK_KINDS and (gt.direction_src or gt.direction_dst):
+        # Skip the direction check when GT itself doesn't carry direction
+        # (old-format injection.json — its data.jsonl side-channel only gives
+        # us chaos_type + service, not the netem src/dst). In that case the
+        # fault is unscorable on direction and we let kind+service alone
+        # decide the match — otherwise no agent could ever HIT old-format
+        # network cases.
         d = rc.direction
         if d is None:
             return MatchStatus.WRONG_DIRECTION, None

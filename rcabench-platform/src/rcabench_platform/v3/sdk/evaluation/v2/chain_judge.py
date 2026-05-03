@@ -208,15 +208,21 @@ async def chain_coherence(
         response = await llm_client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=400,
         )
     except Exception as exc:
         logger.warning("%s judge call failed: %s", tag, exc)
         return ChainJudgeResult(score=None, reasoning=f"(judge error: {exc!s:.200})")
 
+    finish_reason = getattr(response.choices[0], "finish_reason", None)
     content = response.choices[0].message.content or ""
-    logger.debug("%s judge raw response (len=%d):\n%s", tag, len(content), _truncate(content))
+    logger.debug("%s judge raw response (finish=%s, len=%d):\n%s", tag, finish_reason, len(content), _truncate(content))
+    if not content and finish_reason == "length":
+        # Should be rare without an explicit max_tokens cap, but keep the
+        # diagnostic in case a provider applies a server-side default.
+        return ChainJudgeResult(
+            score=None,
+            reasoning="(judge returned empty content with finish_reason=length; provider may impose a server-side cap)",
+        )
 
     # Try the cheap path first: model already obeyed and returned raw JSON.
     parsed: dict | None = None
