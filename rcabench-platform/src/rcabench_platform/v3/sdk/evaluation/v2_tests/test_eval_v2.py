@@ -650,20 +650,85 @@ def test_evaluate_v2_requires_llm_client(tmp_path: Path) -> None:
         asyncio.run(evaluate_v2(agent, _injection(), case, gt_graph=None, llm_client=None))
 
 
+class _RaisingCompletions:
+    async def create(self, **_kwargs: Any) -> Any:
+        raise RuntimeError("simulated outage")
+
+
+class _RaisingChat:
+    def __init__(self) -> None:
+        self.completions = _RaisingCompletions()
+
+
+class _StubLLMClientFails:
+    """Stub that raises on every call — simulates a judge outage so we can
+    verify the score=None / headline=None propagation path.
+    """
+
+    def __init__(self) -> None:
+        self.chat = _RaisingChat()
+
+
+def test_evaluate_v2_judge_failure_returns_none(tmp_path: Path) -> None:
+    """When the judge call fails, chain_coherence and headline are None
+    (not 0.0). This lets aggregators distinguish 'couldn't judge' from
+    'judged poorly' instead of conflating both as a zero score.
+    """
+    case = _make_case(tmp_path)
+    agent = json.dumps(
+        {
+            "root_causes": [
+                {
+                    "service": "shipping",
+                    "fault_kind": "network_delay",
+                    "direction": {"src": "shipping", "dst": "quote"},
+                    "evidence": [
+                        {
+                            "kind": "metric",
+                            "sql": (
+                                "SELECT * FROM read_parquet('abnormal_metrics.parquet') WHERE service_name='shipping'"
+                            ),
+                            "claim": "x",
+                        }
+                    ],
+                }
+            ],
+            "propagation": [],
+        }
+    )
+    res = asyncio.run(
+        evaluate_v2(
+            agent,
+            _injection(),
+            case,
+            gt_graph=None,
+            llm_client=_StubLLMClientFails(),  # type: ignore[arg-type]
+        )
+    )
+    assert res.root_cause_f1 == 1.0
+    assert res.sql_executable_rate == 1.0
+    assert res.chain_coherence is None
+    assert res.headline is None
+    assert res.case_correct is True
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Batch aggregation via RCABenchProcesser.calculate_metrics
 # ──────────────────────────────────────────────────────────────────────
 
 
 def test_calculate_metrics_aggregation() -> None:
-    """4 stub samples → aggregate is the mean over the 3 successfully scored.
+    """5 stub samples → aggregates split avg_chain/avg_headline (judge-aware).
 
     Sample mix:
-      [0] perfect    rc_f1=1.0  sql=1.0  chain=1.0  headline=1.0  correct=True
-      [1] partial    rc_f1=0.5  sql=0.8  chain=0.6  headline=0.24
-      [2] parse-err  zeros + parse_error=True
-      [3] eval-err   sample.meta['eval_v2'] = {'error': '...'}  → excluded
-    Expected averages over the 3 scored samples (excluding [3]).
+      [0] perfect      rc_f1=1.0  sql=1.0  chain=1.0   headline=1.0   correct=True
+      [1] partial      rc_f1=0.5  sql=0.8  chain=0.6   headline=0.24
+      [2] parse-err    zeros + parse_error=True
+      [3] judge-fail   rc_f1=1.0  sql=1.0  chain=None  headline=None
+      [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}  → excluded
+    The deterministic axes (rc_f1, sql, etc.) average over the 4 scored samples
+    (0,1,2,3). The judge-affected axes (chain, headline) average over the 3
+    that produced a real score (0,1,2) and report `judge_failed=1`.
     """
     from rcabench_platform.v3.sdk.llm_eval.eval.processer.rcabench import RCABenchProcesser
 
@@ -721,6 +786,22 @@ def test_calculate_metrics_aggregation() -> None:
                 }
             }
         ),
+        _StubSample(
+            {
+                "eval_v2": {
+                    "service_f1": 1.0,
+                    "root_cause_f1": 1.0,
+                    "overclaim_rate": 0.0,
+                    "sql_executable_rate": 1.0,
+                    "chain_coherence": None,
+                    "node_f1": 1.0,
+                    "edge_f1": 1.0,
+                    "headline": None,
+                    "case_correct": True,
+                    "per_evidence": [{}],
+                }
+            }
+        ),
         _StubSample({"eval_v2": {"error": "missing case dir"}}),
     ]
 
@@ -728,16 +809,19 @@ def test_calculate_metrics_aggregation() -> None:
     proc.name = "RCABench"
     metrics = proc.calculate_metrics(samples)  # type: ignore[arg-type]
 
-    assert metrics["total_samples"] == 4
-    assert metrics["scored_samples"] == 3
-    assert metrics["case_correct"] == 1
-    assert metrics["case_correct_rate"] == round(1 / 3, 4)
+    assert metrics["total_samples"] == 5
+    assert metrics["scored_samples"] == 4
+    assert metrics["case_correct"] == 2
+    assert metrics["case_correct_rate"] == round(2 / 4, 4)
     assert metrics["parse_errors"] == 1
     assert metrics["zero_evidence_outputs"] == 1
-    assert metrics["avg_service_f1"] == round((1.0 + 0.7 + 0.0) / 3, 4)
-    assert metrics["avg_root_cause_f1"] == round((1.0 + 0.5 + 0.0) / 3, 4)
-    assert metrics["avg_sql_executable_rate"] == round((1.0 + 0.8 + 0.0) / 3, 4)
+    assert metrics["judge_failed"] == 1
+    # Deterministic axes average over all 4 scored samples.
+    assert metrics["avg_service_f1"] == round((1.0 + 0.7 + 0.0 + 1.0) / 4, 4)
+    assert metrics["avg_root_cause_f1"] == round((1.0 + 0.5 + 0.0 + 1.0) / 4, 4)
+    assert metrics["avg_sql_executable_rate"] == round((1.0 + 0.8 + 0.0 + 1.0) / 4, 4)
+    assert metrics["avg_node_f1"] == round((1.0 + 0.4 + 0.0 + 1.0) / 4, 4)
+    assert metrics["avg_edge_f1"] == round((1.0 + 0.2 + 0.0 + 1.0) / 4, 4)
+    # Judge-affected axes average over only the 3 that produced a real score.
     assert metrics["avg_chain_coherence"] == round((1.0 + 0.6 + 0.0) / 3, 4)
-    assert metrics["avg_node_f1"] == round((1.0 + 0.4 + 0.0) / 3, 4)
-    assert metrics["avg_edge_f1"] == round((1.0 + 0.2 + 0.0) / 3, 4)
     assert metrics["avg_headline"] == round((1.0 + 0.24 + 0.0) / 3, 4)

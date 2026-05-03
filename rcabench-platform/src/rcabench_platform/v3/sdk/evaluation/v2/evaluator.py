@@ -43,21 +43,26 @@ class EvaluationResultV2(BaseModel):
       - root_cause_f1:     type-aware match against engine_config faults
       - overclaim_rate:    agent root_causes that did not align to any GT fault
       - sql_executable_rate: evidence SQL that ran, returned rows, and aligned
-      - chain_coherence:   LLM judge over (claims + SQL preview + GT graph)
+      - chain_coherence:   LLM judge over (claims + SQL preview); blind to GT
       - node_f1 / edge_f1: agent's claimed graph vs GT causal_graph (service-level)
 
     `headline = root_cause_f1 × sql_executable_rate × chain_coherence`
+
+    ``chain_coherence`` and ``headline`` are ``None`` when the LLM judge call
+    itself failed (e.g. network outage). Aggregators are expected to drop
+    those samples from the headline average rather than treat them as 0.0,
+    so a transient outage doesn't infect the case-level score.
     """
 
     root_cause_f1: float
     overclaim_rate: float
     sql_executable_rate: float
-    chain_coherence: float
+    chain_coherence: float | None
 
     node_f1: float = 0.0
     edge_f1: float = 0.0
 
-    headline: float = Field(..., description="root_cause_f1 × sql_executable_rate × chain_coherence")
+    headline: float | None = Field(..., description="root_cause_f1 × sql_executable_rate × chain_coherence")
     case_correct: bool = False
 
     service_precision: float = 0.0
@@ -174,12 +179,14 @@ async def evaluate_v2(
     judge_result = await chain_coherence(
         agent=agent,
         evidence_results=sql_evidence_results,
-        gt_graph=gt_graph,
         llm_client=llm_client,
         model=judge_model,
     )
 
-    headline = outcome.root_cause_f1 * sql_executable_rate * judge_result.score
+    if judge_result.score is None:
+        headline: float | None = None
+    else:
+        headline = outcome.root_cause_f1 * sql_executable_rate * judge_result.score
 
     return EvaluationResultV2(
         root_cause_f1=outcome.root_cause_f1,

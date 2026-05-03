@@ -28,6 +28,7 @@ class BaseLLMJudgeProcesser(BaseProcesser):
         self._judge_client: AsyncOpenAI | None = None
         provider_config = config.judge_model.model_provider.model_dump()
         self._judge_provider_config = provider_config
+        self._judge_max_retries = int(config.judge_model.rate_limit.max_retries)
         self.judge_model = str(provider_config.get("model") or "gpt-4o-mini")
 
     @property
@@ -37,6 +38,7 @@ class BaseLLMJudgeProcesser(BaseProcesser):
             self._judge_client = AsyncOpenAI(
                 base_url=self._judge_provider_config.get("base_url") or None,
                 api_key=self._judge_provider_config.get("api_key") or None,
+                max_retries=self._judge_max_retries,
             )
         return self._judge_client
 
