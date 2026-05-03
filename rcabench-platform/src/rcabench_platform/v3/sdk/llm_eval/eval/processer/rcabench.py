@@ -156,8 +156,19 @@ class RCABenchProcesser(BaseMatchProcesser):
         if result.chain_judge and result.chain_judge.reasoning:
             reasoning_bits.append(f"judge: {result.chain_judge.reasoning}")
 
+        # Surface the raw LLM-as-judge output on `judged_response` so it shows
+        # up alongside the agent response in the eval DB / dashboard. Falls
+        # back to a serialized ChainJudgeResult when raw_response is missing
+        # (e.g. judge errored before any content was returned).
+        judged_response: str | None = None
+        if result.chain_judge is not None:
+            if result.chain_judge.raw_response:
+                judged_response = result.chain_judge.raw_response
+            else:
+                judged_response = result.chain_judge.model_dump_json(indent=2)
+
         sample.update(
-            judged_response=None,
+            judged_response=judged_response,
             correct=result.case_correct,
             confidence=result.headline if result.headline is not None else 0.0,
             reasoning=" | ".join(reasoning_bits),
