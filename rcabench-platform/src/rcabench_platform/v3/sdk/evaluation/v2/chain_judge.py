@@ -11,11 +11,19 @@ Returns a 0–1 score (or ``None`` when the judge call itself failed, e.g.
 network outage after retries are exhausted) plus a short explanation.
 ``None`` lets aggregators distinguish "couldn't judge" from "judged poorly"
 instead of conflating both as 0.0.
+
+Compatibility note: the OpenAI ``response_format={"type": "json_object"}``
+flag is intentionally NOT used. Some OpenAI-compatible gateways (litellm
+etc.) reject it with HTTP 400 even when the underlying model behaves fine
+without it. Instead the prompt strictly demands raw JSON and the parser
+tolerates markdown fences / preamble text, falling back to a brace-walk
+when ``json.loads`` on the whole content rejects it.
 """
 
 from __future__ import annotations
 
 import json
+import re
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
@@ -55,7 +63,10 @@ You are NOT given the ground-truth answer. Do not try to infer which case
 this is or whether the agent's named services match a "correct" set —
 that is judged separately. Your job is only claim-vs-data consistency.
 
-Respond with strict JSON: {{"score": <float 0..1>, "reasoning": "<=80 words>"}}.
+OUTPUT FORMAT — strict, no exceptions:
+  • Output exactly one JSON object: {{"score": <float 0..1>, "reasoning": "<=80 words>"}}
+  • No prose before or after. No markdown fences. No commentary.
+  • Begin your response with `{{` and end with `}}`.
 
 == Agent output ==
 {agent_output}
@@ -63,6 +74,56 @@ Respond with strict JSON: {{"score": <float 0..1>, "reasoning": "<=80 words>"}}.
 == Evidence executions (status + sample rows) ==
 {evidence_block}
 """
+
+
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.IGNORECASE)
+
+
+def _extract_json_object(text: str) -> str | None:
+    """Pull a balanced JSON object out of arbitrary model output.
+
+    Tolerates three real-world failure modes seen in the wild:
+      • the whole content is already raw JSON (fast path),
+      • the model wraps JSON in a ```json ... ``` fence,
+      • the model prepends prose ("Sure, here's the JSON: { ... }").
+
+    Returns the substring containing the first balanced ``{...}`` object,
+    or ``None`` if no plausible candidate is found.
+    """
+    if not text:
+        return None
+    fence = _JSON_FENCE_RE.search(text)
+    if fence:
+        candidate = fence.group(1).strip()
+        if candidate.startswith("{"):
+            return candidate
+
+    first_brace = text.find("{")
+    if first_brace == -1:
+        return None
+    depth = 0
+    in_string = False
+    escape_next = False
+    for i in range(first_brace, len(text)):
+        ch = text[i]
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == "\\":
+            escape_next = True
+            continue
+        if ch == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[first_brace : i + 1]
+    return None
 
 
 def _format_evidence_block(agent: AgentRCAOutput, results: list[tuple[str, EvidenceVerifyResult]]) -> str:
@@ -119,19 +180,57 @@ async def chain_coherence(
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=400,
-            response_format={"type": "json_object"},
         )
     except Exception as exc:
         return ChainJudgeResult(score=None, reasoning=f"(judge error: {exc!s:.200})")
 
     content = response.choices[0].message.content or ""
+
+    # Try the cheap path first: model already obeyed and returned raw JSON.
+    parsed: dict | None = None
     try:
-        parsed = json.loads(content)
+        candidate = json.loads(content)
+        if isinstance(candidate, dict):
+            parsed = candidate
     except json.JSONDecodeError:
-        return ChainJudgeResult(score=None, reasoning="(judge returned non-JSON)", raw_response=content)
+        pass
+
+    # Fallback: extract a balanced JSON object from text that may have
+    # markdown fences or prose preamble.
+    if parsed is None:
+        extracted = _extract_json_object(content)
+        if extracted is None:
+            return ChainJudgeResult(
+                score=None,
+                reasoning="(judge returned no JSON object)",
+                raw_response=content,
+            )
+        try:
+            candidate = json.loads(extracted)
+        except json.JSONDecodeError as exc:
+            return ChainJudgeResult(
+                score=None,
+                reasoning=f"(judge JSON parse failed: {exc!s:.120})",
+                raw_response=content,
+            )
+        if not isinstance(candidate, dict):
+            return ChainJudgeResult(
+                score=None,
+                reasoning="(judge JSON was not an object)",
+                raw_response=content,
+            )
+        parsed = candidate
+
     raw_score = parsed.get("score")
     if raw_score is None:
         return ChainJudgeResult(score=None, reasoning="(judge omitted score)", raw_response=content)
-    score = max(0.0, min(1.0, float(raw_score)))
+    try:
+        score = max(0.0, min(1.0, float(raw_score)))
+    except (TypeError, ValueError):
+        return ChainJudgeResult(
+            score=None,
+            reasoning=f"(judge score not numeric: {raw_score!r:.40})",
+            raw_response=content,
+        )
     reasoning = str(parsed.get("reasoning") or "")
     return ChainJudgeResult(score=score, reasoning=reasoning, raw_response=content)

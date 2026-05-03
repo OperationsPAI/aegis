@@ -669,6 +669,97 @@ class _StubLLMClientFails:
         self.chat = _RaisingChat()
 
 
+class _BadRequestCompletions:
+    """Mimics a litellm gateway that 400s on response_format=json_object.
+
+    The new chain_judge no longer sends that flag, so this completions
+    stub should never see it; if a future regression re-introduces it,
+    inspecting captured kwargs in the test would catch the slip.
+    """
+
+    def __init__(self) -> None:
+        self.last_kwargs: dict[str, Any] = {}
+
+    async def create(self, **kwargs: Any) -> Any:
+        self.last_kwargs = kwargs
+        raise RuntimeError(
+            "Error code: 400 - {'error': {'message': 'litellm.BadRequestError: "
+            "OpenAIException - response_format json_object not supported'}}"
+        )
+
+
+class _BadRequestChat:
+    def __init__(self) -> None:
+        self.completions = _BadRequestCompletions()
+
+
+class _BadRequestLLMClient:
+    def __init__(self) -> None:
+        self.chat = _BadRequestChat()
+
+
+def test_chain_judge_no_response_format_param() -> None:
+    """Regression: the gateway-incompatible json_object flag must not be
+    sent. Caught one production gateway returning HTTP 400 with this
+    exact message; we now rely on prompt-only formatting + tolerant
+    extraction, so the request kwargs should not contain response_format.
+    """
+    from ..v2.chain_judge import chain_coherence
+    from ..v2.schema import AgentRCAOutput
+
+    client = _BadRequestLLMClient()
+    agent = AgentRCAOutput(root_causes=[], propagation=[])
+    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
+    # Judge raised → score is None (transient outage semantics).
+    assert res.score is None
+    # And we definitely didn't send the offending flag.
+    assert "response_format" not in client.chat.completions.last_kwargs
+
+
+def test_chain_judge_extracts_json_from_markdown_fence() -> None:
+    """Real models often wrap JSON in ```json ... ``` fences. Parser
+    must tolerate that instead of returning score=None on a syntactically
+    fine response.
+    """
+    from ..v2.chain_judge import chain_coherence
+    from ..v2.schema import AgentRCAOutput
+
+    fenced = '```json\n{"score": 0.7, "reasoning": "ok"}\n```'
+    client = type("C", (), {"chat": _StubChat(fenced)})()
+    agent = AgentRCAOutput(root_causes=[], propagation=[])
+    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
+    assert res.score == 0.7
+    assert res.reasoning == "ok"
+
+
+def test_chain_judge_extracts_json_after_prose_preamble() -> None:
+    """Some models prepend "Sure, here's the result: { ... }". Parser
+    must walk braces past the preamble.
+    """
+    from ..v2.chain_judge import chain_coherence
+    from ..v2.schema import AgentRCAOutput
+
+    preamble = 'Here is my judgement: {"score": 0.4, "reasoning": "partial"}'
+    client = type("C", (), {"chat": _StubChat(preamble)})()
+    agent = AgentRCAOutput(root_causes=[], propagation=[])
+    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
+    assert res.score == 0.4
+
+
+def test_chain_judge_non_numeric_score_returns_none() -> None:
+    """If the model emits a non-coercible score, fail loud (None) rather
+    than silently treat it as 0.0.
+    """
+    from ..v2.chain_judge import chain_coherence
+    from ..v2.schema import AgentRCAOutput
+
+    bad = '{"score": "high", "reasoning": "x"}'
+    client = type("C", (), {"chat": _StubChat(bad)})()
+    agent = AgentRCAOutput(root_causes=[], propagation=[])
+    res = asyncio.run(chain_coherence(agent, [], client))  # type: ignore[arg-type]
+    assert res.score is None
+
+
 def test_evaluate_v2_judge_failure_returns_none(tmp_path: Path) -> None:
     """When the judge call fails, chain_coherence and headline are None
     (not 0.0). This lets aggregators distinguish 'couldn't judge' from
