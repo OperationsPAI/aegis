@@ -156,9 +156,9 @@ def test_layer_gate_deep_path_reuses_last_layer() -> None:
         [1, 2, 3, 4, 5],
         [
             "routes_to_BACKWARD",  # layer 1
-            "calls_BACKWARD",      # layer 2
-            "calls_BACKWARD",      # layer 3
-            "calls_BACKWARD",      # reuses layer 3
+            "calls_BACKWARD",  # layer 2
+            "calls_BACKWARD",  # layer 3
+            "calls_BACKWARD",  # reuses layer 3
         ],
     )
     result = gate.evaluate(path, ctx=None)  # type: ignore[arg-type]

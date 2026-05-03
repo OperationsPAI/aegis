@@ -48,9 +48,7 @@ def test_run_reads_benchmark_system_env_var(monkeypatch: pytest.MonkeyPatch, tmp
     try:
         run(in_p=tmp_path, ou_p=tmp_path, system=None)
     except ValueError as e:
-        assert "BENCHMARK_SYSTEM" not in str(e), (
-            f"system gate still tripped despite BENCHMARK_SYSTEM=hs: {e}"
-        )
+        assert "BENCHMARK_SYSTEM" not in str(e), f"system gate still tripped despite BENCHMARK_SYSTEM=hs: {e}"
     except Exception:
         # Any non-ValueError or downstream ValueError is fine -- it means the
         # system-required gate accepted the env var and execution proceeded.

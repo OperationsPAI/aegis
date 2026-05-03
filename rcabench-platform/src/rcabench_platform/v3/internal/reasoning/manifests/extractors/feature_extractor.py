@@ -127,9 +127,7 @@ THREAD_COUNT_METRICS = (
 # ---------------------------------------------------------------------------
 
 
-def _window_max(
-    timestamps: np.ndarray, values: np.ndarray, t0: int | None, t1: int | None
-) -> float | None:
+def _window_max(timestamps: np.ndarray, values: np.ndarray, t0: int | None, t1: int | None) -> float | None:
     if len(timestamps) == 0 or len(values) == 0:
         return None
     if t0 is not None or t1 is not None:
@@ -147,9 +145,7 @@ def _window_max(
     return float(np.max(sl))
 
 
-def _window_sum(
-    timestamps: np.ndarray, values: np.ndarray, t0: int | None, t1: int | None
-) -> float | None:
+def _window_sum(timestamps: np.ndarray, values: np.ndarray, t0: int | None, t1: int | None) -> float | None:
     if len(timestamps) == 0 or len(values) == 0:
         return None
     if t0 is not None or t1 is not None:
@@ -201,9 +197,7 @@ def _first_present_metric(node: Node, candidates: Iterable[str]) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def _cpu_throttle_ratio(
-    node: Node, t0: int | None, t1: int | None
-) -> float | None:
+def _cpu_throttle_ratio(node: Node, t0: int | None, t1: int | None) -> float | None:
     """Prefer cgroup-saturation metric (already a ratio in [0,1]); fall back
     to absolute CPU usage divided by baseline mean.
     """
@@ -242,9 +236,7 @@ def _cpu_throttle_ratio(
     return None
 
 
-def _memory_usage_ratio(
-    node: Node, t0: int | None, t1: int | None
-) -> float | None:
+def _memory_usage_ratio(node: Node, t0: int | None, t1: int | None) -> float | None:
     """Prefer the cgroup-saturation memory metric (already in [0,1]).
 
     The manifest's memory_usage_ratio band is in saturation units (e.g.
@@ -277,9 +269,7 @@ def _memory_usage_ratio(
     return None
 
 
-def _restart_count(
-    node: Node, t0: int | None, t1: int | None
-) -> float | None:
+def _restart_count(node: Node, t0: int | None, t1: int | None) -> float | None:
     metric = _first_present_metric(node, RESTART_METRICS)
     if metric is None:
         return None
@@ -296,9 +286,7 @@ def _restart_count(
     return delta if delta > 0 else None
 
 
-def _gc_pause_ratio(
-    node: Node, t0: int | None, t1: int | None
-) -> float | None:
+def _gc_pause_ratio(node: Node, t0: int | None, t1: int | None) -> float | None:
     metric = _first_present_metric(node, GC_DURATION_METRICS)
     if metric is None:
         return None
@@ -320,9 +308,7 @@ def _gc_pause_ratio(
     return min(1.0, total_pause / window)
 
 
-def _thread_queue_depth(
-    node: Node, t0: int | None, t1: int | None
-) -> float | None:
+def _thread_queue_depth(node: Node, t0: int | None, t1: int | None) -> float | None:
     metric = _first_present_metric(node, THREAD_COUNT_METRICS)
     if metric is None:
         return None
@@ -337,9 +323,7 @@ def _thread_queue_depth(
     return _ratio(peak, base)
 
 
-def _pod_unavailable(
-    node: Node, t0: int | None, t1: int | None
-) -> float | None:
+def _pod_unavailable(node: Node, t0: int | None, t1: int | None) -> float | None:
     """Detect pod-killed via the same data-stop heuristic K8sMetricsAdapter
     uses: a tail window with no metric samples while baseline had data.
     """
@@ -415,9 +399,7 @@ def _aggregate_trace_stats(
         [
             (pl.col("duration") / 1e9).alias("_dur_sec"),
             detector.is_failure_expr().cast(pl.Int32).alias("_is_err"),
-            (pl.col("service_name") + "::" + pl.col("span_name")).alias(
-                "_full_name"
-            ),
+            (pl.col("service_name") + "::" + pl.col("span_name")).alias("_full_name"),
         ]
     )
 
@@ -437,24 +419,13 @@ def _aggregate_trace_stats(
         sm = pl.col("status_message").cast(pl.Utf8).fill_null("")
         aggs.extend(
             [
-                ((sm.str.contains("(?i)dns") | sm.str.contains("(?i)resolve"))
-                 .cast(pl.Int32))
+                ((sm.str.contains("(?i)dns") | sm.str.contains("(?i)resolve")).cast(pl.Int32))
                 .sum()
                 .alias("dns_errors"),
-                (
-                    (
-                        sm.str.contains("(?i)connection refused")
-                        | sm.str.contains("(?i)econnrefused")
-                    ).cast(pl.Int32)
-                )
+                ((sm.str.contains("(?i)connection refused") | sm.str.contains("(?i)econnrefused")).cast(pl.Int32))
                 .sum()
                 .alias("conn_refused"),
-                (
-                    (
-                        sm.str.contains("(?i)timeout")
-                        | sm.str.contains("(?i)deadline")
-                    ).cast(pl.Int32)
-                )
+                ((sm.str.contains("(?i)timeout") | sm.str.contains("(?i)deadline")).cast(pl.Int32))
                 .sum()
                 .alias("timeouts"),
             ]
@@ -530,19 +501,13 @@ def _extract_span_features(
         # latency_p99_ratio / latency_p50_ratio
         if base is not None:
             if base.get("p99", 0.0) > 0 and abn["p99"] > 0:
-                out[(nid, FeatureKind.span, Feature.latency_p99_ratio)] = (
-                    abn["p99"] / base["p99"]
-                )
+                out[(nid, FeatureKind.span, Feature.latency_p99_ratio)] = abn["p99"] / base["p99"]
             if base.get("p50", 0.0) > 0 and abn["p50"] > 0:
-                out[(nid, FeatureKind.span, Feature.latency_p50_ratio)] = (
-                    abn["p50"] / base["p50"]
-                )
+                out[(nid, FeatureKind.span, Feature.latency_p50_ratio)] = abn["p50"] / base["p50"]
 
         # error_rate is absolute (not ratio): errors / count.
         if abn["count"] > 0:
-            out[(nid, FeatureKind.span, Feature.error_rate)] = (
-                abn["errors"] / abn["count"]
-            )
+            out[(nid, FeatureKind.span, Feature.error_rate)] = abn["errors"] / abn["count"]
 
         # request_count_ratio: per-second-rate ratio.
         if (
@@ -556,23 +521,15 @@ def _extract_span_features(
             base_rate = base["count"] / base_window
             abn_rate = abn["count"] / abn_window
             if base_rate > 0:
-                out[(nid, FeatureKind.span, Feature.request_count_ratio)] = (
-                    abn_rate / base_rate
-                )
+                out[(nid, FeatureKind.span, Feature.request_count_ratio)] = abn_rate / base_rate
 
         # Error-class rates (only when the schema carried status_message).
         if "dns_errors" in abn and abn["count"] > 0:
-            out[(nid, FeatureKind.span, Feature.dns_failure_rate)] = (
-                abn["dns_errors"] / abn["count"]
-            )
+            out[(nid, FeatureKind.span, Feature.dns_failure_rate)] = abn["dns_errors"] / abn["count"]
         if "conn_refused" in abn and abn["count"] > 0:
-            out[(nid, FeatureKind.span, Feature.connection_refused_rate)] = (
-                abn["conn_refused"] / abn["count"]
-            )
+            out[(nid, FeatureKind.span, Feature.connection_refused_rate)] = abn["conn_refused"] / abn["count"]
         if "timeouts" in abn and abn["count"] > 0:
-            out[(nid, FeatureKind.span, Feature.timeout_rate)] = (
-                abn["timeouts"] / abn["count"]
-            )
+            out[(nid, FeatureKind.span, Feature.timeout_rate)] = abn["timeouts"] / abn["count"]
 
 
 def _extract_silent_unavailable_from_timelines(
@@ -602,8 +559,7 @@ def _extract_silent_unavailable_from_timelines(
 
         if tl.kind == PlaceKind.service:
             if "silent" in states or any(
-                "silent" in (w.evidence.get("specialization_labels") or set())
-                for w in windows
+                "silent" in (w.evidence.get("specialization_labels") or set()) for w in windows
             ):
                 out[(node.id, FeatureKind.service, Feature.silent)] = 1.0
             if "unavailable" in states:
@@ -682,9 +638,7 @@ def extract_feature_samples(
 
     # Trace-derived span features.
     if baseline_traces is not None and abnormal_traces is not None:
-        _extract_span_features(
-            out, graph, baseline_traces, abnormal_traces, t0, t1
-        )
+        _extract_span_features(out, graph, baseline_traces, abnormal_traces, t0, t1)
 
     # Timeline-derived boolean features (silent / unavailable on
     # service / span / pod, populated by trace_volume + structural

@@ -175,9 +175,7 @@ def _make_manifest(
     extension: ExtensionConfig | None
     corroborator: CorroboratorConfig | None = None
     if tier == "erroring":
-        extension = ExtensionConfig(
-            max_extra_hops=4, max_frontier=256, requires_strict_anchor=True
-        )
+        extension = ExtensionConfig(max_extra_hops=4, max_frontier=256, requires_strict_anchor=True)
     elif tier in {"silent", "unavailable", "slow"}:
         extension = ExtensionConfig(max_extra_hops=6, max_frontier=256)
         if tier == "slow":
@@ -352,14 +350,11 @@ def test_manifest_path_builder_extends_erroring_cascade_past_band() -> None:
 
     # The cascade reached node_ids[3] (depth 3) despite the band miss.
     deepest = max(len(p.node_ids) for p in out.paths) if out.paths else 0
-    assert deepest >= 4, (
-        f"erroring-tier extension should reach depth >=3 (4 nodes), "
-        f"got deepest={deepest}"
-    )
+    assert deepest >= 4, f"erroring-tier extension should reach depth >=3 (4 nodes), got deepest={deepest}"
     # The deeper hops carry the ``Lext`` rule_id stamp.
-    assert any(
-        any(rid.endswith(":Lext") for rid in p.rule_ids) for p in out.paths
-    ), "expected at least one path edge tagged as the erroring extension"
+    assert any(any(rid.endswith(":Lext") for rid in p.rule_ids) for p in out.paths), (
+        "expected at least one path edge tagged as the erroring extension"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -139,14 +139,9 @@ class FaultPropagator:
             or self.reasoning_ctx.manifest is None
             or self.reasoning_ctx.v_root_node_id is None
         ):
-            ft = (
-                self.reasoning_ctx.fault_type_name
-                if self.reasoning_ctx is not None
-                else "<no_ctx>"
-            )
+            ft = self.reasoning_ctx.fault_type_name if self.reasoning_ctx is not None else "<no_ctx>"
             warning_msg = (
-                f"manifest-only propagator: skipping fault_type={ft} — "
-                f"no manifest registered or no v_root resolved"
+                f"manifest-only propagator: skipping fault_type={ft} — no manifest registered or no v_root resolved"
             )
             logger.warning(f"  [WARNING] {warning_msg}")
             return PropagationResult(

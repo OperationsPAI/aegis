@@ -39,9 +39,7 @@ from rcabench_platform.v3.internal.reasoning.manifests.schema import (
 )
 
 
-def _corroborator_matches(
-    node_id: int, rctx: ReasoningContext, corr: CorroboratorConfig
-) -> tuple[bool, float | None]:
+def _corroborator_matches(node_id: int, rctx: ReasoningContext, corr: CorroboratorConfig) -> tuple[bool, float | None]:
     """Apply ``manifest.corroborator`` to a destination.
 
     Mirrors :meth:`manifest_path_builder.ManifestAwarePathBuilder._corroborator_matches`.
@@ -107,9 +105,7 @@ def _node_matches_any_expected(
     return any_match, evidence
 
 
-def _assign_layers_from_rule_ids(
-    rule_ids: list[str], layers: list[DerivationLayer]
-) -> list[int | None]:
+def _assign_layers_from_rule_ids(rule_ids: list[str], layers: list[DerivationLayer]) -> list[int | None]:
     """Map each path edge to its layer index (or None for lift edges).
 
     Reads the ``rule_id`` tag the path-builder stamps on each edge:
@@ -240,21 +236,15 @@ class ManifestLayerGate:
             # True``. The gate honours that bool rather than parsing the
             # rule_id string — rule_ids stay audit-only metadata
             # (``manifest:{ft}:Lext`` is still the canonical tag).
-            is_extension_edge = (
-                i < len(path.per_edge_relaxed) and path.per_edge_relaxed[i]
-            )
+            is_extension_edge = i < len(path.per_edge_relaxed) and path.per_edge_relaxed[i]
             relax_features = is_extension_edge
 
             edge_ok = _edge_admitted_by_layer(edge_desc, layer)
-            features_ok, feature_evidence = _node_matches_any_expected(
-                dst_id, list(layer.expected_features), rctx
-            )
+            features_ok, feature_evidence = _node_matches_any_expected(dst_id, list(layer.expected_features), rctx)
             corroborated = False
             corroborator_value: float | None = None
             if not features_ok and corroborator is not None:
-                corroborated, corroborator_value = _corroborator_matches(
-                    dst_id, rctx, corroborator
-                )
+                corroborated, corroborator_value = _corroborator_matches(dst_id, rctx, corroborator)
             features_admitted = features_ok or relax_features or corroborated
             edge_passed = edge_ok and features_admitted
             if not edge_passed:
@@ -281,10 +271,7 @@ class ManifestLayerGate:
             reason = ""
         else:
             n_failed = sum(1 for e in edges_evidence if not e["passed"])
-            reason = (
-                f"{n_failed} edge(s) failed manifest layer check "
-                f"(edge-kind or magnitude band miss)"
-            )
+            reason = f"{n_failed} edge(s) failed manifest layer check (edge-kind or magnitude band miss)"
 
         return GateResult(
             gate_name=self.name,

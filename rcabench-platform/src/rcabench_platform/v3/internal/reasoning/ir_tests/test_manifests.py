@@ -245,9 +245,7 @@ def test_registry_load_directory(tmp_path: Path) -> None:
     mem = _minimal_yaml(fault_type_name="MemoryStress")
     (tmp_path / "memory_stress.yaml").write_text(dedent(mem))
     # Invalid: bad seed tier.
-    (tmp_path / "bad.yaml").write_text(
-        dedent(_minimal_yaml(seed_tier="slow"))
-    )
+    (tmp_path / "bad.yaml").write_text(dedent(_minimal_yaml(seed_tier="slow")))
 
     # Strict mode: the bad file aborts loading.
     with pytest.raises(ManifestLoadError):

@@ -187,9 +187,7 @@ FEATURE_METADATA: Final[dict[Feature, FeatureMeta]] = {
 
 
 # Sanity: every Feature member has metadata.
-assert set(FEATURE_METADATA.keys()) == set(Feature), (
-    "FEATURE_METADATA must cover every Feature enum member"
-)
+assert set(FEATURE_METADATA.keys()) == set(Feature), "FEATURE_METADATA must cover every Feature enum member"
 
 
 def is_known_feature(name: str) -> bool:

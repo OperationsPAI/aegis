@@ -278,9 +278,7 @@ def _run_one_sham(
         # cli.run_single_case (cli.py:728-767), with the sham node as
         # v_root but holding the real fault_type_name (we are testing the
         # manifest's specificity, not its category routing).
-        v_root_id: int | None = (
-            injection_node_ids[0] if injection_node_ids else physical_node_ids[0]
-        )
+        v_root_id: int | None = injection_node_ids[0] if injection_node_ids else physical_node_ids[0]
         feature_samples = extract_feature_samples(
             graph=graph,
             baseline_traces=baseline_traces,

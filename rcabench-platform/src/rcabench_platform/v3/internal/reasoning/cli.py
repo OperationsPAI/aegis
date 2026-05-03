@@ -60,9 +60,7 @@ app = typer.Typer(name="reason", help="Fault propagation reasoning engine CLI")
 # Default manifest directory: package-relative ``manifests/fault_types/``.
 # Phase 1 ships zero manifests (apart from the example referenced in tests),
 # so the default is "registry empty → fall back to generic rules everywhere".
-_DEFAULT_MANIFEST_DIR = (
-    Path(__file__).resolve().parent / "manifests" / "fault_types"
-)
+_DEFAULT_MANIFEST_DIR = Path(__file__).resolve().parent / "manifests" / "fault_types"
 
 
 def _init_manifest_registry(manifest_dir: str | None) -> None:
@@ -75,8 +73,7 @@ def _init_manifest_registry(manifest_dir: str | None) -> None:
     target = Path(manifest_dir) if manifest_dir else _DEFAULT_MANIFEST_DIR
     if not target.exists():
         logger.info(
-            "manifest dir %s does not exist; using empty registry "
-            "(generic rules everywhere)",
+            "manifest dir %s does not exist; using empty registry (generic rules everywhere)",
             target,
         )
         set_default_registry(ManifestRegistry({}))
@@ -613,13 +610,9 @@ def run_single_case(
         _registry = get_default_registry()
         _manifest = _registry.get(resolved.fault_type_name)
         if _manifest is None:
-            logger.info(
-                "no manifest for %s, using generic rules", resolved.fault_type_name
-            )
+            logger.info("no manifest for %s, using generic rules", resolved.fault_type_name)
         else:
-            logger.debug(
-                "manifest %s bound for case %s", resolved.fault_type_name, case_name
-            )
+            logger.debug("manifest %s bound for case %s", resolved.fault_type_name, case_name)
 
         physical_node_ids: list[int] = []
         for injection_node in actual_injection_nodes:
@@ -721,9 +714,7 @@ def run_single_case(
         # uses the IR products that have just been computed (graph,
         # timelines, traces) plus the resolved injection root.
         v_root_id: int | None = (
-            injection_node_ids[0]
-            if injection_node_ids
-            else (physical_node_ids[0] if physical_node_ids else None)
+            injection_node_ids[0] if injection_node_ids else (physical_node_ids[0] if physical_node_ids else None)
         )
         feature_samples = extract_feature_samples(
             graph=graph,
@@ -1039,13 +1030,8 @@ def _collect_batch_tasks(
 
         # Validity marker: `.valid` (legacy) or any of the AegisLab markers.
         # Empty marker files; their presence is the only signal.
-        if not any(
-            (case_folder / m).exists() or (data_dir / m).exists()
-            for m in (".valid", ".done", ".finished")
-        ):
-            logger.debug(
-                f"[{case_folder.name}] Skipping: no .valid/.done/.finished marker"
-            )
+        if not any((case_folder / m).exists() or (data_dir / m).exists() for m in (".valid", ".done", ".finished")):
+            logger.debug(f"[{case_folder.name}] Skipping: no .valid/.done/.finished marker")
             continue
 
         case_output_folder = data_dir

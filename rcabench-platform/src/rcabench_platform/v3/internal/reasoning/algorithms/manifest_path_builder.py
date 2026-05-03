@@ -357,9 +357,7 @@ class ManifestAwarePathBuilder:
                         continue
                     seen.add(other_id)
                     if self._has_edge_of_kind_dir(other_id, layer1_pairs):
-                        proxies.append(
-                            self._make_seed_frame(other_id, manifest.fault_type_name)
-                        )
+                        proxies.append(self._make_seed_frame(other_id, manifest.fault_type_name))
                     else:
                         next_frontier.append(other_id)
             frontier = next_frontier
@@ -451,9 +449,7 @@ class ManifestAwarePathBuilder:
                         stack.append((other_id, transit_frame, hop + 1))
         return lifted
 
-    def _has_edge_of_kind_dir(
-        self, node_id: int, kind_dirs: set[tuple[str, str]]
-    ) -> bool:
+    def _has_edge_of_kind_dir(self, node_id: int, kind_dirs: set[tuple[str, str]]) -> bool:
         """True iff ``node_id`` has an edge matching one of ``(kind, direction)``.
 
         Direction follows :class:`_admit_layer_children` semantics:
@@ -576,9 +572,7 @@ class ManifestAwarePathBuilder:
             # only candidate path.
             if next_frontier and k_idx + 1 < len(layers):
                 next_layer = layers[k_idx + 1]
-                next_pairs = set(
-                    zip(next_layer.edge_kinds, next_layer.edge_directions, strict=False)
-                )
+                next_pairs = set(zip(next_layer.edge_kinds, next_layer.edge_directions, strict=False))
                 lifted_frontier = self._lift_frontier_to_pairs(
                     next_frontier, next_pairs, manifest_name=manifest.fault_type_name
                 )
@@ -657,12 +651,8 @@ class ManifestAwarePathBuilder:
         # ``_dst_features_match`` so admission stays band-driven.
         ext = manifest.extension
         if ext is not None and ext.max_extra_hops > 0 and layers:
-            anchor_ok = (
-                strict_admit_observed if ext.requires_strict_anchor else True
-            )
-            launch = (
-                extension_seeds if ext.requires_strict_anchor else frontier
-            )
+            anchor_ok = strict_admit_observed if ext.requires_strict_anchor else True
+            launch = extension_seeds if ext.requires_strict_anchor else frontier
             if anchor_ok and launch:
                 self._extend_cascade(
                     frontier=launch,
@@ -823,11 +813,7 @@ class ManifestAwarePathBuilder:
             picked_state, picked_states_all, picked_time = picked
 
             edge_desc = f"{edge_ref.kind.value}_{direction}"
-            rule_id = (
-                rule_id_override
-                if rule_id_override is not None
-                else f"manifest:{manifest_name}:L{layer.layer}"
-            )
+            rule_id = rule_id_override if rule_id_override is not None else f"manifest:{manifest_name}:L{layer.layer}"
             admitted.append(
                 _Frame(
                     node_id=dst_id,

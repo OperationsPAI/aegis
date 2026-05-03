@@ -106,10 +106,7 @@ class ManifestRegistry:
                     raise
                 continue
             if m.fault_type_name in manifests:
-                detail = (
-                    f"duplicate manifest for {m.fault_type_name!r}: "
-                    f"already loaded from another file"
-                )
+                detail = f"duplicate manifest for {m.fault_type_name!r}: already loaded from another file"
                 if strict:
                     raise ManifestLoadError(yaml_path, detail)
                 logger.error("%s: %s", yaml_path, detail)
@@ -218,8 +215,7 @@ def get_default_registry() -> ManifestRegistry:
                 # Don't crash on bad manifests at lazy-init time; tests
                 # may be running an in-tree subset. Fall back to empty.
                 logger.warning(
-                    "failed to lazy-load default manifest registry from %s; "
-                    "using empty registry",
+                    "failed to lazy-load default manifest registry from %s; using empty registry",
                     default_dir,
                 )
                 _DEFAULT_REGISTRY = ManifestRegistry({})

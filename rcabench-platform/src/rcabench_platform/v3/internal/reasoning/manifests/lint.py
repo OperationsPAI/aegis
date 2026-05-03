@@ -31,10 +31,7 @@ def _print_err(msg: str) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if len(args) != 1:
-        _print_err(
-            "usage: python -m rcabench_platform.v3.internal.reasoning.manifests.lint "
-            "<manifest-dir>"
-        )
+        _print_err("usage: python -m rcabench_platform.v3.internal.reasoning.manifests.lint <manifest-dir>")
         return 2
     target = Path(args[0])
     if not target.exists() or not target.is_dir():
@@ -56,9 +53,7 @@ def main(argv: list[str] | None = None) -> int:
             errors += 1
             continue
         if m.fault_type_name in valid:
-            _print_err(
-                f"{path}: duplicate manifest for {m.fault_type_name!r}"
-            )
+            _print_err(f"{path}: duplicate manifest for {m.fault_type_name!r}")
             errors += 1
             continue
         valid[m.fault_type_name] = m

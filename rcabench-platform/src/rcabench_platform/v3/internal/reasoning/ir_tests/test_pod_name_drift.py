@@ -79,11 +79,8 @@ def test_pod_metrics_extracted_despite_pod_name_drift() -> None:
     mem_key = (pod.id, FeatureKind.pod, Feature.memory_usage_ratio)
 
     assert cpu_key in samples, (
-        "cpu_throttle_ratio missing — extractor failed to attach metric "
-        "to the post-drift pod node"
+        "cpu_throttle_ratio missing — extractor failed to attach metric to the post-drift pod node"
     )
-    assert samples[cpu_key] >= 3.0, (
-        f"cpu_throttle_ratio={samples[cpu_key]} below manifest band lower bound"
-    )
+    assert samples[cpu_key] >= 3.0, f"cpu_throttle_ratio={samples[cpu_key]} below manifest band lower bound"
     assert mem_key in samples
     assert 0.5 <= samples[mem_key] <= 1.0

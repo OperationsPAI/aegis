@@ -97,12 +97,8 @@ SYSTEM_FINGERPRINTS: Final[tuple[SystemFingerprint, ...]] = (
 # are derived once at import time from the fingerprints above; the
 # resolver uses them as opaque constants and never references a
 # specific system by name.
-ALL_SERVICE_PREFIXES: Final[frozenset[str]] = frozenset(
-    p for f in SYSTEM_FINGERPRINTS for p in f.service_prefixes
-)
-ALL_SIDECAR_SUFFIXES: Final[frozenset[str]] = frozenset(
-    s for f in SYSTEM_FINGERPRINTS for s in f.sidecar_suffixes
-)
+ALL_SERVICE_PREFIXES: Final[frozenset[str]] = frozenset(p for f in SYSTEM_FINGERPRINTS for p in f.service_prefixes)
+ALL_SIDECAR_SUFFIXES: Final[frozenset[str]] = frozenset(s for f in SYSTEM_FINGERPRINTS for s in f.sidecar_suffixes)
 
 
 # External / infrastructure services. These are not under chaos and
@@ -111,15 +107,17 @@ ALL_SIDECAR_SUFFIXES: Final[frozenset[str]] = frozenset(
 # JVMMySQLException naming both the user service and the mysql
 # server). The resolver filters them out when picking the
 # user-perceptible cause. Single source of truth.
-EXTERNAL_SERVICE_NAMES: Final[frozenset[str]] = frozenset({
-    "mysql",
-    "redis",
-    "postgres",
-    "mongodb",
-    "kafka",
-    "rabbitmq",
-    "memcached",
-})
+EXTERNAL_SERVICE_NAMES: Final[frozenset[str]] = frozenset(
+    {
+        "mysql",
+        "redis",
+        "postgres",
+        "mongodb",
+        "kafka",
+        "rabbitmq",
+        "memcached",
+    }
+)
 
 
 def service_name_matches(graph_service_name: str, target_service: str) -> bool:

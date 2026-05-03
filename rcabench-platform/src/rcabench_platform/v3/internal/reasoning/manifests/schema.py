@@ -185,8 +185,7 @@ class HandOffTrigger(BaseModel):
         meta = FEATURE_METADATA[self.feature]
         if self.kind not in meta.kinds:
             raise ValueError(
-                f"hand-off trigger feature {self.feature.value!r} not defined "
-                f"for kind {self.kind.value!r}"
+                f"hand-off trigger feature {self.feature.value!r} not defined for kind {self.kind.value!r}"
             )
         return self
 
@@ -269,10 +268,7 @@ class CorroboratorConfig(BaseModel):
             raise ValueError(f"band low ({lo}) must be <= band high ({hi})")
         meta = FEATURE_METADATA[self.feature]
         if self.kind not in meta.kinds:
-            raise ValueError(
-                f"corroborator feature {self.feature.value!r} not defined "
-                f"for kind {self.kind.value!r}"
-            )
+            raise ValueError(f"corroborator feature {self.feature.value!r} not defined for kind {self.kind.value!r}")
         return self
 
 
@@ -321,10 +317,7 @@ class FaultManifest(BaseModel):
         # Validation rule 2: seed_tier must match the canonical mapping.
         canonical = FAULT_TYPE_TO_SEED_TIER[self.fault_type_name]
         if self.seed_tier not in SEED_TIERS:
-            raise ValueError(
-                f"seed_tier {self.seed_tier!r} is not a valid tier; "
-                f"must be one of {sorted(SEED_TIERS)}"
-            )
+            raise ValueError(f"seed_tier {self.seed_tier!r} is not a valid tier; must be one of {sorted(SEED_TIERS)}")
         if self.seed_tier != canonical:
             raise ValueError(
                 f"seed_tier {self.seed_tier!r} disagrees with fault_seed.py "
@@ -335,13 +328,9 @@ class FaultManifest(BaseModel):
         # Validation rule 8: layers strictly increasing, max ≤ 5.
         layer_nums = [layer.layer for layer in self.derivation_layers]
         if any(b <= a for a, b in zip(layer_nums, layer_nums[1:], strict=False)):
-            raise ValueError(
-                f"derivation_layers must be strictly increasing; got {layer_nums}"
-            )
+            raise ValueError(f"derivation_layers must be strictly increasing; got {layer_nums}")
         if max(layer_nums) > 5:
-            raise ValueError(
-                f"derivation_layers max layer is {max(layer_nums)}; cap is 5"
-            )
+            raise ValueError(f"derivation_layers max layer is {max(layer_nums)}; cap is 5")
 
         # Hand-off on_layer references must point to an existing layer.
         layer_set = set(layer_nums)

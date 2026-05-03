@@ -58,9 +58,7 @@ def test_layer_admits_latency_only_node() -> None:
     ]
 
     matched, evidence = _node_matches_any_expected(node_id, expected, rctx)
-    assert matched, (
-        f"latency-only node was rejected; evidence: {evidence}"
-    )
+    assert matched, f"latency-only node was rejected; evidence: {evidence}"
     # Specifically, the latency entry should be the matching one and the
     # error_rate entry should report not-matched (0.0 < 0.05 lower bound).
     by_feature = {e["feature"]: e for e in evidence}
@@ -74,7 +72,7 @@ def test_layer_rejects_when_no_expected_feature_matches() -> None:
     node_id = 99
     feature_samples = {
         (node_id, FeatureKind.span, Feature.latency_p99_ratio): 1.0,  # below band
-        (node_id, FeatureKind.span, Feature.error_rate): 0.0,        # below band
+        (node_id, FeatureKind.span, Feature.error_rate): 0.0,  # below band
     }
     rctx = ReasoningContext(feature_samples=feature_samples)
     expected = [

@@ -162,6 +162,7 @@ def _assert_fault_catalog_consistency() -> None:
     from rcabench_platform.v3.internal.reasoning.models.fault_seed import (
         FAULT_TYPE_TO_SEED_TIER,
     )
+
     names_from_types = set(FAULT_TYPES)
     names_from_categories = {FAULT_TYPES[i] for i in FAULT_TYPE_CATEGORIES}
     names_from_seed_tier = set(FAULT_TYPE_TO_SEED_TIER.keys())

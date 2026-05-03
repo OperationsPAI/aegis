@@ -36,9 +36,7 @@ from rcabench_platform.v3.internal.reasoning.manifests import (
 
 # 31 manifests live under src/.../manifests/fault_types/. Resolve path
 # relative to this file rather than CWD so the test is location-stable.
-MANIFEST_DIR = (
-    Path(__file__).resolve().parents[1] / "manifests" / "fault_types"
-)
+MANIFEST_DIR = Path(__file__).resolve().parents[1] / "manifests" / "fault_types"
 
 # At least one fault type per family A–F (matching Phase 2 split).
 SAMPLES_PER_FAMILY: dict[str, list[str]] = {

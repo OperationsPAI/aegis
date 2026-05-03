@@ -51,18 +51,8 @@ from rcabench_platform.v3.internal.reasoning.models.graph import (
     PlaceKind,
 )
 
-CPU_STRESS_MANIFEST = (
-    Path(__file__).resolve().parents[1]
-    / "manifests"
-    / "fault_types"
-    / "cpu_stress.yaml"
-)
-JVM_MEM_STRESS_MANIFEST = (
-    Path(__file__).resolve().parents[1]
-    / "manifests"
-    / "fault_types"
-    / "jvm_memory_stress.yaml"
-)
+CPU_STRESS_MANIFEST = Path(__file__).resolve().parents[1] / "manifests" / "fault_types" / "cpu_stress.yaml"
+JVM_MEM_STRESS_MANIFEST = Path(__file__).resolve().parents[1] / "manifests" / "fault_types" / "jvm_memory_stress.yaml"
 DATASET_DIR = Path("/home/ddq/AoyangSpace/dataset/rca/")
 
 
@@ -80,9 +70,7 @@ def _make_synthetic_cpu_stress_graph() -> tuple[HyperGraph, Node, Node]:
             self_name="ts-auth-service-77d85c69dd-sv9d4",
         )
     )
-    cont = g.add_node(
-        Node(kind=PlaceKind.container, self_name="ts-auth-service")
-    )
+    cont = g.add_node(Node(kind=PlaceKind.container, self_name="ts-auth-service"))
 
     base_ts = np.arange(1000, 1060, dtype=np.int64)
     base_vals_cpu = np.full(60, 0.10, dtype=np.float64)  # 10% baseline CPU.
@@ -93,13 +81,16 @@ def _make_synthetic_cpu_stress_graph() -> tuple[HyperGraph, Node, Node]:
     abn_vals_cpu = np.concatenate([np.full(20, 0.10), np.full(40, 0.95)])
 
     pod.baseline_metrics["k8s.pod.cpu_limit_utilization"] = (
-        base_ts, base_vals_cpu,
+        base_ts,
+        base_vals_cpu,
     )
     pod.abnormal_metrics["k8s.pod.cpu_limit_utilization"] = (
-        abn_ts, abn_vals_cpu,
+        abn_ts,
+        abn_vals_cpu,
     )
     cont.baseline_metrics["container.cpu.usage"] = (
-        base_ts, base_vals_cpu,
+        base_ts,
+        base_vals_cpu,
     )
     cont.abnormal_metrics["container.cpu.usage"] = (abn_ts, abn_vals_cpu)
     return g, pod, cont
@@ -118,17 +109,17 @@ def test_extractor_populates_cpu_throttle_ratio_synthetic() -> None:
 
     # Both pod and container carry cpu_throttle_ratio.
     assert (
-        pod.id, FeatureKind.pod, Feature.cpu_throttle_ratio,
+        pod.id,
+        FeatureKind.pod,
+        Feature.cpu_throttle_ratio,
     ) in samples
     assert (
-        cont.id, FeatureKind.container, Feature.cpu_throttle_ratio,
+        cont.id,
+        FeatureKind.container,
+        Feature.cpu_throttle_ratio,
     ) in samples
-    cont_ratio = samples[
-        (cont.id, FeatureKind.container, Feature.cpu_throttle_ratio)
-    ]
-    assert cont_ratio >= 3.0, (
-        f"expected CPU ratio >= 3.0 (CPUStress band lower edge), got {cont_ratio}"
-    )
+    cont_ratio = samples[(cont.id, FeatureKind.container, Feature.cpu_throttle_ratio)]
+    assert cont_ratio >= 3.0, f"expected CPU ratio >= 3.0 (CPUStress band lower edge), got {cont_ratio}"
 
 
 def test_entry_gate_passes_with_extracted_samples_synthetic() -> None:
@@ -166,9 +157,7 @@ def test_entry_gate_fails_when_no_samples_extracted_synthetic() -> None:
     silently pass the gate.
     """
     g = HyperGraph()
-    cont = g.add_node(
-        Node(kind=PlaceKind.container, self_name="ts-auth-service")
-    )
+    cont = g.add_node(Node(kind=PlaceKind.container, self_name="ts-auth-service"))
     samples = extract_feature_samples(
         graph=g,
         baseline_traces=None,
@@ -187,7 +176,8 @@ def test_entry_gate_fails_when_no_samples_extracted_synthetic() -> None:
         feature_samples=samples,
     )
     result = ManifestEntryGate(rctx).evaluate(
-        path=None, ctx=None  # type: ignore[arg-type]
+        path=None,
+        ctx=None,  # type: ignore[arg-type]
     )
     assert not result.passed
     assert "required" in result.reason
@@ -230,13 +220,7 @@ def test_extractor_on_real_stress_datapack() -> None:
     pod_col = "attr.k8s.pod.name"
     if pod_col not in df.columns:
         pytest.skip(f"datapack {case.name} has no {pod_col} column")
-    pods = (
-        df.filter(pl.col(pod_col).is_not_null())
-        .select(pod_col)
-        .unique()
-        .to_series()
-        .to_list()
-    )
+    pods = df.filter(pl.col(pod_col).is_not_null()).select(pod_col).unique().to_series().to_list()
     target_pod = next((p for p in pods if "auth" in p or "stress" in p), pods[0])
 
     g = HyperGraph()
@@ -252,12 +236,8 @@ def test_extractor_on_real_stress_datapack() -> None:
     ]
     populated = 0
     for metric in interesting:
-        ab = df.filter(
-            (pl.col("metric") == metric) & (pl.col(pod_col) == target_pod)
-        ).sort("time")
-        bs = base_df.filter(
-            (pl.col("metric") == metric) & (pl.col(pod_col) == target_pod)
-        ).sort("time")
+        ab = df.filter((pl.col("metric") == metric) & (pl.col(pod_col) == target_pod)).sort("time")
+        bs = base_df.filter((pl.col("metric") == metric) & (pl.col(pod_col) == target_pod)).sort("time")
         if len(ab) == 0:
             continue
         ts_a = ab["time"].to_numpy()
@@ -288,10 +268,7 @@ def test_extractor_on_real_stress_datapack() -> None:
         populated += 1
 
     if populated == 0:
-        pytest.skip(
-            f"datapack {case.name} carried no recognisable resource metrics "
-            f"for pod {target_pod}"
-        )
+        pytest.skip(f"datapack {case.name} carried no recognisable resource metrics for pod {target_pod}")
 
     # Window = full abnormal range.
     t0 = int(min(ts.min() for ts, _ in node.abnormal_metrics.values()))
@@ -305,15 +282,14 @@ def test_extractor_on_real_stress_datapack() -> None:
         abnormal_window_end=t1,
     )
     assert samples, (
-        f"extractor produced no samples on real datapack {case.name} "
-        f"(pod={target_pod}, populated_metrics={populated})"
+        f"extractor produced no samples on real datapack {case.name} (pod={target_pod}, populated_metrics={populated})"
     )
 
     # Sanity: at least one of the resource-pressure features fires
     # (cpu_throttle_ratio or memory_usage_ratio). Stress datasets in the
     # ts0 corpus push one of these into a saturation regime.
     keys = {(k[1], k[2]) for k in samples}
-    assert (
-        (FeatureKind.pod, Feature.cpu_throttle_ratio) in keys
-        or (FeatureKind.pod, Feature.memory_usage_ratio) in keys
-    ), f"no resource-pressure feature in samples: {keys}"
+    assert (FeatureKind.pod, Feature.cpu_throttle_ratio) in keys or (
+        FeatureKind.pod,
+        Feature.memory_usage_ratio,
+    ) in keys, f"no resource-pressure feature in samples: {keys}"

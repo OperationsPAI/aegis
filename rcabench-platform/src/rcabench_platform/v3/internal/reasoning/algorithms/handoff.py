@@ -81,8 +81,7 @@ class HandOffChain:
         if self.handoff_count >= MAX_HAND_OFFS_PER_PATH:
             self.rejected_handoffs.append((node_id, fault_type_name))
             logger.warning(
-                "hand-off rejected: chain hit cap MAX_HAND_OFFS_PER_PATH=%d "
-                "(visited=%s, attempted=%s)",
+                "hand-off rejected: chain hit cap MAX_HAND_OFFS_PER_PATH=%d (visited=%s, attempted=%s)",
                 MAX_HAND_OFFS_PER_PATH,
                 sorted(self.fault_types),
                 fault_type_name,

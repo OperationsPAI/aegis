@@ -76,9 +76,7 @@ def test_entry_gate_required_missing_sample_counts_as_miss() -> None:
     gate = ManifestEntryGate(_make_ctx({}))
     result = gate.evaluate(path=None, ctx=None)  # type: ignore[arg-type]
     assert not result.passed
-    assert all(
-        not e["matched"] for e in result.evidence["required_features"]
-    )
+    assert all(not e["matched"] for e in result.evidence["required_features"])
 
 
 def test_entry_gate_passes_when_only_one_optional_matches() -> None:

@@ -1435,11 +1435,7 @@ class ParquetDataLoader:
             cols = source_metrics.columns
             if "attr.k8s.deployment.name" not in cols or "attr.k8s.pod.name" not in cols:
                 continue
-            pairs = (
-                source_metrics.select(["attr.k8s.deployment.name", "attr.k8s.pod.name"])
-                .drop_nulls()
-                .unique()
-            )
+            pairs = source_metrics.select(["attr.k8s.deployment.name", "attr.k8s.pod.name"]).drop_nulls().unique()
             for dep, pod in pairs.iter_rows():
                 if not dep or not pod:
                     continue

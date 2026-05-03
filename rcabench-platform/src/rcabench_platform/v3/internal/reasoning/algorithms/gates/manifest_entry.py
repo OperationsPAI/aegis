@@ -154,10 +154,7 @@ class ManifestEntryGate:
             n_failed = sum(1 for e in required_evidence if not e["matched"])
             reason = f"{n_failed} required feature(s) missed entry-signature band"
         else:
-            reason = (
-                f"only {optional_matched}/{sig.optional_min_match} required "
-                f"optional features matched"
-            )
+            reason = f"only {optional_matched}/{sig.optional_min_match} required optional features matched"
 
         return GateResult(
             gate_name=self.name,
