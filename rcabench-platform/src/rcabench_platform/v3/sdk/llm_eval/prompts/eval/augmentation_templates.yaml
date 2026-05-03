@@ -1,11 +1,17 @@
-# NOTE: template should include keys {question}
+# NOTE: template should include keys {question} OR ({reports}, {directory_path})
 
 default: |
   {question}
 
 RCABench: |
-  The following API endpoints are experiencing possible SLO violations and need investigation:
+  The following API endpoints are experiencing possible SLO violations and
+  need investigation:
   {reports}
 
-  Please investigate the root cause of these SLO violations.
-  The telemetry data is stored in: `{directory_path}`
+  Telemetry parquets are stored in: `{directory_path}`
+  Available files: abnormal_metrics.parquet, abnormal_traces.parquet,
+  abnormal_logs.parquet, abnormal_metrics_histogram.parquet,
+  abnormal_metrics_sum.parquet, normal_metrics.parquet,
+  normal_traces.parquet, normal_logs.parquet.
+
+  Investigate the telemetry and identify the root cause(s) of the violation.

@@ -1,6 +1,6 @@
 [project]
 name = "rcabench-platform"
-version = "0.4.23"
+version = "0.4.24"
 description = "An experiment framework for Root Cause Analysis"
 readme = "README.md"
 authors = [ #
@@ -116,6 +116,7 @@ dev = [ #
 [tool.pytest.ini_options]
 testpaths = [
     "src/rcabench_platform/v3/internal/reasoning/ir_tests",
+    "src/rcabench_platform/v3/sdk/evaluation/v2_tests",
 ]
 
 [build-system]
