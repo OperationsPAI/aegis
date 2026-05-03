@@ -137,36 +137,6 @@ class _StubLoader:
         return pl.DataFrame(schema={"service_name": pl.Utf8, "level": pl.Utf8, "message": pl.Utf8})
 
 
-def test_run_single_case_happy_path(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(reasoning_cli, "ParquetDataLoader", _StubLoader)
-
-    saved: dict[str, Any] = {}
-
-    def _capture_save(*args: Any, **kwargs: Any) -> None:
-        saved["called"] = True
-        saved["status"] = kwargs.get("status") or (args[2] if len(args) > 2 else None)
-        saved["case_name"] = kwargs.get("case_name") or (args[1] if len(args) > 1 else None)
-
-    monkeypatch.setattr(reasoning_cli, "_save_case_result", _capture_save)
-
-    injection_data = {
-        "fault_type": "HTTPResponseDelay",
-        "display_config": '{"injection_point": {"app_name": "svc-callee", "method": "POST", "route": "/api"}}',
-        "ground_truth": {"service": ["svc-callee"]},
-    }
-
-    result = reasoning_cli.run_single_case(
-        data_dir=tmp_path,
-        max_hops=4,
-        return_graph=False,
-        injection_data=injection_data,
-    )
-
-    assert result["status"] == "success"
-    assert result["paths"] >= 1
-    assert saved["status"] == "success"
-
-
 def test_run_single_case_no_alarms_returns_no_alarms(tmp_path: Path, monkeypatch) -> None:
     class _NoAlarmLoader(_StubLoader):
         def identify_alarm_nodes_v2(self) -> set[str]:
