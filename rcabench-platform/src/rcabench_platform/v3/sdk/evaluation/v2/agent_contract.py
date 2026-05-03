@@ -5,8 +5,6 @@ The judge code (matcher / ground_truth / evaluator) and the prompt that
 
   * the fault_kind enum,
   * the JSON output schema,
-  * which kinds need ``direction.src/dst``,
-  * which kinds make ``method`` meaningful,
   * what the evidence SQL is allowed to do.
 
 If the prompt drifts from the SDK, every answer silently maps to UNKNOWN /
@@ -27,7 +25,7 @@ Usage (e.g. in a langgraph synthesis prompt)::
 
 from __future__ import annotations
 
-from .fault_kind import METHOD_RELEVANT_KINDS, NETWORK_KINDS, FaultKind
+from .fault_kind import FaultKind
 
 
 def _enum_block() -> str:
@@ -49,9 +47,6 @@ _SCHEMA_BLOCK = """{
     {
       "service": "<canonical service_name as it appears in the data>",
       "fault_kind": "<one of the enum values below>",
-      "direction": {"src": "<service>", "dst": "<service>"},
-      "method": "<class.method or null>",
-      "confidence": 0.0,
       "evidence": [
         {"kind": "metric|trace|log",
          "sql": "<DuckDB SQL re-executable on this case dir>",
@@ -73,9 +68,6 @@ def get_agent_contract_prompt() -> str:
     changes. Integrators should NOT hand-maintain a copy of the enum — pull
     this string at agent-startup so a SDK upgrade flows through.
     """
-    network_kinds = sorted(k.value for k in NETWORK_KINDS)
-    method_kinds = sorted(k.value for k in METHOD_RELEVANT_KINDS)
-
     return f"""## Output schema (STRICT JSON, no markdown / commentary)
 
 ```json
@@ -87,12 +79,9 @@ def get_agent_contract_prompt() -> str:
   {_enum_block()}
 
 ## Field rules
-  * `direction` is REQUIRED for every network kind ({", ".join(network_kinds)}).
-    `src` is the service the network rule sits on; `dst` is the remote peer it
-    shapes traffic toward. Omit for non-network kinds.
-  * `method` (`class.method`) is OPTIONAL for kinds where call-site is
-    meaningful ({", ".join(method_kinds)}); omit (or set to null) for the rest.
   * Service names must match strings present in the data — do not invent.
+  * One entry per distinct root cause; do NOT collapse multiple distinct
+    faults into a single root_cause.
 
 ## SQL rules
   * DuckDB on this case dir's parquets.
@@ -105,8 +94,6 @@ def get_agent_contract_prompt() -> str:
     rows back.
 
 ## Hard rules
-  * One entry per distinct root cause. Do NOT collapse multiple distinct
-    faults into a single root_cause.
   * EVERY root_cause carries >=1 `evidence` (real runnable SQL).
   * EVERY propagation edge carries >=1 evidence. Do not emit edges you cannot
     back with a concrete trace/metric query."""
