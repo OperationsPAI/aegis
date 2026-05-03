@@ -6,6 +6,11 @@
 # upstream signal is a user complaint, and the agent must walk the
 # telemetry to find which endpoints are actually affected before it
 # even gets to "why".
+#
+# The fault_kind enum is intentionally NOT enumerated here. Whatever
+# integrator is invoking this benchmark provides the candidate list to
+# the agent at its own system-prompt layer — duplicating it in the
+# augmentation prompt would conflict with that source of truth.
 
 default: |
   {question}
@@ -24,54 +29,3 @@ RCABench: |
   Walk the telemetry to identify which endpoints / services are
   actually affected, then determine the root cause(s) of the
   degradation.
-
-  ## Output schema (strict JSON)
-
-  ```json
-  {{
-    "root_causes": [
-      {{
-        "service": "<canonical service_name as it appears in the data>",
-        "fault_kind": "<one of the enum values below>",
-        "direction": {{"src": "<service>", "dst": "<service>"}}, /* network_* only */
-        "method": "<class.method>",                              /* jvm_*/http_* only, optional */
-        "confidence": 0.0,
-        "evidence": [
-          {{"kind": "metric|trace|log",
-            "sql": "<DuckDB SQL re-executable on this case dir>",
-            "claim": "<≤20-word claim the rows back>"}}
-        ]
-      }}
-    ],
-    "propagation": [
-      {{"from": "<service>", "to": "<service>",
-        "evidence": [{{"kind": "trace", "sql": "...", "claim": "..."}}]}}
-    ]
-  }}
-  ```
-
-  ## fault_kind enum (pick exactly one per root_cause)
-
-  pod_failure, pod_unavailable,
-  network_delay, network_loss, network_partition, network_corrupt,
-  network_duplicate, network_bandwidth_limit,
-  http_aborted, http_slow, http_payload_modified, http_response_status_modified,
-  cpu_stress, jvm_thread_cpu_stress, mem_stress, jvm_heap_stress, jvm_gc_pressure,
-  jvm_method_exception, jvm_jdbc_exception, jvm_method_latency, jvm_jdbc_latency,
-  jvm_method_mutated,
-  dns_resolution_failed, dns_resolution_wrong, clock_skew
-
-  - `direction` is REQUIRED for `network_*` kinds (`src` = the service the
-    network rule sits on, `dst` = the remote peer it shapes traffic toward);
-    omit for non-network kinds.
-  - `method` (`class.method`) is OPTIONAL for `jvm_*` and `http_*` kinds.
-
-  ## SQL constraints (re-run by the judge)
-
-  - DuckDB dialect on this case dir's parquets.
-  - Reference parquets via `read_parquet('<filename>.parquet')` (bare filenames),
-    or directly `FROM abnormal_traces` (each `*.parquet` is mounted as a
-    same-named view).
-  - One SELECT statement per `sql` field. SELECT only.
-
-  Return only the JSON object. No prose, no markdown fences.
