@@ -68,14 +68,18 @@ class RCABenchProcesser(BaseMatchProcesser):
             symlink_path.unlink()
         symlink_path.symlink_to(source_path.absolute(), target_is_directory=True)
 
+        # Still computed (and stored on meta) for downstream analysis —
+        # judge / aggregator code can compare what the agent flagged
+        # against the GT-affected endpoints. Just no longer leaked to the
+        # agent via the prompt: the new RCABench template frames the
+        # incident as a user-ticket complaint, so finding the affected
+        # endpoints is part of the task.
         alarm_endpoints = self._extract_alarm_endpoints(source_path)
         meta["alarm_endpoints"] = alarm_endpoints
         meta["path"] = str(symlink_path.absolute())
 
-        formatted_reports = "\n".join(f"- {ep}" for ep in alarm_endpoints)
         template = AUGMENTATION_PROMPTS.get("RCABench", AUGMENTATION_PROMPTS["default"])
         augmented_question = template.format(
-            reports=formatted_reports,
             directory_path=str(symlink_path.absolute()),
         )
 
