@@ -20,6 +20,18 @@ class MatchStatus(str, Enum):
     MISS = "MISS"
 
 
+# Partial-credit weights, used for the `partial_*` scoring tier.
+# Strict scoring (`root_cause_*`) still treats anything other than HIT as 0;
+# the partial tier acknowledges that getting the service right but missing
+# direction or kind is a closer answer than a complete miss.
+_PARTIAL_WEIGHT: dict[MatchStatus, float] = {
+    MatchStatus.HIT: 1.0,
+    MatchStatus.WRONG_DIRECTION: 0.5,
+    MatchStatus.WRONG_KIND: 0.5,
+    MatchStatus.MISS: 0.0,
+}
+
+
 class FaultMatchResult(BaseModel):
     """Per-GT-fault diagnostic."""
 
@@ -58,20 +70,27 @@ class GraphMetrics(BaseModel):
 
 
 class OutcomeResult(BaseModel):
-    """Two-tier outcome scoring derived from the same per_fault assignment.
+    """Three-tier outcome scoring derived from the same per_fault assignment.
 
-    `service_*` counts a fault matched if the agent picked the right service
-    (regardless of fault kind / direction). `root_cause_*` (kind-level) is
-    stricter: requires kind match and, for network_*, direction match too —
-    i.e. the per_fault status == HIT.
+    All three tiers share denominators (n_agent_rcs for precision,
+    n_gt_faults for recall) — only the credit per matched fault changes:
 
-    Both pairs share denominators: precision over n_agent_root_causes,
-    recall over n_gt_faults.
+    - ``service_*`` (most lenient): any non-MISS pairing counts as 1.0, i.e.
+      "agent picked the right service even if kind/direction wrong".
+    - ``root_cause_partial_*``: HIT=1.0, WRONG_DIRECTION=0.5, WRONG_KIND=0.5,
+      MISS=0. Acknowledges that "service + most attributes right" is closer
+      to correct than "complete miss".
+    - ``root_cause_*`` (strictest): HIT=1.0, everything else=0. The metric
+      most papers cite. ``case_correct`` is the boolean version.
     """
 
     service_precision: float
     service_recall: float
     service_f1: float
+
+    root_cause_partial_precision: float
+    root_cause_partial_recall: float
+    root_cause_partial_f1: float
 
     root_cause_precision: float
     root_cause_recall: float
@@ -189,19 +208,20 @@ def compute_outcome(agent: AgentRCAOutput, gt_faults: list[GTFault]) -> OutcomeR
 
     overclaim_indices = [i for i in range(n_agent) if i not in assigned_agent]
 
-    # service-level: any matched assignment counts (status != MISS)
+    # Three tiers, same denominators (n_agent / n_gt), different per-fault weights.
     n_service_hit = sum(1 for r in per_fault if r.status != MatchStatus.MISS)
-    # kind-level (the strict reading): status must be HIT
+    partial_hit_score = sum(_PARTIAL_WEIGHT[r.status] for r in per_fault)
     n_kind_hit = sum(1 for r in per_fault if r.status == MatchStatus.HIT)
 
-    def _prf(hits: int) -> tuple[float, float, float]:
+    def _prf(hits: float) -> tuple[float, float, float]:
         p = hits / n_agent if n_agent else (1.0 if n_gt == 0 else 0.0)
         r = hits / n_gt if n_gt else (1.0 if n_agent == 0 else 0.0)
         f = (2 * p * r / (p + r)) if (p + r) else 0.0
         return p, r, f
 
-    sp, sr, sf = _prf(n_service_hit)
-    kp, kr, kf = _prf(n_kind_hit)
+    sp, sr, sf = _prf(float(n_service_hit))
+    pp, pr_, pf = _prf(partial_hit_score)
+    kp, kr, kf = _prf(float(n_kind_hit))
 
     overclaim_rate = len(overclaim_indices) / n_agent if n_agent else 0.0
     case_correct = (n_kind_hit == n_gt) and (len(overclaim_indices) == 0) and n_gt > 0
@@ -210,6 +230,9 @@ def compute_outcome(agent: AgentRCAOutput, gt_faults: list[GTFault]) -> OutcomeR
         service_precision=sp,
         service_recall=sr,
         service_f1=sf,
+        root_cause_partial_precision=pp,
+        root_cause_partial_recall=pr_,
+        root_cause_partial_f1=pf,
         root_cause_precision=kp,
         root_cause_recall=kr,
         root_cause_f1=kf,

@@ -39,10 +39,20 @@ from rcabench_platform.v3.sdk.evaluation.v2 import (
 
 def test_map_chaos_type_known() -> None:
     assert map_chaos_type("NetworkDelay") is FaultKind.NETWORK_DELAY
-    assert map_chaos_type("PodFailure") is FaultKind.POD_FAILURE
-    assert map_chaos_type("JVMRuntimeMutator") is FaultKind.JVM_MUTATOR
-    assert map_chaos_type("HTTPResponseReplaceCode") is FaultKind.HTTP_REPLACE
-    assert map_chaos_type("DNSChaos") is FaultKind.DNS
+    assert map_chaos_type("PodKill") is FaultKind.POD_FAILURE
+    assert map_chaos_type("PodFailure") is FaultKind.POD_UNAVAILABLE
+    assert map_chaos_type("JVMRuntimeMutator") is FaultKind.JVM_METHOD_MUTATED
+    assert map_chaos_type("JVMReturn") is FaultKind.JVM_METHOD_MUTATED
+    assert map_chaos_type("JVMLatency") is FaultKind.JVM_METHOD_LATENCY
+    assert map_chaos_type("JVMGarbageCollector") is FaultKind.JVM_GC_PRESSURE
+    assert map_chaos_type("JVMMySQLException") is FaultKind.JVM_JDBC_EXCEPTION
+    assert map_chaos_type("HTTPResponseReplaceCode") is FaultKind.HTTP_RESPONSE_STATUS_MODIFIED
+    assert map_chaos_type("HTTPRequestDelay") is FaultKind.HTTP_SLOW
+    assert map_chaos_type("HTTPResponsePatchBody") is FaultKind.HTTP_PAYLOAD_MODIFIED
+    assert map_chaos_type("NetworkBandwidth") is FaultKind.NETWORK_BANDWIDTH_LIMIT
+    assert map_chaos_type("DNSChaos") is FaultKind.DNS_RESOLUTION_FAILED  # alias
+    assert map_chaos_type("DNSRandom") is FaultKind.DNS_RESOLUTION_WRONG
+    assert map_chaos_type("TimeChaos") is FaultKind.CLOCK_SKEW  # alias
 
 
 def test_map_chaos_type_unknown() -> None:
@@ -75,7 +85,7 @@ def test_extract_gt_new_format_hybrid() -> None:
     f1 = ctx.faults[1]
     assert f1.service == "payment" and f1.fault_kind is FaultKind.CPU_STRESS
 
-    assert ctx.start_time_ns and ctx.end_time_ns
+    assert ctx.start_time_ns is not None and ctx.end_time_ns is not None
     assert ctx.end_time_ns - ctx.start_time_ns == 5 * 60 * 1_000_000_000
 
 
@@ -94,23 +104,76 @@ def test_extract_gt_jvm_method() -> None:
     assert ctx.faults[0].method == "com.foo.BasicController.queryForX"
 
 
-def test_extract_gt_old_format_falls_back() -> None:
-    """Old-format injection.json has engine_config as an opaque JSON-encoded
-    string and a numeric fault_type; only `ground_truth` is reliable."""
+def test_extract_gt_old_format_decodes_fault_type_index() -> None:
+    """Old-format injection.json carries `fault_type` as a numeric index into
+    canonical FAULT_TYPES — we decode it without needing data.jsonl. service
+    and direction come from `display_config.injection_point` + direction."""
     inj = {
         "engine_config": '{"some":"opaque","tree":1}',
-        "fault_type": 27,
+        "fault_type": 22,  # canonical[22] == "NetworkPartition"
+        "display_config": json.dumps(
+            {
+                "direction": "both",
+                "injection_point": {"source_service": "mysql", "target_service": "ts-train-service"},
+                "namespace": "ts",
+            }
+        ),
         "ground_truth": {
-            "service": ["ts-cancel-service"],
-            "function": ["fdse.cancel.CancelImpl.cancelFromOrder"],
+            "service": ["mysql", "ts-train-service"],
+            "function": None,
         },
     }
-    ctx = extract_gt_faults(inj, case_name="<no-side-channel>")
+    ctx = extract_gt_faults(inj, case_name="ts0-mysql-partition-x")
+    assert len(ctx.faults) == 1
+    f = ctx.faults[0]
+    assert f.service == "mysql"
+    assert f.fault_kind is FaultKind.NETWORK_PARTITION
+    assert f.direction_src == "mysql"
+    assert f.direction_dst == "ts-train-service"
+    assert f.raw_chaos_type == "NetworkPartition"
+
+
+def test_extract_gt_old_format_jvm_method_from_display_config() -> None:
+    """JVM-class chaos in old format: method comes from display_config's
+    class_name + method_name (data.jsonl no longer needed)."""
+    inj = {
+        "engine_config": "{}",
+        "fault_type": 27,  # canonical[27] == "JVMCPUStress"
+        "display_config": json.dumps(
+            {
+                "injection_point": {
+                    "app_name": "ts-cancel-service",
+                    "class_name": "fdse.cancel.CancelImpl",
+                    "method_name": "cancelFromOrder",
+                },
+            }
+        ),
+        "ground_truth": {"service": ["ts-cancel-service"]},
+    }
+    ctx = extract_gt_faults(inj, case_name="x")
     assert len(ctx.faults) == 1
     f = ctx.faults[0]
     assert f.service == "ts-cancel-service"
-    assert f.method == "fdse.cancel.CancelImpl.cancelFromOrder"
-    assert f.fault_kind is FaultKind.UNKNOWN  # numeric fault_type, no data.jsonl
+    assert f.fault_kind is FaultKind.JVM_THREAD_CPU_STRESS  # JVMCPUStress
+    # method only attached for jvm/http kinds; JVM_THREAD_CPU_STRESS is
+    # resource-class so method stays None
+    assert f.method is None
+
+
+def test_extract_gt_old_format_no_fault_type_no_side_channel() -> None:
+    """No `fault_type` field and no data.jsonl entry → kind=UNKNOWN, but we
+    can still recover service from display_config so the case isn't dropped."""
+    inj = {
+        "engine_config": "{}",
+        "display_config": json.dumps(
+            {"injection_point": {"app_name": "service-x"}}
+        ),
+        "ground_truth": {"service": ["service-x"]},
+    }
+    ctx = extract_gt_faults(inj, case_name="<no-side-channel>")
+    assert len(ctx.faults) == 1
+    assert ctx.faults[0].service == "service-x"
+    assert ctx.faults[0].fault_kind is FaultKind.UNKNOWN
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -130,20 +193,71 @@ def _agent(rcs: list[dict[str, Any]], propagation: list[dict[str, Any]] | None =
 
 def test_match_perfect_single_fault() -> None:
     """Agent: 1 root_cause, kind+service correct → HIT, F1=1, case_correct=True."""
-    gt = [GTFault(service="ts-basic-service", fault_kind=FaultKind.JVM_MUTATOR)]
+    gt = [GTFault(service="ts-basic-service", fault_kind=FaultKind.JVM_METHOD_MUTATED)]
     agent = _agent(
         [
             {
                 "service": "ts-basic-service",
-                "fault_kind": "jvm_mutator",
+                "fault_kind": "jvm_method_mutated",
                 "evidence": [_DUMMY_EV],
             }
         ]
     )
     out = compute_outcome(agent, gt)
     assert out.root_cause_f1 == 1.0
+    assert out.root_cause_partial_f1 == 1.0
+    assert out.service_f1 == 1.0
     assert out.case_correct is True
     assert out.per_fault[0].status is MatchStatus.HIT
+
+
+def test_match_partial_credit_wrong_kind() -> None:
+    """Service correct but kind wrong → WRONG_KIND, partial=0.5, strict=0.0."""
+    gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
+    agent = _agent(
+        [
+            {
+                "service": "payment",
+                "fault_kind": "mem_stress",  # wrong kind
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.WRONG_KIND
+    assert out.service_f1 == 1.0          # service correct counts here
+    assert out.root_cause_partial_f1 == 0.5  # half credit
+    assert out.root_cause_f1 == 0.0       # strict zero
+    assert out.case_correct is False
+
+
+def test_match_partial_credit_wrong_direction() -> None:
+    """Network case: service+kind correct but direction flipped → WRONG_DIRECTION,
+    partial=0.5, strict=0.0."""
+    gt = [
+        GTFault(
+            service="shipping",
+            fault_kind=FaultKind.NETWORK_DELAY,
+            direction_src="shipping",
+            direction_dst="quote",
+        )
+    ]
+    agent = _agent(
+        [
+            {
+                "service": "shipping",
+                "fault_kind": "network_delay",
+                "direction": {"src": "quote", "dst": "shipping"},  # flipped
+                "evidence": [_DUMMY_EV],
+            }
+        ]
+    )
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.WRONG_DIRECTION
+    assert out.service_f1 == 1.0
+    assert out.root_cause_partial_f1 == 0.5
+    assert out.root_cause_f1 == 0.0
+    assert out.case_correct is False
 
 
 def test_match_network_no_direction_is_wrong_direction() -> None:

@@ -55,6 +55,7 @@ class EvaluationResultV2(BaseModel):
     """
 
     root_cause_f1: float
+    root_cause_partial_f1: float = 0.0
     overclaim_rate: float
     sql_executable_rate: float
     chain_coherence: float | None
@@ -68,6 +69,9 @@ class EvaluationResultV2(BaseModel):
     service_precision: float = 0.0
     service_recall: float = 0.0
     service_f1: float = 0.0
+
+    root_cause_partial_precision: float = 0.0
+    root_cause_partial_recall: float = 0.0
 
     root_cause_precision: float = 0.0
     root_cause_recall: float = 0.0
@@ -103,6 +107,7 @@ def _parse_agent(raw: str | dict[str, Any] | None) -> tuple[AgentRCAOutput | Non
 def _zero_result(parse_error: str, notes: list[str] | None = None) -> EvaluationResultV2:
     return EvaluationResultV2(
         root_cause_f1=0.0,
+        root_cause_partial_f1=0.0,
         overclaim_rate=0.0,
         sql_executable_rate=0.0,
         chain_coherence=0.0,
@@ -191,6 +196,7 @@ async def evaluate_v2(
 
     return EvaluationResultV2(
         root_cause_f1=outcome.root_cause_f1,
+        root_cause_partial_f1=outcome.root_cause_partial_f1,
         overclaim_rate=outcome.overclaim_rate,
         sql_executable_rate=sql_executable_rate,
         chain_coherence=judge_result.score,
@@ -201,6 +207,8 @@ async def evaluate_v2(
         service_precision=outcome.service_precision,
         service_recall=outcome.service_recall,
         service_f1=outcome.service_f1,
+        root_cause_partial_precision=outcome.root_cause_partial_precision,
+        root_cause_partial_recall=outcome.root_cause_partial_recall,
         root_cause_precision=outcome.root_cause_precision,
         root_cause_recall=outcome.root_cause_recall,
         node_precision=graph.node_precision,
