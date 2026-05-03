@@ -18,8 +18,8 @@ from enum import Enum
 
 class FaultKind(str, Enum):
     # ── Pod / container lifecycle ────────────────────────────────────────
-    POD_FAILURE = "pod_failure"               # PodKill, ContainerKill — service blips and recovers
-    POD_UNAVAILABLE = "pod_unavailable"       # PodFailure — service stays gone for the window
+    POD_FAILURE = "pod_failure"  # PodKill, ContainerKill — service blips and recovers
+    POD_UNAVAILABLE = "pod_unavailable"  # PodFailure — service stays gone for the window
 
     # ── L3/L4 network (direction is part of the GT) ─────────────────────
     NETWORK_DELAY = "network_delay"
@@ -30,29 +30,29 @@ class FaultKind(str, Enum):
     NETWORK_BANDWIDTH_LIMIT = "network_bandwidth_limit"
 
     # ── HTTP layer (no direction — span carries service_name itself) ────
-    HTTP_ABORTED = "http_aborted"             # HTTPRequestAbort, HTTPResponseAbort
-    HTTP_SLOW = "http_slow"                   # HTTPRequestDelay, HTTPResponseDelay
+    HTTP_ABORTED = "http_aborted"  # HTTPRequestAbort, HTTPResponseAbort
+    HTTP_SLOW = "http_slow"  # HTTPRequestDelay, HTTPResponseDelay
     HTTP_PAYLOAD_MODIFIED = "http_payload_modified"  # ReplacePath/Method/Body, PatchBody
     HTTP_RESPONSE_STATUS_MODIFIED = "http_response_status_modified"  # ReplaceCode
 
     # ── Resource exhaustion ─────────────────────────────────────────────
-    CPU_STRESS = "cpu_stress"                 # container.cpu.usage saturated
+    CPU_STRESS = "cpu_stress"  # container.cpu.usage saturated
     JVM_THREAD_CPU_STRESS = "jvm_thread_cpu_stress"  # jvm.cpu.* high specifically
-    MEM_STRESS = "mem_stress"                 # container.memory.usage saturated
-    JVM_HEAP_STRESS = "jvm_heap_stress"       # jvm.memory.used → limit
-    JVM_GC_PRESSURE = "jvm_gc_pressure"       # jvm.gc.duration histogram spikes
+    MEM_STRESS = "mem_stress"  # container.memory.usage saturated
+    JVM_HEAP_STRESS = "jvm_heap_stress"  # jvm.memory.used → limit
+    JVM_GC_PRESSURE = "jvm_gc_pressure"  # jvm.gc.duration histogram spikes
 
     # ── Code-level JVM ──────────────────────────────────────────────────
-    JVM_METHOD_EXCEPTION = "jvm_method_exception"     # JVMException
-    JVM_JDBC_EXCEPTION = "jvm_jdbc_exception"         # JVMMySQLException
-    JVM_METHOD_LATENCY = "jvm_method_latency"         # JVMLatency
-    JVM_JDBC_LATENCY = "jvm_jdbc_latency"             # JVMMySQLLatency
-    JVM_METHOD_MUTATED = "jvm_method_mutated"         # JVMReturn, JVMRuntimeMutator
+    JVM_METHOD_EXCEPTION = "jvm_method_exception"  # JVMException
+    JVM_JDBC_EXCEPTION = "jvm_jdbc_exception"  # JVMMySQLException
+    JVM_METHOD_LATENCY = "jvm_method_latency"  # JVMLatency
+    JVM_JDBC_LATENCY = "jvm_jdbc_latency"  # JVMMySQLLatency
+    JVM_METHOD_MUTATED = "jvm_method_mutated"  # JVMReturn, JVMRuntimeMutator
 
     # ── DNS / time ──────────────────────────────────────────────────────
-    DNS_RESOLUTION_FAILED = "dns_resolution_failed"   # DNSError, DNSChaos (alias)
-    DNS_RESOLUTION_WRONG = "dns_resolution_wrong"     # DNSRandom
-    CLOCK_SKEW = "clock_skew"                          # TimeSkew, TimeChaos (alias)
+    DNS_RESOLUTION_FAILED = "dns_resolution_failed"  # DNSError, DNSChaos (alias)
+    DNS_RESOLUTION_WRONG = "dns_resolution_wrong"  # DNSRandom
+    CLOCK_SKEW = "clock_skew"  # TimeSkew, TimeChaos (alias)
 
     UNKNOWN = "unknown"
 
@@ -111,15 +111,37 @@ _CHAOS_TYPE_MAP: dict[str, FaultKind] = {
 # Duplicated here to avoid circular imports (the reasoning module pulls in
 # heavy graph deps; the eval module needs to stay light).
 CANONICAL_FAULT_TYPES: tuple[str, ...] = (
-    "PodKill", "PodFailure", "ContainerKill", "MemoryStress", "CPUStress",
-    "HTTPRequestAbort", "HTTPResponseAbort", "HTTPRequestDelay", "HTTPResponseDelay",
-    "HTTPResponseReplaceBody", "HTTPResponsePatchBody", "HTTPRequestReplacePath",
-    "HTTPRequestReplaceMethod", "HTTPResponseReplaceCode",
-    "DNSError", "DNSRandom", "TimeSkew",
-    "NetworkDelay", "NetworkLoss", "NetworkDuplicate", "NetworkCorrupt",
-    "NetworkBandwidth", "NetworkPartition",
-    "JVMLatency", "JVMReturn", "JVMException", "JVMGarbageCollector",
-    "JVMCPUStress", "JVMMemoryStress", "JVMMySQLLatency", "JVMMySQLException",
+    "PodKill",
+    "PodFailure",
+    "ContainerKill",
+    "MemoryStress",
+    "CPUStress",
+    "HTTPRequestAbort",
+    "HTTPResponseAbort",
+    "HTTPRequestDelay",
+    "HTTPResponseDelay",
+    "HTTPResponseReplaceBody",
+    "HTTPResponsePatchBody",
+    "HTTPRequestReplacePath",
+    "HTTPRequestReplaceMethod",
+    "HTTPResponseReplaceCode",
+    "DNSError",
+    "DNSRandom",
+    "TimeSkew",
+    "NetworkDelay",
+    "NetworkLoss",
+    "NetworkDuplicate",
+    "NetworkCorrupt",
+    "NetworkBandwidth",
+    "NetworkPartition",
+    "JVMLatency",
+    "JVMReturn",
+    "JVMException",
+    "JVMGarbageCollector",
+    "JVMCPUStress",
+    "JVMMemoryStress",
+    "JVMMySQLLatency",
+    "JVMMySQLException",
 )
 
 

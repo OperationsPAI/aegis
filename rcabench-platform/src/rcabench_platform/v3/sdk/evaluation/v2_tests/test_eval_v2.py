@@ -165,9 +165,7 @@ def test_extract_gt_old_format_no_fault_type_no_side_channel() -> None:
     can still recover service from display_config so the case isn't dropped."""
     inj = {
         "engine_config": "{}",
-        "display_config": json.dumps(
-            {"injection_point": {"app_name": "service-x"}}
-        ),
+        "display_config": json.dumps({"injection_point": {"app_name": "service-x"}}),
         "ground_truth": {"service": ["service-x"]},
     }
     ctx = extract_gt_faults(inj, case_name="<no-side-channel>")
@@ -225,9 +223,9 @@ def test_match_partial_credit_wrong_kind() -> None:
     )
     out = compute_outcome(agent, gt)
     assert out.per_fault[0].status is MatchStatus.WRONG_KIND
-    assert out.service_f1 == 1.0          # service correct counts here
+    assert out.service_f1 == 1.0  # service correct counts here
     assert out.root_cause_partial_f1 == 0.5  # half credit
-    assert out.root_cause_f1 == 0.0       # strict zero
+    assert out.root_cause_f1 == 0.0  # strict zero
     assert out.case_correct is False
 
 
