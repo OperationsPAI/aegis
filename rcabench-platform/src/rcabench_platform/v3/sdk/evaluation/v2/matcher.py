@@ -1,5 +1,13 @@
-"""Type-aware matcher: pair each agent root_cause to a GT fault, plus
-service-level node / edge F1 against the ground-truth causal graph."""
+"""Single-tier (service, fault_kind) multiset matcher.
+
+Match key is the normalized ``(service, fault_kind)`` pair. The agent's
+``direction`` and ``method`` fields are allowed in the schema but do not
+affect HIT/WRONG_KIND/MISS — this is the deliberate simplification spelled
+out in the v2 README.
+
+Service-level node_f1 / edge_f1 against the GT causal_graph stay as a
+separate ``GraphMetrics`` block.
+"""
 
 from __future__ import annotations
 
@@ -8,48 +16,26 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from ..causal_graph import CausalGraph
-from .fault_kind import NETWORK_KINDS, FaultKind
+from .fault_kind import FaultKind
 from .ground_truth import GTFault
 from .schema import AgentRCAOutput, RootCauseClaim
 
 
 class MatchStatus(str, Enum):
     HIT = "HIT"
-    WRONG_DIRECTION = "WRONG_DIRECTION"
     WRONG_KIND = "WRONG_KIND"
     MISS = "MISS"
 
 
-# Partial-credit weights, used for the `partial_*` scoring tier.
-# Strict scoring (`root_cause_*`) still treats anything other than HIT as 0;
-# the partial tier acknowledges that getting the service right but missing
-# direction or kind is a closer answer than a complete miss.
-_PARTIAL_WEIGHT: dict[MatchStatus, float] = {
-    MatchStatus.HIT: 1.0,
-    MatchStatus.WRONG_DIRECTION: 0.5,
-    MatchStatus.WRONG_KIND: 0.5,
-    MatchStatus.MISS: 0.0,
-}
-
-
 class FaultMatchResult(BaseModel):
-    """Per-GT-fault diagnostic."""
-
     gt_service: str
     gt_fault_kind: FaultKind
     matched_root_cause_index: int | None = None
     status: MatchStatus
-    method_match: bool | None = None
 
 
 class GraphMetrics(BaseModel):
-    """Service-level graph comparison vs ground-truth causal_graph.json.
-
-    The agent's service set is the union of every service mentioned across
-    root_causes, propagation endpoints, and Network direction pairs. Its edge
-    set is the propagation list collapsed to (src, dst) tuples (self-loops
-    dropped).
-    """
+    """Service-level graph comparison vs ground-truth causal_graph.json."""
 
     node_precision: float = 0.0
     node_recall: float = 0.0
@@ -70,44 +56,28 @@ class GraphMetrics(BaseModel):
 
 
 class OutcomeResult(BaseModel):
-    """Three-tier outcome scoring derived from the same per_fault assignment.
+    """Single-tier outcome derived from the (service, fault_kind) multiset.
 
-    All three tiers share denominators (n_agent_rcs for precision,
-    n_gt_faults for recall) — only the credit per matched fault changes:
-
-    - ``service_*`` (most lenient): any non-MISS pairing counts as 1.0, i.e.
-      "agent picked the right service even if kind/direction wrong".
-    - ``root_cause_partial_*``: HIT=1.0, WRONG_DIRECTION=0.5, WRONG_KIND=0.5,
-      MISS=0. Acknowledges that "service + most attributes right" is closer
-      to correct than "complete miss".
-    - ``root_cause_*`` (strictest): HIT=1.0, everything else=0. The metric
-      most papers cite. ``case_correct`` is the boolean version.
+    - ``f1`` (with ``precision`` / ``recall``) — the headline rate.
+    - ``exact_match`` — True iff every agent rc and every GT fault paired by HIT.
+    - ``fault_kind_accuracy`` — among service-correct rcs (HIT + WRONG_KIND),
+      the share that are HIT. ``None`` when the denominator is 0; aggregator
+      excludes those cases from the benchmark mean.
     """
 
-    service_precision: float
-    service_recall: float
-    service_f1: float
+    precision: float
+    recall: float
+    f1: float
+    exact_match: bool
 
-    root_cause_partial_precision: float
-    root_cause_partial_recall: float
-    root_cause_partial_f1: float
+    fault_kind_accuracy: float | None
+    kind_accuracy_denom: int
 
-    root_cause_precision: float
-    root_cause_recall: float
-    root_cause_f1: float
-
-    overclaim_rate: float
     per_fault: list[FaultMatchResult] = Field(default_factory=list)
     overclaim_indices: list[int] = Field(default_factory=list)
-    case_correct: bool = False
 
 
 def _norm(name: str | None) -> str:
-    """Uniform service-name normalization used by both the matcher and the
-    SQL verifier. Lower-case, strip dashes and underscores. No system-specific
-    prefix stripping — agents may use various writings, but they must avoid
-    inventing names not present in the data.
-    """
     if not name:
         return ""
     return name.strip().lower().replace("-", "").replace("_", "")
@@ -117,82 +87,57 @@ def _service_eq(a: str | None, b: str | None) -> bool:
     return _norm(a) == _norm(b) and bool(_norm(a))
 
 
-def _evaluate_pair(rc: RootCauseClaim, gt: GTFault) -> tuple[MatchStatus, bool | None]:
-    """Score one (agent_rc, gt_fault) pair without committing — caller picks best."""
+def _evaluate_pair(rc: RootCauseClaim, gt: GTFault) -> MatchStatus:
     if not _service_eq(rc.service, gt.service):
-        return MatchStatus.MISS, None
-
+        return MatchStatus.MISS
     if rc.fault_kind != gt.fault_kind:
-        return MatchStatus.WRONG_KIND, None
-
-    if gt.fault_kind in NETWORK_KINDS and (gt.direction_src or gt.direction_dst):
-        # Skip the direction check when GT itself doesn't carry direction
-        # (old-format injection.json — its data.jsonl side-channel only gives
-        # us chaos_type + service, not the netem src/dst). In that case the
-        # fault is unscorable on direction and we let kind+service alone
-        # decide the match — otherwise no agent could ever HIT old-format
-        # network cases.
-        d = rc.direction
-        if d is None:
-            return MatchStatus.WRONG_DIRECTION, None
-        src_ok = _service_eq(d.src, gt.direction_src)
-        dst_ok = _service_eq(d.dst, gt.direction_dst)
-        if not (src_ok and dst_ok):
-            return MatchStatus.WRONG_DIRECTION, None
-
-    method_match: bool | None = None
-    if gt.method:
-        method_match = (rc.method or "").strip() == gt.method.strip()
-
-    return MatchStatus.HIT, method_match
+        return MatchStatus.WRONG_KIND
+    return MatchStatus.HIT
 
 
 _RANK = {
     MatchStatus.HIT: 0,
-    MatchStatus.WRONG_DIRECTION: 1,
-    MatchStatus.WRONG_KIND: 2,
-    MatchStatus.MISS: 3,
+    MatchStatus.WRONG_KIND: 1,
+    MatchStatus.MISS: 2,
 }
 
 
 def compute_outcome(agent: AgentRCAOutput, gt_faults: list[GTFault]) -> OutcomeResult:
-    """Greedy assignment: each agent_rc and each gt_fault used at most once.
+    """Greedy 1-1 assignment of agent root_causes to GT faults.
 
-    Strategy: enumerate all (rc, gt) pairs, sort by tightness (HIT first), then
-    consume top-down skipping pairs whose endpoints are already taken. Remaining
-    GT faults become MISS; remaining agent rcs become overclaim.
+    Each agent rc and each GT fault gets used at most once. Pairs are taken
+    in HIT-first order so a HIT never gets shadowed by a WRONG_KIND that
+    consumes the same agent rc.
     """
     n_agent = len(agent.root_causes)
     n_gt = len(gt_faults)
 
-    triples: list[tuple[int, int, MatchStatus, bool | None]] = []
+    triples: list[tuple[int, int, MatchStatus]] = []
     for i, rc in enumerate(agent.root_causes):
         for j, gt in enumerate(gt_faults):
-            status, method_match = _evaluate_pair(rc, gt)
-            triples.append((i, j, status, method_match))
+            triples.append((i, j, _evaluate_pair(rc, gt)))
     triples.sort(key=lambda t: _RANK[t[2]])
 
-    assigned_agent: dict[int, tuple[int, MatchStatus, bool | None]] = {}
-    assigned_gt: dict[int, tuple[int, MatchStatus, bool | None]] = {}
-    for i, j, status, method_match in triples:
+    assigned_agent: dict[int, tuple[int, MatchStatus]] = {}
+    assigned_gt: dict[int, tuple[int, MatchStatus]] = {}
+    for i, j, status in triples:
         if status == MatchStatus.MISS:
             break
         if i in assigned_agent or j in assigned_gt:
             continue
-        assigned_agent[i] = (j, status, method_match)
-        assigned_gt[j] = (i, status, method_match)
+        assigned_agent[i] = (j, status)
+        assigned_gt[j] = (i, status)
 
     per_fault: list[FaultMatchResult] = []
     for j, gt in enumerate(gt_faults):
         if j in assigned_gt:
-            i, status, method_match = assigned_gt[j]
+            i, status = assigned_gt[j]
             per_fault.append(
                 FaultMatchResult(
                     gt_service=gt.service,
                     gt_fault_kind=gt.fault_kind,
                     matched_root_cause_index=i,
                     status=status,
-                    method_match=method_match,
                 )
             )
         else:
@@ -202,44 +147,38 @@ def compute_outcome(agent: AgentRCAOutput, gt_faults: list[GTFault]) -> OutcomeR
                     gt_fault_kind=gt.fault_kind,
                     matched_root_cause_index=None,
                     status=MatchStatus.MISS,
-                    method_match=None,
                 )
             )
 
     overclaim_indices = [i for i in range(n_agent) if i not in assigned_agent]
 
-    # Three tiers, same denominators (n_agent / n_gt), different per-fault weights.
-    n_service_hit = sum(1 for r in per_fault if r.status != MatchStatus.MISS)
-    partial_hit_score = sum(_PARTIAL_WEIGHT[r.status] for r in per_fault)
-    n_kind_hit = sum(1 for r in per_fault if r.status == MatchStatus.HIT)
+    n_hit = sum(1 for v in assigned_agent.values() if v[1] == MatchStatus.HIT)
+    n_wrong_kind = sum(1 for v in assigned_agent.values() if v[1] == MatchStatus.WRONG_KIND)
 
-    def _prf(hits: float) -> tuple[float, float, float]:
-        p = hits / n_agent if n_agent else (1.0 if n_gt == 0 else 0.0)
-        r = hits / n_gt if n_gt else (1.0 if n_agent == 0 else 0.0)
-        f = (2 * p * r / (p + r)) if (p + r) else 0.0
-        return p, r, f
+    if n_agent:
+        precision = n_hit / n_agent
+    else:
+        precision = 1.0 if n_gt == 0 else 0.0
+    if n_gt:
+        recall = n_hit / n_gt
+    else:
+        recall = 1.0 if n_agent == 0 else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
 
-    sp, sr, sf = _prf(float(n_service_hit))
-    pp, pr_, pf = _prf(partial_hit_score)
-    kp, kr, kf = _prf(float(n_kind_hit))
+    exact_match = (n_hit == n_gt) and (n_hit == n_agent) and n_gt > 0
 
-    overclaim_rate = len(overclaim_indices) / n_agent if n_agent else 0.0
-    case_correct = (n_kind_hit == n_gt) and (len(overclaim_indices) == 0) and n_gt > 0
+    kind_denom = n_hit + n_wrong_kind
+    kind_accuracy: float | None = (n_hit / kind_denom) if kind_denom > 0 else None
 
     return OutcomeResult(
-        service_precision=sp,
-        service_recall=sr,
-        service_f1=sf,
-        root_cause_partial_precision=pp,
-        root_cause_partial_recall=pr_,
-        root_cause_partial_f1=pf,
-        root_cause_precision=kp,
-        root_cause_recall=kr,
-        root_cause_f1=kf,
-        overclaim_rate=overclaim_rate,
+        precision=precision,
+        recall=recall,
+        f1=f1,
+        exact_match=exact_match,
+        fault_kind_accuracy=kind_accuracy,
+        kind_accuracy_denom=kind_denom,
         per_fault=per_fault,
         overclaim_indices=overclaim_indices,
-        case_correct=case_correct,
     )
 
 
@@ -277,12 +216,6 @@ def _prf(agent: set, gt: set) -> tuple[float, float, float]:
 
 
 def compute_graph_metrics(agent: AgentRCAOutput, gt_graph: CausalGraph | None) -> GraphMetrics:
-    """Service-level node/edge F1 of the agent's claimed graph against the GT.
-
-    Names are normalized with the same rule as the type-aware matcher (lowercased,
-    `ts-` stripped, hyphens/underscores removed) so trivial naming variance does
-    not show up as missed/hallucinated.
-    """
     if gt_graph is None:
         return GraphMetrics(applicable=False)
 

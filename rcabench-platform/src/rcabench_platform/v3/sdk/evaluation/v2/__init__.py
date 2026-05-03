@@ -1,4 +1,4 @@
-"""Top-down RCA evaluation v2.
+"""Top-down RCA evaluation v2 (single-tier match + per-evidence judge).
 
 Public API:
     AgentRCAOutput / RootCauseClaim / Evidence / PropagationClaim — agent contract
@@ -10,11 +10,18 @@ Public API:
 """
 
 from .agent_contract import get_agent_contract_prompt
-from .chain_judge import ChainJudgeResult, chain_coherence
-from .evaluator import EvaluationResultV2, evaluate_v2
+from .chain_judge import EvidenceJudgeResult, evidence_support
+from .evaluator import EvaluationResultV2, PerEvidenceRecord, evaluate_v2
 from .fault_kind import FaultKind, map_chaos_type
 from .ground_truth import GTFault, extract_gt_faults
-from .matcher import FaultMatchResult, GraphMetrics, MatchStatus, compute_graph_metrics, compute_outcome
+from .matcher import (
+    FaultMatchResult,
+    GraphMetrics,
+    MatchStatus,
+    OutcomeResult,
+    compute_graph_metrics,
+    compute_outcome,
+)
 from .schema import (
     AgentRCAOutput,
     Direction,
@@ -39,14 +46,16 @@ __all__ = [
     "MatchStatus",
     "FaultMatchResult",
     "GraphMetrics",
+    "OutcomeResult",
     "compute_outcome",
     "compute_graph_metrics",
     "EvidenceVerifyResult",
     "EvidenceStatus",
     "verify_evidence",
-    "ChainJudgeResult",
-    "chain_coherence",
+    "EvidenceJudgeResult",
+    "evidence_support",
     "EvaluationResultV2",
+    "PerEvidenceRecord",
     "evaluate_v2",
     "get_agent_contract_prompt",
 ]

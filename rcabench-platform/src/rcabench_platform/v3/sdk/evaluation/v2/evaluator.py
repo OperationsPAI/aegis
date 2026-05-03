@@ -1,16 +1,20 @@
-"""Top-level v2 evaluator.
+"""Top-level v2 evaluator (single-tier match + per-evidence judge).
 
 Pipeline per case:
-    1. Parse agent output JSON      → AgentRCAOutput
-    2. Extract GT faults             → list[GTFault] (+ time window)
-    3. Type-aware match              → root_cause_f1, overclaim_rate, per_fault
-    4. Verify each evidence SQL      → sql_executable_rate, per_evidence
-    5. LLM-as-judge over chain        → chain_coherence
-    6. Compose 4 numbers + headline.
+    1. Parse agent output JSON           → AgentRCAOutput
+    2. Extract GT faults                  → list[GTFault]
+    3. Single-tier (service, fault_kind) multiset match
+                                          → precision/recall/f1, exact_match,
+                                            fault_kind_accuracy
+    4. Service-level node_f1 / edge_f1 vs GT causal_graph
+    5. Verify each evidence SQL via DuckDB
+                                          → sql_executable_rate, per_evidence
+    6. Per-evidence LLM judge             → evidence_support_rate
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -19,10 +23,10 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
 from ..causal_graph import CausalGraph
-from .chain_judge import ChainJudgeResult, chain_coherence
+from .chain_judge import EvidenceJudgeResult, evidence_support
 from .ground_truth import GTContext, extract_gt_faults
 from .matcher import FaultMatchResult, GraphMetrics, OutcomeResult, compute_graph_metrics, compute_outcome
-from .schema import AgentRCAOutput
+from .schema import AgentRCAOutput, Evidence
 from .sql_verify import EvidenceStatus, EvidenceVerifyResult, verify_evidence
 
 
@@ -34,47 +38,39 @@ class PerEvidenceRecord(BaseModel):
     status: EvidenceStatus
     error: str | None = None
     row_count: int = 0
+    supported: bool | None = None
+    judge_reasoning: str = ""
 
 
 class EvaluationResultV2(BaseModel):
-    """Headline scores + every diagnostic needed to debug them.
+    """Per-case scoring under the simplified contract.
 
-    Headline numbers (per case):
-      - root_cause_f1:     type-aware match against engine_config faults
-      - overclaim_rate:    agent root_causes that did not align to any GT fault
-      - sql_executable_rate: evidence SQL that ran, returned rows, and aligned
-      - chain_coherence:   LLM judge over (claims + SQL preview); blind to GT
-      - node_f1 / edge_f1: agent's claimed graph vs GT causal_graph (service-level)
+    Headline numbers:
+      - precision / recall / f1 — over the (service, fault_kind) multiset
+      - exact_match              — boolean, multiset equality after match
+      - fault_kind_accuracy      — HIT / (HIT + WRONG_KIND); None when denom=0
+      - sql_executable_rate      — mechanical (DuckDB returns rows)
+      - evidence_support_rate    — supported / judged among per-evidence judges;
+                                   None when no evidence was judged
+      - node_f1 / edge_f1        — service-level graph alignment
 
-    `headline = root_cause_f1 × sql_executable_rate × chain_coherence`
-
-    ``chain_coherence`` and ``headline`` are ``None`` when the LLM judge call
-    itself failed (e.g. network outage). Aggregators are expected to drop
-    those samples from the headline average rather than treat them as 0.0,
-    so a transient outage doesn't infect the case-level score.
+    No multiplicative headline. Each axis is reported independently so the
+    aggregator can show which one is failing without composing them.
     """
 
-    root_cause_f1: float
-    root_cause_partial_f1: float = 0.0
-    overclaim_rate: float
+    precision: float
+    recall: float
+    f1: float
+    exact_match: bool
+
+    fault_kind_accuracy: float | None
+    kind_accuracy_denom: int
+
     sql_executable_rate: float
-    chain_coherence: float | None
+    evidence_support_rate: float | None
 
     node_f1: float = 0.0
     edge_f1: float = 0.0
-
-    headline: float | None = Field(..., description="root_cause_f1 × sql_executable_rate × chain_coherence")
-    case_correct: bool = False
-
-    service_precision: float = 0.0
-    service_recall: float = 0.0
-    service_f1: float = 0.0
-
-    root_cause_partial_precision: float = 0.0
-    root_cause_partial_recall: float = 0.0
-
-    root_cause_precision: float = 0.0
-    root_cause_recall: float = 0.0
     node_precision: float = 0.0
     node_recall: float = 0.0
     edge_precision: float = 0.0
@@ -85,7 +81,9 @@ class EvaluationResultV2(BaseModel):
     per_evidence: list[PerEvidenceRecord] = Field(default_factory=list)
     graph_metrics: GraphMetrics | None = None
 
-    chain_judge: ChainJudgeResult | None = None
+    n_evidence: int = 0
+    n_evidence_judged: int = 0
+    n_evidence_judge_failed: int = 0
 
     parse_error: str | None = None
     notes: list[str] = Field(default_factory=list)
@@ -106,16 +104,32 @@ def _parse_agent(raw: str | dict[str, Any] | None) -> tuple[AgentRCAOutput | Non
 
 def _zero_result(parse_error: str, notes: list[str] | None = None) -> EvaluationResultV2:
     return EvaluationResultV2(
-        root_cause_f1=0.0,
-        root_cause_partial_f1=0.0,
-        overclaim_rate=0.0,
+        precision=0.0,
+        recall=0.0,
+        f1=0.0,
+        exact_match=False,
+        fault_kind_accuracy=None,
+        kind_accuracy_denom=0,
         sql_executable_rate=0.0,
-        chain_coherence=0.0,
-        headline=0.0,
-        case_correct=False,
+        evidence_support_rate=None,
         parse_error=parse_error,
         notes=notes or [],
     )
+
+
+def _summarize_chain(agent: AgentRCAOutput) -> str:
+    """Compact text view of the chain for the per-evidence judge prompt."""
+    lines: list[str] = []
+    for i, rc in enumerate(agent.root_causes):
+        bits = [f"service={rc.service}", f"fault_kind={rc.fault_kind.value}"]
+        if rc.direction:
+            bits.append(f"direction={rc.direction.src}->{rc.direction.dst}")
+        if rc.method:
+            bits.append(f"method={rc.method}")
+        lines.append(f"  rc[{i}]: " + " ".join(bits))
+    for i, prop in enumerate(agent.propagation):
+        lines.append(f"  prop[{i}]: {prop.from_} -> {prop.to}")
+    return "\n".join(lines) if lines else "  (empty chain)"
 
 
 async def evaluate_v2(
@@ -141,12 +155,14 @@ async def evaluate_v2(
     graph: GraphMetrics = compute_graph_metrics(agent, gt_graph)
 
     per_evidence: list[PerEvidenceRecord] = []
-    sql_evidence_results: list[tuple[str, EvidenceVerifyResult]] = []
+    judge_inputs: list[tuple[int, str, str, Evidence, EvidenceVerifyResult]] = []
 
     for ri, rc in enumerate(agent.root_causes):
+        location = f"root_cause[{ri}] service={rc.service} fault_kind={rc.fault_kind.value}"
         for ei, ev in enumerate(rc.evidence):
             label = f"rc[{ri}].ev[{ei}]"
             vr = verify_evidence(evidence=ev, parquet_dir=parquet_dir)
+            rec_idx = len(per_evidence)
             per_evidence.append(
                 PerEvidenceRecord(
                     label=label,
@@ -158,12 +174,14 @@ async def evaluate_v2(
                     row_count=vr.row_count,
                 )
             )
-            sql_evidence_results.append((label, vr))
+            judge_inputs.append((rec_idx, label, location, ev, vr))
 
     for pi, prop in enumerate(agent.propagation):
+        location = f"propagation[{pi}] {prop.from_} -> {prop.to}"
         for ei, ev in enumerate(prop.evidence):
             label = f"prop[{pi}].ev[{ei}]"
             vr = verify_evidence(evidence=ev, parquet_dir=parquet_dir)
+            rec_idx = len(per_evidence)
             per_evidence.append(
                 PerEvidenceRecord(
                     label=label,
@@ -175,42 +193,67 @@ async def evaluate_v2(
                     row_count=vr.row_count,
                 )
             )
-            sql_evidence_results.append((label, vr))
+            judge_inputs.append((rec_idx, label, location, ev, vr))
 
     n_ev = len(per_evidence)
     n_ok = sum(1 for r in per_evidence if r.status == EvidenceStatus.OK)
     sql_executable_rate = n_ok / n_ev if n_ev else 0.0
 
-    judge_result = await chain_coherence(
-        agent=agent,
-        evidence_results=sql_evidence_results,
-        llm_client=llm_client,
-        model=judge_model,
-        case_name=case_name,
-    )
+    # Per-evidence judge fan-out (concurrent within case).
+    if judge_inputs and llm_client is not None:
+        chain_summary = _summarize_chain(agent)
 
-    if judge_result.score is None:
-        headline: float | None = None
+        async def _run(idx: int, label: str, location: str, ev: Evidence, vr: EvidenceVerifyResult) -> tuple[int, EvidenceJudgeResult]:
+            try:
+                jr = await evidence_support(
+                    chain_summary=chain_summary,
+                    location=location,
+                    label=label,
+                    evidence=ev,
+                    verify_result=vr,
+                    llm_client=llm_client,
+                    model=judge_model,
+                    case_name=case_name,
+                )
+            except Exception as exc:
+                jr = EvidenceJudgeResult(supported=None, reasoning=f"(judge error: {exc!s:.200})")
+            return idx, jr
+
+        results = await asyncio.gather(*(_run(*t) for t in judge_inputs))
+        for idx, jr in results:
+            rec = per_evidence[idx]
+            rec.supported = jr.supported
+            rec.judge_reasoning = jr.reasoning
+
+    n_supported = sum(1 for r in per_evidence if r.supported is True)
+    n_unsupported = sum(1 for r in per_evidence if r.supported is False)
+    n_judged = n_supported + n_unsupported
+    # judge_failed = evidences that went into the judge but came back None
+    # (transient outage etc.). When no judge ran at all (no client), it's 0.
+    n_failed = (n_ev - n_judged) if (judge_inputs and llm_client is not None) else 0
+
+    if n_judged > 0:
+        evidence_support_rate: float | None = n_supported / n_judged
+    elif n_ev == 0:
+        # No evidence at all — caller will see zero_evidence in the per-case
+        # diagnostic. Score is 0 (nothing to support).
+        evidence_support_rate = 0.0
     else:
-        headline = outcome.root_cause_f1 * sql_executable_rate * judge_result.score
+        # Evidence exists but no judge ran (no client) or all judges failed.
+        # Per README: case scores 0 in benchmark mean; judge_failed exposed.
+        evidence_support_rate = 0.0
 
     return EvaluationResultV2(
-        root_cause_f1=outcome.root_cause_f1,
-        root_cause_partial_f1=outcome.root_cause_partial_f1,
-        overclaim_rate=outcome.overclaim_rate,
+        precision=outcome.precision,
+        recall=outcome.recall,
+        f1=outcome.f1,
+        exact_match=outcome.exact_match,
+        fault_kind_accuracy=outcome.fault_kind_accuracy,
+        kind_accuracy_denom=outcome.kind_accuracy_denom,
         sql_executable_rate=sql_executable_rate,
-        chain_coherence=judge_result.score,
+        evidence_support_rate=evidence_support_rate,
         node_f1=graph.node_f1,
         edge_f1=graph.edge_f1,
-        headline=headline,
-        case_correct=outcome.case_correct,
-        service_precision=outcome.service_precision,
-        service_recall=outcome.service_recall,
-        service_f1=outcome.service_f1,
-        root_cause_partial_precision=outcome.root_cause_partial_precision,
-        root_cause_partial_recall=outcome.root_cause_partial_recall,
-        root_cause_precision=outcome.root_cause_precision,
-        root_cause_recall=outcome.root_cause_recall,
         node_precision=graph.node_precision,
         node_recall=graph.node_recall,
         edge_precision=graph.edge_precision,
@@ -219,5 +262,7 @@ async def evaluate_v2(
         overclaim_indices=outcome.overclaim_indices,
         per_evidence=per_evidence,
         graph_metrics=graph,
-        chain_judge=judge_result,
+        n_evidence=n_ev,
+        n_evidence_judged=n_judged,
+        n_evidence_judge_failed=n_failed,
     )

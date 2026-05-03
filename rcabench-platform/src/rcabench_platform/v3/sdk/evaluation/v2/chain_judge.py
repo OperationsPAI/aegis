@@ -1,23 +1,16 @@
-"""LLM-as-judge for evidence–claim coherence.
+"""Per-evidence LLM-as-judge: claim-vs-rows + chain coherence.
 
-The judge looks ONLY at internal consistency: does each natural-language
-claim hold up against the rows the evidence SQL actually returned? It is
-deliberately blind to the ground-truth causal graph — GT alignment is
-already covered by the deterministic ``root_cause_f1`` / ``node_f1`` /
-``edge_f1`` metrics, so re-judging it here would duplicate work and inject
-LLM noise into the headline.
+Each evidence is judged independently against its own SQL row preview, with
+a brief view of the agent's overall claim chain so the judge can flag
+broken propagation links. Output is binary ``supported: bool``; the
+benchmark-level ``evidence_support_rate`` aggregates these.
 
-Returns a 0–1 score (or ``None`` when the judge call itself failed, e.g.
-network outage after retries are exhausted) plus a short explanation.
-``None`` lets aggregators distinguish "couldn't judge" from "judged poorly"
-instead of conflating both as 0.0.
+A failed judge call (transient outage etc.) returns ``supported=None`` so
+the aggregator can distinguish it from a judged-as-incoherent evidence
+and exclude it from the per-case denominator.
 
-Compatibility note: the OpenAI ``response_format={"type": "json_object"}``
-flag is intentionally NOT used. Some OpenAI-compatible gateways (litellm
-etc.) reject it with HTTP 400 even when the underlying model behaves fine
-without it. Instead the prompt strictly demands raw JSON and the parser
-tolerates markdown fences / preamble text, falling back to a brace-walk
-when ``json.loads`` on the whole content rejects it.
+The judge stays blind to the ground-truth causal graph — GT alignment is
+already covered deterministically by ``f1`` / ``node_f1`` / ``edge_f1``.
 """
 
 from __future__ import annotations
@@ -29,67 +22,66 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 from ...llm_eval.utils import get_logger
-from .schema import AgentRCAOutput
+from .schema import Evidence
 from .sql_verify import EvidenceVerifyResult
 
-# Logs flow through the shared `llm_eval` logger tree, which `setup_logging`
-# already wires to both a colored stream handler (level = $LLM_EVAL_LOG_LEVEL,
-# default WARNING) and a rotating file handler at $LLM_EVAL_LOG_DIR/llm_eval.log
-# (always DEBUG). So:
-#   • To see judge prompts + raw responses in the terminal, run with
-#     LLM_EVAL_LOG_LEVEL=DEBUG.
-#   • Otherwise tail logs/llm_eval.log — DEBUG-level records are always there.
 logger = get_logger("llm_eval.chain_judge")
 
-# Cap how much of the prompt and the raw response we drop into logs. Full
-# prompts can hit hundreds of KB once evidence rows are spliced in, so an
-# unbounded log line would balloon log files and risk leaking large case
-# payloads. 8 KB keeps DEBUG useful (you can read the first ~120 lines)
-# without turning the log into a data dump.
 _LOG_BODY_LIMIT = 8000
 
 
-class ChainJudgeResult(BaseModel):
-    score: float | None = Field(default=None, ge=0.0, le=1.0)
-    """0–1 coherence score, or None when the judge call itself failed."""
+class EvidenceJudgeResult(BaseModel):
+    supported: bool | None = Field(default=None)
+    """True/False if judged; None when the judge call itself failed."""
     reasoning: str = ""
     raw_response: str | None = None
 
 
-_JUDGE_PROMPT = """You are scoring whether an RCA agent's reasoning chain is internally
-coherent: does each natural-language claim hold up against the rows the
-evidence SQL actually returned when re-executed?
+_JUDGE_PROMPT = """You are scoring whether ONE piece of evidence supports its paired claim,
+in the context of an RCA agent's overall reasoning chain.
 
 You will be given:
-  • the agent's structured output (root_causes + propagation edges, each with
-    an evidence SQL and a natural-language claim);
-  • a preview (sample rows) of what each SQL actually returned.
+  • a compact summary of the agent's full chain (root_causes + propagation
+    edges) — for context only, so you can spot broken upstream links;
+  • the specific evidence under review: where in the chain it lives, the
+    natural-language claim, the SQL, and a sample of rows the SQL actually
+    returned when re-executed.
 
-Score on a single 0.0–1.0 scale:
-  1.0 — every claim is plausibly supported by the SQL rows shown, and the
-        chain is internally consistent (claimed root cause feeds the
-        claimed propagation, etc.).
-  0.0 — the chain is incoherent, or the SQL results clearly contradict the
-        claims (e.g. the agent says "p99 latency spiked" but the rows show
-        no such pattern, or the propagation edge has no supporting
-        evidence at all).
-  Intermediate values are allowed; calibrate so 0.5 means "half the chain
-  is supported, the other half is asserted without backing rows."
+Decide BOTH conditions hold:
+  1. The SQL row sample plausibly supports the claim — the rows do not
+     contradict the assertion (e.g. "p99 latency spiked" needs rows that
+     actually show elevated latency, not flat values).
+  2. The evidence fits coherently into the chain — its claim is not a
+     dangling assertion whose upstream cause is missing from the chain,
+     and is not contradicted by adjacent claims.
 
-You are NOT given the ground-truth answer. Do not try to infer which case
-this is or whether the agent's named services match a "correct" set —
-that is judged separately. Your job is only claim-vs-data consistency.
+If both hold → supported=true. Otherwise → supported=false. EMPTY or
+SQL_ERROR results almost always mean supported=false (no rows to support
+the claim).
+
+You are NOT given the ground-truth answer. Do not guess which case this
+is or whether the named services are "correct" — that is judged
+separately. Your job is only claim-vs-data plus internal coherence.
 
 OUTPUT FORMAT — strict, no exceptions:
-  • Output exactly one JSON object: {{"score": <float 0..1>, "reasoning": "<=80 words>"}}
+  • Output exactly one JSON object: {{"supported": true|false, "reasoning": "<=80 words"}}
   • No prose before or after. No markdown fences. No commentary.
   • Begin your response with `{{` and end with `}}`.
 
-== Agent output ==
-{agent_output}
+== Agent's full chain (context) ==
+{chain_summary}
 
-== Evidence executions (status + sample rows) ==
-{evidence_block}
+== Evidence under review ==
+Location: {location}
+Label: {label}
+Claim: {claim}
+SQL kind: {kind}
+SQL:
+{sql}
+
+SQL execution result: status={status} rows={row_count}{error_block}
+Sample rows:
+{rows_block}
 """
 
 
@@ -97,16 +89,6 @@ _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.IGNORECASE)
 
 
 def _extract_json_object(text: str) -> str | None:
-    """Pull a balanced JSON object out of arbitrary model output.
-
-    Tolerates three real-world failure modes seen in the wild:
-      • the whole content is already raw JSON (fast path),
-      • the model wraps JSON in a ```json ... ``` fence,
-      • the model prepends prose ("Sure, here's the JSON: { ... }").
-
-    Returns the substring containing the first balanced ``{...}`` object,
-    or ``None`` if no plausible candidate is found.
-    """
     if not text:
         return None
     fence = _JSON_FENCE_RE.search(text)
@@ -143,64 +125,61 @@ def _extract_json_object(text: str) -> str | None:
     return None
 
 
-def _format_evidence_block(agent: AgentRCAOutput, results: list[tuple[str, EvidenceVerifyResult]]) -> str:
-    """Pair each evidence with its verifier result.
-
-    Shows up to 5 rows per evidence and 200 chars per cell — wider than the
-    older 3-row × 80-char preview so claims like "p99 increased N×" or
-    "error count spiked" actually have enough signal in the preview to be
-    judged. The trade-off is a bigger prompt; cases with many evidence rows
-    will lean harder on the model's context window.
-    """
-    if not results:
-        return "(no evidence)"
-    lines: list[str] = []
-    for label, vr in results:
-        head = f"[{label}] status={vr.status.value} rows={vr.row_count}"
-        if vr.error:
-            lines.append(f"{head} error={vr.error[:200]}")
-            continue
-        lines.append(head)
-        for row in vr.sample_rows[:5]:
-            shrunk = {k: (str(v)[:200] if v is not None else None) for k, v in row.items()}
-            lines.append(f"    {json.dumps(shrunk, ensure_ascii=False, default=str)}")
-    return "\n".join(lines)
-
-
 def _truncate(s: str, limit: int = _LOG_BODY_LIMIT) -> str:
     if len(s) <= limit:
         return s
     return f"{s[:limit]}... [+{len(s) - limit} bytes truncated]"
 
 
-async def chain_coherence(
-    agent: AgentRCAOutput,
-    evidence_results: list[tuple[str, EvidenceVerifyResult]],
-    llm_client: AsyncOpenAI | None,
+def _format_rows(verify_result: EvidenceVerifyResult, max_rows: int = 5, max_cell: int = 200) -> str:
+    if not verify_result.sample_rows:
+        return "  (no rows)"
+    lines: list[str] = []
+    for row in verify_result.sample_rows[:max_rows]:
+        shrunk = {k: (str(v)[:max_cell] if v is not None else None) for k, v in row.items()}
+        lines.append(f"  {json.dumps(shrunk, ensure_ascii=False, default=str)}")
+    return "\n".join(lines)
+
+
+async def evidence_support(
+    *,
+    chain_summary: str,
+    location: str,
+    label: str,
+    evidence: Evidence,
+    verify_result: EvidenceVerifyResult,
+    llm_client: AsyncOpenAI,
     model: str = "gpt-4o-mini",
     case_name: str | None = None,
-) -> ChainJudgeResult:
-    """Judge whether agent claims are supported by their evidence SQL rows.
+) -> EvidenceJudgeResult:
+    """Judge a single (claim, SQL row preview) pair in chain context.
 
     On any exception (network outage, malformed JSON, etc.) returns
-    ``ChainJudgeResult(score=None, ...)`` so callers can distinguish
-    "couldn't judge" from "judged as incoherent". Aggregators are expected
-    to drop None values from the average; do not silently coerce to 0.0.
+    ``EvidenceJudgeResult(supported=None, ...)`` so callers can distinguish
+    "couldn't judge" from "judged as unsupported". The aggregator excludes
+    None entries from the per-case denominator and surfaces the count via
+    ``judge_failed`` instead of conflating them with a 0 score.
 
-    ``case_name`` is purely a log correlation key — it tags every log
-    record this judge call emits so multi-case runs stay readable.
+    ``case_name`` + ``label`` together tag every log record this call emits
+    so multi-case multi-evidence runs stay readable.
     """
-    tag = f"[case={case_name}]" if case_name else "[case=?]"
+    tag = f"[case={case_name or '?'} {label}]"
 
-    if llm_client is None:
-        raise ValueError(
-            "chain_coherence requires an LLM client; configure judge_model in "
-            "the eval config so a non-None client is provided."
-        )
+    error_block = ""
+    if verify_result.error:
+        error_block = f"\nSQL error: {verify_result.error[:300]}"
 
     prompt = _JUDGE_PROMPT.format(
-        agent_output=agent.model_dump_json(by_alias=True, indent=2),
-        evidence_block=_format_evidence_block(agent, evidence_results),
+        chain_summary=chain_summary,
+        location=location,
+        label=label,
+        claim=evidence.claim,
+        kind=evidence.kind.value,
+        sql=evidence.sql,
+        status=verify_result.status.value,
+        row_count=verify_result.row_count,
+        error_block=error_block,
+        rows_block=_format_rows(verify_result),
     )
     logger.debug("%s judge prompt (model=%s, len=%d):\n%s", tag, model, len(prompt), _truncate(prompt))
 
@@ -211,20 +190,17 @@ async def chain_coherence(
         )
     except Exception as exc:
         logger.warning("%s judge call failed: %s", tag, exc)
-        return ChainJudgeResult(score=None, reasoning=f"(judge error: {exc!s:.200})")
+        return EvidenceJudgeResult(supported=None, reasoning=f"(judge error: {exc!s:.200})")
 
     finish_reason = getattr(response.choices[0], "finish_reason", None)
     content = response.choices[0].message.content or ""
     logger.debug("%s judge raw response (finish=%s, len=%d):\n%s", tag, finish_reason, len(content), _truncate(content))
     if not content and finish_reason == "length":
-        # Should be rare without an explicit max_tokens cap, but keep the
-        # diagnostic in case a provider applies a server-side default.
-        return ChainJudgeResult(
-            score=None,
-            reasoning="(judge returned empty content with finish_reason=length; provider may impose a server-side cap)",
+        return EvidenceJudgeResult(
+            supported=None,
+            reasoning="(judge returned empty content with finish_reason=length)",
         )
 
-    # Try the cheap path first: model already obeyed and returned raw JSON.
     parsed: dict | None = None
     try:
         candidate = json.loads(content)
@@ -233,14 +209,12 @@ async def chain_coherence(
     except json.JSONDecodeError:
         pass
 
-    # Fallback: extract a balanced JSON object from text that may have
-    # markdown fences or prose preamble.
     if parsed is None:
         extracted = _extract_json_object(content)
         if extracted is None:
             logger.warning("%s judge returned no JSON object; raw=%r", tag, content[:200])
-            return ChainJudgeResult(
-                score=None,
+            return EvidenceJudgeResult(
+                supported=None,
                 reasoning="(judge returned no JSON object)",
                 raw_response=content,
             )
@@ -248,33 +222,51 @@ async def chain_coherence(
             candidate = json.loads(extracted)
         except json.JSONDecodeError as exc:
             logger.warning("%s judge JSON parse failed: %s; raw=%r", tag, exc, content[:200])
-            return ChainJudgeResult(
-                score=None,
+            return EvidenceJudgeResult(
+                supported=None,
                 reasoning=f"(judge JSON parse failed: {exc!s:.120})",
                 raw_response=content,
             )
         if not isinstance(candidate, dict):
-            logger.warning("%s judge JSON was not an object; raw=%r", tag, content[:200])
-            return ChainJudgeResult(
-                score=None,
+            return EvidenceJudgeResult(
+                supported=None,
                 reasoning="(judge JSON was not an object)",
                 raw_response=content,
             )
         parsed = candidate
 
-    raw_score = parsed.get("score")
-    if raw_score is None:
-        logger.warning("%s judge omitted score; parsed=%r", tag, parsed)
-        return ChainJudgeResult(score=None, reasoning="(judge omitted score)", raw_response=content)
-    try:
-        score = max(0.0, min(1.0, float(raw_score)))
-    except (TypeError, ValueError):
-        logger.warning("%s judge score not numeric: %r", tag, raw_score)
-        return ChainJudgeResult(
-            score=None,
-            reasoning=f"(judge score not numeric: {raw_score!r:.40})",
+    raw_supported = parsed.get("supported")
+    if raw_supported is None:
+        logger.warning("%s judge omitted supported; parsed=%r", tag, parsed)
+        return EvidenceJudgeResult(
+            supported=None,
+            reasoning="(judge omitted 'supported')",
             raw_response=content,
         )
+
+    if isinstance(raw_supported, bool):
+        supported_val: bool = raw_supported
+    elif isinstance(raw_supported, str):
+        s = raw_supported.strip().lower()
+        if s in ("true", "yes", "y", "1"):
+            supported_val = True
+        elif s in ("false", "no", "n", "0"):
+            supported_val = False
+        else:
+            return EvidenceJudgeResult(
+                supported=None,
+                reasoning=f"(judge 'supported' not boolean: {raw_supported!r:.40})",
+                raw_response=content,
+            )
+    elif isinstance(raw_supported, (int, float)):
+        supported_val = bool(raw_supported)
+    else:
+        return EvidenceJudgeResult(
+            supported=None,
+            reasoning=f"(judge 'supported' not boolean: {raw_supported!r:.40})",
+            raw_response=content,
+        )
+
     reasoning = str(parsed.get("reasoning") or "")
-    logger.info("%s judge score=%.3f reasoning=%s", tag, score, _truncate(reasoning, 200))
-    return ChainJudgeResult(score=score, reasoning=reasoning, raw_response=content)
+    logger.info("%s judge supported=%s reasoning=%s", tag, supported_val, _truncate(reasoning, 200))
+    return EvidenceJudgeResult(supported=supported_val, reasoning=reasoning, raw_response=content)

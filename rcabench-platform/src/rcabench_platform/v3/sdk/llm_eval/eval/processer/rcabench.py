@@ -1,8 +1,11 @@
-"""RCABench evaluator (v2 schema).
+"""RCABench evaluator (v2 schema, simplified contract).
 
-The agent emits an `AgentRCAOutput` JSON. Judging is fully mechanical for the
-deterministic axes (root_cause F1, overclaim, sql_executable) and uses an
-LLM-as-judge only for chain coherence.
+Per case the agent emits an ``AgentRCAOutput`` JSON. Judging is mechanical
+for the deterministic axes (single-tier (service, fault_kind) match,
+sql_executable) and uses a per-evidence LLM judge for evidence_support.
+
+See the v2 README at ``v3/sdk/evaluation/v2/README.md`` for the full
+metric contract; this module is the aggregator that wraps `evaluate_v2`.
 """
 
 import json
@@ -20,19 +23,21 @@ from .prompts import AUGMENTATION_PROMPTS
 
 
 class RCABenchProcesser(BaseMatchProcesser):
-    """Processer for RCABench v2 evaluation.
+    """Processer for RCABench v2 evaluation (simplified contract).
 
-    Agent contract: structured JSON (`AgentRCAOutput`). The judge:
-      1. Type-aware matches each agent root_cause to a GT fault from
-         injection.json's engine_config.
-      2. Re-runs every evidence SQL via DuckDB on the case parquets.
-      3. Asks an LLM to score the chain's coherence given the merged claims +
-         executed SQL preview + GT causal_graph.
+    Agent contract: structured JSON (`AgentRCAOutput`). Per case:
+      1. Single-tier (service, fault_kind) multiset match against GT
+         engine_config faults → precision/recall/f1, exact_match,
+         fault_kind_accuracy.
+      2. Re-runs every evidence SQL via DuckDB → sql_executable_rate.
+      3. Per-evidence LLM judge over (claim ↔ SQL row preview + chain
+         coherence) → evidence_support_rate.
+      4. Service-level node_f1 / edge_f1 vs GT causal_graph.
 
     Output (per sample, stored on `sample.meta['eval_v2']`):
-        - root_cause_f1, overclaim_rate, sql_executable_rate, chain_coherence
-        - headline = product of the four
-        - per_fault, per_evidence, chain_judge — diagnostic detail
+        - precision, recall, f1, exact_match, fault_kind_accuracy,
+          sql_executable_rate, evidence_support_rate, node_f1, edge_f1
+        - per_fault, per_evidence — diagnostic detail
     """
 
     name: str = "RCABench"
@@ -145,32 +150,43 @@ class RCABenchProcesser(BaseMatchProcesser):
 
         meta["eval_v2"] = result.model_dump(mode="json")
 
-        chain_str = f"{result.chain_coherence:.2f}" if result.chain_coherence is not None else "n/a"
-        headline_str = f"{result.headline:.2f}" if result.headline is not None else "n/a"
+        kind_str = (
+            f"{result.fault_kind_accuracy:.2f}"
+            if result.fault_kind_accuracy is not None
+            else "n/a"
+        )
+        ev_str = (
+            f"{result.evidence_support_rate:.2f}"
+            if result.evidence_support_rate is not None
+            else "n/a"
+        )
         reasoning_bits: list[str] = [
-            f"rc_f1={result.root_cause_f1:.2f} sql={result.sql_executable_rate:.2f} "
-            f"chain={chain_str} headline={headline_str}"
+            f"f1={result.f1:.2f} exact={int(result.exact_match)} "
+            f"kind_acc={kind_str} sql={result.sql_executable_rate:.2f} "
+            f"ev_support={ev_str} node_f1={result.node_f1:.2f} edge_f1={result.edge_f1:.2f}"
         ]
         if result.parse_error:
             reasoning_bits.append(f"parse_error={result.parse_error}")
-        if result.chain_judge and result.chain_judge.reasoning:
-            reasoning_bits.append(f"judge: {result.chain_judge.reasoning}")
+        if result.n_evidence_judge_failed:
+            reasoning_bits.append(
+                f"judge_failed={result.n_evidence_judge_failed}/{result.n_evidence}"
+            )
 
-        # Surface the raw LLM-as-judge output on `judged_response` so it shows
-        # up alongside the agent response in the eval DB / dashboard. Falls
-        # back to a serialized ChainJudgeResult when raw_response is missing
-        # (e.g. judge errored before any content was returned).
-        judged_response: str | None = None
-        if result.chain_judge is not None:
-            if result.chain_judge.raw_response:
-                judged_response = result.chain_judge.raw_response
-            else:
-                judged_response = result.chain_judge.model_dump_json(indent=2)
+        # Surface per-evidence judge reasoning lines on `judged_response` so
+        # the dashboard can render them alongside the agent response. One
+        # line per evidence keeps the diff readable for cases with many.
+        judge_lines: list[str] = []
+        for rec in result.per_evidence:
+            if rec.supported is None and not rec.judge_reasoning:
+                continue
+            tag = "?" if rec.supported is None else ("Y" if rec.supported else "N")
+            judge_lines.append(f"[{rec.label}] supported={tag} {rec.judge_reasoning}")
+        judged_response: str | None = "\n".join(judge_lines) if judge_lines else None
 
         sample.update(
             judged_response=judged_response,
-            correct=result.case_correct,
-            confidence=result.headline if result.headline is not None else 0.0,
+            correct=result.exact_match,
+            confidence=result.f1,
             reasoning=" | ".join(reasoning_bits),
             extracted_final_answer=None,
             meta=meta,
@@ -210,32 +226,45 @@ class RCABenchProcesser(BaseMatchProcesser):
             return {
                 "benchmark": self.name,
                 "total_samples": 0,
-                "case_correct_rate": 0.0,
-                "avg_service_f1": 0.0,
-                "avg_root_cause_partial_f1": 0.0,
-                "avg_root_cause_f1": 0.0,
+                "scored_samples": 0,
+                "exact_match_count": 0,
+                "exact_match_rate": 0.0,
+                "avg_precision": 0.0,
+                "avg_recall": 0.0,
+                "avg_f1": 0.0,
+                "avg_fault_kind_accuracy": 0.0,
+                "kind_accuracy_denom": 0,
                 "avg_sql_executable_rate": 0.0,
-                "avg_chain_coherence": 0.0,
-                "avg_headline": 0.0,
-                "avg_overclaim_rate": 0.0,
+                "avg_evidence_support_rate": 0.0,
+                "avg_node_f1": 0.0,
+                "avg_edge_f1": 0.0,
+                "parse_errors": 0,
+                "zero_evidence_outputs": 0,
+                "judge_failed": 0,
             }
 
         n = len(samples)
-        service_f1 = 0.0
-        rc_partial_f1 = 0.0
-        rc_f1 = 0.0
-        overclaim = 0.0
-        sql_ok = 0.0
-        chain_sum = 0.0
-        chain_count = 0
-        headline_sum = 0.0
-        node_f1 = 0.0
-        edge_f1 = 0.0
-        correct = 0
-        with_eval = 0
+
+        # Sums divide by total n so parse-failed / no-eval samples count as 0
+        # for every metric except fault_kind_accuracy — there a 0 denominator
+        # means "no service-correct rcs to grade", which is genuinely
+        # different from "graded as 0" and would smear the metric. Those
+        # cases are excluded from the kind-accuracy mean and kind_accuracy_denom
+        # exposes how many cases actually contributed.
+        exact_count = 0
+        precision_sum = 0.0
+        recall_sum = 0.0
+        f1_sum = 0.0
+        sql_sum = 0.0
+        ev_support_sum = 0.0
+        node_f1_sum = 0.0
+        edge_f1_sum = 0.0
+        kind_acc_sum = 0.0
+        kind_acc_cases = 0
+        scored = 0
         parse_errors = 0
         zero_evidence = 0
-        judge_failed = 0
+        judge_failed_evidences = 0
 
         for s in samples:
             if not isinstance(s.meta, dict):
@@ -243,61 +272,52 @@ class RCABenchProcesser(BaseMatchProcesser):
             ev = s.meta.get("eval_v2")
             if not isinstance(ev, dict) or "error" in ev:
                 continue
-            with_eval += 1
-            service_f1 += float(ev.get("service_f1") or 0.0)
-            rc_partial_f1 += float(ev.get("root_cause_partial_f1") or 0.0)
-            rc_f1 += float(ev.get("root_cause_f1") or 0.0)
-            overclaim += float(ev.get("overclaim_rate") or 0.0)
-            sql_ok += float(ev.get("sql_executable_rate") or 0.0)
-            node_f1 += float(ev.get("node_f1") or 0.0)
-            edge_f1 += float(ev.get("edge_f1") or 0.0)
-            # chain_coherence is None when the LLM judge call itself failed
-            # (e.g. transient outage). Track judged-only count separately so
-            # `avg_chain_coherence` reflects the score of cases that were
-            # actually judged; surface the rest via `judge_failed`. headline
-            # for those cases counts as 0 in the per-n average below — judge
-            # outages do penalize the published score.
-            chain_val = ev.get("chain_coherence")
-            if chain_val is not None:
-                chain_sum += float(chain_val)
-                chain_count += 1
-            else:
-                judge_failed += 1
-            headline_val = ev.get("headline")
-            if headline_val is not None:
-                headline_sum += float(headline_val)
-            if ev.get("case_correct"):
-                correct += 1
+            scored += 1
+
+            precision_sum += float(ev.get("precision") or 0.0)
+            recall_sum += float(ev.get("recall") or 0.0)
+            f1_sum += float(ev.get("f1") or 0.0)
+            sql_sum += float(ev.get("sql_executable_rate") or 0.0)
+            node_f1_sum += float(ev.get("node_f1") or 0.0)
+            edge_f1_sum += float(ev.get("edge_f1") or 0.0)
+
+            esr = ev.get("evidence_support_rate")
+            if esr is not None:
+                ev_support_sum += float(esr)
+            # else: case did not produce a usable evidence_support_rate;
+            # README says it counts as 0 in the benchmark mean.
+
+            kind_acc = ev.get("fault_kind_accuracy")
+            if kind_acc is not None:
+                kind_acc_sum += float(kind_acc)
+                kind_acc_cases += 1
+
+            if ev.get("exact_match"):
+                exact_count += 1
             if ev.get("parse_error"):
                 parse_errors += 1
             if not ev.get("per_evidence"):
                 zero_evidence += 1
+            judge_failed_evidences += int(ev.get("n_evidence_judge_failed") or 0)
 
-        # Score averages divide by total `n` so parse-failed / no-eval samples
-        # count as 0 — otherwise an agent that JSON-fails 90% of cases but gets
-        # the rest right would post the same case_correct_rate as one that
-        # parses every output. `avg_chain_coherence` keeps its judge-only
-        # denominator since "judge couldn't run" is a system failure that
-        # should not be conflated with "judged as 0", and is reported
-        # alongside `judge_failed` so the gap is visible.
         denom = max(1, n)
-        chain_denom = max(1, chain_count)
+        kind_denom = max(1, kind_acc_cases)
         return {
             "benchmark": self.name,
             "total_samples": n,
-            "scored_samples": with_eval,
-            "case_correct": correct,
-            "case_correct_rate": round(correct / denom, 4),
-            "avg_service_f1": round(service_f1 / denom, 4),
-            "avg_root_cause_partial_f1": round(rc_partial_f1 / denom, 4),
-            "avg_root_cause_f1": round(rc_f1 / denom, 4),
-            "avg_overclaim_rate": round(overclaim / denom, 4),
-            "avg_sql_executable_rate": round(sql_ok / denom, 4),
-            "avg_chain_coherence": round(chain_sum / chain_denom, 4),
-            "avg_node_f1": round(node_f1 / denom, 4),
-            "avg_edge_f1": round(edge_f1 / denom, 4),
-            "avg_headline": round(headline_sum / denom, 4),
-            "judge_failed": judge_failed,
+            "scored_samples": scored,
+            "exact_match_count": exact_count,
+            "exact_match_rate": round(exact_count / denom, 4),
+            "avg_precision": round(precision_sum / denom, 4),
+            "avg_recall": round(recall_sum / denom, 4),
+            "avg_f1": round(f1_sum / denom, 4),
+            "avg_fault_kind_accuracy": round(kind_acc_sum / kind_denom, 4),
+            "kind_accuracy_denom": kind_acc_cases,
+            "avg_sql_executable_rate": round(sql_sum / denom, 4),
+            "avg_evidence_support_rate": round(ev_support_sum / denom, 4),
+            "avg_node_f1": round(node_f1_sum / denom, 4),
+            "avg_edge_f1": round(edge_f1_sum / denom, 4),
             "parse_errors": parse_errors,
             "zero_evidence_outputs": zero_evidence,
+            "judge_failed": judge_failed_evidences,
         }
