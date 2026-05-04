@@ -21,6 +21,7 @@ from .matcher import (
     OutcomeResult,
     compute_graph_metrics,
     compute_outcome,
+    compute_path_reachability,
 )
 from .schema import (
     AgentRCAOutput,
@@ -49,6 +50,7 @@ __all__ = [
     "OutcomeResult",
     "compute_outcome",
     "compute_graph_metrics",
+    "compute_path_reachability",
     "EvidenceVerifyResult",
     "EvidenceStatus",
     "verify_evidence",

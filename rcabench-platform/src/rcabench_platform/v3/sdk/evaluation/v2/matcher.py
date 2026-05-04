@@ -11,6 +11,7 @@ separate ``GraphMetrics`` block.
 
 from __future__ import annotations
 
+from collections import deque
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -231,6 +232,60 @@ def _prf(agent: set, gt: set) -> tuple[float, float, float]:
     r = len(matched) / len(gt) if gt else 0.0
     f1 = (2 * p * r / (p + r)) if (p + r) else 0.0
     return p, r, f1
+
+
+def compute_path_reachability(
+    agent: AgentRCAOutput,
+    outcome: OutcomeResult,
+    gt_graph: CausalGraph | None,
+) -> bool | None:
+    """Does the agent's propagation graph contain at least one path from a
+    correctly-identified root cause to a GT alarm service?
+
+    Returns ``None`` when the metric is not applicable (no GT graph, or GT graph
+    has no alarm services). Otherwise returns ``True`` iff there exists some HIT
+    agent root_cause whose service can reach some alarm service via the agent's
+    own ``propagation`` edges (treated as directed from -> to). Path length 0
+    counts: a HIT rc whose service itself is an alarm service is reachable.
+
+    Anchoring on HIT root causes prevents trivial passes — an agent that emits
+    a generic ``loadgen -> frontend -> cart`` chain without identifying any GT
+    fault scores 0 here even though its edges might overlap real ones.
+    """
+    if gt_graph is None:
+        return None
+    alarm_services = {_norm(s) for s in gt_graph.get_alarm_services()}
+    alarm_services.discard("")
+    if not alarm_services:
+        return None
+
+    hit_rc_indices = {
+        m.matched_root_cause_index
+        for m in outcome.per_fault
+        if m.status == MatchStatus.HIT and m.matched_root_cause_index is not None
+    }
+    if not hit_rc_indices:
+        return False
+
+    adj: dict[str, set[str]] = {}
+    for s, t in _agent_edge_set(agent):
+        adj.setdefault(s, set()).add(t)
+
+    for idx in hit_rc_indices:
+        start = _norm(agent.root_causes[idx].service)
+        if not start:
+            continue
+        seen = {start}
+        queue: deque[str] = deque([start])
+        while queue:
+            node = queue.popleft()
+            if node in alarm_services:
+                return True
+            for nxt in adj.get(node, ()):
+                if nxt not in seen:
+                    seen.add(nxt)
+                    queue.append(nxt)
+    return False
 
 
 def compute_graph_metrics(agent: AgentRCAOutput, gt_graph: CausalGraph | None) -> GraphMetrics:

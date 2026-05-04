@@ -152,10 +152,12 @@ class RCABenchProcesser(BaseMatchProcesser):
 
         kind_str = f"{result.fault_kind_accuracy:.2f}" if result.fault_kind_accuracy is not None else "n/a"
         ev_str = f"{result.evidence_support_rate:.2f}" if result.evidence_support_rate is not None else "n/a"
+        path_str = "n/a" if result.path_reachability is None else str(int(result.path_reachability))
         reasoning_bits: list[str] = [
             f"f1={result.f1:.2f} exact={int(result.exact_match)} "
             f"kind_acc={kind_str} sql={result.sql_executable_rate:.2f} "
-            f"ev_support={ev_str} node_f1={result.node_f1:.2f} edge_f1={result.edge_f1:.2f}"
+            f"ev_support={ev_str} path={path_str} "
+            f"node_f1={result.node_f1:.2f} edge_f1={result.edge_f1:.2f}"
         ]
         if result.parse_error:
             reasoning_bits.append(f"parse_error={result.parse_error}")
@@ -226,6 +228,8 @@ class RCABenchProcesser(BaseMatchProcesser):
                 "kind_accuracy_denom": 0,
                 "avg_sql_executable_rate": 0.0,
                 "avg_evidence_support_rate": 0.0,
+                "avg_path_reachability": 0.0,
+                "path_reachability_denom": 0,
                 "avg_node_f1": 0.0,
                 "avg_edge_f1": 0.0,
                 "parse_errors": 0,
@@ -251,6 +255,8 @@ class RCABenchProcesser(BaseMatchProcesser):
         edge_f1_sum = 0.0
         kind_acc_sum = 0.0
         kind_acc_cases = 0
+        path_reach_sum = 0
+        path_reach_cases = 0
         scored = 0
         parse_errors = 0
         zero_evidence = 0
@@ -282,6 +288,11 @@ class RCABenchProcesser(BaseMatchProcesser):
                 kind_acc_sum += float(kind_acc)
                 kind_acc_cases += 1
 
+            path_reach = ev.get("path_reachability")
+            if path_reach is not None:
+                path_reach_sum += int(path_reach)
+                path_reach_cases += 1
+
             if ev.get("exact_match"):
                 exact_count += 1
             if ev.get("parse_error"):
@@ -292,6 +303,7 @@ class RCABenchProcesser(BaseMatchProcesser):
 
         denom = max(1, n)
         kind_denom = max(1, kind_acc_cases)
+        path_denom = max(1, path_reach_cases)
         return {
             "benchmark": self.name,
             "total_samples": n,
@@ -305,6 +317,8 @@ class RCABenchProcesser(BaseMatchProcesser):
             "kind_accuracy_denom": kind_acc_cases,
             "avg_sql_executable_rate": round(sql_sum / denom, 4),
             "avg_evidence_support_rate": round(ev_support_sum / denom, 4),
+            "avg_path_reachability": round(path_reach_sum / path_denom, 4),
+            "path_reachability_denom": path_reach_cases,
             "avg_node_f1": round(node_f1_sum / denom, 4),
             "avg_edge_f1": round(edge_f1_sum / denom, 4),
             "parse_errors": parse_errors,

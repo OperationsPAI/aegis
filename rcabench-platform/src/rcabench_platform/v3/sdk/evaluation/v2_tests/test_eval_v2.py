@@ -26,6 +26,7 @@ from rcabench_platform.v3.sdk.evaluation.v2 import (
     MatchStatus,
     compute_graph_metrics,
     compute_outcome,
+    compute_path_reachability,
     evaluate_v2,
     extract_gt_faults,
     map_chaos_type,
@@ -461,12 +462,18 @@ def test_match_normalization_is_uniform_across_systems() -> None:
 # ──────────────────────────────────────────────────────────────────────
 
 
-def _gt_graph(nodes: list[str], edges: list[tuple[str, str]]) -> CausalGraph:
+def _gt_graph(
+    nodes: list[str],
+    edges: list[tuple[str, str]],
+    alarms: list[str] | None = None,
+) -> CausalGraph:
+    alarms = alarms or []
     return CausalGraph.from_dict(
         {
             "nodes": [{"component": n} for n in nodes],
             "edges": [{"source": s, "target": t} for s, t in edges],
-            "component_to_service": {n: n for n in nodes},
+            "alarm_nodes": [{"component": a} for a in alarms],
+            "component_to_service": {n: n for n in nodes + alarms},
         }
     )
 
@@ -508,6 +515,119 @@ def test_graph_metrics_no_gt_marks_inapplicable() -> None:
     gm = compute_graph_metrics(agent, None)
     assert gm.applicable is False
     assert gm.node_f1 == 0.0
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Path reachability (HIT root cause -> alarm service via agent edges)
+# ──────────────────────────────────────────────────────────────────────
+
+
+def test_path_reachability_hit_chains_to_alarm() -> None:
+    """HIT rc on `a`, agent edges a->b->c, alarm on `c` → reachable."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["a", "b", "c"], [("a", "b"), ("b", "c")], alarms=["c"])
+    agent = _agent(
+        [{"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[
+            {"from": "a", "to": "b", "evidence": [_DUMMY_EV]},
+            {"from": "b", "to": "c", "evidence": [_DUMMY_EV]},
+        ],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is True
+
+
+def test_path_reachability_hit_is_alarm_zero_length() -> None:
+    """HIT rc service is itself the alarm service (path length 0) → reachable."""
+    gt_faults = [GTFault(service="frontend", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["frontend"], [], alarms=["frontend"])
+    agent = _agent([{"service": "frontend", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is True
+
+
+def test_path_reachability_no_hit_returns_false() -> None:
+    """Agent never identifies a GT fault correctly → False even if propagation
+    happens to overlap GT edges. This is the anti-trivial-pass guarantee."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["a", "b", "c"], [("a", "b"), ("b", "c")], alarms=["c"])
+    agent = _agent(
+        [{"service": "x", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[
+            {"from": "a", "to": "b", "evidence": [_DUMMY_EV]},
+            {"from": "b", "to": "c", "evidence": [_DUMMY_EV]},
+        ],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is False
+
+
+def test_path_reachability_hit_but_disconnected() -> None:
+    """HIT rc on `a` but agent's edges don't lead to alarm `c`."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["a", "b", "c"], [("a", "b"), ("b", "c")], alarms=["c"])
+    agent = _agent(
+        [{"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[{"from": "a", "to": "b", "evidence": [_DUMMY_EV]}],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is False
+
+
+def test_path_reachability_one_of_many_hits_reaches_alarm() -> None:
+    """Two HITs; only one walks to an alarm. At-least-one semantics → True."""
+    gt_faults = [
+        GTFault(service="a", fault_kind=FaultKind.POD_FAILURE),
+        GTFault(service="z", fault_kind=FaultKind.POD_FAILURE),
+    ]
+    gt = _gt_graph(["a", "b", "c", "z"], [("a", "b"), ("b", "c")], alarms=["c"])
+    agent = _agent(
+        [
+            {"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
+            {"service": "z", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
+        ],
+        propagation=[
+            {"from": "a", "to": "b", "evidence": [_DUMMY_EV]},
+            {"from": "b", "to": "c", "evidence": [_DUMMY_EV]},
+        ],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is True
+
+
+def test_path_reachability_normalization() -> None:
+    """Service names normalize across `_` / `-` / case (matches matcher rules)."""
+    gt_faults = [GTFault(service="cart-svc", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(
+        ["cart-svc", "checkout_svc", "Frontend"],
+        [("cart-svc", "checkout_svc"), ("checkout_svc", "Frontend")],
+        alarms=["Frontend"],
+    )
+    agent = _agent(
+        [{"service": "CartSvc", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[
+            {"from": "cart_svc", "to": "checkout-svc", "evidence": [_DUMMY_EV]},
+            {"from": "checkoutsvc", "to": "frontend", "evidence": [_DUMMY_EV]},
+        ],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is True
+
+
+def test_path_reachability_no_gt_graph_is_none() -> None:
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    agent = _agent([{"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, None) is None
+
+
+def test_path_reachability_no_alarm_services_is_none() -> None:
+    """GT graph exists but declares no alarms → metric not gradeable, return None."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["a", "b"], [("a", "b")], alarms=[])
+    agent = _agent([{"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is None
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -862,14 +982,14 @@ def test_evidence_judge_no_response_format_param() -> None:
 
 def test_calculate_metrics_aggregation() -> None:
     """5 stub samples → aggregator divides by total n=5, except
-    ``avg_fault_kind_accuracy`` which uses ``kind_accuracy_denom`` (cases
-    that actually had service-correct rcs to grade).
+    ``avg_fault_kind_accuracy`` (uses ``kind_accuracy_denom``) and
+    ``avg_path_reachability`` (uses ``path_reachability_denom``).
 
     Sample mix:
-      [0] perfect      f1=1.0  exact=True  kind_acc=1.0  sql=1.0  ev_support=1.0
-      [1] partial      f1=0.5  exact=False kind_acc=0.5  sql=0.8  ev_support=0.6
-      [2] parse-err    zeros + parse_error=True (kind_acc=None → excluded)
-      [3] judge-fail   f1=1.0  ev_support=0.0  n_evidence_judge_failed=1
+      [0] perfect      f1=1.0  exact=True  kind_acc=1.0  sql=1.0  ev_support=1.0  path=True
+      [1] partial      f1=0.5  exact=False kind_acc=0.5  sql=0.8  ev_support=0.6  path=False
+      [2] parse-err    zeros + parse_error=True (kind_acc=None, path=None → both excluded)
+      [3] judge-fail   f1=1.0  ev_support=0.0  n_evidence_judge_failed=1        path=True
       [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}
     """
     from rcabench_platform.v3.sdk.llm_eval.eval.processer.rcabench import RCABenchProcesser
@@ -892,6 +1012,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "evidence_support_rate": 1.0,
                     "node_f1": 1.0,
                     "edge_f1": 1.0,
+                    "path_reachability": True,
                     "n_evidence_judge_failed": 0,
                     "per_evidence": [{}],
                 }
@@ -910,6 +1031,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "evidence_support_rate": 0.6,
                     "node_f1": 0.4,
                     "edge_f1": 0.2,
+                    "path_reachability": False,
                     "n_evidence_judge_failed": 0,
                     "per_evidence": [{}],
                 }
@@ -928,6 +1050,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "evidence_support_rate": 0.0,
                     "node_f1": 0.0,
                     "edge_f1": 0.0,
+                    "path_reachability": None,
                     "n_evidence_judge_failed": 0,
                     "parse_error": "bad json",
                     "per_evidence": [],
@@ -947,6 +1070,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "evidence_support_rate": 0.0,
                     "node_f1": 1.0,
                     "edge_f1": 1.0,
+                    "path_reachability": True,
                     "n_evidence_judge_failed": 1,
                     "per_evidence": [{}],
                 }
@@ -977,3 +1101,6 @@ def test_calculate_metrics_aggregation() -> None:
     # fault_kind_accuracy excludes the parse-err case (denom=0); 3 cases contribute.
     assert metrics["kind_accuracy_denom"] == 3
     assert metrics["avg_fault_kind_accuracy"] == round((1.0 + 0.5 + 1.0) / 3, 4)
+    # path_reachability excludes the parse-err case (None); 3 cases contribute, 2 reachable.
+    assert metrics["path_reachability_denom"] == 3
+    assert metrics["avg_path_reachability"] == round(2 / 3, 4)

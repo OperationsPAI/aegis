@@ -14,7 +14,7 @@
 | `schema.py` | Agent 输出契约 `AgentRCAOutput`：`root_causes` + `propagation`，每条 `RootCauseClaim` 至少 1 条 evidence |
 | `ground_truth.py` | 从 `injection.json` 提取 `GTFault` 列表（`service` + `fault_kind`，`direction_*` / `method` 仍保留为可选诊断字段，但**不再参与判定**） |
 | `fault_kind.py` | 26 类故障枚举 + `chaos_type` 映射 |
-| `matcher.py` | 单层 `(service, fault_kind)` 多重集匹配 → P/R/F1、`exact_match`、`fault_kind_accuracy`；服务级 `node_f1` / `edge_f1` |
+| `matcher.py` | 单层 `(service, fault_kind)` 多重集匹配 → P/R/F1、`exact_match`、`fault_kind_accuracy`；服务级 `node_f1` / `edge_f1`；`path_reachability`（HIT 根因→GT alarm 服务在 agent propagation 上是否可达） |
 | `sql_verify.py` | DuckDB 在 case 的 parquet 目录上 re-run 每条 evidence SQL（机械验证：能跑、有行） |
 | `chain_judge.py` | LLM-as-judge：**逐 evidence** 判定 "SQL 行集合是否支撑 claim 且整条链不断裂" |
 | `evaluator.py` | 串起以上五步，组合 `EvaluationResultV2` |
@@ -63,8 +63,9 @@ HIT  ⇔  service_match(rc, gt) and rc.fault_kind == gt.fault_kind
 | `evidence_support_rate` | **case 内**先按 evidence 取均值（每条 evidence judge 出 0/1），**再**在 benchmark 维度按 case 取均值 | claim 与 SQL 行集合 + chain 连贯性 |
 | `node_f1` | agent 服务集合 vs `causal_graph.json` 服务集合的 F1（含 root_cause + propagation 端点） | 传播图节点完整性 |
 | `edge_f1` | agent propagation `(from, to)` 集合 vs GT 边集合的 F1 | 传播图边完整性 |
+| `path_reachability` | 二值：是否存在某个 **HIT** 的 `agent.root_causes[i]`，其 `service` 沿 agent 自报的 `propagation` 边能走到 `causal_graph.alarm_nodes` 对应的某个服务（路径长度 0 也算）。无 HIT 即 0；GT 无 causal_graph 或无 alarm 服务时记 None，从均值剔除（用 `path_reachability_denom` 子分母） | 至少一条根因→告警的因果链是连通的（补 `edge_f1` 看不出连通性的盲区） |
 
-聚合维度（在 `RCABenchProcesser.calculate_metrics`）一律对**全部样本**取算术平均，分母 = `total_samples`，**`fault_kind_accuracy` 例外**（剔除分母为 0 的 case，单独跟踪 `kind_accuracy_denom`）。parse 失败 / 缺 case dir 的样本对其他指标计 0 进平均，避免高 JSON 失败率的 agent 偷分。
+聚合维度（在 `RCABenchProcesser.calculate_metrics`）一律对**全部样本**取算术平均，分母 = `total_samples`，**`fault_kind_accuracy` 与 `path_reachability` 例外**（前者剔除分母为 0 的 case，单独跟踪 `kind_accuracy_denom`；后者剔除无 GT 图 / 无 alarm 服务的 case，单独跟踪 `path_reachability_denom`）。parse 失败 / 缺 case dir 的样本对其他指标计 0 进平均，避免高 JSON 失败率的 agent 偷分。
 
 `evidence_support_rate` 的双层平均（case 内→benchmark）让 evidence 多的 case 不会权重碾压其他 case。case 内全部 evidence judge 都失败时，该 case 该指标记 0 计入 benchmark 均值；**单条 evidence 的 judge 失败不污染其他 evidence 的得分**（粒度收到 evidence 级，比旧版 chain 级容错好）。
 
