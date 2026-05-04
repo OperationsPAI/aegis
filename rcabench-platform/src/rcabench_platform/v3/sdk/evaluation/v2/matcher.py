@@ -16,7 +16,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from ..causal_graph import CausalGraph
-from .fault_kind import FaultKind
+from .fault_kind import NETWORK_KINDS, FaultKind
 from .ground_truth import GTFault
 from .schema import AgentRCAOutput, RootCauseClaim
 
@@ -87,8 +87,26 @@ def _service_eq(a: str | None, b: str | None) -> bool:
     return _norm(a) == _norm(b) and bool(_norm(a))
 
 
+def _gt_service_candidates(gt: GTFault) -> list[str]:
+    """Service names that count as "the right side" for this GT fault.
+
+    Network-class faults (netem rules) install on one end but the latency /
+    drop signal shows on both — the agent can't tell which side has the rule
+    from telemetry alone, so we accept either ``direction_src`` or
+    ``direction_dst``. All other kinds stick to the single GT.service.
+    """
+    if gt.fault_kind in NETWORK_KINDS:
+        out = [gt.service]
+        if gt.direction_src and gt.direction_src != gt.service:
+            out.append(gt.direction_src)
+        if gt.direction_dst and gt.direction_dst != gt.service:
+            out.append(gt.direction_dst)
+        return out
+    return [gt.service]
+
+
 def _evaluate_pair(rc: RootCauseClaim, gt: GTFault) -> MatchStatus:
-    if not _service_eq(rc.service, gt.service):
+    if not any(_service_eq(rc.service, c) for c in _gt_service_candidates(gt)):
         return MatchStatus.MISS
     if rc.fault_kind != gt.fault_kind:
         return MatchStatus.WRONG_KIND

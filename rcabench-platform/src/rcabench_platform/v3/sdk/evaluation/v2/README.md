@@ -40,14 +40,15 @@ injection.json ─→ list[GTFault]         (无 GT → parse_error)
 把每个 agent root_cause 和每个 GT fault 提炼成 `(service, fault_kind)` 二元组：
 
 ```python
-HIT  ⇔  _service_eq(rc.service, gt.service) and rc.fault_kind == gt.fault_kind
+HIT  ⇔  service_match(rc, gt) and rc.fault_kind == gt.fault_kind
 ```
 
 - **服务名归一化**：小写、去 `-` 与 `_`，避免命名风格抖动。
+- **网络类故障两端皆可命中**：`gt.fault_kind ∈ NETWORK_KINDS`（6 类 L3/L4 netem：delay / loss / partition / corrupt / duplicate / bandwidth）时，agent 报 `direction_src` 或 `direction_dst` 任一端都算服务匹配。理由：netem 规则装在哪一端从 trace/metrics 看不出来（双侧 RTT/丢包都能观测到），归因到任一端都合理。**HTTP 类、JVM 类、Pod / 资源 / DNS / 时钟等仍走严格 `_service_eq(rc.service, gt.service)`** ——这些故障的 span 直接挂在装规则的 service 上，归因明确。
 - **不再检查 direction、method、confidence**——这些字段允许出现在 agent 输出里（schema 不强制移除），但**不影响匹配**。
-  - 旧版 `WRONG_DIRECTION` / `WRONG_KIND` / 三层评分全部废弃，匹配状态收敛为二值 `HIT` / `MISS`。
-  - 网络故障的方向信息变为**纯诊断字段**：写在 `FaultMatchResult` 里方便排错，但不再参与得分。
-- 多故障 case：贪心一对一分配（每个 agent_rc 和每个 gt_fault 各只能用一次）。剩下的 agent_rc 是多报，剩下的 gt_fault 是漏报。
+  - 旧版 `WRONG_DIRECTION` / 三层评分全部废弃，匹配状态收敛为 `HIT` / `WRONG_KIND` / `MISS`。
+  - 网络故障的 `direction.src/dst` 仅作为**诊断字段**写在 `FaultMatchResult`，不参与得分；同时也作为"两端可命中"的候选服务集来源（仅对 NETWORK_KINDS 生效）。
+- 多故障 case：贪心一对一分配（每个 agent_rc 和每个 gt_fault 各只能用一次）。剩下的 agent_rc 是多报，剩下的 gt_fault 是漏报。多故障的 `exact_match` 仍要求多重集严格相等（`n_hit == n_agent == n_gt`），网络两端可命中只放宽单条匹配，不放宽 multiset 完整性。
 
 ## Headline 指标（每个 case 独立计算，benchmark 维度做平均）
 

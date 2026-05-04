@@ -235,6 +235,129 @@ def test_match_network_no_direction_still_hits() -> None:
     assert out.per_fault[0].status is MatchStatus.HIT
 
 
+def test_match_network_either_end_hits() -> None:
+    """Network kind: agent may report either direction_src OR direction_dst.
+
+    Rationale: netem rule sits on one side but RTT/drops show on both — from
+    spans alone you can't tell which side is patched, so either end counts.
+    """
+    gt = [
+        GTFault(
+            service="shipping",
+            fault_kind=FaultKind.NETWORK_DELAY,
+            direction_src="shipping",
+            direction_dst="quote",
+        )
+    ]
+    # Reporting the dst end (quote) — must HIT under the relaxation.
+    agent_dst = _agent(
+        [{"service": "quote", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]}],
+    )
+    out = compute_outcome(agent_dst, gt)
+    assert out.per_fault[0].status is MatchStatus.HIT
+    assert out.f1 == 1.0
+    assert out.exact_match is True
+
+    # Reporting the src end (shipping) — also HIT (same as before).
+    agent_src = _agent(
+        [{"service": "shipping", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]}],
+    )
+    assert compute_outcome(agent_src, gt).per_fault[0].status is MatchStatus.HIT
+
+    # A third unrelated service — still MISS.
+    agent_other = _agent(
+        [{"service": "frontend", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]}],
+    )
+    assert compute_outcome(agent_other, gt).per_fault[0].status is MatchStatus.MISS
+
+
+def test_match_network_both_ends_overclaims() -> None:
+    """Reporting BOTH ends of a single network GT: one HIT + one overclaim.
+
+    Multiset-exact stays strict — ``exact_match`` falls because n_agent > n_gt.
+    """
+    gt = [
+        GTFault(
+            service="shipping",
+            fault_kind=FaultKind.NETWORK_DELAY,
+            direction_src="shipping",
+            direction_dst="quote",
+        )
+    ]
+    agent = _agent(
+        [
+            {"service": "shipping", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]},
+            {"service": "quote", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]},
+        ]
+    )
+    out = compute_outcome(agent, gt)
+    assert out.recall == 1.0
+    assert out.precision == 0.5
+    assert out.exact_match is False
+    assert len(out.overclaim_indices) == 1
+
+
+def test_match_network_relaxation_does_not_apply_to_http() -> None:
+    """HTTP / JVM / Pod / DNS / time stay strict — only the 6 NETWORK_KINDS
+    accept either-end matching. A peer-service guess on HTTP is a MISS."""
+    gt = [
+        GTFault(
+            service="shipping",
+            fault_kind=FaultKind.HTTP_ABORTED,
+            # direction_dst left None — _new_format_faults only fills it for
+            # NETWORK_KINDS, but we set service-level both fields here just to
+            # prove the matcher is gated by fault_kind, not by what's filled.
+            direction_src="shipping",
+            direction_dst="quote",
+        )
+    ]
+    agent = _agent(
+        [{"service": "quote", "fault_kind": "http_aborted", "evidence": [_DUMMY_EV]}],
+    )
+    assert compute_outcome(agent, gt).per_fault[0].status is MatchStatus.MISS
+
+
+def test_match_network_multi_fault_still_requires_full_recall() -> None:
+    """Two network GTs: agent must hit both (on either end of each) for exact_match.
+
+    Greedy 1-1 means the same agent_rc can't satisfy two GTs even when its
+    service appears in both.
+    """
+    gt = [
+        GTFault(
+            service="shipping",
+            fault_kind=FaultKind.NETWORK_DELAY,
+            direction_src="shipping",
+            direction_dst="quote",
+        ),
+        GTFault(
+            service="payment",
+            fault_kind=FaultKind.NETWORK_LOSS,
+            direction_src="payment",
+            direction_dst="quote",
+        ),
+    ]
+    # Agent reports quote twice with the right kinds — each consumes one GT.
+    agent = _agent(
+        [
+            {"service": "quote", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]},
+            {"service": "quote", "fault_kind": "network_loss", "evidence": [_DUMMY_EV]},
+        ]
+    )
+    out = compute_outcome(agent, gt)
+    assert out.recall == 1.0
+    assert out.precision == 1.0
+    assert out.exact_match is True
+
+    # Single agent_rc on `quote` cannot cover both — only one GT pairs.
+    agent_one = _agent(
+        [{"service": "quote", "fault_kind": "network_delay", "evidence": [_DUMMY_EV]}],
+    )
+    out_one = compute_outcome(agent_one, gt)
+    assert out_one.recall == 0.5
+    assert out_one.exact_match is False
+
+
 def test_match_partial_hybrid() -> None:
     """Hybrid GT (2 faults). Agent gets one right + an unrelated overclaim."""
     gt = [
