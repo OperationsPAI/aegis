@@ -129,14 +129,21 @@ of an unrelated baseline drift coinciding with the chaos start.
 """
 
 INJECT_NODE_PRE_GRACE_SECONDS: int = 5
-"""Pre-injection slack applied **only to the injection node**.
+"""Pre-injection slack applied to the injection node.
 
 Absorbs NTP-bounded clock skew between the chaos control plane and trace
 timestamps for the very first onset on the injection node — the node where
 chaos-mesh observed the fault and our pipeline observed the cascade may
-disagree by a few seconds even on synchronised infrastructure. Downstream
-nodes do not need this grace because their onsets are gated by the source
-onset via the temporal admission rule.
+disagree by a few seconds even on synchronised infrastructure.
+"""
+
+DOWNSTREAM_NODE_PRE_GRACE_SECONDS: int = 5
+"""Pre-injection slack applied to non-root path nodes.
+
+Downstream span onsets can be bucketed a few seconds before the abnormal
+window even when the request continues through the injected interval. Keep
+this deliberately small so we absorb timestamp/bucket boundary jitter without
+admitting unrelated pre-injection drift.
 """
 
 

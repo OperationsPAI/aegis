@@ -1,10 +1,11 @@
-"""InjectTimeGate: every picked onset lies within [t0, t0 + Δt + τ]."""
+"""InjectTimeGate: every picked onset lies near the injection window."""
 
 from __future__ import annotations
 
 from rcabench_platform.v3.internal.reasoning.algorithms.gates.base import GateContext, GateResult
 from rcabench_platform.v3.internal.reasoning.algorithms.path_builder import CandidatePath
 from rcabench_platform.v3.internal.reasoning.algorithms.policy import (
+    DOWNSTREAM_NODE_PRE_GRACE_SECONDS,
     INJECT_NODE_PRE_GRACE_SECONDS,
     INJECT_TIME_TOLERANCE_SECONDS,
 )
@@ -16,16 +17,17 @@ __all__ = [
     "InjectTimeGate",
     "INJECT_TIME_TOLERANCE_SECONDS",
     "INJECT_NODE_PRE_GRACE_SECONDS",
+    "DOWNSTREAM_NODE_PRE_GRACE_SECONDS",
 ]
 
 
 class InjectTimeGate:
     """Picked onsets must lie within the injection window.
 
-    The injection node itself gets a small pre-injection grace
-    (``INJECT_NODE_PRE_GRACE_SECONDS``) to absorb clock skew between the
-    chaos control plane and trace timestamps. Downstream nodes must lie
-    fully within ``[t0, t0 + Δt + τ]``.
+    Path nodes get a small pre-injection grace to absorb clock skew and
+    timestamp bucket boundaries between the chaos control plane, traces, and
+    metrics. The downstream grace is deliberately small; the upper-bound
+    tolerance still covers late propagation.
     """
 
     name = "inject_time"
@@ -38,7 +40,8 @@ class InjectTimeGate:
         for i, nid in enumerate(path.node_ids):
             onset = path.picked_state_start_times[i]
             is_injection = nid in injection_ids
-            lower = t0 - INJECT_NODE_PRE_GRACE_SECONDS if is_injection else t0
+            pre_grace = INJECT_NODE_PRE_GRACE_SECONDS if is_injection else DOWNSTREAM_NODE_PRE_GRACE_SECONDS
+            lower = t0 - pre_grace
             in_window = lower <= onset <= t_end
             if not in_window:
                 all_pass = False
@@ -48,6 +51,7 @@ class InjectTimeGate:
                     "node_id": nid,
                     "onset": onset,
                     "is_injection": is_injection,
+                    "pre_grace_seconds": pre_grace,
                     "lower_bound": lower,
                     "upper_bound": t_end,
                     "in_window": in_window,
