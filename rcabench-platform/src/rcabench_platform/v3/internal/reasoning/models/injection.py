@@ -436,6 +436,19 @@ class InjectionMetadata(BaseModel):
         )
 
 
+class ResolvedRootCandidate(BaseModel):
+    """One resolved root candidate for single- or multi-fault injections."""
+
+    node: str
+    root_group_id: int | None = None
+    start_kind: str
+    category: str
+    fault_category: str
+    fault_type_name: str
+    resolution_method: str
+    expected_state: str | None = None
+
+
 class ResolvedInjection(BaseModel):
     """Result of injection node resolution."""
 
@@ -447,6 +460,7 @@ class ResolvedInjection(BaseModel):
     fault_type_name: str  # Human-readable fault type name
     resolution_method: str  # How the resolution was done (for debugging)
     injection_point: InjectionPoint | None = None  # Original injection point config for downstream use
+    root_candidates: list[ResolvedRootCandidate] = Field(default_factory=list)
 
 
 class InjectionNodeResolver:
@@ -480,7 +494,90 @@ class InjectionNodeResolver:
         Returns:
             ResolvedInjection with injection nodes and metadata
         """
+        hybrid = self._resolve_hybrid(injection_data)
+        if hybrid is not None:
+            return hybrid
+
         metadata = InjectionMetadata.from_injection_json(injection_data)
+        return self._with_root_candidates(self._resolve_metadata(metadata))
+
+    def _resolve_hybrid(self, injection_data: dict) -> ResolvedInjection | None:
+        """Resolve list-shaped hybrid injections one leg at a time.
+
+        AegisLab hybrid datapacks align ``engine_config[i]`` with
+        ``ground_truth[i]``. Treating only ``engine_config[0]`` drops the
+        remaining roots, so each leg is fed through the existing single-fault
+        resolver and exported as an explicit root candidate.
+        """
+        engine_config = injection_data.get("engine_config")
+        engine_entries = list(engine_config) if isinstance(engine_config, list) else []
+        gt_raw = injection_data.get("ground_truth")
+        gt_entries = [e for e in gt_raw if isinstance(e, dict)] if isinstance(gt_raw, list) else []
+        raw_fault_type = injection_data.get("fault_type")
+
+        valid_engine_indices = [
+            idx
+            for idx, entry in enumerate(engine_entries)
+            if isinstance(entry, dict) and isinstance(entry.get("chaos_type"), str) and entry.get("chaos_type")
+        ]
+
+        is_hybrid = raw_fault_type == "hybrid" or len(valid_engine_indices) > 1 or len(gt_entries) > 1
+        if not is_hybrid:
+            return None
+
+        if raw_fault_type == "hybrid" and not valid_engine_indices:
+            return ResolvedInjection(
+                injection_nodes=[],
+                start_kind="service",
+                category="hybrid",
+                fault_category="hybrid",
+                fault_type_name="hybrid",
+                resolution_method="hybrid_no_engine_entries",
+                root_candidates=[],
+            )
+
+        # Ground-truth rows describe expected roots, but only engine entries
+        # describe executable fault legs. If stale datapacks contain extra GT
+        # rows, do not fabricate an "Unknown" hybrid leg from them.
+        if len(valid_engine_indices) <= 1 and not (raw_fault_type == "hybrid" and len(gt_entries) > 1):
+            return None
+
+        candidates: list[ResolvedRootCandidate] = []
+        resolved_nodes: list[str] = []
+        seen_nodes: set[str] = set()
+
+        for idx in valid_engine_indices:
+            leg_data = dict(injection_data)
+            engine = engine_entries[idx]
+            leg_data["engine_config"] = [engine]
+            leg_data["display_config"] = ""
+            leg_data["fault_type"] = engine["chaos_type"]
+            if idx < len(gt_entries):
+                leg_data["ground_truth"] = gt_entries[idx]
+            else:
+                leg_data["ground_truth"] = {}
+
+            leg = self._with_root_candidates(self._resolve_metadata(InjectionMetadata.from_injection_json(leg_data)))
+            candidates.extend(candidate.model_copy(update={"root_group_id": idx}) for candidate in leg.root_candidates)
+            for node in leg.injection_nodes:
+                if node not in seen_nodes:
+                    resolved_nodes.append(node)
+                    seen_nodes.add(node)
+
+        fault_types = sorted({c.fault_type_name for c in candidates if c.fault_type_name})
+        first = candidates[0] if candidates else None
+        return ResolvedInjection(
+            injection_nodes=resolved_nodes,
+            start_kind=first.start_kind if first else "service",
+            category=first.category if first else "hybrid",
+            fault_category=first.fault_category if first else "hybrid",
+            fault_type_name=first.fault_type_name if first else "hybrid",
+            resolution_method=f"hybrid[{','.join(fault_types)}]",
+            root_candidates=candidates,
+        )
+
+    def _resolve_metadata(self, metadata: InjectionMetadata) -> ResolvedInjection:
+        """Resolve one already-parsed fault descriptor."""
         fault_type = metadata.fault_type
         category = FAULT_TYPE_CATEGORIES.get(fault_type, "service")
         fault_category = get_fault_category(fault_type, category)
@@ -556,6 +653,35 @@ class InjectionNodeResolver:
 
         elif category == "network":
             nodes, method = self._resolve_network(point, metadata)
+            root_candidates = []
+            gt_services = [s for s in metadata.ground_truth_services if s not in EXTERNAL_SERVICE_NAMES]
+            if len(gt_services) >= 2:
+                root_candidates = [
+                    ResolvedRootCandidate(
+                        node=f"service|{service}",
+                        start_kind="service",
+                        category=category,
+                        fault_category=fault_category,
+                        fault_type_name=metadata.fault_type_name,
+                        resolution_method=f"network_ground_truth_{point.direction or 'unknown'}",
+                        expected_state=self._expected_seed_state("service", metadata.fault_type_name),
+                    )
+                    for service in gt_services
+                ]
+                seen_root_candidate_nodes = {candidate.node for candidate in root_candidates}
+                root_candidates.extend(
+                    ResolvedRootCandidate(
+                        node=node,
+                        start_kind="service",
+                        category=category,
+                        fault_category=fault_category,
+                        fault_type_name=metadata.fault_type_name,
+                        resolution_method=method,
+                        expected_state=self._expected_seed_state("service", metadata.fault_type_name),
+                    )
+                    for node in nodes
+                    if node not in seen_root_candidate_nodes
+                )
             return ResolvedInjection(
                 injection_nodes=nodes,
                 start_kind="service",
@@ -564,6 +690,7 @@ class InjectionNodeResolver:
                 fault_type_name=metadata.fault_type_name,
                 resolution_method=method,
                 injection_point=point,
+                root_candidates=root_candidates,
             )
 
         elif category == "dns":
@@ -602,6 +729,37 @@ class InjectionNodeResolver:
                 resolution_method=method,
                 injection_point=point,
             )
+
+    def _with_root_candidates(self, resolved: ResolvedInjection) -> ResolvedInjection:
+        if resolved.root_candidates:
+            return resolved
+        candidates = [
+            ResolvedRootCandidate(
+                node=node,
+                start_kind=resolved.start_kind,
+                category=resolved.category,
+                fault_category=resolved.fault_category,
+                fault_type_name=resolved.fault_type_name,
+                resolution_method=resolved.resolution_method,
+                expected_state=self._expected_seed_state(resolved.start_kind, resolved.fault_type_name),
+            )
+            for node in resolved.injection_nodes
+        ]
+        return resolved.model_copy(update={"root_candidates": candidates})
+
+    @staticmethod
+    def _expected_seed_state(start_kind: str, fault_type_name: str) -> str | None:
+        from rcabench_platform.v3.internal.reasoning.models.fault_seed import (
+            START_KIND_TO_PLACE_KIND,
+            canonical_seed_tier,
+            pick_canonical_state,
+        )
+
+        kind = START_KIND_TO_PLACE_KIND.get(start_kind)
+        if kind is None:
+            return None
+        tier, _known = canonical_seed_tier(fault_type_name)
+        return pick_canonical_state(kind, tier)
 
     def _resolve_http_span(
         self,
@@ -961,18 +1119,36 @@ class InjectionNodeResolver:
         # outgoing edges (e.g. a callee whose primary out-edges are k8s
         # structural rather than ``calls``). The other end provides the
         # caller-perceptible expansion surface.
-        gt_services = [s for s in metadata.ground_truth_services if self.graph.get_node_by_name(f"service|{s}")]
-        if len(gt_services) >= 2:
+        gt_services = [s for s in metadata.ground_truth_services if s not in EXTERNAL_SERVICE_NAMES]
+        gt_services_in_graph = [s for s in gt_services if self.graph.get_node_by_name(f"service|{s}")]
+        if len(gt_services) >= 2 and len(gt_services_in_graph) == len(gt_services):
+            resolved_nodes = [f"service|{s}" for s in gt_services_in_graph]
+            # Preserve the physical engine-config endpoint even when the GT
+            # endpoints are graph-resolvable. Stale GT can point at plausible
+            # neighbors, but the source/target is the executable injection leg.
+            for service in (source, target):
+                if service and self.graph.get_node_by_name(f"service|{service}"):
+                    node_name = f"service|{service}"
+                    if node_name not in resolved_nodes:
+                        resolved_nodes.append(node_name)
             return (
-                [f"service|{s}" for s in gt_services],
+                resolved_nodes,
                 f"network_ground_truth_{direction or 'unknown'}",
             )
+
+        physical_endpoint_nodes: list[str] = []
+        for service in (source, target):
+            if service and self.graph.get_node_by_name(f"service|{service}"):
+                node_name = f"service|{service}"
+                if node_name not in physical_endpoint_nodes:
+                    physical_endpoint_nodes.append(node_name)
 
         # Check if source exists in graph
         if source:
             source_node = self.graph.get_node_by_name(f"service|{source}")
             if source_node:
-                return [f"service|{source}"], f"network_source_{direction or 'unknown'}"
+                nodes = physical_endpoint_nodes if len(gt_services) >= 2 else [f"service|{source}"]
+                return nodes, f"network_source_{direction or 'unknown'}"
 
             # Source not in graph (e.g., external mysql/redis)
             # Use target instead since it's the internal service affected
@@ -980,11 +1156,18 @@ class InjectionNodeResolver:
             if target:
                 target_node = self.graph.get_node_by_name(f"service|{target}")
                 if target_node:
-                    return [f"service|{target}"], f"network_target_{direction or 'unknown'}_source_external"
+                    nodes = physical_endpoint_nodes or [f"service|{target}"]
+                    return nodes, f"network_target_{direction or 'unknown'}_source_external"
+
+        if physical_endpoint_nodes and len(gt_services) >= 2:
+            return physical_endpoint_nodes, f"network_physical_endpoint_{direction or 'unknown'}"
 
         # Fallback to ground_truth services, excluding external services
         if metadata.ground_truth_services:
             internal_services = [s for s in metadata.ground_truth_services if s not in EXTERNAL_SERVICE_NAMES]
+            graph_services = [s for s in internal_services if self.graph.get_node_by_name(f"service|{s}")]
+            if graph_services:
+                return [f"service|{graph_services[0]}"], "fallback_to_internal_service"
             if internal_services:
                 return [f"service|{internal_services[0]}"], "fallback_to_internal_service"
             # If only external services exist, use the first one anyway

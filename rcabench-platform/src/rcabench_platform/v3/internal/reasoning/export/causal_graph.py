@@ -41,10 +41,16 @@ def _sync_injection_states_from_root_causes(result: PropagationResult, causal_gr
     if not causal_graph.root_causes:
         return
 
-    target_len = max(len(result.injection_node_ids), len(causal_graph.root_causes), len(result.injection_states))
+    target_len = len(causal_graph.root_causes)
     states = list(result.injection_states)
     if len(states) < target_len:
         states.extend([_UNKNOWN_STATE] * (target_len - len(states)))
+    else:
+        states = states[:target_len]
+
+    aligned_injection_node_ids = [
+        root.injection_node_id if root.injection_node_id is not None else -1 for root in causal_graph.root_causes
+    ]
 
     reasons: list[str | None] = [None] * target_len
     details: list[dict[str, Any]] = []
@@ -60,7 +66,7 @@ def _sync_injection_states_from_root_causes(result: PropagationResult, causal_gr
         reasons[idx] = reason
         details.append(
             {
-                "injection_node_id": result.injection_node_ids[idx] if idx < len(result.injection_node_ids) else None,
+                "injection_node_id": aligned_injection_node_ids[idx] if idx < len(aligned_injection_node_ids) else None,
                 "component": root.component,
                 "canonical_state": states[idx],
                 "root_cause_states": sorted(root.state),
@@ -73,6 +79,7 @@ def _sync_injection_states_from_root_causes(result: PropagationResult, causal_gr
             reasons[idx] = "root_resolved_from_metadata_only"
 
     result.injection_states = states[:target_len]
+    result.injection_node_ids = aligned_injection_node_ids
     result.injection_state_reasons = reasons[:target_len]
     result.injection_state_details = details
 
@@ -105,9 +112,14 @@ def _causal_graph_with_export_metadata(
         "candidate_alarm_nodes": alarm_accounting.get("candidate_alarm_nodes", []),
         "explained_alarm_nodes": alarm_accounting.get("explained_alarm_nodes", []),
         "unexplained_alarm_nodes": alarm_accounting.get("unexplained_alarm_nodes", []),
+        "candidate_alarm_node_ids": alarm_accounting.get("candidate_alarm_node_ids", []),
+        "explained_alarm_node_ids": alarm_accounting.get("explained_alarm_node_ids", []),
+        "unexplained_alarm_node_ids": alarm_accounting.get("unexplained_alarm_node_ids", []),
         "candidate_alarm_count": alarm_accounting.get("candidate_alarm_count", 0),
         "explained_alarm_count": alarm_accounting.get("explained_alarm_count", 0),
         "unexplained_alarm_count": alarm_accounting.get("unexplained_alarm_count", 0),
+        "path_terminal_alarm_count": len(causal_graph.path_terminal_alarm_nodes),
+        "path_terminal_alarm_node_ids": causal_graph.path_terminal_alarm_node_ids,
         "candidate_strong_alarm_count": alarm_accounting.get("candidate_strong_alarm_count", 0),
         "explained_strong_alarm_count": alarm_accounting.get("explained_strong_alarm_count", 0),
         "unexplained_strong_alarm_count": alarm_accounting.get("unexplained_strong_alarm_count", 0),
@@ -118,6 +130,16 @@ def _causal_graph_with_export_metadata(
     if resolution_info:
         update["fault_type"] = resolution_info.get("fault_type")
         update["root_resolution_method"] = resolution_info.get("resolution_method")
+        if resolution_info.get("fault_types"):
+            update["fault_types"] = list(resolution_info.get("fault_types") or [])
+            if len(update["fault_types"]) > 1:
+                update["fault_type"] = "hybrid"
+        if resolution_info.get("root_candidates"):
+            update["root_candidates"] = [
+                dict(candidate)
+                for candidate in resolution_info.get("root_candidates") or []
+                if isinstance(candidate, dict) and candidate.get("node")
+            ]
     return causal_graph.model_copy(update=update)
 
 
@@ -125,36 +147,197 @@ def _resolve_root_causal_node(
     component: str,
     graph_nodes: list[CausalNode],
     fallback_states: frozenset[str],
+    graph: HyperGraph | None = None,
+    *,
+    fault_type: str | None = None,
+    root_candidate_index: int | None = None,
+    resolution_method: str | None = None,
+    injection_node_id: int | None = None,
+    prefer_fallback_state: bool = False,
 ) -> CausalNode:
-    matching_nodes = [node for node in graph_nodes if node.component == component]
-    stateful_nodes = [
-        node
-        for node in matching_nodes
-        if node.state and node.state != frozenset({_UNKNOWN_STATE}) and node.state != frozenset({"UNKNOWN"})
-    ]
-    if stateful_nodes:
+    graph_node = graph.get_node_by_name(component) if graph is not None else None
+
+    def _with_root_metadata(update: dict[str, Any]) -> CausalNode:
+        return CausalNode(
+            **update,
+            fault_type=fault_type,
+            root_candidate_index=root_candidate_index,
+            root_resolution_method=resolution_method,
+            injection_node_id=injection_node_id,
+        )
+
+    def _stateful_nodes_for(components: list[str]) -> list[CausalNode]:
+        wanted = set(components)
+        return [
+            node
+            for node in graph_nodes
+            if node.component in wanted
+            and node.state
+            and node.state != frozenset({_UNKNOWN_STATE})
+            and node.state != frozenset({"UNKNOWN"})
+            and _primary_export_state(node.state) is not None
+        ]
+
+    def _causal_node_from_stateful(component_name: str, stateful_nodes: list[CausalNode]) -> CausalNode:
         unioned_state: set[str] = set()
         timestamps: list[int] = []
         for node in stateful_nodes:
             unioned_state.update(s for s in node.state if s.lower() != _UNKNOWN_STATE)
             if node.timestamp is not None:
                 timestamps.append(node.timestamp)
-        return CausalNode(
-            component=component,
-            timestamp=min(timestamps) if timestamps else None,
-            state=frozenset(unioned_state) if unioned_state else fallback_states,
+        return _with_root_metadata(
+            {
+                "component": component_name,
+                "timestamp": min(timestamps) if timestamps else None,
+                "state": frozenset(unioned_state) if unioned_state else fallback_states,
+            }
         )
 
     concrete_fallback = frozenset(s for s in fallback_states if s.lower() != _UNKNOWN_STATE)
-    if concrete_fallback:
-        return CausalNode(component=component, state=concrete_fallback)
+    if prefer_fallback_state and concrete_fallback and graph_node is not None:
+        return _with_root_metadata({"component": component, "state": concrete_fallback})
 
-    reason = "no_stateful_graph_node" if matching_nodes else "root_component_not_in_causal_graph"
-    return CausalNode(
-        component=component,
-        state=frozenset({_UNKNOWN_STATE}),
-        state_resolution_reason=reason,
+    matching_nodes = [node for node in graph_nodes if node.component == component]
+    stateful_nodes = _stateful_nodes_for([component])
+    if stateful_nodes:
+        return _causal_node_from_stateful(component, stateful_nodes)
+
+    if graph is not None and graph_node is not None:
+        for mapped_components in _root_state_candidate_components(graph, graph_node):
+            mapped_stateful_nodes = _stateful_nodes_for(mapped_components)
+            if mapped_stateful_nodes:
+                # Service roots are already the user-facing component. Keep
+                # that component while borrowing pod/container evidence.
+                target_component = (
+                    component if graph_node.kind == PlaceKind.service else mapped_stateful_nodes[0].component
+                )
+                return _causal_node_from_stateful(target_component, mapped_stateful_nodes)
+
+    if concrete_fallback and graph_node is not None:
+        return _with_root_metadata({"component": component, "state": concrete_fallback})
+
+    if graph_node is not None:
+        reason = "no_mappable_root_state"
+    elif matching_nodes:
+        reason = "no_stateful_graph_node"
+    else:
+        reason = "root_component_not_in_causal_graph"
+    return _with_root_metadata(
+        {
+            "component": component,
+            "state": frozenset({_UNKNOWN_STATE}),
+            "state_resolution_reason": reason,
+        }
     )
+
+
+def _root_state_candidate_components(graph: HyperGraph, root_node: Any) -> list[list[str]]:
+    """Return topology-near components whose concrete state can stand in for a root.
+
+    Physical JVM fallbacks can resolve to a container even though the concrete
+    evidence is on the service/span plane. PodFailure service fallbacks can have
+    the inverse shape: the root is the service but unavailable evidence remains
+    on pod/container nodes. Keep the groups ordered by semantic closeness.
+    """
+    if root_node.id is None:
+        return []
+
+    def _service_ids_for_pod(pod_id: int) -> list[int]:
+        service_ids: list[int] = []
+        for src_id, _dst_id, edge_key in graph._graph.in_edges(pod_id, keys=True):  # type: ignore[call-arg]
+            if edge_key == DepKind.routes_to:
+                src = graph.get_node_by_id(src_id)
+                if src.kind == PlaceKind.service:
+                    service_ids.append(int(src_id))
+        return service_ids
+
+    def _pod_ids_for_container(container_id: int) -> list[int]:
+        pod_ids: list[int] = []
+        for src_id, _dst_id, edge_key in graph._graph.in_edges(container_id, keys=True):  # type: ignore[call-arg]
+            if edge_key == DepKind.runs:
+                src = graph.get_node_by_id(src_id)
+                if src.kind == PlaceKind.pod:
+                    pod_ids.append(int(src_id))
+        return pod_ids
+
+    def _pod_ids_for_service(service_id: int) -> list[int]:
+        pod_ids: list[int] = []
+        for _src_id, dst_id, edge_key in graph._graph.out_edges(service_id, keys=True):  # type: ignore[call-arg]
+            if edge_key == DepKind.routes_to:
+                dst = graph.get_node_by_id(dst_id)
+                if dst.kind == PlaceKind.pod:
+                    pod_ids.append(int(dst_id))
+        return pod_ids
+
+    def _span_ids_for_service(service_id: int) -> list[int]:
+        span_ids: list[int] = []
+        for _src_id, dst_id, edge_key in graph._graph.out_edges(service_id, keys=True):  # type: ignore[call-arg]
+            if edge_key == DepKind.includes:
+                dst = graph.get_node_by_id(dst_id)
+                if dst.kind == PlaceKind.span:
+                    span_ids.append(int(dst_id))
+        return span_ids
+
+    def _container_ids_for_pods(pod_ids: list[int]) -> list[int]:
+        container_ids: list[int] = []
+        for pod_id in pod_ids:
+            for _src_id, dst_id, edge_key in graph._graph.out_edges(pod_id, keys=True):  # type: ignore[call-arg]
+                if edge_key == DepKind.runs:
+                    dst = graph.get_node_by_id(dst_id)
+                    if dst.kind == PlaceKind.container:
+                        container_ids.append(int(dst_id))
+        return container_ids
+
+    def _uniq_names(node_ids: list[int]) -> list[str]:
+        names: list[str] = []
+        seen: set[str] = set()
+        for node_id in node_ids:
+            node = graph.get_node_by_id(node_id)
+            if node.uniq_name not in seen:
+                names.append(node.uniq_name)
+                seen.add(node.uniq_name)
+        return names
+
+    if root_node.kind == PlaceKind.service:
+        pod_ids = _pod_ids_for_service(root_node.id)
+        return [
+            _uniq_names(pod_ids + _container_ids_for_pods(pod_ids)),
+        ]
+
+    if root_node.kind == PlaceKind.container:
+        pod_ids = _pod_ids_for_container(root_node.id)
+        container_service_ids: list[int] = []
+        for pod_id in pod_ids:
+            container_service_ids.extend(_service_ids_for_pod(pod_id))
+        container_span_ids: list[int] = []
+        for service_id in container_service_ids:
+            container_span_ids.extend(_span_ids_for_service(service_id))
+        return [
+            _uniq_names(container_service_ids),
+            _uniq_names(container_span_ids),
+            _uniq_names(pod_ids),
+        ]
+
+    if root_node.kind == PlaceKind.pod:
+        pod_service_ids = _service_ids_for_pod(root_node.id)
+        pod_span_ids: list[int] = []
+        for service_id in pod_service_ids:
+            pod_span_ids.extend(_span_ids_for_service(service_id))
+        return [
+            _uniq_names(pod_service_ids),
+            _uniq_names(pod_span_ids),
+        ]
+
+    if root_node.kind == PlaceKind.span:
+        span_service_ids: list[int] = []
+        for src_id, _dst_id, edge_key in graph._graph.in_edges(root_node.id, keys=True):  # type: ignore[call-arg]
+            if edge_key == DepKind.includes:
+                src = graph.get_node_by_id(src_id)
+                if src.kind == PlaceKind.service:
+                    span_service_ids.append(int(src_id))
+        return [_uniq_names(span_service_ids)]
+
+    return []
 
 
 def propagation_result_to_causal_graph(
@@ -163,6 +346,9 @@ def propagation_result_to_causal_graph(
     injection_node_name: str,
     alarm_node_ids: set[int],
     span_to_service_mapping: dict[str, list[str]] | None = None,
+    injection_node_names: list[str] | None = None,
+    root_fallback_states: dict[str, str | list[str] | set[str] | frozenset[str]] | None = None,
+    root_candidates: list[dict[str, Any]] | None = None,
 ) -> CausalGraph:
     """Convert PropagationResult to CausalGraph format.
 
@@ -174,16 +360,24 @@ def propagation_result_to_causal_graph(
     Args:
         result: The propagation result
         graph: The HyperGraph
-        injection_node_name: Name of the injection node
+        injection_node_name: Name of the primary injection node. Kept for
+            backward compatibility when ``injection_node_names`` is omitted.
         alarm_node_ids: Set of alarm node IDs
         span_to_service_mapping: Optional mapping from span_name to list of services
             (loaded from parquet files). If provided, this is used as ground truth.
+        injection_node_names: Ordered root node names to export. Supplying
+            all resolved roots preserves network and hybrid root sets.
+        root_fallback_states: Optional per-root fallback states from metadata
+            for roots that have no admitted propagation path.
+        root_candidates: Ordered root metadata from the resolver. When set,
+            this is the authoritative export source so same-component hybrid
+            legs are not silently collapsed.
     """
     from collections import Counter
 
     nodes_dict: dict[str, CausalNode] = {}
     edges_set: set[tuple[str, str]] = set()
-    alarm_nodes_dict: dict[str, CausalNode] = {}
+    alarm_nodes_dict: dict[int, CausalNode] = {}
     # Track all service assignments for each component across all paths
     component_service_votes: dict[str, Counter[str]] = {}
 
@@ -235,8 +429,31 @@ def propagation_result_to_causal_graph(
                 )
                 nodes_dict[node_key] = causal_node
 
-                if node_id in alarm_node_ids:
-                    alarm_nodes_dict[node_key] = causal_node
+                if node_id in alarm_node_ids and i == len(path.nodes) - 1:
+                    previous = alarm_nodes_dict.get(node_id)
+                    if previous is None:
+                        alarm_nodes_dict[node_id] = causal_node
+                    else:
+                        merged_state = frozenset(set(previous.state) | set(causal_node.state))
+                        timestamps = [ts for ts in (previous.timestamp, causal_node.timestamp) if ts is not None]
+                        alarm_nodes_dict[node_id] = CausalNode(
+                            component=component,
+                            state=merged_state,
+                            timestamp=min(timestamps) if timestamps else None,
+                        )
+            elif node_id in alarm_node_ids and i == len(path.nodes) - 1:
+                causal_node = nodes_dict[node_key]
+                previous = alarm_nodes_dict.get(node_id)
+                if previous is None:
+                    alarm_nodes_dict[node_id] = causal_node
+                    continue
+                merged_state = frozenset(set(previous.state) | set(states))
+                timestamps = [ts for ts in (previous.timestamp, timestamp) if ts is not None]
+                alarm_nodes_dict[node_id] = CausalNode(
+                    component=component,
+                    state=merged_state,
+                    timestamp=min(timestamps) if timestamps else None,
+                )
 
             # Collect service votes for this component
             svc = path_services[i]
@@ -263,11 +480,59 @@ def propagation_result_to_causal_graph(
     edges = [CausalEdge(source=src, target=tgt) for src, tgt in edges_set]
 
     graph_nodes = list(nodes_dict.values())
-    injection_node_obj = graph.get_node_by_name(injection_node_name)
     root_causes = []
-    if injection_node_obj:
-        injection_states = frozenset(result.injection_states) if result.injection_states else frozenset()
-        root_causes.append(_resolve_root_causal_node(injection_node_name, graph_nodes, injection_states))
+    root_fallback_states = root_fallback_states or {}
+    if root_candidates:
+        root_specs: list[dict[str, Any]] = []
+        for candidate in root_candidates:
+            if not isinstance(candidate, dict) or not candidate.get("node"):
+                continue
+            spec = dict(candidate)
+            spec["_root_candidate_index"] = len(root_specs)
+            root_specs.append(spec)
+        if not root_specs:
+            root_specs = [{"node": root_name} for root_name in (injection_node_names or [injection_node_name])]
+    else:
+        root_names = injection_node_names or [injection_node_name]
+        seen_roots: set[str] = set()
+        root_specs = []
+        for root_name in root_names:
+            if root_name in seen_roots:
+                continue
+            seen_roots.add(root_name)
+            root_specs.append({"node": root_name})
+
+    root_name_counts = Counter(str(spec.get("node") or "") for spec in root_specs)
+    for idx, root_spec in enumerate(root_specs):
+        root_name = str(root_spec.get("node") or "")
+        if not root_name:
+            continue
+        root_node = graph.get_node_by_name(root_name)
+
+        fallback_raw = root_spec.get("expected_state") or root_fallback_states.get(root_name)
+        if isinstance(fallback_raw, str):
+            fallback_states = frozenset({fallback_raw})
+        elif fallback_raw:
+            fallback_states = frozenset(str(state) for state in fallback_raw)
+        elif idx < len(result.injection_states):
+            fallback_states = frozenset({result.injection_states[idx]})
+        else:
+            fallback_states = frozenset()
+        root_causes.append(
+            _resolve_root_causal_node(
+                root_name,
+                graph_nodes,
+                fallback_states,
+                graph,
+                fault_type=str(root_spec["fault_type_name"]) if root_spec.get("fault_type_name") else None,
+                root_candidate_index=int(root_spec["_root_candidate_index"])
+                if "_root_candidate_index" in root_spec
+                else None,
+                resolution_method=str(root_spec["resolution_method"]) if root_spec.get("resolution_method") else None,
+                injection_node_id=root_node.id if root_node is not None else -1,
+                prefer_fallback_state=root_name_counts[root_name] > 1 and root_spec.get("expected_state") is not None,
+            )
+        )
 
     return CausalGraph(
         nodes=graph_nodes,
@@ -275,6 +540,8 @@ def propagation_result_to_causal_graph(
         root_causes=root_causes,
         alarm_nodes=list(alarm_nodes_dict.values()),
         path_terminal_alarm_nodes=list(alarm_nodes_dict.values()),
+        path_terminal_alarm_count=len(alarm_nodes_dict),
+        path_terminal_alarm_node_ids=sorted(alarm_nodes_dict),
         component_to_service=component_to_service,
     )
 

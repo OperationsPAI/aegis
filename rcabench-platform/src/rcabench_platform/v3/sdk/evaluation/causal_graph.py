@@ -92,6 +92,22 @@ class CausalNode(BaseModel):
         default=None,
         description="Why root/alarm state stayed unknown when no stateful graph node could be joined.",
     )
+    fault_type: str | None = Field(
+        default=None,
+        description="Fault type for root-cause entries when exported from multi-root/hybrid metadata.",
+    )
+    root_candidate_index: int | None = Field(
+        default=None,
+        description="Index into root_candidates for root-cause entries.",
+    )
+    root_resolution_method: str | None = Field(
+        default=None,
+        description="Resolver method for root-cause entries.",
+    )
+    injection_node_id: int | None = Field(
+        default=None,
+        description="Graph node id for root-cause entries, or -1 for metadata-only missing roots.",
+    )
 
     def __hash__(self) -> int:
         return hash((self.component, self.state))
@@ -139,6 +155,10 @@ class CausalGraph(BaseModel):
         default=None,
         description="Resolved fault type used by the reasoning exporter.",
     )
+    fault_types: list[str] = Field(
+        default_factory=list,
+        description="All resolved fault types for multi-root/hybrid injections.",
+    )
     root_resolution_method: str | None = Field(
         default=None,
         description="How the injection root was resolved from metadata.",
@@ -159,6 +179,10 @@ class CausalGraph(BaseModel):
         default_factory=list,
         description="Root cause nodes (injection points / identified root causes). Can be multiple.",
     )
+    root_candidates: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Resolved root candidate metadata from injection.json/ground_truth.",
+    )
     alarm_nodes: list[CausalNode] = Field(
         default_factory=list,
         description=(
@@ -170,6 +194,14 @@ class CausalGraph(BaseModel):
         default_factory=list,
         description="Alarm/symptom nodes that terminate accepted propagation paths.",
     )
+    path_terminal_alarm_count: int = Field(
+        default=0,
+        description="Number of alarm_nodes/path_terminal_alarm_nodes entries under alarm_nodes_scope.",
+    )
+    path_terminal_alarm_node_ids: list[int] = Field(
+        default_factory=list,
+        description="Graph node ids for path_terminal_alarm_nodes / alarm_nodes.",
+    )
     component_to_service: dict[str, str] = Field(
         default_factory=dict,
         description="Mapping from component (span/pod) to service name",
@@ -178,13 +210,25 @@ class CausalGraph(BaseModel):
         default_factory=list,
         description="All detected candidate alarm nodes with audit evidence.",
     )
+    candidate_alarm_node_ids: list[int] = Field(
+        default_factory=list,
+        description="Graph node ids for all detected candidate alarms.",
+    )
     explained_alarm_nodes: list[dict[str, Any]] = Field(
         default_factory=list,
         description="Candidate alarms that terminate at least one accepted path.",
     )
+    explained_alarm_node_ids: list[int] = Field(
+        default_factory=list,
+        description="Graph node ids for candidate alarms explained by paths.",
+    )
     unexplained_alarm_nodes: list[dict[str, Any]] = Field(
         default_factory=list,
         description="Candidate alarms excluded from accepted paths, including drop reasons.",
+    )
+    unexplained_alarm_node_ids: list[int] = Field(
+        default_factory=list,
+        description="Graph node ids for candidate alarms not explained by paths.",
     )
     candidate_alarm_count: int = Field(default=0, description="Number of detected candidate alarms.")
     explained_alarm_count: int = Field(default=0, description="Number of candidate alarms explained by paths.")
@@ -255,6 +299,10 @@ class CausalGraph(BaseModel):
                         component=node_data.get("component", ""),
                         state=_parse_state(node_data.get("state", [])),
                         timestamp=parse_timestamp(node_data.get("timestamp")),
+                        fault_type=node_data.get("fault_type"),
+                        root_candidate_index=node_data.get("root_candidate_index"),
+                        root_resolution_method=node_data.get("root_resolution_method"),
+                        injection_node_id=node_data.get("injection_node_id"),
                     )
                 )
 
@@ -279,6 +327,10 @@ class CausalGraph(BaseModel):
                         state=_parse_state(rc_data.get("state", [])),
                         timestamp=parse_timestamp(rc_data.get("timestamp")),
                         state_resolution_reason=rc_data.get("state_resolution_reason"),
+                        fault_type=rc_data.get("fault_type"),
+                        root_candidate_index=rc_data.get("root_candidate_index"),
+                        root_resolution_method=rc_data.get("root_resolution_method"),
+                        injection_node_id=rc_data.get("injection_node_id"),
                     )
                 )
 
@@ -292,6 +344,10 @@ class CausalGraph(BaseModel):
                         state=_parse_state(alarm_data.get("state", [])),
                         timestamp=parse_timestamp(alarm_data.get("timestamp")),
                         state_resolution_reason=alarm_data.get("state_resolution_reason"),
+                        fault_type=alarm_data.get("fault_type"),
+                        root_candidate_index=alarm_data.get("root_candidate_index"),
+                        root_resolution_method=alarm_data.get("root_resolution_method"),
+                        injection_node_id=alarm_data.get("injection_node_id"),
                     )
                 )
 
@@ -313,23 +369,34 @@ class CausalGraph(BaseModel):
                         state=_parse_state(alarm_data.get("state", [])),
                         timestamp=parse_timestamp(alarm_data.get("timestamp")),
                         state_resolution_reason=alarm_data.get("state_resolution_reason"),
+                        fault_type=alarm_data.get("fault_type"),
+                        root_candidate_index=alarm_data.get("root_candidate_index"),
+                        root_resolution_method=alarm_data.get("root_resolution_method"),
+                        injection_node_id=alarm_data.get("injection_node_id"),
                     )
                 )
 
         return cls(
             case_name=data.get("case_name"),
             fault_type=data.get("fault_type"),
+            fault_types=data.get("fault_types", []),
             root_resolution_method=data.get("root_resolution_method"),
             alarm_nodes_scope=data.get("alarm_nodes_scope", "path_terminal_alarm_nodes"),
             nodes=nodes,
             edges=edges,
             root_causes=root_causes,
+            root_candidates=data.get("root_candidates", []),
             alarm_nodes=alarm_nodes,
             path_terminal_alarm_nodes=parsed_path_terminal_alarm_nodes,
+            path_terminal_alarm_count=data.get("path_terminal_alarm_count", len(parsed_path_terminal_alarm_nodes)),
+            path_terminal_alarm_node_ids=data.get("path_terminal_alarm_node_ids", []),
             component_to_service=component_to_service,
             candidate_alarm_nodes=data.get("candidate_alarm_nodes", []),
+            candidate_alarm_node_ids=data.get("candidate_alarm_node_ids", []),
             explained_alarm_nodes=data.get("explained_alarm_nodes", []),
+            explained_alarm_node_ids=data.get("explained_alarm_node_ids", []),
             unexplained_alarm_nodes=data.get("unexplained_alarm_nodes", []),
+            unexplained_alarm_node_ids=data.get("unexplained_alarm_node_ids", []),
             candidate_alarm_count=data.get("candidate_alarm_count", 0),
             explained_alarm_count=data.get("explained_alarm_count", 0),
             unexplained_alarm_count=data.get("unexplained_alarm_count", 0),

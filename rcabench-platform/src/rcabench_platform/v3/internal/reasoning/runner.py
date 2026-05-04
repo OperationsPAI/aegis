@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -38,7 +39,11 @@ from rcabench_platform.v3.internal.reasoning.manifests.context import ReasoningC
 from rcabench_platform.v3.internal.reasoning.manifests.extractors import extract_feature_samples
 from rcabench_platform.v3.internal.reasoning.manifests.registry import get_default_registry
 from rcabench_platform.v3.internal.reasoning.models.graph import HyperGraph
-from rcabench_platform.v3.internal.reasoning.models.injection import InjectionNodeResolver
+from rcabench_platform.v3.internal.reasoning.models.injection import (
+    InjectionNodeResolver,
+    ResolvedInjection,
+    ResolvedRootCandidate,
+)
 from rcabench_platform.v3.internal.reasoning.models.propagation import (
     FaultDecomposition,
     LabelT,
@@ -216,6 +221,349 @@ def _resolve_alarm_nodes(graph: HyperGraph, alarm_node_names: list[str]) -> set[
     return alarm_nodes
 
 
+@dataclass(frozen=True)
+class _PropagationUnit:
+    fault_type_name: str
+    start_kind: str
+    category: str
+    fault_category: str
+    resolution_method: str
+    root_group_id: int | None
+    root_candidate_indices: list[int]
+    physical_node_names: list[str]
+    physical_node_ids: list[int]
+    starting_node_ids: list[int]
+    manifest: Any
+
+
+def _unique_ints(values: list[int]) -> list[int]:
+    out: list[int] = []
+    seen: set[int] = set()
+    for value in values:
+        if value in seen:
+            continue
+        out.append(value)
+        seen.add(value)
+    return out
+
+
+def _unit_to_resolution_info(unit: _PropagationUnit, graph: HyperGraph) -> dict[str, Any]:
+    return {
+        "fault_type": unit.fault_type_name,
+        "root_candidate_indices": unit.root_candidate_indices,
+        "root_group_id": unit.root_group_id,
+        "physical_nodes": unit.physical_node_names,
+        "starting_points": [
+            node.uniq_name for node_id in unit.starting_node_ids if (node := graph.get_node_by_id(node_id)) is not None
+        ],
+        "manifest_bound": unit.manifest is not None,
+        "manifest_multi_v_root": bool(getattr(unit.manifest, "multi_v_root", False)),
+    }
+
+
+def _build_propagation_units(
+    *,
+    graph: HyperGraph,
+    resolved: ResolvedInjection,
+    registry: Any,
+    rules: list[Any],
+    starting_resolver: StartingPointResolver,
+) -> list[_PropagationUnit]:
+    """Bind hybrid roots as independent single-manifest propagation legs."""
+    raw_candidates = list(resolved.root_candidates)
+    if not raw_candidates:
+        raw_candidates = [
+            ResolvedRootCandidate(
+                node=node,
+                start_kind=resolved.start_kind,
+                category=resolved.category,
+                fault_category=resolved.fault_category,
+                fault_type_name=resolved.fault_type_name,
+                resolution_method=resolved.resolution_method,
+                root_group_id=None,
+            )
+            for node in resolved.injection_nodes
+        ]
+
+    provisional: list[_PropagationUnit] = []
+    for idx, candidate in enumerate(raw_candidates):
+        graph_node = graph.get_node_by_name(candidate.node)
+        if graph_node is None or graph_node.id is None:
+            logger.warning("Skipping unresolved root candidate %s", candidate.node)
+            continue
+
+        single = ResolvedInjection(
+            injection_nodes=[candidate.node],
+            start_kind=candidate.start_kind,
+            category=candidate.category,
+            fault_category=candidate.fault_category,
+            fault_type_name=candidate.fault_type_name,
+            resolution_method=candidate.resolution_method,
+            root_candidates=[candidate],
+        )
+        starting_ids = starting_resolver.resolve(
+            physical_node_ids=[graph_node.id],
+            resolved_injection=single,
+            rules=rules,
+        )
+        if not starting_ids:
+            starting_ids = [graph_node.id]
+
+        manifest = registry.get(candidate.fault_type_name)
+        provisional.append(
+            _PropagationUnit(
+                fault_type_name=candidate.fault_type_name,
+                start_kind=candidate.start_kind,
+                category=candidate.category,
+                fault_category=candidate.fault_category,
+                resolution_method=candidate.resolution_method,
+                root_group_id=candidate.root_group_id,
+                root_candidate_indices=[idx],
+                physical_node_names=[candidate.node],
+                physical_node_ids=[graph_node.id],
+                starting_node_ids=_unique_ints(starting_ids),
+                manifest=manifest,
+            )
+        )
+
+    grouped: dict[tuple[str, int | str | None], _PropagationUnit] = {}
+    units: list[_PropagationUnit] = []
+    for unit in provisional:
+        if bool(getattr(unit.manifest, "multi_v_root", False)):
+            group_key = (
+                unit.fault_type_name,
+                unit.root_group_id if unit.root_group_id is not None else unit.resolution_method,
+            )
+            previous = grouped.get(group_key)
+            if previous is None:
+                grouped[group_key] = unit
+                units.append(unit)
+                continue
+            merged = _PropagationUnit(
+                fault_type_name=previous.fault_type_name,
+                start_kind=previous.start_kind,
+                category=previous.category,
+                fault_category=previous.fault_category,
+                resolution_method=previous.resolution_method,
+                root_group_id=previous.root_group_id,
+                root_candidate_indices=previous.root_candidate_indices + unit.root_candidate_indices,
+                physical_node_names=previous.physical_node_names + unit.physical_node_names,
+                physical_node_ids=_unique_ints(previous.physical_node_ids + unit.physical_node_ids),
+                starting_node_ids=_unique_ints(previous.starting_node_ids + unit.starting_node_ids),
+                manifest=previous.manifest,
+            )
+            grouped[group_key] = merged
+            units[units.index(previous)] = merged
+            continue
+
+        for starting_node_id in unit.starting_node_ids:
+            units.append(
+                _PropagationUnit(
+                    fault_type_name=unit.fault_type_name,
+                    start_kind=unit.start_kind,
+                    category=unit.category,
+                    fault_category=unit.fault_category,
+                    resolution_method=unit.resolution_method,
+                    root_group_id=unit.root_group_id,
+                    root_candidate_indices=unit.root_candidate_indices,
+                    physical_node_names=unit.physical_node_names,
+                    physical_node_ids=unit.physical_node_ids,
+                    starting_node_ids=[starting_node_id],
+                    manifest=unit.manifest,
+                )
+            )
+
+    return units
+
+
+def _build_physical_fallback_units(
+    *,
+    graph: HyperGraph,
+    resolved: ResolvedInjection,
+    registry: Any,
+    physical_node_ids: list[int],
+) -> list[_PropagationUnit]:
+    """Materialize the logged physical-node fallback as real propagation units."""
+    manifest = registry.get(resolved.fault_type_name)
+    node_ids = _unique_ints(physical_node_ids)
+    node_names = [node.uniq_name for node_id in node_ids if (node := graph.get_node_by_id(node_id)) is not None]
+    if not node_ids:
+        return []
+    if bool(getattr(manifest, "multi_v_root", False)):
+        return [
+            _PropagationUnit(
+                fault_type_name=resolved.fault_type_name,
+                start_kind=resolved.start_kind,
+                category=resolved.category,
+                fault_category=resolved.fault_category,
+                resolution_method=f"{resolved.resolution_method}_physical_fallback",
+                root_group_id=None,
+                root_candidate_indices=[],
+                physical_node_names=node_names,
+                physical_node_ids=node_ids,
+                starting_node_ids=node_ids,
+                manifest=manifest,
+            )
+        ]
+    return [
+        _PropagationUnit(
+            fault_type_name=resolved.fault_type_name,
+            start_kind=resolved.start_kind,
+            category=resolved.category,
+            fault_category=resolved.fault_category,
+            resolution_method=f"{resolved.resolution_method}_physical_fallback",
+            root_group_id=None,
+            root_candidate_indices=[],
+            physical_node_names=[node_name],
+            physical_node_ids=[node_id],
+            starting_node_ids=[node_id],
+            manifest=manifest,
+        )
+        for node_id, node_name in zip(node_ids, node_names, strict=False)
+    ]
+
+
+def _merge_propagation_results(results: list[PropagationResult], injection_node_ids: list[int]) -> PropagationResult:
+    if not results:
+        return PropagationResult(
+            injection_node_ids=injection_node_ids,
+            injection_states=["unknown"] * len(injection_node_ids),
+            paths=[],
+            visited_nodes=set(),
+            max_hops_reached=0,
+        )
+
+    states_by_occurrence: list[tuple[int, str]] = []
+    reasons_by_occurrence: list[tuple[int, str | None]] = []
+    details_by_occurrence: list[tuple[int, dict[str, Any]]] = []
+    for result in results:
+        for idx, node_id in enumerate(result.injection_node_ids):
+            if idx < len(result.injection_states):
+                states_by_occurrence.append((node_id, result.injection_states[idx]))
+            if idx < len(result.injection_state_reasons):
+                reasons_by_occurrence.append((node_id, result.injection_state_reasons[idx]))
+            if idx < len(result.injection_state_details):
+                details_by_occurrence.append((node_id, dict(result.injection_state_details[idx])))
+
+    injection_states: list[str] = []
+    injection_state_reasons: list[str | None] = []
+    injection_state_details: list[dict[str, Any]] = []
+    used_state_occurrences: set[int] = set()
+    used_reason_occurrences: set[int] = set()
+    used_detail_occurrences: set[int] = set()
+    for node_id in injection_node_ids:
+        state_idx = next(
+            (
+                idx
+                for idx, (occurrence_node_id, _state) in enumerate(states_by_occurrence)
+                if occurrence_node_id == node_id and idx not in used_state_occurrences
+            ),
+            None,
+        )
+        if state_idx is None:
+            injection_states.append("unknown")
+        else:
+            used_state_occurrences.add(state_idx)
+            injection_states.append(states_by_occurrence[state_idx][1])
+
+        reason_idx = next(
+            (
+                idx
+                for idx, (occurrence_node_id, _reason) in enumerate(reasons_by_occurrence)
+                if occurrence_node_id == node_id and idx not in used_reason_occurrences
+            ),
+            None,
+        )
+        if reason_idx is None:
+            injection_state_reasons.append(None)
+        else:
+            used_reason_occurrences.add(reason_idx)
+            injection_state_reasons.append(reasons_by_occurrence[reason_idx][1])
+
+        detail_idx = next(
+            (
+                idx
+                for idx, (occurrence_node_id, _detail) in enumerate(details_by_occurrence)
+                if occurrence_node_id == node_id and idx not in used_detail_occurrences
+            ),
+            None,
+        )
+        if detail_idx is not None:
+            used_detail_occurrences.add(detail_idx)
+            injection_state_details.append(details_by_occurrence[detail_idx][1])
+
+    return PropagationResult(
+        injection_node_ids=injection_node_ids,
+        injection_states=injection_states,
+        paths=[path for result in results for path in result.paths],
+        visited_nodes=set().union(*(result.visited_nodes for result in results)),
+        max_hops_reached=max(result.max_hops_reached for result in results),
+        subgraph_edges=[edge for result in results for edge in result.subgraph_edges],
+        warnings=[warning for result in results for warning in result.warnings],
+        rejected_paths=[path for result in results for path in result.rejected_paths],
+        injection_state_reasons=injection_state_reasons,
+        injection_state_details=injection_state_details,
+    )
+
+
+def _sync_no_path_root_states_from_candidates(
+    result: PropagationResult,
+    *,
+    resolved: ResolvedInjection,
+    graph: HyperGraph,
+) -> None:
+    """Populate root-scoped state arrays when no causal graph is exported."""
+    candidates = list(resolved.root_candidates)
+    if not candidates:
+        candidates = [
+            ResolvedRootCandidate(
+                node=node,
+                start_kind=resolved.start_kind,
+                category=resolved.category,
+                fault_category=resolved.fault_category,
+                fault_type_name=resolved.fault_type_name,
+                resolution_method=resolved.resolution_method,
+            )
+            for node in resolved.injection_nodes
+        ]
+    if not candidates:
+        return
+
+    node_ids: list[int] = []
+    states: list[str] = []
+    reasons: list[str | None] = []
+    details: list[dict[str, Any]] = []
+    for candidate in candidates:
+        graph_node = graph.get_node_by_name(candidate.node)
+        node_id = graph_node.id if graph_node is not None and graph_node.id is not None else -1
+        if node_id == -1:
+            state = "unknown"
+            reason = "root_component_not_in_causal_graph"
+        elif candidate.expected_state:
+            state = candidate.expected_state
+            reason = None
+        else:
+            state = "unknown"
+            reason = "root_resolved_from_metadata_only"
+        node_ids.append(node_id)
+        states.append(state)
+        reasons.append(reason)
+        details.append(
+            {
+                "injection_node_id": node_id,
+                "component": candidate.node,
+                "canonical_state": state,
+                "root_cause_states": [state],
+                "reason": reason,
+            }
+        )
+
+    result.injection_node_ids = node_ids
+    result.injection_states = states
+    result.injection_state_reasons = reasons
+    result.injection_state_details = details
+
+
 def run_single_case(
     data_dir: Path,
     max_hops: int,
@@ -255,21 +603,18 @@ def run_single_case(
             "fault_type": resolved.fault_type_name,
             "resolution_method": resolved.resolution_method,
         }
+        if resolved.root_candidates:
+            root_candidates = [candidate.model_dump(exclude_none=True) for candidate in resolved.root_candidates]
+            resolution_info["root_candidates"] = root_candidates
+            resolution_info["fault_types"] = sorted(
+                {str(candidate["fault_type_name"]) for candidate in root_candidates if candidate.get("fault_type_name")}
+            )
         logger.info(
             f"[{case_name}] Resolved injection: {resolved.fault_type_name} -> "
             f"{resolved.start_kind} ({resolved.resolution_method}): {resolved.injection_nodes}"
         )
 
-        # Bind the active manifest (if any) for downstream Phase-3 gates.
-        # The full ReasoningContext (with v_root_node_id, t0, and
-        # feature_samples) is built below once the IR pipeline has run;
-        # this early lookup just decides routing and logging.
         _registry = get_default_registry()
-        _manifest = _registry.get(resolved.fault_type_name)
-        if _manifest is None:
-            logger.info("no manifest for %s, using generic rules", resolved.fault_type_name)
-        else:
-            logger.debug("manifest %s bound for case %s", resolved.fault_type_name, case_name)
 
         physical_node_ids: list[int] = []
         for injection_node in actual_injection_nodes:
@@ -280,7 +625,11 @@ def run_single_case(
             assert injection_node_obj.id is not None
             physical_node_ids.append(injection_node_obj.id)
 
-        assert physical_node_ids != []
+        if not physical_node_ids:
+            logger.warning(
+                f"[{case_name}] no resolved injection node exists in graph; "
+                "continuing with metadata root candidates for export"
+            )
 
         if resolved.injection_point:
             ip = resolved.injection_point
@@ -331,7 +680,7 @@ def run_single_case(
         # NOT a StateAdapter — it mutates graph topology after the IR
         # pipeline has settled, so the propagator sees the new edges
         # naturally on construction. See ir/adapters/inferred_edges.py.
-        n_inferred = enrich_with_inferred_edges(graph, timelines, physical_node_ids)
+        n_inferred = enrich_with_inferred_edges(graph, timelines, physical_node_ids) if physical_node_ids else 0
         logger.info(f"[{case_name}] inferred edges: {n_inferred}")
 
         # Per-system log-evidence adapters: scan application logs for
@@ -349,13 +698,28 @@ def run_single_case(
             n_log_inferred = dispatch_log_adapters(graph, timelines, abnormal_logs_for_deps, normal_logs_for_deps)
             logger.info(f"[{case_name}] log-inferred edges: {n_log_inferred}")
 
-        # Resolve propagation starting points based on rule semantics
-        # For HTTP response faults, propagation starts from caller service (not physical injection)
+        # Resolve propagation starting points per root candidate. Hybrid
+        # injections are multiple independent manifest legs, not one primary
+        # manifest with a long root list.
         starting_resolver = StartingPointResolver(graph)
-        injection_node_ids = starting_resolver.resolve(
-            physical_node_ids=physical_node_ids,
-            resolved_injection=resolved,
+        propagation_units = _build_propagation_units(
+            graph=graph,
+            resolved=resolved,
+            registry=_registry,
             rules=rules,
+            starting_resolver=starting_resolver,
+        )
+        if not propagation_units:
+            logger.warning(f"[{case_name}] no propagation units resolved; falling back to physical nodes")
+            propagation_units = _build_physical_fallback_units(
+                graph=graph,
+                resolved=resolved,
+                registry=_registry,
+                physical_node_ids=physical_node_ids,
+            )
+        resolution_info["propagation_units"] = [_unit_to_resolution_info(unit, graph) for unit in propagation_units]
+        injection_node_ids = [node_id for unit in propagation_units for node_id in unit.starting_node_ids] or list(
+            physical_node_ids
         )
         if injection_node_ids != physical_node_ids:
             starting_node_names = [graph.get_node_by_id(nid).uniq_name for nid in injection_node_ids]
@@ -367,12 +731,6 @@ def run_single_case(
 
         local_effect = _compute_local_effect(physical_node_ids, timelines, graph)
 
-        # Build the ReasoningContext for the manifest-aware gates. This
-        # uses the IR products that have just been computed (graph,
-        # timelines, traces) plus the resolved injection root.
-        v_root_id: int | None = (
-            injection_node_ids[0] if injection_node_ids else (physical_node_ids[0] if physical_node_ids else None)
-        )
         feature_samples = extract_feature_samples(
             graph=graph,
             baseline_traces=baseline_traces,
@@ -381,21 +739,6 @@ def run_single_case(
             abnormal_window_end=abnormal_window_end,
             timelines=timelines,
         )
-        reasoning_ctx = ReasoningContext(
-            fault_type_name=resolved.fault_type_name,
-            manifest=_manifest,
-            v_root_node_id=v_root_id,
-            t0=injection_at,
-            feature_samples=feature_samples,
-            registry=_registry,
-            graph=graph,
-        )
-        if _manifest is not None:
-            logger.info(
-                f"[{case_name}] manifest gates active: "
-                f"{len(feature_samples)} feature samples extracted "
-                f"(v_root={v_root_id})"
-            )
 
         propagator_graph = graph
         if slo_impact.detected:
@@ -406,20 +749,45 @@ def run_single_case(
             )
             delta_t = max(0, abnormal_window_end - injection_at)
             injection_window = (injection_at, injection_at + delta_t + tau)
-            propagator = FaultPropagator(
-                graph=graph,
-                rules=rules,
-                timelines=timelines,
-                max_hops=max_hops,
-                injection_window=injection_window,
-                gates=manifest_aware_gates(reasoning_ctx),
-                reasoning_ctx=reasoning_ctx,
-            )
-            result = propagator.propagate_from_injection(
-                injection_node_ids=injection_node_ids,
-                alarm_nodes=alarm_nodes,
-            )
-            propagator_graph = propagator.graph
+            unit_results: list[PropagationResult] = []
+            for unit in propagation_units:
+                v_root_id = unit.starting_node_ids[0] if unit.starting_node_ids else None
+                reasoning_ctx = ReasoningContext(
+                    fault_type_name=unit.fault_type_name,
+                    manifest=unit.manifest,
+                    v_root_node_id=v_root_id,
+                    t0=injection_at,
+                    feature_samples=feature_samples,
+                    registry=_registry,
+                    graph=graph,
+                )
+                if unit.manifest is None:
+                    logger.info("no manifest for %s, using manifest-only empty result", unit.fault_type_name)
+                else:
+                    logger.info(
+                        f"[{case_name}] manifest gates active: "
+                        f"{unit.fault_type_name} roots={unit.starting_node_ids} "
+                        f"features={len(feature_samples)}"
+                    )
+                propagator = FaultPropagator(
+                    graph=graph,
+                    rules=rules,
+                    timelines=timelines,
+                    max_hops=max_hops,
+                    injection_window=injection_window,
+                    gates=manifest_aware_gates(reasoning_ctx),
+                    reasoning_ctx=reasoning_ctx,
+                )
+                unit_result = propagator.propagate_from_injection(
+                    injection_node_ids=unit.starting_node_ids,
+                    alarm_nodes=alarm_nodes,
+                )
+                unit_result.warnings = [
+                    f"{unit.fault_type_name}@{unit.physical_node_names}: {warning}" for warning in unit_result.warnings
+                ]
+                unit_results.append(unit_result)
+                propagator_graph = propagator.graph
+            result = _merge_propagation_results(unit_results, injection_node_ids)
         else:
             result = PropagationResult(
                 injection_node_ids=injection_node_ids,
@@ -461,6 +829,7 @@ def run_single_case(
             )
 
         alarm_accounting = _build_alarm_accounting(result, propagator_graph, alarm_nodes, alarm_evidence_by_name)
+        _sync_no_path_root_states_from_candidates(result, resolved=resolved, graph=propagator_graph)
         _save_case_result(
             data_dir=data_dir,
             case_name=case_name,

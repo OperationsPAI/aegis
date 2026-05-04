@@ -46,9 +46,19 @@ def test_export_consistency_bad_case_alarm_accounting() -> None:
         assert len(result["alarm_nodes"]) == candidate_count
         assert causal_graph["candidate_alarm_count"] == candidate_count
         assert causal_graph["explained_alarm_count"] == explained_count
+        assert causal_graph["unexplained_alarm_count"] == candidate_count - explained_count
+        assert causal_graph["candidate_alarm_count"] == (
+            causal_graph["explained_alarm_count"] + causal_graph["unexplained_alarm_count"]
+        )
         assert len(causal_graph["candidate_alarm_nodes"]) == candidate_count
         assert len(causal_graph["explained_alarm_nodes"]) == explained_count
         assert causal_graph["alarm_nodes_scope"] == "path_terminal_alarm_nodes"
+        path_terminal_count = causal_graph.get(
+            "path_terminal_alarm_count",
+            len(causal_graph["path_terminal_alarm_nodes"]),
+        )
+        assert path_terminal_count == len(causal_graph["path_terminal_alarm_nodes"])
+        assert path_terminal_count == len(causal_graph["alarm_nodes"])
 
 
 @pytest.mark.skipif(not BETA_DATASET_CASES.exists(), reason="local v3 beta dataset is not available")
