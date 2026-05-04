@@ -144,7 +144,7 @@ class CausalGraph(BaseModel):
         description="How the injection root was resolved from metadata.",
     )
     alarm_nodes_scope: str = Field(
-        default="path_terminal_compat_alias",
+        default="path_terminal_alarm_nodes",
         description="Scope of alarm_nodes; kept as a path-terminal compatibility alias.",
     )
     nodes: list[CausalNode] = Field(
@@ -320,7 +320,7 @@ class CausalGraph(BaseModel):
             case_name=data.get("case_name"),
             fault_type=data.get("fault_type"),
             root_resolution_method=data.get("root_resolution_method"),
-            alarm_nodes_scope=data.get("alarm_nodes_scope", "path_terminal_compat_alias"),
+            alarm_nodes_scope=data.get("alarm_nodes_scope", "path_terminal_alarm_nodes"),
             nodes=nodes,
             edges=edges,
             root_causes=root_causes,

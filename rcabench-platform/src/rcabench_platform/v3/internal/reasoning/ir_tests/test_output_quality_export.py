@@ -20,6 +20,29 @@ def _add_edge(g: HyperGraph, src: Node, dst: Node, kind: DepKind = DepKind.inclu
     )
 
 
+def _alarm_index(rows: list[dict]) -> dict:
+    evidence_by_name = {reasoning_cli._ALARM_EVIDENCE_INDEX_KEY: reasoning_cli._new_alarm_index()}
+    for row in rows:
+        raw_name = row["SpanName"]
+        evidence = reasoning_cli._classify_conclusion_alarm(row)
+        evidence["conclusion_span_name"] = raw_name
+        evidence_by_name[raw_name] = evidence
+        normalized_name = reasoning_cli._normalize_conclusion_span_name(raw_name)
+        evidence_by_name[normalized_name] = evidence
+        reasoning_cli._append_alarm_index(
+            evidence_by_name[reasoning_cli._ALARM_EVIDENCE_INDEX_KEY],
+            reasoning_cli._parse_alarm_identity(raw_name),
+            evidence,
+        )
+        if normalized_name != raw_name:
+            reasoning_cli._append_alarm_index(
+                evidence_by_name[reasoning_cli._ALARM_EVIDENCE_INDEX_KEY],
+                reasoning_cli._parse_alarm_identity(normalized_name),
+                evidence,
+            )
+    return evidence_by_name
+
+
 def test_root_cause_export_reuses_stateful_graph_node() -> None:
     g = HyperGraph()
     root = g.add_node(Node(kind=PlaceKind.service, self_name="ts-root-service"))
@@ -150,7 +173,8 @@ def test_alarm_accounting_separates_unexplained_strong_and_penalizes_weak_path()
     assert accounting["unexplained_alarm_count"] == 1
     assert accounting["strong_alarm_coverage"] == 0.5
     assert accounting["unexplained_strong_alarm_count"] == 1
-    assert accounting["unexplained_alarm_nodes"][0]["drop_reason"] == "no_path"
+    assert accounting["explained_alarm_nodes"][0]["path_ids"]
+    assert accounting["unexplained_alarm_nodes"][0]["drop_reason"] == "no_path_found"
     assert accounting["unexplained_alarm_nodes"][0]["path_status"] == "strong_unexplained"
 
     causal_graph = reasoning_cli.propagation_result_to_causal_graph(
@@ -168,7 +192,7 @@ def test_alarm_accounting_separates_unexplained_strong_and_penalizes_weak_path()
     )
     assert enriched.case_name == "synthetic-case"
     assert enriched.fault_type == "PodFailure"
-    assert enriched.alarm_nodes_scope == "path_terminal_compat_alias"
+    assert enriched.alarm_nodes_scope == "path_terminal_alarm_nodes"
     assert enriched.candidate_alarm_count == 3
     assert enriched.explained_alarm_count == 2
     assert enriched.strong_alarm_coverage == 0.5
@@ -218,3 +242,68 @@ def test_alarm_accounting_zero_strong_denominator_is_null() -> None:
 
 def test_erroring_export_state_removes_healthy_and_missing_noise() -> None:
     assert reasoning_cli._canonical_export_states(["healthy", "missing", "erroring"]) == frozenset({"erroring"})
+
+
+def test_alarm_evidence_matches_bare_conclusion_span_to_graph_component() -> None:
+    g = HyperGraph()
+    alarm = g.add_node(Node(kind=PlaceKind.span, self_name="frontend::HTTP /recommendations"))
+    assert alarm.id is not None
+    evidence_by_name = _alarm_index(
+        [
+            {
+                "SpanName": "HTTP /recommendations",
+                "Issues": "{}",
+                "NormalSuccRate": 1.0,
+                "AbnormalSuccRate": 0.001,
+            }
+        ]
+    )
+
+    evidence = reasoning_cli._alarm_evidence_for_node(alarm.id, g, evidence_by_name)
+
+    assert evidence["issue_strength"] == "strong"
+    assert evidence["issue_strength_reason"] == "success_rate_drop"
+    assert evidence["conclusion_match"]["status"] == "matched"
+    assert evidence["conclusion_match"]["method"] == "bare_operation_unique"
+    assert evidence["conclusion_span_name"] == "HTTP /recommendations"
+
+
+def test_alarm_evidence_marks_ambiguous_bare_operation_without_service_match() -> None:
+    g = HyperGraph()
+    alarm = g.add_node(Node(kind=PlaceKind.span, self_name="frontend::GET /shared"))
+    assert alarm.id is not None
+    evidence_by_name = _alarm_index(
+        [
+            {"SpanName": "service-a::GET /shared", "Issues": '{"errors": 10}'},
+            {"SpanName": "service-b::GET /shared", "Issues": '{"errors": 11}'},
+        ]
+    )
+
+    evidence = reasoning_cli._alarm_evidence_for_node(alarm.id, g, evidence_by_name)
+
+    assert evidence["issue_strength"] == "unknown"
+    assert evidence["issue_strength_reason"] == "ambiguous_conclusion_match"
+    assert evidence["conclusion_match"]["status"] == "ambiguous"
+    assert evidence["conclusion_match"]["method"] == "bare_operation_unique"
+
+
+def test_alarm_evidence_matches_full_url_to_service_operation() -> None:
+    g = HyperGraph()
+    alarm = g.add_node(Node(kind=PlaceKind.span, self_name="ts-ui-dashboard::GET /api/v1/foodservice/foods"))
+    assert alarm.id is not None
+    evidence_by_name = _alarm_index(
+        [
+            {
+                "SpanName": "HTTP GET http://ts-ui-dashboard:8080/api/v1/foodservice/foods",
+                "Issues": "{}",
+                "NormalSuccRate": 1.0,
+                "AbnormalSuccRate": 0.2,
+            }
+        ]
+    )
+
+    evidence = reasoning_cli._alarm_evidence_for_node(alarm.id, g, evidence_by_name)
+
+    assert evidence["issue_strength"] == "strong"
+    assert evidence["conclusion_match"]["status"] == "matched"
+    assert evidence["conclusion_match"]["method"] == "service_operation"
