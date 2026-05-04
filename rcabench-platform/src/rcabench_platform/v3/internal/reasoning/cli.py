@@ -129,6 +129,327 @@ def load_span_to_service_mapping(data_dir: Path) -> dict[str, list[str]]:
     return mapping
 
 
+_UNKNOWN_STATE = "unknown"
+_WEAK_ALARM_CONFIDENCE_CAP = 0.65
+_NO_ISSUE_ALARM_CONFIDENCE_CAP = 0.45
+_UNKNOWN_ALARM_CONFIDENCE_CAP = 0.80
+
+
+def _parse_issues_payload(issues_raw: Any) -> dict[str, Any]:
+    if issues_raw is None:
+        return {}
+    if isinstance(issues_raw, dict):
+        return issues_raw
+    if not isinstance(issues_raw, str):
+        return {}
+    payload = issues_raw.strip()
+    if payload in {"", "{}", "null", "None"}:
+        return {}
+    try:
+        parsed = json.loads(payload)
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _ratio(after: float, before: float) -> float:
+    if before <= 1e-9:
+        return 0.0
+    return after / before
+
+
+def _normalize_conclusion_span_name(span_name: str) -> str:
+    """Map conclusion.parquet span labels to graph span self_name when possible."""
+    raw = span_name.strip()
+    match = re.match(r"^HTTP\s+([A-Z]+)\s+https?://([^/:?\s]+)(?::\d+)?([^\s?]*)", raw)
+    if match:
+        method, host, path = match.groups()
+        return f"{host}::{method} {path or '/'}"
+    return raw
+
+
+def _classify_conclusion_alarm(row: dict[str, Any]) -> dict[str, Any]:
+    issues = _parse_issues_payload(row.get("Issues"))
+    normal_success = _safe_float(row.get("NormalSuccRate"), 1.0)
+    abnormal_success = _safe_float(row.get("AbnormalSuccRate"), normal_success)
+    normal_avg = _safe_float(row.get("NormalAvgDuration"))
+    abnormal_avg = _safe_float(row.get("AbnormalAvgDuration"))
+    normal_p99 = _safe_float(row.get("NormalP99"))
+    abnormal_p99 = _safe_float(row.get("AbnormalP99"))
+
+    success_drop = max(0.0, normal_success - abnormal_success)
+    avg_ratio = _ratio(abnormal_avg, normal_avg)
+    p99_ratio = _ratio(abnormal_p99, normal_p99)
+    avg_abs_change = max(0.0, abnormal_avg - normal_avg)
+    p99_abs_change = max(0.0, abnormal_p99 - normal_p99)
+
+    if issues:
+        strength = "strong"
+        reason = "conclusion_issues"
+    elif success_drop >= 0.10:
+        strength = "strong"
+        reason = "success_rate_drop"
+    elif (avg_ratio >= 2.0 and avg_abs_change >= 1.0) or (p99_ratio >= 5.0 and p99_abs_change >= 3.0):
+        strength = "strong"
+        reason = "material_latency_anomaly"
+    elif avg_ratio >= 1.5 or p99_ratio >= 2.0 or avg_abs_change >= 0.5 or p99_abs_change >= 1.0:
+        strength = "weak"
+        reason = "weak_latency_signal"
+    else:
+        strength = "none"
+        reason = "no_material_conclusion_signal"
+
+    return {
+        "issue_strength": strength,
+        "issue_strength_reason": reason,
+        "has_issues": bool(issues),
+        "issues": issues,
+        "normal_success_rate": normal_success,
+        "abnormal_success_rate": abnormal_success,
+        "success_rate_drop": success_drop,
+        "normal_avg_duration": normal_avg,
+        "abnormal_avg_duration": abnormal_avg,
+        "avg_duration_ratio": avg_ratio,
+        "normal_p99": normal_p99,
+        "abnormal_p99": abnormal_p99,
+        "p99_ratio": p99_ratio,
+    }
+
+
+def _load_alarm_evidence_index(loader: ParquetDataLoader) -> dict[str, dict[str, Any]]:
+    try:
+        conclusion_df = loader.load_conclusion()
+    except (AttributeError, FileNotFoundError):
+        return {}
+
+    evidence_by_name: dict[str, dict[str, Any]] = {}
+    for row in conclusion_df.iter_rows(named=True):
+        raw_name = str(row.get("SpanName") or "")
+        if not raw_name:
+            continue
+        evidence = _classify_conclusion_alarm(row)
+        evidence["conclusion_span_name"] = raw_name
+        evidence_by_name[raw_name] = evidence
+        evidence_by_name[_normalize_conclusion_span_name(raw_name)] = evidence
+    return evidence_by_name
+
+
+def _span_self_name_from_component(component: str) -> str:
+    return component.split("|", 1)[1] if component.startswith("span|") else component
+
+
+def _alarm_evidence_for_node(
+    node_id: int,
+    graph: HyperGraph,
+    evidence_by_name: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    node = graph.get_node_by_id(node_id)
+    component = node.uniq_name
+    span_self_name = _span_self_name_from_component(component)
+    evidence = evidence_by_name.get(span_self_name)
+    if evidence:
+        return dict(evidence)
+    return {
+        "issue_strength": "unknown",
+        "issue_strength_reason": "conclusion_row_unavailable",
+        "has_issues": False,
+    }
+
+
+def _alarm_detail(
+    node_id: int,
+    graph: HyperGraph,
+    evidence_by_name: dict[str, dict[str, Any]],
+    *,
+    reason: str | None = None,
+    path_status: str | None = None,
+) -> dict[str, Any]:
+    node = graph.get_node_by_id(node_id)
+    evidence = _alarm_evidence_for_node(node_id, graph, evidence_by_name)
+    out: dict[str, Any] = {
+        "node_id": node_id,
+        "component": node.uniq_name,
+        "issue_strength": evidence["issue_strength"],
+        "issue_strength_reason": evidence["issue_strength_reason"],
+    }
+    if reason is not None:
+        out["reason"] = reason
+    if path_status is not None:
+        out["path_status"] = path_status
+    for key in (
+        "has_issues",
+        "normal_success_rate",
+        "abnormal_success_rate",
+        "success_rate_drop",
+        "normal_avg_duration",
+        "abnormal_avg_duration",
+        "avg_duration_ratio",
+        "normal_p99",
+        "abnormal_p99",
+        "p99_ratio",
+        "conclusion_span_name",
+    ):
+        if key in evidence:
+            out[key] = evidence[key]
+    return out
+
+
+def _path_terminal_alarm_ids(result: PropagationResult, alarm_nodes: set[int]) -> set[int]:
+    return {path.nodes[-1] for path in result.paths if path.nodes and path.nodes[-1] in alarm_nodes}
+
+
+def _confidence_cap_for_strength(strength: str) -> float | None:
+    if strength == "weak":
+        return _WEAK_ALARM_CONFIDENCE_CAP
+    if strength == "none":
+        return _NO_ISSUE_ALARM_CONFIDENCE_CAP
+    if strength == "unknown":
+        return _UNKNOWN_ALARM_CONFIDENCE_CAP
+    return None
+
+
+def _apply_terminal_alarm_confidence_caps(
+    result: PropagationResult,
+    graph: HyperGraph,
+    alarm_nodes: set[int],
+    evidence_by_name: dict[str, dict[str, Any]],
+) -> None:
+    for path in result.paths:
+        if not path.nodes or path.nodes[-1] not in alarm_nodes:
+            continue
+        strength = _alarm_evidence_for_node(path.nodes[-1], graph, evidence_by_name)["issue_strength"]
+        cap = _confidence_cap_for_strength(strength)
+        if cap is not None and path.confidence > cap:
+            path.confidence = cap
+
+
+def _split_default_and_weak_paths(
+    result: PropagationResult,
+    graph: HyperGraph,
+    alarm_nodes: set[int],
+    evidence_by_name: dict[str, dict[str, Any]],
+) -> tuple[list[Any], list[Any]]:
+    default_paths = []
+    weak_paths = []
+    for path in result.paths:
+        if path.nodes and path.nodes[-1] in alarm_nodes:
+            strength = _alarm_evidence_for_node(path.nodes[-1], graph, evidence_by_name)["issue_strength"]
+            if strength in {"weak", "none"}:
+                weak_paths.append(path)
+                continue
+        default_paths.append(path)
+
+    # Avoid producing an empty causal graph for datasets where conclusion rows
+    # are unavailable or all alarm evidence is weak; weak_paths still makes the
+    # isolation explicit in result.json.
+    if not default_paths and weak_paths:
+        return weak_paths, []
+    return default_paths, weak_paths
+
+
+def _result_with_paths(result: PropagationResult, paths: list[Any]) -> PropagationResult:
+    return PropagationResult(
+        injection_node_ids=list(result.injection_node_ids),
+        injection_states=list(result.injection_states),
+        paths=list(paths),
+        visited_nodes=set(result.visited_nodes),
+        max_hops_reached=result.max_hops_reached,
+        subgraph_edges=list(result.subgraph_edges),
+        warnings=list(result.warnings),
+        label=result.label,
+        label_reason=result.label_reason,
+        decomposition=result.decomposition,
+        rejected_paths=list(result.rejected_paths),
+    )
+
+
+def _build_alarm_accounting(
+    result: PropagationResult,
+    graph: HyperGraph,
+    alarm_nodes: set[int],
+    evidence_by_name: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    explained_ids = _path_terminal_alarm_ids(result, alarm_nodes)
+    unexplained_ids = set(alarm_nodes) - explained_ids
+    candidate_details = [_alarm_detail(nid, graph, evidence_by_name) for nid in sorted(alarm_nodes)]
+    explained_details = [
+        _alarm_detail(nid, graph, evidence_by_name, reason="path_terminal", path_status="explained")
+        for nid in sorted(explained_ids)
+    ]
+    unexplained_details = []
+    for nid in sorted(unexplained_ids):
+        strength = _alarm_evidence_for_node(nid, graph, evidence_by_name)["issue_strength"]
+        path_status = "strong_unexplained" if strength == "strong" else "unexplained"
+        unexplained_details.append(
+            _alarm_detail(nid, graph, evidence_by_name, reason="no_path_found", path_status=path_status)
+        )
+
+    candidate_strong_count = sum(1 for detail in candidate_details if detail["issue_strength"] == "strong")
+    explained_strong_count = sum(1 for detail in explained_details if detail["issue_strength"] == "strong")
+    strong_alarm_coverage = (
+        1.0 if candidate_strong_count == 0 else explained_strong_count / candidate_strong_count
+    )
+
+    return {
+        "candidate_alarm_nodes": candidate_details,
+        "explained_alarm_nodes": explained_details,
+        "unexplained_alarm_nodes": unexplained_details,
+        "path_terminal_alarm_nodes": explained_details,
+        "candidate_alarm_node_ids": sorted(alarm_nodes),
+        "explained_alarm_node_ids": sorted(explained_ids),
+        "unexplained_alarm_node_ids": sorted(unexplained_ids),
+        "strong_alarm_coverage": strong_alarm_coverage,
+        "candidate_strong_alarm_count": candidate_strong_count,
+        "explained_strong_alarm_count": explained_strong_count,
+        "unexplained_strong_alarm_count": candidate_strong_count - explained_strong_count,
+    }
+
+
+def _resolve_root_causal_node(
+    component: str,
+    graph_nodes: list[CausalNode],
+    fallback_states: frozenset[str],
+) -> CausalNode:
+    matching_nodes = [node for node in graph_nodes if node.component == component]
+    stateful_nodes = [
+        node
+        for node in matching_nodes
+        if node.state and node.state != frozenset({_UNKNOWN_STATE}) and node.state != frozenset({"UNKNOWN"})
+    ]
+    if stateful_nodes:
+        unioned_state: set[str] = set()
+        timestamps: list[int] = []
+        for node in stateful_nodes:
+            unioned_state.update(s for s in node.state if s.lower() != _UNKNOWN_STATE)
+            if node.timestamp is not None:
+                timestamps.append(node.timestamp)
+        return CausalNode(
+            component=component,
+            timestamp=min(timestamps) if timestamps else None,
+            state=frozenset(unioned_state) if unioned_state else fallback_states,
+        )
+
+    concrete_fallback = frozenset(s for s in fallback_states if s.lower() != _UNKNOWN_STATE)
+    if concrete_fallback:
+        return CausalNode(component=component, state=concrete_fallback)
+
+    reason = "no_stateful_graph_node" if matching_nodes else "root_component_not_in_causal_graph"
+    return CausalNode(
+        component=component,
+        state=frozenset({_UNKNOWN_STATE}),
+        state_resolution_reason=reason,
+    )
+
+
 # =============================================================================
 # Conversion: PropagationResult -> CausalGraph
 # =============================================================================
@@ -239,22 +560,19 @@ def propagation_result_to_causal_graph(
 
     edges = [CausalEdge(source=src, target=tgt) for src, tgt in edges_set]
 
+    graph_nodes = list(nodes_dict.values())
     injection_node_obj = graph.get_node_by_name(injection_node_name)
     root_causes = []
     if injection_node_obj:
         injection_states = frozenset(result.injection_states) if result.injection_states else frozenset()
-        root_causes.append(
-            CausalNode(
-                component=injection_node_name,
-                state=injection_states,
-            )
-        )
+        root_causes.append(_resolve_root_causal_node(injection_node_name, graph_nodes, injection_states))
 
     return CausalGraph(
-        nodes=list(nodes_dict.values()),
+        nodes=graph_nodes,
         edges=edges,
         root_causes=root_causes,
         alarm_nodes=list(alarm_nodes_dict.values()),
+        path_terminal_alarm_nodes=list(alarm_nodes_dict.values()),
         component_to_service=component_to_service,
     )
 
@@ -581,6 +899,7 @@ def run_single_case(
         alarm_node_names = loader.identify_alarm_nodes_v2()
         alarm_node_names = _filter_alarms_by_surface(list(alarm_node_names), graph, surface)
         alarm_nodes = _resolve_alarm_nodes(graph, list(alarm_node_names))
+        alarm_evidence_by_name = _load_alarm_evidence_index(loader)
         slo_impact = _compute_slo_impact(alarm_nodes, graph, surface)
 
         actual_injection_nodes = []
@@ -772,6 +1091,7 @@ def run_single_case(
                 max_hops_reached=0,
             )
 
+        _apply_terminal_alarm_confidence_caps(result, propagator_graph, alarm_nodes, alarm_evidence_by_name)
         has_path = bool(result.paths)
         label, label_reason = classify(local_effect, slo_impact, has_path)
         mechanism: MechanismPath | None = None
@@ -799,8 +1119,10 @@ def run_single_case(
                 resolution_info=resolution_info,
                 label=label,
                 label_reason=label_reason,
+                alarm_evidence_by_name=alarm_evidence_by_name,
             )
 
+        alarm_accounting = _build_alarm_accounting(result, propagator_graph, alarm_nodes, alarm_evidence_by_name)
         _save_case_result(
             data_dir=data_dir,
             case_name=case_name,
@@ -808,6 +1130,7 @@ def run_single_case(
             result=result,
             label=label,
             label_reason=label_reason,
+            alarm_accounting=alarm_accounting,
         )
         return _build_result(
             case_name,
@@ -858,22 +1181,28 @@ def _process_successful_propagation(
     resolution_info: dict[str, Any] | None = None,
     label: LabelT | None = None,
     label_reason: str = "",
+    alarm_evidence_by_name: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Process case with successful propagation paths."""
     primary_injection_node = injection_nodes[0] if injection_nodes else ""
 
     # Load span-to-service mapping from parquet files for accurate service assignment
     span_to_service_mapping = load_span_to_service_mapping(data_dir)
+    alarm_evidence_by_name = alarm_evidence_by_name or {}
+    default_paths, weak_paths = _split_default_and_weak_paths(result, graph, alarm_nodes, alarm_evidence_by_name)
+    graph_result = _result_with_paths(result, default_paths)
 
     causal_graph = propagation_result_to_causal_graph(
-        result=result,
+        result=graph_result,
         graph=graph,
         injection_node_name=primary_injection_node,
         alarm_node_ids=alarm_nodes,
         span_to_service_mapping=span_to_service_mapping,
     )
 
-    viz_paths = _build_visualization_paths(result, graph, alarm_nodes)
+    viz_paths = _build_visualization_paths(graph_result, graph, alarm_nodes)
+    weak_viz_paths = _build_visualization_paths(_result_with_paths(result, weak_paths), graph, alarm_nodes)
+    alarm_accounting = _build_alarm_accounting(result, graph, alarm_nodes, alarm_evidence_by_name)
 
     _save_case_result(
         data_dir=data_dir,
@@ -884,6 +1213,8 @@ def _process_successful_propagation(
         alarm_nodes=alarm_nodes,
         result=result,
         viz_paths=viz_paths,
+        weak_paths=weak_viz_paths,
+        alarm_accounting=alarm_accounting,
         resolution_info=resolution_info,
         label=label,
         label_reason=label_reason,
@@ -927,6 +1258,8 @@ def _save_case_result(
     alarm_nodes: set[int] | None = None,
     result: PropagationResult | None = None,
     viz_paths: list[dict[str, Any]] | None = None,
+    weak_paths: list[dict[str, Any]] | None = None,
+    alarm_accounting: dict[str, Any] | None = None,
     resolution_info: dict[str, Any] | None = None,
     label: LabelT | None = None,
     label_reason: str = "",
@@ -934,7 +1267,7 @@ def _save_case_result(
     _clean_previous_results(data_dir)
 
     if status == "success" and causal_graph and result and injection_nodes is not None and alarm_nodes is not None:
-        graph_data = causal_graph.model_dump()
+        graph_data = causal_graph.model_dump(exclude_none=True)
         save_json(graph_data, path=data_dir / "causal_graph.json")
 
         result_data: dict[str, Any] = {
@@ -944,6 +1277,10 @@ def _save_case_result(
             "propagation_result": result.to_dict(),
             "visualization_paths": viz_paths or [],
         }
+        if weak_paths:
+            result_data["weak_paths"] = weak_paths
+        if alarm_accounting:
+            result_data.update(alarm_accounting)
         if resolution_info:
             result_data["resolution_info"] = resolution_info
         if label is not None:
@@ -959,6 +1296,8 @@ def _save_case_result(
                 "case_name": case_name,
                 "propagation_result": result.to_dict(),
             }
+            if alarm_accounting:
+                result_data.update(alarm_accounting)
             if label is not None:
                 result_data["label"] = label
                 result_data["label_reason"] = label_reason
@@ -972,6 +1311,8 @@ def _save_case_result(
                 "case_name": case_name,
                 "propagation_result": result.to_dict(),
             }
+            if alarm_accounting:
+                result_data.update(alarm_accounting)
             if label is not None:
                 result_data["label"] = label
                 result_data["label_reason"] = label_reason

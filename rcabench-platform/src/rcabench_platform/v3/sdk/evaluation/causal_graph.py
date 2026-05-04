@@ -88,6 +88,10 @@ class CausalNode(BaseModel):
         default=frozenset(),
         description="Set of abnormal states (e.g., {'high_latency', 'timeout'})",
     )
+    state_resolution_reason: str | None = Field(
+        default=None,
+        description="Why root/alarm state stayed unknown when no stateful graph node could be joined.",
+    )
 
     def __hash__(self) -> int:
         return hash((self.component, self.state))
@@ -141,7 +145,14 @@ class CausalGraph(BaseModel):
     )
     alarm_nodes: list[CausalNode] = Field(
         default_factory=list,
-        description="Alarm/symptom nodes (endpoints of propagation paths). These are the observable symptoms.",
+        description=(
+            "Backward-compatible alias for path-terminal alarm/symptom nodes. "
+            "Use path_terminal_alarm_nodes for unambiguous output-quality accounting."
+        ),
+    )
+    path_terminal_alarm_nodes: list[CausalNode] = Field(
+        default_factory=list,
+        description="Alarm/symptom nodes that terminate accepted propagation paths.",
     )
     component_to_service: dict[str, str] = Field(
         default_factory=dict,
@@ -221,6 +232,7 @@ class CausalGraph(BaseModel):
                         component=rc_data.get("component", ""),
                         state=_parse_state(rc_data.get("state", [])),
                         timestamp=parse_timestamp(rc_data.get("timestamp")),
+                        state_resolution_reason=rc_data.get("state_resolution_reason"),
                     )
                 )
 
@@ -233,17 +245,37 @@ class CausalGraph(BaseModel):
                         component=alarm_data.get("component", ""),
                         state=_parse_state(alarm_data.get("state", [])),
                         timestamp=parse_timestamp(alarm_data.get("timestamp")),
+                        state_resolution_reason=alarm_data.get("state_resolution_reason"),
                     )
                 )
 
         # Parse component_to_service mapping
         component_to_service = data.get("component_to_service", {})
 
+        path_terminal_alarm_nodes = data.get("path_terminal_alarm_nodes")
+        if path_terminal_alarm_nodes is None:
+            path_terminal_alarm_nodes = alarm_nodes
+
+        parsed_path_terminal_alarm_nodes = []
+        for alarm_data in path_terminal_alarm_nodes:
+            if isinstance(alarm_data, CausalNode):
+                parsed_path_terminal_alarm_nodes.append(alarm_data)
+            elif isinstance(alarm_data, dict):
+                parsed_path_terminal_alarm_nodes.append(
+                    CausalNode(
+                        component=alarm_data.get("component", ""),
+                        state=_parse_state(alarm_data.get("state", [])),
+                        timestamp=parse_timestamp(alarm_data.get("timestamp")),
+                        state_resolution_reason=alarm_data.get("state_resolution_reason"),
+                    )
+                )
+
         return cls(
             nodes=nodes,
             edges=edges,
             root_causes=root_causes,
             alarm_nodes=alarm_nodes,
+            path_terminal_alarm_nodes=parsed_path_terminal_alarm_nodes,
             component_to_service=component_to_service,
         )
 
