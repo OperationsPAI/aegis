@@ -25,7 +25,14 @@ from pydantic import BaseModel, Field, ValidationError
 from ..causal_graph import CausalGraph
 from .chain_judge import EvidenceJudgeResult, evidence_support
 from .ground_truth import GTContext, extract_gt_faults
-from .matcher import FaultMatchResult, GraphMetrics, OutcomeResult, compute_graph_metrics, compute_outcome
+from .matcher import (
+    FaultMatchResult,
+    GraphMetrics,
+    OutcomeResult,
+    compute_graph_metrics,
+    compute_outcome,
+    compute_path_reachability,
+)
 from .schema import AgentRCAOutput, Evidence
 from .sql_verify import EvidenceStatus, EvidenceVerifyResult, verify_evidence
 
@@ -68,6 +75,8 @@ class EvaluationResultV2(BaseModel):
 
     sql_executable_rate: float
     evidence_support_rate: float | None
+
+    path_reachability: bool | None = None
 
     node_f1: float = 0.0
     edge_f1: float = 0.0
@@ -153,6 +162,7 @@ async def evaluate_v2(
 
     outcome: OutcomeResult = compute_outcome(agent, gt_ctx.faults)
     graph: GraphMetrics = compute_graph_metrics(agent, gt_graph)
+    path_reachable: bool | None = compute_path_reachability(agent, outcome, gt_graph)
 
     per_evidence: list[PerEvidenceRecord] = []
     judge_inputs: list[tuple[int, str, str, Evidence, EvidenceVerifyResult]] = []
@@ -254,6 +264,7 @@ async def evaluate_v2(
         kind_accuracy_denom=outcome.kind_accuracy_denom,
         sql_executable_rate=sql_executable_rate,
         evidence_support_rate=evidence_support_rate,
+        path_reachability=path_reachable,
         node_f1=graph.node_f1,
         edge_f1=graph.edge_f1,
         node_precision=graph.node_precision,
