@@ -395,9 +395,7 @@ def _build_alarm_accounting(
 
     candidate_strong_count = sum(1 for detail in candidate_details if detail["issue_strength"] == "strong")
     explained_strong_count = sum(1 for detail in explained_details if detail["issue_strength"] == "strong")
-    strong_alarm_coverage = (
-        1.0 if candidate_strong_count == 0 else explained_strong_count / candidate_strong_count
-    )
+    strong_alarm_coverage = 1.0 if candidate_strong_count == 0 else explained_strong_count / candidate_strong_count
 
     return {
         "candidate_alarm_nodes": candidate_details,
