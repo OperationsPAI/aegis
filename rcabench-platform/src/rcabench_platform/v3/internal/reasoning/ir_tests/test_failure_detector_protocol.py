@@ -25,6 +25,7 @@ from rcabench_platform.v3.internal.reasoning.ir.protocols import (
     GRPCFailureDetector,
     HTTPFailureDetector,
     OrFailureDetector,
+    SpanStatusCodeFailureDetector,
     _clear_failure_detector_registry_for_tests,
     default_failure_detector,
     get_failure_detector,
@@ -48,8 +49,13 @@ def test_default_flags_http_500() -> None:
         {
             "attr.http.response.status_code": [200, 500, None],
             "attr.grpc.status_code": [None, None, None],
+            "attr.status_code": [None, None, None],
         },
-        schema={"attr.http.response.status_code": pl.Int64, "attr.grpc.status_code": pl.Int64},
+        schema={
+            "attr.http.response.status_code": pl.Int64,
+            "attr.grpc.status_code": pl.Int64,
+            "attr.status_code": pl.Utf8,
+        },
     )
     assert _eval(default_failure_detector(), df) == [False, True, False]
 
@@ -62,8 +68,13 @@ def test_default_picks_up_grpc_nonzero_when_http_null() -> None:
         {
             "attr.http.response.status_code": [None, 200, None],
             "attr.grpc.status_code": [13, 0, None],
+            "attr.status_code": [None, None, None],
         },
-        schema={"attr.http.response.status_code": pl.Int64, "attr.grpc.status_code": pl.Int64},
+        schema={
+            "attr.http.response.status_code": pl.Int64,
+            "attr.grpc.status_code": pl.Int64,
+            "attr.status_code": pl.Utf8,
+        },
     )
     # Row 0: gRPC=13 (failure)  Row 1: HTTP=200 + gRPC=0 (ok)  Row 2: both null (ok)
     assert _eval(default_failure_detector(), df) == [True, False, False]
@@ -95,8 +106,8 @@ def test_registered_per_system_detector_returned_by_lookup() -> None:
         # Unknown system_code falls back to default.
         fallback = get_failure_detector("not-registered")
         assert isinstance(fallback, OrFailureDetector)
-        # Default has 2 detectors (HTTP + gRPC), not 3.
-        assert len(fallback.detectors) == 2
+        # Default has 3 detectors (HTTP + gRPC + OTel span status), not the app-specific detector.
+        assert len(fallback.detectors) == 3
 
         # None also falls back to default.
         assert isinstance(get_failure_detector(None), OrFailureDetector)
@@ -116,6 +127,22 @@ def test_registered_per_system_detector_returned_by_lookup() -> None:
         assert _eval(custom, df) == [True]
     finally:
         _clear_failure_detector_registry_for_tests()
+
+
+def test_default_picks_up_span_status_code_error() -> None:
+    df = pl.DataFrame(
+        {
+            "attr.http.response.status_code": [None, 200, None],
+            "attr.grpc.status_code": [0, 0, None],
+            "attr.status_code": ["Error", "Unset", None],
+        },
+        schema={
+            "attr.http.response.status_code": pl.Int64,
+            "attr.grpc.status_code": pl.Int64,
+            "attr.status_code": pl.Utf8,
+        },
+    )
+    assert _eval(default_failure_detector(), df) == [True, False, False]
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +181,38 @@ def test_trace_adapter_default_filters_to_http_only_when_grpc_column_absent() ->
     # Only HTTPFailureDetector survived filter_by_columns (no grpc col).
     assert len(detector.detectors) == 1
     assert isinstance(detector.detectors[0], HTTPFailureDetector)
+
+    events = [e for e in adapter.emit(CTX) if e.kind == PlaceKind.span]
+    errs = [e for e in events if e.to_state == "erroring"]
+    assert errs, events
+    assert errs[0].evidence.get("trigger_metric") == "error_rate"
+
+
+def test_trace_adapter_default_keeps_span_status_detector_when_present() -> None:
+    base = pl.DataFrame(
+        [
+            {
+                **_row(1000 + i, "front-end", "GET /api", 50_000_000, 200),
+                "attr.status_code": "Unset",
+            }
+            for i in range(40)
+        ]
+    )
+    abn = pl.DataFrame(
+        [
+            {
+                **_row(2000 + i % 3, "front-end", "GET /api", 50_000_000, 200),
+                "attr.status_code": "Error",
+            }
+            for i in range(20)
+        ]
+    )
+    adapter = TraceStateAdapter(base, abn, window_sec=3)
+    detector = adapter._failure_detector  # type: ignore[attr-defined]
+    assert isinstance(detector, OrFailureDetector)
+    assert len(detector.detectors) == 2
+    assert isinstance(detector.detectors[0], HTTPFailureDetector)
+    assert isinstance(detector.detectors[1], SpanStatusCodeFailureDetector)
 
     # And ERRORING is still emitted exactly like before the refactor.
     events = [e for e in adapter.emit(CTX) if e.kind == PlaceKind.span]

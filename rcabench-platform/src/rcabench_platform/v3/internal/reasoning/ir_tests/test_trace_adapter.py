@@ -14,7 +14,15 @@ from rcabench_platform.v3.internal.reasoning.models.graph import PlaceKind
 CTX = AdapterContext(datapack_dir=Path("/tmp/not-used"), case_name="trace-fixture")
 
 
-def _row(ts: int, svc: str, span: str, dur_ns: int, status: int | None, parent: str = "") -> dict:
+def _row(
+    ts: int,
+    svc: str,
+    span: str,
+    dur_ns: int,
+    status: int | None,
+    parent: str = "",
+    span_status: str | None = None,
+) -> dict:
     return {
         "time": ts,
         "trace_id": f"trace-{ts}-{span}",
@@ -24,6 +32,7 @@ def _row(ts: int, svc: str, span: str, dur_ns: int, status: int | None, parent: 
         "service_name": svc,
         "duration": dur_ns,
         "attr.http.response.status_code": status,
+        "attr.status_code": span_status,
     }
 
 
@@ -69,6 +78,39 @@ def test_error_rate_emits_erroring() -> None:
     assert events
     errs = [e for e in events if e.to_state == "erroring"]
     assert errs, events
+    assert errs[0].evidence.get("trigger_metric") == "error_rate"
+
+
+def test_span_status_code_error_emits_erroring_for_caller_span() -> None:
+    base_rows = [
+        _row(
+            1000 + i,
+            "frontend",
+            "recommendation.Recommendation/GetRecommendations",
+            50_000_000,
+            200,
+            span_status="Unset",
+        )
+        for i in range(50)
+    ]
+    abn_rows = [
+        _row(
+            2000 + i % 3,
+            "frontend",
+            "recommendation.Recommendation/GetRecommendations",
+            5_000_000_000,
+            200,
+            span_status="Error",
+        )
+        for i in range(20)
+    ]
+
+    adapter = TraceStateAdapter(_df(base_rows), _df(abn_rows), window_sec=3)
+    events = [e for e in adapter.emit(CTX) if e.kind == PlaceKind.span]
+
+    errs = [e for e in events if e.to_state == "erroring"]
+    assert errs, events
+    assert errs[0].node_key == "span|frontend::recommendation.Recommendation/GetRecommendations"
     assert errs[0].evidence.get("trigger_metric") == "error_rate"
 
 
