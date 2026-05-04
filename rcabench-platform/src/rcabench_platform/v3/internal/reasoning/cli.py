@@ -27,6 +27,7 @@ from rcabench_platform.v3.internal.reasoning.ir.adapters.trace_db_binding import
     dispatch_trace_db_binding_adapters,
 )
 from rcabench_platform.v3.internal.reasoning.ir.pipeline import run_reasoning_ir
+from rcabench_platform.v3.internal.reasoning.ir.states import severity
 from rcabench_platform.v3.internal.reasoning.ir.timeline import StateTimeline
 from rcabench_platform.v3.internal.reasoning.loaders.parquet_loader import ParquetDataLoader
 from rcabench_platform.v3.internal.reasoning.loaders.utils import fmap_processpool
@@ -317,6 +318,27 @@ def _confidence_cap_for_strength(strength: str) -> float | None:
     return None
 
 
+def _is_concrete_state(state: str) -> bool:
+    return state.lower() not in {_UNKNOWN_STATE, "healthy", "unknown"}
+
+
+def _primary_export_state(states: set[str] | frozenset[str] | list[str]) -> str | None:
+    concrete = [str(state).lower() for state in states if _is_concrete_state(str(state))]
+    if not concrete:
+        return None
+    return max(sorted(concrete), key=severity)
+
+
+def _canonical_export_states(states: list[str] | frozenset[str] | set[str]) -> frozenset[str]:
+    normalized = {str(state).lower() for state in states if str(state)}
+    concrete = {state for state in normalized if _is_concrete_state(state)}
+    if not concrete:
+        return frozenset({_UNKNOWN_STATE}) if _UNKNOWN_STATE in normalized else frozenset(normalized)
+    if "erroring" in concrete:
+        return frozenset({"erroring"})
+    return frozenset(concrete)
+
+
 def _apply_terminal_alarm_confidence_caps(
     result: PropagationResult,
     graph: HyperGraph,
@@ -330,6 +352,47 @@ def _apply_terminal_alarm_confidence_caps(
         cap = _confidence_cap_for_strength(strength)
         if cap is not None and path.confidence > cap:
             path.confidence = cap
+
+
+def _sync_injection_states_from_root_causes(result: PropagationResult, causal_graph: CausalGraph) -> None:
+    """Make result.json use the same canonical root-state source as the graph export."""
+    if not causal_graph.root_causes:
+        return
+
+    target_len = max(len(result.injection_node_ids), len(causal_graph.root_causes), len(result.injection_states))
+    states = list(result.injection_states)
+    if len(states) < target_len:
+        states.extend([_UNKNOWN_STATE] * (target_len - len(states)))
+
+    reasons: list[str | None] = [None] * target_len
+    details: list[dict[str, Any]] = []
+    for idx, root in enumerate(causal_graph.root_causes):
+        primary = _primary_export_state(root.state)
+        reason = root.state_resolution_reason
+        if primary is not None:
+            states[idx] = primary
+            reason = None
+        else:
+            states[idx] = _UNKNOWN_STATE
+            reason = reason or "no_canonical_root_state"
+        reasons[idx] = reason
+        details.append(
+            {
+                "injection_node_id": result.injection_node_ids[idx] if idx < len(result.injection_node_ids) else None,
+                "component": root.component,
+                "canonical_state": states[idx],
+                "root_cause_states": sorted(root.state),
+                "reason": reason,
+            }
+        )
+
+    for idx, state in enumerate(states[:target_len]):
+        if str(state).lower() == _UNKNOWN_STATE and reasons[idx] is None:
+            reasons[idx] = "root_resolved_from_metadata_only"
+
+    result.injection_states = states[:target_len]
+    result.injection_state_reasons = reasons[:target_len]
+    result.injection_state_details = details
 
 
 def _split_default_and_weak_paths(
@@ -369,6 +432,8 @@ def _result_with_paths(result: PropagationResult, paths: list[Any]) -> Propagati
         label_reason=result.label_reason,
         decomposition=result.decomposition,
         rejected_paths=list(result.rejected_paths),
+        injection_state_reasons=list(result.injection_state_reasons),
+        injection_state_details=list(result.injection_state_details),
     )
 
 
@@ -389,15 +454,23 @@ def _build_alarm_accounting(
     for nid in sorted(unexplained_ids):
         strength = _alarm_evidence_for_node(nid, graph, evidence_by_name)["issue_strength"]
         path_status = "strong_unexplained" if strength == "strong" else "unexplained"
+        drop_reason = "no_path" if strength == "strong" else "weak_noise"
         unexplained_details.append(
-            _alarm_detail(nid, graph, evidence_by_name, reason="no_path_found", path_status=path_status)
+            _alarm_detail(
+                nid,
+                graph,
+                evidence_by_name,
+                reason="no_path_found",
+                path_status=path_status,
+            )
+            | {"drop_reason": drop_reason}
         )
 
     candidate_strong_count = sum(1 for detail in candidate_details if detail["issue_strength"] == "strong")
     explained_strong_count = sum(1 for detail in explained_details if detail["issue_strength"] == "strong")
-    strong_alarm_coverage = 1.0 if candidate_strong_count == 0 else explained_strong_count / candidate_strong_count
+    strong_alarm_coverage = None if candidate_strong_count == 0 else explained_strong_count / candidate_strong_count
 
-    return {
+    out: dict[str, Any] = {
         "candidate_alarm_nodes": candidate_details,
         "explained_alarm_nodes": explained_details,
         "unexplained_alarm_nodes": unexplained_details,
@@ -405,11 +478,69 @@ def _build_alarm_accounting(
         "candidate_alarm_node_ids": sorted(alarm_nodes),
         "explained_alarm_node_ids": sorted(explained_ids),
         "unexplained_alarm_node_ids": sorted(unexplained_ids),
+        "candidate_alarm_count": len(candidate_details),
+        "explained_alarm_count": len(explained_details),
+        "unexplained_alarm_count": len(unexplained_details),
         "strong_alarm_coverage": strong_alarm_coverage,
         "candidate_strong_alarm_count": candidate_strong_count,
         "explained_strong_alarm_count": explained_strong_count,
         "unexplained_strong_alarm_count": candidate_strong_count - explained_strong_count,
     }
+    if candidate_strong_count == 0:
+        out["strong_alarm_coverage_reason"] = "no_candidate_strong_alarms"
+    return out
+
+
+def _evidence_confidence_for_strength(strength: str) -> float:
+    if strength == "strong":
+        return 1.0
+    if strength == "weak":
+        return 0.5
+    return 0.0
+
+
+def _build_confidence_breakdown(result: PropagationResult, alarm_accounting: dict[str, Any]) -> dict[str, float]:
+    rule_confidence = max((p.confidence for p in result.paths), default=0.0)
+    coverage = alarm_accounting.get("strong_alarm_coverage")
+    alarm_coverage_confidence = float(coverage) if coverage is not None else 0.0
+    evidence_confidence = alarm_coverage_confidence
+    return {
+        "rule_admission_confidence": rule_confidence,
+        "evidence_confidence": evidence_confidence,
+        "alarm_coverage_confidence": alarm_coverage_confidence,
+        "final_confidence": min(rule_confidence, evidence_confidence),
+    }
+
+
+def _causal_graph_with_export_metadata(
+    causal_graph: CausalGraph,
+    *,
+    case_name: str,
+    result: PropagationResult,
+    alarm_accounting: dict[str, Any],
+    resolution_info: dict[str, Any] | None,
+) -> CausalGraph:
+    confidence_breakdown = _build_confidence_breakdown(result, alarm_accounting)
+    update: dict[str, Any] = {
+        "case_name": case_name,
+        "alarm_nodes_scope": "path_terminal_compat_alias",
+        "candidate_alarm_nodes": alarm_accounting.get("candidate_alarm_nodes", []),
+        "explained_alarm_nodes": alarm_accounting.get("explained_alarm_nodes", []),
+        "unexplained_alarm_nodes": alarm_accounting.get("unexplained_alarm_nodes", []),
+        "candidate_alarm_count": alarm_accounting.get("candidate_alarm_count", 0),
+        "explained_alarm_count": alarm_accounting.get("explained_alarm_count", 0),
+        "unexplained_alarm_count": alarm_accounting.get("unexplained_alarm_count", 0),
+        "candidate_strong_alarm_count": alarm_accounting.get("candidate_strong_alarm_count", 0),
+        "explained_strong_alarm_count": alarm_accounting.get("explained_strong_alarm_count", 0),
+        "unexplained_strong_alarm_count": alarm_accounting.get("unexplained_strong_alarm_count", 0),
+        "strong_alarm_coverage": alarm_accounting.get("strong_alarm_coverage"),
+        "strong_alarm_coverage_reason": alarm_accounting.get("strong_alarm_coverage_reason"),
+        "confidence_breakdown": confidence_breakdown,
+    }
+    if resolution_info:
+        update["fault_type"] = resolution_info.get("fault_type")
+        update["root_resolution_method"] = resolution_info.get("resolution_method")
+    return causal_graph.model_copy(update=update)
 
 
 def _resolve_root_causal_node(
@@ -519,7 +650,7 @@ def propagation_result_to_causal_graph(
                 continue
 
             component = node.uniq_name
-            states = frozenset(path.states[i]) if i < len(path.states) else frozenset()
+            states = _canonical_export_states(path.states[i]) if i < len(path.states) else frozenset()
             timestamp = path.state_start_times[i] if i < len(path.state_start_times) else None
 
             node_key = f"{component}|{','.join(sorted(states))}"
@@ -662,8 +793,10 @@ def _build_visualization_paths(
     result: PropagationResult,
     graph: HyperGraph,
     alarm_nodes: set[int],
+    evidence_by_name: dict[str, dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Build path data with full node info for visualization."""
+    evidence_by_name = evidence_by_name or {}
     viz_paths = []
     for path in result.paths:
         path_nodes = []
@@ -708,9 +841,17 @@ def _build_visualization_paths(
                 }
             )
 
+        terminal_strength = "unknown"
+        if path.nodes and path.nodes[-1] in alarm_nodes:
+            terminal_strength = _alarm_evidence_for_node(path.nodes[-1], graph, evidence_by_name)["issue_strength"]
+        evidence_confidence = _evidence_confidence_for_strength(terminal_strength)
         viz_paths.append(
             {
-                "confidence": path.confidence,
+                "confidence": min(path.confidence, evidence_confidence),
+                "rule_admission_confidence": path.confidence,
+                "evidence_confidence": evidence_confidence,
+                "alarm_coverage_confidence": evidence_confidence,
+                "final_confidence": min(path.confidence, evidence_confidence),
                 "nodes": path_nodes,
             }
         )
@@ -1198,9 +1339,22 @@ def _process_successful_propagation(
         span_to_service_mapping=span_to_service_mapping,
     )
 
-    viz_paths = _build_visualization_paths(graph_result, graph, alarm_nodes)
-    weak_viz_paths = _build_visualization_paths(_result_with_paths(result, weak_paths), graph, alarm_nodes)
     alarm_accounting = _build_alarm_accounting(result, graph, alarm_nodes, alarm_evidence_by_name)
+    causal_graph = _causal_graph_with_export_metadata(
+        causal_graph,
+        case_name=case_name,
+        result=result,
+        alarm_accounting=alarm_accounting,
+        resolution_info=resolution_info,
+    )
+    _sync_injection_states_from_root_causes(result, causal_graph)
+    viz_paths = _build_visualization_paths(graph_result, graph, alarm_nodes, alarm_evidence_by_name)
+    weak_viz_paths = _build_visualization_paths(
+        _result_with_paths(result, weak_paths),
+        graph,
+        alarm_nodes,
+        alarm_evidence_by_name,
+    )
 
     _save_case_result(
         data_dir=data_dir,

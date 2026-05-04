@@ -131,6 +131,22 @@ class CausalEdge(BaseModel):
 
 
 class CausalGraph(BaseModel):
+    case_name: str | None = Field(
+        default=None,
+        description="Datapack/case name that produced this graph.",
+    )
+    fault_type: str | None = Field(
+        default=None,
+        description="Resolved fault type used by the reasoning exporter.",
+    )
+    root_resolution_method: str | None = Field(
+        default=None,
+        description="How the injection root was resolved from metadata.",
+    )
+    alarm_nodes_scope: str = Field(
+        default="path_terminal_compat_alias",
+        description="Scope of alarm_nodes; kept as a path-terminal compatibility alias.",
+    )
     nodes: list[CausalNode] = Field(
         default_factory=list,
         description="All nodes in the causal graph",
@@ -157,6 +173,36 @@ class CausalGraph(BaseModel):
     component_to_service: dict[str, str] = Field(
         default_factory=dict,
         description="Mapping from component (span/pod) to service name",
+    )
+    candidate_alarm_nodes: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="All detected candidate alarm nodes with audit evidence.",
+    )
+    explained_alarm_nodes: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Candidate alarms that terminate at least one accepted path.",
+    )
+    unexplained_alarm_nodes: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Candidate alarms excluded from accepted paths, including drop reasons.",
+    )
+    candidate_alarm_count: int = Field(default=0, description="Number of detected candidate alarms.")
+    explained_alarm_count: int = Field(default=0, description="Number of candidate alarms explained by paths.")
+    unexplained_alarm_count: int = Field(default=0, description="Number of candidate alarms not explained by paths.")
+    candidate_strong_alarm_count: int = Field(default=0, description="Detected strong candidate alarm count.")
+    explained_strong_alarm_count: int = Field(default=0, description="Explained strong alarm count.")
+    unexplained_strong_alarm_count: int = Field(default=0, description="Unexplained strong alarm count.")
+    strong_alarm_coverage: float | None = Field(
+        default=None,
+        description="Explained strong alarms / candidate strong alarms, or null when denominator is zero.",
+    )
+    strong_alarm_coverage_reason: str | None = Field(
+        default=None,
+        description="Why strong_alarm_coverage is null.",
+    )
+    confidence_breakdown: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Exporter-level distinction between rule admission and evidence quality.",
     )
 
     def get_service_edges(self) -> set[tuple[str, str]]:
@@ -271,12 +317,28 @@ class CausalGraph(BaseModel):
                 )
 
         return cls(
+            case_name=data.get("case_name"),
+            fault_type=data.get("fault_type"),
+            root_resolution_method=data.get("root_resolution_method"),
+            alarm_nodes_scope=data.get("alarm_nodes_scope", "path_terminal_compat_alias"),
             nodes=nodes,
             edges=edges,
             root_causes=root_causes,
             alarm_nodes=alarm_nodes,
             path_terminal_alarm_nodes=parsed_path_terminal_alarm_nodes,
             component_to_service=component_to_service,
+            candidate_alarm_nodes=data.get("candidate_alarm_nodes", []),
+            explained_alarm_nodes=data.get("explained_alarm_nodes", []),
+            unexplained_alarm_nodes=data.get("unexplained_alarm_nodes", []),
+            candidate_alarm_count=data.get("candidate_alarm_count", 0),
+            explained_alarm_count=data.get("explained_alarm_count", 0),
+            unexplained_alarm_count=data.get("unexplained_alarm_count", 0),
+            candidate_strong_alarm_count=data.get("candidate_strong_alarm_count", 0),
+            explained_strong_alarm_count=data.get("explained_strong_alarm_count", 0),
+            unexplained_strong_alarm_count=data.get("unexplained_strong_alarm_count", 0),
+            strong_alarm_coverage=data.get("strong_alarm_coverage"),
+            strong_alarm_coverage_reason=data.get("strong_alarm_coverage_reason"),
+            confidence_breakdown=data.get("confidence_breakdown", {}),
         )
 
 

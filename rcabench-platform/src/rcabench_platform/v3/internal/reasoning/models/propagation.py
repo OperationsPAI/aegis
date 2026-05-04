@@ -152,6 +152,8 @@ class PropagationResult:
     label_reason: str = ""
     decomposition: FaultDecomposition | None = None
     rejected_paths: list[RejectedPath] = field(default_factory=list)
+    injection_state_reasons: list[str | None] = field(default_factory=list)
+    injection_state_details: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert PropagationResult to dictionary."""
@@ -165,6 +167,10 @@ class PropagationResult:
             "warnings": self.warnings,
             "rejected_paths": [_serialize_rejected_path(r) for r in self.rejected_paths],
         }
+        if self.injection_state_reasons:
+            out["injection_state_reasons"] = self.injection_state_reasons
+        if self.injection_state_details:
+            out["injection_state_details"] = self.injection_state_details
         if self.label is not None:
             out["label"] = self.label
         if self.label_reason:

@@ -157,6 +157,8 @@ def _classify(
     error_rate_floor: float,
 ) -> tuple[str, str, float, float] | None:
     """Return (to_state, trigger_metric, observed, threshold) or None if healthy."""
+    if win.err_rate > base.err_rate and win.err_rate >= error_rate_floor:
+        return "erroring", "error_rate", win.err_rate, max(base.err_rate, error_rate_floor)
     if base.avg > 0:
         cv = base.std / base.avg if base.avg > 1e-6 else 0.0
         avg_mult = get_adaptive_threshold(base.avg, cv)
@@ -168,8 +170,6 @@ def _classify(
         p99_mult = get_adaptive_threshold(base.p99, cv99)
         if win.p99 > base.p99 * p99_mult:
             return "slow", "p99_latency", win.p99, base.p99 * p99_mult
-    if win.err_rate > base.err_rate and win.err_rate >= error_rate_floor:
-        return "erroring", "error_rate", win.err_rate, max(base.err_rate, error_rate_floor)
     return None
 
 

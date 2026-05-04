@@ -70,6 +70,22 @@ class GRPCFailureDetector:
         return ("attr.grpc.status_code",)
 
 
+class SpanStatusCodeFailureDetector:
+    """OTel span status code ``Error``.
+
+    Some gRPC client spans (notably hotel-reservation traces) leave protocol
+    status fields empty while recording the canonical OTel span status in
+    ``attr.status_code``. Treat that as first-class error evidence so caller
+    spans with present error rows are not mis-exported as missing.
+    """
+
+    def is_failure_expr(self) -> pl.Expr:
+        return pl.col("attr.status_code").is_not_null() & (pl.col("attr.status_code") == "Error")
+
+    def required_columns(self) -> Iterable[str]:
+        return ("attr.status_code",)
+
+
 class ExceptionEventFailureDetector:
     """Span carries an exception event (``attr.exception.type`` non-null).
 
@@ -134,14 +150,14 @@ def filter_by_columns(detector: FailureDetector, available_columns: Iterable[str
 
 
 def default_failure_detector() -> FailureDetector:
-    """Methodology default: HTTP OR gRPC.
+    """Methodology default: HTTP OR gRPC OR canonical OTel span status.
 
     ``ExceptionEventFailureDetector`` is intentionally excluded by
     default — its column presence isn't guaranteed across the existing
     parquet fixtures, and adding it silently inflates ERRORING when the
     column happens to be present for unrelated reasons.
     """
-    return OrFailureDetector(HTTPFailureDetector(), GRPCFailureDetector())
+    return OrFailureDetector(HTTPFailureDetector(), GRPCFailureDetector(), SpanStatusCodeFailureDetector())
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +191,7 @@ __all__ = [
     "GRPCFailureDetector",
     "HTTPFailureDetector",
     "OrFailureDetector",
+    "SpanStatusCodeFailureDetector",
     "_clear_failure_detector_registry_for_tests",
     "default_failure_detector",
     "filter_by_columns",
