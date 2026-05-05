@@ -1030,11 +1030,11 @@ def test_calculate_metrics_aggregation() -> None:
     no service-correct rcs don't smear the metric).
 
     Sample mix:
-      [0] perfect      f1=1.0  exact=True  kind_acc=1.0  sql=1.0  ev_support=1.0  path=True   any_hit=True
-      [1] partial      f1=0.5  exact=False kind_acc=0.5  sql=0.8  ev_support=0.6  path=False  any_hit=True (HIT but no path)
-      [2] parse-err    zeros + parse_error=True (kind_acc=None, path=None → both excluded)   any_hit=False
-      [3] judge-fail   f1=1.0  ev_support=0.0  n_evidence_judge_failed=1        path=True    any_hit=True
-      [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}
+      [0] perfect    f1=1.0 exact=True  kind_acc=1.0 sql=1.0 ev=1.0 path=True  any_hit=True
+      [1] partial    f1=0.5 exact=False kind_acc=0.5 sql=0.8 ev=0.6 path=False any_hit=True (HIT, no path)
+      [2] parse-err  zeros + parse_error=True (kind_acc=None, path=None excluded) any_hit=False
+      [3] judge-fail f1=1.0 ev=0.0 n_evidence_judge_failed=1 path=True any_hit=True
+      [4] eval-err   sample.meta['eval_v2'] = {'error': '...'}
     """
     from rcabench_platform.v3.sdk.llm_eval.eval.processer.rcabench import RCABenchProcesser
 
