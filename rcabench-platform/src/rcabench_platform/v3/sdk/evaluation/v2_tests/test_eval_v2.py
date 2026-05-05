@@ -631,6 +631,50 @@ def test_path_reachability_no_alarm_services_is_none() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────
+# any_root_cause_hit — supplement to path_reachability
+#
+# Per-case invariant: any_root_cause_hit ≥ path_reachability (treating True/False
+# as 1/0). path_reachability=True implies a HIT exists; the converse can fail
+# when the agent identifies the root cause but its propagation chain doesn't
+# reach a GT alarm.
+# ──────────────────────────────────────────────────────────────────────
+
+
+def test_any_root_cause_hit_disconnected_path() -> None:
+    """HIT rc but agent edges don't reach the alarm → any_hit=True, path_reach=False."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["a", "b", "c"], [("a", "b"), ("b", "c")], alarms=["c"])
+    agent = _agent(
+        [{"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[{"from": "a", "to": "b", "evidence": [_DUMMY_EV]}],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
+    assert any_hit is True
+    assert compute_path_reachability(agent, outcome, gt) is False
+
+
+def test_any_root_cause_hit_all_miss() -> None:
+    """No HITs → any_hit=False (path_reach is also False)."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["a", "b", "c"], [("a", "b"), ("b", "c")], alarms=["c"])
+    agent = _agent([{"service": "x", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
+    assert any_hit is False
+    assert compute_path_reachability(agent, outcome, gt) is False
+
+
+def test_any_root_cause_hit_wrong_kind_does_not_count() -> None:
+    """Service-correct but wrong fault_kind is WRONG_KIND, not HIT → any_hit=False."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    agent = _agent([{"service": "a", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
+    assert any_hit is False
+
+
+# ──────────────────────────────────────────────────────────────────────
 # DuckDB SQL evidence verification
 # ──────────────────────────────────────────────────────────────────────
 
@@ -982,14 +1026,14 @@ def test_evidence_judge_no_response_format_param() -> None:
 
 def test_calculate_metrics_aggregation() -> None:
     """5 stub samples → aggregator divides by total n=5, except
-    ``avg_fault_kind_accuracy`` (uses ``kind_accuracy_denom``) and
-    ``avg_path_reachability`` (uses ``path_reachability_denom``).
+    ``avg_fault_kind_accuracy`` (uses ``kind_accuracy_denom`` so cases with
+    no service-correct rcs don't smear the metric).
 
     Sample mix:
-      [0] perfect      f1=1.0  exact=True  kind_acc=1.0  sql=1.0  ev_support=1.0  path=True
-      [1] partial      f1=0.5  exact=False kind_acc=0.5  sql=0.8  ev_support=0.6  path=False
-      [2] parse-err    zeros + parse_error=True (kind_acc=None, path=None → both excluded)
-      [3] judge-fail   f1=1.0  ev_support=0.0  n_evidence_judge_failed=1        path=True
+      [0] perfect      f1=1.0  exact=True  kind_acc=1.0  sql=1.0  ev_support=1.0  path=True   any_hit=True
+      [1] partial      f1=0.5  exact=False kind_acc=0.5  sql=0.8  ev_support=0.6  path=False  any_hit=True (HIT but no path)
+      [2] parse-err    zeros + parse_error=True (kind_acc=None, path=None → both excluded)   any_hit=False
+      [3] judge-fail   f1=1.0  ev_support=0.0  n_evidence_judge_failed=1        path=True    any_hit=True
       [4] eval-err     sample.meta['eval_v2'] = {'error': '...'}
     """
     from rcabench_platform.v3.sdk.llm_eval.eval.processer.rcabench import RCABenchProcesser
@@ -1013,6 +1057,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "node_f1": 1.0,
                     "edge_f1": 1.0,
                     "path_reachability": True,
+                    "any_root_cause_hit": True,
                     "n_evidence_judge_failed": 0,
                     "per_evidence": [{}],
                 }
@@ -1032,6 +1077,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "node_f1": 0.4,
                     "edge_f1": 0.2,
                     "path_reachability": False,
+                    "any_root_cause_hit": True,
                     "n_evidence_judge_failed": 0,
                     "per_evidence": [{}],
                 }
@@ -1051,6 +1097,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "node_f1": 0.0,
                     "edge_f1": 0.0,
                     "path_reachability": None,
+                    "any_root_cause_hit": False,
                     "n_evidence_judge_failed": 0,
                     "parse_error": "bad json",
                     "per_evidence": [],
@@ -1071,6 +1118,7 @@ def test_calculate_metrics_aggregation() -> None:
                     "node_f1": 1.0,
                     "edge_f1": 1.0,
                     "path_reachability": True,
+                    "any_root_cause_hit": True,
                     "n_evidence_judge_failed": 1,
                     "per_evidence": [{}],
                 }
@@ -1101,6 +1149,11 @@ def test_calculate_metrics_aggregation() -> None:
     # fault_kind_accuracy excludes the parse-err case (denom=0); 3 cases contribute.
     assert metrics["kind_accuracy_denom"] == 3
     assert metrics["avg_fault_kind_accuracy"] == round((1.0 + 0.5 + 1.0) / 3, 4)
-    # path_reachability excludes the parse-err case (None); 3 cases contribute, 2 reachable.
-    assert metrics["path_reachability_denom"] == 3
-    assert metrics["avg_path_reachability"] == round(2 / 3, 4)
+    # path_reachability divides by total n=5; None / parse-err / eval-err count as 0.
+    # 2 of 5 samples are reachable.
+    assert metrics["avg_path_reachability"] == round(2 / 5, 4)
+    # any_root_cause_hit also divides by n=5. 3 of 5 samples have a HIT.
+    # Per-case invariant any_hit ≥ path_reach now lifts to rate level: 3/5 ≥ 2/5.
+    assert metrics["any_root_cause_hit_count"] == 3
+    assert metrics["avg_any_root_cause_hit"] == round(3 / 5, 4)
+    assert metrics["avg_any_root_cause_hit"] >= metrics["avg_path_reachability"]
