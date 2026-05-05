@@ -229,7 +229,8 @@ class RCABenchProcesser(BaseMatchProcesser):
                 "avg_sql_executable_rate": 0.0,
                 "avg_evidence_support_rate": 0.0,
                 "avg_path_reachability": 0.0,
-                "path_reachability_denom": 0,
+                "avg_any_root_cause_hit": 0.0,
+                "any_root_cause_hit_count": 0,
                 "avg_node_f1": 0.0,
                 "avg_edge_f1": 0.0,
                 "parse_errors": 0,
@@ -256,7 +257,7 @@ class RCABenchProcesser(BaseMatchProcesser):
         kind_acc_sum = 0.0
         kind_acc_cases = 0
         path_reach_sum = 0
-        path_reach_cases = 0
+        any_hit_sum = 0
         scored = 0
         parse_errors = 0
         zero_evidence = 0
@@ -289,9 +290,11 @@ class RCABenchProcesser(BaseMatchProcesser):
                 kind_acc_cases += 1
 
             path_reach = ev.get("path_reachability")
-            if path_reach is not None:
-                path_reach_sum += int(path_reach)
-                path_reach_cases += 1
+            if path_reach:
+                path_reach_sum += 1
+
+            if ev.get("any_root_cause_hit"):
+                any_hit_sum += 1
 
             if ev.get("exact_match"):
                 exact_count += 1
@@ -303,7 +306,6 @@ class RCABenchProcesser(BaseMatchProcesser):
 
         denom = max(1, n)
         kind_denom = max(1, kind_acc_cases)
-        path_denom = max(1, path_reach_cases)
         return {
             "benchmark": self.name,
             "total_samples": n,
@@ -317,8 +319,9 @@ class RCABenchProcesser(BaseMatchProcesser):
             "kind_accuracy_denom": kind_acc_cases,
             "avg_sql_executable_rate": round(sql_sum / denom, 4),
             "avg_evidence_support_rate": round(ev_support_sum / denom, 4),
-            "avg_path_reachability": round(path_reach_sum / path_denom, 4),
-            "path_reachability_denom": path_reach_cases,
+            "avg_path_reachability": round(path_reach_sum / denom, 4),
+            "avg_any_root_cause_hit": round(any_hit_sum / denom, 4),
+            "any_root_cause_hit_count": any_hit_sum,
             "avg_node_f1": round(node_f1_sum / denom, 4),
             "avg_edge_f1": round(edge_f1_sum / denom, 4),
             "parse_errors": parse_errors,

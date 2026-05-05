@@ -28,6 +28,7 @@ from .ground_truth import GTContext, extract_gt_faults
 from .matcher import (
     FaultMatchResult,
     GraphMetrics,
+    MatchStatus,
     OutcomeResult,
     compute_graph_metrics,
     compute_outcome,
@@ -77,6 +78,7 @@ class EvaluationResultV2(BaseModel):
     evidence_support_rate: float | None
 
     path_reachability: bool | None = None
+    any_root_cause_hit: bool = False
 
     node_f1: float = 0.0
     edge_f1: float = 0.0
@@ -163,6 +165,7 @@ async def evaluate_v2(
     outcome: OutcomeResult = compute_outcome(agent, gt_ctx.faults)
     graph: GraphMetrics = compute_graph_metrics(agent, gt_graph)
     path_reachable: bool | None = compute_path_reachability(agent, outcome, gt_graph)
+    any_hit: bool = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
 
     per_evidence: list[PerEvidenceRecord] = []
     judge_inputs: list[tuple[int, str, str, Evidence, EvidenceVerifyResult]] = []
@@ -265,6 +268,7 @@ async def evaluate_v2(
         sql_executable_rate=sql_executable_rate,
         evidence_support_rate=evidence_support_rate,
         path_reachability=path_reachable,
+        any_root_cause_hit=any_hit,
         node_f1=graph.node_f1,
         edge_f1=graph.edge_f1,
         node_precision=graph.node_precision,
