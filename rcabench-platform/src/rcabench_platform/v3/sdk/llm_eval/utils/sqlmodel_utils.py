@@ -122,10 +122,17 @@ class SQLModelUtils:
 
         # Index migrations: (index_name, create_sql)
         _t = "evaluation_data"
+        # COALESCE columns: SQLite/Postgres treat NULL as distinct in unique indexes,
+        # which would let two writers both insert when model_name/agent_type is NULL.
         index_migrations = [
             ("ix_eval_exp_id", f"CREATE INDEX IF NOT EXISTS ix_eval_exp_id ON {_t} (exp_id)"),
             ("ix_eval_stage", f"CREATE INDEX IF NOT EXISTS ix_eval_stage ON {_t} (stage)"),
             ("ix_eval_exp_stage", f"CREATE INDEX IF NOT EXISTS ix_eval_exp_stage ON {_t} (exp_id, stage)"),
+            (
+                "ux_eval_logical_id",
+                f"CREATE UNIQUE INDEX IF NOT EXISTS ux_eval_logical_id ON {_t} "
+                f"(exp_id, dataset, dataset_index, COALESCE(model_name, ''), COALESCE(agent_type, ''))",
+            ),
         ]
 
         with engine.connect() as conn:

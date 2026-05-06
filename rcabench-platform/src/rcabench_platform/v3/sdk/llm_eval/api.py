@@ -10,9 +10,15 @@ Designed for two writers:
 UPSERT keys on the logical identity ``(exp_id, dataset, dataset_index,
 model_name, agent_type)`` and is implemented as SELECT-then-update-or-insert
 in Python so SQLite and Postgres behave identically (no ``ON CONFLICT``
-dialect, no UNIQUE constraint required). ``eval_metrics`` and ``meta`` are
-shallow dict-merged on update; scalar fields follow "pass-to-update,
-None-to-keep".
+dialect). ``eval_metrics`` and ``meta`` are shallow dict-merged on update;
+scalar fields follow "pass-to-update, None-to-keep".
+
+A unique index on the logical identity (NULL-safe via COALESCE) closes the
+SELECT-then-INSERT race; if a concurrent writer beats us between the lookup
+and the INSERT, ``IntegrityError`` is caught and we retry the operation as
+an UPDATE on the now-existing row. This auto-recovery only fires when the
+session is owned by this call — when the caller passes their own session
+they handle the rollback themselves.
 
 Aggregation runs in Python over the row set so no SQL JSON-path syntax
 leaks into the SDK — consumers that want a SQL view can build one in their
@@ -25,6 +31,7 @@ import datetime
 from collections.abc import Iterable
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from .db.eval_datapoint import EvaluationRolloutStats, EvaluationSample
@@ -96,43 +103,52 @@ def upload_case_result(
     """
     own_session = session is None
     sess = session if session is not None else SQLModelUtils.create_session()
+    scalar_updates = {
+        "response": response,
+        "trace_id": trace_id,
+        "trace_url": trace_url,
+        "time_cost": time_cost,
+        "trajectories": trajectories,
+        "correct": correct,
+        "confidence": confidence,
+        "judged_response": judged_response,
+        "reasoning": reasoning,
+        "extracted_final_answer": extracted_final_answer,
+        "raw_question": raw_question,
+        "source": source,
+        "level": level,
+        "correct_answer": correct_answer,
+        "augmented_question": augmented_question,
+        "file_name": file_name,
+        "stage": stage,
+    }
+    identity = {
+        "exp_id": exp_id,
+        "dataset": dataset,
+        "dataset_index": dataset_index,
+        "model_name": model_name,
+        "agent_type": agent_type,
+    }
+
+    def _apply_update(row: EvaluationSample) -> None:
+        if eval_metrics:
+            row.eval_metrics = _shallow_merge(row.eval_metrics, eval_metrics)
+        if meta:
+            row.meta = _shallow_merge(row.meta, meta)
+        for k, v in scalar_updates.items():
+            if v is not None:
+                setattr(row, k, v)
+        row.updated_at = datetime.datetime.now()
+
     try:
-        existing = _find_existing(
-            sess,
-            exp_id=exp_id,
-            dataset=dataset,
-            dataset_index=dataset_index,
-            model_name=model_name,
-            agent_type=agent_type,
-        )
+        existing = _find_existing(sess, **identity)
 
-        scalar_updates = {
-            "response": response,
-            "trace_id": trace_id,
-            "trace_url": trace_url,
-            "time_cost": time_cost,
-            "trajectories": trajectories,
-            "correct": correct,
-            "confidence": confidence,
-            "judged_response": judged_response,
-            "reasoning": reasoning,
-            "extracted_final_answer": extracted_final_answer,
-            "raw_question": raw_question,
-            "source": source,
-            "level": level,
-            "correct_answer": correct_answer,
-            "augmented_question": augmented_question,
-            "file_name": file_name,
-            "stage": stage,
-        }
-
-        if existing is None:
+        if existing is not None:
+            row = existing
+            _apply_update(row)
+        else:
             row = EvaluationSample(
-                exp_id=exp_id,
-                dataset=dataset,
-                dataset_index=dataset_index,
-                model_name=model_name,
-                agent_type=agent_type,
+                **identity,
                 eval_metrics=dict(eval_metrics) if eval_metrics else None,
                 meta=dict(meta) if meta else None,
             )
@@ -140,17 +156,21 @@ def upload_case_result(
                 if v is not None:
                     setattr(row, k, v)
             sess.add(row)
-            sess.flush()  # populate row.id for FK in rollout_stats
-        else:
-            row = existing
-            if eval_metrics:
-                row.eval_metrics = _shallow_merge(row.eval_metrics, eval_metrics)
-            if meta:
-                row.meta = _shallow_merge(row.meta, meta)
-            for k, v in scalar_updates.items():
-                if v is not None:
-                    setattr(row, k, v)
-            row.updated_at = datetime.datetime.now()
+            try:
+                sess.flush()  # populate row.id for FK in rollout_stats
+            except IntegrityError:
+                # Concurrent writer beat us between SELECT and INSERT — covered
+                # by the ux_eval_logical_id unique index. Recover only when we
+                # own the session; an externally-provided session may have other
+                # pending state that the caller needs to manage.
+                if not own_session:
+                    raise
+                sess.rollback()
+                existing = _find_existing(sess, **identity)
+                if existing is None:
+                    raise
+                row = existing
+                _apply_update(row)
 
         if rollout_stats:
             _upsert_rollout_stats(sess, row.id, rollout_stats)
