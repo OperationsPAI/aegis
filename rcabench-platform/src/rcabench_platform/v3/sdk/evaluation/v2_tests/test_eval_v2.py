@@ -1030,82 +1030,83 @@ def test_calculate_metrics_aggregation() -> None:
     no service-correct rcs don't smear the metric).
 
     Sample mix:
-      [0] perfect    f1=1.0 exact=True  kind_acc=1.0 sql=1.0 ev=1.0 path=True  any_hit=True
-      [1] partial    f1=0.5 exact=False kind_acc=0.5 sql=0.8 ev=0.6 path=False any_hit=True (HIT, no path)
-      [2] parse-err  zeros + parse_error=True (kind_acc=None, path=None excluded) any_hit=False
-      [3] judge-fail f1=1.0 ev=0.0 n_evidence_judge_failed=1 path=True any_hit=True
-      [4] eval-err   sample.meta['eval_v2'] = {'error': '...'}
+      [0] perfect    f1=1.0 exact=True  kind_acc=1.0 sql=1.0 ev=1.0 path=True  any_hit=True   (eval_metrics)
+      [1] partial    f1=0.5 exact=False kind_acc=0.5 sql=0.8 ev=0.6 path=False any_hit=True   (eval_metrics)
+      [2] parse-err  zeros + parse_error=True (kind_acc=None, path=None excluded) any_hit=False (eval_metrics)
+      [3] judge-fail f1=1.0 ev=0.0 n_evidence_judge_failed=1 path=True (legacy meta['eval_v2'] fallback)
+      [4] eval-err   sample.eval_metrics = {'error': '...'}
     """
     from rcabench_platform.v3.sdk.llm_eval.eval.processer.rcabench import RCABenchProcesser
 
     class _StubSample:
-        def __init__(self, meta: dict[str, Any]) -> None:
-            self.meta: dict[str, Any] = meta
+        def __init__(
+            self,
+            *,
+            eval_metrics: dict[str, Any] | None = None,
+            meta: dict[str, Any] | None = None,
+        ) -> None:
+            self.eval_metrics = eval_metrics
+            self.meta: dict[str, Any] | None = meta
 
     samples = [
         _StubSample(
-            {
-                "eval_v2": {
-                    "precision": 1.0,
-                    "recall": 1.0,
-                    "f1": 1.0,
-                    "exact_match": True,
-                    "fault_kind_accuracy": 1.0,
-                    "kind_accuracy_denom": 1,
-                    "sql_executable_rate": 1.0,
-                    "evidence_support_rate": 1.0,
-                    "node_f1": 1.0,
-                    "edge_f1": 1.0,
-                    "path_reachability": True,
-                    "any_root_cause_hit": True,
-                    "n_evidence_judge_failed": 0,
-                    "per_evidence": [{}],
-                }
+            eval_metrics={
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1": 1.0,
+                "exact_match": True,
+                "fault_kind_accuracy": 1.0,
+                "kind_accuracy_denom": 1,
+                "sql_executable_rate": 1.0,
+                "evidence_support_rate": 1.0,
+                "node_f1": 1.0,
+                "edge_f1": 1.0,
+                "path_reachability": True,
+                "any_root_cause_hit": True,
+                "n_evidence_judge_failed": 0,
+                "per_evidence": [{}],
             }
         ),
         _StubSample(
-            {
-                "eval_v2": {
-                    "precision": 0.5,
-                    "recall": 0.5,
-                    "f1": 0.5,
-                    "exact_match": False,
-                    "fault_kind_accuracy": 0.5,
-                    "kind_accuracy_denom": 2,
-                    "sql_executable_rate": 0.8,
-                    "evidence_support_rate": 0.6,
-                    "node_f1": 0.4,
-                    "edge_f1": 0.2,
-                    "path_reachability": False,
-                    "any_root_cause_hit": True,
-                    "n_evidence_judge_failed": 0,
-                    "per_evidence": [{}],
-                }
+            eval_metrics={
+                "precision": 0.5,
+                "recall": 0.5,
+                "f1": 0.5,
+                "exact_match": False,
+                "fault_kind_accuracy": 0.5,
+                "kind_accuracy_denom": 2,
+                "sql_executable_rate": 0.8,
+                "evidence_support_rate": 0.6,
+                "node_f1": 0.4,
+                "edge_f1": 0.2,
+                "path_reachability": False,
+                "any_root_cause_hit": True,
+                "n_evidence_judge_failed": 0,
+                "per_evidence": [{}],
             }
         ),
         _StubSample(
-            {
-                "eval_v2": {
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "f1": 0.0,
-                    "exact_match": False,
-                    "fault_kind_accuracy": None,  # no service-correct rcs → excluded from mean
-                    "kind_accuracy_denom": 0,
-                    "sql_executable_rate": 0.0,
-                    "evidence_support_rate": 0.0,
-                    "node_f1": 0.0,
-                    "edge_f1": 0.0,
-                    "path_reachability": None,
-                    "any_root_cause_hit": False,
-                    "n_evidence_judge_failed": 0,
-                    "parse_error": "bad json",
-                    "per_evidence": [],
-                }
+            eval_metrics={
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "exact_match": False,
+                "fault_kind_accuracy": None,  # no service-correct rcs → excluded from mean
+                "kind_accuracy_denom": 0,
+                "sql_executable_rate": 0.0,
+                "evidence_support_rate": 0.0,
+                "node_f1": 0.0,
+                "edge_f1": 0.0,
+                "path_reachability": None,
+                "any_root_cause_hit": False,
+                "n_evidence_judge_failed": 0,
+                "parse_error": "bad json",
+                "per_evidence": [],
             }
         ),
+        # Backward-compat: row written by older SDK still under meta["eval_v2"].
         _StubSample(
-            {
+            meta={
                 "eval_v2": {
                     "precision": 1.0,
                     "recall": 1.0,
@@ -1124,7 +1125,7 @@ def test_calculate_metrics_aggregation() -> None:
                 }
             }
         ),
-        _StubSample({"eval_v2": {"error": "missing case dir"}}),
+        _StubSample(eval_metrics={"error": "missing case dir"}),
     ]
 
     proc = RCABenchProcesser.__new__(RCABenchProcesser)

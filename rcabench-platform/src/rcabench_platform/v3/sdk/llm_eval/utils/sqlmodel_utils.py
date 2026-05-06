@@ -116,6 +116,8 @@ class SQLModelUtils:
             ("data", "tags", "JSON"),
             # Add tags column to evaluation_data table
             ("evaluation_data", "tags", "JSON"),
+            # v2 metrics namespace
+            ("evaluation_data", "eval_metrics", "JSON"),
         ]
 
         # Index migrations: (index_name, create_sql)
