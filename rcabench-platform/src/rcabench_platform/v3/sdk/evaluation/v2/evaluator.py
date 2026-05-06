@@ -172,9 +172,7 @@ async def evaluate_v2(
     # any_service_hit ≥ any_root_cause_hit; all_service_hit ≥ (recall == 1.0).
     _service_correct = (MatchStatus.HIT, MatchStatus.WRONG_KIND)
     any_service: bool = any(m.status in _service_correct for m in outcome.per_fault)
-    all_service: bool = bool(outcome.per_fault) and all(
-        m.status in _service_correct for m in outcome.per_fault
-    )
+    all_service: bool = bool(outcome.per_fault) and all(m.status in _service_correct for m in outcome.per_fault)
 
     per_evidence: list[PerEvidenceRecord] = []
     judge_inputs: list[tuple[int, str, str, Evidence, EvidenceVerifyResult]] = []

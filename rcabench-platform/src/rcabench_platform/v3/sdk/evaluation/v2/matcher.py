@@ -137,9 +137,7 @@ def _gt_service_candidates(gt: GTFault) -> list[str]:
 # `pod_unavailable` while another reserves it for cases that never recover),
 # so the distinction empirically tracks model bias rather than diagnostic
 # skill. The two are collapsed into one equivalence class at evaluation time.
-_KIND_EQUIV_GROUPS: tuple[frozenset[FaultKind], ...] = (
-    frozenset({FaultKind.POD_FAILURE, FaultKind.POD_UNAVAILABLE}),
-)
+_KIND_EQUIV_GROUPS: tuple[frozenset[FaultKind], ...] = (frozenset({FaultKind.POD_FAILURE, FaultKind.POD_UNAVAILABLE}),)
 
 
 def _kind_eq(a: FaultKind, b: FaultKind) -> bool:
@@ -355,11 +353,7 @@ def compute_graph_metrics(agent: AgentRCAOutput, gt_graph: CausalGraph | None) -
     gt_nodes.discard("")
     gt_nodes -= _LOADGEN_NORM
     gt_edges = {(_norm(s), _norm(t)) for s, t in gt_edges_raw}
-    gt_edges = {
-        (s, t)
-        for s, t in gt_edges
-        if s and t and s != t and s not in _LOADGEN_NORM and t not in _LOADGEN_NORM
-    }
+    gt_edges = {(s, t) for s, t in gt_edges if s and t and s != t and s not in _LOADGEN_NORM and t not in _LOADGEN_NORM}
 
     node_p, node_r, node_f1 = _prf(agent_nodes, gt_nodes)
     edge_p, edge_r, edge_f1 = _prf(agent_edges, gt_edges)
