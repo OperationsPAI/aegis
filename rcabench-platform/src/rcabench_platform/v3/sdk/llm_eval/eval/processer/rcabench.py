@@ -131,11 +131,11 @@ class RCABenchProcesser(BaseMatchProcesser):
             sample.update(
                 correct=False,
                 confidence=0.0,
-                reasoning="missing case dir or injection.json",
+                reasoning=None,
                 judged_response=None,
+                eval_metrics={"error": "missing case dir or injection.json"},
+                meta=meta,
             )
-            meta["eval_v2"] = {"error": "missing case dir or injection.json"}
-            sample.update(meta=meta)
             return sample
 
         result: EvaluationResultV2 = await evaluate_v2(
@@ -148,25 +148,8 @@ class RCABenchProcesser(BaseMatchProcesser):
             case_name=sample.source,
         )
 
-        meta["eval_v2"] = result.model_dump(mode="json")
-
-        kind_str = f"{result.fault_kind_accuracy:.2f}" if result.fault_kind_accuracy is not None else "n/a"
-        ev_str = f"{result.evidence_support_rate:.2f}" if result.evidence_support_rate is not None else "n/a"
-        path_str = "n/a" if result.path_reachability is None else str(int(result.path_reachability))
-        reasoning_bits: list[str] = [
-            f"f1={result.f1:.2f} exact={int(result.exact_match)} "
-            f"kind_acc={kind_str} sql={result.sql_executable_rate:.2f} "
-            f"ev_support={ev_str} path={path_str} "
-            f"node_f1={result.node_f1:.2f} edge_f1={result.edge_f1:.2f}"
-        ]
-        if result.parse_error:
-            reasoning_bits.append(f"parse_error={result.parse_error}")
-        if result.n_evidence_judge_failed:
-            reasoning_bits.append(f"judge_failed={result.n_evidence_judge_failed}/{result.n_evidence}")
-
-        # Surface per-evidence judge reasoning lines on `judged_response` so
-        # the dashboard can render them alongside the agent response. One
-        # line per evidence keeps the diff readable for cases with many.
+        # Per-evidence judge prose lives on `judged_response`; one line per
+        # evidence keeps it readable for cases with many.
         judge_lines: list[str] = []
         for rec in result.per_evidence:
             if rec.supported is None and not rec.judge_reasoning:
@@ -179,8 +162,9 @@ class RCABenchProcesser(BaseMatchProcesser):
             judged_response=judged_response,
             correct=result.exact_match,
             confidence=result.f1,
-            reasoning=" | ".join(reasoning_bits),
+            reasoning=None,
             extracted_final_answer=None,
+            eval_metrics=result.model_dump(mode="json"),
             meta=meta,
         )
         return sample
@@ -264,9 +248,10 @@ class RCABenchProcesser(BaseMatchProcesser):
         judge_failed_evidences = 0
 
         for s in samples:
-            if not isinstance(s.meta, dict):
-                continue
-            ev = s.meta.get("eval_v2")
+            ev = s.eval_metrics
+            if not isinstance(ev, dict):
+                # Pre-eval_metrics rows: fall back to legacy meta["eval_v2"] location.
+                ev = s.meta.get("eval_v2") if isinstance(s.meta, dict) else None
             if not isinstance(ev, dict) or "error" in ev:
                 continue
             scored += 1

@@ -56,6 +56,8 @@ class EvaluationSample(EvalBaseModel, SQLModel, table=True):
     reasoning: str | None = Field(default=None)
     correct: bool | None = Field(default=None)
     confidence: float | None = Field(default=None)
+    # v2 metrics namespace; v1 path leaves NULL. correct/confidence above retain v1 semantics.
+    eval_metrics: Any | None = Field(default=None, sa_column=Column(JSON))
     # id
     exp_id: str = Field(default="default", index=True)
     agent_type: str | None = Field(default=None, index=True)  # agent type: simple, orchestra, orchestrator, etc.
@@ -82,5 +84,23 @@ class EvaluationSample(EvalBaseModel, SQLModel, table=True):
             "judged_response",
             "correct",
             "confidence",
+            "eval_metrics",
         ]
         return {k: getattr(self, k) for k in keys if getattr(self, k) is not None}
+
+
+class EvaluationRolloutStats(SQLModel, table=True):
+    """Token / call-count telemetry for one rollout. 1:1 with EvaluationSample.
+
+    Lives in a sibling table because the writer is the agent runtime, not the
+    judge — different lifecycle from the metric columns on evaluation_data.
+    """
+
+    __tablename__: ClassVar[str] = "evaluation_rollout_stats"  # type: ignore[assignment]
+
+    id: int | None = Field(default=None, foreign_key="evaluation_data.id", primary_key=True)
+    input_tokens: int | None = Field(default=None)
+    output_tokens: int | None = Field(default=None)
+    cache_hit_tokens: int | None = Field(default=None)
+    cache_write_tokens: int | None = Field(default=None)
+    n_llm_calls: int | None = Field(default=None)

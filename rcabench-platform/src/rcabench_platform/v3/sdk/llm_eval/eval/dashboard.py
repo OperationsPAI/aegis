@@ -17,6 +17,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from ..api import aggregate_experiment_summary
+from ..db.eval_datapoint import EvaluationSample
+from ..utils import SQLModelUtils
 from .tracker import EvalTracker
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -168,6 +171,38 @@ def create_eval_dashboard(
             if isinstance(service, list):
                 info["root_cause_services"] = [str(s) for s in service if str(s).strip()]
         return info
+
+    @app.get("/api/eval/experiments")
+    async def eval_experiments(exp_id: str | None = None) -> dict[str, Any]:
+        """Per-(exp_id × model_name × agent_type) rollup over judged rows."""
+        if not SQLModelUtils.check_db_available():
+            return {"summaries": [], "db_available": False}
+        summaries = aggregate_experiment_summary(exp_id=exp_id)
+        return {"summaries": summaries, "db_available": True}
+
+    @app.get("/api/eval/cases/{row_id}/metrics")
+    async def eval_case_metrics(row_id: int) -> dict[str, Any]:
+        """Per-case judged surface for review tooling, keyed by EvaluationSample.id."""
+        if not SQLModelUtils.check_db_available():
+            return {"error": "db unavailable"}
+        with SQLModelUtils.create_session() as sess:
+            row = sess.get(EvaluationSample, row_id)
+            if row is None:
+                return {"error": "not found"}
+            return {
+                "id": row.id,
+                "exp_id": row.exp_id,
+                "model_name": row.model_name,
+                "agent_type": row.agent_type,
+                "dataset": row.dataset,
+                "dataset_index": row.dataset_index,
+                "stage": row.stage,
+                "eval_metrics": row.eval_metrics,
+                "correct": row.correct,
+                "confidence": row.confidence,
+                "judged_response": row.judged_response,
+                "reasoning": row.reasoning,
+            }
 
     @app.get("/api/eval/samples/{sample_id}/events")
     async def eval_sample_events(sample_id: str, after: int = 0) -> dict[str, Any]:
