@@ -11,6 +11,7 @@ import polars as pl
 from rcabench_platform.v3.internal.reasoning.alarm_evidence import (
     _alarm_evidence_for_node,
     _build_alarm_accounting,
+    _build_leg_alarm_accounting,
     _evidence_confidence_for_strength,
     _split_default_and_weak_paths,
 )
@@ -207,6 +208,15 @@ def _process_successful_propagation(
     )
 
     alarm_accounting = _build_alarm_accounting(result, graph, alarm_nodes, alarm_evidence_by_name)
+    leg_accounting = _build_leg_alarm_accounting(
+        result,
+        graph,
+        alarm_nodes,
+        alarm_evidence_by_name,
+        resolution_info,
+    )
+    if leg_accounting:
+        alarm_accounting["leg_alarm_accounting"] = leg_accounting
     causal_graph = _causal_graph_with_export_metadata(
         causal_graph,
         case_name=case_name,

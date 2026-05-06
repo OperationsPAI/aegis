@@ -77,6 +77,33 @@ def _normalize_alarm_path(path: str | None) -> str | None:
     return normalized
 
 
+def _path_signature(path: str | None) -> str | None:
+    """Return a template-tolerant path key for unique fallback matching.
+
+    Conclusion rows and graph spans sometimes disagree on whether a path
+    segment is concrete (``/orders/123``) or templated
+    (``/orders/{orderId}``). Exact path matching should remain preferred, but
+    a unique signature lets us recover strong evidence for those format-only
+    mismatches without turning ambiguous endpoints into matches.
+    """
+    normalized = _normalize_alarm_path(path)
+    if not normalized:
+        return None
+    parts = []
+    for part in normalized.split("/"):
+        if not part:
+            continue
+        if re.fullmatch(r"\{[^/{}]+\}", part):
+            parts.append("{}")
+        elif re.fullmatch(r"\d+", part):
+            parts.append("{}")
+        elif re.fullmatch(r"[0-9a-fA-F]{8,}(?:-[0-9a-fA-F]{4,})*", part):
+            parts.append("{}")
+        else:
+            parts.append(part.lower())
+    return "/" + "/".join(parts) if parts else "/"
+
+
 def _lower_key(value: str | None) -> str | None:
     return value.lower() if value else None
 
@@ -192,6 +219,8 @@ def _new_alarm_index() -> dict[str, Any]:
         "owner_http": defaultdict(list),
         "method_path": defaultdict(list),
         "path": defaultdict(list),
+        "method_path_signature": defaultdict(list),
+        "path_signature": defaultdict(list),
     }
 
 
@@ -209,8 +238,14 @@ def _append_alarm_index(index: dict[str, Any], identity: _AlarmIdentity, evidenc
             index["owner_http"][(_lower_key(owner), identity.method, identity.normalized_path)].append(entry)
     if identity.method and identity.normalized_path:
         index["method_path"][(identity.method, identity.normalized_path)].append(entry)
+        signature = _path_signature(identity.normalized_path)
+        if signature:
+            index["method_path_signature"][(identity.method, signature)].append(entry)
     if identity.normalized_path:
         index["path"][identity.normalized_path].append(entry)
+        signature = _path_signature(identity.normalized_path)
+        if signature:
+            index["path_signature"][signature].append(entry)
 
 
 def _load_alarm_evidence_index(loader: ParquetDataLoader) -> dict[str, Any]:
@@ -363,6 +398,14 @@ def _alarm_evidence_for_node(
                 else None,
             ),
             ("bare_path_unique", "path", node_identity.normalized_path),
+            (
+                "http_endpoint_signature_unique",
+                "method_path_signature",
+                (node_identity.method, _path_signature(node_identity.normalized_path))
+                if node_identity.method and node_identity.normalized_path
+                else None,
+            ),
+            ("bare_path_signature_unique", "path_signature", _path_signature(node_identity.normalized_path)),
         ]
         for method, bucket, key in match_steps:
             if key is None:
@@ -557,6 +600,89 @@ def _build_alarm_accounting(
     if candidate_strong_count == 0:
         out["strong_alarm_coverage_reason"] = "no_candidate_strong_alarms"
     return out
+
+
+def _build_leg_alarm_accounting(
+    result: PropagationResult,
+    graph: HyperGraph,
+    alarm_nodes: set[int],
+    evidence_by_name: dict[str, Any],
+    resolution_info: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Attribute terminal alarm evidence to each resolved fault leg.
+
+    The top-level label only says that at least one mechanism path exists.
+    Hybrid cases need a stricter per-leg view: which root candidate produced
+    paths, and did those paths reach any strong alarm?  This is intentionally
+    accounting-only; it does not alter path construction or labels.
+    """
+    if not resolution_info:
+        return []
+    units = resolution_info.get("propagation_units") or []
+    if not isinstance(units, list):
+        return []
+
+    terminal_path_ids = _path_terminal_alarm_path_ids(result, alarm_nodes)
+    leg_reports: list[dict[str, Any]] = []
+    global_candidate_strong_count = sum(
+        1 for nid in alarm_nodes if _alarm_evidence_for_node(nid, graph, evidence_by_name)["issue_strength"] == "strong"
+    )
+
+    for index, unit in enumerate(units):
+        if not isinstance(unit, dict):
+            continue
+        starting_points = [str(name) for name in unit.get("starting_points") or unit.get("physical_nodes") or []]
+        start_ids: set[int] = set()
+        for name in starting_points:
+            node = graph.get_node_by_name(name)
+            if node is not None and node.id is not None:
+                start_ids.add(node.id)
+
+        fault_type = str(unit.get("fault_type") or "")
+        manifest_rule_prefix = f"manifest:{fault_type}:" if fault_type else ""
+        leg_paths = [
+            path
+            for path in result.paths
+            if path.nodes
+            and (
+                path.nodes[0] in start_ids
+                or any(str(rule).startswith(manifest_rule_prefix) for rule in (path.rules or []))
+            )
+        ]
+        explained_ids = {
+            path.nodes[-1] for path in leg_paths if path.nodes and path.nodes[-1] in alarm_nodes
+        }
+        explained_details = [
+            _alarm_detail(nid, graph, evidence_by_name, reason="path_terminal", path_status="explained")
+            | {"path_ids": terminal_path_ids.get(nid, [])}
+            for nid in sorted(explained_ids)
+        ]
+        explained_strong_count = sum(1 for detail in explained_details if detail["issue_strength"] == "strong")
+        status = "strong_reason_found" if explained_strong_count > 0 else "no_strong_reason"
+        if not leg_paths:
+            status = "no_path"
+        elif global_candidate_strong_count == 0:
+            status = "no_candidate_strong_alarms"
+
+        leg_reports.append(
+            {
+                "leg_index": index,
+                "fault_type": unit.get("fault_type"),
+                "root_group_id": unit.get("root_group_id"),
+                "root_candidate_indices": unit.get("root_candidate_indices", []),
+                "starting_points": starting_points,
+                "path_count": len(leg_paths),
+                "explained_alarm_count": len(explained_details),
+                "explained_strong_alarm_count": explained_strong_count,
+                "candidate_strong_alarm_count": global_candidate_strong_count,
+                "strong_alarm_coverage": None
+                if global_candidate_strong_count == 0
+                else explained_strong_count / global_candidate_strong_count,
+                "status": status,
+                "explained_alarm_nodes": explained_details,
+            }
+        )
+    return leg_reports
 
 
 def _evidence_confidence_for_strength(strength: str) -> float:
