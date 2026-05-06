@@ -55,7 +55,8 @@ _SCHEMA_BLOCK = """{
     }
   ],
   "propagation": [
-    {"from": "<service>", "to": "<service>",
+    {"from": "<failing service where the fault originates>",
+     "to":   "<service further along the impact chain, closer to the user>",
      "evidence": [{"kind": "trace", "sql": "...", "claim": "..."}]}
   ]
 }"""
@@ -82,6 +83,13 @@ def get_agent_contract_prompt() -> str:
   * Service names must match strings present in the data — do not invent.
   * One entry per distinct root cause; do NOT collapse multiple distinct
     faults into a single root_cause.
+  * `propagation` is the FAULT-IMPACT chain: edges flow FROM the failing
+    service TOWARD the user-visible alarm tier (e.g. `frontend`,
+    `front-end`, `ts-ui-dashboard`). Each chain should reach a frontend-tier
+    service. Do NOT use the request-call direction (caller → callee).
+  * Synthetic traffic generators (`loadgenerator`, `locust`, `wrk2`,
+    `dsb-wrk2`, `k6`) are NOT services — never list them as `root_causes`,
+    `from`, or `to`.
 
 ## SQL rules
   * DuckDB on this case dir's parquets.

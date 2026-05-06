@@ -61,11 +61,16 @@ HIT  ⇔  service_match(rc, gt) and rc.fault_kind == gt.fault_kind
 | `fault_kind_accuracy` | service 命中的子集中 kind 也对的比例。分母 = 服务匹配上某个 GT 的 agent_rc 数（HIT + WRONG_KIND）；分子 = HIT 数。**分母为 0 的 case 直接从该指标的 benchmark 均值中剔除**（用 `kind_accuracy_denom` 子分母） | "定位失败 vs 分类失败"诊断 |
 | `sql_executable_rate` | `#OK / #all_evidence`（root_causes + propagation 的 evidence 全算） | 机械可执行率 |
 | `evidence_support_rate` | **case 内**先按 evidence 取均值（每条 evidence judge 出 0/1），**再**在 benchmark 维度按 case 取均值 | claim 与 SQL 行集合 + chain 连贯性 |
-| `node_f1` | agent 服务集合 vs `causal_graph.json` 服务集合的 F1（含 root_cause + propagation 端点） | 传播图节点完整性 |
-| `edge_f1` | agent propagation `(from, to)` 集合 vs GT 边集合的 F1 | 传播图边完整性 |
-| `path_reachability` | 二值：是否存在某个 **HIT** 的 `agent.root_causes[i]`，其 `service` 沿 agent 自报的 `propagation` 边能走到 `causal_graph.alarm_nodes` 对应的某个服务（路径长度 0 也算）。无 HIT 即 0；GT 无 causal_graph 或无 alarm 服务时记 None，从均值剔除（用 `path_reachability_denom` 子分母） | 至少一条根因→告警的因果链是连通的（补 `edge_f1` 看不出连通性的盲区） |
+| `node_f1` | agent 服务集合 vs `causal_graph.json` 服务集合的 F1（含 root_cause + propagation 端点）。两侧都剔除 loadgen 类合成流量服务（`loadgenerator` / `locust` / `wrk2` / `dsb-wrk2` / `k6`） | 传播图节点完整性 |
+| `edge_f1` | agent propagation `(from, to)` 集合 vs GT 边集合的 F1，方向严格。两侧同样剔除 loadgen 端点 | 传播图边完整性（含方向） |
+| `path_reachability` | 二值：是否存在某个 **HIT** 的 `agent.root_causes[i]`，其 `service` 沿 agent `propagation` 边**无向遍历**能走到 `causal_graph.alarm_nodes` 对应的某个服务（路径长度 0 也算）。无 HIT 即 0；GT 无 causal_graph 或无 alarm 服务时记 None，按总样本数计 0 进均值。无向是有意为之 —— agent contract 里 `from`/`to` 语义被部分模型反向解读，方向严格会误判连通性 | 至少一条根因→告警的因果链是**连通**的（方向严格归 `edge_f1` 管） |
+| `any_root_cause_hit` | 二值：`per_fault` 里至少一个 `HIT`（即至少一个 (service, fault_kind) 双对） | 比 path 更宽松的"猜对了一个"信号 |
+| `any_service_hit` | 二值：至少一个 service 对（HIT 或 WRONG_KIND，不看 fault_kind） | 阶梯最低档：服务定位有没有踩到 |
+| `all_service_hit` | 二值：每个 GT fault 都有 service 命中（HIT 或 WRONG_KIND）。比 `recall == 1.0` 宽松 —— 不要求 fault_kind 都对 | 阶梯高档：服务覆盖度 |
 
-聚合维度（在 `RCABenchProcesser.calculate_metrics`）一律对**全部样本**取算术平均，分母 = `total_samples`，**`fault_kind_accuracy` 与 `path_reachability` 例外**（前者剔除分母为 0 的 case，单独跟踪 `kind_accuracy_denom`；后者剔除无 GT 图 / 无 alarm 服务的 case，单独跟踪 `path_reachability_denom`）。parse 失败 / 缺 case dir 的样本对其他指标计 0 进平均，避免高 JSON 失败率的 agent 偷分。
+聚合维度（在 `RCABenchProcesser.calculate_metrics`）一律对**全部样本**取算术平均，分母 = `total_samples`，**`fault_kind_accuracy` 例外**（剔除分母为 0 的 case，单独跟踪 `kind_accuracy_denom`）。parse 失败 / 缺 case dir 的样本对其他指标（含 path_reachability、any/all_*hit）计 0 进平均，避免高 JSON 失败率的 agent 偷分。
+
+**严格度阶梯**（per case，True/False 当 1/0）：`any_service_hit ≥ any_root_cause_hit ≥ path_reachability`；`all_service_hit ≥ exact_match`。
 
 `evidence_support_rate` 的双层平均（case 内→benchmark）让 evidence 多的 case 不会权重碾压其他 case。case 内全部 evidence judge 都失败时，该 case 该指标记 0 计入 benchmark 均值；**单条 evidence 的 judge 失败不污染其他 evidence 的得分**（粒度收到 evidence 级，比旧版 chain 级容错好）。
 

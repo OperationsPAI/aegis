@@ -79,6 +79,8 @@ class EvaluationResultV2(BaseModel):
 
     path_reachability: bool | None = None
     any_root_cause_hit: bool = False
+    any_service_hit: bool = False
+    all_service_hit: bool = False
 
     node_f1: float = 0.0
     edge_f1: float = 0.0
@@ -166,6 +168,13 @@ async def evaluate_v2(
     graph: GraphMetrics = compute_graph_metrics(agent, gt_graph)
     path_reachable: bool | None = compute_path_reachability(agent, outcome, gt_graph)
     any_hit: bool = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
+    # Kind-agnostic siblings: HIT and WRONG_KIND both mean "service was right".
+    # any_service_hit ≥ any_root_cause_hit; all_service_hit ≥ (recall == 1.0).
+    _service_correct = (MatchStatus.HIT, MatchStatus.WRONG_KIND)
+    any_service: bool = any(m.status in _service_correct for m in outcome.per_fault)
+    all_service: bool = bool(outcome.per_fault) and all(
+        m.status in _service_correct for m in outcome.per_fault
+    )
 
     per_evidence: list[PerEvidenceRecord] = []
     judge_inputs: list[tuple[int, str, str, Evidence, EvidenceVerifyResult]] = []
@@ -269,6 +278,8 @@ async def evaluate_v2(
         evidence_support_rate=evidence_support_rate,
         path_reachability=path_reachable,
         any_root_cause_hit=any_hit,
+        any_service_hit=any_service,
+        all_service_hit=all_service,
         node_f1=graph.node_f1,
         edge_f1=graph.edge_f1,
         node_precision=graph.node_precision,

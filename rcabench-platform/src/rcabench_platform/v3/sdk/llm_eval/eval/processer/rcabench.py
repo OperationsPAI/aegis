@@ -213,8 +213,12 @@ class RCABenchProcesser(BaseMatchProcesser):
                 "avg_sql_executable_rate": 0.0,
                 "avg_evidence_support_rate": 0.0,
                 "avg_path_reachability": 0.0,
+                "avg_any_service_hit": 0.0,
+                "any_service_hit_count": 0,
                 "avg_any_root_cause_hit": 0.0,
                 "any_root_cause_hit_count": 0,
+                "avg_all_service_hit": 0.0,
+                "all_service_hit_count": 0,
                 "avg_node_f1": 0.0,
                 "avg_edge_f1": 0.0,
                 "parse_errors": 0,
@@ -242,6 +246,8 @@ class RCABenchProcesser(BaseMatchProcesser):
         kind_acc_cases = 0
         path_reach_sum = 0
         any_hit_sum = 0
+        any_service_hit_sum = 0
+        all_service_hit_sum = 0
         scored = 0
         parse_errors = 0
         zero_evidence = 0
@@ -280,6 +286,10 @@ class RCABenchProcesser(BaseMatchProcesser):
 
             if ev.get("any_root_cause_hit"):
                 any_hit_sum += 1
+            if ev.get("any_service_hit"):
+                any_service_hit_sum += 1
+            if ev.get("all_service_hit"):
+                all_service_hit_sum += 1
 
             if ev.get("exact_match"):
                 exact_count += 1
@@ -305,8 +315,12 @@ class RCABenchProcesser(BaseMatchProcesser):
             "avg_sql_executable_rate": round(sql_sum / denom, 4),
             "avg_evidence_support_rate": round(ev_support_sum / denom, 4),
             "avg_path_reachability": round(path_reach_sum / denom, 4),
+            "avg_any_service_hit": round(any_service_hit_sum / denom, 4),
+            "any_service_hit_count": any_service_hit_sum,
             "avg_any_root_cause_hit": round(any_hit_sum / denom, 4),
             "any_root_cause_hit_count": any_hit_sum,
+            "avg_all_service_hit": round(all_service_hit_sum / denom, 4),
+            "all_service_hit_count": all_service_hit_sum,
             "avg_node_f1": round(node_f1_sum / denom, 4),
             "avg_edge_f1": round(edge_f1_sum / denom, 4),
             "parse_errors": parse_errors,

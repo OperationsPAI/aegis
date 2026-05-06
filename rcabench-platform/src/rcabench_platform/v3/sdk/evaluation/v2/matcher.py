@@ -84,6 +84,25 @@ def _norm(name: str | None) -> str:
     return name.strip().lower().replace("-", "").replace("_", "")
 
 
+# Synthetic traffic sources excluded from graph metrics: they're never GT
+# root causes (we don't inject into them), they're filtered out of GT
+# alarm_nodes upstream (parquet_loader.is_root_alarm_candidate_row), and
+# the right "user-visible" boundary is the topmost non-loadgen span
+# (frontend / ts-ui-dashboard / front-end). Whether the agent mentions
+# loadgen or not should not move node_f1 / edge_f1 / path_reachability.
+_LOADGEN_NORM: frozenset[str] = frozenset(
+    _norm(s)
+    for s in (
+        "loadgenerator",
+        "load-generator",
+        "locust",
+        "wrk2",
+        "dsb-wrk2",
+        "k6",
+    )
+)
+
+
 def _service_eq(a: str | None, b: str | None) -> bool:
     return _norm(a) == _norm(b) and bool(_norm(a))
 
@@ -106,10 +125,36 @@ def _gt_service_candidates(gt: GTFault) -> list[str]:
     return [gt.service]
 
 
+# Fault-kind equivalence classes for HIT determination. Two kinds in the same
+# class differ only in a feature the agent cannot observe from the released
+# telemetry, so the matcher treats them as the same answer.
+#
+# `pod_failure` vs `pod_unavailable` differ only in whether the unavailability
+# extends past the injection window. The window length is GT-side knowledge;
+# from telemetry the agent sees a service that stopped emitting and may or
+# may not resume within the abnormal slice. Different models calibrate the
+# threshold in opposite directions (e.g., one reads any sustained gap as
+# `pod_unavailable` while another reserves it for cases that never recover),
+# so the distinction empirically tracks model bias rather than diagnostic
+# skill. The two are collapsed into one equivalence class at evaluation time.
+_KIND_EQUIV_GROUPS: tuple[frozenset[FaultKind], ...] = (
+    frozenset({FaultKind.POD_FAILURE, FaultKind.POD_UNAVAILABLE}),
+)
+
+
+def _kind_eq(a: FaultKind, b: FaultKind) -> bool:
+    if a == b:
+        return True
+    for group in _KIND_EQUIV_GROUPS:
+        if a in group and b in group:
+            return True
+    return False
+
+
 def _evaluate_pair(rc: RootCauseClaim, gt: GTFault) -> MatchStatus:
     if not any(_service_eq(rc.service, c) for c in _gt_service_candidates(gt)):
         return MatchStatus.MISS
-    if rc.fault_kind != gt.fault_kind:
+    if not _kind_eq(rc.fault_kind, gt.fault_kind):
         return MatchStatus.WRONG_KIND
     return MatchStatus.HIT
 
@@ -212,6 +257,7 @@ def _agent_service_set(agent: AgentRCAOutput) -> set[str]:
         out.add(_norm(prop.from_))
         out.add(_norm(prop.to))
     out.discard("")
+    out -= _LOADGEN_NORM
     return out
 
 
@@ -219,7 +265,7 @@ def _agent_edge_set(agent: AgentRCAOutput) -> set[tuple[str, str]]:
     out: set[tuple[str, str]] = set()
     for prop in agent.propagation:
         s, t = _norm(prop.from_), _norm(prop.to)
-        if s and t and s != t:
+        if s and t and s != t and s not in _LOADGEN_NORM and t not in _LOADGEN_NORM:
             out.add((s, t))
     return out
 
@@ -245,8 +291,15 @@ def compute_path_reachability(
     Returns ``None`` when the metric is not applicable (no GT graph, or GT graph
     has no alarm services). Otherwise returns ``True`` iff there exists some HIT
     agent root_cause whose service can reach some alarm service via the agent's
-    own ``propagation`` edges (treated as directed from -> to). Path length 0
-    counts: a HIT rc whose service itself is an alarm service is reachable.
+    own ``propagation`` edges, traversed as **undirected** (both ``from -> to``
+    and ``to -> from`` admit traversal). Path length 0 counts.
+
+    Direction is intentionally collapsed: the agent contract uses ``from`` /
+    ``to`` for the fault-impact direction (failing service → user-visible
+    alarm), but some models silently re-interpret it as the request-call
+    direction (caller → callee), which inverts every edge. This metric grades
+    the CONNECTIVITY of the agent's chain claim, not the arrow direction;
+    ``edge_f1`` is the strict-direction counterpart.
 
     Anchoring on HIT root causes prevents trivial passes — an agent that emits
     a generic ``loadgen -> frontend -> cart`` chain without identifying any GT
@@ -270,6 +323,7 @@ def compute_path_reachability(
     adj: dict[str, set[str]] = {}
     for s, t in _agent_edge_set(agent):
         adj.setdefault(s, set()).add(t)
+        adj.setdefault(t, set()).add(s)
 
     for idx in hit_rc_indices:
         start = _norm(agent.root_causes[idx].service)
@@ -299,8 +353,13 @@ def compute_graph_metrics(agent: AgentRCAOutput, gt_graph: CausalGraph | None) -
     gt_edges_raw = gt_graph.get_service_edges()
     gt_nodes = {_norm(s) for s in gt_nodes_raw}
     gt_nodes.discard("")
+    gt_nodes -= _LOADGEN_NORM
     gt_edges = {(_norm(s), _norm(t)) for s, t in gt_edges_raw}
-    gt_edges = {(s, t) for s, t in gt_edges if s and t and s != t}
+    gt_edges = {
+        (s, t)
+        for s, t in gt_edges
+        if s and t and s != t and s not in _LOADGEN_NORM and t not in _LOADGEN_NORM
+    }
 
     node_p, node_r, node_f1 = _prf(agent_nodes, gt_nodes)
     edge_p, edge_r, edge_f1 = _prf(agent_edges, gt_edges)

@@ -186,6 +186,36 @@ def test_match_wrong_kind() -> None:
     assert out.kind_accuracy_denom == 1
 
 
+def test_match_pod_failure_unavailable_equivalence() -> None:
+    """pod_failure and pod_unavailable differ only in unavailability duration,
+    which the agent cannot observe from the released telemetry. The matcher
+    treats the pair as one equivalence class: either prediction is HIT against
+    either GT."""
+    # Direction 1: GT pod_unavailable, agent pod_failure → HIT (was WRONG_KIND)
+    gt = [GTFault(service="payment", fault_kind=FaultKind.POD_UNAVAILABLE)]
+    agent = _agent([{"service": "payment", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}])
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.HIT
+    assert out.exact_match is True
+    assert out.fault_kind_accuracy == 1.0
+
+    # Direction 2: GT pod_failure, agent pod_unavailable → HIT
+    gt = [GTFault(service="payment", fault_kind=FaultKind.POD_FAILURE)]
+    agent = _agent([{"service": "payment", "fault_kind": "pod_unavailable", "evidence": [_DUMMY_EV]}])
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.HIT
+    assert out.exact_match is True
+
+
+def test_match_pod_equivalence_does_not_leak() -> None:
+    """The pod equivalence class must not pull in unrelated kinds. A non-pod
+    kind paired with pod_failure / pod_unavailable still yields WRONG_KIND."""
+    gt = [GTFault(service="payment", fault_kind=FaultKind.POD_FAILURE)]
+    agent = _agent([{"service": "payment", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}])
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.WRONG_KIND
+
+
 def test_match_direction_is_diagnostic_only() -> None:
     """Network fault: agent gives wrong direction → still HIT under the
     simplified contract (matcher only checks service + fault_kind)."""
@@ -517,6 +547,52 @@ def test_graph_metrics_no_gt_marks_inapplicable() -> None:
     assert gm.node_f1 == 0.0
 
 
+def test_graph_metrics_loadgen_filtered_both_sides() -> None:
+    """loadgenerator (and aliases) are dropped from both agent and GT before
+    P/R/F1 — they're synthetic traffic, not real services. Whether the agent
+    mentions them or not should not move the score."""
+    gt = _gt_graph(
+        ["loadgenerator", "frontend", "cart"],
+        [("loadgenerator", "frontend"), ("frontend", "cart")],
+    )
+    # Agent that includes loadgen everywhere should score the same as one that
+    # omits it, because the metric filter wipes loadgen from both sides.
+    agent_with_loadgen = _agent(
+        [{"service": "cart", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[
+            {"from": "loadgenerator", "to": "frontend", "evidence": [_DUMMY_EV]},
+            {"from": "frontend", "to": "cart", "evidence": [_DUMMY_EV]},
+        ],
+    )
+    agent_without = _agent(
+        [{"service": "cart", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[{"from": "frontend", "to": "cart", "evidence": [_DUMMY_EV]}],
+    )
+    gm_with = compute_graph_metrics(agent_with_loadgen, gt)
+    gm_without = compute_graph_metrics(agent_without, gt)
+    assert gm_with.node_f1 == gm_without.node_f1 == 1.0
+    assert gm_with.edge_f1 == gm_without.edge_f1 == 1.0
+    # loadgen should appear in neither matched / missed / hallucinated lists.
+    for gm in (gm_with, gm_without):
+        for svc in gm.matched_services + gm.missed_services + gm.hallucinated_services:
+            assert "loadgen" not in svc and "locust" not in svc
+        for s, t in gm.matched_edges + gm.missed_edges + gm.hallucinated_edges:
+            assert "loadgen" not in s and "loadgen" not in t
+
+
+def test_graph_metrics_loadgen_alias_filtered() -> None:
+    """`load-generator`, `locust`, `wrk2`, `dsb-wrk2`, `k6` are also filtered."""
+    gt = _gt_graph(["wrk2", "frontend"], [("wrk2", "frontend")])
+    agent = _agent(
+        [{"service": "frontend", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[{"from": "locust", "to": "frontend", "evidence": [_DUMMY_EV]}],
+    )
+    gm = compute_graph_metrics(agent, gt)
+    assert gm.matched_services == ["frontend"]
+    assert gm.missed_services == []
+    assert gm.hallucinated_services == []
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Path reachability (HIT root cause -> alarm service via agent edges)
 # ──────────────────────────────────────────────────────────────────────
@@ -630,6 +706,77 @@ def test_path_reachability_no_alarm_services_is_none() -> None:
     assert compute_path_reachability(agent, outcome, gt) is None
 
 
+def test_path_reachability_agent_loadgen_edges_dropped() -> None:
+    """Agent that overshoots into loadgen still passes when the chain reaches
+    a real alarm service mid-traversal — loadgen edges are filtered, so they
+    neither help nor hurt."""
+    gt_faults = [GTFault(service="cart", fault_kind=FaultKind.POD_FAILURE)]
+    # Alarm on frontend (the real user-visible boundary), not loadgen.
+    gt = _gt_graph(["cart", "frontend"], [("cart", "frontend")], alarms=["frontend"])
+    agent = _agent(
+        [{"service": "cart", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[
+            {"from": "cart", "to": "frontend", "evidence": [_DUMMY_EV]},
+            {"from": "frontend", "to": "loadgenerator", "evidence": [_DUMMY_EV]},
+        ],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is True
+
+
+def test_path_reachability_loadgen_only_chain_is_unreachable() -> None:
+    """If the agent's only outgoing edge from the HIT root cause goes to loadgen,
+    that edge is filtered out → no path → False. Documents that loadgen is not
+    a valid reachability target."""
+    gt_faults = [GTFault(service="cart", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["cart", "frontend"], [("cart", "frontend")], alarms=["frontend"])
+    agent = _agent(
+        [{"service": "cart", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[{"from": "cart", "to": "loadgenerator", "evidence": [_DUMMY_EV]}],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is False
+
+
+def test_path_reachability_reversed_direction_still_reachable() -> None:
+    """Agent emits the chain in request-call direction (caller → callee), the
+    inverse of fault-impact direction. The metric should still credit the
+    connectivity rather than punish the direction interpretation."""
+    gt_faults = [GTFault(service="cart", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(["cart", "frontend"], [("frontend", "cart")], alarms=["frontend"])
+    # Reversed: agent writes frontend -> cart (caller calls callee), but the
+    # fault originates at cart. Old (directed): BFS from cart along outgoing
+    # edges only sees cart → False. New (undirected): cart ↔ frontend → True.
+    agent = _agent(
+        [{"service": "cart", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[{"from": "frontend", "to": "cart", "evidence": [_DUMMY_EV]}],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is True
+
+
+def test_path_reachability_undirected_traverses_multi_hop_reverse_chain() -> None:
+    """Multi-hop chain written entirely in the reverse direction still resolves.
+    HIT on `cart`; agent writes ts-ui-dashboard → frontend → cart (request-call
+    direction). With undirected traversal cart → frontend → ts-ui-dashboard
+    works → True."""
+    gt_faults = [GTFault(service="cart", fault_kind=FaultKind.POD_FAILURE)]
+    gt = _gt_graph(
+        ["cart", "frontend", "ts-ui-dashboard"],
+        [("cart", "frontend"), ("frontend", "ts-ui-dashboard")],
+        alarms=["ts-ui-dashboard"],
+    )
+    agent = _agent(
+        [{"service": "cart", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}],
+        propagation=[
+            {"from": "ts-ui-dashboard", "to": "frontend", "evidence": [_DUMMY_EV]},
+            {"from": "frontend", "to": "cart", "evidence": [_DUMMY_EV]},
+        ],
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    assert compute_path_reachability(agent, outcome, gt) is True
+
+
 # ──────────────────────────────────────────────────────────────────────
 # any_root_cause_hit — supplement to path_reachability
 #
@@ -672,6 +819,70 @@ def test_any_root_cause_hit_wrong_kind_does_not_count() -> None:
     outcome = compute_outcome(agent, gt_faults)
     any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
     assert any_hit is False
+
+
+# ──────────────────────────────────────────────────────────────────────
+# any_service_hit / all_service_hit — kind-agnostic siblings
+#
+# Strictness ladder (most lenient → strictest):
+#   any_service_hit  ≥  any_root_cause_hit  ≥  path_reachability
+#   all_service_hit  ≥  (recall == 1.0)     ≥  exact_match
+# ──────────────────────────────────────────────────────────────────────
+
+
+def test_any_service_hit_includes_wrong_kind() -> None:
+    """Service-correct but wrong fault_kind → any_service_hit=True even though
+    any_root_cause_hit=False. This is the rung any_root_cause_hit cannot reach."""
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    agent = _agent([{"service": "a", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    any_service = any(m.status in (MatchStatus.HIT, MatchStatus.WRONG_KIND) for m in outcome.per_fault)
+    any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
+    assert any_service is True
+    assert any_hit is False
+
+
+def test_any_service_hit_all_miss_is_false() -> None:
+    gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
+    agent = _agent([{"service": "x", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    any_service = any(m.status in (MatchStatus.HIT, MatchStatus.WRONG_KIND) for m in outcome.per_fault)
+    assert any_service is False
+
+
+def test_all_service_hit_partial_coverage_is_false() -> None:
+    """Two GT faults, agent only matches one service → all_service_hit=False."""
+    gt_faults = [
+        GTFault(service="a", fault_kind=FaultKind.POD_FAILURE),
+        GTFault(service="b", fault_kind=FaultKind.POD_FAILURE),
+    ]
+    agent = _agent([{"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]}])
+    outcome = compute_outcome(agent, gt_faults)
+    all_service = bool(outcome.per_fault) and all(
+        m.status in (MatchStatus.HIT, MatchStatus.WRONG_KIND) for m in outcome.per_fault
+    )
+    assert all_service is False
+
+
+def test_all_service_hit_full_coverage_with_wrong_kinds_is_true() -> None:
+    """Every GT service is matched (some HIT, some WRONG_KIND) → all_service_hit=True
+    even though exact_match=False. This is the rung exact_match cannot reach."""
+    gt_faults = [
+        GTFault(service="a", fault_kind=FaultKind.POD_FAILURE),
+        GTFault(service="b", fault_kind=FaultKind.POD_FAILURE),
+    ]
+    agent = _agent(
+        [
+            {"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
+            {"service": "b", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
+        ]
+    )
+    outcome = compute_outcome(agent, gt_faults)
+    all_service = bool(outcome.per_fault) and all(
+        m.status in (MatchStatus.HIT, MatchStatus.WRONG_KIND) for m in outcome.per_fault
+    )
+    assert all_service is True
+    assert outcome.exact_match is False
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1063,6 +1274,8 @@ def test_calculate_metrics_aggregation() -> None:
                 "edge_f1": 1.0,
                 "path_reachability": True,
                 "any_root_cause_hit": True,
+                "any_service_hit": True,
+                "all_service_hit": True,
                 "n_evidence_judge_failed": 0,
                 "per_evidence": [{}],
             }
@@ -1081,6 +1294,11 @@ def test_calculate_metrics_aggregation() -> None:
                 "edge_f1": 0.2,
                 "path_reachability": False,
                 "any_root_cause_hit": True,
+                # 2 GT, 1 HIT + 1 WRONG_KIND → both per_fault entries are
+                # service-correct → all_service_hit=True even though
+                # exact_match=False and recall=0.5.
+                "any_service_hit": True,
+                "all_service_hit": True,
                 "n_evidence_judge_failed": 0,
                 "per_evidence": [{}],
             }
@@ -1099,6 +1317,8 @@ def test_calculate_metrics_aggregation() -> None:
                 "edge_f1": 0.0,
                 "path_reachability": None,
                 "any_root_cause_hit": False,
+                "any_service_hit": False,
+                "all_service_hit": False,
                 "n_evidence_judge_failed": 0,
                 "parse_error": "bad json",
                 "per_evidence": [],
@@ -1120,6 +1340,8 @@ def test_calculate_metrics_aggregation() -> None:
                     "edge_f1": 1.0,
                     "path_reachability": True,
                     "any_root_cause_hit": True,
+                    "any_service_hit": True,
+                    "all_service_hit": True,
                     "n_evidence_judge_failed": 1,
                     "per_evidence": [{}],
                 }
@@ -1158,3 +1380,16 @@ def test_calculate_metrics_aggregation() -> None:
     assert metrics["any_root_cause_hit_count"] == 3
     assert metrics["avg_any_root_cause_hit"] == round(3 / 5, 4)
     assert metrics["avg_any_root_cause_hit"] >= metrics["avg_path_reachability"]
+    # any_service_hit / all_service_hit: same n=5 denom. In this stub mix all
+    # service-hit cases happen to also have HITs, so counts match — the rung
+    # any_service > any_root_cause only fires on WRONG_KIND-only cases (covered
+    # by test_any_service_hit_includes_wrong_kind).
+    assert metrics["any_service_hit_count"] == 3
+    assert metrics["avg_any_service_hit"] == round(3 / 5, 4)
+    assert metrics["all_service_hit_count"] == 3
+    assert metrics["avg_all_service_hit"] == round(3 / 5, 4)
+    # Strictness ladder lifts to rate level:
+    #   any_service ≥ any_root_cause ≥ path_reachability
+    #   all_service ≥ exact_match
+    assert metrics["avg_any_service_hit"] >= metrics["avg_any_root_cause_hit"]
+    assert metrics["avg_all_service_hit"] >= metrics["exact_match_rate"]
