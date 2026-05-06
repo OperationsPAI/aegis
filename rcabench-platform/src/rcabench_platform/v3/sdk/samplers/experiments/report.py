@@ -1,6 +1,7 @@
 """Sampler performance report generation."""
 
 import polars as pl
+from urllib.parse import unquote
 
 from ...datasets.spec import get_datapack_folder, get_datapack_list
 from ...logging import logger, timeit
@@ -8,6 +9,35 @@ from ...utils.dataframe import print_dataframe
 from ...utils.serde import save_parquet
 from ..spec import SamplingMode, global_sampler_registry
 from .spec import get_sampler_output_folder
+
+
+def _parse_sampler_folder_name(folder_name: str) -> tuple[str, float, SamplingMode, str | None] | None:
+    if folder_name.startswith("sampler="):
+        items = {}
+        for part in folder_name.split("__"):
+            key, sep, value = part.partition("=")
+            if not sep:
+                return None
+            items[key] = unquote(value)
+        try:
+            sampler_name = items["sampler"]
+            sampling_rate = float(items["rate"])
+            mode = SamplingMode(items["mode"])
+            model_name = items.get("model")
+        except (KeyError, ValueError, TypeError):
+            return None
+        return sampler_name, sampling_rate, mode, model_name
+
+    parts = folder_name.split("_")
+    if len(parts) < 3:
+        return None
+    try:
+        sampler_name = "_".join(parts[:-2])
+        sampling_rate = float(parts[-2])
+        mode = SamplingMode(parts[-1])
+    except (ValueError, TypeError):
+        return None
+    return sampler_name, sampling_rate, mode, None
 
 
 @timeit(log_level="INFO")
@@ -102,44 +132,33 @@ def generate_sampler_perf_report(
                         continue
 
                 if sampler_folder:
-                    # Parse sampler_rate_mode pattern
-                    parts = sampler_folder.split("_")
-                    if len(parts) >= 3:
-                        sampler_name = "_".join(parts[:-2])  # Handle multi-word sampler names
-                        rate_str = parts[-2]
-                        mode_str = parts[-1]
+                    parsed = _parse_sampler_folder_name(sampler_folder)
+                    if parsed is None:
+                        if warn_missing:
+                            logger.warning(f"Failed to parse sampler metadata from {perf_file}")
+                        continue
+                    sampler_name, sampling_rate, mode, model_name = parsed
 
-                        try:
-                            sampling_rate = float(rate_str)
-                            mode = SamplingMode(mode_str)
+                    if samplers and sampler_name not in samplers:
+                        continue
+                    if sampling_rates and sampling_rate not in sampling_rates:
+                        continue
+                    if modes and mode not in modes:
+                        continue
 
-                            # Apply filters if specified
-                            if samplers and sampler_name not in samplers:
-                                continue
-                            if sampling_rates and sampling_rate not in sampling_rates:
-                                continue
-                            if modes and mode not in modes:
-                                continue
+                    perf_df = _normalize_perf_schema(perf_df)
+                    perf_df = perf_df.with_columns(
+                        [
+                            pl.lit(dataset).alias("dataset"),
+                            pl.lit(datapack_name).alias("datapack"),
+                            pl.lit(sampler_name).alias("sampler"),
+                            pl.lit(model_name, dtype=pl.String).alias("model_name"),
+                            pl.lit(sampling_rate).alias("sampling_rate"),
+                            pl.lit(mode.value).alias("mode"),
+                        ]
+                    )
 
-                            # Ensure consistent schema by adding missing columns with default values
-                            perf_df = _normalize_perf_schema(perf_df)
-
-                            # Add metadata columns
-                            perf_df = perf_df.with_columns(
-                                [
-                                    pl.lit(dataset).alias("dataset"),
-                                    pl.lit(datapack_name).alias("datapack"),
-                                    pl.lit(sampler_name).alias("sampler"),
-                                    pl.lit(sampling_rate).alias("sampling_rate"),
-                                    pl.lit(mode.value).alias("mode"),
-                                ]
-                            )
-
-                            all_perf_data.append(perf_df)
-
-                        except (ValueError, TypeError) as e:
-                            if warn_missing:
-                                logger.warning(f"Failed to parse sampler metadata from {perf_file}: {e}")
+                    all_perf_data.append(perf_df)
 
             except Exception as e:
                 if warn_missing:
@@ -154,7 +173,7 @@ def generate_sampler_perf_report(
 
     # Calculate aggregate statistics
     agg_perf_df = (
-        combined_perf_df.group_by(["sampler", "dataset", "sampling_rate", "mode"])
+        combined_perf_df.group_by(["sampler", "model_name", "dataset", "sampling_rate", "mode"])
         .agg(
             [
                 pl.len().alias("datapack_count"),
@@ -246,7 +265,7 @@ def generate_sampler_perf_report(
                 pl.col("avg_anomaly_score").max().alias("max_avg_anomaly_score"),
             ]
         )
-        .sort(["sampler", "dataset", "sampling_rate", "mode"])
+        .sort(["sampler", "model_name", "dataset", "sampling_rate", "mode"])
     )
 
     # Save detailed and aggregated results with dataset-specific directories
@@ -338,27 +357,14 @@ def _scan_available_configurations(
                 if not sampler_folder.is_dir():
                     continue
 
-                folder_name = sampler_folder.name
-                parts = folder_name.split("_")
-
-                if len(parts) >= 3:
-                    try:
-                        # Extract sampler name (all parts except last 2)
-                        sampler_name = "_".join(parts[:-2])
-                        rate_str = parts[-2]
-                        mode_str = parts[-1]
-
-                        # Validate and add to sets
-                        rate = float(rate_str)
-                        mode = SamplingMode(mode_str)
-
-                        if 0.0 <= rate <= 1.0:
-                            samplers.add(sampler_name)
-                            rates.add(rate)
-                            modes.add(mode)
-
-                    except (ValueError, TypeError):
-                        continue
+                parsed = _parse_sampler_folder_name(sampler_folder.name)
+                if parsed is None:
+                    continue
+                sampler_name, rate, mode, _ = parsed
+                if 0.0 <= rate <= 1.0:
+                    samplers.add(sampler_name)
+                    rates.add(rate)
+                    modes.add(mode)
 
     # Convert to sorted lists
     available_samplers = sorted(list(samplers))

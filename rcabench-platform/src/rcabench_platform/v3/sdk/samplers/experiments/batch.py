@@ -15,6 +15,7 @@ from .single import run_sampler_single
 def run_sampler_batch(
     samplers: list[str],
     datasets: list[str],
+    model_name: str | None,
     sampling_rates: list[float],
     modes: list[SamplingMode],
     *,
@@ -46,6 +47,7 @@ def run_sampler_batch(
 
     logger.debug(f"samplers={samplers}")
     logger.debug(f"datasets={datasets}")
+    logger.debug(f"model_name={model_name}")
     logger.debug(f"sampling_rates={sampling_rates}")
     logger.debug(f"modes={[m.value for m in modes]}")
 
@@ -82,6 +84,7 @@ def run_sampler_batch(
                                 sampler,
                                 dataset,
                                 datapack,
+                                model_name,
                                 sampling_rate,
                                 mode,
                                 clear=clear,

@@ -20,6 +20,7 @@ class SamplerArgs:
 
     dataset: str
     datapack: str
+    model_name: str | None = None
     input_folder: Path
     output_folder: Path
     sampling_rate: float  # Sampling rate between 0.0 and 1.0

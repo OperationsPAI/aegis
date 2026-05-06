@@ -27,6 +27,7 @@ def run_sampler_single(
     sampler: str,
     dataset: str,
     datapack: str,
+    model_name: str | None,
     sampling_rate: float,
     mode: SamplingMode,
     *,
@@ -40,6 +41,7 @@ def run_sampler_single(
         sampler: Name of the sampler algorithm
         dataset: Dataset name
         datapack: Datapack name
+        model_name: Optional model name distinct from dataset
         sampling_rate: Sampling rate (0.0 to 1.0)
         mode: Sampling mode (online/offline)
         clear: Whether to clear existing output
@@ -48,7 +50,7 @@ def run_sampler_single(
     sampler_instance = global_sampler_registry()[sampler]()
 
     input_folder = get_datapack_folder(dataset, datapack)
-    output_folder = get_sampler_output_folder(dataset, datapack, sampler, sampling_rate, mode)
+    output_folder = get_sampler_output_folder(dataset, datapack, sampler, sampling_rate, mode, model_name)
     # Generate metrics_sli.parquet in the original input folder if it doesn't exist
     logger.debug("Ensuring metrics_sli.parquet exists in input folder")
     generate_metrics_sli(input_folder, output_folder=input_folder)
@@ -65,6 +67,7 @@ def run_sampler_single(
                 SamplerArgs(
                     dataset=dataset,
                     datapack=datapack,
+                    model_name=model_name,
                     input_folder=input_folder,
                     output_folder=output_folder,
                     sampling_rate=sampling_rate,
@@ -95,6 +98,7 @@ def run_sampler_single(
         pl.lit(sampler).alias("sampler"),
         pl.lit(dataset).alias("dataset"),
         pl.lit(datapack).alias("datapack"),
+        pl.lit(model_name, dtype=pl.String).alias("model_name"),
         pl.lit(sampling_rate).alias("sampling_rate"),
         pl.lit(mode.value).alias("mode"),
         pl.lit(runtime, dtype=pl.Float64).alias("runtime.seconds"),
