@@ -14,16 +14,32 @@ from ..logging import get_real_logger, logger, set_real_logger, timeit
 from ..samplers.spec import global_sampler_registry, set_global_sampler_registry
 
 
+_THREAD_LIMIT_ENV_VARS = (
+    "POLARS_MAX_THREADS",
+    "OMP_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+)
+
+
+def _set_thread_limit_env_vars(n: int) -> None:
+    for name in _THREAD_LIMIT_ENV_VARS:
+        os.environ[name] = str(n)
+
+
 def set_cpu_limit_outer(n: int | None) -> None:
     if n is None:
         return
 
-    os.environ["POLARS_MAX_THREADS"] = str(n)
+    _set_thread_limit_env_vars(n)
 
 
 def set_cpu_limit_inner(n: int | None) -> None:
     if n is None:
         return
+
+    _set_thread_limit_env_vars(n)
 
     try:
         import torch  # type: ignore
@@ -35,6 +51,7 @@ def set_cpu_limit_inner(n: int | None) -> None:
 
 def initializers(*, cpu_limit: int | None = None) -> list[tuple[Callable, Any]]:
     ans = [
+        (set_cpu_limit_outer, (cpu_limit,)),
         (set_cpu_limit_inner, (cpu_limit,)),
         # (set_real_logger, (get_real_logger(),)),
         (set_config, (get_config(),)),
@@ -89,7 +106,7 @@ def _fmap(
             pool = multiprocessing.get_context("spawn").Pool(
                 processes=num_workers,
                 initializer=call_initializers,
-                initargs=(initializers(),),
+                initargs=(initializers(cpu_limit=cpu_limit_each),),
             )
         else:
             raise ValueError(f"Unknown mode: {mode}")
