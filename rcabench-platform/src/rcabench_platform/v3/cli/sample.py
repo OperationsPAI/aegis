@@ -30,6 +30,7 @@ def single(
     sampler: str,
     dataset: str,
     datapack: str,
+    model_name: Annotated[str | None, typer.Option("--model-name")] = None,
     sampling_rate: float = 0.1,
     mode: SamplingMode = SamplingMode.OFFLINE,
     clear: bool = False,
@@ -40,6 +41,7 @@ def single(
         sampler=sampler,
         dataset=dataset,
         datapack=datapack,
+        model_name=model_name,
         sampling_rate=sampling_rate,
         mode=mode,
         clear=clear,
@@ -52,6 +54,7 @@ def single(
 def batch(
     samplers: Annotated[list[str], typer.Option("-s", "--sampler")],
     datasets: Annotated[list[str], typer.Option("-d", "--dataset")],
+    model_name: Annotated[str | None, typer.Option("--model-name")] = None,
     sampling_rates: Annotated[list[float], typer.Option("-r", "--rate")] = [0.1],
     modes: Annotated[list[SamplingMode], typer.Option("-m", "--mode")] = [SamplingMode.OFFLINE],
     sample_datapacks: int | None = None,
@@ -64,6 +67,7 @@ def batch(
     run_sampler_batch(
         samplers=samplers,
         datasets=datasets,
+        model_name=model_name,
         sampling_rates=sampling_rates,
         modes=modes,
         sample_datapacks=sample_datapacks,
