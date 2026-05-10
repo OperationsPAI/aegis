@@ -38,7 +38,7 @@ func parsePositiveID(c *gin.Context, key, label string) (int, bool) {
 //	@Failure		404	{object}	dto.GenericResponse[any]				"Datapack not found or not ready"
 //	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/injections/{id}/metrics/catalog [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) GetMetricsCatalog(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
 	if !ok {
@@ -73,7 +73,7 @@ func (h *Handler) GetMetricsCatalog(c *gin.Context) {
 //	@Failure		404			{object}	dto.GenericResponse[any]				"Datapack not found or not ready"
 //	@Failure		500			{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/injections/{id}/metrics/series [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) GetMetricsSeries(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
 	if !ok {
@@ -115,7 +115,7 @@ func (h *Handler) GetMetricsSeries(c *gin.Context) {
 //	@Failure		404				{object}	dto.GenericResponse[any]			"Datapack not found or not ready"
 //	@Failure		500				{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/injections/{id}/spans [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) ListSpans(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
 	if !ok {
@@ -150,7 +150,7 @@ func (h *Handler) ListSpans(c *gin.Context) {
 //	@Failure		404			{object}	dto.GenericResponse[any]			"Datapack not found or trace not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/injections/{id}/spans/{trace_id} [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) GetSpanTree(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
 	if !ok {
@@ -185,7 +185,7 @@ func (h *Handler) GetSpanTree(c *gin.Context) {
 //	@Failure		404		{object}	dto.GenericResponse[any]			"Datapack not found or not ready"
 //	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/injections/{id}/service-map [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) GetServiceMap(c *gin.Context) {
 	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
 	if !ok {
