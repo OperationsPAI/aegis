@@ -20,20 +20,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Test */
-    "types": ["vitest/globals"],
-
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
       "@/components/*": ["src/components/*"],
-      "@/pages/*": ["src/pages/*"],
-      "@/hooks/*": ["src/hooks/*"],
-      "@/utils/*": ["src/utils/*"],
-      "@/api/*": ["src/api/*"],
-      "@/types/*": ["src/types/*"],
-      "@/store/*": ["src/store/*"],
       "@/assets/*": ["src/assets/*"]
     }
   },

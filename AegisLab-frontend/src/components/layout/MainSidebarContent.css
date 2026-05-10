@@ -17,10 +17,29 @@
 }
 
 .main-sidebar-content .ant-menu-item {
-  margin: 4px 12px;
-  border-radius: 6px;
+  margin: 2px 0;
+  border-radius: 0;
   height: 40px;
   line-height: 40px;
+  padding-left: 24px !important;
+  margin-inline: 0;
+  margin-block: 2px;
+  width: 100%;
+}
+
+/* Left highlight bar for selected item (Alibaba Cloud style) */
+.main-sidebar-content .ant-menu-item-selected {
+  background: var(--color-primary-100) !important;
+  color: var(--color-primary-600) !important;
+  font-weight: 500;
+  border-left: 3px solid var(--color-primary-500);
+  padding-left: 21px !important;
+}
+
+[data-theme='dark'] .main-sidebar-content .ant-menu-item-selected {
+  background: var(--color-primary-900) !important;
+  color: var(--color-primary-300) !important;
+  border-left-color: var(--color-primary-400);
 }
 
 .main-sidebar-content .ant-menu-item:hover {
@@ -31,19 +50,24 @@
   background: var(--color-secondary-700);
 }
 
-.main-sidebar-content .ant-menu-item-selected {
-  background: var(--color-primary-100) !important;
-  color: var(--color-primary-600) !important;
-  font-weight: 500;
-}
-
-[data-theme='dark'] .main-sidebar-content .ant-menu-item-selected {
-  background: var(--color-primary-900) !important;
-  color: var(--color-primary-300) !important;
-}
-
 .main-sidebar-content .ant-menu-item-selected::after {
   display: none;
+}
+
+/* Menu group labels */
+.main-sidebar-content .ant-menu-item-group-title {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+  padding: 8px 24px 4px !important;
+}
+
+/* Divider styling */
+.main-sidebar-content .ant-menu-item-divider {
+  margin: 8px 16px;
+  background: var(--color-border);
 }
 
 .main-sidebar-footer {

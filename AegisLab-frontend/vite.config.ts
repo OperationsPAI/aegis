@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
       port: Number(env.VITE_PORT) || 3000,
       proxy: {
         '/api': {
-          target: env.VITE_API_TARGET || 'http://127.0.0.1:8082',
+          target: env.VITE_API_TARGET || 'http://127.0.0.1:8083',
           changeOrigin: true,
           ws: true,
         },

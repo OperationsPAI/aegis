@@ -81,7 +81,7 @@
 .app-header-breadcrumb {
   margin-left: 8px;
   padding-left: 16px;
-  border-left: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-secondary-200);
 }
 
 .app-header-breadcrumb .ant-breadcrumb-link {
@@ -119,34 +119,6 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text-secondary);
-}
-
-/* Main sidebar drawer */
-.app-sidebar-drawer .ant-drawer-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.app-sidebar-drawer .ant-drawer-body {
-  padding: 0;
-}
-
-.app-drawer-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.app-drawer-logo {
-  color: var(--color-primary-500);
-  display: flex;
-  align-items: center;
-}
-
-.app-drawer-title span {
-  font-family: var(--font-family-display);
-  font-size: 18px;
-  font-weight: 600;
 }
 
 /* Responsive */

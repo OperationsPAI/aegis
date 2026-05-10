@@ -3,7 +3,7 @@
 .chart-card,
 .search-card,
 .table-card {
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-base);
   border: 1px solid var(--color-secondary-200);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -33,11 +33,11 @@
 /* Chart Container */
 .chart-container {
   background: var(--color-secondary-0);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-base);
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-secondary-200);
-  transition: all var(--transition-base);
+  transition: box-shadow var(--transition-base);
   animation: fadeIn 0.8s ease-out;
   animation-fill-mode: both;
 }
@@ -49,5 +49,4 @@
 
 .chart-container:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }

@@ -21,3 +21,20 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
+
+  frontend-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        - NPM_TOKEN
+    container_name: aegislab-frontend-prod
+    ports:
+      - "8080:80"
+    environment:
+      - API_TARGET=http://host.docker.internal:8082
+    restart: unless-stopped
+
+secrets:
+  NPM_TOKEN:
+    environment: NPM_TOKEN
