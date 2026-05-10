@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"aegis/config"
@@ -26,6 +27,13 @@ type QueryOpts struct {
 	End       time.Time
 	Limit     int
 	Direction string
+	// Extra filters appended to the base `{app="rcabench"} | task_id=<id>`
+	// stream selector. Used by the filtered logs and histogram endpoints.
+	// When provided, the substring is wrapped in a `|= "<q>"` filter; when
+	// the caller wants to push a raw LogQL fragment they can pass it via
+	// RawLogQL which is appended verbatim after the base selector.
+	Substring string
+	RawLogQL  string
 }
 
 type queryRangeResponse struct {
@@ -80,7 +88,7 @@ func (c *Client) QueryJobLogs(ctx context.Context, taskID string, opts QueryOpts
 		opts.Direction = "forward"
 	}
 
-	logQL := fmt.Sprintf(`{app="rcabench"} | task_id=%q`, taskID)
+	logQL := buildJobLogQL(taskID, opts)
 
 	params := url.Values{}
 	params.Set("query", logQL)
@@ -148,4 +156,18 @@ func (c *Client) QueryJobLogs(ctx context.Context, taskID string, opts QueryOpts
 
 	logrus.Infof("Loki: queried %d log entries for task %s", len(entries), taskID)
 	return entries, nil
+}
+
+// buildJobLogQL builds the LogQL pipeline for the given task and optional
+// substring / raw-logql filters. RawLogQL takes precedence over Substring
+// when both are provided.
+func buildJobLogQL(taskID string, opts QueryOpts) string {
+	logQL := fmt.Sprintf(`{app="rcabench"} | task_id=%q`, taskID)
+	switch {
+	case strings.TrimSpace(opts.RawLogQL) != "":
+		logQL = logQL + " " + strings.TrimSpace(opts.RawLogQL)
+	case strings.TrimSpace(opts.Substring) != "":
+		logQL = fmt.Sprintf(`%s |= %q`, logQL, opts.Substring)
+	}
+	return logQL
 }

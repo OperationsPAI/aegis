@@ -66,6 +66,11 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				injections.POST("/batch-delete", handler.BatchDeleteInjections)
 				injections.POST("/upload", handler.UploadDatapack)
 				injections.PUT("/:id/groundtruth", handler.UpdateGroundtruth)
+
+				observation := injections.Group("", middleware.RequireProjectRead)
+				{
+					observation.GET("/:id/logs", handler.GetInjectionLogs)
+				}
 			}
 		},
 	}
