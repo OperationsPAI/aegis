@@ -16,6 +16,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 			{
 				executions.GET("/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:read"), handler.ListAvailableExecutionLabels)
 				executions.POST("/batch-delete", handler.BatchDeleteExecutions)
+				executions.POST("/compare", handler.CompareExecutions)
 			}
 		},
 	}

@@ -249,6 +249,42 @@ func (h *Handler) BatchDeleteExecutions(c *gin.Context) {
 	dto.JSONResponse[any](c, http.StatusNoContent, "Executions deleted successfully", nil)
 }
 
+// CompareExecutions returns a per-execution subset for cross-execution comparison.
+//
+//	@Summary		Compare executions
+//	@Description	Return a subset of execution details for the requested IDs, suitable for cross-execution comparison views
+//	@Tags			Executions
+//	@ID				compare_executions
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		CompareExecutionsRequest					true	"Compare request"
+//	@Success		200		{object}	dto.GenericResponse[CompareExecutionsResponse]	"Comparison results"
+//	@Failure		400		{object}	dto.GenericResponse[any]					"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]					"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]					"Permission denied"
+//	@Failure		404		{object}	dto.GenericResponse[any]					"Execution not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]					"Internal server error"
+//	@Router			/api/v2/executions/compare [post]
+//	@x-api-type		{"portal":"true","sdk":"true"}
+func (h *Handler) CompareExecutions(c *gin.Context) {
+	var req CompareExecutionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
+		return
+	}
+	req.Normalize()
+	if err := req.Validate(); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+	resp, err := h.service.CompareExecutions(c.Request.Context(), &req)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 // UploadDetectorResults uploads detector results
 //
 //	@Summary		Upload detector results

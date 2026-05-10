@@ -11,6 +11,7 @@ import (
 	group "aegis/module/group"
 	injection "aegis/module/injection"
 	label "aegis/module/label"
+	llmeval "aegis/module/llmeval"
 	metric "aegis/module/metric"
 	notification "aegis/module/notification"
 	pedestal "aegis/module/pedestal"
@@ -40,6 +41,7 @@ func producerHTTPModules() []fx.Option {
 		group.Module,
 		injection.Module,
 		label.Module,
+		llmeval.Module,
 		metric.Module,
 		notification.Module,
 		pedestal.Module,
@@ -69,6 +71,7 @@ func producerHTTPModuleNames() []string {
 		"group",
 		"injection",
 		"label",
+		"llmeval",
 		"metric",
 		"notification",
 		"pedestal",
