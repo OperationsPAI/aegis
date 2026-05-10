@@ -11,6 +11,7 @@ import (
 // Reader exposes the injection-owned reads that other modules depend on.
 type Reader interface {
 	ResolveDatapacks(datapackName *string, datasetRef *dto.DatasetRef, userID int, taskType consts.TaskType) ([]model.FaultInjection, *int, error)
+	GetReadyDatapackName(ctx context.Context, id int) (string, error)
 }
 
 // Writer exposes the injection-owned runtime writes that consumer code depends on.

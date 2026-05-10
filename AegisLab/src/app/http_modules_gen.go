@@ -13,6 +13,7 @@ import (
 	label "aegis/module/label"
 	metric "aegis/module/metric"
 	notification "aegis/module/notification"
+	observation "aegis/module/observation"
 	pedestal "aegis/module/pedestal"
 	project "aegis/module/project"
 	ratelimiter "aegis/module/ratelimiter"
@@ -42,6 +43,7 @@ func producerHTTPModules() []fx.Option {
 		label.Module,
 		metric.Module,
 		notification.Module,
+		observation.Module,
 		pedestal.Module,
 		project.Module,
 		ratelimiter.Module,
@@ -71,6 +73,7 @@ func producerHTTPModuleNames() []string {
 		"label",
 		"metric",
 		"notification",
+		"observation",
 		"pedestal",
 		"project",
 		"ratelimiter",
