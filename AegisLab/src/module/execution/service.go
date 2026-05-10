@@ -196,6 +196,35 @@ func (s *Service) GetExecution(_ context.Context, id int) (*ExecutionDetailResp,
 	return resp, nil
 }
 
+func (s *Service) CompareExecutions(ctx context.Context, req *CompareExecutionsRequest) (*CompareExecutionsResponse, error) {
+	results := make(map[string]CompareExecutionItem, len(req.ExecutionIDs))
+	includeDetector := false
+	includeGranularity := false
+	for _, inc := range req.Include {
+		switch inc {
+		case CompareIncludeDetectorResults:
+			includeDetector = true
+		case CompareIncludeGranularityResults:
+			includeGranularity = true
+		}
+	}
+	for _, id := range req.ExecutionIDs {
+		detail, err := s.GetExecution(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		item := CompareExecutionItem{ExecutionResp: detail.ExecutionResp}
+		if includeDetector {
+			item.DetectorResults = detail.DetectorResults
+		}
+		if includeGranularity {
+			item.GranularityResults = detail.GranularityResults
+		}
+		results[fmt.Sprintf("%d", id)] = item
+	}
+	return &CompareExecutionsResponse{Results: results}, nil
+}
+
 func (s *Service) ListEvaluationExecutionsByDatapack(_ context.Context, req *EvaluationExecutionsByDatapackReq) ([]EvaluationExecutionItem, error) {
 	if req == nil {
 		return nil, fmt.Errorf("evaluation datapack query is nil")

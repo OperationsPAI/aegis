@@ -17,6 +17,7 @@ type HandlerService interface {
 	BatchDelete(context.Context, *BatchDeleteExecutionReq) error
 	UploadDetectorResults(context.Context, *UploadDetectorResultReq, int) (*UploadExecutionResultResp, error)
 	UploadGranularityResults(context.Context, *UploadGranularityResultReq, int) (*UploadExecutionResultResp, error)
+	CompareExecutions(context.Context, *CompareExecutionsRequest) (*CompareExecutionsResponse, error)
 }
 
 func AsHandlerService(service *Service) HandlerService {

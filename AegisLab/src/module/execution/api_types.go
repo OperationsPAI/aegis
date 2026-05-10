@@ -290,6 +290,66 @@ func NewExecutionDetailResp(execution *model.Execution, labels []model.Label) *E
 	}
 }
 
+const compareExecutionsMaxIDs = 50
+
+type CompareExecutionsInclude string
+
+const (
+	CompareIncludeDetectorResults    CompareExecutionsInclude = "detector_results"
+	CompareIncludeGranularityResults CompareExecutionsInclude = "granularity_results"
+)
+
+type CompareExecutionsRequest struct {
+	ExecutionIDs []int                      `json:"execution_ids"`
+	Include      []CompareExecutionsInclude `json:"include"`
+}
+
+func (req *CompareExecutionsRequest) Validate() error {
+	if len(req.ExecutionIDs) == 0 {
+		return fmt.Errorf("execution_ids must not be empty")
+	}
+	if len(req.ExecutionIDs) > compareExecutionsMaxIDs {
+		return fmt.Errorf("execution_ids exceeds maximum of %d", compareExecutionsMaxIDs)
+	}
+	seen := make(map[int]struct{}, len(req.ExecutionIDs))
+	for i, id := range req.ExecutionIDs {
+		if id <= 0 {
+			return fmt.Errorf("invalid execution_id at index %d: %d", i, id)
+		}
+		if _, dup := seen[id]; dup {
+			return fmt.Errorf("duplicate execution_id at index %d: %d", i, id)
+		}
+		seen[id] = struct{}{}
+	}
+	for i, inc := range req.Include {
+		switch inc {
+		case CompareIncludeDetectorResults, CompareIncludeGranularityResults:
+		default:
+			return fmt.Errorf("invalid include[%d]: %q", i, inc)
+		}
+	}
+	return nil
+}
+
+func (req *CompareExecutionsRequest) Normalize() {
+	if len(req.Include) == 0 {
+		req.Include = []CompareExecutionsInclude{
+			CompareIncludeDetectorResults,
+			CompareIncludeGranularityResults,
+		}
+	}
+}
+
+type CompareExecutionItem struct {
+	ExecutionResp
+	DetectorResults    []DetectorResultItem    `json:"detector_results,omitempty"`
+	GranularityResults []GranularityResultItem `json:"granularity_results,omitempty"`
+}
+
+type CompareExecutionsResponse struct {
+	Results map[string]CompareExecutionItem `json:"results"`
+}
+
 // SubmitExecutionItem describes a single submitted execution task.
 type SubmitExecutionItem struct {
 	Index              int    `json:"index"`
