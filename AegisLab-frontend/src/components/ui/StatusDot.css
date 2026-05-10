@@ -1,0 +1,18 @@
+.aegis-status-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: var(--radius-circle);
+  background: var(--text-main);
+}
+
+.aegis-status-dot--inverted {
+  background: var(--text-on-inverted);
+}
+
+.aegis-status-dot--warning {
+  background: var(--accent-warning);
+}
+
+.aegis-status-dot--pulse {
+  animation: aegis-pulse 2s infinite;
+}

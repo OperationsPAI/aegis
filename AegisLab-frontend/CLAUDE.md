@@ -6,6 +6,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 RCABench frontend is a React 18 + TypeScript application using Ant Design 5, built with Vite. It serves as the web interface for the AegisLab RCA benchmarking platform.
 
+## Current Phase: Design Language First (priority)
+
+The frontend is currently in **design-language-first** mode. Before building
+any scenario UI (experiment-observation page, dashboards, etc.), the goal is
+to land a small, opinionated set of primitives that everything composes from.
+
+**Order of work** — do not skip steps:
+
+1. Establish design tokens (color, type, spacing, motion, radius, shadow) in
+   `src/styles/theme.css`. Tokens are the only source of visual truth.
+2. Build primitives in `src/components/ui/` — one component per file, plain
+   CSS, no business logic.
+3. Showcase every primitive in the gallery (`src/App.tsx` + `src/App.css`).
+   The gallery **is** the live spec — if it isn't in the gallery, the team
+   doesn't know it exists.
+4. **Only after** the primitive is in the gallery, compose scenario pages
+   from it. Resist the urge to one-off bespoke UI inside a page.
+
+**Design conventions** (enforced):
+
+- **No hardcoded values** in component CSS (no raw hex, px, ms). Reference a
+  CSS custom property from `theme.css`. If a token is missing, add it there
+  first, then use it.
+- **Activation = surface inversion** (`--bg-inverted` background +
+  `--text-on-inverted` text), never accent color.
+- **Anomaly red** (`--accent-warning`, `#E11D48`) is reserved for *actual*
+  anomalies — failures, breaches, alarms. Never decorative.
+- **Type stack**: brand (Geist) for titles, UI (Inter) for body, data
+  (JetBrains Mono) for numbers / IDs / parameters. Use the `--font-*` tokens.
+- **Spacing**: use `--space-*` tokens (4 px scale). No raw padding/margin.
+- **Components are presentational** — no API calls, no Zustand reads, no
+  business state. Hosts pass props in. Story-tested in the gallery.
+- **Every primitive ships with a Specimen** in the gallery. PRs that add a
+  primitive without a gallery entry are incomplete.
+
+**Where things live**:
+
+| Path | Purpose |
+|------|---------|
+| `src/styles/theme.css` | Design tokens (CSS custom properties + keyframes) |
+| `src/styles/fonts.ts` | Font-asset imports (Geist / Inter / JetBrains Mono) |
+| `src/components/ui/` | Primitives + their CSS, one component per file |
+| `src/components/ui/index.ts` | Primitive barrel — public API of the UI kit |
+| `src/App.tsx` + `src/App.css` | Gallery — the live spec & visual review surface |
+| `src/theme/antdTheme.ts` | Ant Design `ConfigProvider` mapped to our tokens |
+
+**Roadmap**: the "Roadmap · planned components" panel at the bottom of the
+gallery enumerates every planned wrapper / composition (TabbedWorkbench,
+TraceWaterfall, MetricChart, …) with its reference implementation library.
+Build top-down from that list — *don't* invent new components that aren't on
+it without first adding them there.
+
+**Validation gates** for design-system PRs:
+
+```bash
+pnpm type-check
+pnpm lint            # --max-warnings 0
+pnpm build
+pnpm dev             # eyeball the gallery in a browser
+```
+
+A primitive is "done" only after the gallery renders cleanly in the browser
+at desktop AND ≤768 px width.
+
 ## Environment Setup
 
 1. **Install Nix** (devbox 的前置依赖):
@@ -114,6 +178,10 @@ src/
 - **Follow existing patterns** in similar components
 - **Extract reusable logic** into custom hooks
 - **Keep components focused** - one component per file
+- **Primitives go in `src/components/ui/`** — one `.tsx` + one `.css` per
+  primitive, exported through `src/components/ui/index.ts`
+- **New primitive ⇒ new gallery Specimen** (`src/App.tsx`). The gallery is
+  the spec; an unshown primitive is invisible to the team.
 
 ### State Management
 
@@ -131,10 +199,19 @@ src/
 
 ### Styling
 
-- **Ant Design theme** configured in `src/main.tsx`
-- **Primary color**: #2563eb (deep blue)
-- **CSS variables** for theming in `src/styles/`
-- **Responsive design** using Ant Design Grid system
+**See "Current Phase: Design Language First" above for the canonical rules.**
+Quick reference:
+
+- All visual values come from tokens in `src/styles/theme.css` — no raw hex,
+  px, or ms in component CSS.
+- Ant Design themed via `src/theme/antdTheme.ts` (mapped to our tokens) —
+  configured in `src/main.tsx`.
+- Anomaly red (`--accent-warning`) is reserved for actual anomalies, never
+  decorative.
+- Activation is expressed by surface inversion (`--bg-inverted`), not by
+  accent color.
+- Responsive breakpoints handled in component CSS; primitives must work at
+  ≥768 px and ≤420 px without overflow.
 
 ### Code Quality
 

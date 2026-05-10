@@ -1,0 +1,34 @@
+.aegis-section-divider {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.aegis-section-divider__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.aegis-section-divider__label {
+  font-size: var(--fs-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+  font-weight: var(--fw-regular);
+}
+
+.aegis-section-divider__extra {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+
+.aegis-section-divider--ruled::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background: var(--border-hairline);
+}

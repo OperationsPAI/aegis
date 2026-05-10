@@ -1,0 +1,27 @@
+.aegis-mono {
+  font-family: var(--font-mono);
+  color: var(--text-main);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.aegis-mono--sm {
+  font-size: var(--fs-11);
+}
+.aegis-mono--base {
+  font-size: var(--fs-13);
+}
+.aegis-mono--lg {
+  font-size: var(--fs-18);
+}
+
+.aegis-mono--regular {
+  font-weight: var(--fw-regular);
+}
+.aegis-mono--medium {
+  font-weight: var(--fw-medium);
+}
+
+.aegis-mono--inverted {
+  color: var(--text-on-inverted);
+}

@@ -1,0 +1,36 @@
+.aegis-blast-radius {
+  width: 100%;
+}
+
+.aegis-blast-radius__track {
+  height: 4px;
+  background: var(--bg-muted);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.aegis-blast-radius__fill {
+  height: 100%;
+  background: var(--text-main);
+  border-radius: 2px;
+  transition: width var(--motion-base);
+}
+
+.aegis-blast-radius__ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  font-size: var(--fs-10);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.aegis-blast-radius__tick {
+  line-height: 1.2;
+}
+
+.aegis-blast-radius__tick--center {
+  color: var(--text-main);
+  font-weight: var(--fw-medium);
+}

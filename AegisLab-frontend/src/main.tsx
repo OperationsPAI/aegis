@@ -1,9 +1,11 @@
+import { ConfigProvider } from 'antd';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import App from './App';
-
+import './styles/fonts';
 import './index.css';
+import { aegisTheme } from './theme/antdTheme';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,6 +14,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <ConfigProvider theme={aegisTheme}>
+      <App />
+    </ConfigProvider>
   </React.StrictMode>
 );
