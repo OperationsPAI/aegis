@@ -266,7 +266,7 @@ func (h *Handler) BatchDeleteExecutions(c *gin.Context) {
 //	@Failure		404		{object}	dto.GenericResponse[any]					"Execution not found"
 //	@Failure		500		{object}	dto.GenericResponse[any]					"Internal server error"
 //	@Router			/api/v2/executions/compare [post]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) CompareExecutions(c *gin.Context) {
 	var req CompareExecutionsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
