@@ -101,7 +101,7 @@ at desktop AND ≤768 px width.
    NPM_TOKEN=<your_github_token> pnpm install
    ```
 
-> **重要**: 项目依赖私有包 `@OperationsPAI/client`（托管在 GitHub Packages）。安装时必须设置 `NPM_TOKEN` 环境变量为有 `read:packages` 权限的 GitHub Personal Access Token。Token 配置在 `.npmrc` 中通过 `${NPM_TOKEN}` 引用。
+> **重要**: 项目依赖私有包 `@OperationsPAI/portal`（托管在 GitHub Packages）。安装时必须设置 `NPM_TOKEN` 环境变量为有 `read:packages` 权限的 GitHub Personal Access Token。Token 配置在 `.npmrc` 中通过 `${NPM_TOKEN}` 引用。
 
 ## Essential Commands
 
@@ -318,7 +318,7 @@ grep -rn "mock\|Mock\|MOCK\|hardcoded\|TODO.*api\|fake.*data\|stub\|Stub" \
 ## Cross-Repo Rules
 
 - **零 Mock**: 必须调用真实后端 API，不允许 hardcoded data
-- **SDK 同步**: 后端 API 变更后，更新 `@rcabench/client` 并 `pnpm install`
+- **SDK 同步**: 后端 API 变更后，更新 `@OperationsPAI/portal` 并 `pnpm install`
 - **Type 对齐**: `src/types/api.ts` 手写类型不能与 SDK 生成类型矛盾
 - **用户验收**: UI 变更标记 tested 前请求用户在浏览器验证
 <!-- auto-harness:end -->

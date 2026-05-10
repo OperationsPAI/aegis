@@ -2,9 +2,9 @@
 function readPackage(pkg, context) {
   if (
     process.env.LOCAL_API === 'true' &&
-    pkg.dependencies['@rcabench/client']
+    pkg.dependencies['@OperationsPAI/portal']
   ) {
-    pkg.dependencies['@rcabench/client'] = 'link:../AegisLab/client/typescript';
+    pkg.dependencies['@OperationsPAI/portal'] = 'link:../AegisLab/sdk/typescript/portal';
   }
   return pkg;
 }
