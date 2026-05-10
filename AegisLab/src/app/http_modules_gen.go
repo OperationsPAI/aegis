@@ -14,6 +14,7 @@ import (
 	llmeval "aegis/module/llmeval"
 	metric "aegis/module/metric"
 	notification "aegis/module/notification"
+	observation "aegis/module/observation"
 	pedestal "aegis/module/pedestal"
 	project "aegis/module/project"
 	ratelimiter "aegis/module/ratelimiter"
@@ -44,6 +45,7 @@ func producerHTTPModules() []fx.Option {
 		llmeval.Module,
 		metric.Module,
 		notification.Module,
+		observation.Module,
 		pedestal.Module,
 		project.Module,
 		ratelimiter.Module,
@@ -74,6 +76,7 @@ func producerHTTPModuleNames() []string {
 		"llmeval",
 		"metric",
 		"notification",
+		"observation",
 		"pedestal",
 		"project",
 		"ratelimiter",

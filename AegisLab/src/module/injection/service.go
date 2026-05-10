@@ -1205,6 +1205,14 @@ func (s *Service) getReadyDatapack(id int) (*model.FaultInjection, error) {
 	return injection, nil
 }
 
+func (s *Service) GetReadyDatapackName(_ context.Context, id int) (string, error) {
+	injection, err := s.getReadyDatapack(id)
+	if err != nil {
+		return "", err
+	}
+	return injection.Name, nil
+}
+
 func (s *Service) batchDeleteByIDs(injectionIDs []int) error {
 	if len(injectionIDs) == 0 {
 		return nil
