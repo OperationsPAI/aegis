@@ -70,6 +70,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				observation := injections.Group("", middleware.RequireProjectRead)
 				{
 					observation.GET("/:id/logs", handler.GetInjectionLogs)
+					observation.GET("/:id/logs/histogram", handler.GetInjectionLogsHistogram)
 				}
 			}
 		},
