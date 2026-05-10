@@ -6,7 +6,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -232,8 +231,6 @@ func parseSpanEvents(s string) []SpanEvent {
 	}
 	return out
 }
-
-var errNotImplemented = errors.New("observation endpoint not yet implemented")
 
 // L3.1 — metrics catalog
 //
@@ -731,6 +728,143 @@ func (s *Service) GetSpanTree(ctx context.Context, id int, traceID string) (*Spa
 	return &SpanTreeResp{Spans: out}, nil
 }
 
-func (s *Service) GetServiceMap(_ context.Context, _ int, _ *ServiceMapReq) (*ServiceMapResp, error) {
-	return nil, errNotImplemented
+// L2.3 — service map: nodes (per service span_count + error_rate) and edges
+// (parent_service → child_service with call_count, error_rate, p50/p99 ms).
+//
+// Strategy: self-join the spans parquet on parent_span_id = span_id (within
+// the same trace) to form caller→callee pairs, then GROUP BY (parent_service,
+// child_service). For nodes, group the same parquet by service. The window
+// query parameter selects which parquet(s) feed the input: fault →
+// abnormal_traces, normal → normal_traces, both → UNION ALL.
+func (s *Service) GetServiceMap(ctx context.Context, id int, req *ServiceMapReq) (*ServiceMapResp, error) {
+	window := strings.ToLower(strings.TrimSpace(req.Window))
+	if window == "" {
+		window = "fault"
+	}
+	if window != "fault" && window != "normal" && window != "both" {
+		return nil, fmt.Errorf("invalid window %q (must be fault|normal|both)", req.Window)
+	}
+
+	name, err := s.injections.GetReadyDatapackName(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	files := []string{}
+	switch window {
+	case "fault":
+		files = append(files, abnormalTracesFile)
+	case "normal":
+		files = append(files, normalTracesFile)
+	case "both":
+		files = append(files, abnormalTracesFile, normalTracesFile)
+	}
+
+	resolved := []string{}
+	for _, f := range files {
+		path, err := s.store.ResolveFilePath(name, f)
+		if err != nil {
+			if window == "both" {
+				continue
+			}
+			return nil, err
+		}
+		resolved = append(resolved, path)
+	}
+	if len(resolved) == 0 {
+		return nil, fmt.Errorf("no traces parquet available for window %s", window)
+	}
+
+	db, err := openDuckDB()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = db.Close() }()
+
+	cols, _, err := describeColumns(ctx, db, resolved[0])
+	if err != nil {
+		return nil, err
+	}
+	sc, err := resolveSpanColumns(cols)
+	if err != nil {
+		return nil, err
+	}
+	if sc.parentID == "" {
+		return nil, fmt.Errorf("traces parquet missing parent_span_id column; cannot build service map")
+	}
+
+	durationNS := spanDurationExpr(sc, cols)
+	errorExpr := spanErrorPredicate(sc)
+
+	unionParts := []string{}
+	for _, p := range resolved {
+		unionParts = append(unionParts, fmt.Sprintf(
+			`SELECT %s AS trace_id, %s AS span_id, %s AS parent_id, %s AS service, %s AS op, (%s) AS duration_ns, (%s) AS is_error FROM read_parquet('%s')`,
+			quoteIdent(sc.traceID), quoteIdent(sc.spanID), quoteIdent(sc.parentID), quoteIdent(sc.service), quoteIdent(sc.op), durationNS, errorExpr, p,
+		))
+	}
+	spansCTE := strings.Join(unionParts, " UNION ALL ")
+
+	nodesQ := fmt.Sprintf(`WITH spans AS (%s)
+SELECT service, count(*) AS span_count,
+       sum(CASE WHEN is_error THEN 1 ELSE 0 END)::DOUBLE / count(*) AS error_rate
+FROM spans
+GROUP BY service
+ORDER BY service`, spansCTE)
+
+	nrows, err := db.QueryContext(ctx, nodesQ)
+	if err != nil {
+		return nil, fmt.Errorf("service-map nodes query failed: %w", err)
+	}
+	nodes := []ServiceMapNode{}
+	for nrows.Next() {
+		var n ServiceMapNode
+		if err := nrows.Scan(&n.Service, &n.SpanCount, &n.ErrorRate); err != nil {
+			_ = nrows.Close()
+			return nil, err
+		}
+		nodes = append(nodes, n)
+	}
+	_ = nrows.Close()
+
+	edgesQ := fmt.Sprintf(`WITH spans AS (%s),
+pairs AS (
+    SELECT p.service AS from_svc, c.service AS to_svc, c.duration_ns AS dur, c.is_error AS is_error
+    FROM spans c
+    JOIN spans p ON c.parent_id = p.span_id AND c.trace_id = p.trace_id
+    WHERE c.service != p.service
+)
+SELECT from_svc, to_svc, count(*) AS call_count,
+       sum(CASE WHEN is_error THEN 1 ELSE 0 END)::DOUBLE / count(*) AS error_rate,
+       quantile_cont(dur / 1e6, 0.5) AS p50_ms,
+       quantile_cont(dur / 1e6, 0.99) AS p99_ms
+FROM pairs
+GROUP BY from_svc, to_svc
+ORDER BY from_svc, to_svc`, spansCTE)
+
+	erows, err := db.QueryContext(ctx, edgesQ)
+	if err != nil {
+		return nil, fmt.Errorf("service-map edges query failed: %w", err)
+	}
+	defer func() { _ = erows.Close() }()
+	edges := []ServiceMapEdge{}
+	for erows.Next() {
+		var e ServiceMapEdge
+		var p50, p99 sql.NullFloat64
+		if err := erows.Scan(&e.From, &e.To, &e.CallCount, &e.ErrorRate, &p50, &p99); err != nil {
+			return nil, err
+		}
+		if p50.Valid {
+			e.P50MS = p50.Float64
+		}
+		if p99.Valid {
+			e.P99MS = p99.Float64
+		}
+		edges = append(edges, e)
+	}
+	if err := erows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &ServiceMapResp{Nodes: nodes, Edges: edges}, nil
 }
