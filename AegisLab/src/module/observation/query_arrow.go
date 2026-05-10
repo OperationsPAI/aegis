@@ -8,7 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/duckdb/duckdb-go/v2"
 )
@@ -273,8 +276,179 @@ func (s *Service) GetMetricsCatalog(ctx context.Context, id int) (*MetricsCatalo
 	return &MetricsCatalogResp{Metrics: metrics}, nil
 }
 
-func (s *Service) GetMetricsSeries(_ context.Context, _ int, _ *MetricsSeriesReq) (*MetricsSeriesResp, error) {
-	return nil, errNotImplemented
+// L3.2 — metrics time series
+//
+// Strategy: parse start/end (RFC3339), bucket by step using duckdb's time_bucket,
+// average the metric column per bucket. Hardcoded assumption: the metrics parquet
+// has a timestamp column named one of {time, timestamp, ts, time_unix_nano}. If
+// the requested metric or timestamp column is absent we return an explicit error
+// rather than mocking. group_by selects an additional GROUP BY dimension; filter
+// is parsed as `dim=value` and added to the WHERE clause via parameterised SQL.
+func (s *Service) GetMetricsSeries(ctx context.Context, id int, req *MetricsSeriesReq) (*MetricsSeriesResp, error) {
+	parquet, err := s.resolveDatapackParquet(ctx, id, abnormalMetricsFile)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := openDuckDB()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = db.Close() }()
+
+	cols, _, err := describeColumns(ctx, db, parquet)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := cols[req.Metric]; !ok {
+		return nil, fmt.Errorf("metric %q not found in %s", req.Metric, filepath.Base(parquet))
+	}
+	if !isNumericDuckType(cols[req.Metric]) {
+		return nil, fmt.Errorf("metric %q is not numeric (type %s)", req.Metric, cols[req.Metric])
+	}
+
+	tsCol := pickColumn(cols, "time", "timestamp", "ts", "time_unix_nano")
+	if tsCol == "" {
+		return nil, fmt.Errorf("no timestamp column found in %s (expected one of: time, timestamp, ts, time_unix_nano)", filepath.Base(parquet))
+	}
+
+	step := strings.TrimSpace(req.Step)
+	if step == "" {
+		step = "30s"
+	}
+	stepDur, err := time.ParseDuration(step)
+	if err != nil {
+		return nil, fmt.Errorf("invalid step %q: %w", step, err)
+	}
+	stepSeconds := int64(stepDur.Seconds())
+	if stepSeconds <= 0 {
+		return nil, fmt.Errorf("step must be at least 1 second, got %q", step)
+	}
+
+	tsExpr := timestampExpr(quoteIdent(tsCol), cols[tsCol])
+
+	var conds []string
+	args := []interface{}{}
+	if req.Start != "" {
+		t, err := time.Parse(time.RFC3339, req.Start)
+		if err != nil {
+			return nil, fmt.Errorf("invalid start: %w", err)
+		}
+		conds = append(conds, fmt.Sprintf("%s >= ?", tsExpr))
+		args = append(args, t.UTC())
+	}
+	if req.End != "" {
+		t, err := time.Parse(time.RFC3339, req.End)
+		if err != nil {
+			return nil, fmt.Errorf("invalid end: %w", err)
+		}
+		conds = append(conds, fmt.Sprintf("%s < ?", tsExpr))
+		args = append(args, t.UTC())
+	}
+
+	if req.Filter != "" {
+		dim, val, ok := strings.Cut(req.Filter, "=")
+		if !ok {
+			return nil, fmt.Errorf("filter must be dim=value, got %q", req.Filter)
+		}
+		dim = strings.TrimSpace(dim)
+		val = strings.TrimSpace(val)
+		if _, exists := cols[dim]; !exists {
+			return nil, fmt.Errorf("filter dimension %q not found", dim)
+		}
+		conds = append(conds, fmt.Sprintf("%s = ?", quoteIdent(dim)))
+		args = append(args, val)
+	}
+
+	groupBy := strings.TrimSpace(req.GroupBy)
+	if groupBy != "" {
+		if _, exists := cols[groupBy]; !exists {
+			return nil, fmt.Errorf("group_by dimension %q not found", groupBy)
+		}
+	}
+
+	groupColExpr := ""
+	if groupBy != "" {
+		groupColExpr = fmt.Sprintf(", CAST(%s AS VARCHAR) AS grp", quoteIdent(groupBy))
+	}
+
+	where := ""
+	if len(conds) > 0 {
+		where = "WHERE " + strings.Join(conds, " AND ")
+	}
+
+	groupClause := ""
+	if groupBy != "" {
+		groupClause = ", grp"
+	}
+
+	query := fmt.Sprintf(
+		`SELECT time_bucket(INTERVAL %d SECOND, %s) AS bucket, avg(CAST(%s AS DOUBLE)) AS value%s
+		 FROM read_parquet('%s')
+		 %s
+		 GROUP BY bucket%s
+		 ORDER BY bucket`,
+		stepSeconds,
+		tsExpr,
+		quoteIdent(req.Metric),
+		groupColExpr,
+		parquet,
+		where,
+		groupClause,
+	)
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("metrics series query failed: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	seriesByLabel := map[string]*MetricSeries{}
+	for rows.Next() {
+		var bucket time.Time
+		var value sql.NullFloat64
+		var grp sql.NullString
+		if groupBy != "" {
+			if err := rows.Scan(&bucket, &value, &grp); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := rows.Scan(&bucket, &value); err != nil {
+				return nil, err
+			}
+		}
+		key := ""
+		labels := map[string]string{}
+		if groupBy != "" {
+			key = grp.String
+			labels[groupBy] = grp.String
+		}
+		series, ok := seriesByLabel[key]
+		if !ok {
+			series = &MetricSeries{Labels: labels, Points: []MetricPoint{}}
+			seriesByLabel[key] = series
+		}
+		v := 0.0
+		if value.Valid {
+			v = value.Float64
+		}
+		series.Points = append(series.Points, MetricPoint{TS: bucket.UTC().Format(time.RFC3339Nano), Value: v})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	out := make([]MetricSeries, 0, len(seriesByLabel))
+	keys := make([]string, 0, len(seriesByLabel))
+	for k := range seriesByLabel {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		out = append(out, *seriesByLabel[k])
+	}
+	return &MetricsSeriesResp{Series: out, Step: step}, nil
 }
 
 func (s *Service) ListSpans(_ context.Context, _ int, _ *ListSpansReq) (*ListSpansResp, error) {
