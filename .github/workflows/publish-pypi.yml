@@ -156,7 +156,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version-file: "AegisLab/src/go.mod"
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
