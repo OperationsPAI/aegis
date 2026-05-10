@@ -451,8 +451,179 @@ func (s *Service) GetMetricsSeries(ctx context.Context, id int, req *MetricsSeri
 	return &MetricsSeriesResp{Series: out, Step: step}, nil
 }
 
-func (s *Service) ListSpans(_ context.Context, _ int, _ *ListSpansReq) (*ListSpansResp, error) {
-	return nil, errNotImplemented
+// L2.1 — list trace summaries (root span per trace_id)
+//
+// Strategy: rank spans within each trace by (parent-is-null first, start_ts asc),
+// take rank 1 as root. Aggregate error_count across all spans of the trace and
+// LEFT JOIN. Pagination is keyset on trace_id (lexicographic) — stable across
+// repeated calls. limit defaults to 50, capped at 500.
+func (s *Service) ListSpans(ctx context.Context, id int, req *ListSpansReq) (*ListSpansResp, error) {
+	parquet, err := s.resolveDatapackParquet(ctx, id, abnormalTracesFile)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := openDuckDB()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = db.Close() }()
+
+	cols, _, err := describeColumns(ctx, db, parquet)
+	if err != nil {
+		return nil, err
+	}
+
+	sc, err := resolveSpanColumns(cols)
+	if err != nil {
+		return nil, err
+	}
+
+	startExpr := timestampExpr(quoteIdent(sc.startTS), cols[sc.startTS])
+	durationExpr := spanDurationExpr(sc, cols)
+	errorExpr := spanErrorPredicate(sc)
+	statusExpr := spanStatusExpr(sc)
+
+	parentExpr := "NULL"
+	if sc.parentID != "" {
+		parentExpr = quoteIdent(sc.parentID)
+	}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	args := []interface{}{}
+	conds := []string{}
+	if req.Service != "" {
+		conds = append(conds, "r.service = ?")
+		args = append(args, req.Service)
+	}
+	if req.Op != "" {
+		conds = append(conds, "r.op = ?")
+		args = append(args, req.Op)
+	}
+	if req.Start != "" {
+		t, err := time.Parse(time.RFC3339, req.Start)
+		if err != nil {
+			return nil, fmt.Errorf("invalid start: %w", err)
+		}
+		conds = append(conds, "r.start_ts >= ?")
+		args = append(args, t.UTC())
+	}
+	if req.End != "" {
+		t, err := time.Parse(time.RFC3339, req.End)
+		if err != nil {
+			return nil, fmt.Errorf("invalid end: %w", err)
+		}
+		conds = append(conds, "r.start_ts < ?")
+		args = append(args, t.UTC())
+	}
+	if req.MinDuration > 0 {
+		conds = append(conds, "r.duration_ns >= ?")
+		args = append(args, req.MinDuration*1_000_000)
+	}
+	if req.Status != "" {
+		switch strings.ToLower(req.Status) {
+		case "error":
+			conds = append(conds, "r.status = 'error'")
+		case "ok":
+			conds = append(conds, "r.status = 'ok'")
+		default:
+			return nil, fmt.Errorf("invalid status %q (must be ok|error)", req.Status)
+		}
+	}
+	if req.Cursor != "" {
+		conds = append(conds, "r.trace_id > ?")
+		args = append(args, req.Cursor)
+	}
+
+	where := ""
+	if len(conds) > 0 {
+		where = "WHERE " + strings.Join(conds, " AND ")
+	}
+
+	q := fmt.Sprintf(`WITH ranked AS (
+	SELECT %s AS trace_id,
+	       %s AS service,
+	       %s AS op,
+	       %s AS start_ts,
+	       %s AS duration_ns,
+	       %s AS status,
+	       row_number() OVER (
+	         PARTITION BY %s
+	         ORDER BY (CASE WHEN %s IS NULL OR CAST(%s AS VARCHAR) = '' THEN 0 ELSE 1 END), %s ASC
+	       ) AS rn
+	FROM read_parquet('%s')
+),
+roots AS (SELECT * FROM ranked WHERE rn = 1),
+errs AS (
+	SELECT %s AS trace_id, sum(CASE WHEN %s THEN 1 ELSE 0 END) AS error_count
+	FROM read_parquet('%s')
+	GROUP BY %s
+)
+SELECT r.trace_id, r.service, r.op, r.start_ts, r.duration_ns, r.status, COALESCE(e.error_count, 0)
+FROM roots r LEFT JOIN errs e ON r.trace_id = e.trace_id
+%s
+ORDER BY r.trace_id ASC
+LIMIT %d`,
+		quoteIdent(sc.traceID),
+		quoteIdent(sc.service),
+		quoteIdent(sc.op),
+		startExpr,
+		durationExpr,
+		statusExpr,
+		quoteIdent(sc.traceID),
+		parentExpr, parentExpr,
+		startExpr,
+		parquet,
+		quoteIdent(sc.traceID), errorExpr,
+		parquet,
+		quoteIdent(sc.traceID),
+		where,
+		limit+1,
+	)
+
+	rows, err := db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list spans query failed: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := []SpanSummary{}
+	for rows.Next() {
+		var traceID, service, op, status string
+		var startTS time.Time
+		var duration int64
+		var errCount int64
+		if err := rows.Scan(&traceID, &service, &op, &startTS, &duration, &status, &errCount); err != nil {
+			return nil, err
+		}
+		out = append(out, SpanSummary{
+			TraceID:     traceID,
+			RootService: service,
+			RootOp:      op,
+			StartTS:     startTS.UTC().Format(time.RFC3339Nano),
+			DurationNS:  duration,
+			Status:      status,
+			ErrorCount:  errCount,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	resp := &ListSpansResp{Spans: out}
+	if len(out) > limit {
+		last := out[limit-1]
+		resp.Spans = out[:limit]
+		resp.NextCursor = last.TraceID
+	}
+	return resp, nil
 }
 
 func (s *Service) GetSpanTree(_ context.Context, _ int, _ string) (*SpanTreeResp, error) {
