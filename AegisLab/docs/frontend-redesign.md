@@ -266,7 +266,7 @@ FaultInjection CRD → HandleCRDSucceeded → BuildDatapack Job → HandleJobSuc
   - DetectorResults: 表格展示每个 span 的 normal vs abnormal 指标 (avg_duration, succ_rate)
   - 可展开的 Percentile 列: p90, p95, p99 (通过 "Show Percentiles" 按钮切换)
   - GranularityResults: 按 rank 排序展示定位结果 (level, result, confidence progress bar)
-  - 类型对齐 SDK: 使用 `DetectorResultItem` 和 `GranularityResultItem` from `@rcabench/client`
+  - 类型对齐 SDK: 使用 `DetectorResultItem` 和 `GranularityResultItem` from `@OperationsPAI/portal`
 - 其他 Tab: Overview, Logs, Files
 
 ### 5.9 Algorithm Benchmark (`/:teamName/:projectName/executions/new`)
@@ -506,12 +506,12 @@ FaultInjection CRD → HandleCRDSucceeded → BuildDatapack Job → HandleJobSuc
 
 ### 7.4 Type Migration
 
-`types/api.ts` 中手写的 `Team`, `TeamMember` 等类型需迁移到 SDK 生成类型 (`@rcabench/client`)。
+`types/api.ts` 中手写的 `Team`, `TeamMember` 等类型需迁移到 SDK 生成类型 (`@OperationsPAI/portal`)。
 
 步骤：
 1. 确保 OpenAPI3 中相关接口带有正确的 `x-api-type` audience 标记（如 `portal` / `admin`）
 2. `just swag-init && just generate-typescript-sdk`
-3. 前端 `import type { ... } from '@rcabench/client'` 替换手写类型
+3. 前端 `import type { ... } from '@OperationsPAI/portal'` 替换手写类型
 
 ## 8. UI/UX Guidelines
 

@@ -370,7 +370,7 @@ cd frontend && npm install
 ```
 
 ### SDK Files Location
-- **TypeScript SDK**: `sdk/typescript/` - Used by frontend via `@rcabench/client`
+- **TypeScript SDK**: `sdk/typescript/` - Used by frontend via `@OperationsPAI/portal`
 - **Python SDK**: `sdk/python/` - Used by CLI tools
 
 ### API Filtering Logic

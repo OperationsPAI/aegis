@@ -286,7 +286,7 @@ clients.runtime.target       (legacy: runtime_worker.grpc.target)   ← note und
 ## 11. Frontend → backend endpoint usage (from `AegisLab-frontend/src/api/`)
 
 `BASE_PATH = '/api/v2'`. Flat URLs — **the router's audience split (admin/portal/public/sdk)
-is URL-transparent**. Hand-rolled `apiClient.<method>('/path')` mixed with `@rcabench/client` SDK
+is URL-transparent**. Hand-rolled `apiClient.<method>('/path')` mixed with `@OperationsPAI/portal` SDK
 via `sdkAxios`.
 
 Deduped endpoint list (alphabetical, deduped): see `slices/07-data-crosscut-seams.md §10`.

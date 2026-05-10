@@ -1605,7 +1605,7 @@ requirements:
   contracts: []
 - id: REQ-601
   title: TypeScript SDK (Auto-generated)
-  description: 'TypeScript SDK auto-generated from Swagger/OpenAPI specs for frontend consumption. Not always present in repo (generated on demand). Used by frontend via @rcabench/client package.
+  description: 'TypeScript SDK auto-generated from Swagger/OpenAPI specs for frontend consumption. Not always present in repo (generated on demand). Used by frontend via @OperationsPAI/portal package.
 
     '
   priority: P1
@@ -2223,7 +2223,7 @@ requirements:
   contracts: []
 - id: REQ-809
   title: Frontend Build Tooling (Vite)
-  description: 'Vite 5 build configuration with React plugin, TypeScript strict mode, path aliases (@/ for src/), API proxy to backend, ESLint, and Prettier. Devbox provides pnpm 8 for package management. Private @OperationsPAI/client package requires NPM_TOKEN for GitHub Packages authentication.
+  description: 'Vite 5 build configuration with React plugin, TypeScript strict mode, path aliases (@/ for src/), API proxy to backend, ESLint, and Prettier. Devbox provides pnpm 8 for package management. Private @OperationsPAI/portal package requires NPM_TOKEN for GitHub Packages authentication.
 
     '
   priority: P1

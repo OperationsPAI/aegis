@@ -1642,7 +1642,7 @@ requirements:
     description: >
       TypeScript SDK auto-generated from Swagger/OpenAPI specs for frontend
       consumption. Not always present in repo (generated on demand).
-      Used by frontend via @rcabench/client package.
+      Used by frontend via @OperationsPAI/portal package.
     priority: P1
     status: implemented
     confidence: inferred
@@ -2349,7 +2349,7 @@ requirements:
     description: >
       Vite 5 build configuration with React plugin, TypeScript strict mode,
       path aliases (@/ for src/), API proxy to backend, ESLint, and Prettier.
-      Devbox provides pnpm 8 for package management. Private @OperationsPAI/client
+      Devbox provides pnpm 8 for package management. Private @OperationsPAI/portal
       package requires NPM_TOKEN for GitHub Packages authentication.
     priority: P1
     status: implemented
@@ -2741,7 +2741,7 @@ requirements:
 #   - (none — traceApi.getTrace confirmed working as of 2026-04-13 audit)
 #
 # SDK USAGE:
-#   - @rcabench/client used for TYPE IMPORTS and direct types (DetectorResultItem, GranularityResultItem)
+#   - @OperationsPAI/portal used for TYPE IMPORTS and direct types (DetectorResultItem, GranularityResultItem)
 #   - All HTTP calls use raw axios via src/api/client.ts
 #
 # DATA INCONSISTENCIES:
