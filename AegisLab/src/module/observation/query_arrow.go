@@ -626,8 +626,109 @@ LIMIT %d`,
 	return resp, nil
 }
 
-func (s *Service) GetSpanTree(_ context.Context, _ int, _ string) (*SpanTreeResp, error) {
-	return nil, errNotImplemented
+// L2.2 — full span tree for one trace_id.
+func (s *Service) GetSpanTree(ctx context.Context, id int, traceID string) (*SpanTreeResp, error) {
+	if strings.TrimSpace(traceID) == "" {
+		return nil, fmt.Errorf("trace_id required")
+	}
+	parquet, err := s.resolveDatapackParquet(ctx, id, abnormalTracesFile)
+	if err != nil {
+		return nil, err
+	}
+	db, err := openDuckDB()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = db.Close() }()
+
+	cols, _, err := describeColumns(ctx, db, parquet)
+	if err != nil {
+		return nil, err
+	}
+	sc, err := resolveSpanColumns(cols)
+	if err != nil {
+		return nil, err
+	}
+
+	startExpr := timestampExpr(quoteIdent(sc.startTS), cols[sc.startTS])
+	var endExpr string
+	if sc.endTS != "" {
+		endExpr = timestampExpr(quoteIdent(sc.endTS), cols[sc.endTS])
+	} else {
+		endExpr = fmt.Sprintf("%s + (CAST((%s) / 1000 AS BIGINT)) * INTERVAL 1 MICROSECOND", startExpr, spanDurationExpr(sc, cols))
+	}
+	parentExpr := "NULL"
+	if sc.parentID != "" {
+		parentExpr = quoteIdent(sc.parentID)
+	}
+	statusExpr := spanStatusExpr(sc)
+	attrsExpr := "NULL"
+	if sc.attrs != "" {
+		attrsExpr = fmt.Sprintf("CAST(%s AS VARCHAR)", quoteIdent(sc.attrs))
+	}
+	eventsExpr := "NULL"
+	if sc.events != "" {
+		eventsExpr = fmt.Sprintf("CAST(%s AS VARCHAR)", quoteIdent(sc.events))
+	}
+
+	q := fmt.Sprintf(`SELECT %s AS span_id, %s AS parent_id, %s AS service, %s AS op,
+		%s AS start_ts, %s AS end_ts, %s AS attrs, %s AS events, %s AS status
+	FROM read_parquet('%s')
+	WHERE %s = ?
+	ORDER BY %s ASC`,
+		quoteIdent(sc.spanID),
+		parentExpr,
+		quoteIdent(sc.service),
+		quoteIdent(sc.op),
+		startExpr,
+		endExpr,
+		attrsExpr,
+		eventsExpr,
+		statusExpr,
+		parquet,
+		quoteIdent(sc.traceID),
+		startExpr,
+	)
+
+	rows, err := db.QueryContext(ctx, q, traceID)
+	if err != nil {
+		return nil, fmt.Errorf("span tree query failed: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := []SpanNode{}
+	for rows.Next() {
+		var spanID, service, op, status string
+		var parentID sql.NullString
+		var startTS, endTS time.Time
+		var attrsRaw, eventsRaw sql.NullString
+		if err := rows.Scan(&spanID, &parentID, &service, &op, &startTS, &endTS, &attrsRaw, &eventsRaw, &status); err != nil {
+			return nil, err
+		}
+		node := SpanNode{
+			SpanID:   spanID,
+			ParentID: parentID.String,
+			Service:  service,
+			Op:       op,
+			StartTS:  startTS.UTC().Format(time.RFC3339Nano),
+			EndTS:    endTS.UTC().Format(time.RFC3339Nano),
+			Status:   status,
+		}
+		if attrsRaw.Valid {
+			node.Attrs = parseJSONOrPairs(attrsRaw.String)
+		}
+		if eventsRaw.Valid {
+			node.Events = parseSpanEvents(eventsRaw.String)
+		}
+		out = append(out, node)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("trace %q not found", traceID)
+	}
+	return &SpanTreeResp{Spans: out}, nil
 }
 
 func (s *Service) GetServiceMap(_ context.Context, _ int, _ *ServiceMapReq) (*ServiceMapResp, error) {
