@@ -232,8 +232,45 @@ func parseSpanEvents(s string) []SpanEvent {
 
 var errNotImplemented = errors.New("observation endpoint not yet implemented")
 
-func (s *Service) GetMetricsCatalog(_ context.Context, _ int) (*MetricsCatalogResp, error) {
-	return nil, errNotImplemented
+// L3.1 — metrics catalog
+//
+// Strategy: pick the abnormal_metrics.parquet file, run DESCRIBE, expose every
+// column as either a metric (numeric) or a dimension (textual). For a richer
+// catalog the parquet would need explicit metric metadata; here we surface
+// what duckdb sees so the frontend can drive selectors honestly without
+// fabricated quantiles or descriptions.
+func (s *Service) GetMetricsCatalog(ctx context.Context, id int) (*MetricsCatalogResp, error) {
+	parquet, err := s.resolveDatapackParquet(ctx, id, abnormalMetricsFile)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := openDuckDB()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = db.Close() }()
+
+	cols, order, err := describeColumns(ctx, db, parquet)
+	if err != nil {
+		return nil, err
+	}
+
+	dims := []string{}
+	metrics := []MetricCatalogItem{}
+	for _, name := range order {
+		typ := cols[name]
+		if isNumericDuckType(typ) && !isTimestampDuckType(typ) {
+			metrics = append(metrics, MetricCatalogItem{Name: name})
+		} else if !isTimestampDuckType(typ) {
+			dims = append(dims, name)
+		}
+	}
+	for i := range metrics {
+		metrics[i].Dimensions = dims
+	}
+
+	return &MetricsCatalogResp{Metrics: metrics}, nil
 }
 
 func (s *Service) GetMetricsSeries(_ context.Context, _ int, _ *MetricsSeriesReq) (*MetricsSeriesResp, error) {
