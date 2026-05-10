@@ -71,6 +71,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				{
 					observation.GET("/:id/logs", handler.GetInjectionLogs)
 					observation.GET("/:id/logs/histogram", handler.GetInjectionLogsHistogram)
+					observation.GET("/:id/timeline", handler.GetInjectionTimeline)
 				}
 			}
 		},

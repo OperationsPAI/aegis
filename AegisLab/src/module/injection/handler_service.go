@@ -26,6 +26,7 @@ type HandlerService interface {
 	GetLogs(context.Context, int) (*InjectionLogsResp, error)
 	GetLogsFiltered(context.Context, int, *InjectionLogQueryReq) (*InjectionLogsFilteredResp, error)
 	GetLogsHistogram(context.Context, int, *InjectionLogHistogramReq) (*InjectionLogHistogramResp, error)
+	GetTimeline(context.Context, int) (*InjectionTimelineResp, error)
 	GetDatapackFilename(context.Context, int) (string, error)
 	DownloadDatapack(context.Context, *zip.Writer, []utils.ExculdeRule, int) error
 	GetDatapackFiles(context.Context, int, string) (*DatapackFilesResp, error)
