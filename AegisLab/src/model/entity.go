@@ -972,3 +972,7 @@ type OIDCClient struct {
 	CreatedAt        time.Time         `gorm:"autoCreateTime"`
 	UpdatedAt        time.Time         `gorm:"autoUpdateTime"`
 }
+
+// GORM's snake_case namer turns OIDCClient into "o_id_c_clients" because
+// it treats each capital letter as a word boundary. Pin the table name.
+func (OIDCClient) TableName() string { return "oidc_clients" }

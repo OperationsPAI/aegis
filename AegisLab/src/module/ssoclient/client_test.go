@@ -62,7 +62,7 @@ func newSSOMock(t *testing.T, priv *rsa.PrivateKey) (*httptest.Server, *atomic.I
 		allowed := body["user_id"].(float64) == 42 && body["permission"] == "injection.create"
 		dto.SuccessResponse(c, gin.H{"allowed": allowed, "reason": "test"})
 	})
-	r.POST("/v1/permissions:register", func(c *gin.Context) {
+	r.POST("/v1/permissions/register", func(c *gin.Context) {
 		regHits.Add(1)
 		raw, _ := io.ReadAll(c.Request.Body)
 		var req map[string]any

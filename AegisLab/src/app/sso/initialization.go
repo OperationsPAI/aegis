@@ -41,12 +41,12 @@ func seedDefaultAdmin(db *gorm.DB) error {
 	admin := &model.User{
 		Username: "admin",
 		Email:    "admin@aegis.local",
-		Password: "admin",
+		Password: "admin123",
 		FullName: "Aegis Admin",
 		IsActive: true,
 		Status:   consts.CommonEnabled,
 	}
-	if err := db.Create(admin).Error; err != nil {
+	if err := db.Omit("active_username").Create(admin).Error; err != nil {
 		return err
 	}
 	logrus.Info("Seeded default SSO admin user")
@@ -87,7 +87,7 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 		Name:             "Aegis Backend",
 		Service:          "aegis-backend",
 		RedirectURIs:     []string{redirectURI},
-		Grants:           []string{"authorization_code", "refresh_token", "client_credentials"},
+		Grants:           []string{"authorization_code", "refresh_token", "client_credentials", "password"},
 		Scopes:           []string{"openid", "profile", "email"},
 		IsConfidential:   true,
 		Status:           consts.CommonEnabled,

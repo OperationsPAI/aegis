@@ -69,7 +69,10 @@ type RefreshClaims struct {
 }
 
 type ServiceClaims struct {
-	TaskID string `json:"task_id"`
+	TaskID    string   `json:"task_id"`
+	TokenType string   `json:"token_type,omitempty"` // "service" for OIDC client_credentials
+	Service   string   `json:"service,omitempty"`    // OIDC client_id
+	Scopes    []string `json:"scopes,omitempty"`     // OIDC scopes
 	jwt.RegisteredClaims
 }
 
@@ -236,7 +239,9 @@ func ParseServiceToken(tokenString string, resolve PublicKeyResolver) (*ServiceC
 		return nil, errors.New("invalid service token")
 	}
 
-	if claims.Issuer != "rcabench-service" {
+	// Accept legacy "rcabench-service" issuer + any token tagged token_type=service
+	// (OIDC client_credentials grants from aegis-sso use the issuer URL).
+	if claims.Issuer != "rcabench-service" && claims.TokenType != "service" {
 		return nil, errors.New("not a valid service token")
 	}
 

@@ -18,13 +18,13 @@ func RegisterAdminRoutes(engine *gin.Engine, handler *AdminHandler) {
 			users.GET("/:id", handler.GetUser)
 			users.GET("/:id/grants", handler.ListUserGrants)
 		}
-		v1.POST("/users:batch", handler.GetUsersBatch)
-		v1.POST("/users:list", handler.ListUsers)
+		v1.POST("/users/batch", handler.GetUsersBatch)
+		v1.POST("/users/list", handler.ListUsers)
 
 		v1.POST("/check", handler.Check)
-		v1.POST("/check:batch", handler.CheckBatch)
+		v1.POST("/check/batch", handler.CheckBatch)
 
-		v1.POST("/permissions:register", handler.RegisterPermissions)
+		v1.POST("/permissions/register", handler.RegisterPermissions)
 
 		grants := v1.Group("/grants")
 		{

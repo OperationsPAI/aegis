@@ -33,7 +33,7 @@ import urllib.request
 SSO_BASE = os.environ.get("SSO_BASE", "http://localhost:8083")
 BACKEND_BASE = os.environ.get("BACKEND_BASE", "http://localhost:8082")
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 CLIENT_ID = os.environ.get("SSO_CLIENT_ID", "aegis-backend")
 
 MYSQL_CONTAINER = os.environ.get("MYSQL_CONTAINER", "mysql")
@@ -339,16 +339,16 @@ def step_oidc_discovery() -> None:
 
 
 def step_users_batch(service_token: str) -> None:
-    step("9. POST /v1/users:batch ids=[1]")
+    step("9. POST /v1/users/batch ids=[1]")
     status, body, _ = post_json(
-        f"{SSO_BASE}/v1/users:batch",
+        f"{SSO_BASE}/v1/users/batch",
         {"ids": [1]},
         token=service_token,
     )
     data = (body or {}).get("data") or {}
     if "1" not in data and 1 not in data:
         fail(f"admin (id=1) absent from batch result: {body}")
-    ok("admin present in /v1/users:batch response")
+    ok("admin present in /v1/users/batch response")
 
 
 def step_audit_log() -> None:

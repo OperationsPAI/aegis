@@ -106,6 +106,10 @@ services:
       - /etc/rcabench/config.dev.toml
       - --port
       - "8083"
+    environment:
+      # HKDF seed for API-key envelope KEK (separate from JWT signing).
+      # See utils/access_key_crypto.go; deferred relocation to PR-2.
+      AEGIS_JWT_SECRET: "dev-kek-seed-not-for-production"
     network_mode: host
     restart: always
     depends_on:

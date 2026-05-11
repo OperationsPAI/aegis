@@ -87,7 +87,7 @@ func (c *Client) GetUser(ctx context.Context, id int) (*UserInfo, error) {
 
 func (c *Client) GetUsers(ctx context.Context, ids []int) (map[int]*UserInfo, error) {
 	var resp map[string]*UserInfo
-	if err := c.doJSON(ctx, http.MethodPost, "/v1/users:batch", map[string]any{"ids": ids}, &resp); err != nil {
+	if err := c.doJSON(ctx, http.MethodPost, "/v1/users/batch", map[string]any{"ids": ids}, &resp); err != nil {
 		return nil, err
 	}
 	out := make(map[int]*UserInfo, len(resp))
@@ -155,7 +155,7 @@ func (c *Client) CheckBatch(ctx context.Context, ps []CheckParams) ([]bool, erro
 	var resp []struct {
 		Allowed bool `json:"allowed"`
 	}
-	if err := c.doJSON(ctx, http.MethodPost, "/v1/check:batch", map[string]any{"checks": checks}, &resp); err != nil {
+	if err := c.doJSON(ctx, http.MethodPost, "/v1/check/batch", map[string]any{"checks": checks}, &resp); err != nil {
 		return nil, err
 	}
 	if len(resp) != len(misses) {
@@ -173,7 +173,7 @@ func (c *Client) RegisterPermissions(ctx context.Context, perms []PermissionSpec
 		"service":     c.cfg.ClientID,
 		"permissions": perms,
 	}
-	return c.doJSON(ctx, http.MethodPost, "/v1/permissions:register", body, nil)
+	return c.doJSON(ctx, http.MethodPost, "/v1/permissions/register", body, nil)
 }
 
 func (c *Client) GrantScopedRole(ctx context.Context, g GrantParams) error {
