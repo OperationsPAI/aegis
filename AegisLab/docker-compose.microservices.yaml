@@ -19,6 +19,24 @@ services:
       etcd:
         condition: service_started
 
+  aegis-sso:
+    image: golang:1.24-bookworm
+    working_dir: /workspace/src
+    command: ["go", "run", "./cmd/aegis-sso", "sso", "--conf", "/workspace/src/config.dev.toml", "--port", "8083"]
+    volumes:
+      - ./:/workspace
+      - ./data/sso/sso-private.pem:/etc/aegis/sso-private.pem:ro
+      - ./data/sso-secrets:/var/lib/aegis-sso
+    environment:
+      GOPROXY: https://proxy.golang.org,direct
+    ports:
+      - "8083:8083"
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
   runtime-worker-service:
     image: golang:1.24-bookworm
     working_dir: /workspace/src

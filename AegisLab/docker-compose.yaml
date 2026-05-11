@@ -95,6 +95,35 @@ services:
       - ./manifests/dev/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
 
+  aegis-sso:
+    image: opspai/rcabench:latest
+    container_name: aegis-sso
+    # Same monorepo image as the backend; entrypoint dispatches on argv[0]=="aegis-sso".
+    command:
+      - aegis-sso
+      - sso
+      - --conf
+      - /etc/rcabench/config.dev.toml
+      - --port
+      - "8083"
+    network_mode: host
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src/config.dev.toml:/etc/rcabench/config.dev.toml:ro
+      - ./data/sso/sso-private.pem:/etc/aegis/sso-private.pem:ro
+      - ./data/sso-secrets:/var/lib/aegis-sso
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/.well-known/jwks.json >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   buildkitd:
     image: moby/buildkit:buildx-stable-1
     container_name: buildkitd

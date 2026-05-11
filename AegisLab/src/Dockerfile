@@ -20,6 +20,9 @@ RUN go mod download
 
 COPY AegisLab/src/ .
 RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/exp
+# aegis-sso is the standalone SSO/identity binary. Reuses the same build tag
+# set as /app/exp so the dependency download cache layer above is shared.
+RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-sso ./cmd/aegis-sso
 FROM debian:bookworm AS runner
 
 ARG INSTALL_CERTS=false
@@ -45,6 +48,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/exp /app/exp
+COPY --from=builder /app/aegis-sso /app/aegis-sso
 COPY AegisLab/src/entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh

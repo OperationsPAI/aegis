@@ -36,6 +36,7 @@ AegisLab (RCABench) is a comprehensive Root Cause Analysis (RCA) benchmarking pl
 ### Local Development
 
 - `docker compose up redis mysql jaeger buildkitd -d` - Start infrastructure services (REQUIRED before testing/building)
+- **SSO**: when working with auth/RBAC, the SSO service is `aegis-sso` running on port 8083 (chart at `helm/aegis-sso/`, compose service `aegis-sso`); see [`docs/sso-extraction-design.md`](docs/sso-extraction-design.md). First-time setup: `just sso-keys` to generate the RSA keypair under `data/sso/`.
 - `make local-debug` - Start the Go application locally (runs `src/main.go both --port 8082`)
 - `cd src && go build -tags duckdb_arrow -o /tmp/rcabench ./main.go` - Build the application binary
 
