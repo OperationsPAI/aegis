@@ -23,6 +23,7 @@ import (
 	"aegis/app"
 	gateway "aegis/app/gateway"
 	runtimeapp "aegis/app/runtime"
+	sso "aegis/app/sso"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -47,7 +48,7 @@ func main() {
 		Use:   "rcabench",
 		Short: "RCA Bench is a benchmarking tool",
 		Run: func(cmd *cobra.Command, args []string) {
-			logrus.Println("Please specify a mode: producer, consumer, both, api-gateway, or runtime-worker-service")
+			logrus.Println("Please specify a mode: producer, consumer, both, api-gateway, runtime-worker-service, or sso")
 		},
 	}
 
@@ -76,6 +77,13 @@ func main() {
 	runtimeWorkerServiceCmd := newModeCommand("runtime-worker-service", "Run as the runtime worker service", func() {
 		fx.New(runtimeapp.Options(viper.GetString("conf"))).Run()
 	})
+	ssoCmd := newModeCommand("sso", "Run as the SSO identity service", func() {
+		port := viper.GetString("port")
+		if port == "" || port == "8080" {
+			port = "8083"
+		}
+		fx.New(sso.Options(viper.GetString("conf"), port)).Run()
+	})
 
 	rootCmd.AddCommand(
 		producerCmd,
@@ -83,6 +91,7 @@ func main() {
 		bothCmd,
 		apiGatewayCmd,
 		runtimeWorkerServiceCmd,
+		ssoCmd,
 	)
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Println(err.Error())
