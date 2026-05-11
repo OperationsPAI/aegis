@@ -302,6 +302,69 @@ Goes in `regression/sso_smoke.py`:
 4. `curl backend/api/v1/admin/users` with non-admin token → 403
 5. `curl sso/v1/check -d '{...}'` with service_token → `{allowed:true}`
 
+### 10.1 E2E smoke verification (PR-1e, task #12)
+
+The smoke test lives at `regression/sso_smoke.py`. It is stdlib-only Python —
+no `pip install` required — so it can run from any host that has
+docker compose + python3.
+
+**How to run** (from `AegisLab/`):
+
+```bash
+just sso-keys                                      # one-time: RSA keypair
+docker compose up -d mysql redis aegis-sso aegis-backend
+python3 regression/sso_smoke.py
+```
+
+The script waits up to `WAIT_TIMEOUT=120s` for both services to be reachable
+(`GET :8083/healthz` for SSO; for the backend, any HTTP response on
+`/api/v2/system/health` — 401/403 also counts as "up", since the route is
+admin-gated).
+
+**What it validates**
+
+1. `aegis-sso` `/healthz` and `aegis-backend` are listening.
+2. `POST /token` with `grant_type=client_credentials` → service token whose
+   `token_type` claim is `service`.
+3. `POST /v1/check` with the service token, `user_id=1`,
+   `permission=system:read:all` → `{allowed: true}` (the seeded admin).
+4. `POST /token` with `grant_type=password` (`admin` / `admin`) → user
+   access token.
+5. `GET :8082/api/v2/system/health` with the admin token → 200.
+6. Same request with no token → 401.
+7. `POST :8083/api/v2/users` (the SSO process also serves `user.Module`)
+   creates a fresh non-admin user; resource-owner login as that user →
+   token; same `/system/health` call → 403.
+8. `GET /.well-known/openid-configuration` and the JWKS URL it advertises
+   return the OIDC-mandated fields and at least one RSA key.
+9. `POST /v1/users:batch` with `{ids:[1]}` returns the admin in `data`.
+10. `audit_logs` table on the `mysql` container contains at least one
+    `action='auth.login.success'` row (skipped with a notice if the
+    container isn't named `mysql` or `docker exec` isn't permitted).
+
+The client secret for `aegis-backend` is read in this order:
+
+- `$CLIENT_SECRET` env var, if set
+- `AegisLab/data/sso-secrets/.first-boot-secret` (mounted into the
+  `aegis-sso` container as `/var/lib/aegis-sso/.first-boot-secret`)
+- `docker exec aegis-sso cat /var/lib/aegis-sso/.first-boot-secret`
+
+**Known limitations**
+
+- Only `password` and `client_credentials` grants are exercised. The
+  browser-based `authorization_code` flow needs an OIDC-aware UI, which
+  is out of scope for PR-1 (frontend OIDC explicitly deferred — see
+  `sso-extraction-decisions.md`).
+- The script does not tear down compose state — that's the operator's
+  responsibility, matching the YAML regression cases under this dir.
+- The audit-log check uses `docker exec mysql mysql ...`; if mysql is
+  reached via a different mechanism the check no-ops with a notice
+  rather than failing the run.
+- The OIDC discovery `jwks_uri` is rewritten host-side because the
+  compose-internal issuer points at hostname `aegis-sso`, which is not
+  resolvable from the test runner. Production deployments behind a real
+  ingress won't need this rewrite.
+
 ## 11. PR sequence
 
 | PR | Scope | Tasks |
