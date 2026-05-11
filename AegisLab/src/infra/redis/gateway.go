@@ -332,6 +332,19 @@ func (g *Gateway) Publish(ctx context.Context, channel string, message any) erro
 	return nil
 }
 
+// GetString returns the string value at `key`, or "" when the key is absent.
+// A genuine error (network, type mismatch) is propagated.
+func (g *Gateway) GetString(ctx context.Context, key string) (string, error) {
+	result, err := g.clientOrInit().Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("redis GET failed for key '%s': %w", key, err)
+	}
+	return result, nil
+}
+
 func (g *Gateway) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
 	if err := g.clientOrInit().Set(ctx, key, value, expiration).Err(); err != nil {
 		return fmt.Errorf("redis SET failed for key '%s': %w", key, err)
