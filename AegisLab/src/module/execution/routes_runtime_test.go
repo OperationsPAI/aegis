@@ -59,7 +59,7 @@ func TestRuntimeExecutionRoutesAcceptServiceToken(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(middleware.InjectService(runtimeRouteService{Service: middleware.NewService(nil, runtimeRouteVerifier{})}))
+	router.Use(middleware.InjectService(runtimeRouteService{Service: middleware.NewService(runtimeRouteVerifier{}, nil, nil)}))
 
 	v2 := router.Group("/api/v2")
 	runtime := v2.Group("/executions", middleware.JWTAuth(), middleware.RequireServiceTokenAuth())

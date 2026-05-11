@@ -21,6 +21,14 @@ type TokenVerifier interface {
 	VerifyServiceToken(ctx context.Context, token string) (*utils.ServiceClaims, error)
 }
 
+// PermissionChecker is the narrow interface middleware needs from SSO. The
+// concrete *ssoclient.Client is adapted to this in module/ssoclient so that
+// middleware does not depend on the ssoclient package (which would close an
+// import cycle — ssoclient imports middleware for TokenVerifier).
+type PermissionChecker interface {
+	Check(ctx context.Context, userID int, permission, scopeType, scopeID string) (bool, error)
+}
+
 type permissionChecker interface {
 	CheckUserPermission(context.Context, *dto.CheckPermissionParams) (bool, error)
 	IsUserTeamAdmin(context.Context, int, int) (bool, error)
@@ -43,8 +51,14 @@ type Service interface {
 
 const middlewareServiceContextKey = "middleware.service"
 
-func NewService(db *gorm.DB, verifier TokenVerifier) Service {
-	return &dbBackedMiddlewareService{db: db, verifier: verifier}
+// NewService constructs the request-time middleware service.
+//
+// Token verification and RBAC permission checks are delegated to aegis-sso via
+// the provided verifier and checker. The *gorm.DB is retained for two
+// AegisLab-owned reads/writes that are not SSO concerns: the audit_logs table
+// and the teams table (used by IsTeamPublic to enforce public-team access).
+func NewService(verifier TokenVerifier, checker PermissionChecker, db *gorm.DB) Service {
+	return &ssoBackedMiddlewareService{verifier: verifier, checker: checker, db: db}
 }
 
 func InjectService(service Service) gin.HandlerFunc {
@@ -104,65 +118,86 @@ func serviceFromContext(c *gin.Context) Service {
 	return middlewareService
 }
 
-type dbBackedMiddlewareService struct {
-	db       *gorm.DB
+type ssoBackedMiddlewareService struct {
 	verifier TokenVerifier
+	checker  PermissionChecker
+	db       *gorm.DB
 }
 
-func (s *dbBackedMiddlewareService) VerifyToken(ctx context.Context, token string) (*utils.Claims, error) {
+func (s *ssoBackedMiddlewareService) VerifyToken(ctx context.Context, token string) (*utils.Claims, error) {
 	if s.verifier == nil {
 		return nil, fmt.Errorf("token verifier not initialized")
 	}
 	return s.verifier.VerifyToken(ctx, token)
 }
 
-func (s *dbBackedMiddlewareService) VerifyServiceToken(ctx context.Context, token string) (*utils.ServiceClaims, error) {
+func (s *ssoBackedMiddlewareService) VerifyServiceToken(ctx context.Context, token string) (*utils.ServiceClaims, error) {
 	if s.verifier == nil {
 		return nil, fmt.Errorf("token verifier not initialized")
 	}
 	return s.verifier.VerifyServiceToken(ctx, token)
 }
 
-func (s *dbBackedMiddlewareService) CheckUserPermission(_ context.Context, params *dto.CheckPermissionParams) (bool, error) {
+func (s *ssoBackedMiddlewareService) CheckUserPermission(ctx context.Context, params *dto.CheckPermissionParams) (bool, error) {
 	if err := params.Validate(); err != nil {
 		return false, fmt.Errorf("invalid request: %w", err)
 	}
+	if s.checker == nil {
+		return false, fmt.Errorf("permission checker not initialized")
+	}
 
 	rule := consts.PermissionRule{Resource: params.ResourceName, Action: params.Action, Scope: params.Scope}
-	permission, err := s.getPermissionByName(rule.String())
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to find target permission: %w", err)
-	}
-
-	return s.checkUserHasPermission(params, permission.ID)
+	scopeType, scopeID := pickScope(params)
+	return s.checker.Check(ctx, params.UserID, rule.String(), scopeType, scopeID)
 }
 
-func (s *dbBackedMiddlewareService) IsUserInTeam(_ context.Context, userID, teamID int) (bool, error) {
-	ut, err := s.getScopedRole(userID, consts.ScopeTypeTeam, strconv.Itoa(teamID))
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, err
+// pickScope mirrors the priority the SQL UNION used to encode: the most
+// specific ID present on the request wins. Callers only ever set one of
+// these in practice; the explicit order keeps behavior stable if more than
+// one is passed.
+func pickScope(params *dto.CheckPermissionParams) (scopeType, scopeID string) {
+	switch {
+	case params.TeamID != nil:
+		return consts.ScopeTypeTeam, strconv.Itoa(*params.TeamID)
+	case params.ProjectID != nil:
+		return consts.ScopeTypeProject, strconv.Itoa(*params.ProjectID)
+	case params.ContainerID != nil:
+		return consts.ScopeTypeContainer, strconv.Itoa(*params.ContainerID)
+	case params.DatasetID != nil:
+		return consts.ScopeTypeDataset, strconv.Itoa(*params.DatasetID)
 	}
-	return ut != nil, nil
+	return "", ""
 }
 
-func (s *dbBackedMiddlewareService) IsUserTeamAdmin(_ context.Context, userID, teamID int) (bool, error) {
-	ut, err := s.getScopedRole(userID, consts.ScopeTypeTeam, strconv.Itoa(teamID))
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, err
+func (s *ssoBackedMiddlewareService) checkScoped(ctx context.Context, userID int, perm consts.PermissionRule, scopeType, scopeID string) (bool, error) {
+	if s.checker == nil {
+		return false, fmt.Errorf("permission checker not initialized")
 	}
-	return ut != nil && ut.Role != nil && ut.Role.Name == consts.RoleTeamAdmin.String(), nil
+	return s.checker.Check(ctx, userID, perm.String(), scopeType, scopeID)
 }
 
-func (s *dbBackedMiddlewareService) IsTeamPublic(_ context.Context, teamID int) (bool, error) {
+func (s *ssoBackedMiddlewareService) IsUserInTeam(ctx context.Context, userID, teamID int) (bool, error) {
+	return s.checkScoped(ctx, userID, consts.PermTeamReadTeam, consts.ScopeTypeTeam, strconv.Itoa(teamID))
+}
+
+func (s *ssoBackedMiddlewareService) IsUserTeamAdmin(ctx context.Context, userID, teamID int) (bool, error) {
+	return s.checkScoped(ctx, userID, consts.PermTeamManageAll, consts.ScopeTypeTeam, strconv.Itoa(teamID))
+}
+
+func (s *ssoBackedMiddlewareService) IsUserInProject(ctx context.Context, userID, projectID int) (bool, error) {
+	return s.checkScoped(ctx, userID, consts.PermProjectReadOwn, consts.ScopeTypeProject, strconv.Itoa(projectID))
+}
+
+func (s *ssoBackedMiddlewareService) IsUserProjectAdmin(ctx context.Context, userID, projectID int) (bool, error) {
+	return s.checkScoped(ctx, userID, consts.PermProjectManageOwn, consts.ScopeTypeProject, strconv.Itoa(projectID))
+}
+
+// IsTeamPublic stays on the local DB: team.is_public is AegisLab business
+// data, not an SSO permission.
+func (s *ssoBackedMiddlewareService) IsTeamPublic(_ context.Context, teamID int) (bool, error) {
+	if s.db == nil {
+		return false, nil
+	}
 	team, err := s.getTeamByID(teamID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -173,31 +208,12 @@ func (s *dbBackedMiddlewareService) IsTeamPublic(_ context.Context, teamID int) 
 	return team.IsPublic, nil
 }
 
-func (s *dbBackedMiddlewareService) IsUserInProject(_ context.Context, userID, projectID int) (bool, error) {
-	up, err := s.getScopedRole(userID, consts.ScopeTypeProject, strconv.Itoa(projectID))
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, err
-	}
-	return up != nil, nil
-}
-
-func (s *dbBackedMiddlewareService) IsUserProjectAdmin(_ context.Context, userID, projectID int) (bool, error) {
-	up, err := s.getScopedRole(userID, consts.ScopeTypeProject, strconv.Itoa(projectID))
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, err
-	}
-	return up != nil && up.Role != nil && up.Role.Name == consts.RoleProjectAdmin.String(), nil
-}
-
-func (s *dbBackedMiddlewareService) LogFailedAction(ipAddress, userAgent, action, errorMsg string, duration, userID int, resourceName consts.ResourceName) error {
+func (s *ssoBackedMiddlewareService) LogFailedAction(ipAddress, userAgent, action, errorMsg string, duration, userID int, resourceName consts.ResourceName) error {
 	if resourceName == "" {
 		return fmt.Errorf("resource name cannot be empty")
+	}
+	if s.db == nil {
+		return fmt.Errorf("audit logger: db not initialized")
 	}
 
 	log := &model.AuditLog{
@@ -225,9 +241,12 @@ func (s *dbBackedMiddlewareService) LogFailedAction(ipAddress, userAgent, action
 	})
 }
 
-func (s *dbBackedMiddlewareService) LogUserAction(ipAddress, userAgent, action, details string, duration, userID int, resourceName consts.ResourceName) error {
+func (s *ssoBackedMiddlewareService) LogUserAction(ipAddress, userAgent, action, details string, duration, userID int, resourceName consts.ResourceName) error {
 	if resourceName == "" {
 		return fmt.Errorf("resource name cannot be empty")
+	}
+	if s.db == nil {
+		return fmt.Errorf("audit logger: db not initialized")
 	}
 
 	log := &model.AuditLog{
@@ -255,105 +274,7 @@ func (s *dbBackedMiddlewareService) LogUserAction(ipAddress, userAgent, action, 
 	})
 }
 
-func (s *dbBackedMiddlewareService) getPermissionByName(name string) (*model.Permission, error) {
-	var permission model.Permission
-	if err := s.db.
-		Where("name = ? AND status != ?", name, consts.CommonDeleted).
-		First(&permission).Error; err != nil {
-		return nil, err
-	}
-	return &permission, nil
-}
-
-func (s *dbBackedMiddlewareService) checkUserHasPermission(params *dto.CheckPermissionParams, permissionID int) (bool, error) {
-	directQuery := s.buildDirectPermissionQuery(params.UserID, permissionID, params.ProjectID, params.ContainerID, params.DatasetID)
-	globalRoleQuery := s.buildGlobalRolePermissionQuery(params.UserID, permissionID)
-	finalQuery := s.db.Table("(? UNION ALL ?) as base", directQuery, globalRoleQuery)
-
-	if params.TeamID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
-			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeTeam, strconv.Itoa(*params.TeamID)))
-	}
-	if params.ProjectID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
-			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeProject, strconv.Itoa(*params.ProjectID)))
-	}
-	if params.ContainerID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
-			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeContainer, strconv.Itoa(*params.ContainerID)))
-	}
-	if params.DatasetID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
-			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeDataset, strconv.Itoa(*params.DatasetID)))
-	}
-
-	var count int64
-	if err := finalQuery.Limit(1).Count(&count).Error; err != nil {
-		return false, fmt.Errorf("failed to check user permission: %w", err)
-	}
-	return count > 0, nil
-}
-
-func (s *dbBackedMiddlewareService) buildDirectPermissionQuery(userID int, permissionID int, projectID, containerID, datasetID *int) *gorm.DB {
-	query := s.db.
-		Select("up.permission_id").
-		Table("user_permissions up").
-		Where("up.user_id = ? AND up.permission_id = ?", userID, permissionID).
-		Where("up.grant_type = ?", consts.GrantTypeGrant).
-		Where("up.expires_at IS NULL OR up.expires_at > ?", time.Now())
-
-	if projectID != nil {
-		query = query.Where("up.project_id IS NULL OR up.project_id = ?", *projectID)
-	} else {
-		query = query.Where("up.project_id IS NULL")
-	}
-	if containerID != nil {
-		query = query.Where("up.container_id IS NULL OR up.container_id = ?", *containerID)
-	} else {
-		query = query.Where("up.container_id IS NULL")
-	}
-	if datasetID != nil {
-		query = query.Where("up.dataset_id IS NULL OR up.dataset_id = ?", *datasetID)
-	} else {
-		query = query.Where("up.dataset_id IS NULL")
-	}
-
-	return query
-}
-
-func (s *dbBackedMiddlewareService) buildGlobalRolePermissionQuery(userID int, permissionID int) *gorm.DB {
-	return s.db.
-		Select("rp.permission_id").
-		Table("role_permissions rp").
-		Joins("JOIN user_roles ur ON rp.role_id = ur.role_id").
-		Where("ur.user_id = ? AND rp.permission_id = ?", userID, permissionID)
-}
-
-// buildScopedRolePermissionQuery replaces the 4 former buildXxxRolePermissionQuery
-// helpers — every scoped grant now lives in user_scoped_roles, keyed by
-// (scope_type, scope_id).
-func (s *dbBackedMiddlewareService) buildScopedRolePermissionQuery(userID int, permissionID int, scopeType, scopeID string) *gorm.DB {
-	return s.db.
-		Select("rp.permission_id").
-		Table("role_permissions rp").
-		Joins("JOIN user_scoped_roles usr ON rp.role_id = usr.role_id").
-		Where("usr.user_id = ? AND usr.scope_type = ? AND usr.scope_id = ? AND rp.permission_id = ?",
-			userID, scopeType, scopeID, permissionID).
-		Where("usr.status = ?", consts.CommonEnabled)
-}
-
-func (s *dbBackedMiddlewareService) getScopedRole(userID int, scopeType, scopeID string) (*model.UserScopedRole, error) {
-	var usr model.UserScopedRole
-	if err := s.db.Preload("Role").
-		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status = ?",
-			userID, scopeType, scopeID, consts.CommonEnabled).
-		First(&usr).Error; err != nil {
-		return nil, err
-	}
-	return &usr, nil
-}
-
-func (s *dbBackedMiddlewareService) getTeamByID(teamID int) (*model.Team, error) {
+func (s *ssoBackedMiddlewareService) getTeamByID(teamID int) (*model.Team, error) {
 	var team model.Team
 	if err := s.db.Where("id = ?", teamID).First(&team).Error; err != nil {
 		return nil, err
@@ -361,7 +282,7 @@ func (s *dbBackedMiddlewareService) getTeamByID(teamID int) (*model.Team, error)
 	return &team, nil
 }
 
-func (s *dbBackedMiddlewareService) getResourceByName(db *gorm.DB, resourceName consts.ResourceName) (*model.Resource, error) {
+func (s *ssoBackedMiddlewareService) getResourceByName(db *gorm.DB, resourceName consts.ResourceName) (*model.Resource, error) {
 	var resource model.Resource
 	if err := db.Where("name = ? AND status != ?", resourceName, consts.CommonDeleted).First(&resource).Error; err != nil {
 		return nil, err
@@ -369,7 +290,7 @@ func (s *dbBackedMiddlewareService) getResourceByName(db *gorm.DB, resourceName 
 	return &resource, nil
 }
 
-func (s *dbBackedMiddlewareService) createAuditLog(db *gorm.DB, log *model.AuditLog) error {
+func (s *ssoBackedMiddlewareService) createAuditLog(db *gorm.DB, log *model.AuditLog) error {
 	return db.Create(log).Error
 }
 

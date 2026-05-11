@@ -26,6 +26,10 @@ func Options(confPath, port string) fx.Option {
 		auth.Module,
 		rbac.Module,
 		ssomod.Module,
+		// SSO process verifies tokens itself; producer uses ssoclient. Both
+		// satisfy middleware.TokenVerifier; in this binary auth owns it.
+		fx.Provide(auth.NewTokenVerifier),
+		fx.Provide(ssoLocalPermissionChecker),
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
 		httpapi.Module,

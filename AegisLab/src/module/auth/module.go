@@ -11,7 +11,6 @@ var Module = fx.Module("auth",
 	fx.Provide(NewTokenStore),
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
-	fx.Provide(NewTokenVerifier),
 	fx.Provide(NewHandler),
 	fx.Provide(
 		fx.Annotate(RoutesPublic, fx.ResultTags(`group:"routes"`)),

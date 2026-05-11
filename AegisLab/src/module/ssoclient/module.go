@@ -39,6 +39,23 @@ func newConfig() Config {
 // the interface (without ssoclient importing middleware reverse-dependencies).
 func asTokenVerifier(c *Client) middleware.TokenVerifier { return c }
 
+// permissionCheckerAdapter bridges *Client's struct-based Check API to the
+// narrow positional-arg interface middleware consumes.
+type permissionCheckerAdapter struct{ c *Client }
+
+func (a permissionCheckerAdapter) Check(ctx context.Context, userID int, permission, scopeType, scopeID string) (bool, error) {
+	return a.c.Check(ctx, CheckParams{
+		UserID:     userID,
+		Permission: permission,
+		ScopeType:  scopeType,
+		ScopeID:    scopeID,
+	})
+}
+
+func asPermissionChecker(c *Client) middleware.PermissionChecker {
+	return permissionCheckerAdapter{c: c}
+}
+
 type bootstrapDeps struct {
 	fx.In
 
@@ -105,5 +122,6 @@ var Module = fx.Module("ssoclient",
 	fx.Provide(newConfig),
 	fx.Provide(NewClient),
 	fx.Provide(asTokenVerifier),
+	fx.Provide(asPermissionChecker),
 	fx.Invoke(registerBootstrap),
 )
