@@ -22,6 +22,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/k0kubun/pp/v3 v3.5.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moby/buildkit v0.29.0
