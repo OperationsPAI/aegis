@@ -115,6 +115,31 @@ func (s *Service) List(_ context.Context, serviceFilter string) ([]ClientResp, e
 	return out, nil
 }
 
+// ListForServices returns all clients whose service is in the given set.
+// Used by the /v1/clients gate for service admins (Task #13). Empty input
+// = empty result.
+func (s *Service) ListForServices(_ context.Context, services []string) ([]ClientResp, error) {
+	if len(services) == 0 {
+		return []ClientResp{}, nil
+	}
+	out := make([]ClientResp, 0)
+	seen := make(map[int]struct{})
+	for _, svc := range services {
+		cs, err := s.repo.List(svc)
+		if err != nil {
+			return nil, err
+		}
+		for i := range cs {
+			if _, dup := seen[cs[i].ID]; dup {
+				continue
+			}
+			seen[cs[i].ID] = struct{}{}
+			out = append(out, *NewClientResp(&cs[i]))
+		}
+	}
+	return out, nil
+}
+
 func (s *Service) Update(_ context.Context, id int, req *UpdateClientReq) (*ClientResp, error) {
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", consts.ErrBadRequest, err)

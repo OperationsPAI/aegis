@@ -173,6 +173,7 @@ var SystemRoleDisplayNames = map[RoleName]string{
 	RoleTeamAdmin:            "Team Admin",
 	RoleTeamMember:           "Team Member",
 	RoleTeamViewer:           "Team Viewer",
+	RoleServiceAdmin:         "Service Admin",
 }
 
 // ------------------- Functions to get names ------------------

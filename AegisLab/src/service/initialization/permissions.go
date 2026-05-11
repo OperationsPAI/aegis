@@ -257,6 +257,14 @@ func reconcileSystemPermissionsTx(store *bootstrapStore, resources []model.Resou
 		return fmt.Errorf("upsert roles: %w", err)
 	}
 
+	// --- SSO service-admin permissions ------------------------------------
+	// These don't follow the resource:action:scope naming so they're seeded
+	// separately. service=aegis-sso, scope_type=ScopeTypeService, granted to
+	// RoleServiceAdmin (delegated service-admin role, Task #13).
+	if err := seedSSOServiceAdminPermissions(store); err != nil {
+		return fmt.Errorf("seed sso service-admin permissions: %w", err)
+	}
+
 	// --- Role permissions --------------------------------------------------
 	// Crucially, this step runs even for pre-existing permission rows — that
 	// is the bug fix for issue #104. A new permission added to an existing
@@ -265,6 +273,10 @@ func reconcileSystemPermissionsTx(store *bootstrapStore, resources []model.Resou
 	newLinks, err := assignSystemRolePermissionsReturningNew(store)
 	if err != nil {
 		return fmt.Errorf("assign role permissions: %w", err)
+	}
+
+	if err := linkServiceAdminPermissions(store); err != nil {
+		return fmt.Errorf("link service-admin permissions: %w", err)
 	}
 
 	if newResources > 0 || len(newPermissionNames) > 0 || newLinks > 0 {
@@ -363,6 +375,65 @@ func assignSystemRolePermissionsReturningNew(store *bootstrapStore) (int, error)
 		}
 	}
 	return newLinks, nil
+}
+
+// seedSSOServiceAdminPermissions inserts the sso.* permissions used by
+// delegated service admins (Task #13). Idempotent — uses the same
+// ON CONFLICT(name) DO NOTHING contract as the other permission upserts.
+func seedSSOServiceAdminPermissions(store *bootstrapStore) error {
+	perms := make([]model.Permission, 0, len(consts.SSOServiceAdminPermissions))
+	for _, name := range consts.SSOServiceAdminPermissions {
+		perms = append(perms, model.Permission{
+			Name:        name,
+			DisplayName: name,
+			Service:     consts.ServiceAegisSSO,
+			ScopeType:   consts.ScopeTypeService,
+			IsSystem:    true,
+			Status:      consts.CommonEnabled,
+		})
+	}
+	return store.upsertPermissions(perms)
+}
+
+// linkServiceAdminPermissions ensures RoleServiceAdmin → sso.* role_permissions
+// links exist. Idempotent.
+func linkServiceAdminPermissions(store *bootstrapStore) error {
+	role, err := store.getRoleByName(consts.RoleServiceAdmin.String())
+	if err != nil {
+		return fmt.Errorf("role %s not found: %w", consts.RoleServiceAdmin, err)
+	}
+	perms, err := store.listPermissionsByNames(consts.SSOServiceAdminPermissions)
+	if err != nil {
+		return fmt.Errorf("list sso service-admin permissions: %w", err)
+	}
+	existing, err := store.listRolePermissionsByRole(role.ID)
+	if err != nil {
+		return fmt.Errorf("list role_permissions for service_admin: %w", err)
+	}
+	have := make(map[int]struct{}, len(existing))
+	for _, l := range existing {
+		have[l.PermissionID] = struct{}{}
+	}
+	toCreate := make([]model.RolePermission, 0, len(perms))
+	for _, p := range perms {
+		if _, ok := have[p.ID]; ok {
+			continue
+		}
+		toCreate = append(toCreate, model.RolePermission{
+			RoleID:       role.ID,
+			PermissionID: p.ID,
+		})
+	}
+	if len(toCreate) > 0 {
+		if err := store.createRolePermissions(toCreate); err != nil {
+			return fmt.Errorf("create service_admin role_permissions: %w", err)
+		}
+		logrus.WithFields(logrus.Fields{
+			"role":      consts.RoleServiceAdmin.String(),
+			"new_links": len(toCreate),
+		}).Info("rbac: linked new sso permissions to service_admin")
+	}
+	return nil
 }
 
 // scopeTypeForResourceScope maps the legacy in-memory ResourceScope (own /
