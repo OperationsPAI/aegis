@@ -36,9 +36,6 @@ type DynamicConfig struct {
 	CreatedAt time.Time `gorm:"autoCreateTime"` // Creation time
 	UpdatedAt time.Time `gorm:"autoUpdateTime"` // Last update time
 
-	// Foreign key association
-	UpdatedByUser *User `gorm:"foreignKey:UpdatedBy"`
-
 	// One-to-many relationship with ConfigHistory
 	History []ConfigHistory `gorm:"foreignKey:ConfigID"`
 
@@ -65,7 +62,6 @@ type ConfigHistory struct {
 
 	// Foreign key associations
 	Config         *DynamicConfig `gorm:"foreignKey:ConfigID"`
-	Operator       *User          `gorm:"foreignKey:OperatorID"`
 	RolledBackFrom *ConfigHistory `gorm:"foreignKey:RolledBackFromID"`
 }
 
@@ -128,7 +124,6 @@ type ContainerVersion struct {
 
 	// Foreign key association
 	Container *Container `gorm:"foreignKey:ContainerID"`
-	User      *User      `gorm:"foreignKey:UserID"`
 
 	// One-to-one relationship with HelmConfig
 	HelmConfig *HelmConfig `gorm:"foreignKey:ContainerVersionID;references:ID"`
@@ -338,7 +333,6 @@ type DatasetVersion struct {
 
 	// Foreign key association
 	Dataset *Dataset `gorm:"foreignKey:DatasetID"`
-	User    *User    `gorm:"foreignKey:UserID"`
 
 	Datapacks []FaultInjection `gorm:"many2many:dataset_version_injections"`
 }
@@ -536,8 +530,10 @@ type AuditLog struct {
 	Status    consts.StatusType    `gorm:"not null;default:1;index" json:"status"`                       // Status: -1:deleted 0:disabled 1:enabled
 	CreatedAt time.Time            `gorm:"autoCreateTime;index:idx_audit_user_time" json:"created_at"`   // When the action was performed
 
-	// Foreign key association
-	User     *User     `gorm:"foreignKey:UserID"`
+	// Foreign key association. The User association used to live here; AegisLab
+	// now resolves audit-log user info via ssoclient (the SSO process owns
+	// users). The DB-level FK can stay since both tables share the same MySQL
+	// instance in PR-1.
 	Resource *Resource `gorm:"foreignKey:ResourceID"`
 }
 

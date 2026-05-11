@@ -10,6 +10,17 @@ import (
 	"testing"
 )
 
+// ssoOwnedModules mirrors SSO_OWNED_MODULES in
+// scripts/generate_http_modules.py — modules whose HTTP graph belongs to the
+// standalone aegis-sso process, not the AegisLab backend producer.
+var ssoOwnedModules = map[string]bool{
+	"user":      true,
+	"auth":      true,
+	"rbac":      true,
+	"sso":       true,
+	"ssoclient": true,
+}
+
 func TestGeneratedProducerHTTPModuleRegistryMatchesModuleDirs(t *testing.T) {
 	moduleRoot := filepath.Join("..", "module")
 	entries, err := os.ReadDir(moduleRoot)
@@ -20,6 +31,9 @@ func TestGeneratedProducerHTTPModuleRegistryMatchesModuleDirs(t *testing.T) {
 	var discovered []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
+			continue
+		}
+		if ssoOwnedModules[entry.Name()] {
 			continue
 		}
 		if _, err := os.Stat(filepath.Join(moduleRoot, entry.Name(), "module.go")); err == nil {

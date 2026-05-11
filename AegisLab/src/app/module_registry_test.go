@@ -19,9 +19,11 @@ import (
 	etcd "aegis/infra/etcd"
 	harbor "aegis/infra/harbor"
 	helm "aegis/infra/helm"
+	"aegis/infra/jwtkeys"
 	k8s "aegis/infra/k8s"
 	loki "aegis/infra/loki"
 	redisinfra "aegis/infra/redis"
+	"aegis/module/ssoclient"
 	"aegis/testutil"
 
 	"github.com/gin-gonic/gin"
@@ -111,6 +113,13 @@ func buildModuleRegistrySnapshot(t *testing.T) moduleRegistrySnapshot {
 			buildkit.NewGateway(),
 		),
 		allModuleOptions(),
+		// Stub ssoclient.Client and JWT key types because the system / task
+		// modules now depend on them. Real wiring lives in ssoclient.Module
+		// and jwtkeys's Signer/Verifier modules respectively; we don't load
+		// them here to keep the snapshot build offline.
+		fx.Supply((*ssoclient.Client)(nil)),
+		fx.Supply((*jwtkeys.Verifier)(nil)),
+		fx.Supply((*jwtkeys.Signer)(nil)),
 		fx.Provide(chaosSystemWriterAdapter),
 		fx.Invoke(func(p moduleRegistryParams) {
 			snapshot.Routes = p.Routes

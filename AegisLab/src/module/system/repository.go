@@ -30,7 +30,7 @@ func (r *Repository) listAuditLogs(limit, offset int, filters *ListAuditLogFilte
 		total int64
 	)
 
-	query := r.db.Model(&model.AuditLog{}).Preload("User").Preload("Resource")
+	query := r.db.Model(&model.AuditLog{}).Preload("Resource")
 	if filters != nil {
 		if filters.Action != "" {
 			query = query.Where("action = ?", filters.Action)
@@ -67,14 +67,9 @@ func (r *Repository) listAuditLogs(limit, offset int, filters *ListAuditLogFilte
 	return logs, total, nil
 }
 
-func (r *Repository) getConfigByID(configID int, includeUser bool) (*model.DynamicConfig, error) {
-	query := r.db
-	if includeUser {
-		query = query.Preload("UpdatedByUser")
-	}
-
+func (r *Repository) getConfigByID(configID int) (*model.DynamicConfig, error) {
 	var cfg model.DynamicConfig
-	if err := query.Where("id = ?", configID).First(&cfg).Error; err != nil {
+	if err := r.db.Where("id = ?", configID).First(&cfg).Error; err != nil {
 		return nil, fmt.Errorf("failed to find config with id %d: %w", configID, err)
 	}
 	return &cfg, nil
@@ -118,7 +113,7 @@ func (r *Repository) updateConfig(config *model.DynamicConfig) error {
 
 func (r *Repository) getConfigHistory(historyID int) (*model.ConfigHistory, error) {
 	var history model.ConfigHistory
-	if err := r.db.Preload("Operator").Preload("Config").First(&history, historyID).Error; err != nil {
+	if err := r.db.Preload("Config").First(&history, historyID).Error; err != nil {
 		return nil, fmt.Errorf("failed to find config history with id %d: %w", historyID, err)
 	}
 	return &history, nil
@@ -148,7 +143,7 @@ func (r *Repository) listConfigHistories(limit, offset int, configID int, change
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count config histories: %w", err)
 	}
-	if err := query.Preload("Operator").Limit(limit).Offset(offset).Order("created_at DESC").Find(&histories).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Order("created_at DESC").Find(&histories).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list config histories: %w", err)
 	}
 	return histories, total, nil
@@ -156,7 +151,7 @@ func (r *Repository) listConfigHistories(limit, offset int, configID int, change
 
 func (r *Repository) listConfigHistoriesByConfigID(configID int) ([]model.ConfigHistory, error) {
 	var histories []model.ConfigHistory
-	if err := r.db.Preload("Operator").Where("config_id = ?", configID).Order("created_at DESC").Find(&histories).Error; err != nil {
+	if err := r.db.Where("config_id = ?", configID).Order("created_at DESC").Find(&histories).Error; err != nil {
 		return nil, fmt.Errorf("failed to list config histories for config %d: %w", configID, err)
 	}
 	return histories, nil
