@@ -24,6 +24,20 @@ func (r *Repository) getUserByID(userID int) (*model.User, error) {
 	return &user, nil
 }
 
+// GetByIDs loads users by id, skipping soft-deleted rows. Order not guaranteed.
+func (r *Repository) GetByIDs(ids []int) ([]*model.User, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var users []*model.User
+	if err := r.db.
+		Where("id IN (?) AND status != ?", ids, consts.CommonDeleted).
+		Find(&users).Error; err != nil {
+		return nil, fmt.Errorf("failed to list users by ids: %w", err)
+	}
+	return users, nil
+}
+
 func (r *Repository) getUserByUsername(username string) (*model.User, error) {
 	var user model.User
 	if err := r.db.Where("username = ?", username).First(&user).Error; err != nil {

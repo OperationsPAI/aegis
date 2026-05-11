@@ -3,7 +3,9 @@ package rbac
 import (
 	"aegis/consts"
 	"aegis/model"
+	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -305,6 +307,235 @@ func (r *Repository) listPermissionsByIDs(permissionIDs []int) ([]model.Permissi
 		return nil, fmt.Errorf("failed to query permissions: %w", err)
 	}
 	return permissions, nil
+}
+
+// CheckPermission resolves whether userID has permName, optionally constrained
+// to (scopeType, scopeID). For scopeType == "" only the global user_roles
+// path is consulted; otherwise the union of global roles + user_scoped_roles
+// at the given scope is consulted. Returns the granting role name in `reason`
+// (as "role:<name>") on allow, or "denied" otherwise.
+func (r *Repository) CheckPermission(userID int, permName, scopeType, scopeID string) (bool, string, error) {
+	var perm model.Permission
+	if err := r.db.
+		Where("name = ? AND status >= ?", permName, consts.CommonDisabled).
+		First(&perm).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, "denied", nil
+		}
+		return false, "", fmt.Errorf("failed to find permission %q: %w", permName, err)
+	}
+
+	type row struct {
+		RoleName string
+	}
+
+	globalQ := r.db.
+		Select("roles.name AS role_name").
+		Table("role_permissions rp").
+		Joins("JOIN user_roles ur ON rp.role_id = ur.role_id").
+		Joins("JOIN roles ON roles.id = rp.role_id").
+		Where("ur.user_id = ? AND rp.permission_id = ?", userID, perm.ID).
+		Where("roles.status = ?", consts.CommonEnabled)
+
+	if scopeType == "" {
+		var hit row
+		if err := globalQ.Limit(1).Scan(&hit).Error; err != nil {
+			return false, "", fmt.Errorf("failed to check global permission: %w", err)
+		}
+		if hit.RoleName != "" {
+			return true, "role:" + hit.RoleName, nil
+		}
+		return false, "denied", nil
+	}
+
+	scopedQ := r.db.
+		Select("roles.name AS role_name").
+		Table("role_permissions rp").
+		Joins("JOIN user_scoped_roles usr ON rp.role_id = usr.role_id").
+		Joins("JOIN roles ON roles.id = rp.role_id").
+		Where("usr.user_id = ? AND usr.scope_type = ? AND usr.scope_id = ? AND rp.permission_id = ?",
+			userID, scopeType, scopeID, perm.ID).
+		Where("usr.status = ?", consts.CommonEnabled).
+		Where("roles.status = ?", consts.CommonEnabled)
+
+	var hits []row
+	if err := r.db.
+		Table("(?) AS combined", r.db.Raw("? UNION ALL ?", globalQ, scopedQ)).
+		Limit(1).
+		Scan(&hits).Error; err != nil {
+		return false, "", fmt.Errorf("failed to check scoped permission: %w", err)
+	}
+	if len(hits) > 0 && hits[0].RoleName != "" {
+		return true, "role:" + hits[0].RoleName, nil
+	}
+	return false, "denied", nil
+}
+
+// AssignScopedRole upserts a scoped role grant. If a row exists with status
+// CommonDeleted it's reactivated; if it exists active, it's left alone.
+// Returns (created bool, error).
+func (r *Repository) AssignScopedRole(userID, roleID int, scopeType, scopeID string) (bool, error) {
+	var existing model.UserScopedRole
+	err := r.db.
+		Where("user_id = ? AND role_id = ? AND scope_type = ? AND scope_id = ?",
+			userID, roleID, scopeType, scopeID).
+		First(&existing).Error
+	if err == nil {
+		if existing.Status == consts.CommonEnabled {
+			return false, nil
+		}
+		if err := r.db.Model(&existing).
+			Update("status", consts.CommonEnabled).Error; err != nil {
+			return false, fmt.Errorf("failed to reactivate scoped role: %w", err)
+		}
+		return true, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, fmt.Errorf("failed to query scoped role: %w", err)
+	}
+
+	row := &model.UserScopedRole{
+		UserID:    userID,
+		RoleID:    roleID,
+		ScopeType: scopeType,
+		ScopeID:   scopeID,
+		Status:    consts.CommonEnabled,
+	}
+	if err := r.db.Create(row).Error; err != nil {
+		return false, fmt.Errorf("failed to create scoped role: %w", err)
+	}
+	return true, nil
+}
+
+// RevokeScopedRole soft-deletes a scoped role grant. Returns rows affected.
+func (r *Repository) RevokeScopedRole(userID, roleID int, scopeType, scopeID string) (int64, error) {
+	result := r.db.Model(&model.UserScopedRole{}).
+		Where("user_id = ? AND role_id = ? AND scope_type = ? AND scope_id = ? AND status != ?",
+			userID, roleID, scopeType, scopeID, consts.CommonDeleted).
+		Update("status", consts.CommonDeleted)
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to revoke scoped role: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
+// ListUserScopedRoles returns the user's active scoped role grants joined to
+// the role row, optionally filtered by scope_type and/or service (which
+// requires permissions join).
+func (r *Repository) ListUserScopedRoles(userID int, scopeType, service string) ([]ScopedRoleRow, error) {
+	q := r.db.
+		Table("user_scoped_roles usr").
+		Select("usr.scope_type, usr.scope_id, usr.created_at, roles.name AS role_name, roles.id AS role_id").
+		Joins("JOIN roles ON roles.id = usr.role_id").
+		Where("usr.user_id = ? AND usr.status = ?", userID, consts.CommonEnabled).
+		Where("roles.status = ?", consts.CommonEnabled)
+
+	if scopeType != "" {
+		q = q.Where("usr.scope_type = ?", scopeType)
+	}
+	if service != "" {
+		q = q.Joins("JOIN role_permissions rp ON rp.role_id = roles.id").
+			Joins("JOIN permissions p ON p.id = rp.permission_id").
+			Where("p.service = ? AND p.status >= ?", service, consts.CommonDisabled).
+			Group("usr.id, usr.scope_type, usr.scope_id, usr.created_at, roles.name, roles.id")
+	}
+
+	var rows []ScopedRoleRow
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to list user scoped roles: %w", err)
+	}
+	return rows, nil
+}
+
+// ListScopeUsers returns who has any role at (scope_type, scope_id).
+func (r *Repository) ListScopeUsers(scopeType, scopeID string) ([]ScopeUserRow, error) {
+	var rows []ScopeUserRow
+	if err := r.db.
+		Table("user_scoped_roles usr").
+		Select("usr.user_id, users.username, roles.name AS role_name").
+		Joins("JOIN users ON users.id = usr.user_id").
+		Joins("JOIN roles ON roles.id = usr.role_id").
+		Where("usr.scope_type = ? AND usr.scope_id = ? AND usr.status = ?",
+			scopeType, scopeID, consts.CommonEnabled).
+		Where("users.status = ?", consts.CommonEnabled).
+		Where("roles.status = ?", consts.CommonEnabled).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to list scope users: %w", err)
+	}
+	return rows, nil
+}
+
+// ScopedRoleRow is the projection returned by ListUserScopedRoles.
+type ScopedRoleRow struct {
+	RoleID    int    `gorm:"column:role_id"`
+	RoleName  string `gorm:"column:role_name"`
+	ScopeType string `gorm:"column:scope_type"`
+	ScopeID   string `gorm:"column:scope_id"`
+	CreatedAt time.Time
+}
+
+// ScopeUserRow is the projection returned by ListScopeUsers.
+type ScopeUserRow struct {
+	UserID   int    `gorm:"column:user_id"`
+	Username string `gorm:"column:username"`
+	RoleName string `gorm:"column:role_name"`
+}
+
+// FindRoleByName loads a role by its (active) name.
+func (r *Repository) FindRoleByName(name string) (*model.Role, error) {
+	var role model.Role
+	if err := r.db.Where("name = ? AND status >= ?", name, consts.CommonDisabled).
+		First(&role).Error; err != nil {
+		return nil, err
+	}
+	return &role, nil
+}
+
+// FindRoleByID loads an active role by ID.
+func (r *Repository) FindRoleByID(id int) (*model.Role, error) {
+	return r.loadRole(id)
+}
+
+// UpsertPermission inserts the permission row or updates display_name /
+// description / scope_type when it already exists. The unique key is (name).
+// Returns (created bool, conflicting service string if name owned by another
+// service; "" otherwise).
+func (r *Repository) UpsertPermission(name, displayName, description, service, scopeType string) (bool, string, error) {
+	var existing model.Permission
+	err := r.db.Where("name = ?", name).First(&existing).Error
+	if err == nil {
+		if existing.Service != "" && existing.Service != service {
+			return false, existing.Service, nil
+		}
+		updates := map[string]any{
+			"display_name": displayName,
+			"description":  description,
+			"scope_type":   scopeType,
+		}
+		if existing.Status < consts.CommonDisabled {
+			updates["status"] = consts.CommonEnabled
+		}
+		if err := r.db.Model(&existing).Updates(updates).Error; err != nil {
+			return false, "", fmt.Errorf("failed to update permission %q: %w", name, err)
+		}
+		return false, "", nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, "", fmt.Errorf("failed to query permission %q: %w", name, err)
+	}
+
+	row := &model.Permission{
+		Name:        name,
+		DisplayName: displayName,
+		Description: description,
+		Service:     service,
+		ScopeType:   scopeType,
+		Status:      consts.CommonEnabled,
+	}
+	if err := r.db.Create(row).Error; err != nil {
+		return false, "", fmt.Errorf("failed to create permission %q: %w", name, err)
+	}
+	return true, "", nil
 }
 
 func (r *Repository) buildAssignablePermissionMap(permissionIDs []int) (map[int]model.Permission, error) {

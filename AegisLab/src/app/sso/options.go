@@ -7,6 +7,7 @@ import (
 	httpapi "aegis/interface/http"
 	"aegis/module/auth"
 	"aegis/module/rbac"
+	ssomod "aegis/module/sso"
 	"aegis/module/user"
 	"aegis/router"
 
@@ -24,6 +25,7 @@ func Options(confPath, port string) fx.Option {
 		user.Module,
 		auth.Module,
 		rbac.Module,
+		ssomod.Module,
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
 		httpapi.Module,
