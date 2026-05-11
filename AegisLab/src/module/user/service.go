@@ -318,7 +318,7 @@ func (s *Service) RemoveProject(_ context.Context, userID, projectID int) error 
 	})
 }
 
-func buildUserResourceRoles(userContainers []model.UserContainer, userDatasets []model.UserDataset, userProjects []model.UserProject) ([]UserContainerInfo, []UserDatasetInfo, []UserProjectInfo) {
+func buildUserResourceRoles(userContainers []model.UserScopedRole, userDatasets []model.UserScopedRole, userProjects []model.UserScopedRole) ([]UserContainerInfo, []UserDatasetInfo, []UserProjectInfo) {
 	containerRoles := make([]UserContainerInfo, 0, len(userContainers))
 	for _, uc := range userContainers {
 		containerRoles = append(containerRoles, *NewUserContainerInfo(&uc))

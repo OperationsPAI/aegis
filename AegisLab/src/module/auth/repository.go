@@ -72,37 +72,26 @@ func (r *UserRepository) UpdateLoginTime(userID int) error {
 	return nil
 }
 
-func (r *UserRepository) ListContainerRoles(userID int) ([]model.UserContainer, error) {
-	var userContainers []model.UserContainer
-	if err := r.db.Preload("Container").
-		Preload("Role").
-		Where("user_id = ? AND status = ?", userID, consts.CommonEnabled).
-		Find(&userContainers).Error; err != nil {
-		return nil, fmt.Errorf("failed to get user-container associations of the specific user: %w", err)
-	}
-	return userContainers, nil
+func (r *UserRepository) ListContainerRoles(userID int) ([]model.UserScopedRole, error) {
+	return r.listScopedRoles(userID, consts.ScopeTypeContainer)
 }
 
-func (r *UserRepository) ListDatasetRoles(userID int) ([]model.UserDataset, error) {
-	var userDatasets []model.UserDataset
-	if err := r.db.Preload("Dataset").
-		Preload("Role").
-		Where("user_id = ? AND status = ?", userID, consts.CommonEnabled).
-		Find(&userDatasets).Error; err != nil {
-		return nil, fmt.Errorf("failed to get user-dataset associations of the specific user: %w", err)
-	}
-	return userDatasets, nil
+func (r *UserRepository) ListDatasetRoles(userID int) ([]model.UserScopedRole, error) {
+	return r.listScopedRoles(userID, consts.ScopeTypeDataset)
 }
 
-func (r *UserRepository) ListProjectRoles(userID int) ([]model.UserProject, error) {
-	var userProjects []model.UserProject
-	if err := r.db.Preload("Project").
-		Preload("Role").
-		Where("user_id = ? AND status = ?", userID, consts.CommonEnabled).
-		Find(&userProjects).Error; err != nil {
-		return nil, fmt.Errorf("failed to get user-project associations of the specific user: %w", err)
+func (r *UserRepository) ListProjectRoles(userID int) ([]model.UserScopedRole, error) {
+	return r.listScopedRoles(userID, consts.ScopeTypeProject)
+}
+
+func (r *UserRepository) listScopedRoles(userID int, scopeType string) ([]model.UserScopedRole, error) {
+	var out []model.UserScopedRole
+	if err := r.db.Preload("Role").
+		Where("user_id = ? AND scope_type = ? AND status = ?", userID, scopeType, consts.CommonEnabled).
+		Find(&out).Error; err != nil {
+		return nil, fmt.Errorf("failed to get scoped role grants for %s: %w", scopeType, err)
 	}
-	return userProjects, nil
+	return out, nil
 }
 
 type RoleRepository struct {

@@ -235,8 +235,8 @@ func reconcileSystemPermissionsTx(store *bootstrapStore, resources []model.Resou
 			Name:        permName,
 			DisplayName: permData.String(),
 			Action:      permData.action,
-			Scope:       permData.resourceScope,
-			ResourceID:  permData.resourceID,
+			Service:     consts.ServiceAegis,
+			ScopeType:   scopeTypeForResourceScope(permData.resourceScope),
 			IsSystem:    true,
 			Status:      consts.CommonEnabled,
 		})
@@ -362,4 +362,20 @@ func assignSystemRolePermissionsReturningNew(store *bootstrapStore) (int, error)
 		}
 	}
 	return newLinks, nil
+}
+
+// scopeTypeForResourceScope maps the legacy in-memory ResourceScope (own /
+// project / team / all) to the new user_scoped_roles scope_type stored on
+// Permission. ScopeAll = global (empty scope_type); project/team/own keep
+// their project/team mapping. "own" is a UserPermission-only concept and
+// doesn't have a UserScopedRole equivalent, so it stays empty too.
+func scopeTypeForResourceScope(s consts.ResourceScope) string {
+	switch s {
+	case consts.ScopeProject:
+		return consts.ScopeTypeProject
+	case consts.ScopeTeam:
+		return consts.ScopeTypeTeam
+	default:
+		return ""
+	}
 }

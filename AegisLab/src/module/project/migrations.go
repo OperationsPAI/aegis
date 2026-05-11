@@ -11,7 +11,8 @@ func Migrations() framework.MigrationRegistrar {
 		Entities: []interface{}{
 			&model.Project{},
 			&model.ProjectLabel{},
-			&model.UserProject{},
+			&model.UserProjectWorkspace{},
+			// UserProject role-grant collapsed into UserScopedRole; migration owned by rbac module.
 		},
 	}
 }

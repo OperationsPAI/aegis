@@ -32,20 +32,10 @@ func (r *Repository) deleteRoleCascade(roleID int) (int64, error) {
 		return 0, fmt.Errorf("%w: cannot delete system role", consts.ErrPermissionDenied)
 	}
 
-	if err := r.db.Model(&model.UserContainer{}).
+	if err := r.db.Model(&model.UserScopedRole{}).
 		Where("role_id = ? AND status != ?", role.ID, consts.CommonDeleted).
 		Update("status", consts.CommonDeleted).Error; err != nil {
-		return 0, fmt.Errorf("failed to remove containers with role: %w", err)
-	}
-	if err := r.db.Model(&model.UserDataset{}).
-		Where("role_id = ? AND status != ?", role.ID, consts.CommonDeleted).
-		Update("status", consts.CommonDeleted).Error; err != nil {
-		return 0, fmt.Errorf("failed to remove datasets with role: %w", err)
-	}
-	if err := r.db.Model(&model.UserProject{}).
-		Where("role_id = ? AND status != ?", role.ID, consts.CommonDeleted).
-		Update("status", consts.CommonDeleted).Error; err != nil {
-		return 0, fmt.Errorf("failed to remove projects with role: %w", err)
+		return 0, fmt.Errorf("failed to remove scoped role grants: %w", err)
 	}
 	if err := r.db.Where("role_id = ?", role.ID).Delete(&model.RolePermission{}).Error; err != nil {
 		return 0, fmt.Errorf("failed to remove permissions with role: %w", err)
@@ -206,7 +196,7 @@ func (r *Repository) listUsersFromRole(roleID int) (*model.Role, []model.User, e
 
 func (r *Repository) getPermissionDetail(permissionID int) (*model.Permission, error) {
 	var permission model.Permission
-	if err := r.db.Preload("Resource").
+	if err := r.db.
 		Where("id = ? and status != ?", permissionID, consts.CommonDeleted).
 		First(&permission).Error; err != nil {
 		return nil, fmt.Errorf("failed to find permission with id %d: %w", permissionID, err)
@@ -291,14 +281,9 @@ func (r *Repository) listResourcePermissions(resourceID int) (*model.Resource, [
 		return nil, nil, err
 	}
 
-	var permissions []model.Permission
-	if err := r.db.
-		Where("resource_id = ? AND status = ?", resource.ID, consts.CommonEnabled).
-		Order("action").
-		Find(&permissions).Error; err != nil {
-		return nil, nil, fmt.Errorf("failed to get permissions by resource: %w", err)
-	}
-	return resource, permissions, nil
+	// Permission rows no longer FK to resources after the SSO extraction
+	// schema collapse; the Resource model survives as a standalone catalog.
+	return resource, nil, nil
 }
 
 func (r *Repository) loadRole(roleID int) (*model.Role, error) {

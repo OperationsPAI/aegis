@@ -509,11 +509,12 @@ func (s *Service) createContainerCore(repo *Repository, container *model.Contain
 		return nil, err
 	}
 
-	if err := repo.createUserContainer(&model.UserContainer{
-		UserID:      userID,
-		ContainerID: container.ID,
-		RoleID:      role.ID,
-		Status:      consts.CommonEnabled,
+	if err := repo.createUserContainer(&model.UserScopedRole{
+		UserID:    userID,
+		RoleID:    role.ID,
+		ScopeType: consts.ScopeTypeContainer,
+		ScopeID:   fmt.Sprintf("%d", container.ID),
+		Status:    consts.CommonEnabled,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to associate container with user: %w", err)
 	}

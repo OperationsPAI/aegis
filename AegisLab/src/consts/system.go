@@ -147,6 +147,19 @@ func (r ResourceScope) String() string {
 	return string(r)
 }
 
+// Scope types for UserScopedRole (SSO extraction). Identifies the kind of
+// business object a scoped role grant applies to. The value is stored as a
+// string in the user_scoped_roles.scope_type column so other services can
+// register their own scope types (e.g. "yourservice.workspace").
+const (
+	ScopeTypeProject   = "aegis.project"
+	ScopeTypeTeam      = "aegis.team"
+	ScopeTypeContainer = "aegis.container"
+	ScopeTypeDataset   = "aegis.dataset"
+
+	ServiceAegis = "aegis"
+)
+
 // RoleName is the type for role constants
 type RoleName string
 

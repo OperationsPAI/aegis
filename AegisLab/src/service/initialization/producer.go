@@ -382,11 +382,12 @@ func initializeUsers(store *bootstrapStore, data *InitialData) error {
 				}
 
 				// Bind user to team with role
-				if err := store.createUserTeam(&model.UserTeam{
-					UserID: user.ID,
-					TeamID: team.ID,
-					RoleID: teamRole.ID,
-					Status: consts.CommonEnabled,
+				if err := store.createUserTeam(&model.UserScopedRole{
+					UserID:    user.ID,
+					RoleID:    teamRole.ID,
+					ScopeType: consts.ScopeTypeTeam,
+					ScopeID:   fmt.Sprintf("%d", team.ID),
+					Status:    consts.CommonEnabled,
 				}); err != nil {
 					return fmt.Errorf("failed to bind user %s to team %s with role %s: %w", user.Username, teamBinding.Name, teamBinding.Role, err)
 				}
@@ -420,10 +421,11 @@ func initializeUsers(store *bootstrapStore, data *InitialData) error {
 						}
 
 						// Bind user to project with role
-						if err := store.createUserProject(&model.UserProject{
+						if err := store.createUserProject(&model.UserScopedRole{
 							UserID:    user.ID,
-							ProjectID: project.ID,
 							RoleID:    projectRole.ID,
+							ScopeType: consts.ScopeTypeProject,
+							ScopeID:   fmt.Sprintf("%d", project.ID),
 							Status:    consts.CommonEnabled,
 						}); err != nil {
 							return fmt.Errorf("failed to bind user %s to project %s with role %s: %w", user.Username, projectBinding.Name, projectBinding.Role, err)
@@ -457,10 +459,11 @@ func initializeUsers(store *bootstrapStore, data *InitialData) error {
 				}
 
 				// Bind user to project with role
-				if err := store.createUserProject(&model.UserProject{
+				if err := store.createUserProject(&model.UserScopedRole{
 					UserID:    user.ID,
-					ProjectID: project.ID,
 					RoleID:    projectRole.ID,
+					ScopeType: consts.ScopeTypeProject,
+					ScopeID:   fmt.Sprintf("%d", project.ID),
 					Status:    consts.CommonEnabled,
 				}); err != nil {
 					return fmt.Errorf("failed to bind user %s to project %s with role %s: %w", user.Username, projectBinding.Name, projectBinding.Role, err)

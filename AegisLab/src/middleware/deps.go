@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"aegis/consts"
@@ -100,7 +101,8 @@ func (s *dbBackedMiddlewareService) CheckUserPermission(_ context.Context, param
 		return false, fmt.Errorf("invalid request: %w", err)
 	}
 
-	permission, err := s.getPermissionByActionAndResource(params.Action, params.Scope, params.ResourceName)
+	rule := consts.PermissionRule{Resource: params.ResourceName, Action: params.Action, Scope: params.Scope}
+	permission, err := s.getPermissionByName(rule.String())
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
@@ -112,7 +114,7 @@ func (s *dbBackedMiddlewareService) CheckUserPermission(_ context.Context, param
 }
 
 func (s *dbBackedMiddlewareService) IsUserInTeam(_ context.Context, userID, teamID int) (bool, error) {
-	ut, err := s.getUserTeamRole(userID, teamID)
+	ut, err := s.getScopedRole(userID, consts.ScopeTypeTeam, strconv.Itoa(teamID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
@@ -123,7 +125,7 @@ func (s *dbBackedMiddlewareService) IsUserInTeam(_ context.Context, userID, team
 }
 
 func (s *dbBackedMiddlewareService) IsUserTeamAdmin(_ context.Context, userID, teamID int) (bool, error) {
-	ut, err := s.getUserTeamRole(userID, teamID)
+	ut, err := s.getScopedRole(userID, consts.ScopeTypeTeam, strconv.Itoa(teamID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
@@ -145,7 +147,7 @@ func (s *dbBackedMiddlewareService) IsTeamPublic(_ context.Context, teamID int) 
 }
 
 func (s *dbBackedMiddlewareService) IsUserInProject(_ context.Context, userID, projectID int) (bool, error) {
-	up, err := s.getUserProjectRole(userID, projectID)
+	up, err := s.getScopedRole(userID, consts.ScopeTypeProject, strconv.Itoa(projectID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
@@ -156,7 +158,7 @@ func (s *dbBackedMiddlewareService) IsUserInProject(_ context.Context, userID, p
 }
 
 func (s *dbBackedMiddlewareService) IsUserProjectAdmin(_ context.Context, userID, projectID int) (bool, error) {
-	up, err := s.getUserProjectRole(userID, projectID)
+	up, err := s.getScopedRole(userID, consts.ScopeTypeProject, strconv.Itoa(projectID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
@@ -226,13 +228,10 @@ func (s *dbBackedMiddlewareService) LogUserAction(ipAddress, userAgent, action, 
 	})
 }
 
-func (s *dbBackedMiddlewareService) getPermissionByActionAndResource(action consts.ActionName, scope consts.ResourceScope, resourceName consts.ResourceName) (*model.Permission, error) {
+func (s *dbBackedMiddlewareService) getPermissionByName(name string) (*model.Permission, error) {
 	var permission model.Permission
 	if err := s.db.
-		Select("permissions.*").
-		Joins("JOIN resources ON permissions.resource_id = resources.id").
-		Where("permissions.action = ? AND permissions.scope = ? AND resources.name = ?", action, scope, resourceName).
-		Where("permissions.status != ?", consts.CommonDeleted).
+		Where("name = ? AND status != ?", name, consts.CommonDeleted).
 		First(&permission).Error; err != nil {
 		return nil, err
 	}
@@ -245,16 +244,20 @@ func (s *dbBackedMiddlewareService) checkUserHasPermission(params *dto.CheckPerm
 	finalQuery := s.db.Table("(? UNION ALL ?) as base", directQuery, globalRoleQuery)
 
 	if params.TeamID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery, s.buildTeamRolePermissionQuery(params.UserID, permissionID, *params.TeamID))
+		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
+			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeTeam, strconv.Itoa(*params.TeamID)))
 	}
 	if params.ProjectID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery, s.buildProjectRolePermissionQuery(params.UserID, permissionID, *params.ProjectID))
+		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
+			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeProject, strconv.Itoa(*params.ProjectID)))
 	}
 	if params.ContainerID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery, s.buildContainerRolePermissionQuery(params.UserID, permissionID, *params.ContainerID))
+		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
+			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeContainer, strconv.Itoa(*params.ContainerID)))
 	}
 	if params.DatasetID != nil {
-		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery, s.buildDatasetRolePermissionQuery(params.UserID, permissionID, *params.DatasetID))
+		finalQuery = s.db.Table("(? UNION ALL ?) as combined", finalQuery,
+			s.buildScopedRolePermissionQuery(params.UserID, permissionID, consts.ScopeTypeDataset, strconv.Itoa(*params.DatasetID)))
 	}
 
 	var count int64
@@ -299,50 +302,28 @@ func (s *dbBackedMiddlewareService) buildGlobalRolePermissionQuery(userID int, p
 		Where("ur.user_id = ? AND rp.permission_id = ?", userID, permissionID)
 }
 
-func (s *dbBackedMiddlewareService) buildTeamRolePermissionQuery(userID int, permissionID int, teamID int) *gorm.DB {
+// buildScopedRolePermissionQuery replaces the 4 former buildXxxRolePermissionQuery
+// helpers — every scoped grant now lives in user_scoped_roles, keyed by
+// (scope_type, scope_id).
+func (s *dbBackedMiddlewareService) buildScopedRolePermissionQuery(userID int, permissionID int, scopeType, scopeID string) *gorm.DB {
 	return s.db.
 		Select("rp.permission_id").
 		Table("role_permissions rp").
-		Joins("JOIN user_teams ut ON rp.role_id = ut.role_id").
-		Where("ut.user_id = ? AND ut.team_id = ? AND rp.permission_id = ?", userID, teamID, permissionID).
-		Where("ut.status = ?", consts.CommonEnabled)
+		Joins("JOIN user_scoped_roles usr ON rp.role_id = usr.role_id").
+		Where("usr.user_id = ? AND usr.scope_type = ? AND usr.scope_id = ? AND rp.permission_id = ?",
+			userID, scopeType, scopeID, permissionID).
+		Where("usr.status = ?", consts.CommonEnabled)
 }
 
-func (s *dbBackedMiddlewareService) buildProjectRolePermissionQuery(userID int, permissionID int, projectID int) *gorm.DB {
-	return s.db.
-		Select("rp.permission_id").
-		Table("role_permissions rp").
-		Joins("JOIN user_projects upr ON rp.role_id = upr.role_id").
-		Where("upr.user_id = ? AND upr.project_id = ? AND rp.permission_id = ?", userID, projectID, permissionID).
-		Where("upr.status = ?", consts.CommonEnabled)
-}
-
-func (s *dbBackedMiddlewareService) buildContainerRolePermissionQuery(userID int, permissionID int, containerID int) *gorm.DB {
-	return s.db.
-		Select("rp.permission_id").
-		Table("role_permissions rp").
-		Joins("JOIN user_containers uc ON rp.role_id = uc.role_id").
-		Where("uc.user_id = ? AND uc.container_id = ? AND rp.permission_id = ?", userID, containerID, permissionID).
-		Where("uc.status = ?", consts.CommonEnabled)
-}
-
-func (s *dbBackedMiddlewareService) buildDatasetRolePermissionQuery(userID int, permissionID int, datasetID int) *gorm.DB {
-	return s.db.
-		Select("rp.permission_id").
-		Table("role_permissions rp").
-		Joins("JOIN user_datasets ud ON rp.role_id = ud.role_id").
-		Where("ud.user_id = ? AND ud.dataset_id = ? AND rp.permission_id = ?", userID, datasetID, permissionID).
-		Where("ud.status = ?", consts.CommonEnabled)
-}
-
-func (s *dbBackedMiddlewareService) getUserTeamRole(userID, teamID int) (*model.UserTeam, error) {
-	var userTeam model.UserTeam
+func (s *dbBackedMiddlewareService) getScopedRole(userID int, scopeType, scopeID string) (*model.UserScopedRole, error) {
+	var usr model.UserScopedRole
 	if err := s.db.Preload("Role").
-		Where("user_id = ? AND team_id = ? AND status = ?", userID, teamID, consts.CommonEnabled).
-		First(&userTeam).Error; err != nil {
+		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status = ?",
+			userID, scopeType, scopeID, consts.CommonEnabled).
+		First(&usr).Error; err != nil {
 		return nil, err
 	}
-	return &userTeam, nil
+	return &usr, nil
 }
 
 func (s *dbBackedMiddlewareService) getTeamByID(teamID int) (*model.Team, error) {
@@ -351,16 +332,6 @@ func (s *dbBackedMiddlewareService) getTeamByID(teamID int) (*model.Team, error)
 		return nil, err
 	}
 	return &team, nil
-}
-
-func (s *dbBackedMiddlewareService) getUserProjectRole(userID, projectID int) (*model.UserProject, error) {
-	var userProject model.UserProject
-	if err := s.db.Preload("Role").
-		Where("user_id = ? AND project_id = ? AND status = ?", userID, projectID, consts.CommonEnabled).
-		First(&userProject).Error; err != nil {
-		return nil, err
-	}
-	return &userProject, nil
 }
 
 func (s *dbBackedMiddlewareService) getResourceByName(db *gorm.DB, resourceName consts.ResourceName) (*model.Resource, error) {

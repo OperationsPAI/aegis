@@ -14,11 +14,10 @@ func TestMigrationsRegistrar(t *testing.T) {
 		t.Fatalf("expected module name 'dataset', got %q", reg.Module)
 	}
 	expected := map[string]bool{
-		"*model.Dataset":                  false,
-		"*model.DatasetVersion":           false,
-		"*model.DatasetLabel":             false,
-		"*model.DatasetVersionInjection":  false,
-		"*model.UserDataset":              false,
+		"*model.Dataset":                 false,
+		"*model.DatasetVersion":          false,
+		"*model.DatasetLabel":            false,
+		"*model.DatasetVersionInjection": false,
 	}
 	for _, e := range reg.Entities {
 		switch e.(type) {
@@ -30,8 +29,6 @@ func TestMigrationsRegistrar(t *testing.T) {
 			expected["*model.DatasetLabel"] = true
 		case *model.DatasetVersionInjection:
 			expected["*model.DatasetVersionInjection"] = true
-		case *model.UserDataset:
-			expected["*model.UserDataset"] = true
 		default:
 			t.Errorf("unexpected entity type: %T", e)
 		}
@@ -107,8 +104,8 @@ func TestRoleGrantsMergesIntoFramework(t *testing.T) {
 func TestMigrationsFlattenIntoFramework(t *testing.T) {
 	reg := Migrations()
 	flat := framework.FlattenMigrations([]framework.MigrationRegistrar{reg})
-	if len(flat) != 5 {
-		t.Fatalf("expected 5 flattened entities, got %d", len(flat))
+	if len(flat) != 4 {
+		t.Fatalf("expected 4 flattened entities, got %d", len(flat))
 	}
 }
 

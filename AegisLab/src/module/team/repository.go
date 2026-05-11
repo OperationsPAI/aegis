@@ -28,11 +28,12 @@ func (r *Repository) createTeamWithCreator(team *model.Team, userID int) error {
 		return fmt.Errorf("failed to create team: %w", err)
 	}
 
-	if err := r.db.Omit("active_user_team").Create(&model.UserTeam{
-		UserID: userID,
-		TeamID: team.ID,
-		RoleID: superAdminRole.ID,
-		Status: consts.CommonEnabled,
+	if err := r.db.Create(&model.UserScopedRole{
+		UserID:    userID,
+		RoleID:    superAdminRole.ID,
+		ScopeType: consts.ScopeTypeTeam,
+		ScopeID:   fmt.Sprintf("%d", team.ID),
+		Status:    consts.CommonEnabled,
 	}).Error; err != nil {
 		return fmt.Errorf("failed to create user-team association: %w", err)
 	}
@@ -46,8 +47,8 @@ func (r *Repository) loadTeamDetailBase(teamID int) (*model.Team, int, error) {
 	}
 
 	var userCount int64
-	if err := r.db.Model(&model.UserTeam{}).
-		Where("team_id = ? AND status = ?", teamID, consts.CommonEnabled).
+	if err := r.db.Model(&model.UserScopedRole{}).
+		Where("scope_type = ? AND scope_id = ? AND status = ?", consts.ScopeTypeTeam, fmt.Sprintf("%d", teamID), consts.CommonEnabled).
 		Count(&userCount).Error; err != nil {
 		return nil, 0, err
 	}
@@ -58,10 +59,20 @@ func (r *Repository) loadTeamDetailBase(teamID int) (*model.Team, int, error) {
 func (r *Repository) listVisibleTeams(limit, offset int, req *ListTeamReq, userID int, isAdmin bool) ([]model.Team, int64, error) {
 	var teamIDs []int
 	if !isAdmin {
-		if err := r.db.Model(&model.UserTeam{}).
-			Where("user_id = ? AND status = ?", userID, consts.CommonEnabled).
-			Pluck("team_id", &teamIDs).Error; err != nil {
+		var scopeIDs []string
+		if err := r.db.Model(&model.UserScopedRole{}).
+			Where("user_id = ? AND scope_type = ? AND status = ?", userID, consts.ScopeTypeTeam, consts.CommonEnabled).
+			Pluck("scope_id", &scopeIDs).Error; err != nil {
 			return nil, 0, err
+		}
+		if len(scopeIDs) == 0 {
+			return []model.Team{}, 0, nil
+		}
+		for _, sid := range scopeIDs {
+			var id int
+			if _, err := fmt.Sscanf(sid, "%d", &id); err == nil {
+				teamIDs = append(teamIDs, id)
+			}
 		}
 		if len(teamIDs) == 0 {
 			return []model.Team{}, 0, nil
@@ -144,11 +155,12 @@ func (r *Repository) addMember(teamID int, username string, roleID int) error {
 		return fmt.Errorf("failed to find role with id %d: %w", roleID, err)
 	}
 
-	if err := r.db.Omit("active_user_team").Create(&model.UserTeam{
-		UserID: user.ID,
-		TeamID: teamID,
-		RoleID: roleID,
-		Status: consts.CommonEnabled,
+	if err := r.db.Create(&model.UserScopedRole{
+		UserID:    user.ID,
+		RoleID:    roleID,
+		ScopeType: consts.ScopeTypeTeam,
+		ScopeID:   fmt.Sprintf("%d", teamID),
+		Status:    consts.CommonEnabled,
 	}).Error; err != nil {
 		return fmt.Errorf("failed to create user-team association: %w", err)
 	}
@@ -163,8 +175,9 @@ func (r *Repository) removeMember(teamID, userID int) (int64, error) {
 		return 0, err
 	}
 
-	result := r.db.Model(&model.UserTeam{}).
-		Where("user_id = ? AND team_id = ? AND status != ?", userID, teamID, consts.CommonDeleted).
+	result := r.db.Model(&model.UserScopedRole{}).
+		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status != ?",
+			userID, consts.ScopeTypeTeam, fmt.Sprintf("%d", teamID), consts.CommonDeleted).
 		Update("status", consts.CommonDeleted)
 	if result.Error != nil {
 		return 0, fmt.Errorf("failed to delete user-team association: %w", result.Error)
@@ -184,9 +197,10 @@ func (r *Repository) updateMemberRole(teamID, targetUserID, roleID int) error {
 		return fmt.Errorf("failed to find role with id %d: %w", roleID, err)
 	}
 
-	var userTeam model.UserTeam
+	var userTeam model.UserScopedRole
 	if err := r.db.Preload("Role").
-		Where("user_id = ? AND team_id = ? AND status = ?", targetUserID, teamID, consts.CommonEnabled).
+		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status = ?",
+			targetUserID, consts.ScopeTypeTeam, fmt.Sprintf("%d", teamID), consts.CommonEnabled).
 		First(&userTeam).Error; err != nil {
 		return err
 	}
@@ -206,9 +220,10 @@ func (r *Repository) listTeamMembers(teamID, limit, offset int) ([]TeamMemberRes
 	var total int64
 
 	query := r.db.Table("users").
-		Joins("JOIN user_teams ON users.id = user_teams.user_id").
-		Joins("LEFT JOIN roles ON roles.id = user_teams.role_id").
-		Where("user_teams.team_id = ? AND user_teams.status = ? AND users.status != ?", teamID, consts.CommonEnabled, consts.CommonDeleted)
+		Joins("JOIN user_scoped_roles usr ON users.id = usr.user_id AND usr.scope_type = ? AND usr.scope_id = CAST(? AS CHAR)",
+			consts.ScopeTypeTeam, teamID).
+		Joins("LEFT JOIN roles ON roles.id = usr.role_id").
+		Where("usr.status = ? AND users.status != ?", consts.CommonEnabled, consts.CommonDeleted)
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count team members for team %d: %w", teamID, err)
@@ -218,20 +233,21 @@ func (r *Repository) listTeamMembers(teamID, limit, offset int) ([]TeamMemberRes
 		"users.username",
 		"users.full_name",
 		"users.email",
-		"user_teams.role_id",
+		"usr.role_id",
 		"roles.display_name AS role_name",
-		"user_teams.created_at AS joined_at",
+		"usr.created_at AS joined_at",
 	).Limit(limit).Offset(offset).Scan(&members).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list team members for team %d: %w", teamID, err)
 	}
 	return members, total, nil
 }
 
-func (r *Repository) loadUserTeamMembership(userID, teamID int) (*model.UserTeam, error) {
-	var userTeam model.UserTeam
+func (r *Repository) loadUserTeamMembership(userID, teamID int) (*model.UserScopedRole, error) {
+	var userTeam model.UserScopedRole
 	if err := r.db.
 		Preload("Role").
-		Where("user_id = ? AND team_id = ? AND status = ?", userID, teamID, consts.CommonEnabled).
+		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status = ?",
+			userID, consts.ScopeTypeTeam, fmt.Sprintf("%d", teamID), consts.CommonEnabled).
 		First(&userTeam).Error; err != nil {
 		return nil, err
 	}

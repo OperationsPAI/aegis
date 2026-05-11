@@ -343,11 +343,12 @@ func (s *Service) registerUpsertContainer(repo *Repository, req *RegisterContain
 	// (e.g. unit tests) we skip rather than fail the register. Real
 	// deployments always have RoleContainerAdmin via RBAC bootstrap.
 	if role, err := repo.getRoleByName(consts.RoleContainerAdmin.String()); err == nil && userID > 0 {
-		_ = repo.createUserContainer(&model.UserContainer{
-			UserID:      userID,
-			ContainerID: container.ID,
-			RoleID:      role.ID,
-			Status:      consts.CommonEnabled,
+		_ = repo.createUserContainer(&model.UserScopedRole{
+			UserID:    userID,
+			RoleID:    role.ID,
+			ScopeType: consts.ScopeTypeContainer,
+			ScopeID:   fmt.Sprintf("%d", container.ID),
+			Status:    consts.CommonEnabled,
 		})
 	}
 

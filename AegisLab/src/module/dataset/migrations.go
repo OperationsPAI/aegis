@@ -13,7 +13,7 @@ func Migrations() framework.MigrationRegistrar {
 			&model.DatasetVersion{},
 			&model.DatasetLabel{},
 			&model.DatasetVersionInjection{},
-			&model.UserDataset{},
+			// UserDataset collapsed into UserScopedRole; migration owned by rbac module.
 		},
 	}
 }

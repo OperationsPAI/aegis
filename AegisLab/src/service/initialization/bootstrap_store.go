@@ -203,15 +203,15 @@ func (s *bootstrapStore) saveProject(project *model.Project) error {
 	return nil
 }
 
-func (s *bootstrapStore) createUserTeam(userTeam *model.UserTeam) error {
-	if err := s.db.Omit(userTeamOmitFields).Clauses(clause.OnConflict{DoNothing: true}).Create(userTeam).Error; err != nil {
+func (s *bootstrapStore) createUserTeam(userScoped *model.UserScopedRole) error {
+	if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(userScoped).Error; err != nil {
 		return fmt.Errorf("failed to create user-team association: %w", err)
 	}
 	return nil
 }
 
-func (s *bootstrapStore) createUserProject(userProject *model.UserProject) error {
-	if err := s.db.Omit("active_user_project").Clauses(clause.OnConflict{DoNothing: true}).Create(userProject).Error; err != nil {
+func (s *bootstrapStore) createUserProject(userScoped *model.UserScopedRole) error {
+	if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(userScoped).Error; err != nil {
 		return fmt.Errorf("failed to create user-project association: %w", err)
 	}
 	return nil

@@ -21,7 +21,7 @@ func Migrations() framework.MigrationRegistrar {
 			&model.ContainerLabel{},
 			&model.ContainerVersionEnvVar{},
 			&model.HelmConfigValue{},
-			&model.UserContainer{},
+			// UserContainer collapsed into UserScopedRole; migration owned by rbac module.
 		},
 		PreMigrate: preMigrateParameterConfigsSystemScope,
 	}

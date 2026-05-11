@@ -39,8 +39,8 @@ func (r *Repository) createDataset(dataset *model.Dataset) error {
 	return nil
 }
 
-func (r *Repository) createUserDataset(userDataset *model.UserDataset) error {
-	if err := r.db.Omit("active_user_dataset").Create(userDataset).Error; err != nil {
+func (r *Repository) createUserDataset(userScopedRole *model.UserScopedRole) error {
+	if err := r.db.Create(userScopedRole).Error; err != nil {
 		return fmt.Errorf("failed to create user-dataset association: %w", err)
 	}
 	return nil
@@ -57,8 +57,8 @@ func (r *Repository) batchDeleteDatasetVersions(datasetID int) (int64, error) {
 }
 
 func (r *Repository) removeUsersFromDataset(datasetID int) (int64, error) {
-	result := r.db.Model(&model.UserDataset{}).
-		Where("dataset_id = ? AND status != ?", datasetID, consts.CommonDeleted).
+	result := r.db.Model(&model.UserScopedRole{}).
+		Where("scope_type = ? AND scope_id = ? AND status != ?", consts.ScopeTypeDataset, fmt.Sprintf("%d", datasetID), consts.CommonDeleted).
 		Update("status", consts.CommonDeleted)
 	if err := result.Error; err != nil {
 		return 0, fmt.Errorf("failed to delete user-dataset associations for dataset %d: %w", datasetID, err)

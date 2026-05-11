@@ -61,20 +61,10 @@ func (r *Repository) deleteUserCascade(userID int) (int64, error) {
 		return 0, err
 	}
 
-	if err := r.db.Model(&model.UserContainer{}).
+	if err := r.db.Model(&model.UserScopedRole{}).
 		Where("user_id = ? AND status != ?", userID, consts.CommonDeleted).
 		Update("status", consts.CommonDeleted).Error; err != nil {
-		return 0, fmt.Errorf("failed to remove containers from user: %w", err)
-	}
-	if err := r.db.Model(&model.UserDataset{}).
-		Where("user_id = ? AND status != ?", userID, consts.CommonDeleted).
-		Update("status", consts.CommonDeleted).Error; err != nil {
-		return 0, fmt.Errorf("failed to remove datasets from user: %w", err)
-	}
-	if err := r.db.Model(&model.UserProject{}).
-		Where("user_id = ? AND status != ?", userID, consts.CommonDeleted).
-		Update("status", consts.CommonDeleted).Error; err != nil {
-		return 0, fmt.Errorf("failed to remove projects from user: %w", err)
+		return 0, fmt.Errorf("failed to remove scoped role grants from user: %w", err)
 	}
 	if err := r.db.Where("user_id = ?", userID).Delete(&model.UserPermission{}).Error; err != nil {
 		return 0, fmt.Errorf("failed to remove permissions from user: %w", err)
@@ -125,7 +115,7 @@ func (r *Repository) updateMutableUser(userID int, patch func(*model.User)) (*mo
 	return &user, nil
 }
 
-func (r *Repository) loadUserDetailRelations(userID int) ([]model.Role, []model.Permission, []model.UserContainer, []model.UserDataset, []model.UserProject, error) {
+func (r *Repository) loadUserDetailRelations(userID int) ([]model.Role, []model.Permission, []model.UserScopedRole, []model.UserScopedRole, []model.UserScopedRole, error) {
 	var roles []model.Role
 	if err := r.db.Table("roles").
 		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
@@ -142,21 +132,26 @@ func (r *Repository) loadUserDetailRelations(userID int) ([]model.Role, []model.
 		return nil, nil, nil, nil, nil, fmt.Errorf("failed to list permissions by user id: %w", err)
 	}
 
-	var userContainers []model.UserContainer
-	if err := r.db.Where("user_id = ? AND status != ?", userID, consts.CommonDeleted).
-		Find(&userContainers).Error; err != nil {
+	loadScope := func(scopeType string) ([]model.UserScopedRole, error) {
+		var out []model.UserScopedRole
+		if err := r.db.Preload("Role").
+			Where("user_id = ? AND scope_type = ? AND status != ?", userID, scopeType, consts.CommonDeleted).
+			Find(&out).Error; err != nil {
+			return nil, err
+		}
+		return out, nil
+	}
+
+	userContainers, err := loadScope(consts.ScopeTypeContainer)
+	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("failed to list user containers: %w", err)
 	}
-
-	var userDatasets []model.UserDataset
-	if err := r.db.Where("user_id = ? AND status != ?", userID, consts.CommonDeleted).
-		Find(&userDatasets).Error; err != nil {
+	userDatasets, err := loadScope(consts.ScopeTypeDataset)
+	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("failed to list user datasets: %w", err)
 	}
-
-	var userProjects []model.UserProject
-	if err := r.db.Where("user_id = ? AND status != ?", userID, consts.CommonDeleted).
-		Find(&userProjects).Error; err != nil {
+	userProjects, err := loadScope(consts.ScopeTypeProject)
+	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("failed to list user projects: %w", err)
 	}
 
@@ -283,10 +278,12 @@ func (r *Repository) assignContainerRole(userID, containerID, roleID int) error 
 		return err
 	}
 
-	if err := r.db.Omit("active_user_container").Create(&model.UserContainer{
-		UserID:      userID,
-		ContainerID: containerID,
-		RoleID:      roleID,
+	if err := r.db.Create(&model.UserScopedRole{
+		UserID:    userID,
+		RoleID:    roleID,
+		ScopeType: consts.ScopeTypeContainer,
+		ScopeID:   fmt.Sprintf("%d", containerID),
+		Status:    consts.CommonEnabled,
 	}).Error; err != nil {
 		return fmt.Errorf("failed to create user-container association: %w", err)
 	}
@@ -300,8 +297,9 @@ func (r *Repository) removeContainerRole(userID, containerID int) (int64, error)
 	if err := r.ensureActiveRecordExists(&model.Container{}, containerID, "container"); err != nil {
 		return 0, err
 	}
-	result := r.db.Model(&model.UserContainer{}).
-		Where("user_id = ? AND container_id = ? AND status != ?", userID, containerID, consts.CommonDeleted).
+	result := r.db.Model(&model.UserScopedRole{}).
+		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status != ?",
+			userID, consts.ScopeTypeContainer, fmt.Sprintf("%d", containerID), consts.CommonDeleted).
 		Update("status", consts.CommonDeleted)
 	if result.Error != nil {
 		return 0, fmt.Errorf("failed to delete user-container association: %w", result.Error)
@@ -320,10 +318,12 @@ func (r *Repository) assignDatasetRole(userID, datasetID, roleID int) error {
 		return err
 	}
 
-	if err := r.db.Omit("active_user_dataset").Create(&model.UserDataset{
+	if err := r.db.Create(&model.UserScopedRole{
 		UserID:    userID,
-		DatasetID: datasetID,
 		RoleID:    roleID,
+		ScopeType: consts.ScopeTypeDataset,
+		ScopeID:   fmt.Sprintf("%d", datasetID),
+		Status:    consts.CommonEnabled,
 	}).Error; err != nil {
 		return fmt.Errorf("failed to create user-dataset association: %w", err)
 	}
@@ -337,8 +337,9 @@ func (r *Repository) removeDatasetRole(userID, datasetID int) (int64, error) {
 	if err := r.ensureActiveRecordExists(&model.Dataset{}, datasetID, "dataset"); err != nil {
 		return 0, err
 	}
-	result := r.db.Model(&model.UserDataset{}).
-		Where("user_id = ? AND dataset_id = ? AND status != ?", userID, datasetID, consts.CommonDeleted).
+	result := r.db.Model(&model.UserScopedRole{}).
+		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status != ?",
+			userID, consts.ScopeTypeDataset, fmt.Sprintf("%d", datasetID), consts.CommonDeleted).
 		Update("status", consts.CommonDeleted)
 	if result.Error != nil {
 		return 0, fmt.Errorf("failed to delete user-dataset association: %w", result.Error)
@@ -357,10 +358,12 @@ func (r *Repository) assignProjectRole(userID, projectID, roleID int) error {
 		return err
 	}
 
-	if err := r.db.Omit("active_user_project").Create(&model.UserProject{
+	if err := r.db.Create(&model.UserScopedRole{
 		UserID:    userID,
-		ProjectID: projectID,
 		RoleID:    roleID,
+		ScopeType: consts.ScopeTypeProject,
+		ScopeID:   fmt.Sprintf("%d", projectID),
+		Status:    consts.CommonEnabled,
 	}).Error; err != nil {
 		return fmt.Errorf("failed to create user-project association: %w", err)
 	}
@@ -374,8 +377,9 @@ func (r *Repository) removeProjectRole(userID, projectID int) (int64, error) {
 	if err := r.ensureActiveRecordExists(&model.Project{}, projectID, "project"); err != nil {
 		return 0, err
 	}
-	result := r.db.Model(&model.UserProject{}).
-		Where("user_id = ? AND project_id = ? AND status != ?", userID, projectID, consts.CommonDeleted).
+	result := r.db.Model(&model.UserScopedRole{}).
+		Where("user_id = ? AND scope_type = ? AND scope_id = ? AND status != ?",
+			userID, consts.ScopeTypeProject, fmt.Sprintf("%d", projectID), consts.CommonDeleted).
 		Update("status", consts.CommonDeleted)
 	if result.Error != nil {
 		return 0, fmt.Errorf("failed to delete user-project association: %w", result.Error)
