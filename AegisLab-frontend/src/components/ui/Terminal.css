@@ -28,6 +28,22 @@
   margin-right: var(--space-1);
 }
 
+.aegis-terminal__prefix--debug {
+  color: var(--text-muted);
+}
+
+.aegis-terminal__prefix--info {
+  color: var(--text-main);
+}
+
+.aegis-terminal__prefix--warn {
+  color: var(--ink-warn);
+}
+
+.aegis-terminal__prefix--error {
+  color: var(--accent-warning);
+}
+
 .aegis-terminal__body {
   color: var(--text-muted);
 }

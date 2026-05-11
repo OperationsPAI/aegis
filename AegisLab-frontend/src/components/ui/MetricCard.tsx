@@ -16,6 +16,7 @@ interface MetricCardProps {
   sparklineHeight?: number;
   inverted?: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
 export function MetricCard({
@@ -26,16 +27,18 @@ export function MetricCard({
   sparklineHeight = 60,
   inverted = false,
   className,
+  onClick,
 }: MetricCardProps) {
   const cls = [
     'aegis-metric-card',
     inverted ? 'aegis-metric-card--inverted' : '',
+    onClick ? 'aegis-metric-card--clickable' : '',
     className ?? '',
   ]
     .filter(Boolean)
     .join(' ');
   return (
-    <div className={cls}>
+    <div className={cls} onClick={onClick} role={onClick ? 'button' : undefined}>
       <MetricLabel inverted={inverted}>{label}</MetricLabel>
       <div className="aegis-metric-card__value">
         <MonoValue size="lg" inverted={inverted}>

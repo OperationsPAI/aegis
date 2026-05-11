@@ -1,0 +1,51 @@
+.aegis-form-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  padding: var(--space-3) 0;
+}
+
+.aegis-form-row__label-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 240px;
+  flex-shrink: 0;
+  padding-top: var(--space-1);
+}
+
+.aegis-form-row__label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  color: var(--text-main);
+}
+
+.aegis-form-row__description {
+  font-family: var(--font-ui);
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.aegis-form-row__control {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 480px;
+}
+
+@media (max-width: 768px) {
+  .aegis-form-row {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .aegis-form-row__label-group {
+    width: 100%;
+    padding-top: 0;
+  }
+
+  .aegis-form-row__control {
+    max-width: none;
+  }
+}

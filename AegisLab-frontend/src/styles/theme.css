@@ -31,6 +31,10 @@
   --accent-warning: #e11d48;
   --accent-warning-soft: var(--bg-warning-soft);
 
+  /* ── Secondary semantic (logs, non-anomaly attention) ────────────── */
+  --ink-warn: #d97706; /* amber-600 — logs & cautions, NOT anomaly red */
+  --bg-warn-soft: #fffbeb;
+
   /* ── Radius ──────────────────────────────────────────────────────── */
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -99,6 +103,30 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
+}
+
+/* ── Page entrance (subtle — never steals attention) ───────────────── */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Staggered children (Panel contents, list rows) ────────────────── */
+@keyframes stagger-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Pulse keyframe (status-dot, "alive" indicator) ────────────────── */

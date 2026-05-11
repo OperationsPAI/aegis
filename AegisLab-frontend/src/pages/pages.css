@@ -1,0 +1,97 @@
+/* Shared page layout styles — imported by all page components */
+
+.page-wrapper {
+  padding: var(--space-6);
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: page-fade-in var(--motion-base) forwards;
+}
+
+.page-wrapper > * + * {
+  margin-top: var(--space-6);
+}
+
+/* Stagger children inside page-wrapper for subtle sequential reveal */
+.page-wrapper > *:nth-child(1) { animation-delay: 0ms; }
+.page-wrapper > *:nth-child(2) { animation-delay: 40ms; }
+.page-wrapper > *:nth-child(3) { animation-delay: 80ms; }
+.page-wrapper > *:nth-child(4) { animation-delay: 120ms; }
+.page-wrapper > *:nth-child(5) { animation-delay: 160ms; }
+
+/* Overview stat grid */
+.page-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+/* ── Generic list skeleton (used by placeholder pages) ───────────── */
+
+.page-table {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border-hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.page-table__head,
+.page-table__row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-panel);
+}
+
+.page-table__head {
+  font-family: var(--font-ui);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+}
+
+.page-table__row {
+  cursor: pointer;
+  transition: background var(--motion-fast), transform var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.page-table__row:hover {
+  background: var(--bg-muted);
+  transform: translateX(2px);
+}
+
+.page-table__row:active {
+  transform: translateX(2px) scale(0.998);
+}
+
+.page-table__cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .page-overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .page-wrapper {
+    padding: var(--space-4);
+  }
+
+  .page-table__head,
+  .page-table__row {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .page-table__head > :nth-child(3),
+  .page-table__row > :nth-child(3) {
+    display: none;
+  }
+}

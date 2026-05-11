@@ -27,7 +27,7 @@ func (r *Repository) ListEvaluations(limit, offset int) ([]model.Evaluation, int
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count evaluations: %w", err)
 	}
-	if err := query.Select("id, project_id, algorithm_name, algorithm_version, datapack_name, dataset_name, dataset_version, eval_type, precision, recall, f1_score, accuracy, status, created_at, updated_at").
+	if err := query.Select("id, project_id, algorithm_name, algorithm_version, datapack_name, dataset_name, dataset_version, eval_type, `precision`, recall, f1_score, accuracy, status, created_at, updated_at").
 		Limit(limit).Offset(offset).Order("updated_at DESC").Find(&evaluations).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list evaluations: %w", err)
 	}

@@ -30,6 +30,9 @@ func (r *Repository) loadInjection(id int) (*model.FaultInjection, error) {
 		Preload("Pedestal.Container").
 		Where("id = ?", id).
 		First(&injection).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, consts.ErrNotFound
+		}
 		return nil, fmt.Errorf("failed to find injection with id %d: %w", id, err)
 	}
 	return &injection, nil

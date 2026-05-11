@@ -13,6 +13,10 @@
   background: var(--accent-warning);
 }
 
+.aegis-status-dot--muted {
+  background: var(--text-muted);
+}
+
 .aegis-status-dot--pulse {
   animation: aegis-pulse 2s infinite;
 }

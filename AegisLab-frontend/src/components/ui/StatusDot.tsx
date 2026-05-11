@@ -2,7 +2,7 @@ import './StatusDot.css';
 
 interface StatusDotProps {
   pulse?: boolean;
-  tone?: 'ink' | 'inverted' | 'warning';
+  tone?: 'ink' | 'inverted' | 'warning' | 'muted';
   size?: number;
   className?: string;
 }

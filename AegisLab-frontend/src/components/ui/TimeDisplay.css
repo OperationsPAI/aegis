@@ -1,0 +1,6 @@
+.aegis-time-display {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  white-space: nowrap;
+}

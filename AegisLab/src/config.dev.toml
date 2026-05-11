@@ -2,13 +2,13 @@ name = "AegisLab"
 version = "1.0.0"
 
 port = 8082
-workspace = "/home/nn/workspace/AegisLab"
+workspace = "/home/faydev/workspace/aegis/AegisLab"
 
 [system]
 timezone = "Asia/Shanghai"
 
 [initialization]
-data_path = "/home/nn/workspace/AegisLab/data/initial_data/staging"
+data_path = "/home/faydev/workspace/aegis/AegisLab/data/initial_data/staging"
 
 [database.mysql]
 host = "localhost"
@@ -53,7 +53,7 @@ source_type = "pvc"
 claim_name = "rcabench-juicefs-experiment-storage"
 
 [jfs]
-container_path = "/home/nn/workspace/AegisLab/containers"
+container_path = "/home/faydev/workspace/aegis/AegisLab/containers"
 dataset_path = "/mnt/jfs/rcabench_dataset"
 experiment_storage_path = "/mnt/jfs/experiment_storage"
 

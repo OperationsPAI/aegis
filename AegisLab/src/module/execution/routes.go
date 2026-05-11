@@ -45,8 +45,8 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 
 			executions := v2.Group("/executions", middleware.JWTAuth())
 			{
-				executions.GET("/:id", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:read"), handler.GetExecution)
-				executions.PATCH("/:id/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:write"), handler.ManageExecutionCustomLabels)
+				executions.GET("/:execution_id", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:read"), handler.GetExecution)
+				executions.PATCH("/:execution_id/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:write"), handler.ManageExecutionCustomLabels)
 			}
 
 			runtime := v2.Group("/executions", middleware.JWTAuth(), middleware.RequireServiceTokenAuth())

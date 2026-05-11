@@ -9,6 +9,7 @@ interface ChipProps {
   /** Optional leading dot/icon node. */
   leading?: ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
 export function Chip({
@@ -16,12 +17,13 @@ export function Chip({
   tone = 'default',
   leading,
   className,
+  onClick,
 }: ChipProps) {
   const cls = ['aegis-chip', `aegis-chip--${tone}`, className ?? '']
     .filter(Boolean)
     .join(' ');
   return (
-    <span className={cls}>
+    <span className={cls} onClick={onClick} role={onClick ? 'button' : undefined}>
       {leading && <span className="aegis-chip__leading">{leading}</span>}
       <span className="aegis-chip__label">{children}</span>
     </span>

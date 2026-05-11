@@ -1,0 +1,258 @@
+.aegis-step {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color var(--motion-fast);
+}
+
+.aegis-step:hover {
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+.aegis-step--expanded {
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+
+.aegis-step__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aegis-step__head:disabled {
+  cursor: default;
+}
+
+.aegis-step__head-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.aegis-step__head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.aegis-step__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  color: var(--text-muted);
+}
+
+.aegis-step__action-preview {
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.aegis-step__chevron {
+  font-size: var(--fs-11);
+  color: var(--text-muted);
+  width: 14px;
+  text-align: center;
+}
+
+/* ── Body ────────────────────────────────────────────────────────── */
+
+.aegis-step__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.aegis-step__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.aegis-step__section:first-child {
+  padding-top: var(--space-3);
+}
+
+.aegis-step__section-label {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.aegis-step__section-body {
+  padding-left: var(--space-2);
+}
+
+.aegis-step__text {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  line-height: 1.6;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Markdown rendering inside step ──────────────────────────────── */
+
+.aegis-step__markdown {
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.aegis-step__markdown > *:first-child {
+  margin-top: 0;
+}
+
+.aegis-step__markdown > *:last-child {
+  margin-bottom: 0;
+}
+
+.aegis-step__markdown p {
+  margin: 0 0 var(--space-2) 0;
+}
+
+.aegis-step__markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.aegis-step__markdown h1,
+.aegis-step__markdown h2,
+.aegis-step__markdown h3,
+.aegis-step__markdown h4,
+.aegis-step__markdown h5,
+.aegis-step__markdown h6 {
+  font-family: var(--font-brand);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-13);
+  line-height: 1.4;
+  margin: var(--space-3) 0 var(--space-2) 0;
+  color: var(--text-main);
+}
+
+.aegis-step__markdown h1:first-child,
+.aegis-step__markdown h2:first-child,
+.aegis-step__markdown h3:first-child,
+.aegis-step__markdown h4:first-child,
+.aegis-step__markdown h5:first-child,
+.aegis-step__markdown h6:first-child {
+  margin-top: 0;
+}
+
+.aegis-step__markdown ul,
+.aegis-step__markdown ol {
+  margin: 0 0 var(--space-2) 0;
+  padding-left: var(--space-4);
+}
+
+.aegis-step__markdown li {
+  margin-bottom: 2px;
+}
+
+.aegis-step__markdown a {
+  color: var(--text-main);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.aegis-step__markdown a:hover {
+  color: var(--text-muted);
+}
+
+.aegis-step__markdown code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  background: var(--bg-muted);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+}
+
+.aegis-step__markdown pre {
+  margin: 0 0 var(--space-2) 0;
+  padding: var(--space-3);
+  background: #0d0d0d;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.aegis-step__markdown pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: #e8e8ed;
+  font-size: var(--fs-11);
+  line-height: 1.6;
+}
+
+.aegis-step__markdown blockquote {
+  margin: 0 0 var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--text-main);
+  background: var(--bg-page);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.aegis-step__markdown blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.aegis-step__markdown hr {
+  border: none;
+  border-top: 1px solid var(--border-hairline);
+  margin: var(--space-3) 0;
+}
+
+.aegis-step__markdown strong {
+  font-weight: var(--fw-semibold);
+}
+
+.aegis-step__markdown em {
+  font-style: italic;
+}
+
+/* ── Timeline connector (visual only) ────────────────────────────── */
+
+.aegis-step + .aegis-step {
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 768px) {
+  .aegis-step__head {
+    padding: var(--space-2) var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .aegis-step__head-right {
+    gap: var(--space-2);
+  }
+
+  .aegis-step__body {
+    padding: 0 var(--space-3) var(--space-3) var(--space-3);
+  }
+}

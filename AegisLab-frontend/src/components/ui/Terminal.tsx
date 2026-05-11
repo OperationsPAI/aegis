@@ -2,9 +2,12 @@ import type { ReactNode } from 'react';
 
 import './Terminal.css';
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
 export interface TerminalLine {
   ts?: string;
   prefix?: string;
+  level?: LogLevel;
   body: ReactNode;
 }
 
@@ -28,7 +31,9 @@ export function Terminal({
             <span className="aegis-terminal__ts">[{line.ts}]</span>
           )}
           {line.prefix && (
-            <span className="aegis-terminal__prefix">{line.prefix}</span>
+            <span className={`aegis-terminal__prefix${line.level ? ` aegis-terminal__prefix--${line.level}` : ''}`}>
+              {line.prefix}
+            </span>
           )}
           <span className="aegis-terminal__body">{line.body}</span>
         </div>

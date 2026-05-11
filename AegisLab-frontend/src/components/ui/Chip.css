@@ -14,6 +14,17 @@
   border: 1px solid var(--border-hairline);
   background: transparent;
   color: var(--text-main);
+  cursor: default;
+  user-select: none;
+  transition: transform var(--motion-fast), background var(--motion-fast);
+}
+
+.aegis-chip[role="button"] {
+  cursor: pointer;
+}
+
+.aegis-chip[role="button"]:active {
+  transform: scale(0.97);
 }
 
 .aegis-chip--default {

@@ -12,17 +12,38 @@ The frontend is currently in **design-language-first** mode. Before building
 any scenario UI (experiment-observation page, dashboards, etc.), the goal is
 to land a small, opinionated set of primitives that everything composes from.
 
-**Order of work** — do not skip steps:
+**Top-down hierarchy — maintain in this order, never skip or invert:**
 
-1. Establish design tokens (color, type, spacing, motion, radius, shadow) in
+1. **Design tokens** (color, type, spacing, motion, radius, shadow) in
    `src/styles/theme.css`. Tokens are the only source of visual truth.
-2. Build primitives in `src/components/ui/` — one component per file, plain
-   CSS, no business logic.
-3. Showcase every primitive in the gallery (`src/App.tsx` + `src/App.css`).
-   The gallery **is** the live spec — if it isn't in the gallery, the team
-   doesn't know it exists.
-4. **Only after** the primitive is in the gallery, compose scenario pages
-   from it. Resist the urge to one-off bespoke UI inside a page.
+2. **Layout system** — the page shell (`src/pages/pages.css`) defines the
+   single root container (`.page-wrapper`) that every page must inherit.
+   Page-level CSS must **not** redefine `max-width`, `margin`, or `padding`;
+   those belong to the shared layout system only.
+3. **Primitives** in `src/components/ui/` — one component per file, plain
+   CSS, no business logic. These are the building blocks that pages compose
+   from; never write bespoke one-off markup inside a page when a primitive
+   already exists.
+4. **Gallery** (`src/App.tsx` + `src/App.css`). The gallery **is** the live
+   spec — if it isn't in the gallery, the team doesn't know it exists.
+5. **Only after** steps 1–4 are solid, compose scenario pages from the
+   existing primitives and layout system. Resist the urge to one-off bespoke
+   UI inside a page.
+
+### Layout system rules
+
+- Every page root element must carry `className="page-wrapper"` (plus an
+  optional page-specific class for internal content layout only).
+- `src/pages/pages.css` owns `.page-wrapper`:
+  - `max-width: 1200px`
+  - `margin: 0 auto`
+  - `padding: var(--space-6)` (mobile: `var(--space-4)`)
+- Page-specific CSS files (e.g. `Dashboard.css`, `Gallery.css`) must **not**
+  declare `max-width`, `margin`, or `padding` on their root class. They may
+  only define internal layout (`display: flex`, `gap`, `grid`, etc.).
+- Before adding a new page, check whether the existing layout and primitives
+  already satisfy the design. If not, extend the layout system or add a
+  primitive first — don't embed a custom layout inside a single page.
 
 **Design conventions** (enforced):
 
@@ -246,10 +267,15 @@ Vite dev server proxies `/api` to `http://10.10.10.220:32080` (change in `vite.c
 
 ### Adding a New Page
 
-1. Create component in `src/pages/`
-2. Add route in `src/App.tsx`
-3. Add navigation item in `src/components/layout/MainLayout.tsx`
-4. Create API client if needed in `src/api/`
+1. **Check the layout system first** — does the page need a new layout
+   pattern, or can it reuse `.page-wrapper` + existing primitives?
+2. Create component in `src/pages/` with `className="page-wrapper"` as the
+   root element. Do not redefine `max-width`, `margin`, or `padding`.
+3. Compose the page from existing primitives (`PageHeader`, `Panel`, `Tabs`,
+   `DataTable`, etc.). Only add new primitives if the gallery genuinely lacks
+   the needed pattern.
+4. Add route in `src/App.tsx` and navigation item in the sidebar nav arrays.
+5. Create API client if needed in `src/api/`
 
 ### Creating API Integration
 

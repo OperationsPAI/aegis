@@ -29,3 +29,12 @@
   width: 100%;
   margin-top: var(--space-2);
 }
+
+.aegis-metric-card--clickable {
+  cursor: pointer;
+  transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+
+.aegis-metric-card--clickable:hover {
+  background: var(--bg-muted);
+}

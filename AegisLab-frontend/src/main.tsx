@@ -1,6 +1,7 @@
 import { ConfigProvider } from 'antd';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 
 import App from './App';
 import './styles/fonts';
@@ -14,8 +15,10 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <ConfigProvider theme={aegisTheme}>
-      <App />
-    </ConfigProvider>
-  </React.StrictMode>
+    <BrowserRouter>
+      <ConfigProvider theme={aegisTheme}>
+        <App />
+      </ConfigProvider>
+    </BrowserRouter>
+  </React.StrictMode>,
 );

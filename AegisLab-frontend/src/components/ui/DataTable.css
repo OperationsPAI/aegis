@@ -1,0 +1,82 @@
+.aegis-data-table {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.aegis-data-table__scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.aegis-data-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+}
+
+.aegis-data-table__th {
+  padding: var(--space-2) var(--space-3);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-11);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border-hairline);
+  white-space: nowrap;
+  background: var(--bg-panel);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.aegis-data-table__row {
+  transition: background var(--motion-fast);
+}
+
+.aegis-data-table__row:hover {
+  background: var(--bg-muted);
+}
+
+.aegis-data-table__td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+  color: var(--text-main);
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+}
+
+.aegis-data-table__empty-cell {
+  border-bottom: none;
+  padding: 0;
+}
+
+/* Skeleton shimmer */
+.aegis-data-table__skeleton {
+  display: inline-block;
+  width: 80%;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted) 25%,
+    var(--bg-page) 50%,
+    var(--bg-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: aegis-skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes aegis-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
