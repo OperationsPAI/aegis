@@ -293,8 +293,7 @@ func getAlgoJobEnvVars(taskID string, executionID int, datapackPathPrefix, expPa
 		outputPath = filepath.Join(expPathPrefix, payload.algorithm.ContainerName, payload.algorithm.Name, timestamp)
 	}
 
-	// Generate service token for job authentication
-	serviceToken, _, err := utils.GenerateServiceToken(taskID)
+	serviceToken, err := issueServiceToken(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate service token: %w", err)
 	}

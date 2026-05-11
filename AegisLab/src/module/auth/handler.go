@@ -146,7 +146,7 @@ func (h *Handler) Logout(c *gin.Context) {
 		return
 	}
 
-	claims, err := utils.ValidateToken(token)
+	claims, err := h.service.VerifyToken(c.Request.Context(), token)
 	if err != nil {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Invalid token")
 		return

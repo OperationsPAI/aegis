@@ -82,3 +82,8 @@ max_entries = 5000
 [otlp_receiver]
 port = 4319
 max_request_size = 5242880
+
+[sso]
+private_key_path = "/etc/aegis/sso-private.pem"
+kid = "aegis-sso-v1"
+jwks_url = "http://aegis-sso:8083/.well-known/jwks.json"

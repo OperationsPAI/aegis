@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"os"
@@ -11,36 +12,21 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// JWT configuration
 const (
-	// JWTSecretEnvVar is the environment variable from which the JWT signing
-	// secret is loaded. It MUST be set to a non-empty, non-default value before
-	// any JWT operation is performed; see InitJWTSecret / ValidateJWTSecret.
+	// JWTSecretEnvVar names the symmetric secret used to derive the API-key
+	// envelope KEK (see access_key_crypto.go). It is NOT used for JWT signing
+	// anymore — JWTs are RS256-signed via an SSO-owned RSA keypair.
 	JWTSecretEnvVar = "AEGIS_JWT_SECRET"
 
-	// LegacyJWTSecretDefault is the hardcoded default that previously shipped
-	// in the source tree. It is retained only so that configuration validation
-	// can detect and reject deployments that still rely on it.
 	LegacyJWTSecretDefault = "your-secret-key-change-this-in-production"
 
 	TokenExpiration        = 24 * time.Hour
 	RefreshTokenExpiration = 7 * 24 * time.Hour
-	ServiceTokenExpiration = 24 * time.Hour // Service token for K8s jobs
+	ServiceTokenExpiration = 24 * time.Hour
 )
 
-// JWTSecret is populated at process start from AEGIS_JWT_SECRET. It is kept
-// as a package-level variable (rather than const) so it can be initialized
-// from the environment and referenced by the rest of the utils package
-// (jwt.go, access_key_crypto.go). Callers MUST invoke InitJWTSecret during
-// startup; otherwise ValidateJWTSecret will fail fast.
 var JWTSecret string
 
-// InitJWTSecret loads the JWT secret from the AEGIS_JWT_SECRET environment
-// variable. It returns an error if the variable is unset, empty, or still
-// holds the legacy hardcoded default. On success, JWTSecret is populated.
-//
-// This function is idempotent; repeated calls will overwrite JWTSecret with
-// the current environment value.
 func InitJWTSecret() error {
 	secret := os.Getenv(JWTSecretEnvVar)
 	if secret == "" {
@@ -53,56 +39,64 @@ func InitJWTSecret() error {
 	return nil
 }
 
-// ValidateJWTSecret confirms JWTSecret has been populated with a non-default
-// value. It should be called after InitJWTSecret and before any JWT
-// signing/verification. Fail-fast on misconfiguration.
 func ValidateJWTSecret() error {
 	if JWTSecret == "" {
-		return fmt.Errorf("JWT secret is not initialized; set %s and call InitJWTSecret at startup", JWTSecretEnvVar)
+		return fmt.Errorf("API-key KEK secret is not initialized; set %s and call InitJWTSecret at startup", JWTSecretEnvVar)
 	}
 	if JWTSecret == LegacyJWTSecretDefault {
-		return fmt.Errorf("JWT secret equals the legacy hardcoded default; set %s to a unique value", JWTSecretEnvVar)
+		return fmt.Errorf("API-key KEK secret equals the legacy hardcoded default; set %s to a unique value", JWTSecretEnvVar)
 	}
 	return nil
 }
 
-// Claims represents JWT claims structure
 type Claims struct {
 	UserID       int      `json:"user_id"`
 	Username     string   `json:"username"`
 	Email        string   `json:"email"`
 	IsActive     bool     `json:"is_active"`
-	IsAdmin      bool     `json:"is_admin"` // System admin flag (super_admin or admin)
-	Roles        []string `json:"roles"`    // Global role names
+	IsAdmin      bool     `json:"is_admin"`
+	Roles        []string `json:"roles"`
 	AuthType     string   `json:"auth_type,omitempty"`
 	APIKeyID     int      `json:"api_key_id,omitempty"`
 	APIKeyScopes []string `json:"api_key_scopes,omitempty"`
 	jwt.RegisteredClaims
 }
 
-// RefreshClaims represents refresh token claims
 type RefreshClaims struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
-// ServiceClaims represents service token claims for K8s jobs
 type ServiceClaims struct {
-	TaskID string `json:"task_id"` // Associated task ID
+	TaskID string `json:"task_id"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken generates a new JWT token for the given user
-func GenerateToken(userID int, username, email string, isActive, isAdmin bool, roles []string) (string, time.Time, error) {
-	return generateUserToken(userID, username, email, isActive, isAdmin, roles, "user", 0, nil)
+// PublicKeyResolver maps a JWT header kid to the RSA public key that should
+// verify the signature. Returning an error rejects the token.
+type PublicKeyResolver func(kid string) (*rsa.PublicKey, error)
+
+func signRS256(claims jwt.Claims, priv *rsa.PrivateKey, kid string) (string, error) {
+	if priv == nil {
+		return "", errors.New("rsa private key is nil")
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	if kid != "" {
+		token.Header["kid"] = kid
+	}
+	return token.SignedString(priv)
 }
 
-func GenerateAPIKeyToken(userID int, username, email string, isActive, isAdmin bool, roles []string, apiKeyID int, apiKeyScopes []string) (string, time.Time, error) {
-	return generateUserToken(userID, username, email, isActive, isAdmin, roles, "api_key", apiKeyID, apiKeyScopes)
+func GenerateToken(userID int, username, email string, isActive, isAdmin bool, roles []string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
+	return generateUserToken(userID, username, email, isActive, isAdmin, roles, "user", 0, nil, priv, kid)
 }
 
-func generateUserToken(userID int, username, email string, isActive, isAdmin bool, roles []string, authType string, apiKeyID int, apiKeyScopes []string) (string, time.Time, error) {
+func GenerateAPIKeyToken(userID int, username, email string, isActive, isAdmin bool, roles []string, apiKeyID int, apiKeyScopes []string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
+	return generateUserToken(userID, username, email, isActive, isAdmin, roles, "api_key", apiKeyID, apiKeyScopes, priv, kid)
+}
+
+func generateUserToken(userID int, username, email string, isActive, isAdmin bool, roles []string, authType string, apiKeyID int, apiKeyScopes []string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
 	expirationTime := time.Now().Add(TokenExpiration)
 
 	claims := &Claims{
@@ -125,17 +119,14 @@ func generateUserToken(userID int, username, email string, isActive, isAdmin boo
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(JWTSecret))
+	tokenString, err := signRS256(claims, priv, kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate token: %v", err)
 	}
-
 	return tokenString, expirationTime, nil
 }
 
-// GenerateRefreshToken generates a refresh token with longer expiration
-func GenerateRefreshToken(userID int, username string) (string, time.Time, error) {
+func GenerateRefreshToken(userID int, username string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
 	expirationTime := time.Now().Add(RefreshTokenExpiration)
 
 	claims := &RefreshClaims{
@@ -150,24 +141,20 @@ func GenerateRefreshToken(userID int, username string) (string, time.Time, error
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(JWTSecret))
+	tokenString, err := signRS256(claims, priv, kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate refresh token: %v", err)
 	}
-
 	return tokenString, expirationTime, nil
 }
 
-// GenerateServiceToken generates a service token for K8s jobs
-// This token is used for job-to-service authentication without exposing user credentials
-func GenerateServiceToken(taskID string) (string, time.Time, error) {
+func GenerateServiceToken(taskID string, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
 	expirationTime := time.Now().Add(ServiceTokenExpiration)
 
 	claims := &ServiceClaims{
 		TaskID: taskID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        fmt.Sprintf("svc_%s_%d", taskID, time.Now().Unix()), // Service token ID
+			ID:        fmt.Sprintf("svc_%s_%d", taskID, time.Now().Unix()),
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
@@ -176,29 +163,32 @@ func GenerateServiceToken(taskID string) (string, time.Time, error) {
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(JWTSecret))
+	tokenString, err := signRS256(claims, priv, kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate service token: %v", err)
 	}
-
 	return tokenString, expirationTime, nil
 }
 
-// ValidateToken validates and parses a JWT token
-func ValidateToken(tokenString string) (*Claims, error) {
+func keyFunc(resolve PublicKeyResolver) jwt.Keyfunc {
+	return func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		kid, _ := token.Header["kid"].(string)
+		return resolve(kid)
+	}
+}
+
+func ParseToken(tokenString string, resolve PublicKeyResolver) (*Claims, error) {
 	if tokenString == "" {
 		return nil, errors.New("token is required")
 	}
+	if resolve == nil {
+		return nil, errors.New("public key resolver is nil")
+	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
-		// Validate the signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(JWTSecret), nil
-	})
-
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, keyFunc(resolve))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %v", err)
 	}
@@ -208,10 +198,6 @@ func ValidateToken(tokenString string) (*Claims, error) {
 		return nil, errors.New("invalid token")
 	}
 
-	// Note: No need to manually check ExpiresAt - jwt.ParseWithClaims already validates it
-	// If token is expired, ParseWithClaims will return an error above
-
-	// Check if user is active
 	if !claims.IsActive {
 		return nil, errors.New("user account is inactive")
 	}
@@ -219,35 +205,28 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-// ValidateTokenWithCustomClaims validates token with custom claims validation
-func ValidateTokenWithCustomClaims(tokenString string, validateFunc func(*Claims) error) (*Claims, error) {
-	claims, err := ValidateToken(tokenString)
+func ParseTokenWithCustomClaims(tokenString string, resolve PublicKeyResolver, validateFunc func(*Claims) error) (*Claims, error) {
+	claims, err := ParseToken(tokenString, resolve)
 	if err != nil {
 		return nil, err
 	}
-
 	if validateFunc != nil {
 		if err := validateFunc(claims); err != nil {
 			return nil, fmt.Errorf("custom validation failed: %v", err)
 		}
 	}
-
 	return claims, nil
 }
 
-// ValidateServiceToken validates and parses a service token
-func ValidateServiceToken(tokenString string) (*ServiceClaims, error) {
+func ParseServiceToken(tokenString string, resolve PublicKeyResolver) (*ServiceClaims, error) {
 	if tokenString == "" {
 		return nil, errors.New("service token is required")
 	}
+	if resolve == nil {
+		return nil, errors.New("public key resolver is nil")
+	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &ServiceClaims{}, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(JWTSecret), nil
-	})
-
+	token, err := jwt.ParseWithClaims(tokenString, &ServiceClaims{}, keyFunc(resolve))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse service token: %v", err)
 	}
@@ -257,7 +236,6 @@ func ValidateServiceToken(tokenString string) (*ServiceClaims, error) {
 		return nil, errors.New("invalid service token")
 	}
 
-	// Verify it's a service token
 	if claims.Issuer != "rcabench-service" {
 		return nil, errors.New("not a valid service token")
 	}
@@ -265,26 +243,8 @@ func ValidateServiceToken(tokenString string) (*ServiceClaims, error) {
 	return claims, nil
 }
 
-// GetUserIDFromToken extracts user ID from a valid token
-func GetUserIDFromToken(tokenString string) (int, error) {
-	claims, err := ValidateToken(tokenString)
-	if err != nil {
-		return 0, err
-	}
-	return claims.UserID, nil
-}
-
-// GetUsernameFromToken extracts username from a valid token
-func GetUsernameFromToken(tokenString string) (string, error) {
-	claims, err := ValidateToken(tokenString)
-	if err != nil {
-		return "", err
-	}
-	return claims.Username, nil
-}
-
-// ParseTokenWithoutValidation parses a token without validating signature or expiration
-// Use this only for extracting claims from expired tokens for logging purposes
+// ParseTokenWithoutValidation parses a token without verifying signature or
+// expiration. Used to extract a user_id from an expired token for logging.
 func ParseTokenWithoutValidation(tokenString string) (*Claims, error) {
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &Claims{})
 	if err != nil {
@@ -299,7 +259,6 @@ func ParseTokenWithoutValidation(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-// ExtractTokenFromHeader extracts the JWT token from the Authorization header
 func ExtractTokenFromHeader(header string) (string, error) {
 	if header == "" {
 		return "", errors.New("authorization header is empty")

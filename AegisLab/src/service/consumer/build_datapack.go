@@ -235,8 +235,7 @@ func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *da
 	now := time.Now()
 	timestamp := now.Format(customTimeFormat)
 
-	// Generate service token for job authentication
-	serviceToken, _, err := utils.GenerateServiceToken(taskID)
+	serviceToken, err := issueServiceToken(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate service token: %w", err)
 	}

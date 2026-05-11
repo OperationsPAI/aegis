@@ -2,19 +2,27 @@ package execution
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"aegis/dto"
 	"aegis/consts"
+	"aegis/dto"
 	"aegis/middleware"
 	"aegis/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
+
+var testPrivateKey *rsa.PrivateKey
+
+func testResolver(_ string) (*rsa.PublicKey, error) {
+	return &testPrivateKey.PublicKey, nil
+}
 
 type runtimeRouteVerifier struct{}
 
@@ -23,7 +31,7 @@ func (runtimeRouteVerifier) VerifyToken(context.Context, string) (*utils.Claims,
 }
 
 func (runtimeRouteVerifier) VerifyServiceToken(_ context.Context, token string) (*utils.ServiceClaims, error) {
-	return utils.ValidateServiceToken(token)
+	return utils.ParseServiceToken(token, testResolver)
 }
 
 type runtimeRouteService struct{ middleware.Service }
@@ -33,7 +41,7 @@ func (runtimeRouteService) CheckUserPermission(context.Context, *dto.CheckPermis
 }
 func (runtimeRouteService) IsUserTeamAdmin(context.Context, int, int) (bool, error) { return false, nil }
 func (runtimeRouteService) IsUserInTeam(context.Context, int, int) (bool, error)    { return false, nil }
-func (runtimeRouteService) IsTeamPublic(context.Context, int) (bool, error)          { return false, nil }
+func (runtimeRouteService) IsTeamPublic(context.Context, int) (bool, error)         { return false, nil }
 func (runtimeRouteService) IsUserProjectAdmin(context.Context, int, int) (bool, error) {
 	return false, nil
 }
@@ -46,10 +54,7 @@ func (runtimeRouteService) LogUserAction(string, string, string, string, int, in
 }
 
 func TestRuntimeExecutionRoutesAcceptServiceToken(t *testing.T) {
-	t.Setenv(utils.JWTSecretEnvVar, "test-jwt-secret-please-ignore-not-for-prod")
-	require.NoError(t, utils.InitJWTSecret())
-
-	token, _, err := utils.GenerateServiceToken("task-123")
+	token, _, err := utils.GenerateServiceToken("task-123", testPrivateKey, "test-kid")
 	require.NoError(t, err)
 
 	gin.SetMode(gin.TestMode)
@@ -79,5 +84,10 @@ func TestMain(m *testing.M) {
 	if err := utils.InitJWTSecret(); err != nil {
 		panic(err)
 	}
+	k, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+	testPrivateKey = k
 	os.Exit(m.Run())
 }

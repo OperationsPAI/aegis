@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"aegis/consts"
+	"aegis/infra/jwtkeys"
 	"aegis/model"
 	user "aegis/module/user"
 	"aegis/utils"
@@ -24,14 +25,18 @@ type Service struct {
 	roleRepo   *RoleRepository
 	apiKeyRepo *APIKeyRepository
 	tokenStore *TokenStore
+	signer     *jwtkeys.Signer
+	verifier   *jwtkeys.Verifier
 }
 
-func NewService(userRepo *UserRepository, roleRepo *RoleRepository, apiKeyRepo *APIKeyRepository, tokenStore *TokenStore) *Service {
+func NewService(userRepo *UserRepository, roleRepo *RoleRepository, apiKeyRepo *APIKeyRepository, tokenStore *TokenStore, signer *jwtkeys.Signer, verifier *jwtkeys.Verifier) *Service {
 	return &Service{
 		userRepo:   userRepo,
 		roleRepo:   roleRepo,
 		apiKeyRepo: apiKeyRepo,
 		tokenStore: tokenStore,
+		signer:     signer,
+		verifier:   verifier,
 	}
 }
 
@@ -151,7 +156,7 @@ func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*Toke
 		return nil, fmt.Errorf("token refresh request is nil")
 	}
 
-	refreshClaims, err := utils.ValidateToken(req.Token)
+	refreshClaims, err := utils.ParseToken(req.Token, s.verifier.Resolve)
 	if err != nil {
 		return nil, fmt.Errorf("token refresh failed: %w", err)
 	}
@@ -185,7 +190,7 @@ func (s *Service) Logout(ctx context.Context, claims *utils.Claims) error {
 }
 
 func (s *Service) VerifyToken(ctx context.Context, token string) (*utils.Claims, error) {
-	claims, err := utils.ValidateToken(token)
+	claims, err := utils.ParseToken(token, s.verifier.Resolve)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +209,7 @@ func (s *Service) VerifyToken(ctx context.Context, token string) (*utils.Claims,
 }
 
 func (s *Service) VerifyServiceToken(ctx context.Context, token string) (*utils.ServiceClaims, error) {
-	return utils.ValidateServiceToken(token)
+	return utils.ParseServiceToken(token, s.verifier.Resolve)
 }
 
 func (s *Service) ChangePassword(ctx context.Context, req *ChangePasswordReq, userID int) error {
@@ -507,7 +512,7 @@ func (s *Service) generateTokenWithRoles(roleRepo *RoleRepository, user *model.U
 		}
 	}
 
-	token, expiresAt, err := utils.GenerateToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames)
+	token, expiresAt, err := utils.GenerateToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -530,7 +535,7 @@ func (s *Service) generateAPIKeyTokenWithRoles(roleRepo *RoleRepository, user *m
 		}
 	}
 
-	token, expiresAt, err := utils.GenerateAPIKeyToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, apiKeyID, apiKeyScopes)
+	token, expiresAt, err := utils.GenerateAPIKeyToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, apiKeyID, apiKeyScopes, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate api key token: %w", err)
 	}

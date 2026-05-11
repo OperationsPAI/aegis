@@ -19,13 +19,13 @@ var Module = fx.Module("config",
 func Init(params Params) {
 	config.Init(params.Path)
 
-	// Fail-fast on missing / default JWT secret. We do this after config.Init
-	// so that any infra logging from viper is already set up, but before any
-	// downstream module (auth, middleware) attempts a JWT operation.
+	// Fail-fast on missing API-key KEK secret (AEGIS_JWT_SECRET; no longer used
+	// for JWT signing — that moved to RS256 — but still seeds the api-key
+	// envelope KEK in utils/access_key_crypto.go).
 	if err := utils.InitJWTSecret(); err != nil {
-		logrus.Fatalf("JWT secret validation failed: %v", err)
+		logrus.Fatalf("API-key KEK secret validation failed: %v", err)
 	}
 	if err := utils.ValidateJWTSecret(); err != nil {
-		logrus.Fatalf("JWT secret validation failed: %v", err)
+		logrus.Fatalf("API-key KEK secret validation failed: %v", err)
 	}
 }
