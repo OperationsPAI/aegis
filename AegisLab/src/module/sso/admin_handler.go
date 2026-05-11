@@ -32,6 +32,16 @@ func parseUserIDParam(c *gin.Context) (int, bool) {
 	return id, true
 }
 
+// viewScopesFor returns the viewScopes filter for a service admin (Task #13),
+// or nil for global admins / service tokens (no filtering).
+func viewScopesFor(c *gin.Context) []string {
+	ac := adminContextFromGin(c)
+	if ac == nil || ac.IsGlobalAdmin || ac.IsServiceToken() {
+		return nil
+	}
+	return ac.ServiceAdminFor
+}
+
 // GetUser handles GET /v1/users/{id}.
 func (h *AdminHandler) GetUser(c *gin.Context) {
 	if !requireAdminOrService(c) {
@@ -41,7 +51,7 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 	if !ok {
 		return
 	}
-	resp, err := h.service.GetUser(c.Request.Context(), id)
+	resp, err := h.service.GetUserForAdmin(c.Request.Context(), id, viewScopesFor(c))
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -62,7 +72,7 @@ func (h *AdminHandler) GetUsersBatch(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	resp, err := h.service.GetUsersBatch(c.Request.Context(), req.IDs)
+	resp, err := h.service.GetUsersBatchForAdmin(c.Request.Context(), req.IDs, viewScopesFor(c))
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -81,7 +91,7 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 			return
 		}
 	}
-	resp, err := h.service.ListUsers(c.Request.Context(), &req)
+	resp, err := h.service.ListUsersForAdmin(c.Request.Context(), &req, viewScopesFor(c))
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -144,7 +154,9 @@ func (h *AdminHandler) RegisterPermissions(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	resp, err := h.service.RegisterPermissions(c.Request.Context(), &req)
+	ac := adminContextFromGin(c)
+	resp, err := h.service.RegisterPermissionsForAdmin(c.Request.Context(), &req,
+		adminScopesFor(ac), isGlobalForGate(ac))
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -165,7 +177,9 @@ func (h *AdminHandler) Grant(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	resp, err := h.service.GrantScopedRole(c.Request.Context(), &req)
+	ac := adminContextFromGin(c)
+	resp, err := h.service.GrantScopedRoleForAdmin(c.Request.Context(), &req,
+		adminScopesFor(ac), isGlobalForGate(ac))
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -186,11 +200,30 @@ func (h *AdminHandler) Revoke(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	resp, err := h.service.RevokeScopedRole(c.Request.Context(), &req)
+	ac := adminContextFromGin(c)
+	resp, err := h.service.RevokeScopedRoleForAdmin(c.Request.Context(), &req,
+		adminScopesFor(ac), isGlobalForGate(ac))
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
 	dto.SuccessResponse(c, resp)
+}
+
+// adminScopesFor returns the caller's service-admin scopes, or nil if global.
+func adminScopesFor(ac *AdminContext) []string {
+	if ac == nil || ac.IsGlobalAdmin || ac.IsServiceToken() {
+		return nil
+	}
+	return ac.ServiceAdminFor
+}
+
+// isGlobalForGate treats global admin and service tokens as "global bypass"
+// for purposes of the per-call permission gate.
+func isGlobalForGate(ac *AdminContext) bool {
+	if ac == nil {
+		return false
+	}
+	return ac.IsGlobalAdmin || ac.IsServiceToken()
 }
 
 // ListUserGrants handles GET /v1/users/{id}/grants.

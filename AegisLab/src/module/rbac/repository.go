@@ -310,10 +310,13 @@ func (r *Repository) listPermissionsByIDs(permissionIDs []int) ([]model.Permissi
 }
 
 // CheckPermission resolves whether userID has permName, optionally constrained
-// to (scopeType, scopeID). For scopeType == "" only the global user_roles
-// path is consulted; otherwise the union of global roles + user_scoped_roles
-// at the given scope is consulted. Returns the granting role name in `reason`
-// (as "role:<name>") on allow, or "denied" otherwise.
+// to (scopeType, scopeID). For scopeType == "" the global user_roles path is
+// consulted PLUS any user_scoped_roles row whose scope_type=ScopeTypeService —
+// a service-admin grant counts as "allowed to attempt"; the handler is then
+// responsible for restricting the data to scope_id services (Task #13). For
+// a non-empty scopeType, the union of global roles + user_scoped_roles at
+// (scopeType, scopeID) is consulted. Returns the granting role name in
+// `reason` (as "role:<name>") on allow, or "denied" otherwise.
 func (r *Repository) CheckPermission(userID int, permName, scopeType, scopeID string) (bool, string, error) {
 	var perm model.Permission
 	if err := r.db.
@@ -344,6 +347,28 @@ func (r *Repository) CheckPermission(userID int, permName, scopeType, scopeID st
 		}
 		if hit.RoleName != "" {
 			return true, "role:" + hit.RoleName, nil
+		}
+
+		// Service-admin fallback (Task #13): a user with any active
+		// ScopeTypeService grant transitively holding this permission is
+		// allowed to *attempt* the operation. The handler then filters
+		// the response to the user's admin services.
+		var saHit row
+		if err := r.db.
+			Select("roles.name AS role_name").
+			Table("role_permissions rp").
+			Joins("JOIN user_scoped_roles usr ON rp.role_id = usr.role_id").
+			Joins("JOIN roles ON roles.id = rp.role_id").
+			Where("usr.user_id = ? AND rp.permission_id = ?", userID, perm.ID).
+			Where("usr.scope_type = ?", consts.ScopeTypeService).
+			Where("usr.scope_id <> ''").
+			Where("usr.status = ?", consts.CommonEnabled).
+			Where("roles.status = ?", consts.CommonEnabled).
+			Limit(1).Scan(&saHit).Error; err != nil {
+			return false, "", fmt.Errorf("failed to check service-admin permission: %w", err)
+		}
+		if saHit.RoleName != "" {
+			return true, "role:" + saHit.RoleName, nil
 		}
 		return false, "denied", nil
 	}
@@ -463,6 +488,87 @@ func (r *Repository) ListScopeUsers(scopeType, scopeID string) ([]ScopeUserRow, 
 		return nil, fmt.Errorf("failed to list scope users: %w", err)
 	}
 	return rows, nil
+}
+
+// ListServiceAdminScopes returns the distinct service names (scope_id values)
+// the user is service-admin for — i.e. has any active user_scoped_roles row
+// with scope_type=ScopeTypeService. An empty list means the user is NOT a
+// service admin (they may still be a global admin; the caller checks that
+// separately). Task #13.
+func (r *Repository) ListServiceAdminScopes(userID int) ([]string, error) {
+	var scopes []string
+	if err := r.db.
+		Table("user_scoped_roles").
+		Select("DISTINCT scope_id").
+		Where("user_id = ? AND scope_type = ? AND status = ? AND scope_id <> ''",
+			userID, consts.ScopeTypeService, consts.CommonEnabled).
+		Scan(&scopes).Error; err != nil {
+		return nil, fmt.Errorf("failed to list service-admin scopes: %w", err)
+	}
+	return scopes, nil
+}
+
+// UserHasGrantInServices reports whether the user has at least one active
+// user_scoped_roles row whose role grants permissions in any of `services`.
+// Used by the SSO /v1/users handlers to enforce delegated service-admin
+// visibility (Task #13).
+func (r *Repository) UserHasGrantInServices(userID int, services []string) (bool, error) {
+	if len(services) == 0 {
+		return false, nil
+	}
+	var count int64
+	if err := r.db.
+		Table("user_scoped_roles usr").
+		Joins("JOIN role_permissions rp ON rp.role_id = usr.role_id").
+		Joins("JOIN permissions p ON p.id = rp.permission_id").
+		Where("usr.user_id = ? AND usr.status = ? AND p.service IN ? AND p.status >= ?",
+			userID, consts.CommonEnabled, services, consts.CommonDisabled).
+		Limit(1).Count(&count).Error; err != nil {
+		return false, fmt.Errorf("failed to check user service grants: %w", err)
+	}
+	return count > 0, nil
+}
+
+// UsersWithGrantInServices returns the subset of userIDs that have any
+// active grant in any of services (same semantics as UserHasGrantInServices,
+// batched). Used by the SSO /v1/users:batch handler.
+func (r *Repository) UsersWithGrantInServices(userIDs []int, services []string) (map[int]struct{}, error) {
+	out := make(map[int]struct{})
+	if len(userIDs) == 0 || len(services) == 0 {
+		return out, nil
+	}
+	var rows []struct{ UserID int }
+	if err := r.db.
+		Table("user_scoped_roles usr").
+		Select("DISTINCT usr.user_id AS user_id").
+		Joins("JOIN role_permissions rp ON rp.role_id = usr.role_id").
+		Joins("JOIN permissions p ON p.id = rp.permission_id").
+		Where("usr.user_id IN ? AND usr.status = ? AND p.service IN ? AND p.status >= ?",
+			userIDs, consts.CommonEnabled, services, consts.CommonDisabled).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to list users with service grants: %w", err)
+	}
+	for _, r := range rows {
+		out[r.UserID] = struct{}{}
+	}
+	return out, nil
+}
+
+// ListRolePermissionServices returns the distinct services of the permissions
+// granted by the given role. Used by the SSO admin gate to decide whether a
+// service admin is allowed to grant the role: all of the role's permission
+// services must be in the caller's admin set.
+func (r *Repository) ListRolePermissionServices(roleID int) ([]string, error) {
+	var services []string
+	if err := r.db.
+		Table("permissions p").
+		Select("DISTINCT p.service").
+		Joins("JOIN role_permissions rp ON rp.permission_id = p.id").
+		Where("rp.role_id = ? AND p.status >= ?", roleID, consts.CommonDisabled).
+		Scan(&services).Error; err != nil {
+		return nil, fmt.Errorf("failed to list role permission services: %w", err)
+	}
+	return services, nil
 }
 
 // ScopedRoleRow is the projection returned by ListUserScopedRoles.

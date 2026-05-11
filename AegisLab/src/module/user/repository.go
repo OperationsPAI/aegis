@@ -97,15 +97,32 @@ func (r *Repository) deleteUserCascade(userID int) (int64, error) {
 }
 
 func (r *Repository) listUserViews(limit, offset int, isActive *bool, status *consts.StatusType) ([]model.User, int64, error) {
+	return r.listUserViewsScoped(limit, offset, isActive, status, nil)
+}
+
+// listUserViewsScoped is listUserViews with an optional viewScopes filter:
+// when len(viewScopes) > 0, only users having at least one active
+// user_scoped_roles grant on a role that owns a permission in one of
+// viewScopes services are returned. Used by the SSO /v1/users endpoints
+// when the caller is a delegated service admin (Task #13).
+func (r *Repository) listUserViewsScoped(limit, offset int, isActive *bool, status *consts.StatusType, viewScopes []string) ([]model.User, int64, error) {
 	var users []model.User
 	var total int64
 
-	query := r.db.Model(&model.User{}).Where("status != ?", consts.CommonDeleted)
+	query := r.db.Model(&model.User{}).Where("users.status != ?", consts.CommonDeleted)
 	if status != nil {
-		query = query.Where("status = ?", *status)
+		query = query.Where("users.status = ?", *status)
 	}
 	if isActive != nil {
-		query = query.Where("is_active = ?", *isActive)
+		query = query.Where("users.is_active = ?", *isActive)
+	}
+	if len(viewScopes) > 0 {
+		query = query.
+			Joins("JOIN user_scoped_roles usr ON usr.user_id = users.id").
+			Joins("JOIN role_permissions rp ON rp.role_id = usr.role_id").
+			Joins("JOIN permissions p ON p.id = rp.permission_id").
+			Where("usr.status = ? AND p.service IN ?", consts.CommonEnabled, viewScopes).
+			Distinct("users.*")
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -115,6 +132,11 @@ func (r *Repository) listUserViews(limit, offset int, isActive *bool, status *co
 		return nil, 0, fmt.Errorf("failed to list users: %w", err)
 	}
 	return users, total, nil
+}
+
+// ListUserViewsScoped is the exported wrapper for SSO admin handlers.
+func (r *Repository) ListUserViewsScoped(limit, offset int, isActive *bool, status *consts.StatusType, viewScopes []string) ([]model.User, int64, error) {
+	return r.listUserViewsScoped(limit, offset, isActive, status, viewScopes)
 }
 
 func (r *Repository) updateMutableUser(userID int, patch func(*model.User)) (*model.User, error) {

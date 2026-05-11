@@ -27,6 +27,14 @@ func NewAdminService(users *user.Service, rbacRepo *rbac.Repository) *AdminServi
 }
 
 func (s *AdminService) GetUser(ctx context.Context, id int) (*UserInfoResp, error) {
+	return s.GetUserForAdmin(ctx, id, nil)
+}
+
+// GetUserForAdmin is GetUser scoped to a delegated service admin's viewScopes
+// (Task #13). When viewScopes is non-empty, the user must have at least one
+// grant in one of those services or the call returns ErrNotFound (404 to the
+// caller — leaking existence would be a privacy hole).
+func (s *AdminService) GetUserForAdmin(ctx context.Context, id int, viewScopes []string) (*UserInfoResp, error) {
 	u, err := s.users.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -34,22 +42,66 @@ func (s *AdminService) GetUser(ctx context.Context, id int) (*UserInfoResp, erro
 		}
 		return nil, err
 	}
+	if len(viewScopes) > 0 {
+		visible, err := s.rbac.UserHasGrantInServices(id, viewScopes)
+		if err != nil {
+			return nil, err
+		}
+		if !visible {
+			return nil, fmt.Errorf("%w: user %d not found", consts.ErrNotFound, id)
+		}
+	}
 	return NewUserInfoResp(u), nil
 }
 
 func (s *AdminService) GetUsersBatch(ctx context.Context, ids []int) (map[string]*UserInfoResp, error) {
+	return s.GetUsersBatchForAdmin(ctx, ids, nil)
+}
+
+// GetUsersBatchForAdmin is GetUsersBatch scoped to viewScopes (Task #13).
+// Users without any grant in viewScopes are silently absent.
+func (s *AdminService) GetUsersBatchForAdmin(ctx context.Context, ids []int, viewScopes []string) (map[string]*UserInfoResp, error) {
 	users, err := s.users.GetByIDs(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
+	var visible map[int]struct{}
+	if len(viewScopes) > 0 {
+		ids := make([]int, 0, len(users))
+		for _, u := range users {
+			ids = append(ids, u.ID)
+		}
+		v, err := s.rbac.UsersWithGrantInServices(ids, viewScopes)
+		if err != nil {
+			return nil, err
+		}
+		visible = v
+	}
 	out := make(map[string]*UserInfoResp, len(users))
 	for _, u := range users {
+		if visible != nil {
+			if _, ok := visible[u.ID]; !ok {
+				continue
+			}
+		}
 		out[fmt.Sprintf("%d", u.ID)] = NewUserInfoResp(u)
 	}
 	return out, nil
 }
 
+// ListUsersForAdmin lists users visible to the calling admin. Global admins
+// (viewScopes==nil) see all users; service admins (Task #13) see only users
+// who have at least one grant on a role with permissions in their admin
+// services.
+func (s *AdminService) ListUsersForAdmin(ctx context.Context, req *ListUsersReq, viewScopes []string) (*ListUsersResp, error) {
+	return s.listUsersImpl(ctx, req, viewScopes)
+}
+
 func (s *AdminService) ListUsers(ctx context.Context, req *ListUsersReq) (*ListUsersResp, error) {
+	return s.listUsersImpl(ctx, req, nil)
+}
+
+func (s *AdminService) listUsersImpl(ctx context.Context, req *ListUsersReq, viewScopes []string) (*ListUsersResp, error) {
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -75,7 +127,7 @@ func (s *AdminService) ListUsers(ctx context.Context, req *ListUsersReq) (*ListU
 	}
 	innerReq.Page = req.Page
 	innerReq.Size = consts.PageSize(size)
-	list, err := s.users.ListUsers(ctx, innerReq)
+	list, err := s.users.ListUsersScoped(ctx, innerReq, viewScopes)
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +177,16 @@ func (s *AdminService) CheckBatch(ctx context.Context, req *BatchCheckReq) ([]*C
 	return out, nil
 }
 
+// RegisterPermissionsForAdmin is RegisterPermissions enforcing the
+// service-admin scope check (Task #13): a service admin may only register
+// permissions for services in their admin set.
+func (s *AdminService) RegisterPermissionsForAdmin(ctx context.Context, req *RegisterPermissionsReq, adminScopes []string, globalAdmin bool) (*RegisterPermissionsResp, error) {
+	if !globalAdmin && !serviceInScopes(req.Service, adminScopes) {
+		return nil, fmt.Errorf("%w: not service admin for %q", consts.ErrPermissionDenied, req.Service)
+	}
+	return s.RegisterPermissions(ctx, req)
+}
+
 func (s *AdminService) RegisterPermissions(_ context.Context, req *RegisterPermissionsReq) (*RegisterPermissionsResp, error) {
 	resp := &RegisterPermissionsResp{}
 	for i := range req.Permissions {
@@ -160,10 +222,27 @@ func (s *AdminService) resolveRole(req *GrantReq) (*model.Role, error) {
 	return role, nil
 }
 
-func (s *AdminService) GrantScopedRole(_ context.Context, req *GrantReq) (*GrantResp, error) {
+func (s *AdminService) GrantScopedRole(ctx context.Context, req *GrantReq) (*GrantResp, error) {
+	return s.GrantScopedRoleForAdmin(ctx, req, nil, true)
+}
+
+// GrantScopedRoleForAdmin is GrantScopedRole enforcing the service-admin
+// scope check (Task #13). The grant is allowed when:
+//   - globalAdmin is true (system_admin bypass), OR
+//   - the request's scope_type is ScopeTypeService AND scope_id is in
+//     adminScopes, OR
+//   - every service that the target role's permissions belong to is in
+//     adminScopes (so service admins can hand out roles whose effect is
+//     confined to their service).
+func (s *AdminService) GrantScopedRoleForAdmin(_ context.Context, req *GrantReq, adminScopes []string, globalAdmin bool) (*GrantResp, error) {
 	role, err := s.resolveRole(req)
 	if err != nil {
 		return nil, err
+	}
+	if !globalAdmin {
+		if err := s.authorizeRoleGrant(role.ID, req, adminScopes); err != nil {
+			return nil, err
+		}
 	}
 	created, err := s.rbac.AssignScopedRole(req.UserID, role.ID, req.ScopeType, req.ScopeID)
 	if err != nil {
@@ -172,10 +251,19 @@ func (s *AdminService) GrantScopedRole(_ context.Context, req *GrantReq) (*Grant
 	return &GrantResp{Granted: created}, nil
 }
 
-func (s *AdminService) RevokeScopedRole(_ context.Context, req *GrantReq) (*RevokeResp, error) {
+func (s *AdminService) RevokeScopedRole(ctx context.Context, req *GrantReq) (*RevokeResp, error) {
+	return s.RevokeScopedRoleForAdmin(ctx, req, nil, true)
+}
+
+func (s *AdminService) RevokeScopedRoleForAdmin(_ context.Context, req *GrantReq, adminScopes []string, globalAdmin bool) (*RevokeResp, error) {
 	role, err := s.resolveRole(req)
 	if err != nil {
 		return nil, err
+	}
+	if !globalAdmin {
+		if err := s.authorizeRoleGrant(role.ID, req, adminScopes); err != nil {
+			return nil, err
+		}
 	}
 	rows, err := s.rbac.RevokeScopedRole(req.UserID, role.ID, req.ScopeType, req.ScopeID)
 	if err != nil {
@@ -185,6 +273,38 @@ func (s *AdminService) RevokeScopedRole(_ context.Context, req *GrantReq) (*Revo
 		return nil, fmt.Errorf("%w: no active grant matched", consts.ErrNotFound)
 	}
 	return &RevokeResp{Revoked: true}, nil
+}
+
+func (s *AdminService) authorizeRoleGrant(roleID int, req *GrantReq, adminScopes []string) error {
+	// service admin granting another service-admin grant: must be a service
+	// they admin.
+	if req.ScopeType == consts.ScopeTypeService {
+		if !serviceInScopes(req.ScopeID, adminScopes) {
+			return fmt.Errorf("%w: not service admin for %q", consts.ErrPermissionDenied, req.ScopeID)
+		}
+		return nil
+	}
+	// generic business-scope grant: the role's permissions must be confined
+	// to the caller's admin services.
+	services, err := s.rbac.ListRolePermissionServices(roleID)
+	if err != nil {
+		return err
+	}
+	for _, svc := range services {
+		if !serviceInScopes(svc, adminScopes) {
+			return fmt.Errorf("%w: role grants permissions in service %q outside admin scope", consts.ErrPermissionDenied, svc)
+		}
+	}
+	return nil
+}
+
+func serviceInScopes(service string, scopes []string) bool {
+	for _, s := range scopes {
+		if s == service {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *AdminService) ListUserGrants(_ context.Context, userID int, scopeType, service string) ([]*UserGrantResp, error) {

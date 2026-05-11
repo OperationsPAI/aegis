@@ -60,7 +60,8 @@ func TestCheckAllowedGlobal(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-// TestCheckDeniedGlobal: permission exists, no role grant — denied.
+// TestCheckDeniedGlobal: permission exists, no role grant — denied. The
+// service-admin fallback (Task #13) also returns no rows.
 func TestCheckDeniedGlobal(t *testing.T) {
 	svc, mock, cleanup := newAdminService(t)
 	defer cleanup()
@@ -76,6 +77,14 @@ func TestCheckDeniedGlobal(t *testing.T) {
 			"JOIN roles ON roles.id = rp.role_id " +
 			"WHERE (ur.user_id = ? AND rp.permission_id = ?) AND roles.status = ? LIMIT ?")).
 		WithArgs(42, 11, consts.CommonEnabled, 1).
+		WillReturnRows(sqlmock.NewRows([]string{"role_name"}))
+
+	mock.ExpectQuery(regexp.QuoteMeta(
+		"SELECT roles.name AS role_name FROM role_permissions rp " +
+			"JOIN user_scoped_roles usr ON rp.role_id = usr.role_id " +
+			"JOIN roles ON roles.id = rp.role_id " +
+			"WHERE (usr.user_id = ? AND rp.permission_id = ?) AND usr.scope_type = ? AND usr.scope_id <> '' AND usr.status = ? AND roles.status = ? LIMIT ?")).
+		WithArgs(42, 11, consts.ScopeTypeService, consts.CommonEnabled, consts.CommonEnabled, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"role_name"}))
 
 	resp, err := svc.Check(context.Background(), &CheckReq{
