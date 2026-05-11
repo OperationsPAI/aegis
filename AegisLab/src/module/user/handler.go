@@ -2,14 +2,22 @@ package user
 
 import (
 	"aegis/httpx"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"aegis/consts"
 	"aegis/dto"
+	"aegis/middleware"
 
 	"github.com/gin-gonic/gin"
 )
+
+func actorID(c *gin.Context) int {
+	id, _ := middleware.GetCurrentUserID(c)
+	return id
+}
 
 type Handler struct {
 	service HandlerService
@@ -47,11 +55,16 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	start := time.Now()
+	actor := actorID(c)
 	resp, err := h.service.CreateUser(c.Request.Context(), &req)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "user.create", fmt.Sprintf(`{"username":%q}`, req.Username), err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "user.create", fmt.Sprintf(`{"target_user_id":%d,"username":%q}`, resp.ID, resp.Username), nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse(c, http.StatusCreated, "User created successfully", resp)
 }
 
@@ -77,9 +90,15 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.DeleteUser(c.Request.Context(), userID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d}`, userID)
+	if err := h.service.DeleteUser(c.Request.Context(), userID); err != nil {
+		middleware.AuditAction(c, "user.delete", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.delete", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusNoContent, "User deleted successfully", nil)
 }
 
@@ -179,10 +198,16 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
 		return
 	}
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d}`, userID)
 	resp, err := h.service.UpdateUser(c.Request.Context(), &req, userID)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "user.update", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.update", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusAccepted, "User updated successfully", resp)
 }
 
@@ -209,9 +234,15 @@ func (h *Handler) AssignRole(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.AssignRole(c.Request.Context(), userID, roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"role_id":%d}`, userID, roleID)
+	if err := h.service.AssignRole(c.Request.Context(), userID, roleID); err != nil {
+		middleware.AuditAction(c, "user.role.grant", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.role.grant", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "Role assigned successfully", nil)
 }
 
@@ -238,9 +269,15 @@ func (h *Handler) RemoveRole(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.RemoveRole(c.Request.Context(), userID, roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"role_id":%d}`, userID, roleID)
+	if err := h.service.RemoveRole(c.Request.Context(), userID, roleID); err != nil {
+		middleware.AuditAction(c, "user.role.revoke", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.role.revoke", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusNoContent, "Role removed successfully", nil)
 }
 
@@ -277,9 +314,15 @@ func (h *Handler) AssignPermissions(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.AssignPermissions(c.Request.Context(), &req, userID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"items":%d}`, userID, len(req.Items))
+	if err := h.service.AssignPermissions(c.Request.Context(), &req, userID); err != nil {
+		middleware.AuditAction(c, "user.permissions.bind", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.permissions.bind", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "Permissions assigned successfully", nil)
 }
 
@@ -316,9 +359,15 @@ func (h *Handler) RemovePermissions(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.RemovePermissions(c.Request.Context(), &req, userID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"permission_ids":%d}`, userID, len(req.PermissionIDs))
+	if err := h.service.RemovePermissions(c.Request.Context(), &req, userID); err != nil {
+		middleware.AuditAction(c, "user.permissions.unbind", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.permissions.unbind", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "Permissions removed successfully", nil)
 }
 
@@ -354,9 +403,15 @@ func (h *Handler) AssignContainer(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.AssignContainer(c.Request.Context(), userID, containerID, roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"container_id":%d,"role_id":%d}`, userID, containerID, roleID)
+	if err := h.service.AssignContainer(c.Request.Context(), userID, containerID, roleID); err != nil {
+		middleware.AuditAction(c, "user.scoped_role.grant", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.scoped_role.grant", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "User assigned to container successfully", nil)
 }
 
@@ -387,9 +442,15 @@ func (h *Handler) RemoveContainer(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.RemoveContainer(c.Request.Context(), userID, containerID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"container_id":%d}`, userID, containerID)
+	if err := h.service.RemoveContainer(c.Request.Context(), userID, containerID); err != nil {
+		middleware.AuditAction(c, "user.scoped_role.revoke", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.scoped_role.revoke", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusNoContent, "User removed from container successfully", nil)
 }
 
@@ -425,9 +486,15 @@ func (h *Handler) AssignDataset(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.AssignDataset(c.Request.Context(), userID, datasetID, roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"dataset_id":%d,"role_id":%d}`, userID, datasetID, roleID)
+	if err := h.service.AssignDataset(c.Request.Context(), userID, datasetID, roleID); err != nil {
+		middleware.AuditAction(c, "user.scoped_role.grant", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.scoped_role.grant", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "User assigned to dataset successfully", nil)
 }
 
@@ -458,9 +525,15 @@ func (h *Handler) RemoveDataset(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.RemoveDataset(c.Request.Context(), userID, datasetID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"dataset_id":%d}`, userID, datasetID)
+	if err := h.service.RemoveDataset(c.Request.Context(), userID, datasetID); err != nil {
+		middleware.AuditAction(c, "user.scoped_role.revoke", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.scoped_role.revoke", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusNoContent, "User removed from dataset successfully", nil)
 }
 
@@ -496,9 +569,15 @@ func (h *Handler) AssignProject(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.AssignProject(c.Request.Context(), userID, projectID, roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"project_id":%d,"role_id":%d}`, userID, projectID, roleID)
+	if err := h.service.AssignProject(c.Request.Context(), userID, projectID, roleID); err != nil {
+		middleware.AuditAction(c, "user.scoped_role.grant", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.scoped_role.grant", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "User assigned to project successfully", nil)
 }
 
@@ -529,9 +608,15 @@ func (h *Handler) RemoveProject(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.RemoveProject(c.Request.Context(), userID, projectID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d,"project_id":%d}`, userID, projectID)
+	if err := h.service.RemoveProject(c.Request.Context(), userID, projectID); err != nil {
+		middleware.AuditAction(c, "user.scoped_role.revoke", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "user.scoped_role.revoke", details, nil, start, actor, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusNoContent, "User removed from project successfully", nil)
 }
 

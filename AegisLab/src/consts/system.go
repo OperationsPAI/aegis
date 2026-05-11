@@ -75,6 +75,7 @@ const (
 	ResourceTrace            ResourceName = "trace"             // trace resource
 	ResourceInjection        ResourceName = "injection"         // fault injection resource
 	ResourceExecution        ResourceName = "execution"         // execution resource
+	ResourceAPIKey           ResourceName = "api_key"           // api key credential resource
 )
 
 func (r ResourceName) String() string {

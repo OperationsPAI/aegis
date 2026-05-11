@@ -62,6 +62,33 @@ func permissionCheckerFromContext(c *gin.Context) permissionChecker { return ser
 
 func auditLoggerFromContext(c *gin.Context) auditLogger { return serviceFromContext(c) }
 
+// AuditLogger is the exported alias of the package-internal auditLogger interface,
+// so handler packages can take a dependency on the audit surface without re-declaring it.
+type AuditLogger = auditLogger
+
+// AuditLoggerFromContext returns the audit logger attached to the gin context, or a
+// no-op stub if the middleware service was not injected. Always safe to call.
+func AuditLoggerFromContext(c *gin.Context) AuditLogger { return auditLoggerFromContext(c) }
+
+// AuditAction emits an audit log row for the current request. On non-nil err it
+// records a failed action; otherwise a successful one. Errors from the audit
+// write itself are intentionally swallowed — audit logging is best-effort and
+// must never block the handler's response.
+func AuditAction(c *gin.Context, action, details string, err error, start time.Time, userID int, resource consts.ResourceName) {
+	auditor := AuditLoggerFromContext(c)
+	if auditor == nil {
+		return
+	}
+	duration := int(time.Since(start).Milliseconds())
+	ip := c.ClientIP()
+	ua := c.Request.UserAgent()
+	if err != nil {
+		_ = auditor.LogFailedAction(ip, ua, action, err.Error(), duration, userID, resource)
+		return
+	}
+	_ = auditor.LogUserAction(ip, ua, action, details, duration, userID, resource)
+}
+
 func serviceFromContext(c *gin.Context) Service {
 	if c == nil {
 		return noopMiddlewareService{}

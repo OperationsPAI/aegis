@@ -75,6 +75,7 @@ func systemResources() []model.Resource {
 		{Name: consts.ResourceTrace, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
 		{Name: consts.ResourceInjection, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
 		{Name: consts.ResourceExecution, Type: consts.ResourceTypeTable, Category: consts.ResourceCategoryChaos},
+		{Name: consts.ResourceAPIKey, Type: consts.ResourceTypeTable, Category: consts.ResourceCategorySystem},
 	}
 	resources = extendWithReferencedResources(resources)
 	for i := range resources {

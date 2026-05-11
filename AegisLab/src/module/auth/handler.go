@@ -2,7 +2,9 @@ package auth
 
 import (
 	"aegis/httpx"
+	"fmt"
 	"net/http"
+	"time"
 
 	"aegis/consts"
 	"aegis/dto"
@@ -36,6 +38,7 @@ func NewHandler(service HandlerService) *Handler {
 //	@Router			/api/v2/auth/login [post]
 //	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Login(c *gin.Context) {
+	start := time.Now()
 	var req LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
@@ -48,10 +51,13 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	resp, err := h.service.Login(c.Request.Context(), &req)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "auth.login.failed", fmt.Sprintf(`{"username":%q}`, req.Username), err, start, 0, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "auth.login.success", fmt.Sprintf(`{"user_id":%d}`, resp.User.ID), nil, start, resp.User.ID, consts.ResourceUser)
 	dto.JSONResponse(c, http.StatusOK, "Login successful", resp)
 }
 
@@ -82,11 +88,15 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	start := time.Now()
 	resp, err := h.service.Register(c.Request.Context(), &req)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "auth.register", fmt.Sprintf(`{"username":%q}`, req.Username), err, start, 0, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "auth.register", fmt.Sprintf(`{"user_id":%d,"username":%q}`, resp.ID, resp.Username), nil, start, resp.ID, consts.ResourceUser)
 	dto.JSONResponse(c, http.StatusCreated, "Registration successful", resp)
 }
 
@@ -139,6 +149,7 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 //	@Router			/api/v2/auth/logout [post]
 //	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Logout(c *gin.Context) {
+	start := time.Now()
 	authHeader := c.GetHeader("Authorization")
 	token, err := utils.ExtractTokenFromHeader(authHeader)
 	if err != nil {
@@ -152,11 +163,13 @@ func (h *Handler) Logout(c *gin.Context) {
 		return
 	}
 
-	err = h.service.Logout(c.Request.Context(), claims)
-	if httpx.HandleServiceError(c, err) {
+	if err := h.service.Logout(c.Request.Context(), claims); err != nil {
+		middleware.AuditAction(c, "auth.logout", "", err, start, claims.UserID, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "auth.logout", fmt.Sprintf(`{"user_id":%d}`, claims.UserID), nil, start, claims.UserID, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "Logged out successfully", nil)
 }
 
@@ -194,11 +207,15 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	start := time.Now()
 	err := h.service.ChangePassword(c.Request.Context(), &req, userID)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "auth.password_change", "", err, start, userID, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "auth.password_change", fmt.Sprintf(`{"user_id":%d}`, userID), nil, start, userID, consts.ResourceUser)
 	dto.JSONResponse[any](c, http.StatusOK, "Password changed successfully", nil)
 }
 
@@ -263,11 +280,15 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 		return
 	}
 
+	start := time.Now()
 	resp, err := h.service.CreateAPIKey(c.Request.Context(), userID, &req)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "apikey.create", fmt.Sprintf(`{"user_id":%d,"name":%q}`, userID, req.Name), err, start, userID, consts.ResourceAPIKey)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "apikey.create", fmt.Sprintf(`{"user_id":%d,"api_key_id":%d,"key_id":%q}`, userID, resp.ID, resp.KeyID), nil, start, userID, consts.ResourceAPIKey)
 	dto.JSONResponse(c, http.StatusCreated, "API key created successfully", resp)
 }
 
@@ -362,10 +383,15 @@ func (h *Handler) DeleteAPIKey(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.DeleteAPIKey(c.Request.Context(), userID, accessKeyID)) {
+	start := time.Now()
+	details := fmt.Sprintf(`{"user_id":%d,"api_key_id":%d}`, userID, accessKeyID)
+	if err := h.service.DeleteAPIKey(c.Request.Context(), userID, accessKeyID); err != nil {
+		middleware.AuditAction(c, "apikey.delete", details, err, start, userID, consts.ResourceAPIKey)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "apikey.delete", details, nil, start, userID, consts.ResourceAPIKey)
 	dto.JSONResponse[any](c, http.StatusNoContent, "API key deleted successfully", nil)
 }
 
@@ -390,10 +416,15 @@ func (h *Handler) DisableAPIKey(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.DisableAPIKey(c.Request.Context(), userID, accessKeyID)) {
+	start := time.Now()
+	details := fmt.Sprintf(`{"user_id":%d,"api_key_id":%d}`, userID, accessKeyID)
+	if err := h.service.DisableAPIKey(c.Request.Context(), userID, accessKeyID); err != nil {
+		middleware.AuditAction(c, "apikey.disable", details, err, start, userID, consts.ResourceAPIKey)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "apikey.disable", details, nil, start, userID, consts.ResourceAPIKey)
 	dto.JSONResponse[any](c, http.StatusOK, "API key disabled successfully", nil)
 }
 
@@ -418,10 +449,15 @@ func (h *Handler) EnableAPIKey(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.EnableAPIKey(c.Request.Context(), userID, accessKeyID)) {
+	start := time.Now()
+	details := fmt.Sprintf(`{"user_id":%d,"api_key_id":%d}`, userID, accessKeyID)
+	if err := h.service.EnableAPIKey(c.Request.Context(), userID, accessKeyID); err != nil {
+		middleware.AuditAction(c, "apikey.enable", details, err, start, userID, consts.ResourceAPIKey)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "apikey.enable", details, nil, start, userID, consts.ResourceAPIKey)
 	dto.JSONResponse[any](c, http.StatusOK, "API key enabled successfully", nil)
 }
 
@@ -446,10 +482,15 @@ func (h *Handler) RevokeAPIKey(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.RevokeAPIKey(c.Request.Context(), userID, accessKeyID)) {
+	start := time.Now()
+	details := fmt.Sprintf(`{"user_id":%d,"api_key_id":%d}`, userID, accessKeyID)
+	if err := h.service.RevokeAPIKey(c.Request.Context(), userID, accessKeyID); err != nil {
+		middleware.AuditAction(c, "apikey.revoke", details, err, start, userID, consts.ResourceAPIKey)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "apikey.revoke", details, nil, start, userID, consts.ResourceAPIKey)
 	dto.JSONResponse[any](c, http.StatusOK, "API key revoked successfully", nil)
 }
 
@@ -474,11 +515,16 @@ func (h *Handler) RotateAPIKey(c *gin.Context) {
 		return
 	}
 
+	start := time.Now()
+	details := fmt.Sprintf(`{"user_id":%d,"api_key_id":%d}`, userID, accessKeyID)
 	resp, err := h.service.RotateAPIKey(c.Request.Context(), userID, accessKeyID)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "apikey.rotate", details, err, start, userID, consts.ResourceAPIKey)
+		httpx.HandleServiceError(c, err)
 		return
 	}
 
+	middleware.AuditAction(c, "apikey.rotate", details, nil, start, userID, consts.ResourceAPIKey)
 	dto.JSONResponse(c, http.StatusOK, "API key rotated successfully", resp)
 }
 

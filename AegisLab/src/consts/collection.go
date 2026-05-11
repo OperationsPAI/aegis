@@ -97,6 +97,7 @@ var resourceDisplayNameMap = map[ResourceName]string{
 	ResourceTrace:            "Trace",
 	ResourceInjection:        "Fault Injection",
 	ResourceExecution:        "Execution",
+	ResourceAPIKey:           "API Key",
 }
 
 var resouceTypeMap = map[ResourceType]string{

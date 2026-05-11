@@ -57,6 +57,7 @@ var ValidResourceNames = map[ResourceName]struct{}{
 	ResourceTrace:            {},
 	ResourceInjection:        {},
 	ResourceExecution:        {},
+	ResourceAPIKey:           {},
 }
 
 var ValidResourceScopes = map[ResourceScope]struct{}{
