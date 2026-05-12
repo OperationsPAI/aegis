@@ -1,0 +1,7 @@
+app/monolith	boot/monolith
+app/sso	boot/sso
+app/blob	boot/blob
+app/notify	boot/notify
+app/configcenter	boot/configcenter
+app/gateway	boot/gateway
+app/runtime	boot/runtime
