@@ -256,7 +256,7 @@ No removed files vs pre-refactor list. No standalone CORS/HTTP helper (CORS is w
 
 ## 10. Frontend → backend `/api/v2/*` usage
 
-Base path is `BASE_PATH = '/api/v2'` in `AegisLab-frontend/src/api/client.ts:4`. All hand-rolled modules call `apiClient.get('/xxx')` relative. There are also `@OperationsPAI/portal` SDK calls (auth.ts, sdk.ts) that go through the same axios via `sdkAxios`, but those target whatever paths the generated SDK encodes (separate concern).
+Base path on the consumer side is `BASE_PATH = '/api/v2'`. All hand-rolled modules call `apiClient.get('/xxx')` relative. There are also `@OperationsPAI/portal` SDK calls (auth.ts, sdk.ts) that go through the same axios via `sdkAxios`, but those target whatever paths the generated SDK encodes (separate concern). The frontend itself now lives in a separate `aegis-ui` repository — this slice was reconstructed from the previously in-tree `AegisLab-frontend/` snapshot.
 
 **Deduped endpoint path list** (relative paths, alpha-sorted). All live under the implicit `/api/v2/` prefix. Parametrised segments shown as `{id}` / `{name}`:
 

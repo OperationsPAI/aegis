@@ -13,11 +13,6 @@ repos:
     stack: [go, python]
     # Requirement field name that carries this repo's code paths.
     path_field: code
-  aegislab-frontend:
-    path: AegisLab-frontend
-    role: ui
-    stack: [typescript, react]
-    path_field: frontend
   chaos-experiment:
     path: chaos-experiment
     role: fault-injection-lib
@@ -32,12 +27,6 @@ repos:
 # Named cross-repo contracts. Requirements reference these by key in a
 # `contracts:` array (added incrementally in Phase 3+; skeleton only here).
 contracts:
-  openapi-backend-sdk:
-    kind: openapi
-    producer: aegislab
-    source: AegisLab/src/docs/swagger.yaml
-    consumers: [aegislab-frontend]
-    regenerate: "just swag-init && just generate-typescript-client"
   chaos-mesh-crd:
     kind: external-crd
     producer: external (chaos-mesh)

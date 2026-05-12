@@ -8,7 +8,7 @@ project:
   - go
   - python
   - typescript
-  description: Full-stack RCA benchmarking workspace spanning AegisLab backend, AegisLab-frontend UI, chaos-experiment fault injection libraries, and rcabench-platform evaluation/data consumers.
+  description: RCA benchmarking workspace spanning AegisLab backend, chaos-experiment fault injection libraries, and rcabench-platform evaluation/data consumers.
 requirements:
 - id: REQ-001
   title: User Authentication (JWT)
@@ -18,7 +18,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: src/middleware/auth.go, src/handlers/v2/auth.go, AegisLab-frontend/src/store/auth.ts, AegisLab-frontend/src/api/auth.ts
+  source: src/middleware/auth.go, src/handlers/v2/auth.go
   code:
   - path: AegisLab/src/middleware/auth.go
     description: JWTAuth, OptionalJWTAuth middlewares; helper functions for extracting user/service context from JWT claims
@@ -26,17 +26,6 @@ requirements:
     description: Register, Login endpoints with Swagger annotations and SDK marking
   - path: AegisLab/src/service/producer/auth.go
     description: Business logic for registration and login
-  frontend:
-  - path: AegisLab-frontend/src/store/auth.ts
-    description: Zustand store managing user, tokens, isAuthenticated state; login/logout/refresh/loadUser actions
-  - path: AegisLab-frontend/src/api/auth.ts
-    description: Auth API client with login, register, logout, getProfile, changePassword, refreshToken endpoints
-  - path: AegisLab-frontend/src/api/client.ts
-    description: Axios instance with request interceptor (attach Bearer token) and response interceptor (auto-refresh on 401)
-  - path: AegisLab-frontend/src/pages/auth/Login.tsx
-    description: Login form page with username/password fields, navigates to /dashboard on success
-  - path: AegisLab-frontend/src/App.tsx
-    description: Route guards checking isAuthenticated, redirecting to /login when not authenticated
   has_mock: false
   tests:
   - path: src/utils/password_test.go
@@ -66,7 +55,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: inferred
-  source: src/handlers/v2/users.go, src/repository/user.go, AegisLab-frontend/src/pages/admin/AdminUsersPage.tsx
+  source: src/handlers/v2/users.go, src/repository/user.go
   code:
   - path: AegisLab/src/handlers/v2/users.go
     description: CreateUser, ListUsers, GetUser, UpdateUser, DeleteUser handlers
@@ -74,11 +63,6 @@ requirements:
     description: User entity with username, email, password, full_name, avatar, phone, status, soft delete
   - path: AegisLab/src/repository/user.go
     description: Data access layer for user operations
-  frontend:
-  - path: AegisLab-frontend/src/pages/admin/AdminUsersPage.tsx
-    description: Admin user management page
-  - path: AegisLab-frontend/src/api/users.ts
-    description: Users API client
   has_mock: false
   tests: []
   docs:
@@ -105,7 +89,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: inferred
-  source: src/middleware/permission.go, src/handlers/v2/roles.go, AegisLab-frontend/src/api/roles.ts
+  source: src/middleware/permission.go, src/handlers/v2/roles.go
   code:
   - path: AegisLab/src/middleware/permission.go
     description: 'Decorator-pattern permission middleware: singlePermission, anyPermission, allPermissions, ownershipCheck, adminOrOwnership, teamAccessCheck, projectAccessCheck. Pre-built permission variables for every domain.
@@ -119,13 +103,6 @@ requirements:
     description: Permission listing and detail endpoints
   - path: AegisLab/src/handlers/v2/resources.go
     description: Resource listing and detail endpoints
-  frontend:
-  - path: AegisLab-frontend/src/api/roles.ts
-    description: Roles API client
-  - path: AegisLab-frontend/src/api/permissions.ts
-    description: Permissions API client
-  - path: AegisLab-frontend/src/api/resources.ts
-    description: Resources API client
   has_mock: false
   tests: []
   docs:
@@ -157,7 +134,7 @@ requirements:
   priority: P1
   status: implemented
   confidence: inferred
-  source: src/handlers/v2/teams.go, AegisLab-frontend/src/pages/teams/TeamDetailPage.tsx
+  source: src/handlers/v2/teams.go
   code:
   - path: AegisLab/src/handlers/v2/teams.go
     description: CreateTeam, DeleteTeam, ListTeams, GetTeam, UpdateTeam handlers
@@ -165,13 +142,6 @@ requirements:
     description: Team entity with name, description, is_public, status, projects relationship
   - path: AegisLab/src/middleware/permission.go
     description: RequireTeamAccess, RequireTeamAdminAccess, RequireTeamMemberAccess middlewares
-  frontend:
-  - path: AegisLab-frontend/src/api/teams.ts
-    description: Team CRUD client still exposed from the current frontend
-  - path: AegisLab-frontend/src/hooks/useTeams.ts
-    description: Shared team query hook used by current pages and selectors
-  - path: AegisLab-frontend/src/utils/teamNameMap.ts
-    description: Team display-name helpers retained after the layout refactor
   has_mock: false
   tests: []
   docs: []
@@ -201,7 +171,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: inferred
-  source: src/handlers/v2/projects.go, AegisLab-frontend/src/pages/projects/ProjectList.tsx
+  source: src/handlers/v2/projects.go
   code:
   - path: AegisLab/src/handlers/v2/projects.go
     description: CreateProject, DeleteProject, ListProjects, GetProject, UpdateProject handlers
@@ -209,21 +179,6 @@ requirements:
     description: Project entity with team FK, containers and datasets M2M, labels M2M
   - path: AegisLab/src/middleware/permission.go
     description: RequireProjectAccess, RequireProjectAdminAccess, RequireProjectMemberAccess middlewares
-  frontend:
-  - path: AegisLab-frontend/src/pages/projects/ProjectList.tsx
-    description: Project listing and entry point for workspace navigation
-  - path: AegisLab-frontend/src/pages/projects/ProjectDetail.tsx
-    description: Project detail shell and overview cards
-  - path: AegisLab-frontend/src/pages/projects/ProjectSettings.tsx
-    description: Project settings view
-  - path: AegisLab-frontend/src/pages/projects/CreateProjectModal.tsx
-    description: Project creation flow exposed from the current layout
-  - path: AegisLab-frontend/src/api/projects.ts
-    description: Project API bindings generated from the backend contract
-  - path: AegisLab-frontend/src/hooks/useProjectContext.ts
-    description: Project context resolution used across project pages
-  - path: AegisLab-frontend/src/hooks/useProjects.ts
-    description: Project collection query hook
   has_mock: false
   tests: []
   docs: []
@@ -252,15 +207,12 @@ requirements:
   priority: P1
   status: implemented
   confidence: inferred
-  source: src/handlers/v2/labels.go, AegisLab-frontend/src/api/labels.ts
+  source: src/handlers/v2/labels.go
   code:
   - path: AegisLab/src/handlers/v2/labels.go
     description: BatchDeleteLabels, CRUD for labels
   - path: AegisLab/src/database/entity.go
     description: Label entity with key, value, category, color, usage count; M2M join tables
-  frontend:
-  - path: AegisLab-frontend/src/api/labels.ts
-    description: Frontend label CRUD and attachment APIs
   has_mock: false
   tests: []
   docs: []
@@ -354,17 +306,12 @@ requirements:
   priority: P1
   status: implemented
   confidence: inferred
-  source: src/database/entity.go, src/service/producer/dynamic_config.go, AegisLab-frontend/src/pages/system/SystemSettings.tsx
+  source: src/database/entity.go, src/service/producer/dynamic_config.go
   code:
   - path: AegisLab/src/database/entity.go
     description: DynamicConfig and ConfigHistory entities with validation fields
   - path: AegisLab/src/service/producer/dynamic_config.go
     description: Config update logic with history tracking and context
-  frontend:
-  - path: AegisLab-frontend/src/pages/system/SystemSettings.tsx
-    description: Current system settings screen for dynamic config values
-  - path: AegisLab-frontend/src/api/system.ts
-    description: System and config API client
   has_mock: false
   tests: []
   docs: []
@@ -391,7 +338,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: src/handlers/v2/injections.go, AegisLab-frontend/src/pages/projects/ProjectInjectionList.tsx
+  source: src/handlers/v2/injections.go
   code:
   - path: AegisLab/src/handlers/v2/injections.go
     description: CRUD handlers for injections including batch delete, get, list, create
@@ -408,19 +355,19 @@ requirements:
   - path: AegisLab/src/repository/container.go
     description: CheckContainerExistsWithDifferentType — container lookup used by pedestal/benchmark mapping
   frontend: &id001
-  - path: AegisLab-frontend/src/pages/injections/InjectionWizard.tsx
+  - path:
     description: Current multi-step fault injection authoring flow
-  - path: AegisLab-frontend/src/pages/injections/components/FaultTypePanel.tsx
+  - path:
     description: Fault type selection backed by backend metadata
-  - path: AegisLab-frontend/src/pages/injections/components/FaultConfigPanel.tsx
+  - path:
     description: Fault parameter editor for generated chaos specs
-  - path: AegisLab-frontend/src/pages/injections/components/VisualCanvas.tsx
+  - path:
     description: Visualization canvas for configured faults
-  - path: AegisLab-frontend/src/pages/projects/ProjectDatapacks.tsx
+  - path:
     description: Project-scoped datapack list with inject/upload entry points
-  - path: AegisLab-frontend/src/pages/datapacks/DatapackDetail.tsx
+  - path:
     description: Datapack detail page with files, logs, and state stepper
-  - path: AegisLab-frontend/src/api/injections.ts
+  - path:
     description: Injection metadata, CRUD, download, and datapack file APIs
   has_mock: false
   tests: []
@@ -662,7 +609,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: src/handlers/v2/executions.go, AegisLab-frontend/src/pages/projects/ProjectExecutionList.tsx
+  source: src/handlers/v2/executions.go
   code:
   - path: AegisLab/src/handlers/v2/executions.go
     description: 'CRUD handlers for executions: batch delete, get, list, create'
@@ -670,18 +617,16 @@ requirements:
     description: executeAlgorithm task handler creating K8s jobs with algorithm container
   - path: AegisLab/src/database/entity.go
     description: Execution entity with algorithm_version, datapack, dataset_version FKs
-  frontend:
-  - &id002
-    path: AegisLab-frontend/src/pages/projects/ProjectExecutions.tsx
+    path:
     description: Project execution list and launch entry point
   - &id003
-    path: AegisLab-frontend/src/pages/executions/CreateExecutionForm.tsx
+    path:
     description: Execution submission flow for algorithms against datapacks
   - &id004
-    path: AegisLab-frontend/src/pages/executions/ExecutionDetail.tsx
+    path:
     description: Execution detail and result drill-down
   - &id005
-    path: AegisLab-frontend/src/api/executions.ts
+    path:
     description: Execution API client
   has_mock: false
   tests: []
@@ -750,18 +695,18 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: src/handlers/v2/evaluations.go, AegisLab-frontend/src/pages/evaluations/EvaluationList.tsx
+  source: src/handlers/v2/evaluations.go
   code:
   - path: AegisLab/src/handlers/v2/evaluations.go
     description: ListDatapackEvaluationResults endpoint (SDK-enabled)
   - path: AegisLab/src/service/analyzer/evaluation.go
     description: Batch evaluation logic mapping container refs to versions and computing results
   frontend: &id006
-  - path: AegisLab-frontend/src/pages/projects/ProjectEvaluations.tsx
+  - path:
     description: Project evaluation landing page
-  - path: AegisLab-frontend/src/pages/evaluations/EvaluationForm.tsx
+  - path:
     description: Evaluation configuration flow
-  - path: AegisLab-frontend/src/api/evaluations.ts
+  - path:
     description: Evaluation API client for datapack and dataset queries
   has_mock: false
   tests: []
@@ -832,17 +777,12 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: src/service/producer/query_datapack_arrow.go, AegisLab-frontend/src/components/workspace/DetailView/tabs/ArrowViewer.tsx
+  source: src/service/producer/query_datapack_arrow.go
   code:
   - path: AegisLab/src/service/producer/query_datapack_arrow.go
     description: 'QueryDatapackFileContent using DuckDB Arrow connector (build tag: duckdb_arrow)'
   - path: AegisLab/src/service/producer/query_datapack_noarrow.go
     description: Stub returning error when duckdb_arrow tag is not set
-  frontend:
-  - path: AegisLab-frontend/src/pages/datapacks/DatapackDetail.tsx
-    description: Datapack detail page used to browse generated artifacts
-  - path: AegisLab-frontend/src/api/injections.ts
-    description: File listing, download, and content query methods for datapacks
   has_mock: false
   tests: []
   docs:
@@ -947,7 +887,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: src/handlers/v2/containers.go, AegisLab-frontend/src/pages/containers/ContainerList.tsx
+  source: src/handlers/v2/containers.go
   code:
   - path: AegisLab/src/handlers/v2/containers.go
     description: CreateContainer, CRUD for containers and container versions
@@ -955,17 +895,6 @@ requirements:
     description: 'Container (type, public, labels), ContainerVersion (semantic versioning, image ref parsing, Helm config, env vars), HelmConfig (chart, repo, values), ParameterConfig (fixed/dynamic params with validation)
 
       '
-  frontend:
-  - path: AegisLab-frontend/src/pages/containers/ContainerList.tsx
-    description: Container listing page (admin)
-  - path: AegisLab-frontend/src/pages/containers/ContainerDetail.tsx
-    description: Container detail page
-  - path: AegisLab-frontend/src/pages/containers/ContainerForm.tsx
-    description: Container creation/editing form
-  - path: AegisLab-frontend/src/pages/containers/ContainerVersions.tsx
-    description: Container version management page
-  - path: AegisLab-frontend/src/api/containers.ts
-    description: Containers API client
   has_mock: false
   tests: []
   docs: []
@@ -991,21 +920,12 @@ requirements:
   priority: P0
   status: implemented
   confidence: inferred
-  source: src/handlers/v2/datasets.go, AegisLab-frontend/src/pages/datasets/DatasetList.tsx
+  source: src/handlers/v2/datasets.go
   code:
   - path: AegisLab/src/handlers/v2/datasets.go
     description: CreateDataset, CRUD for datasets and dataset versions
   - path: AegisLab/src/database/entity.go
     description: Dataset and DatasetVersion entities with datapacks M2M relationship
-  frontend:
-  - path: AegisLab-frontend/src/pages/datasets/DatasetList.tsx
-    description: Dataset listing page (admin)
-  - path: AegisLab-frontend/src/pages/datasets/DatasetDetail.tsx
-    description: Dataset detail page
-  - path: AegisLab-frontend/src/pages/datasets/DatasetForm.tsx
-    description: Dataset creation/editing form
-  - path: AegisLab-frontend/src/api/datasets.ts
-    description: Datasets API client
   has_mock: false
   tests: []
   docs: []
@@ -1134,21 +1054,12 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: src/service/consumer/task.go, AegisLab-frontend/src/pages/tasks/TaskList.tsx
+  source: src/service/consumer/task.go
   code:
   - path: AegisLab/src/service/consumer/task.go
     description: 'Redis queue constants, concurrency control, Prometheus metrics, task cancellation registry, event publishing
 
       '
-  frontend:
-  - path: AegisLab-frontend/src/pages/tasks/TaskList.tsx
-    description: Task queue monitoring with filters and SSE refresh
-  - path: AegisLab-frontend/src/pages/tasks/TaskDetail.tsx
-    description: Task detail page with timeline and live logs
-  - path: AegisLab-frontend/src/components/pipeline/TaskLogViewer.tsx
-    description: Reusable task log viewer
-  - path: AegisLab-frontend/src/api/tasks.ts
-    description: Task queue API client
   has_mock: false
   tests: []
   docs:
@@ -1244,13 +1155,10 @@ requirements:
   priority: P1
   status: implemented
   confidence: inferred
-  source: src/handlers/v2/tasks.go, AegisLab-frontend/src/api/tasks.ts
+  source: src/handlers/v2/tasks.go
   code:
   - path: AegisLab/src/handlers/v2/tasks.go
     description: BatchDeleteTasks and other task management handlers; WebSocket upgrader for real-time updates
-  frontend:
-  - path: AegisLab-frontend/src/api/tasks.ts
-    description: Tasks API client consuming task management endpoints
   has_mock: false
   tests: []
   docs: []
@@ -1276,7 +1184,7 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: src/handlers/v2/traces.go, AegisLab-frontend/src/pages/traces/TracesPage.tsx
+  source: src/handlers/v2/traces.go
   code:
   - path: AegisLab/src/handlers/v2/traces.go
     description: GetTrace handler with SSE streaming support via Redis
@@ -1284,13 +1192,6 @@ requirements:
     description: GetGroupStats with SSE streaming for group-level monitoring
   - path: AegisLab/src/database/entity.go
     description: Trace (type, state, group_id, leaf_num) and Task (parent-child, level, sequence) entities
-  frontend:
-  - path: AegisLab-frontend/src/api/traces.ts
-    description: Trace stream and trace lookup client
-  - path: AegisLab-frontend/src/api/groups.ts
-    description: Trace group API client
-  - path: AegisLab-frontend/src/hooks/useTraceSSE.ts
-    description: Trace streaming hook used by task and pipeline views
   has_mock: false
   tests: []
   docs:
@@ -1409,19 +1310,12 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: src/handlers/v2/system.go, AegisLab-frontend/src/pages/home/HomePage.tsx
+  source: src/handlers/v2/system.go
   code:
   - path: AegisLab/src/handlers/v2/system.go
     description: GetSystemMetrics (current) and GetSystemMetricsHistory (24h) endpoints
   - path: AegisLab/src/service/consumer/task.go
     description: Prometheus task_processed_total counter and task_duration_seconds histogram
-  frontend:
-  - path: AegisLab-frontend/src/pages/system/SystemSettings.tsx
-    description: System monitoring and health settings view
-  - path: AegisLab-frontend/src/api/metrics.ts
-    description: Metrics API client
-  - path: AegisLab-frontend/src/pages/home/HomePage.tsx
-    description: Home dashboard surfaces quick health and workload stats
   has_mock: false
   tests: []
   docs: []
@@ -1448,17 +1342,10 @@ requirements:
   priority: P1
   status: implemented
   confidence: inferred
-  source: src/handlers/v2/metrics.go, AegisLab-frontend/src/api/metrics.ts
+  source: src/handlers/v2/metrics.go
   code:
   - path: AegisLab/src/handlers/v2/metrics.go
     description: GetInjectionMetrics and GetExecutionMetrics endpoints (SDK-enabled)
-  frontend:
-  - path: AegisLab-frontend/src/pages/executions/ExecutionDetail.tsx
-    description: Execution detail surfaces detector and granularity results
-  - path: AegisLab-frontend/src/pages/datapacks/DatapackDetail.tsx
-    description: Datapack detail shows pipeline state progression
-  - path: AegisLab-frontend/src/api/metrics.ts
-    description: Metrics API client
   has_mock: false
   tests: []
   docs: []
@@ -1613,13 +1500,6 @@ requirements:
   confidence: inferred
   source: CLAUDE.md
   code: []
-  frontend:
-  - path: AegisLab-frontend/package.json
-    description: Frontend consumes the generated TypeScript client package
-  - path: AegisLab-frontend/src/api/client.ts
-    description: Shared typed API wrapper built on the generated SDK models
-  - path: AegisLab-frontend/src/types/api.ts
-    description: Frontend-side type surface aligned to the SDK contract
   has_mock: false
   tests: []
   docs:
@@ -1939,19 +1819,12 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/components/layout/MainLayout.tsx, AegisLab-frontend/src/components/layout/WorkspaceLayout.tsx
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/components/layout/MainLayout.tsx
-    description: Current single-layout shell after workspace layout removal
-  - path: AegisLab-frontend/src/components/layout/MainSidebarContent.tsx
-    description: Current sidebar navigation for the main shell
-  - path: AegisLab-frontend/src/components/layout/AppHeader.tsx
-    description: Header shared by all protected routes
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab-frontend/workspace.md
+  - path:
   acceptance:
     status: pending
     date: ''
@@ -1976,13 +1849,8 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/App.tsx, AegisLab-frontend/src/main.tsx
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/App.tsx
-    description: Route tree and route guards
-  - path: AegisLab-frontend/src/components/layout/MainLayout.tsx
-    description: Route outlet host for protected pages
   has_mock: false
   tests: []
   docs: []
@@ -2011,17 +1879,8 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/store/theme.ts, AegisLab-frontend/src/components/ui/ThemeToggle.tsx
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/store/theme.ts
-    description: Persisted theme and sidebar state store
-  - path: AegisLab-frontend/src/components/ui/ThemeToggle.tsx
-    description: Theme toggle control
-  - path: AegisLab-frontend/src/utils/theme.ts
-    description: Theme helper functions
-  - path: AegisLab-frontend/src/styles/theme.css
-    description: Theme variable definitions
   has_mock: false
   tests: []
   docs: []
@@ -2045,15 +1904,8 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/pages/home/HomePage.tsx
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/pages/home/HomePage.tsx
-    description: Current home dashboard
-  - path: AegisLab-frontend/src/pages/home/HomePage.css
-    description: Home dashboard styling
-  - path: AegisLab-frontend/src/components/ui/StatCard.tsx
-    description: Reusable stats card used by dashboard flows
   has_mock: false
   tests: []
   docs: []
@@ -2081,11 +1933,8 @@ requirements:
   priority: P2
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/pages/profile/ProfilePage.tsx
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/pages/profile/ProfilePage.tsx
-    description: Current profile page
   has_mock: false
   tests: []
   docs: []
@@ -2112,11 +1961,8 @@ requirements:
   priority: P2
   status: implemented
   confidence: inferred
-  source: AegisLab-frontend/src/pages/settings/Settings.tsx
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/pages/settings/Settings.tsx
-    description: Current user settings page
   has_mock: false
   tests: []
   docs: []
@@ -2141,7 +1987,7 @@ requirements:
   priority: P1
   status: removed-frontend
   confidence: confirmed
-  source: AegisLab-frontend/src/components/workspace/
+  source: ''
   code: []
   frontend: []
   has_mock: false
@@ -2169,7 +2015,7 @@ requirements:
   priority: P1
   status: removed-frontend
   confidence: inferred
-  source: AegisLab-frontend/src/components/charts/
+  source: ''
   code: []
   frontend: []
   has_mock: false
@@ -2197,15 +2043,8 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/components/ui/
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/components/ui/StatCard.tsx
-    description: Reusable stats card component
-  - path: AegisLab-frontend/src/components/ui/StatusBadge.tsx
-    description: Reusable status badge
-  - path: AegisLab-frontend/src/components/ui/ThemeToggle.tsx
-    description: Reusable theme toggle
   has_mock: false
   tests: []
   docs: []
@@ -2229,19 +2068,12 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/vite.config.ts, AegisLab-frontend/package.json
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/vite.config.ts
-    description: Vite configuration, proxy, and path aliases
-  - path: AegisLab-frontend/package.json
-    description: Frontend build, lint, and type-check scripts
-  - path: AegisLab-frontend/tsconfig.json
-    description: TypeScript compiler configuration
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab-frontend/CLAUDE.md
+  - path:
   acceptance:
     status: pending
     date: ''
@@ -2262,19 +2094,8 @@ requirements:
   priority: P1
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/components/workspace/DetailView/
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/pages/datapacks/DatapackDetail.tsx
-    description: Datapack detail replacement for the old workspace detail view
-  - path: AegisLab-frontend/src/pages/executions/ExecutionDetail.tsx
-    description: Execution detail replacement for the old result drill-down
-  - path: AegisLab-frontend/src/pages/tasks/TaskDetail.tsx
-    description: Task detail with logs and timeline
-  - path: AegisLab-frontend/src/components/pipeline/StateStepper.tsx
-    description: Reusable state progression component
-  - path: AegisLab-frontend/src/components/pipeline/TaskLogViewer.tsx
-    description: Reusable task log viewer
   has_mock: false
   tests: []
   docs: []
@@ -2300,19 +2121,8 @@ requirements:
   priority: P2
   status: implemented
   confidence: confirmed
-  source: AegisLab-frontend/src/utils/, AegisLab-frontend/src/types/
+  source: ''
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/utils/colors.ts
-    description: Color utilities
-  - path: AegisLab-frontend/src/utils/projectNameMap.ts
-    description: Project display-name helpers
-  - path: AegisLab-frontend/src/utils/state.ts
-    description: State label helpers shared across pages
-  - path: AegisLab-frontend/src/utils/teamNameMap.ts
-    description: Team display-name helpers
-  - path: AegisLab-frontend/src/types/api.ts
-    description: Frontend API type declarations
   has_mock: false
   tests: []
   docs: []
@@ -2337,9 +2147,6 @@ requirements:
   confidence: confirmed
   source: docs/frontend-redesign.md section 5.6
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/components/pipeline/StateStepper.tsx
-    description: Pipeline progress / state stepper component
   has_mock: false
   tests: []
   docs:
@@ -2400,11 +2207,6 @@ requirements:
   confidence: confirmed
   source: docs/frontend-redesign.md section 5.9
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/pages/executions/CreateExecutionForm.tsx
-    description: Benchmark-oriented algorithm execution submission flow
-  - path: AegisLab-frontend/src/pages/projects/ProjectExecutions.tsx
-    description: Project execution list used as the benchmark workflow hub
   has_mock: false
   tests: []
   docs:
@@ -2497,11 +2299,6 @@ requirements:
   confidence: confirmed
   source: docs/frontend-redesign.md section 5.8
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/pages/executions/ExecutionDetail.tsx
-    description: Execution detail renders detector and granularity results
-  - path: AegisLab-frontend/src/pages/projects/ProjectExecutions.tsx
-    description: Execution list routes into result detail
   has_mock: false
   tests: []
   docs:
@@ -2773,7 +2570,7 @@ requirements:
   rcabench_code: []
   tests: []
   docs:
-  - AegisLab-frontend/CLAUDE.md
+  -
   acceptance:
     status: pending
     date: ''
@@ -2796,18 +2593,11 @@ requirements:
   type: ui
   repo: aegislab-frontend
   code: []
-  frontend:
-  - path: AegisLab-frontend/src/pages/projects/ProjectDatapacks.tsx
-    description: Project datapack list
-  - path: AegisLab-frontend/src/pages/datapacks/DatapackDetail.tsx
-    description: Datapack file and log browser
-  - path: AegisLab-frontend/src/api/injections.ts
-    description: Datapack download and file browsing API client
   chaos_code: []
   rcabench_code: []
   tests: []
   docs:
-  - AegisLab-frontend/CLAUDE.md
+  -
   acceptance:
     status: pending
     date: ''
@@ -2831,18 +2621,11 @@ requirements:
   type: ui
   repo: aegislab-frontend
   code: []
-  frontend:
-  - *id002
-  - *id003
-  - *id004
-  - *id005
-  - path: AegisLab-frontend/src/pages/projects/stateLabels.ts
-    description: Execution/datapack state labels used by the execution UI
   chaos_code: []
   rcabench_code: []
   tests: []
   docs:
-  - AegisLab-frontend/CLAUDE.md
+  -
   acceptance:
     status: pending
     date: ''
@@ -2871,7 +2654,7 @@ requirements:
   rcabench_code: []
   tests: []
   docs:
-  - AegisLab-frontend/CLAUDE.md
+  -
   acceptance:
     status: pending
     date: ''
@@ -2891,7 +2674,7 @@ requirements:
   priority: P0
   status: implemented
   confidence: confirmed
-  source: Reverse-engineered from chaos-experiment handler/controller packages, AegisLab injection services, and AegisLab-frontend injection/datapack pages.
+  source: Reverse-engineered from chaos-experiment handler/controller packages and AegisLab injection services.
   type: feature
   repo: null
   code: []

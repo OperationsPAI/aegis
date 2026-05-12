@@ -283,20 +283,12 @@ clients.runtime.target       (legacy: runtime_worker.grpc.target)   ← note und
   (falls back to viper-backed `injection.system` map)
 - DynamicConfig rows → etcd `/rcabench/configs/{producer,consumer,global}/<key>` → watchers → handlers
 
-## 11. Frontend → backend endpoint usage (from `AegisLab-frontend/src/api/`)
+## 11. (removed) Frontend → backend endpoint usage
 
-`BASE_PATH = '/api/v2'`. Flat URLs — **the router's audience split (admin/portal/public/sdk)
-is URL-transparent**. Hand-rolled `apiClient.<method>('/path')` mixed with `@OperationsPAI/portal` SDK
-via `sdkAxios`.
-
-Deduped endpoint list (alphabetical, deduped): see `slices/07-data-crosscut-seams.md §10`.
-
-Notable:
-
-- SSE literals: `/api/v2/traces/{id}/stream`, `/api/v2/groups/{id}/stream`
-- WS literal: `/api/v2/tasks/{id}/logs/ws?token=...`
-- **No frontend caller for `/api/v2/notifications/stream`** despite being wired
-- **No frontend caller for `/api/v2/sdk/*` endpoints** — SDK surface is machine-only
+The frontend codebase moved out of this monorepo to the separate
+`aegis-ui` repository. Endpoint coverage from the consumer side now
+lives there; this section was retired rather than maintained as a
+duplicate snapshot.
 
 ## 12. rcabench-platform data contract
 

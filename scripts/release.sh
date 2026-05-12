@@ -7,9 +7,7 @@
 #   portal            → NPM   @OperationsPAI/portal      tag: release-ts-portal/v<ver>
 #   admin             → NPM   @OperationsPAI/admin       tag: release-ts-admin/v<ver>
 #   backend-image     → Docker opspai/rcabench           tag: release-backend/v<ver>
-#   frontend-image    → Docker opspai/rcabench-frontend  tag: release-frontend/v<ver>
 #   backend-chart     → Helm chart rcabench              tag: release-helm-backend/v<ver>
-#   frontend-chart    → Helm chart AegisLab-frontend     tag: release-helm-frontend/v<ver>
 #
 # Usage:
 #   scripts/release.sh <pkg>=<version> [<pkg>=<version> ...]
@@ -45,9 +43,7 @@ tag_prefix_for() {
     portal)          echo "release-ts-portal" ;;
     admin)           echo "release-ts-admin" ;;
     backend-image)   echo "release-backend" ;;
-    frontend-image)  echo "release-frontend" ;;
     backend-chart)   echo "release-helm-backend" ;;
-    frontend-chart)  echo "release-helm-frontend" ;;
     *) die "unknown package: $1" ;;
   esac
 }
@@ -67,18 +63,12 @@ preflight() {
         || die "rcabench-platform/pyproject.toml version is '$py', expected '$ver'. Bump it and commit first."
       ;;
     sdk|portal|admin) : ;;  # version injected by CI generator
-    backend-image|frontend-image) : ;;  # version comes straight from the tag
+    backend-image) : ;;  # version comes straight from the tag
     backend-chart)
       local cv
       cv=$(chart_version_of AegisLab/helm/Chart.yaml)
       [[ "$cv" == "$ver" ]] \
         || echo "warn: AegisLab/helm/Chart.yaml version is '$cv', releasing as '$ver' (CI will override --version)." >&2
-      ;;
-    frontend-chart)
-      local cv
-      cv=$(chart_version_of AegisLab-frontend/helm/Chart.yaml)
-      [[ "$cv" == "$ver" ]] \
-        || echo "warn: AegisLab-frontend/helm/Chart.yaml version is '$cv', releasing as '$ver' (CI will override --version)." >&2
       ;;
   esac
 }

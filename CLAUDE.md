@@ -1,6 +1,6 @@
 # Aegis Workspace — Working Guidelines
 
-This is the workspace-level guide. Each subproject (`AegisLab/`, `AegisLab-frontend/`,
+This is the workspace-level guide. Each subproject (`AegisLab/`,
 `chaos-experiment/`, `rcabench-platform/`, `rcabench-platform-phase2/`) has its own
 `CLAUDE.md` with stack-specific rules — read those when working inside a subproject.
 This file captures the cross-cutting principles that apply everywhere.
