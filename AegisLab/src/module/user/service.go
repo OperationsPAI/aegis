@@ -29,6 +29,10 @@ func (s *Service) GetByUsername(_ context.Context, username string) (*model.User
 	return s.repo.getUserByUsername(username)
 }
 
+func (s *Service) GetByEmail(_ context.Context, email string) (*model.User, error) {
+	return s.repo.getUserByEmail(email)
+}
+
 func (s *Service) GetByIDs(_ context.Context, ids []int) ([]*model.User, error) {
 	return s.repo.GetByIDs(ids)
 }

@@ -37,12 +37,17 @@ func hashSecret(secret string) (string, error) {
 	return string(h), nil
 }
 
-// VerifySecret compares a plaintext secret against a stored bcrypt hash. It
-// returns nil only when the client is active and the secret matches.
+// VerifySecret resolves a client by id and validates credentials. For
+// confidential clients the bcrypt-hashed secret must match. For public
+// clients (IsConfidential=false) the secret check is skipped — they prove
+// possession via PKCE at the /token endpoint instead.
 func (s *Service) VerifySecret(ctx context.Context, clientID, secret string) (*model.OIDCClient, error) {
 	c, err := s.repo.GetByClientID(clientID)
 	if err != nil {
 		return nil, err
+	}
+	if !c.IsConfidential {
+		return c, nil
 	}
 	if bcrypt.CompareHashAndPassword([]byte(c.ClientSecretHash), []byte(secret)) != nil {
 		return nil, consts.ErrAuthenticationFailed

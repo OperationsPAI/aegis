@@ -46,6 +46,14 @@ func (r *Repository) getUserByUsername(username string) (*model.User, error) {
 	return &user, nil
 }
 
+func (r *Repository) getUserByEmail(email string) (*model.User, error) {
+	var user model.User
+	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to find user with email %s: %w", email, err)
+	}
+	return &user, nil
+}
+
 func (r *Repository) createUserIfUnique(user *model.User) error {
 	var existingByUsername model.User
 	if err := r.db.Where("username = ?", user.Username).First(&existingByUsername).Error; err == nil {

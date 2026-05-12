@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"aegis/config"
 	"aegis/consts"
@@ -24,7 +25,10 @@ func registerSSOInitialization(lc fx.Lifecycle, db *gorm.DB, clients *ssomod.Ser
 			if err := seedDefaultAdmin(db); err != nil {
 				return err
 			}
-			return seedDefaultOIDCClient(ctx, db, clients)
+			if err := seedDefaultOIDCClient(ctx, db, clients); err != nil {
+				return err
+			}
+			return seedConsoleOIDCClient(ctx, db)
 		},
 	})
 }
@@ -112,6 +116,72 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 			logrus.WithError(writeErr).Warn("could not write seed-secret dump file")
 		}
 	}
+	return nil
+}
+
+// seedConsoleOIDCClient ensures the public client used by the aegis-ui
+// console exists and matches the current config on every boot. Redirect
+// URIs come from `[sso] console_redirect_uris` (or `SSO_CONSOLE_REDIRECT_URIS`
+// env override, comma-separated); grants/scopes/IsConfidential are
+// reconciled too so an operator can rotate the whitelist without manual
+// DB surgery. No client_secret — the browser proves possession via PKCE.
+func seedConsoleOIDCClient(_ context.Context, db *gorm.DB) error {
+	raw := config.GetString("sso.console_redirect_uris")
+	if raw == "" {
+		raw = "http://localhost:3100/auth/callback"
+	}
+	var uris []string
+	for _, u := range strings.Split(raw, ",") {
+		if t := strings.TrimSpace(u); t != "" {
+			uris = append(uris, t)
+		}
+	}
+
+	desired := &model.OIDCClient{
+		ClientID:         "aegis-console",
+		ClientSecretHash: "",
+		Name:             "Aegis Console",
+		Service:          "aegis-console",
+		RedirectURIs:     uris,
+		Grants:           []string{"authorization_code", "refresh_token"},
+		Scopes:           []string{"openid", "profile", "email"},
+		IsConfidential:   false,
+		Status:           consts.CommonEnabled,
+	}
+
+	var existing model.OIDCClient
+	err := db.Where("client_id = ?", "aegis-console").First(&existing).Error
+	switch {
+	case err == gorm.ErrRecordNotFound:
+		if err := db.Create(desired).Error; err != nil {
+			return err
+		}
+	case err != nil:
+		return err
+	default:
+		// `Updates(map)` would emit `('a','b')` for the JSON-serialized
+		// slice columns and MySQL trips on "Operand should contain 1
+		// column". A struct-form update + Select on the slice columns
+		// preserves the registered gorm json serializer.
+		desired.ID = existing.ID
+		desired.CreatedAt = existing.CreatedAt
+		if err := db.Model(&existing).
+			Select("Name", "Service", "RedirectURIs", "Grants", "Scopes",
+				"ClientSecretHash", "Status").
+			Updates(desired).Error; err != nil {
+			return err
+		}
+	}
+	// GORM's INSERT skips bool(false) zero-values and lets the column
+	// fall back to `default:true`. Force it false in a follow-up update
+	// so reconciliation can't accidentally promote it to confidential.
+	if err := db.Model(&model.OIDCClient{}).
+		Where("client_id = ?", "aegis-console").
+		Update("is_confidential", false).Error; err != nil {
+		return err
+	}
+	logrus.WithFields(logrus.Fields{"client_id": "aegis-console", "redirect_uris": uris}).
+		Info("Reconciled public OIDC client for aegis-ui console")
 	return nil
 }
 

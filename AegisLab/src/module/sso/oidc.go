@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -36,11 +38,13 @@ const (
 // Redis under sso:authreq:<code>, keyed by the auth code the OP returns to
 // the relying-party.
 type authRequest struct {
-	ClientID    string `json:"client_id"`
-	UserID      int    `json:"user_id"`
-	RedirectURI string `json:"redirect_uri"`
-	State       string `json:"state,omitempty"`
-	Scope       string `json:"scope,omitempty"`
+	ClientID            string `json:"client_id"`
+	UserID              int    `json:"user_id"`
+	RedirectURI         string `json:"redirect_uri"`
+	State               string `json:"state,omitempty"`
+	Scope               string `json:"scope,omitempty"`
+	CodeChallenge       string `json:"code_challenge,omitempty"`
+	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
 }
 
 type refreshRecord struct {
@@ -139,6 +143,8 @@ func (s *OIDCService) authorizeGet(c *gin.Context) {
 	state := c.Query("state")
 	scope := c.Query("scope")
 	respType := c.Query("response_type")
+	codeChallenge := c.Query("code_challenge")
+	codeChallengeMethod := c.Query("code_challenge_method")
 
 	if respType != "code" {
 		c.String(http.StatusBadRequest, "unsupported response_type")
@@ -157,6 +163,41 @@ func (s *OIDCService) authorizeGet(c *gin.Context) {
 		c.String(http.StatusBadRequest, "redirect_uri not registered")
 		return
 	}
+	if !cli.IsConfidential && codeChallenge == "" {
+		c.String(http.StatusBadRequest, "public client requires code_challenge (PKCE)")
+		return
+	}
+	if codeChallenge != "" {
+		if codeChallengeMethod == "" {
+			codeChallengeMethod = "plain"
+		}
+		if codeChallengeMethod != "S256" && codeChallengeMethod != "plain" {
+			c.String(http.StatusBadRequest, "unsupported code_challenge_method")
+			return
+		}
+	}
+
+	// When a `[sso] login_redirect` is configured, hand off rendering of the
+	// login UI to the console — re-emit every OIDC param (including PKCE)
+	// so the console can POST them back to /login unchanged.
+	if dest := config.GetString("sso.login_redirect"); dest != "" {
+		u, err := url.Parse(dest)
+		if err == nil {
+			q := u.Query()
+			q.Set("client_id", clientID)
+			q.Set("redirect_uri", redirectURI)
+			q.Set("state", state)
+			q.Set("scope", scope)
+			q.Set("response_type", respType)
+			if codeChallenge != "" {
+				q.Set("code_challenge", codeChallenge)
+				q.Set("code_challenge_method", codeChallengeMethod)
+			}
+			u.RawQuery = q.Encode()
+			c.Redirect(http.StatusFound, u.String())
+			return
+		}
+	}
 
 	html := fmt.Sprintf(`<!doctype html><html><body>
 <h2>Sign in to %s</h2>
@@ -165,12 +206,15 @@ func (s *OIDCService) authorizeGet(c *gin.Context) {
 <input type="hidden" name="redirect_uri" value="%s"/>
 <input type="hidden" name="state" value="%s"/>
 <input type="hidden" name="scope" value="%s"/>
+<input type="hidden" name="code_challenge" value="%s"/>
+<input type="hidden" name="code_challenge_method" value="%s"/>
 <label>Username <input name="username"/></label><br/>
 <label>Password <input name="password" type="password"/></label><br/>
 <button type="submit">Sign in</button>
 </form></body></html>`,
 		htmlEscape(cli.Name), htmlEscape(clientID), htmlEscape(redirectURI),
-		htmlEscape(state), htmlEscape(scope))
+		htmlEscape(state), htmlEscape(scope),
+		htmlEscape(codeChallenge), htmlEscape(codeChallengeMethod))
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
 
@@ -186,13 +230,22 @@ func (s *OIDCService) loginPost(c *gin.Context) {
 	scope := c.PostForm("scope")
 	username := c.PostForm("username")
 	password := c.PostForm("password")
+	codeChallenge := c.PostForm("code_challenge")
+	codeChallengeMethod := c.PostForm("code_challenge_method")
 
 	cli, err := s.clients.GetByClientID(c.Request.Context(), clientID)
 	if err != nil || !grantAllowed(cli, "authorization_code") || !redirectAllowed(cli, redirectURI) {
 		c.String(http.StatusBadRequest, "invalid client or redirect_uri")
 		return
 	}
+	if !cli.IsConfidential && codeChallenge == "" {
+		c.String(http.StatusBadRequest, "public client requires PKCE")
+		return
+	}
 	u, err := s.users.GetByUsername(c.Request.Context(), username)
+	if err != nil && strings.Contains(username, "@") {
+		u, err = s.users.GetByEmail(c.Request.Context(), username)
+	}
 	if err != nil || !utils.VerifyPassword(password, u.Password) || !u.IsActive {
 		c.String(http.StatusUnauthorized, "invalid credentials")
 		return
@@ -203,7 +256,18 @@ func (s *OIDCService) loginPost(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "code generation failed")
 		return
 	}
-	ar := authRequest{ClientID: cli.ClientID, UserID: u.ID, RedirectURI: redirectURI, State: state, Scope: scope}
+	if codeChallenge != "" && codeChallengeMethod == "" {
+		codeChallengeMethod = "plain"
+	}
+	ar := authRequest{
+		ClientID:            cli.ClientID,
+		UserID:              u.ID,
+		RedirectURI:         redirectURI,
+		State:               state,
+		Scope:               scope,
+		CodeChallenge:       codeChallenge,
+		CodeChallengeMethod: codeChallengeMethod,
+	}
 	if err := s.storeAuthRequest(c.Request.Context(), code, ar); err != nil {
 		c.String(http.StatusInternalServerError, "auth state persistence failed")
 		return
@@ -346,6 +410,20 @@ func (s *OIDCService) grantAuthCode(c *gin.Context, cli *model.OIDCClient) {
 		tokenError(c, http.StatusBadRequest, "invalid_grant", "code does not match client/redirect")
 		return
 	}
+	codeVerifier := c.PostForm("code_verifier")
+	if ar.CodeChallenge != "" {
+		if codeVerifier == "" {
+			tokenError(c, http.StatusBadRequest, "invalid_grant", "code_verifier required")
+			return
+		}
+		if !verifyPKCE(ar.CodeChallenge, ar.CodeChallengeMethod, codeVerifier) {
+			tokenError(c, http.StatusBadRequest, "invalid_grant", "code_verifier mismatch")
+			return
+		}
+	} else if !cli.IsConfidential {
+		tokenError(c, http.StatusBadRequest, "invalid_grant", "public client requires PKCE")
+		return
+	}
 	u, err := s.users.GetByID(c.Request.Context(), ar.UserID)
 	if err != nil {
 		tokenError(c, http.StatusBadRequest, "invalid_grant", "user gone")
@@ -403,6 +481,9 @@ func (s *OIDCService) grantPassword(c *gin.Context, cli *model.OIDCClient) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 	u, err := s.users.GetByUsername(c.Request.Context(), username)
+	if err != nil && strings.Contains(username, "@") {
+		u, err = s.users.GetByEmail(c.Request.Context(), username)
+	}
 	if err != nil || !utils.VerifyPassword(password, u.Password) || !u.IsActive {
 		tokenError(c, http.StatusUnauthorized, "invalid_grant", "invalid credentials")
 		return
@@ -491,6 +572,20 @@ func redirectAllowed(cli *model.OIDCClient, uri string) bool {
 		}
 	}
 	return false
+}
+
+// verifyPKCE checks that a code_verifier matches the stored challenge per
+// RFC 7636. `plain` compares directly; `S256` compares base64url(sha256(v)).
+func verifyPKCE(challenge, method, verifier string) bool {
+	switch method {
+	case "", "plain":
+		return challenge == verifier
+	case "S256":
+		sum := sha256.Sum256([]byte(verifier))
+		return challenge == base64.RawURLEncoding.EncodeToString(sum[:])
+	default:
+		return false
+	}
 }
 
 func randomToken(nBytes int) (string, error) {
