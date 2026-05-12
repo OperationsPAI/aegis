@@ -110,6 +110,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
+            {{- if .Values.aegisEnvironments.enabled }}
+            - name: AEGIS_ENVIRONMENTS_JSON
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-aegis-environments
+                  key: manifest.json
+            {{- end }}
             {{- with .Values.ssoclient }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}

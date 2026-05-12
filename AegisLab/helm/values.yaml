@@ -559,3 +559,18 @@ initialDataFiles:
 
 serviceAccount:
   imagePullSecrets: []
+
+# Aegis multi-environment manifest published at GET /.well-known/aegis-environments.json.
+# Lets one UI build switch between prod/stage/dev installs that share this same manifest.
+# When `enabled: false` (default) no ConfigMap is rendered, no env var is injected, and
+# the handler returns 404 — single-env deployments stay untouched.
+# See `values-multi-env.example.yaml` for a populated example.
+aegisEnvironments:
+  enabled: false
+  # Populated only when `enabled: true`. The aegis-api handler validates this at startup.
+  manifest:
+    # `default` MUST reference one of the `id`s listed in `environments`.
+    default: ""
+    # Each entry: { id, label, baseUrl, badge }.
+    # `badge` is one of: default | info | warning | danger.
+    environments: []
