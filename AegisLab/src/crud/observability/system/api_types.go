@@ -9,7 +9,7 @@ import (
 	"aegis/platform/model"
 	"aegis/clients/sso"
 	systemmetric "aegis/crud/observability/systemmetric"
-	task "aegis/module/task"
+	task "aegis/core/domain/task"
 )
 
 // HealthCheckResp represents system health check response.

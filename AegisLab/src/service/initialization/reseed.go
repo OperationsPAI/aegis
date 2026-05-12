@@ -13,7 +13,7 @@ import (
 	"aegis/platform/consts"
 	etcd "aegis/platform/etcd"
 	"aegis/platform/model"
-	containerrepo "aegis/module/container"
+	containerrepo "aegis/core/domain/container"
 	"aegis/service/common"
 
 	"github.com/sirupsen/logrus"

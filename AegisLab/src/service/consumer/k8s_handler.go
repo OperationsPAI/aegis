@@ -13,7 +13,7 @@ import (
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
-	container "aegis/module/container"
+	container "aegis/core/domain/container"
 	"aegis/service/common"
 	"aegis/platform/utils"
 

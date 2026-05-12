@@ -7,8 +7,8 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
-	execution "aegis/module/execution"
-	injection "aegis/module/injection"
+	execution "aegis/core/domain/execution"
+	injection "aegis/core/domain/injection"
 )
 
 type stateStore struct {

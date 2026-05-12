@@ -5,7 +5,7 @@ import (
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
-	group "aegis/module/group"
+	group "aegis/core/domain/group"
 	"context"
 	"fmt"
 	"time"

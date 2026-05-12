@@ -1,7 +1,7 @@
 package docs
 
 import (
-	group "aegis/module/group"
+	group "aegis/core/domain/group"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/gin-gonic/gin"

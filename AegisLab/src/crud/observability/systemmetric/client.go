@@ -3,7 +3,7 @@ package systemmetric
 import (
 	"context"
 
-	task "aegis/module/task"
+	task "aegis/core/domain/task"
 )
 
 // Reader exposes the system metric data other modules currently consume.

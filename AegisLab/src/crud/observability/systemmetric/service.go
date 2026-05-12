@@ -11,7 +11,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	redisinfra "aegis/platform/redis"
-	task "aegis/module/task"
+	task "aegis/core/domain/task"
 
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/shirou/gopsutil/v3/cpu"

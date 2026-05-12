@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	systemmetric "aegis/crud/observability/systemmetric"
-	task "aegis/module/task"
+	task "aegis/core/domain/task"
 )
 
 type runtimeQuerySource interface {

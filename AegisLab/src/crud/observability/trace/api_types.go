@@ -9,7 +9,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
-	task "aegis/module/task"
+	task "aegis/core/domain/task"
 	"aegis/platform/utils"
 )
 

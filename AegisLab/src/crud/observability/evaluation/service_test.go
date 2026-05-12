@@ -3,7 +3,7 @@ package evaluation
 import (
 	"testing"
 
-	execution "aegis/module/execution"
+	execution "aegis/core/domain/execution"
 )
 
 func TestListEvaluationExecutionsRequiresQuerySource(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	helm "aegis/platform/helm"
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
-	task "aegis/module/task"
+	task "aegis/core/domain/task"
 	runtimev1 "aegis/platform/proto/runtime/v1"
 	"aegis/service/consumer"
 

@@ -3,7 +3,7 @@ package observation
 import (
 	"context"
 
-	injection "aegis/module/injection"
+	injection "aegis/core/domain/injection"
 )
 
 type Service struct {

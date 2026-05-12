@@ -9,7 +9,7 @@ import (
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
-	execution "aegis/module/execution"
+	execution "aegis/core/domain/execution"
 	"aegis/service/common"
 	"aegis/platform/utils"
 

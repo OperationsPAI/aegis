@@ -8,9 +8,9 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
-	container "aegis/module/container"
-	dataset "aegis/module/dataset"
-	injection "aegis/module/injection"
+	container "aegis/core/domain/container"
+	dataset "aegis/core/domain/dataset"
+	injection "aegis/core/domain/injection"
 )
 
 type ProjectContainerItem = container.ContainerResp

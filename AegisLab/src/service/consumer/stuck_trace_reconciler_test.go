@@ -11,8 +11,8 @@ import (
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
-	execution "aegis/module/execution"
-	injection "aegis/module/injection"
+	execution "aegis/core/domain/execution"
+	injection "aegis/core/domain/injection"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/google/uuid"

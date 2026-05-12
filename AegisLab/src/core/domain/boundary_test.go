@@ -1,4 +1,4 @@
-package module_test
+package domain_test
 
 import (
 	"go/ast"
@@ -43,10 +43,10 @@ func TestModulePackagesAvoidForeignRepositoryConstructors(t *testing.T) {
 		aliases := map[string]string{}
 		for _, imp := range file.Imports {
 			importPath := strings.Trim(imp.Path.Value, "\"")
-			if !strings.HasPrefix(importPath, "aegis/module/") {
+			if !strings.HasPrefix(importPath, "aegis/core/domain/") {
 				continue
 			}
-			depModule := strings.TrimPrefix(importPath, "aegis/module/")
+			depModule := strings.TrimPrefix(importPath, "aegis/core/domain/")
 			if depModule == ownerModule {
 				continue
 			}
@@ -78,6 +78,6 @@ func TestModulePackagesAvoidForeignRepositoryConstructors(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("scan module packages: %v", err)
+		t.Fatalf("scan domain packages: %v", err)
 	}
 }

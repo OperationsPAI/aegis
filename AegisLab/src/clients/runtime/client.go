@@ -9,10 +9,10 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/httpx"
-	execution "aegis/module/execution"
-	injection "aegis/module/injection"
+	execution "aegis/core/domain/execution"
+	injection "aegis/core/domain/injection"
 	systemmetric "aegis/crud/observability/systemmetric"
-	task "aegis/module/task"
+	task "aegis/core/domain/task"
 	runtimev1 "aegis/platform/proto/runtime/v1"
 
 	"go.uber.org/fx"

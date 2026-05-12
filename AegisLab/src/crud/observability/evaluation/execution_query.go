@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	execution "aegis/module/execution"
+	execution "aegis/core/domain/execution"
 )
 
 type executionQuerySource interface {

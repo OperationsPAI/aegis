@@ -1,7 +1,7 @@
 package router
 
 import (
-	container "aegis/module/container"
+	container "aegis/core/domain/container"
 	label "aegis/crud/iam/label"
 	project "aegis/crud/iam/project"
 	sdk "aegis/crud/observability/sdk"

@@ -8,9 +8,9 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
-	container "aegis/module/container"
-	dataset "aegis/module/dataset"
-	execution "aegis/module/execution"
+	container "aegis/core/domain/container"
+	dataset "aegis/core/domain/dataset"
+	execution "aegis/core/domain/execution"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

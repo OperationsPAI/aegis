@@ -1,11 +1,11 @@
 package app
 
 import (
-	chaossystem "aegis/module/chaossystem"
-	container "aegis/module/container"
-	dataset "aegis/module/dataset"
-	execution "aegis/module/execution"
-	injection "aegis/module/injection"
+	chaossystem "aegis/core/domain/chaossystem"
+	container "aegis/core/domain/container"
+	dataset "aegis/core/domain/dataset"
+	execution "aegis/core/domain/execution"
+	injection "aegis/core/domain/injection"
 	label "aegis/crud/iam/label"
 
 	"go.uber.org/fx"

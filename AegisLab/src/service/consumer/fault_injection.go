@@ -13,7 +13,7 @@ import (
 	"aegis/platform/dto"
 	"aegis/platform/tracing"
 	"aegis/platform/model"
-	injection "aegis/module/injection"
+	injection "aegis/core/domain/injection"
 	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"

@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"aegis/platform/dto"
-	execution "aegis/module/execution"
-	injection "aegis/module/injection"
+	execution "aegis/core/domain/execution"
+	injection "aegis/core/domain/injection"
 	runtimev1 "aegis/platform/proto/runtime/v1"
 
 	"google.golang.org/protobuf/types/known/structpb"

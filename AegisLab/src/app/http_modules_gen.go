@@ -2,14 +2,14 @@
 package app
 
 import (
-	chaossystem "aegis/module/chaossystem"
-	container "aegis/module/container"
-	dataset "aegis/module/dataset"
-	execution "aegis/module/execution"
-	group "aegis/module/group"
-	injection "aegis/module/injection"
-	pedestal "aegis/module/pedestal"
-	task "aegis/module/task"
+	chaossystem "aegis/core/domain/chaossystem"
+	container "aegis/core/domain/container"
+	dataset "aegis/core/domain/dataset"
+	execution "aegis/core/domain/execution"
+	group "aegis/core/domain/group"
+	injection "aegis/core/domain/injection"
+	pedestal "aegis/core/domain/pedestal"
+	task "aegis/core/domain/task"
 	label "aegis/crud/iam/label"
 	project "aegis/crud/iam/project"
 	team "aegis/crud/iam/team"

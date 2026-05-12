@@ -16,7 +16,7 @@ import (
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
-	execution "aegis/module/execution"
+	execution "aegis/core/domain/execution"
 	"aegis/service/common"
 	"aegis/platform/utils"
 

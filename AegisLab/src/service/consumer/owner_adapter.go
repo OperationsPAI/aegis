@@ -6,8 +6,8 @@ import (
 
 	"aegis/platform/dto"
 	"aegis/clients/runtime"
-	execution "aegis/module/execution"
-	injection "aegis/module/injection"
+	execution "aegis/core/domain/execution"
+	injection "aegis/core/domain/injection"
 
 	"go.uber.org/fx"
 )

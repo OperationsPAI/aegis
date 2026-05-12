@@ -9,7 +9,7 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
-	"aegis/module/execution"
+	"aegis/core/domain/execution"
 
 	"github.com/redis/go-redis/v9"
 )

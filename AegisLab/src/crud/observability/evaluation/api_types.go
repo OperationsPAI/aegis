@@ -7,7 +7,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/dto"
 	"aegis/platform/model"
-	execution "aegis/module/execution"
+	execution "aegis/core/domain/execution"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 )
