@@ -15,12 +15,6 @@ services:
     network_mode: host
     volumes:
       - ./:/workspace
-      # config.dev.toml hardcodes host-style absolute paths (workspace =
-      # /home/faydev/...; initialization.data_path = same prefix). Mirror
-      # the source tree at that path inside the container so those
-      # references resolve. The toml is already faydev-bound so this
-      # asymmetry is intentional for the single-dev compose stack.
-      - ./:/home/faydev/workspace/aegis/AegisLab
       - ../chaos-experiment:/chaos-experiment:ro
       # api-gateway's ssoclient module derives its Verifier from a Signer
       # built off the same private key aegis-sso uses. Share the file.
