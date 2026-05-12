@@ -15,7 +15,20 @@ services:
     network_mode: host
     volumes:
       - ./:/workspace
+      # config.dev.toml hardcodes host-style absolute paths (workspace =
+      # /home/faydev/...; initialization.data_path = same prefix). Mirror
+      # the source tree at that path inside the container so those
+      # references resolve. The toml is already faydev-bound so this
+      # asymmetry is intentional for the single-dev compose stack.
+      - ./:/home/faydev/workspace/aegis/AegisLab
       - ../chaos-experiment:/chaos-experiment:ro
+      # api-gateway's ssoclient module derives its Verifier from a Signer
+      # built off the same private key aegis-sso uses. Share the file.
+      - ./data/sso/sso-private.pem:/etc/aegis/sso-private.pem:ro
+      # Same first-boot-secret dump aegis-sso writes; ssoclient's
+      # client_credentials grant reads it when [sso] client_secret is
+      # empty in the toml. Keep :ro — only aegis-sso writes here.
+      - ./data/sso-secrets:/var/lib/aegis-sso:ro
       # Monolith pulls in chaos/k8s modules. Mount the host's kubeconfig
       # plus the minikube cert tree it points at, so dev runs without
       # an in-cluster service account. Override KUBECONFIG_HOST_PATH /
@@ -23,7 +36,7 @@ services:
       - ${KUBECONFIG_HOST_PATH:-${HOME}/.kube/config}:/root/.kube/config:ro
       - ${MINIKUBE_HOST_PATH:-${HOME}/.minikube}:${MINIKUBE_HOST_PATH:-${HOME}/.minikube}:ro
     environment:
-      GOPROXY: https://proxy.golang.org,direct
+      GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     depends_on:
       redis:
@@ -44,7 +57,7 @@ services:
       - ./data/sso/sso-private.pem:/etc/aegis/sso-private.pem:ro
       - ./data/sso-secrets:/var/lib/aegis-sso
     environment:
-      GOPROXY: https://proxy.golang.org,direct
+      GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     ports:
       - "8083:8083"
@@ -62,7 +75,7 @@ services:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
     environment:
-      GOPROXY: https://proxy.golang.org,direct
+      GOPROXY: https://goproxy.cn,direct
     ports:
       - "9094:9094"
     depends_on:
@@ -91,8 +104,9 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
+      - ./data/sso-secrets:/var/lib/aegis-sso:ro
     environment:
-      GOPROXY: https://proxy.golang.org,direct
+      GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     depends_on:
       redis:
@@ -110,9 +124,10 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
+      - ./data/sso-secrets:/var/lib/aegis-sso:ro
       - aegis-blob-scratch:/var/lib/aegis-blob/scratch
     environment:
-      GOPROXY: https://proxy.golang.org,direct
+      GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
       # Override the localfs scratch bucket root so it lives on a named
       # volume instead of the container layer (which dies on rebuild).
@@ -133,8 +148,9 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
+      - ./data/sso-secrets:/var/lib/aegis-sso:ro
     environment:
-      GOPROXY: https://proxy.golang.org,direct
+      GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     depends_on:
       aegis-sso:
@@ -154,8 +170,9 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
+      - ./data/sso-secrets:/var/lib/aegis-sso:ro
     environment:
-      GOPROXY: https://proxy.golang.org,direct
+      GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     depends_on:
       redis:
