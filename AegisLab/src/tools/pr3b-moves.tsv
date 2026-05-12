@@ -1,0 +1,9 @@
+service/consumer	core/orchestrator
+service/common	core/orchestrator/common
+service/logreceiver	core/orchestrator/logreceiver
+service/initialization	boot/seed
+interface/grpc	core/orchestrator/transport/grpc
+interface/worker	core/orchestrator/transport/worker
+interface/receiver	core/orchestrator/transport/receiver
+interface/http	boot/wiring/http
+interface/controller	core/orchestrator/lifecycle
