@@ -36,6 +36,6 @@ func newRateLimiter(cfg Config) *RateLimiter {
 	return NewRateLimiter(cfg.RateLimit, cfg.Routes)
 }
 
-func newAuthenticator(cfg Config, client *ssoclient.Client) *Authenticator {
+func newAuthenticator(cfg Config, client *ssoclient.Client) (*Authenticator, error) {
 	return NewAuthenticator(client, cfg.TrustedHeaderKey)
 }

@@ -5,11 +5,13 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"aegis/config"
 	"aegis/consts"
 	"aegis/module/ssoclient"
 	"aegis/utils"
@@ -27,16 +29,20 @@ type Authenticator struct {
 }
 
 // NewAuthenticator wires the SSO client + the gateway-wide HMAC signing
-// key. An empty key triggers a dev-only fallback so the gateway still
-// boots in local dev; production deployments MUST configure
-// `gateway.trusted_header_key`.
-func NewAuthenticator(client *ssoclient.Client, key string) *Authenticator {
+// key. In production an empty key is fatal: the fallback exists only so
+// `go run ./main.go` works without setup. Configure
+// `gateway.trusted_header_key` (or env GATEWAY_TRUSTED_HEADER_KEY)
+// before deploying.
+func NewAuthenticator(client *ssoclient.Client, key string) (*Authenticator, error) {
 	k := strings.TrimSpace(key)
 	if k == "" {
-		logrus.Warn("gateway: trusted_header_key is empty; using dev fallback. Set [gateway].trusted_header_key in production.")
+		if config.IsProduction() {
+			return nil, errors.New("gateway.trusted_header_key is required in production")
+		}
+		logrus.Warnf("gateway: trusted_header_key is empty; using dev fallback (env=%s). Set [gateway].trusted_header_key in production.", config.Env())
 		k = "aegis-dev-trusted-header-key-do-not-use-in-prod"
 	}
-	return &Authenticator{client: client, key: []byte(k)}
+	return &Authenticator{client: client, key: []byte(k)}, nil
 }
 
 // Middleware returns an http middleware that enforces the route's

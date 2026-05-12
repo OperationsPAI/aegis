@@ -89,7 +89,10 @@ func NewOIDCService(signer *jwtkeys.Signer, clients *Service, users *user.Servic
 	}
 	issuer := config.GetString("sso.issuer")
 	if issuer == "" {
-		issuer = "https://sso.aegis.local"
+		if config.IsProduction() {
+			return nil, errors.New("sso.issuer is required in production")
+		}
+		issuer = "http://localhost:8083"
 	}
 	return &OIDCService{
 		signer:      signer,
