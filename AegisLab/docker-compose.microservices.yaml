@@ -1,4 +1,8 @@
 name: aegislab-dev
+
+include:
+  - docker-compose.yaml
+
 services:
   api-gateway:
     image: golang:1.26-bookworm
@@ -33,6 +37,7 @@ services:
     image: golang:1.26-bookworm
     working_dir: /workspace/src
     command: ["go", "run", "./cmd/aegis-sso", "sso", "--conf", "/workspace/src/config.dev.toml", "--port", "8083"]
+    network_mode: host
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
@@ -40,6 +45,7 @@ services:
       - ./data/sso-secrets:/var/lib/aegis-sso
     environment:
       GOPROXY: https://proxy.golang.org,direct
+      AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     ports:
       - "8083:8083"
     depends_on:

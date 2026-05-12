@@ -98,12 +98,12 @@ seed_secret_dump_path = "/var/lib/aegis-sso/.first-boot-secret"
 # Override per deploy with env SSO_CONSOLE_REDIRECT_URIS.
 # Reconciled into the DB on every boot — change here and restart, no
 # manual DELETE on oidc_clients needed.
-console_redirect_uris = "http://localhost:3101/auth/callback,http://127.0.0.1:3101/auth/callback"
+console_redirect_uris = "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
 # Optional: when non-empty, /authorize 302s here so the console renders
 # the login form instead of SSO's inline <form>. Console must POST the
 # OIDC params (incl. PKCE) back to /login unchanged.
 # Override per deploy with env SSO_LOGIN_REDIRECT.
-login_redirect = "http://localhost:3101/auth/login"
+login_redirect = "http://localhost:3323/auth/login"
 
 # ---------------------------------------------------------------------
 # Blob storage — see RFC docs/rfcs/blob-storage.md and cmd/aegis-blob.

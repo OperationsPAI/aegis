@@ -9,9 +9,9 @@
 aegis.localhost:8443 {
 	tls internal
 
-	# aegis-ui's vite dev server runs on the host at :3100.
+	# aegis-ui's vite dev server runs on the host at :3323.
 	# Vite already proxies /api, /authorize, /token, etc. to the
 	# microservices, so we only need to front the SPA here.
 	# This service uses network_mode: host, so 127.0.0.1 == the host.
-	reverse_proxy 127.0.0.1:3100
+	reverse_proxy 127.0.0.1:3323
 }
