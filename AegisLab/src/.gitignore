@@ -2,3 +2,6 @@
 /internal/dagger
 /internal/querybuilder
 /internal/telemetry
+# Build artifacts from malformed `just build-aegisctl output=<path>` invocations
+# that treat the flag as a literal directory name (e.g. `output=.`, `output=./bin/`).
+/output=*
