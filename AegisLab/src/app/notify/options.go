@@ -37,10 +37,10 @@ func Options(confPath, port string) fx.Option {
 		app.DataOptions(),
 
 		user.Module,
-		// ssoclient brings: jwtkeys.VerifierModule (remote JWKS),
-		// middleware.TokenVerifier, middleware.PermissionChecker.
-		// This binary verifies tokens minted by aegis-sso; it does not
-		// mint its own, so no WithSigner.
+		// Verify-only binary: tokens are minted by aegis-sso, not here.
+		// WithRemoteVerifier wires the JWKS-backed *Verifier; ssoclient
+		// adds TokenVerifier + PermissionChecker on top of it.
+		app.WithRemoteVerifier(),
 		ssoclient.Module,
 		notification.Module,
 

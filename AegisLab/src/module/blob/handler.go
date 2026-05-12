@@ -53,6 +53,43 @@ type listResp struct {
 	NextCursor string         `json:"next_cursor,omitempty"`
 }
 
+// BucketSummary is the wire shape returned by GET /blob/buckets — the
+// UI uses it to populate a bucket picker without hard-coding names.
+type BucketSummary struct {
+	Name           string `json:"name"`
+	Driver         string `json:"driver"`
+	MaxObjectBytes int64  `json:"max_object_bytes,omitempty"`
+	RetentionDays  int    `json:"retention_days,omitempty"`
+	PublicRead     bool   `json:"public_read,omitempty"`
+}
+
+type listBucketsResp struct {
+	Items []BucketSummary `json:"items"`
+}
+
+// ListBuckets surfaces the configured bucket registry so the console
+// can populate a picker without hard-coded names. Auth lives in the
+// route group; ACL filtering by caller is intentionally not done yet —
+// the registry is treated as public catalog data within the platform.
+func (h *Handler) ListBuckets(c *gin.Context) {
+	names := h.svc.Registry().Names()
+	out := make([]BucketSummary, 0, len(names))
+	for _, name := range names {
+		b, err := h.svc.Registry().Lookup(name)
+		if err != nil {
+			continue
+		}
+		out = append(out, BucketSummary{
+			Name:           name,
+			Driver:         b.Config.Driver,
+			MaxObjectBytes: b.Config.MaxObjectBytes,
+			RetentionDays:  b.Config.RetentionDays,
+			PublicRead:     b.Config.PublicRead,
+		})
+	}
+	c.JSON(http.StatusOK, listBucketsResp{Items: out})
+}
+
 // ---- Endpoints ----
 
 func (h *Handler) PresignPut(c *gin.Context) {

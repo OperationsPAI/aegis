@@ -8,7 +8,6 @@ import (
 
 	"aegis/config"
 	"aegis/framework"
-	"aegis/infra/jwtkeys"
 	"aegis/middleware"
 
 	"github.com/sirupsen/logrus"
@@ -116,9 +115,20 @@ func flattenSpecs(rs []framework.PermissionRegistrar) []PermissionSpec {
 //   - *Client (concrete) for callers that need grant/check by struct
 //   - middleware.TokenVerifier (interface) so Task #8 can swap producer auth
 //
-// Reuses jwtkeys.VerifierModule for periodic JWKS refresh.
+// Depends on `*jwtkeys.Verifier` being provided by the caller. Pick one:
+//
+//   - aegis-sso / monolith / runtime-worker bring `app.WithSigner()` —
+//     the signer's pubkey doubles as the verifier (same key both ways).
+//   - verify-only binaries (aegis-notify, aegis-blob, aegis-gateway,
+//     aegis-configcenter) bring `app.WithRemoteVerifier()` — verifier
+//     refreshes from `sso.jwks_url`.
+//
+// Previously this module pulled `jwtkeys.VerifierModule` in transitively,
+// which collided with `app.WithSigner()`'s self-verifier in any process
+// that did both (the monolith — fx blew up at boot with "*jwtkeys.Verifier
+// already provided"). Picking the verifier at the binary level avoids
+// that gotcha and matches the comments on the helpers in app/app.go.
 var Module = fx.Module("ssoclient",
-	jwtkeys.VerifierModule,
 	fx.Provide(newConfig),
 	fx.Provide(NewClient),
 	fx.Provide(asTokenVerifier),

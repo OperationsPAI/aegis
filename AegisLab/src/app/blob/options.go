@@ -32,8 +32,10 @@ func Options(confPath, port string) fx.Option {
 		app.ObserveOptions(),
 		app.DataOptions(),
 
-		// ssoclient brings remote JWKS Verifier, TokenVerifier, and
-		// PermissionChecker. Verify-only binary — no WithSigner.
+		// Verify-only binary: no WithSigner. ssoclient brings
+		// TokenVerifier + PermissionChecker; WithRemoteVerifier supplies
+		// the JWKS-backed *Verifier ssoclient depends on.
+		app.WithRemoteVerifier(),
 		ssoclient.Module,
 		blob.Module,
 

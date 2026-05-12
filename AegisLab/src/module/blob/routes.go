@@ -17,6 +17,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Register: func(v2 *gin.RouterGroup) {
 			g := v2.Group("/blob", middleware.JWTAuth())
 			{
+				g.GET("/buckets", handler.ListBuckets)
 				g.POST("/buckets/:bucket/presign-put", handler.PresignPut)
 				g.POST("/buckets/:bucket/presign-get", handler.PresignGet)
 				g.GET("/buckets/:bucket/objects/:key", handler.InlineGet)

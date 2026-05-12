@@ -4,14 +4,23 @@ services:
     image: golang:1.26-bookworm
     working_dir: /workspace/src
     command: ["go", "run", "./cmd/aegis-api", "-conf", "/workspace/src/config.dev.toml", "-port", "8082"]
+    # Match aegis-sso/notify/blob: host network so the shared dev TOML's
+    # "localhost" DB/redis/etcd targets resolve directly. With host mode
+    # the port maps below are noops (the binary already binds 8082/9096
+    # on the host).
+    network_mode: host
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
+      # Monolith pulls in chaos/k8s modules. Mount the host's kubeconfig
+      # plus the minikube cert tree it points at, so dev runs without
+      # an in-cluster service account. Override KUBECONFIG_HOST_PATH /
+      # MINIKUBE_HOST_PATH if your kubeconfig sits elsewhere.
+      - ${KUBECONFIG_HOST_PATH:-${HOME}/.kube/config}:/root/.kube/config:ro
+      - ${MINIKUBE_HOST_PATH:-${HOME}/.minikube}:${MINIKUBE_HOST_PATH:-${HOME}/.minikube}:ro
     environment:
       GOPROXY: https://proxy.golang.org,direct
-    ports:
-      - "8082:8082"
-      - "9096:9096"   # runtime-intake gRPC
+      AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     depends_on:
       redis:
         condition: service_healthy

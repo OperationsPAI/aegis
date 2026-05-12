@@ -34,6 +34,7 @@ func Options(confPath, port string) fx.Option {
 		app.BaseOptions(confPath),
 		app.ObserveOptions(),
 
+		app.WithRemoteVerifier(),
 		ssoclient.Module,
 		gatewaymod.Module,
 
