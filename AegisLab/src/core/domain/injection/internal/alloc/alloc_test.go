@@ -1,4 +1,4 @@
-package injection
+package alloc
 
 import (
 	"context"
@@ -43,27 +43,27 @@ func withAllocSeams(
 	acquire func(ctx context.Context, r *redisinfra.Gateway, ns string, endTime time.Time, traceID string, now time.Time) error,
 ) {
 	t.Helper()
-	origSetNX := allocSetNXFn
-	origCompareDel := allocCompareDelFn
-	origProbe := nsLockProbeFn
-	origAcquire := nsLockAcquireFn
+	origSetNX := AllocSetNXFn
+	origCompareDel := AllocCompareDelFn
+	origProbe := NsLockProbeFn
+	origAcquire := NsLockAcquireFn
 	if setNX != nil {
-		allocSetNXFn = setNX
+		AllocSetNXFn = setNX
 	}
 	if compareDel != nil {
-		allocCompareDelFn = compareDel
+		AllocCompareDelFn = compareDel
 	}
 	if probe != nil {
-		nsLockProbeFn = probe
+		NsLockProbeFn = probe
 	}
 	if acquire != nil {
-		nsLockAcquireFn = acquire
+		NsLockAcquireFn = acquire
 	}
 	t.Cleanup(func() {
-		allocSetNXFn = origSetNX
-		allocCompareDelFn = origCompareDel
-		nsLockProbeFn = origProbe
-		nsLockAcquireFn = origAcquire
+		AllocSetNXFn = origSetNX
+		AllocCompareDelFn = origCompareDel
+		NsLockProbeFn = origProbe
+		NsLockAcquireFn = origAcquire
 	})
 }
 
@@ -186,7 +186,7 @@ func TestAllocateReleaseUsesCompareAndDelete(t *testing.T) {
 		compareDelCalls  int
 		compareDelTrace  string
 		compareDelKey    string
-		expectedAllocKey = fmt.Sprintf(allocLockKeyPattern, system)
+		expectedAllocKey = fmt.Sprintf(AllocLockKeyPattern, system)
 	)
 
 	withAllocSeams(t,
@@ -387,7 +387,7 @@ func TestAllocateBootstrapsWhenNoEmptySlotAvailable(t *testing.T) {
 // to >=60s after the #167 review. The previous 10s value let real-world
 // allocations cross the TTL when etcd writes or k8s API hiccuped.
 func TestAllocLockTTLCoversWorstCase(t *testing.T) {
-	if allocLockTTL < 30*time.Second {
-		t.Fatalf("allocLockTTL = %v; expected >=30s to cover worst-case etcd+k8s+viper latency (#166 hardening)", allocLockTTL)
+	if AllocLockTTL < 30*time.Second {
+		t.Fatalf("AllocLockTTL = %v; expected >=30s to cover worst-case etcd+k8s+viper latency (#166 hardening)", AllocLockTTL)
 	}
 }
