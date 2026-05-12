@@ -19,6 +19,7 @@ import (
 func Options(confPath string) fx.Option {
 	return fx.Options(
 		app.BaseOptions(confPath),
+		app.WithSigner(),
 		app.ObserveOptions(),
 		app.DataOptions(),
 		app.CoordinationOptions(),

@@ -106,7 +106,10 @@ func newRemoteVerifier(lc fx.Lifecycle) (*Verifier, error) {
 		OnStart: func(ctx context.Context) error {
 			fetchCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
-			return v.Refresh(fetchCtx)
+			if err := v.Refresh(fetchCtx); err != nil {
+				logrus.WithError(err).Warn("jwks initial fetch failed; refresh loop will retry")
+			}
+			return nil
 		},
 	})
 	startRefreshLoop(lc, v)

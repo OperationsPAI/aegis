@@ -23,6 +23,7 @@ import (
 func Options(confPath, port string) fx.Option {
 	return fx.Options(
 		app.BaseOptions(confPath),
+		app.WithSigner(),
 		app.ObserveOptions(),
 		app.DataOptions(),
 		app.CoordinationOptions(),
