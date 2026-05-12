@@ -1,0 +1,8 @@
+module/chaossystem	core/domain/chaossystem
+module/container	core/domain/container
+module/dataset	core/domain/dataset
+module/execution	core/domain/execution
+module/group	core/domain/group
+module/injection	core/domain/injection
+module/pedestal	core/domain/pedestal
+module/task	core/domain/task
