@@ -638,7 +638,7 @@ func (r *Repository) UpsertPermission(name, displayName, description, service, s
 		ScopeType:   scopeType,
 		Status:      consts.CommonEnabled,
 	}
-	if err := r.db.Create(row).Error; err != nil {
+	if err := r.db.Omit("ActiveName").Create(row).Error; err != nil {
 		return false, "", fmt.Errorf("failed to create permission %q: %w", name, err)
 	}
 	return true, "", nil
