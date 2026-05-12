@@ -76,6 +76,10 @@ microservices:
     service:
       type: NodePort
       nodePort: 30082
+    trustedHeaderKey: "aegis-local-dev-trusted-header-key-not-for-prod"
+
+rcabench-frontend:
+  apiTarget: "http://rcabench-aegis-api:8082"
 
 sso:
   service:

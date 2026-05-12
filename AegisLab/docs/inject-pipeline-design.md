@@ -68,7 +68,7 @@ Chaos Mesh CRDs
 - `src/module/injection/submit.go` - batch validation and deduplication for guided configs
 - `src/module/injection/service.go` - guided-only task submission path
 - `src/service/consumer/fault_injection.go` - guided-only runtime execution path
-- `src/cmd/aegisctl/cmd/inject_guided.go` - canonical CLI submit path for guided configs
+- `src/cli/cmd/inject_guided.go` - canonical CLI submit path for guided configs
 - `src/consts/consts.go` and `src/dto/task.go` - task payload keys and task envelope fields
 
 ## Behavior notes

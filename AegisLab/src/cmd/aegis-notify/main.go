@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	notify "aegis/app/notify"
+	notify "aegis/boot/notify"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

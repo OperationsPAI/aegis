@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	gateway "aegis/app/gateway"
+	gateway "aegis/boot/gateway"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

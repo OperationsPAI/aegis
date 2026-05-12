@@ -20,10 +20,10 @@ package main
 import (
 	"os"
 
-	"aegis/app"
-	monolith "aegis/app/monolith"
-	runtimeapp "aegis/app/runtime"
-	sso "aegis/app/sso"
+	"aegis/boot"
+	monolith "aegis/boot/monolith"
+	runtimeapp "aegis/boot/runtime"
+	sso "aegis/boot/sso"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

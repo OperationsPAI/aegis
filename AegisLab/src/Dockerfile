@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y g++ gcc
 COPY chaos-experiment /chaos-experiment
 
 COPY AegisLab/src/go.mod AegisLab/src/go.sum ./
-RUN go env -w GOPROXY=https://goproxy.cn,direct
+RUN go env -w "GOPROXY=https://goproxy.cn|https://proxy.golang.org|direct"
 RUN go mod download
 
 COPY AegisLab/src/ .

@@ -210,4 +210,4 @@ These are the command surfaces this document treats as stable for validation:
 - `aegisctl execute create`
 
 If behavior for one of these commands changes, update this file and the command
-coverage in `src/cmd/aegisctl/cmd/*_test.go` in the same change.
+coverage in `src/cli/cmd/*_test.go` in the same change.

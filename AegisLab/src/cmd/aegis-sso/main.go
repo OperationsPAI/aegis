@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	sso "aegis/app/sso"
+	sso "aegis/boot/sso"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

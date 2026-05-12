@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	monolith "aegis/app/monolith"
+	monolith "aegis/boot/monolith"
 
 	"go.uber.org/fx"
 )

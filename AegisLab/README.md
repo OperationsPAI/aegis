@@ -36,7 +36,7 @@ The dedicated split-process deployment is therefore `api-gateway <-> runtime-wor
 | Path | Purpose |
 | --- | --- |
 | `src/` | Go backend, runtime worker, router, modules, infra |
-| `src/cmd/aegisctl/` | operator CLI |
+| `src/cli/` | operator CLI |
 | `sdk/python/` | Python SDK |
 | `helm/` | Helm chart for the backend stack |
 | `manifests/` | Kubernetes manifests and environment-specific overlays |
@@ -167,7 +167,7 @@ Current docs to read first:
 - [`../docs/deployment/README.md`](../docs/deployment/README.md) - deployment and smoke-test entrypoint map
 - [`../docs/troubleshooting/README.md`](../docs/troubleshooting/README.md) - cross-repo troubleshooting runbooks
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) - module self-registration and cross-module boundary rules
-- [`src/cmd/aegisctl/README.md`](src/cmd/aegisctl/README.md) - CLI usage
+- [`src/cli/README.md`](src/cli/README.md) - CLI usage
 - [`docs/inject-pipeline-design.md`](docs/inject-pipeline-design.md) - guided injection request pipeline
 
 Notes on older docs:

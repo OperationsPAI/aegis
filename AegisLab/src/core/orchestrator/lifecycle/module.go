@@ -1,0 +1,111 @@
+package controller
+
+import (
+	"context"
+	"log"
+	"os"
+
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
+	"aegis/core/orchestrator"
+
+	"github.com/go-logr/stdr"
+	"go.uber.org/fx"
+	"gorm.io/gorm"
+	k8slogger "sigs.k8s.io/controller-runtime/pkg/log"
+)
+
+var Module = fx.Module("controller",
+	fx.Provide(newLifecycle),
+	fx.Invoke(registerLifecycle),
+)
+
+type Params struct {
+	fx.In
+
+	Controller           *k8s.Controller
+	K8sGateway           *k8s.Gateway
+	RedisGateway         *redis.Gateway
+	DB                   *gorm.DB
+	Monitor              consumer.NamespaceMonitor
+	AlgoLimiter          *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
+	BuildDatapackLimiter *consumer.TokenBucketRateLimiter `name:"build_datapack_limiter"`
+	BatchManager         *consumer.FaultBatchManager
+	ExecutionOwner       consumer.ExecutionOwner
+	InjectionOwner       consumer.InjectionOwner
+}
+
+type Lifecycle struct {
+	params   Params
+	RunFunc  func(context.Context, context.CancelFunc) error
+	StopFunc func()
+}
+
+func newLifecycle(params Params) *Lifecycle {
+	return &Lifecycle{params: params}
+}
+
+func (r *Lifecycle) start(ctx context.Context, cancel context.CancelFunc) error {
+	if r.RunFunc != nil {
+		return r.RunFunc(ctx, cancel)
+	}
+	k8slogger.SetLogger(stdr.New(log.New(os.Stdout, "", log.LstdFlags)))
+	go r.params.Controller.Initialize(
+		ctx,
+		cancel,
+		consumer.NewHandler(
+			r.params.DB,
+			r.params.Monitor,
+			r.params.AlgoLimiter,
+			r.params.BuildDatapackLimiter,
+			r.params.K8sGateway,
+			r.params.RedisGateway,
+			r.params.BatchManager,
+			r.params.ExecutionOwner,
+			r.params.InjectionOwner,
+		),
+	)
+	// Stuck-trace reconciler (issue #293). Runs alongside the chaos-mesh
+	// CRD informer; recovers traces stuck after fault.injection.{started,
+	// completed} when the CRD-success path failed to submit BuildDatapack
+	// (worker restart, in-memory batchManager race, silent postProcess
+	// early-return). Idempotent: a BuildDatapack child task already linked
+	// to the FaultInjection task is the trigger to skip.
+	consumer.StartStuckTraceReconciler(
+		ctx,
+		consumer.NewStuckTraceReconciler(
+			r.params.DB,
+			r.params.RedisGateway,
+			r.params.ExecutionOwner,
+			r.params.InjectionOwner,
+		),
+	)
+	return nil
+}
+
+func (r *Lifecycle) stop() {
+	if r.StopFunc != nil {
+		r.StopFunc()
+	}
+}
+
+func registerLifecycle(lc fx.Lifecycle, runner *Lifecycle) {
+	var (
+		controllerCtx context.Context
+		cancel        context.CancelFunc
+	)
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			controllerCtx, cancel = context.WithCancel(context.WithoutCancel(ctx))
+			return runner.start(controllerCtx, cancel)
+		},
+		OnStop: func(ctx context.Context) error {
+			if cancel != nil {
+				cancel()
+			}
+			runner.stop()
+			return nil
+		},
+	})
+}
