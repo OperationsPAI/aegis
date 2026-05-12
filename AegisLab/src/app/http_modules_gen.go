@@ -2,17 +2,22 @@
 package app
 
 import (
+	blob "aegis/module/blob"
+	blobclient "aegis/module/blobclient"
 	chaossystem "aegis/module/chaossystem"
+	configcenter "aegis/module/configcenter"
+	configcenterclient "aegis/module/configcenterclient"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
 	evaluation "aegis/module/evaluation"
 	execution "aegis/module/execution"
+	gateway "aegis/module/gateway"
 	group "aegis/module/group"
 	injection "aegis/module/injection"
 	label "aegis/module/label"
-	llmeval "aegis/module/llmeval"
 	metric "aegis/module/metric"
 	notification "aegis/module/notification"
+	notificationclient "aegis/module/notificationclient"
 	observation "aegis/module/observation"
 	pedestal "aegis/module/pedestal"
 	project "aegis/module/project"
@@ -30,17 +35,22 @@ import (
 
 func producerHTTPModules() []fx.Option {
 	return []fx.Option{
+		blob.Module,
+		blobclient.Module,
 		chaossystem.Module,
+		configcenter.Module,
+		configcenterclient.Module,
 		container.Module,
 		dataset.Module,
 		evaluation.Module,
 		execution.Module,
+		gateway.Module,
 		group.Module,
 		injection.Module,
 		label.Module,
-		llmeval.Module,
 		metric.Module,
 		notification.Module,
+		notificationclient.Module,
 		observation.Module,
 		pedestal.Module,
 		project.Module,
@@ -58,17 +68,22 @@ func producerHTTPModules() []fx.Option {
 
 func producerHTTPModuleNames() []string {
 	return []string{
+		"blob",
+		"blobclient",
 		"chaossystem",
+		"configcenter",
+		"configcenterclient",
 		"container",
 		"dataset",
 		"evaluation",
 		"execution",
+		"gateway",
 		"group",
 		"injection",
 		"label",
-		"llmeval",
 		"metric",
 		"notification",
+		"notificationclient",
 		"observation",
 		"pedestal",
 		"project",
