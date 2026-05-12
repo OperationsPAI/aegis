@@ -1,11 +1,12 @@
-name: aegislab-microservices
+name: aegislab-dev
 services:
   api-gateway:
-    image: golang:1.24-bookworm
+    image: golang:1.26-bookworm
     working_dir: /workspace/src
     command: ["go", "run", "./cmd/aegis-api", "-conf", "/workspace/src/config.dev.toml", "-port", "8082"]
     volumes:
       - ./:/workspace
+      - ../chaos-experiment:/chaos-experiment:ro
     environment:
       GOPROXY: https://proxy.golang.org,direct
     ports:
@@ -20,11 +21,12 @@ services:
         condition: service_started
 
   aegis-sso:
-    image: golang:1.24-bookworm
+    image: golang:1.26-bookworm
     working_dir: /workspace/src
     command: ["go", "run", "./cmd/aegis-sso", "sso", "--conf", "/workspace/src/config.dev.toml", "--port", "8083"]
     volumes:
       - ./:/workspace
+      - ../chaos-experiment:/chaos-experiment:ro
       - ./data/sso/sso-private.pem:/etc/aegis/sso-private.pem:ro
       - ./data/sso-secrets:/var/lib/aegis-sso
     environment:
@@ -38,11 +40,12 @@ services:
         condition: service_healthy
 
   runtime-worker-service:
-    image: golang:1.24-bookworm
+    image: golang:1.26-bookworm
     working_dir: /workspace/src
     command: ["go", "run", "./cmd/runtime-worker-service", "-conf", "/workspace/src/config.dev.toml"]
     volumes:
       - ./:/workspace
+      - ../chaos-experiment:/chaos-experiment:ro
     environment:
       GOPROXY: https://proxy.golang.org,direct
     ports:
@@ -56,3 +59,98 @@ services:
         condition: service_started
       api-gateway:
         condition: service_started
+
+  # NOTE: all aegis-* go-run entries use `network_mode: host` to match
+  # aegis-sso in docker-compose.yaml. The shared dev TOML
+  # (src/config.dev.toml) points DB/redis/etcd at "localhost"; with
+  # host networking, every service reaches them directly on the host's
+  # exposed ports. Container-name DNS (mysql/redis/etcd) would also
+  # work but only after rewriting the TOML, and we keep one source of
+  # truth for now.
+
+  aegis-notify:
+    image: golang:1.26-bookworm
+    working_dir: /workspace/src
+    command: ["go", "run", "./cmd/aegis-notify", "serve", "--conf", "/workspace/src", "--port", "8084"]
+    network_mode: host
+    volumes:
+      - ./:/workspace
+      - ../chaos-experiment:/chaos-experiment:ro
+    environment:
+      GOPROXY: https://proxy.golang.org,direct
+      AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      aegis-sso:
+        condition: service_started
+
+  aegis-blob:
+    image: golang:1.26-bookworm
+    working_dir: /workspace/src
+    command: ["go", "run", "./cmd/aegis-blob", "serve", "--conf", "/workspace/src", "--port", "8085"]
+    network_mode: host
+    volumes:
+      - ./:/workspace
+      - ../chaos-experiment:/chaos-experiment:ro
+      - aegis-blob-scratch:/var/lib/aegis-blob/scratch
+    environment:
+      GOPROXY: https://proxy.golang.org,direct
+      AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
+      # Override the localfs scratch bucket root so it lives on a named
+      # volume instead of the container layer (which dies on rebuild).
+      BLOB_BUCKETS_SCRATCH_ROOT: /var/lib/aegis-blob/scratch
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      aegis-sso:
+        condition: service_started
+
+  aegis-gateway:
+    image: golang:1.26-bookworm
+    working_dir: /workspace/src
+    command: ["go", "run", "./cmd/aegis-gateway", "serve", "--conf", "/workspace/src", "--port", "8086"]
+    network_mode: host
+    volumes:
+      - ./:/workspace
+      - ../chaos-experiment:/chaos-experiment:ro
+    environment:
+      GOPROXY: https://proxy.golang.org,direct
+      AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
+    depends_on:
+      aegis-sso:
+        condition: service_started
+      aegis-notify:
+        condition: service_started
+      aegis-blob:
+        condition: service_started
+      api-gateway:
+        condition: service_started
+
+  aegis-configcenter:
+    image: golang:1.26-bookworm
+    working_dir: /workspace/src
+    command: ["go", "run", "./cmd/aegis-configcenter", "serve", "--conf", "/workspace/src", "--port", "8087"]
+    network_mode: host
+    volumes:
+      - ./:/workspace
+      - ../chaos-experiment:/chaos-experiment:ro
+    environment:
+      GOPROXY: https://proxy.golang.org,direct
+      AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+      aegis-sso:
+        condition: service_started
+
+volumes:
+  aegis-blob-scratch:
