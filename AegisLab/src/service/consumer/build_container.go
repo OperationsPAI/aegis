@@ -12,8 +12,8 @@ import (
 	"aegis/dto"
 	buildkit "aegis/infra/buildkit"
 	redis "aegis/infra/redis"
+	"aegis/infra/tracing"
 	"aegis/service/common"
-	"aegis/tracing"
 	"aegis/utils"
 
 	con "github.com/docker/cli/cli/config"

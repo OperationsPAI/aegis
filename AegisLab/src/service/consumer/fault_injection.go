@@ -11,9 +11,9 @@ import (
 
 	"aegis/consts"
 	"aegis/dto"
+	"aegis/infra/tracing"
 	"aegis/model"
 	injection "aegis/module/injection"
-	"aegis/tracing"
 	"aegis/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"

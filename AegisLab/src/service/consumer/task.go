@@ -12,9 +12,9 @@ import (
 	"aegis/consts"
 	"aegis/dto"
 	redisinfra "aegis/infra/redis"
+	"aegis/infra/tracing"
 	"aegis/model"
 	"aegis/service/common"
-	"aegis/tracing"
 	"aegis/utils"
 
 	"github.com/prometheus/client_golang/prometheus"

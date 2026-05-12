@@ -8,9 +8,9 @@ import (
 	"aegis/consts"
 	"aegis/dto"
 	redis "aegis/infra/redis"
+	"aegis/infra/tracing"
 	execution "aegis/module/execution"
 	"aegis/service/common"
-	"aegis/tracing"
 	"aegis/utils"
 
 	"github.com/sirupsen/logrus"

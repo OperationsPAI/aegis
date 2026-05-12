@@ -7,7 +7,7 @@ import (
 
 	"aegis/consts"
 	"aegis/dto"
-	"aegis/tracing"
+	"aegis/infra/tracing"
 
 	"github.com/sirupsen/logrus"
 )

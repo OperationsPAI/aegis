@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"aegis/config"
-	"aegis/tracing"
+	"aegis/infra/tracing"
 
 	"github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/action"

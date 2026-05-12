@@ -10,7 +10,7 @@ import (
 
 	"aegis/config"
 	"aegis/consts"
-	"aegis/tracing"
+	"aegis/infra/tracing"
 	"aegis/utils"
 
 	"github.com/sirupsen/logrus"

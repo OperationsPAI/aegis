@@ -15,9 +15,9 @@ import (
 	"aegis/dto"
 	k8s "aegis/infra/k8s"
 	redis "aegis/infra/redis"
+	"aegis/infra/tracing"
 	execution "aegis/module/execution"
 	"aegis/service/common"
-	"aegis/tracing"
 	"aegis/utils"
 
 	"github.com/sirupsen/logrus"

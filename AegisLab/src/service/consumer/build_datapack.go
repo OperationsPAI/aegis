@@ -21,8 +21,8 @@ import (
 	db "aegis/infra/db"
 	k8s "aegis/infra/k8s"
 	redis "aegis/infra/redis"
+	"aegis/infra/tracing"
 	"aegis/service/common"
-	"aegis/tracing"
 	"aegis/utils"
 )
 
