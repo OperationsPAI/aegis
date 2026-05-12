@@ -104,3 +104,25 @@ console_redirect_uris = "http://localhost:3101/auth/callback,http://127.0.0.1:31
 # OIDC params (incl. PKCE) back to /login unchanged.
 # Override per deploy with env SSO_LOGIN_REDIRECT.
 login_redirect = "http://localhost:3101/auth/login"
+
+# ---------------------------------------------------------------------
+# Blob storage — see RFC docs/rfcs/blob-storage.md and cmd/aegis-blob.
+# In dev we only declare the localfs `scratch` bucket; real buckets
+# (dataset-artifacts, user-avatars) come online in Phase B.
+# ---------------------------------------------------------------------
+[blob]
+# HMAC key used by the localfs driver to sign /raw/:token URLs.
+# Override per deploy via env (set blob.signing_key_env = "BLOB_SIGNING_KEY").
+signing_key = "dev-only-blob-signing-key-change-me"
+
+[blob.client]
+mode = "local"
+# endpoint = "http://aegis-blob:8085"   # only used when mode = "remote"
+max_retries = 2
+
+[blob.buckets.scratch]
+driver = "localfs"
+root = "/tmp/aegis-blob/scratch"
+max_object_bytes = 5_368_709_120
+retention_days = 7
+inline_max_bytes = 65_536
