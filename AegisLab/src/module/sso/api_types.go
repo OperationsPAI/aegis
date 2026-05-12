@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"aegis/consts"
 	"aegis/model"
 )
 
@@ -95,10 +96,10 @@ type RotateSecretResp struct {
 }
 
 var allowedGrants = map[string]struct{}{
-	"authorization_code": {},
-	"refresh_token":      {},
-	"client_credentials": {},
-	"password":           {},
+	consts.OIDCGrantAuthorizationCode: {},
+	consts.OIDCGrantRefreshToken:      {},
+	consts.OIDCGrantClientCredentials: {},
+	consts.OIDCGrantPassword:          {},
 }
 
 func isAllowedGrant(g string) bool {

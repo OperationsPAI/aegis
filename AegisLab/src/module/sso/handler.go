@@ -97,7 +97,7 @@ func SetAdminScopeResolver(r AdminScopeResolver) { scopeResolver = r }
 // context for handlers to consult when filtering responses.
 func requireAdminOrService(c *gin.Context) bool {
 	ctx := &AdminContext{}
-	if v, ok := c.Get("token_type"); ok {
+	if v, ok := c.Get(consts.CtxKeyTokenType); ok {
 		if t, _ := v.(string); t == "service" {
 			ctx.ServiceTokenFor = "service"
 			if sv, ok := c.Get("service"); ok {
@@ -107,13 +107,13 @@ func requireAdminOrService(c *gin.Context) bool {
 			}
 		}
 	}
-	if v, ok := c.Get("is_admin"); ok {
+	if v, ok := c.Get(consts.CtxKeyIsAdmin); ok {
 		if a, _ := v.(bool); a {
 			ctx.IsGlobalAdmin = true
 		}
 	}
 	if !ctx.IsGlobalAdmin && !ctx.IsServiceToken() && scopeResolver != nil {
-		if v, ok := c.Get("user_id"); ok {
+		if v, ok := c.Get(consts.CtxKeyUserID); ok {
 			if uid, _ := v.(int); uid > 0 {
 				scopes, err := scopeResolver.ListServiceAdminScopes(uid)
 				if err == nil {

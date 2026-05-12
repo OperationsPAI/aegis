@@ -3,11 +3,27 @@ package middleware
 import (
 	"net/http"
 
+	"aegis/consts"
 	"aegis/dto"
 	"aegis/utils"
 
 	"github.com/gin-gonic/gin"
 )
+
+// setUserClaims stashes JWT claims onto the Gin context using the canonical
+// keys from consts/context_keys.go. Both JWTAuth and OptionalJWTAuth funnel
+// successful validations through this helper so the key list is in one place.
+func setUserClaims(c *gin.Context, claims *utils.Claims) {
+	c.Set(consts.CtxKeyUserID, claims.UserID)
+	c.Set(consts.CtxKeyUsername, claims.Username)
+	c.Set(consts.CtxKeyEmail, claims.Email)
+	c.Set(consts.CtxKeyIsActive, claims.IsActive)
+	c.Set(consts.CtxKeyIsAdmin, claims.IsAdmin)
+	c.Set(consts.CtxKeyUserRoles, claims.Roles)
+	c.Set(consts.CtxKeyAuthType, claims.AuthType)
+	c.Set(consts.CtxKeyAPIKeyID, claims.APIKeyID)
+	c.Set(consts.CtxKeyAPIKeyScopes, append([]string(nil), claims.APIKeyScopes...))
+}
 
 func extractTokenFromHeader(header string) (string, error) {
 	return utils.ExtractTokenFromHeader(header)
@@ -32,17 +48,9 @@ func JWTAuth() gin.HandlerFunc {
 		claims, err := service.VerifyToken(c.Request.Context(), token)
 		if err == nil {
 			// Valid user token - store user information in context
-			c.Set("user_id", claims.UserID)
-			c.Set("username", claims.Username)
-			c.Set("email", claims.Email)
-			c.Set("is_active", claims.IsActive)
-			c.Set("is_admin", claims.IsAdmin)
-			c.Set("user_roles", claims.Roles)
-			c.Set("auth_type", claims.AuthType)
-			c.Set("api_key_id", claims.APIKeyID)
-			c.Set("api_key_scopes", append([]string(nil), claims.APIKeyScopes...))
+			setUserClaims(c, claims)
 			c.Set("token_expires_at", claims.ExpiresAt.Time)
-			c.Set("token_type", "user")
+			c.Set(consts.CtxKeyTokenType, "user")
 			c.Next()
 			return
 		}
@@ -51,10 +59,10 @@ func JWTAuth() gin.HandlerFunc {
 		serviceClaims, serviceErr := service.VerifyServiceToken(c.Request.Context(), token)
 		if serviceErr == nil {
 			// Valid service token - store service information in context
-			c.Set("task_id", serviceClaims.TaskID)
+			c.Set(consts.CtxKeyTaskID, serviceClaims.TaskID)
 			c.Set("token_expires_at", serviceClaims.ExpiresAt.Time)
-			c.Set("token_type", "service")
-			c.Set("is_service_token", true)
+			c.Set(consts.CtxKeyTokenType, "service")
+			c.Set(consts.CtxKeyIsServiceToken, true)
 			c.Next()
 			return
 		}
@@ -91,17 +99,9 @@ func OptionalJWTAuth() gin.HandlerFunc {
 		claims, err := service.VerifyToken(c.Request.Context(), token)
 		if err == nil {
 			// Valid user token, set user information
-			c.Set("user_id", claims.UserID)
-			c.Set("username", claims.Username)
-			c.Set("email", claims.Email)
-			c.Set("is_active", claims.IsActive)
-			c.Set("is_admin", claims.IsAdmin)
-			c.Set("user_roles", claims.Roles)
-			c.Set("auth_type", claims.AuthType)
-			c.Set("api_key_id", claims.APIKeyID)
-			c.Set("api_key_scopes", append([]string(nil), claims.APIKeyScopes...))
+			setUserClaims(c, claims)
 			c.Set("token_expires_at", claims.ExpiresAt.Time)
-			c.Set("token_type", "user")
+			c.Set(consts.CtxKeyTokenType, "user")
 			c.Next()
 			return
 		}
@@ -110,10 +110,10 @@ func OptionalJWTAuth() gin.HandlerFunc {
 		serviceClaims, serviceErr := service.VerifyServiceToken(c.Request.Context(), token)
 		if serviceErr == nil {
 			// Valid service token, set service information
-			c.Set("task_id", serviceClaims.TaskID)
+			c.Set(consts.CtxKeyTaskID, serviceClaims.TaskID)
 			c.Set("token_expires_at", serviceClaims.ExpiresAt.Time)
-			c.Set("token_type", "service")
-			c.Set("is_service_token", true)
+			c.Set(consts.CtxKeyTokenType, "service")
+			c.Set(consts.CtxKeyIsServiceToken, true)
 			c.Next()
 			return
 		}
@@ -125,7 +125,7 @@ func OptionalJWTAuth() gin.HandlerFunc {
 
 // GetCurrentUserID extracts current user ID from context
 func GetCurrentUserID(c *gin.Context) (int, bool) {
-	userID, exists := c.Get("user_id")
+	userID, exists := c.Get(consts.CtxKeyUserID)
 	if !exists {
 		return 0, false
 	}
@@ -136,7 +136,7 @@ func GetCurrentUserID(c *gin.Context) (int, bool) {
 
 // GetCurrentUsername extracts current username from context
 func GetCurrentUsername(c *gin.Context) (string, bool) {
-	username, exists := c.Get("username")
+	username, exists := c.Get(consts.CtxKeyUsername)
 	if !exists {
 		return "", false
 	}
@@ -147,7 +147,7 @@ func GetCurrentUsername(c *gin.Context) (string, bool) {
 
 // GetCurrentUserEmail extracts current user email from context
 func GetCurrentUserEmail(c *gin.Context) (string, bool) {
-	email, exists := c.Get("email")
+	email, exists := c.Get(consts.CtxKeyEmail)
 	if !exists {
 		return "", false
 	}
@@ -158,7 +158,7 @@ func GetCurrentUserEmail(c *gin.Context) (string, bool) {
 
 // IsCurrentUserActive checks if current user is active
 func IsCurrentUserActive(c *gin.Context) bool {
-	isActive, exists := c.Get("is_active")
+	isActive, exists := c.Get(consts.CtxKeyIsActive)
 	if !exists {
 		return false
 	}
@@ -169,7 +169,7 @@ func IsCurrentUserActive(c *gin.Context) bool {
 
 // IsServiceToken checks if the current request is authenticated with a service token
 func IsServiceToken(c *gin.Context) bool {
-	isService, exists := c.Get("is_service_token")
+	isService, exists := c.Get(consts.CtxKeyIsServiceToken)
 	if !exists {
 		return false
 	}
@@ -180,7 +180,7 @@ func IsServiceToken(c *gin.Context) bool {
 
 // GetTokenType returns the type of token used for authentication ("user", "service", or "")
 func GetTokenType(c *gin.Context) string {
-	tokenType, exists := c.Get("token_type")
+	tokenType, exists := c.Get(consts.CtxKeyTokenType)
 	if !exists {
 		return ""
 	}
@@ -194,7 +194,7 @@ func GetTokenType(c *gin.Context) string {
 
 // IsCurrentUserAdmin checks if current user has system admin role (from JWT token)
 func IsCurrentUserAdmin(c *gin.Context) bool {
-	isAdmin, exists := c.Get("is_admin")
+	isAdmin, exists := c.Get(consts.CtxKeyIsAdmin)
 	if !exists {
 		return false
 	}
@@ -205,7 +205,7 @@ func IsCurrentUserAdmin(c *gin.Context) bool {
 
 // GetCurrentUserRoles returns the roles of the current user (from JWT token)
 func GetCurrentUserRoles(c *gin.Context) ([]string, bool) {
-	roles, exists := c.Get("user_roles")
+	roles, exists := c.Get(consts.CtxKeyUserRoles)
 	if !exists {
 		return nil, false
 	}
@@ -217,7 +217,7 @@ func GetCurrentUserRoles(c *gin.Context) ([]string, bool) {
 // GetCurrentAPIKeyScopes returns API key scopes when the current bearer token
 // was issued via Key ID / Key Secret exchange.
 func GetCurrentAPIKeyScopes(c *gin.Context) ([]string, bool) {
-	scopes, exists := c.Get("api_key_scopes")
+	scopes, exists := c.Get(consts.CtxKeyAPIKeyScopes)
 	if !exists {
 		return nil, false
 	}
@@ -228,7 +228,7 @@ func GetCurrentAPIKeyScopes(c *gin.Context) ([]string, bool) {
 
 // GetAuthType returns the auth_type claim of the current bearer token when present.
 func GetAuthType(c *gin.Context) string {
-	authType, exists := c.Get("auth_type")
+	authType, exists := c.Get(consts.CtxKeyAuthType)
 	if !exists {
 		return ""
 	}
@@ -242,7 +242,7 @@ func GetAuthType(c *gin.Context) string {
 
 // GetServiceTaskID extracts task ID from service token context
 func GetServiceTaskID(c *gin.Context) (string, bool) {
-	taskID, exists := c.Get("task_id")
+	taskID, exists := c.Get(consts.CtxKeyTaskID)
 	if !exists {
 		return "", false
 	}

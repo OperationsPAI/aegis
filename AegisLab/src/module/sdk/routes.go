@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"aegis/consts"
 	"aegis/framework"
 	"aegis/middleware"
 
@@ -17,14 +18,14 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceSDK,
 		Name:     "sdk",
 		Register: func(v2 *gin.RouterGroup) {
-			sdkEval := v2.Group("/sdk/evaluations", middleware.JWTAuth(), middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:evaluations:*", "sdk:evaluations:read"))
+			sdkEval := v2.Group("/sdk/evaluations", middleware.JWTAuth(), middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead))
 			{
 				sdkEval.GET("", handler.ListEvaluations)
 				sdkEval.GET("/experiments", handler.ListExperiments)
 				sdkEval.GET("/:id", handler.GetEvaluation)
 			}
 
-			sdkData := v2.Group("/sdk/datasets", middleware.JWTAuth(), middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:datasets:*", "sdk:datasets:read"))
+			sdkData := v2.Group("/sdk/datasets", middleware.JWTAuth(), middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKDatasetsAll, consts.ScopeSDKDatasetsRead))
 			{
 				sdkData.GET("", handler.ListDatasetSamples)
 			}

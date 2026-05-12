@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"aegis/consts"
 	"aegis/framework"
 	"aegis/middleware"
 
@@ -14,7 +15,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Register: func(v2 *gin.RouterGroup) {
 			executions := v2.Group("/executions", middleware.JWTAuth())
 			{
-				executions.GET("/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:read"), handler.ListAvailableExecutionLabels)
+				executions.GET("/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.ListAvailableExecutionLabels)
 				executions.POST("/batch-delete", handler.BatchDeleteExecutions)
 				executions.POST("/compare", handler.CompareExecutions)
 			}
@@ -45,8 +46,8 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 
 			executions := v2.Group("/executions", middleware.JWTAuth())
 			{
-				executions.GET("/:execution_id", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:read"), handler.GetExecution)
-				executions.PATCH("/:execution_id/labels", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:executions:*", "sdk:executions:write"), handler.ManageExecutionCustomLabels)
+				executions.GET("/:execution_id", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.GetExecution)
+				executions.PATCH("/:execution_id/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsWrite), handler.ManageExecutionCustomLabels)
 			}
 
 			runtime := v2.Group("/executions", middleware.JWTAuth(), middleware.RequireServiceTokenAuth())

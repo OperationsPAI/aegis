@@ -1,8 +1,10 @@
 package middleware
 
 import (
-	"aegis/httpx"
 	"regexp"
+
+	"aegis/consts"
+	"aegis/httpx"
 
 	"github.com/google/uuid"
 
@@ -36,7 +38,7 @@ func GroupID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method == "POST" {
 			groupID := uuid.New().String()
-			c.Set("groupID", groupID)
+			c.Set(consts.CtxKeyGroupID, groupID)
 			c.Writer.Header().Set("X-Group-ID", groupID)
 		}
 
@@ -59,7 +61,7 @@ func RequestID() gin.HandlerFunc {
 
 func TracerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		groupID := c.GetString("groupID")
+		groupID := c.GetString(consts.CtxKeyGroupID)
 
 		// Use request method and path for span name
 		spanName := c.Request.Method + " " + c.Request.URL.Path

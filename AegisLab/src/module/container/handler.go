@@ -520,7 +520,7 @@ func (h *Handler) SetContainerVersionImage(c *gin.Context) {
 //	@Router			/api/v2/containers/build [post]
 //	@x-api-type		{"portal":"true"}
 func (h *Handler) SubmitContainerBuilding(c *gin.Context) {
-	groupID := c.GetString("groupID")
+	groupID := c.GetString(consts.CtxKeyGroupID)
 	userID, exists := middleware.GetCurrentUserID(c)
 	if !exists || userID <= 0 {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")

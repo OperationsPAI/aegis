@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"aegis/consts"
 	"aegis/dto"
 
 	"github.com/gin-gonic/gin"
@@ -15,21 +16,21 @@ func apiKeyScopeMatchesTarget(scope, target string) bool {
 	if scope == "" || target == "" {
 		return false
 	}
-	if scope == "*" {
+	if scope == consts.ScopeWildcard {
 		return true
 	}
 
-	targetParts := strings.Split(target, ":")
-	scopeParts := strings.Split(scope, ":")
+	targetParts := strings.Split(target, consts.ScopeSeparator)
+	scopeParts := strings.Split(scope, consts.ScopeSeparator)
 	if len(scopeParts) > len(targetParts) {
 		return false
 	}
 	for len(scopeParts) < len(targetParts) {
-		scopeParts = append(scopeParts, "*")
+		scopeParts = append(scopeParts, consts.ScopeWildcard)
 	}
 	for i := range targetParts {
 		part := strings.TrimSpace(scopeParts[i])
-		if part == "*" {
+		if part == consts.ScopeWildcard {
 			continue
 		}
 		if part != targetParts[i] {
@@ -61,7 +62,7 @@ func RequireHumanUserAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if GetAuthType(c) == "api_key" {
+		if GetAuthType(c) == consts.AuthTypeAPIKey {
 			dto.ErrorResponse(c, http.StatusForbidden, "User session required, API key token not allowed")
 			c.Abort()
 			return
@@ -82,7 +83,7 @@ func RequireAPIKeyScopesAny(targets ...string) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		if GetAuthType(c) != "api_key" {
+		if GetAuthType(c) != consts.AuthTypeAPIKey {
 			c.Next()
 			return
 		}

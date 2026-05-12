@@ -1,6 +1,7 @@
 package evaluation
 
 import (
+	"aegis/consts"
 	"aegis/framework"
 	"aegis/middleware"
 
@@ -33,10 +34,10 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 		Register: func(v2 *gin.RouterGroup) {
 			evaluations := v2.Group("/evaluations", middleware.JWTAuth())
 			{
-				evaluations.POST("/datapacks", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:evaluations:*", "sdk:evaluations:read"), handler.ListDatapackEvaluationResults)
-				evaluations.POST("/datasets", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:evaluations:*", "sdk:evaluations:read"), handler.ListDatasetEvaluationResults)
-				evaluations.GET("", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:evaluations:*", "sdk:evaluations:read"), handler.ListEvaluations)
-				evaluations.GET("/:id", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:evaluations:*", "sdk:evaluations:read"), handler.GetEvaluation)
+				evaluations.POST("/datapacks", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListDatapackEvaluationResults)
+				evaluations.POST("/datasets", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListDatasetEvaluationResults)
+				evaluations.GET("", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListEvaluations)
+				evaluations.GET("/:id", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.GetEvaluation)
 			}
 		},
 	}

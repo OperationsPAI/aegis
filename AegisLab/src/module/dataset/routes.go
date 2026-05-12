@@ -1,6 +1,7 @@
 package dataset
 
 import (
+	"aegis/consts"
 	"aegis/framework"
 	"aegis/middleware"
 
@@ -55,7 +56,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 					datasetVersions.GET(
 						"/:version_id/download",
 						middleware.RequireDatasetVersionDownload,
-						middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:datasets:*", "sdk:datasets:read"),
+						middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKDatasetsAll, consts.ScopeSDKDatasetsRead),
 						handler.DownloadDatasetVersion,
 					)
 				}
@@ -63,7 +64,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 				datasets.PATCH(
 					"/:dataset_id/version/:version_id/injections",
 					middleware.RequireDatasetVersionUpdate,
-					middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:datasets:*", "sdk:datasets:write"),
+					middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKDatasetsAll, consts.ScopeSDKDatasetsWrite),
 					handler.ManageDatasetVersionInjections,
 				)
 			}

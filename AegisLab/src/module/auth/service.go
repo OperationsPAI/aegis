@@ -490,7 +490,7 @@ func (s *Service) ExchangeAPIKeyToken(ctx context.Context, req *APIKeyTokenReq, 
 
 	return &APIKeyTokenResp{
 		Token:     token,
-		TokenType: "Bearer",
+		TokenType: consts.TokenTypeBearer,
 		ExpiresAt: expiresAt,
 		AuthType:  "api_key",
 		KeyID:     key.KeyID,

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/consts"
 	"aegis/module/ssoclient"
 	"aegis/utils"
 
@@ -124,7 +125,7 @@ func (a *Authenticator) injectServiceHeaders(r *http.Request, c *utils.ServiceCl
 	headers := map[string]string{
 		HeaderUserID:    "0",
 		HeaderUserEmail: "",
-		HeaderRoles:     "service:" + c.Service,
+		HeaderRoles:     consts.ClaimSubjectServicePrefix + c.Service,
 		HeaderTokenAud:  aud,
 		HeaderTokenJti:  c.ID,
 	}
@@ -156,7 +157,7 @@ func bearer(r *http.Request) string {
 	if !strings.HasPrefix(strings.ToLower(h), "bearer ") {
 		return ""
 	}
-	return strings.TrimSpace(h[len("Bearer "):])
+	return strings.TrimSpace(h[len(consts.AuthSchemeBearer):])
 }
 
 func checkAudience(c *utils.Claims, want []string) error {

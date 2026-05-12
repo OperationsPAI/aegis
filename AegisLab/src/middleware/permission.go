@@ -51,13 +51,13 @@ func extractPermissionContext(c *gin.Context) (*permissionContext, string) {
 
 	// Get admin status and roles from context (already validated in JWT)
 	isAdmin := false
-	if val, exists := c.Get("is_admin"); exists {
+	if val, exists := c.Get(consts.CtxKeyIsAdmin); exists {
 		if v, ok := val.(bool); ok {
 			isAdmin = v
 		}
 	}
 	roles := []string{}
-	if val, exists := c.Get("user_roles"); exists {
+	if val, exists := c.Get(consts.CtxKeyUserRoles); exists {
 		if v, ok := val.([]string); ok {
 			roles = v
 		}
@@ -104,7 +104,7 @@ func extractPermissionContext(c *gin.Context) (*permissionContext, string) {
 }
 
 func (ctx *permissionContext) isAPIKeyAuth() bool {
-	return ctx != nil && ctx.authType == "api_key"
+	return ctx != nil && ctx.authType == consts.AuthTypeAPIKey
 }
 
 func (ctx *permissionContext) scopeAllowsPermission(permission consts.PermissionRule) bool {

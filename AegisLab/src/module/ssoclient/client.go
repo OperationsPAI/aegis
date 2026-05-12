@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"aegis/consts"
 	"aegis/infra/jwtkeys"
 	"aegis/utils"
 
@@ -227,7 +228,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body, out any)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("Authorization", "Bearer "+tok)
+	req.Header.Set("Authorization", consts.AuthSchemeBearer+tok)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -273,7 +274,7 @@ func (c *Client) getServiceToken(ctx context.Context) (string, error) {
 
 func (c *Client) refreshServiceToken(ctx context.Context) (string, error) {
 	form := url.Values{}
-	form.Set("grant_type", "client_credentials")
+	form.Set("grant_type", consts.OIDCGrantClientCredentials)
 	form.Set("client_id", c.cfg.ClientID)
 	form.Set("client_secret", c.cfg.ClientSecret)
 

@@ -749,7 +749,7 @@ func (h *Handler) listFaultInjectionWithIssues(c *gin.Context, projectID *int) {
 }
 
 func (h *Handler) submitFaultInjection(c *gin.Context, projectID *int) {
-	groupID := c.GetString("groupID")
+	groupID := c.GetString(consts.CtxKeyGroupID)
 	userID, exists := middleware.GetCurrentUserID(c)
 	if !exists {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -793,7 +793,7 @@ func (h *Handler) submitFaultInjection(c *gin.Context, projectID *int) {
 }
 
 func (h *Handler) submitDatapackBuilding(c *gin.Context, projectID *int) {
-	groupID := c.GetString("groupID")
+	groupID := c.GetString(consts.CtxKeyGroupID)
 	userID, exists := middleware.GetCurrentUserID(c)
 	if !exists {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")

@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"aegis/consts"
 	"aegis/framework"
 	"aegis/middleware"
 
@@ -16,9 +17,9 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 		Register: func(v2 *gin.RouterGroup) {
 			metrics := v2.Group("/metrics", middleware.JWTAuth())
 			{
-				metrics.GET("/algorithms", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:metrics:*", "sdk:metrics:read"), handler.GetAlgorithmMetrics)
-				metrics.GET("/executions", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:metrics:*", "sdk:metrics:read"), handler.GetExecutionMetrics)
-				metrics.GET("/injections", middleware.RequireAPIKeyScopesAny("sdk:*", "sdk:metrics:*", "sdk:metrics:read"), handler.GetInjectionMetrics)
+				metrics.GET("/algorithms", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKMetricsAll, consts.ScopeSDKMetricsRead), handler.GetAlgorithmMetrics)
+				metrics.GET("/executions", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKMetricsAll, consts.ScopeSDKMetricsRead), handler.GetExecutionMetrics)
+				metrics.GET("/injections", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKMetricsAll, consts.ScopeSDKMetricsRead), handler.GetInjectionMetrics)
 			}
 		},
 	}

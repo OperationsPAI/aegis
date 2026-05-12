@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"aegis/consts"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -113,11 +115,11 @@ func generateUserToken(userID int, username, email string, isActive, isAdmin boo
 		APIKeyID:     apiKeyID,
 		APIKeyScopes: append([]string(nil), apiKeyScopes...),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        fmt.Sprintf("jwt_%s_%d_%d", authType, userID, time.Now().Unix()),
+			ID:        fmt.Sprintf("%s_%s_%d_%d", consts.JWTJTIPrefixUser, authType, userID, time.Now().Unix()),
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "rcabench",
+			Issuer:    consts.JWTIssuerUser,
 			Subject:   strconv.Itoa(userID),
 		},
 	}
@@ -139,7 +141,7 @@ func GenerateRefreshToken(userID int, username string, priv *rsa.PrivateKey, kid
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "rcabench-refresh",
+			Issuer:    consts.JWTIssuerRefresh,
 			Subject:   strconv.Itoa(userID),
 		},
 	}
@@ -157,11 +159,11 @@ func GenerateServiceToken(taskID string, priv *rsa.PrivateKey, kid string) (stri
 	claims := &ServiceClaims{
 		TaskID: taskID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        fmt.Sprintf("svc_%s_%d", taskID, time.Now().Unix()),
+			ID:        fmt.Sprintf("%s_%s_%d", consts.JWTJTIPrefixService, taskID, time.Now().Unix()),
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "rcabench-service",
+			Issuer:    consts.JWTIssuerService,
 			Subject:   taskID,
 		},
 	}
@@ -239,9 +241,9 @@ func ParseServiceToken(tokenString string, resolve PublicKeyResolver) (*ServiceC
 		return nil, errors.New("invalid service token")
 	}
 
-	// Accept legacy "rcabench-service" issuer + any token tagged token_type=service
-	// (OIDC client_credentials grants from sso use the issuer URL).
-	if claims.Issuer != "rcabench-service" && claims.TokenType != "service" {
+	// Accept legacy consts.JWTIssuerService issuer + any token tagged
+	// token_type=consts.TokenTypeService (OIDC client_credentials grants from sso use the issuer URL).
+	if claims.Issuer != consts.JWTIssuerService && claims.TokenType != consts.TokenTypeService {
 		return nil, errors.New("not a valid service token")
 	}
 
@@ -270,7 +272,7 @@ func ExtractTokenFromHeader(header string) (string, error) {
 	}
 
 	parts := strings.Split(header, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
+	if len(parts) != 2 || parts[0] != consts.TokenTypeBearer {
 		return "", errors.New("invalid authorization header format")
 	}
 

@@ -88,7 +88,7 @@ func (h *Handler) ListProjectExecutions(c *gin.Context) {
 //	@Router			/api/v2/projects/{project_id}/executions/execute [post]
 //	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) SubmitAlgorithmExecution(c *gin.Context) {
-	groupID := c.GetString("groupID")
+	groupID := c.GetString(consts.CtxKeyGroupID)
 	userID, exists := middleware.GetCurrentUserID(c)
 	if !exists {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")

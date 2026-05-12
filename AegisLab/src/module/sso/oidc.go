@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"aegis/config"
+	"aegis/consts"
 	"aegis/infra/jwtkeys"
 	"aegis/infra/redis"
 	"aegis/model"
@@ -122,10 +123,10 @@ func (s *OIDCService) discovery(c *gin.Context) {
 		"jwks_uri":                              iss + "/.well-known/jwks.json",
 		"end_session_endpoint":                  iss + "/v1/logout",
 		"response_types_supported":              []string{"code"},
-		"grant_types_supported":                 []string{"authorization_code", "refresh_token", "client_credentials", "password"},
+		"grant_types_supported":                 consts.OIDCGrantsSupported,
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{"RS256"},
-		"scopes_supported":                      []string{"openid", "profile", "email"},
+		"scopes_supported":                      consts.OIDCScopesSupported,
 		"token_endpoint_auth_methods_supported": []string{"client_secret_basic", "client_secret_post"},
 	})
 }
@@ -155,7 +156,7 @@ func (s *OIDCService) authorizeGet(c *gin.Context) {
 		c.String(http.StatusBadRequest, "unknown client_id")
 		return
 	}
-	if !grantAllowed(cli, "authorization_code") {
+	if !grantAllowed(cli, consts.OIDCGrantAuthorizationCode) {
 		c.String(http.StatusBadRequest, "client not configured for authorization_code")
 		return
 	}
@@ -169,9 +170,9 @@ func (s *OIDCService) authorizeGet(c *gin.Context) {
 	}
 	if codeChallenge != "" {
 		if codeChallengeMethod == "" {
-			codeChallengeMethod = "plain"
+			codeChallengeMethod = consts.PKCEMethodPlain
 		}
-		if codeChallengeMethod != "S256" && codeChallengeMethod != "plain" {
+		if codeChallengeMethod != consts.PKCEMethodS256 && codeChallengeMethod != consts.PKCEMethodPlain {
 			c.String(http.StatusBadRequest, "unsupported code_challenge_method")
 			return
 		}
@@ -234,7 +235,7 @@ func (s *OIDCService) loginPost(c *gin.Context) {
 	codeChallengeMethod := c.PostForm("code_challenge_method")
 
 	cli, err := s.clients.GetByClientID(c.Request.Context(), clientID)
-	if err != nil || !grantAllowed(cli, "authorization_code") || !redirectAllowed(cli, redirectURI) {
+	if err != nil || !grantAllowed(cli, consts.OIDCGrantAuthorizationCode) || !redirectAllowed(cli, redirectURI) {
 		c.String(http.StatusBadRequest, "invalid client or redirect_uri")
 		return
 	}
@@ -257,7 +258,7 @@ func (s *OIDCService) loginPost(c *gin.Context) {
 		return
 	}
 	if codeChallenge != "" && codeChallengeMethod == "" {
-		codeChallengeMethod = "plain"
+		codeChallengeMethod = consts.PKCEMethodPlain
 	}
 	ar := authRequest{
 		ClientID:            cli.ClientID,
@@ -356,21 +357,21 @@ func (s *OIDCService) token(c *gin.Context) {
 		return
 	}
 	if !grantAllowed(cli, grant) {
-		tokenError(c, http.StatusBadRequest, "unauthorized_client", "grant not allowed for client")
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorUnauthorizedClient, "grant not allowed for client")
 		return
 	}
 
 	switch grant {
-	case "authorization_code":
+	case consts.OIDCGrantAuthorizationCode:
 		s.grantAuthCode(c, cli)
-	case "refresh_token":
+	case consts.OIDCGrantRefreshToken:
 		s.grantRefresh(c, cli)
-	case "client_credentials":
+	case consts.OIDCGrantClientCredentials:
 		s.grantClientCredentials(c, cli)
-	case "password":
+	case consts.OIDCGrantPassword:
 		s.grantPassword(c, cli)
 	default:
-		tokenError(c, http.StatusBadRequest, "unsupported_grant_type", "unsupported grant_type")
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorUnsupportedGrantType, "unsupported grant_type")
 	}
 }
 
@@ -387,12 +388,12 @@ func (s *OIDCService) authenticateClient(c *gin.Context) (*model.OIDCClient, boo
 		clientSecret = c.PostForm("client_secret")
 	}
 	if clientID == "" {
-		tokenError(c, http.StatusUnauthorized, "invalid_client", "missing client_id")
+		tokenError(c, http.StatusUnauthorized, consts.OIDCErrorInvalidClient, "missing client_id")
 		return nil, false
 	}
 	cli, err := s.clients.VerifySecret(c.Request.Context(), clientID, clientSecret)
 	if err != nil {
-		tokenError(c, http.StatusUnauthorized, "invalid_client", "client authentication failed")
+		tokenError(c, http.StatusUnauthorized, consts.OIDCErrorInvalidClient, "client authentication failed")
 		return nil, false
 	}
 	return cli, true
@@ -403,30 +404,30 @@ func (s *OIDCService) grantAuthCode(c *gin.Context, cli *model.OIDCClient) {
 	redirectURI := c.PostForm("redirect_uri")
 	ar, err := s.consumeAuthRequest(c.Request.Context(), code)
 	if err != nil {
-		tokenError(c, http.StatusBadRequest, "invalid_grant", err.Error())
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, err.Error())
 		return
 	}
 	if ar.ClientID != cli.ClientID || ar.RedirectURI != redirectURI {
-		tokenError(c, http.StatusBadRequest, "invalid_grant", "code does not match client/redirect")
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "code does not match client/redirect")
 		return
 	}
 	codeVerifier := c.PostForm("code_verifier")
 	if ar.CodeChallenge != "" {
 		if codeVerifier == "" {
-			tokenError(c, http.StatusBadRequest, "invalid_grant", "code_verifier required")
+			tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "code_verifier required")
 			return
 		}
 		if !verifyPKCE(ar.CodeChallenge, ar.CodeChallengeMethod, codeVerifier) {
-			tokenError(c, http.StatusBadRequest, "invalid_grant", "code_verifier mismatch")
+			tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "code_verifier mismatch")
 			return
 		}
 	} else if !cli.IsConfidential {
-		tokenError(c, http.StatusBadRequest, "invalid_grant", "public client requires PKCE")
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "public client requires PKCE")
 		return
 	}
 	u, err := s.users.GetByID(c.Request.Context(), ar.UserID)
 	if err != nil {
-		tokenError(c, http.StatusBadRequest, "invalid_grant", "user gone")
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "user gone")
 		return
 	}
 	s.respondUserToken(c, cli, u, true)
@@ -436,16 +437,16 @@ func (s *OIDCService) grantRefresh(c *gin.Context, cli *model.OIDCClient) {
 	rt := c.PostForm("refresh_token")
 	rec, err := s.loadRefresh(c.Request.Context(), rt)
 	if err != nil {
-		tokenError(c, http.StatusBadRequest, "invalid_grant", err.Error())
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, err.Error())
 		return
 	}
 	if rec.ClientID != cli.ClientID {
-		tokenError(c, http.StatusBadRequest, "invalid_grant", "refresh token bound to different client")
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "refresh token bound to different client")
 		return
 	}
 	u, err := s.users.GetByID(c.Request.Context(), rec.UserID)
 	if err != nil {
-		tokenError(c, http.StatusBadRequest, "invalid_grant", "user gone")
+		tokenError(c, http.StatusBadRequest, consts.OIDCErrorInvalidGrant, "user gone")
 		return
 	}
 	// Rotate the refresh token to invalidate the replayed one.
@@ -456,23 +457,23 @@ func (s *OIDCService) grantRefresh(c *gin.Context, cli *model.OIDCClient) {
 func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClient) {
 	exp := time.Now().Add(utils.ServiceTokenExpiration)
 	claims := jwt.MapClaims{
-		"iss":        s.issuer,
-		"sub":        "service:" + cli.Service,
-		"aud":        []string{"sso"},
-		"exp":        exp.Unix(),
-		"iat":        time.Now().Unix(),
-		"service":    cli.Service,
-		"scopes":     cli.Scopes,
-		"token_type": "service",
+		"iss":                     s.issuer,
+		consts.OIDCClaimSubject:   consts.ClaimSubjectServicePrefix + cli.Service,
+		consts.OIDCClaimAudience:  []string{consts.AudienceSSOInternal},
+		"exp":                     exp.Unix(),
+		"iat":                     time.Now().Unix(),
+		"service":                 cli.Service,
+		"scopes":                  cli.Scopes,
+		consts.OIDCClaimTokenType: consts.TokenTypeService,
 	}
 	signed, err := signWithKid(claims, s.signer)
 	if err != nil {
-		tokenError(c, http.StatusInternalServerError, "server_error", err.Error())
+		tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, tokenResp{
 		AccessToken: signed,
-		TokenType:   "Bearer",
+		TokenType:   consts.TokenTypeBearer,
 		ExpiresIn:   int64(time.Until(exp).Seconds()),
 	})
 }
@@ -485,7 +486,7 @@ func (s *OIDCService) grantPassword(c *gin.Context, cli *model.OIDCClient) {
 		u, err = s.users.GetByEmail(c.Request.Context(), username)
 	}
 	if err != nil || !utils.VerifyPassword(password, u.Password) || !u.IsActive {
-		tokenError(c, http.StatusUnauthorized, "invalid_grant", "invalid credentials")
+		tokenError(c, http.StatusUnauthorized, consts.OIDCErrorInvalidGrant, "invalid credentials")
 		return
 	}
 	s.respondUserToken(c, cli, u, false)
@@ -495,29 +496,29 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 	roles, _ := s.users.ListRoleNames(c.Request.Context(), u.ID)
 	isAdmin := false
 	for _, r := range roles {
-		if r == "super_admin" || r == "admin" {
+		if r == string(consts.RoleSuperAdmin) || r == string(consts.RoleAdmin) {
 			isAdmin = true
 			break
 		}
 	}
 	access, expiresAt, err := utils.GenerateToken(u.ID, u.Username, u.Email, u.IsActive, isAdmin, roles, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
-		tokenError(c, http.StatusInternalServerError, "server_error", err.Error())
+		tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 		return
 	}
 	resp := tokenResp{
 		AccessToken: access,
-		TokenType:   "Bearer",
+		TokenType:   consts.TokenTypeBearer,
 		ExpiresIn:   int64(time.Until(expiresAt).Seconds()),
 	}
-	if withRefresh && grantAllowed(cli, "refresh_token") {
+	if withRefresh && grantAllowed(cli, consts.OIDCGrantRefreshToken) {
 		rt, err := randomToken(32)
 		if err != nil {
-			tokenError(c, http.StatusInternalServerError, "server_error", err.Error())
+			tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 			return
 		}
 		if err := s.storeRefresh(c.Request.Context(), rt, refreshRecord{UserID: u.ID, ClientID: cli.ClientID}); err != nil {
-			tokenError(c, http.StatusInternalServerError, "server_error", err.Error())
+			tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 			return
 		}
 		resp.RefreshToken = rt
@@ -547,12 +548,12 @@ func (s *OIDCService) userinfo(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"sub":            strconv.Itoa(u.ID),
-		"preferred_username": u.Username,
-		"email":          u.Email,
-		"email_verified": true,
-		"name":           u.FullName,
-		"picture":        u.Avatar,
+		consts.OIDCClaimSubject:           strconv.Itoa(u.ID),
+		consts.OIDCClaimPreferredUsername: u.Username,
+		consts.OIDCClaimEmail:             u.Email,
+		consts.OIDCClaimEmailVerified:     true,
+		consts.OIDCClaimName:              u.FullName,
+		consts.OIDCClaimPicture:           u.Avatar,
 	})
 }
 
@@ -586,9 +587,9 @@ func redirectAllowed(cli *model.OIDCClient, uri string) bool {
 // RFC 7636. `plain` compares directly; `S256` compares base64url(sha256(v)).
 func verifyPKCE(challenge, method, verifier string) bool {
 	switch method {
-	case "", "plain":
+	case "", consts.PKCEMethodPlain:
 		return challenge == verifier
-	case "S256":
+	case consts.PKCEMethodS256:
 		sum := sha256.Sum256([]byte(verifier))
 		return challenge == base64.RawURLEncoding.EncodeToString(sum[:])
 	default:
