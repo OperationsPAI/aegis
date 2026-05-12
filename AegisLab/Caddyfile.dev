@@ -1,0 +1,17 @@
+{
+	# Local TLS via Caddy's internal CA. Export & trust the root once with:
+	#   docker compose -f docker-compose.caddy.yaml exec caddy \
+	#     cat /data/caddy/pki/authorities/local/root.crt
+	local_certs
+	auto_https disable_redirects
+}
+
+aegis.localhost:8443 {
+	tls internal
+
+	# aegis-ui's vite dev server runs on the host at :3100.
+	# Vite already proxies /api, /authorize, /token, etc. to the
+	# microservices, so we only need to front the SPA here.
+	# This service uses network_mode: host, so 127.0.0.1 == the host.
+	reverse_proxy 127.0.0.1:3100
+}
