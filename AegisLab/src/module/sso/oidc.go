@@ -492,7 +492,15 @@ func (s *OIDCService) grantPassword(c *gin.Context, cli *model.OIDCClient) {
 }
 
 func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u *model.User, withRefresh bool) {
-	access, expiresAt, err := utils.GenerateToken(u.ID, u.Username, u.Email, u.IsActive, false, nil, s.signer.PrivateKey, s.signer.Kid)
+	roles, _ := s.users.ListRoleNames(c.Request.Context(), u.ID)
+	isAdmin := false
+	for _, r := range roles {
+		if r == "super_admin" || r == "admin" {
+			isAdmin = true
+			break
+		}
+	}
+	access, expiresAt, err := utils.GenerateToken(u.ID, u.Username, u.Email, u.IsActive, isAdmin, roles, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		tokenError(c, http.StatusInternalServerError, "server_error", err.Error())
 		return

@@ -24,6 +24,20 @@ func (r *Repository) getUserByID(userID int) (*model.User, error) {
 	return &user, nil
 }
 
+// ListRoleNames returns the active role names for a user (joins
+// user_roles → roles). Used by the OIDC token issuer so issued JWTs
+// carry the caller's actual role membership.
+func (r *Repository) ListRoleNames(userID int) ([]string, error) {
+	var names []string
+	if err := r.db.Table("roles").
+		Joins("JOIN user_roles ur ON ur.role_id = roles.id").
+		Where("ur.user_id = ? AND roles.status = ?", userID, consts.CommonEnabled).
+		Pluck("roles.name", &names).Error; err != nil {
+		return nil, fmt.Errorf("failed to list role names for user %d: %w", userID, err)
+	}
+	return names, nil
+}
+
 // GetByIDs loads users by id, skipping soft-deleted rows. Order not guaranteed.
 func (r *Repository) GetByIDs(ids []int) ([]*model.User, error) {
 	if len(ids) == 0 {

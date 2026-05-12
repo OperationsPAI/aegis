@@ -37,6 +37,11 @@ func (s *Service) GetByIDs(_ context.Context, ids []int) ([]*model.User, error) 
 	return s.repo.GetByIDs(ids)
 }
 
+// ListRoleNames returns the active role names granted to a user.
+func (s *Service) ListRoleNames(_ context.Context, userID int) ([]string, error) {
+	return s.repo.ListRoleNames(userID)
+}
+
 func (s *Service) CreateUser(_ context.Context, req *CreateUserReq) (*UserResp, error) {
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
