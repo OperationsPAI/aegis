@@ -126,3 +126,61 @@ root = "/tmp/aegis-blob/scratch"
 max_object_bytes = 5_368_709_120
 retention_days = 7
 inline_max_bytes = 65_536
+
+# ---------------------------------------------------------------------
+# [gateway] — aegis-gateway (cmd/aegis-gateway, default :8086).
+# See docs/rfcs/api-gateway.md. Routes are matched first-by-prefix
+# (longer prefixes win, ties broken by config order).
+# ---------------------------------------------------------------------
+[gateway]
+# HMAC key used to sign trusted headers (X-Aegis-User-Id, …) so
+# Phase-C upstreams can detect forgery. Override per deploy with env
+# GATEWAY_TRUSTED_HEADER_KEY. Empty → dev fallback (logged at warn).
+trusted_header_key = ""
+
+[gateway.rate_limit]
+rps   = 200
+burst = 400
+
+[gateway.cors]
+allowed_origins   = ["http://localhost:3101", "http://127.0.0.1:3101"]
+allowed_methods   = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+allowed_headers   = ["Authorization", "Content-Type", "X-Aegis-Request-Id"]
+allow_credentials = true
+max_age_seconds   = 86400
+
+[[gateway.routes]]
+prefix   = "/v1/"
+upstream = "aegis-sso:8083"
+auth     = "none"
+
+[[gateway.routes]]
+prefix   = "/.well-known/"
+upstream = "aegis-sso:8083"
+auth     = "none"
+
+[[gateway.routes]]
+prefix    = "/api/v2/inbox/"
+upstream  = "aegis-notify:8084"
+auth      = "jwt"
+audiences = ["portal"]
+
+[[gateway.routes]]
+prefix   = "/api/v2/notifications/"
+upstream = "aegis-notify:8084"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/blob/"
+upstream = "aegis-blob:8085"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/auth/"
+upstream = "aegis-api:8080"
+auth     = "none"
+
+[[gateway.routes]]
+prefix   = "/"
+upstream = "aegis-api:8080"
+auth     = "jwt"

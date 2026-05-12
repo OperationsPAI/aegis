@@ -21,7 +21,7 @@ import (
 	"os"
 
 	"aegis/app"
-	gateway "aegis/app/gateway"
+	monolith "aegis/app/monolith"
 	runtimeapp "aegis/app/runtime"
 	sso "aegis/app/sso"
 
@@ -72,7 +72,7 @@ func main() {
 		fx.New(app.BothOptions(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
 	apiGatewayCmd := newModeCommand("api-gateway", "Run as the API gateway", func() {
-		fx.New(gateway.Options(viper.GetString("conf"), viper.GetString("port"))).Run()
+		fx.New(monolith.Options(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
 	runtimeWorkerServiceCmd := newModeCommand("runtime-worker-service", "Run as the runtime worker service", func() {
 		fx.New(runtimeapp.Options(viper.GetString("conf"))).Run()

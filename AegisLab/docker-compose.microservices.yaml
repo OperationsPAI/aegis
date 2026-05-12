@@ -3,7 +3,7 @@ services:
   api-gateway:
     image: golang:1.24-bookworm
     working_dir: /workspace/src
-    command: ["go", "run", "./cmd/api-gateway", "-conf", "/workspace/src/config.dev.toml", "-port", "8082"]
+    command: ["go", "run", "./cmd/aegis-api", "-conf", "/workspace/src/config.dev.toml", "-port", "8082"]
     volumes:
       - ./:/workspace
     environment:
