@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	gateway "aegis/app/gateway"
+	monolith "aegis/app/monolith"
 
 	"go.uber.org/fx"
 )
@@ -13,5 +13,5 @@ func main() {
 	port := flag.String("port", "8080", "port to run the API gateway on")
 	flag.Parse()
 
-	fx.New(gateway.Options(*conf, *port)).Run()
+	fx.New(monolith.Options(*conf, *port)).Run()
 }
