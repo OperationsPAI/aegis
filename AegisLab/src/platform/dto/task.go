@@ -15,6 +15,68 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
+// TaskResp represents the response for a task.
+type TaskResp struct {
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	Immediate   bool   `json:"immediate"`
+	ExecuteTime int64  `json:"execute_time"`
+	CronExpr    string `json:"cron_expr,omitempty"`
+	TraceID     string `json:"trace_id"`
+	GroupID     string `json:"group_id"`
+
+	State       string    `json:"state"`
+	Status      string    `json:"status"`
+	ProjectID   int       `json:"project_id,omitempty"`
+	ProjectName string    `json:"project_name,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func NewTaskResp(task *model.Task) *TaskResp {
+	return &TaskResp{
+		ID:          task.ID,
+		Type:        consts.GetTaskTypeName(task.Type),
+		Immediate:   task.Immediate,
+		ExecuteTime: task.ExecuteTime,
+		CronExpr:    task.CronExpr,
+		TraceID:     task.TraceID,
+		State:       consts.GetTaskStateName(task.State),
+		Status:      consts.GetStatusTypeName(task.Status),
+		CreatedAt:   task.CreatedAt,
+		UpdatedAt:   task.UpdatedAt,
+	}
+}
+
+// TaskDetailResp represents a task with payload and logs.
+type TaskDetailResp struct {
+	TaskResp
+
+	Payload map[string]any `json:"payload,omitempty" swaggertype:"object"`
+	Logs    []string       `json:"logs"`
+}
+
+func NewTaskDetailResp(task *model.Task, logs []string) *TaskDetailResp {
+	resp := &TaskDetailResp{
+		TaskResp: *NewTaskResp(task),
+		Logs:     logs,
+	}
+
+	if task.Payload != "" {
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(task.Payload), &payload); err == nil {
+			resp.Payload = payload
+		}
+	}
+	return resp
+}
+
+// QueuedTasksResp represents ready and delayed queued tasks.
+type QueuedTasksResp struct {
+	ReadyTasks   []TaskResp `json:"ready_tasks"`
+	DelayedTasks []TaskResp `json:"delayed_tasks"`
+}
+
 // RetryPolicy defines how tasks should be retried on failure
 type RetryPolicy struct {
 	MaxAttempts int `json:"max_attempts"` // Maximum number of retry attempts

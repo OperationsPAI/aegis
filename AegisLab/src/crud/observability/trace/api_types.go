@@ -9,7 +9,6 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
-	task "aegis/core/domain/task"
 	"aegis/platform/utils"
 )
 
@@ -172,16 +171,16 @@ type CancelTraceResp struct {
 type TraceDetailResp struct {
 	TraceResp
 
-	Tasks []task.TaskResp `json:"tasks"`
+	Tasks []dto.TaskResp `json:"tasks"`
 }
 
 func NewTraceDetailResp(trace *model.Trace) *TraceDetailResp {
 	resp := &TraceDetailResp{
 		TraceResp: *NewTraceResp(trace),
-		Tasks:     make([]task.TaskResp, 0, len(trace.Tasks)),
+		Tasks:     make([]dto.TaskResp, 0, len(trace.Tasks)),
 	}
 	for i := range trace.Tasks {
-		resp.Tasks = append(resp.Tasks, *task.NewTaskResp(&trace.Tasks[i]))
+		resp.Tasks = append(resp.Tasks, *dto.NewTaskResp(&trace.Tasks[i]))
 	}
 	return resp
 }

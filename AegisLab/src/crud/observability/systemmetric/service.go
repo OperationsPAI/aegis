@@ -11,7 +11,6 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	redisinfra "aegis/platform/redis"
-	task "aegis/core/domain/task"
 
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -143,7 +142,7 @@ func (s *Service) ListNamespaceLocks(ctx context.Context) (*ListNamespaceLockRes
 	return &ListNamespaceLockResp{Items: items}, nil
 }
 
-func (s *Service) ListQueuedTasks(ctx context.Context) (*task.QueuedTasksResp, error) {
+func (s *Service) ListQueuedTasks(ctx context.Context) (*dto.QueuedTasksResp, error) {
 	readyTaskDatas, err := s.redis.ListReadyTasks(ctx)
 	if err != nil {
 		if errors.Is(err, goredis.Nil) {
@@ -152,7 +151,7 @@ func (s *Service) ListQueuedTasks(ctx context.Context) (*task.QueuedTasksResp, e
 		return nil, err
 	}
 
-	readyTasks := make([]task.TaskResp, 0, len(readyTaskDatas))
+	readyTasks := make([]dto.TaskResp, 0, len(readyTaskDatas))
 	for _, taskData := range readyTaskDatas {
 		taskResp, err := decodeQueuedTask(taskData)
 		if err != nil {
@@ -169,7 +168,7 @@ func (s *Service) ListQueuedTasks(ctx context.Context) (*task.QueuedTasksResp, e
 		return nil, err
 	}
 
-	delayedTasks := make([]task.TaskResp, 0, len(delayedTaskDatas))
+	delayedTasks := make([]dto.TaskResp, 0, len(delayedTaskDatas))
 	for _, taskData := range delayedTaskDatas {
 		taskResp, err := decodeQueuedTask(taskData)
 		if err != nil {
@@ -178,19 +177,19 @@ func (s *Service) ListQueuedTasks(ctx context.Context) (*task.QueuedTasksResp, e
 		delayedTasks = append(delayedTasks, taskResp)
 	}
 
-	return &task.QueuedTasksResp{
+	return &dto.QueuedTasksResp{
 		ReadyTasks:   readyTasks,
 		DelayedTasks: delayedTasks,
 	}, nil
 }
 
-func decodeQueuedTask(taskData string) (task.TaskResp, error) {
+func decodeQueuedTask(taskData string) (dto.TaskResp, error) {
 	var queuedTask dto.UnifiedTask
 	if err := json.Unmarshal([]byte(taskData), &queuedTask); err != nil {
-		return task.TaskResp{}, err
+		return dto.TaskResp{}, err
 	}
 
-	return task.TaskResp{
+	return dto.TaskResp{
 		ID:          queuedTask.TaskID,
 		Type:        consts.GetTaskTypeName(queuedTask.Type),
 		Immediate:   queuedTask.Immediate,

@@ -12,7 +12,6 @@ import (
 	helm "aegis/platform/helm"
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
-	task "aegis/core/domain/task"
 	runtimev1 "aegis/platform/proto/runtime/v1"
 	"aegis/core/orchestrator"
 
@@ -190,14 +189,14 @@ func listQueuedTasks(ctx context.Context, redis *redis.Gateway) (map[string]any,
 	}, nil
 }
 
-func decodeQueuedTasks(items []string) ([]task.TaskResp, error) {
-	result := make([]task.TaskResp, 0, len(items))
+func decodeQueuedTasks(items []string) ([]dto.TaskResp, error) {
+	result := make([]dto.TaskResp, 0, len(items))
 	for _, item := range items {
 		var queuedTask dto.UnifiedTask
 		if err := json.Unmarshal([]byte(item), &queuedTask); err != nil {
 			return nil, err
 		}
-		result = append(result, task.TaskResp{
+		result = append(result, dto.TaskResp{
 			ID:          queuedTask.TaskID,
 			Type:        consts.GetTaskTypeName(queuedTask.Type),
 			Immediate:   queuedTask.Immediate,

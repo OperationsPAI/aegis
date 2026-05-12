@@ -12,7 +12,6 @@ import (
 	execution "aegis/core/domain/execution"
 	injection "aegis/core/domain/injection"
 	systemmetric "aegis/crud/observability/systemmetric"
-	task "aegis/core/domain/task"
 	runtimev1 "aegis/platform/proto/runtime/v1"
 
 	"go.uber.org/fx"
@@ -137,7 +136,7 @@ func (c *Client) GetNamespaceLocks(ctx context.Context) (*systemmetric.ListNames
 	return decodeStruct[systemmetric.ListNamespaceLockResp](resp.GetData())
 }
 
-func (c *Client) GetQueuedTasks(ctx context.Context) (*task.QueuedTasksResp, error) {
+func (c *Client) GetQueuedTasks(ctx context.Context) (*dto.QueuedTasksResp, error) {
 	if !c.Enabled() {
 		return nil, fmt.Errorf("runtime grpc client is not configured")
 	}
@@ -145,7 +144,7 @@ func (c *Client) GetQueuedTasks(ctx context.Context) (*task.QueuedTasksResp, err
 	if err != nil {
 		return nil, mapRPCError(err)
 	}
-	return decodeStruct[task.QueuedTasksResp](resp.GetData())
+	return decodeStruct[dto.QueuedTasksResp](resp.GetData())
 }
 
 // --- intake direction: runtime-worker -> api-gateway ---

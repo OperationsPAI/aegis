@@ -9,7 +9,6 @@ import (
 	"aegis/platform/model"
 	"aegis/clients/sso"
 	systemmetric "aegis/crud/observability/systemmetric"
-	task "aegis/core/domain/task"
 )
 
 // HealthCheckResp represents system health check response.
@@ -55,7 +54,7 @@ type MonitoringMetricsResp struct {
 
 type MetricValue = systemmetric.MetricValue
 type ListNamespaceLockResp = systemmetric.ListNamespaceLockResp
-type QueuedTasksResp = task.QueuedTasksResp
+type QueuedTasksResp = dto.QueuedTasksResp
 
 type ListAuditLogFilters struct {
 	Action     string

@@ -40,7 +40,7 @@ func (s *Service) BatchDelete(ctx context.Context, taskIDs []string) error {
 	return s.repository.BatchDelete(taskIDs)
 }
 
-func (s *Service) GetDetail(ctx context.Context, taskID string) (*TaskDetailResp, error) {
+func (s *Service) GetDetail(ctx context.Context, taskID string) (*dto.TaskDetailResp, error) {
 	task, err := s.repository.GetByID(taskID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -50,10 +50,10 @@ func (s *Service) GetDetail(ctx context.Context, taskID string) (*TaskDetailResp
 	}
 
 	logs := s.queryHistoricalLogs(ctx, task)
-	return NewTaskDetailResp(task, logs), nil
+	return dto.NewTaskDetailResp(task, logs), nil
 }
 
-func (s *Service) List(ctx context.Context, req *ListTaskReq) (*dto.ListResp[TaskResp], error) {
+func (s *Service) List(ctx context.Context, req *ListTaskReq) (*dto.ListResp[dto.TaskResp], error) {
 	if req == nil {
 		return nil, fmt.Errorf("list tasks request is nil")
 	}
@@ -66,12 +66,12 @@ func (s *Service) List(ctx context.Context, req *ListTaskReq) (*dto.ListResp[Tas
 		return nil, fmt.Errorf("failed to list tasks: %w", err)
 	}
 
-	taskResps := make([]TaskResp, 0, len(tasks))
+	taskResps := make([]dto.TaskResp, 0, len(tasks))
 	for _, task := range tasks {
-		taskResps = append(taskResps, *NewTaskResp(&task))
+		taskResps = append(taskResps, *dto.NewTaskResp(&task))
 	}
 
-	return &dto.ListResp[TaskResp]{
+	return &dto.ListResp[dto.TaskResp]{
 		Items:      taskResps,
 		Pagination: req.ConvertToPaginationInfo(total),
 	}, nil
@@ -85,7 +85,7 @@ func (s *Service) List(ctx context.Context, req *ListTaskReq) (*dto.ListResp[Tas
 //
 // DB update is authoritative; Redis rescore is best-effort — if the entry
 // is already promoted by the scheduler, the call still succeeds.
-func (s *Service) Expedite(ctx context.Context, taskID string) (*TaskResp, error) {
+func (s *Service) Expedite(ctx context.Context, taskID string) (*dto.TaskResp, error) {
 	task, err := s.repository.GetByID(taskID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -101,7 +101,7 @@ func (s *Service) Expedite(ctx context.Context, taskID string) (*TaskResp, error
 
 	now := time.Now().Unix()
 	if task.ExecuteTime <= now {
-		return NewTaskResp(task), nil
+		return dto.NewTaskResp(task), nil
 	}
 
 	if err := s.repository.UpdateExecuteTime(taskID, now); err != nil {
@@ -116,7 +116,7 @@ func (s *Service) Expedite(ctx context.Context, taskID string) (*TaskResp, error
 	s.emitExpediteScheduledEvent(ctx, task, now)
 
 	task.ExecuteTime = now
-	return NewTaskResp(task), nil
+	return dto.NewTaskResp(task), nil
 }
 
 // emitExpediteScheduledEvent publishes a task.scheduled event for a manually
