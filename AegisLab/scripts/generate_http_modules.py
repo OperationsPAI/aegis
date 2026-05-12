@@ -9,6 +9,7 @@ OUTPUT = SRC_ROOT / "app" / "http_modules_gen.go"
 # Walk these roots (relative to src/) for module.go discovery.
 # Each direct child subdirectory that contains a module.go is a candidate.
 WALK_ROOTS = [
+    "core/domain",
     "module",
     "crud/iam",
     "crud/observability",
