@@ -13,6 +13,7 @@ import (
 	"aegis/platform/dto"
 	redisinfra "aegis/platform/redis"
 	"aegis/platform/utils"
+	"aegis/core/orchestrator/internal/state"
 
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
@@ -82,9 +83,9 @@ type NamespaceActivator interface {
 type monitor struct {
 	ctx          context.Context
 	redisGateway *redisinfra.Gateway
-	namespaces   namespaceCatalogStore
-	locks        namespaceLockStore
-	status       namespaceStatusStore
+	namespaces   state.CatalogStore
+	locks        state.LockStore
+	status       state.StatusStore
 	activator    NamespaceActivator
 	mu           sync.RWMutex // Protects namespace operations
 }
@@ -93,9 +94,9 @@ func NewMonitor(gateway *redisinfra.Gateway) NamespaceMonitor {
 	return &monitor{
 		ctx:          context.TODO(),
 		redisGateway: gateway,
-		namespaces:   newNamespaceCatalogStore(gateway),
-		locks:        newNamespaceLockStore(gateway),
-		status:       newNamespaceStatusStore(gateway),
+		namespaces:   state.NewCatalogStore(gateway),
+		locks:        state.NewLockStore(gateway),
+		status:       state.NewStatusStore(gateway),
 	}
 }
 
@@ -132,15 +133,15 @@ func (m *monitor) currentContext() context.Context {
 }
 
 func (m *monitor) listNamespaces() ([]string, error) {
-	return m.namespaces.list(m.currentContext())
+	return m.namespaces.List(m.currentContext())
 }
 
 func (m *monitor) namespaceExists(namespace string) (bool, error) {
-	return m.namespaces.exists(m.currentContext(), namespace)
+	return m.namespaces.Exists(m.currentContext(), namespace)
 }
 
 func (m *monitor) seedNamespace(namespace string, endTime time.Time) error {
-	return m.namespaces.seed(m.currentContext(), namespace, endTime)
+	return m.namespaces.Seed(m.currentContext(), namespace, endTime)
 }
 
 // AcquireLock attempts to acquire a lock on a namespace
@@ -198,7 +199,7 @@ func (m *monitor) AcquireLock(namespace string, endTime time.Time, traceID strin
 	}
 
 	// All lock checking and acquisition happens in a single atomic transaction
-	err = m.locks.acquire(m.currentContext(), namespace, endTime, traceID, time.Unix(nowTime, 0))
+	err = m.locks.Acquire(m.currentContext(), namespace, endTime, traceID, time.Unix(nowTime, 0))
 
 	logEntry := logrus.WithFields(
 		logrus.Fields{
@@ -271,7 +272,7 @@ func (m *monitor) ReleaseLock(ctx context.Context, namespace string, traceID str
 	}
 
 	// Check if the lock is actually held by this traceID
-	err = m.locks.release(m.currentContext(), namespace, traceID, time.Now())
+	err = m.locks.Release(m.currentContext(), namespace, traceID, time.Now())
 
 	return
 }
@@ -409,7 +410,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	logrus.Infof("Loaded %d namespaces from config", len(latestNamespaces))
 
 	// Get existing namespaces from Redis
-	existingNamespaces, err := m.namespaces.list(ctx)
+	existingNamespaces, err := m.namespaces.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing namespaces: %w", err)
 	}
@@ -422,7 +423,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	for ns := range latestSet {
 		if _, exists := existingSet[ns]; !exists {
 			// Brand new namespace, add it
-			if err := m.namespaces.seed(ctx, ns, time.Now()); err != nil {
+			if err := m.namespaces.Seed(ctx, ns, time.Now()); err != nil {
 				logrus.Errorf("Failed to add namespace %s: %v", ns, err)
 			} else {
 				result.Added = append(result.Added, ns)
@@ -430,7 +431,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 			}
 		} else {
 			// Existing namespace, check if it needs recovery
-			currentStatus, err := m.status.get(ctx, ns)
+			currentStatus, err := m.status.Get(ctx, ns)
 			if err != nil {
 				logrus.Errorf("Failed to get status for namespace %s: %v", ns, err)
 				continue
@@ -438,7 +439,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 
 			if currentStatus != consts.CommonEnabled {
 				// Namespace was disabled/deleted but is back in config, recover it
-				if err := m.status.set(ctx, ns, consts.CommonEnabled); err != nil {
+				if err := m.status.Set(ctx, ns, consts.CommonEnabled); err != nil {
 					logrus.Errorf("Failed to recover namespace %s: %v", ns, err)
 				} else {
 					result.Recovered = append(result.Recovered, ns)
@@ -453,7 +454,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	for ns := range existingSet {
 		if _, exists := latestSet[ns]; !exists {
 			// Namespace removed from config
-			currentStatus, err := m.status.get(ctx, ns)
+			currentStatus, err := m.status.Get(ctx, ns)
 			if err != nil {
 				logrus.Errorf("Failed to get status for namespace %s: %v", ns, err)
 				continue
@@ -470,7 +471,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 			}
 
 			// Check if namespace has active lock
-			isLocked, err := m.locks.isActive(ctx, ns, time.Now())
+			isLocked, err := m.locks.IsActive(ctx, ns, time.Now())
 			if err != nil {
 				logrus.Errorf("Failed to check lock status for %s: %v", ns, err)
 				continue
@@ -478,7 +479,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 
 			if isLocked {
 				// Has active lock, mark as disabled
-				if err := m.status.set(ctx, ns, consts.CommonDisabled); err != nil {
+				if err := m.status.Set(ctx, ns, consts.CommonDisabled); err != nil {
 					logrus.Errorf("Failed to set namespace %s status to disabled: %v", ns, err)
 				} else {
 					result.Disabled = append(result.Disabled, ns)
@@ -486,7 +487,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 				}
 			} else {
 				// No active lock, mark as deleted
-				if err := m.status.set(ctx, ns, consts.CommonDeleted); err != nil {
+				if err := m.status.Set(ctx, ns, consts.CommonDeleted); err != nil {
 					logrus.Errorf("Failed to set namespace %s status to deleted: %v", ns, err)
 				} else {
 					result.Deleted = append(result.Deleted, ns)
@@ -508,15 +509,15 @@ func (m *monitor) addNamespace(namespace string, endTime time.Time) error {
 
 // isNamespaceLocked checks if a namespace currently has an active lock
 func (m *monitor) isNamespaceLocked(namespace string) (bool, error) {
-	return m.locks.isActive(m.currentContext(), namespace, time.Now())
+	return m.locks.IsActive(m.currentContext(), namespace, time.Now())
 }
 
 // getNamespaceStatus gets the status of a namespace
 func (m *monitor) getNamespaceStatus(namespace string) (consts.StatusType, error) {
-	return m.status.get(m.currentContext(), namespace)
+	return m.status.Get(m.currentContext(), namespace)
 }
 
 // setNamespaceStatus sets the status of a namespace
 func (m *monitor) setNamespaceStatus(namespace string, status consts.StatusType) error {
-	return m.status.set(m.currentContext(), namespace, status)
+	return m.status.Set(m.currentContext(), namespace, status)
 }

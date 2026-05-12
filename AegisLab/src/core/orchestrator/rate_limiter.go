@@ -8,6 +8,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	redis "aegis/platform/redis"
+	"aegis/core/orchestrator/internal/state"
 
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
@@ -25,7 +26,7 @@ type RateLimiterConfig struct {
 // TokenBucketRateLimiter token bucket rate limiter
 type TokenBucketRateLimiter struct {
 	bucketKey   string
-	store       tokenBucketStore
+	store       state.TokenBucketStore
 	mu          sync.RWMutex
 	maxTokens   int
 	waitTimeout time.Duration
@@ -50,7 +51,7 @@ func (r *TokenBucketRateLimiter) GetConfig() (maxTokens int, waitTimeout time.Du
 
 func (r *TokenBucketRateLimiter) Snapshot(ctx context.Context) RateLimiterSnapshot {
 	maxTokens, waitTimeout := r.GetConfig()
-	inUseTokens, err := r.store.inUse(ctx)
+	inUseTokens, err := r.store.InUse(ctx)
 
 	return RateLimiterSnapshot{
 		ServiceName:        r.serviceName,
@@ -96,7 +97,7 @@ func (r *TokenBucketRateLimiter) AcquireToken(ctx context.Context, taskID, trace
 	maxTokens := r.maxTokens
 	r.mu.RUnlock()
 
-	acquired, err := r.store.acquire(ctx, maxTokens, taskID, traceID)
+	acquired, err := r.store.Acquire(ctx, maxTokens, taskID, traceID)
 	if err != nil {
 		span.RecordError(err)
 		return false, err
@@ -118,7 +119,7 @@ func (r *TokenBucketRateLimiter) AcquireToken(ctx context.Context, taskID, trace
 func (r *TokenBucketRateLimiter) ReleaseToken(ctx context.Context, taskID, traceID string) error {
 	span := trace.SpanFromContext(ctx)
 
-	result, err := r.store.release(ctx, taskID)
+	result, err := r.store.Release(ctx, taskID)
 	if err != nil {
 		span.RecordError(err)
 		return err
@@ -258,7 +259,7 @@ func newTokenBucketRateLimiter(gateway *redis.Gateway, cfg RateLimiterConfig) *T
 
 	return &TokenBucketRateLimiter{
 		bucketKey:   cfg.TokenBucketKey,
-		store:       newTokenBucketStore(gateway, cfg.TokenBucketKey),
+		store:       state.NewTokenBucketStore(gateway, cfg.TokenBucketKey),
 		maxTokens:   maxTokens,
 		waitTimeout: time.Duration(waitTimeout) * time.Second,
 		serviceName: cfg.ServiceName,
