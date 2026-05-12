@@ -242,6 +242,7 @@ class BaseBenchmark:
                 response=result.response,
                 trajectory_json=traj_json,
                 time_cost=elapsed,
+                trace_id=result.trace_id,
             )
 
         return _runner

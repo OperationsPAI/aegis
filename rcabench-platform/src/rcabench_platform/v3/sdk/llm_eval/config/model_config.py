@@ -36,6 +36,19 @@ class ModelProviderConfig(ConfigBaseModel):
     """model provider api key"""
     api_format: Literal["openai", "anthropic", "google"] = "openai"
     """API format: openai (default), anthropic, or google. Used by LangGraph agent to select appropriate SDK."""
+    extra_query: dict[str, str] | None = None
+    """Optional per-request query-string parameters forwarded as
+    ``default_query`` to the OpenAI client. Needed for gateways that
+    authenticate via a query param (e.g. LiteLLM behind Warpgate
+    expects ``warpgate-ticket=<ticket>``)."""
+    extra_headers: dict[str, str] | None = None
+    """Optional per-request HTTP headers forwarded as ``default_headers``
+    to the OpenAI client. Use for token-based auth schemes that the
+    standard ``Authorization: Bearer`` flow does not cover."""
+    verify_ssl: bool = True
+    """If False, TLS certificate verification is disabled when building
+    the OpenAI client's underlying ``httpx`` transport. Use only for
+    internal gateways with self-signed certs."""
 
 
 class ModelParamsConfig(ConfigBaseModel):

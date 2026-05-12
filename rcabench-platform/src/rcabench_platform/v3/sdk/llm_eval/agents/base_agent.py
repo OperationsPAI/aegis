@@ -23,11 +23,19 @@ class AgentResult:
     Attributes:
         response: Structured output (e.g. CausalGraph JSON string).
         trajectory: Standardised trajectory for the run.
+        trace_id: Optional OTel trace_id (or any opaque correlation id)
+            that the agent emitted under the hood. ``_wrap_agent``
+            forwards it to ``RolloutResult.trace_id`` so the framework
+            persists it on ``evaluation_data.trace_id``. Agents that
+            integrate with an in-process observability stack (AgentM,
+            LangGraph, an OTel SDK …) should populate this so downstream
+            queries can join the eval row back to the trace store.
         metadata: Arbitrary extra information (token counts, cost, …).
     """
 
     response: str = ""
     trajectory: Trajectory | None = None
+    trace_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

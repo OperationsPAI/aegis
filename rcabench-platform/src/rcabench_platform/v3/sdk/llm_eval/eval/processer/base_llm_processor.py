@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from openai import AsyncOpenAI
 
@@ -33,13 +34,32 @@ class BaseLLMJudgeProcesser(BaseProcesser):
 
     @property
     def judge_client(self) -> AsyncOpenAI:
-        """Lazily initialize the OpenAI client (only when LLM judging is needed)."""
+        """Lazily initialize the OpenAI client (only when LLM judging is needed).
+
+        Honours the full ``ModelProviderConfig`` surface — ``extra_query``,
+        ``extra_headers``, ``verify_ssl`` — so judge calls work against
+        gateways that authenticate via query param (LiteLLM behind
+        Warpgate) or carry self-signed TLS certs. Stays a pure
+        constructor: callers that need a different transport entirely
+        should swap the property at the subclass level."""
         if self._judge_client is None:
-            self._judge_client = AsyncOpenAI(
-                base_url=self._judge_provider_config.get("base_url") or None,
-                api_key=self._judge_provider_config.get("api_key") or None,
-                max_retries=self._judge_max_retries,
-            )
+            cfg = self._judge_provider_config
+            client_kwargs: dict[str, Any] = {
+                "base_url": cfg.get("base_url") or None,
+                "api_key": cfg.get("api_key") or None,
+                "max_retries": self._judge_max_retries,
+            }
+            extra_query = cfg.get("extra_query")
+            if extra_query:
+                client_kwargs["default_query"] = dict(extra_query)
+            extra_headers = cfg.get("extra_headers")
+            if extra_headers:
+                client_kwargs["default_headers"] = dict(extra_headers)
+            if cfg.get("verify_ssl") is False:
+                import httpx
+
+                client_kwargs["http_client"] = httpx.AsyncClient(verify=False)
+            self._judge_client = AsyncOpenAI(**client_kwargs)
         return self._judge_client
 
     def preprocess_one(self, sample: EvaluationSample) -> EvaluationSample:
