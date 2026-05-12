@@ -6,7 +6,7 @@ data:
   config.prod.toml: |
     name = "{{ .Values.configmap.name }}"
     version = "{{ .Values.configmap.version }}"
-    port = {{ .Values.microservices.apiGateway.httpPort }}
+    port = {{ .Values.microservices.aegisApi.httpPort }}
     workspace = "{{ .Values.configmap.workspace }}"
 
     [system]
@@ -46,7 +46,7 @@ data:
     [k8s]
     namespace = "{{ .Values.configmap.k8s.namespace }}"
     [k8s.service]
-    internal_url = "{{ .Values.configmap.k8s.service.internalURL | default (printf "http://%s-api-gateway:%v" .Release.Name .Values.microservices.apiGateway.httpPort) }}"
+    internal_url = "{{ .Values.configmap.k8s.service.internalURL | default (printf "http://%s-aegis-api:%v" .Release.Name .Values.microservices.aegisApi.httpPort) }}"
     [k8s.init_container]
     {{- range $key, $value := .Values.configmap.k8s.init_container }}
     {{ $key }} = {{ $value | quote }}
@@ -85,7 +85,7 @@ data:
     jwks_url = "{{ .Values.configmap.sso.jwksURL }}"
     client_id = "{{ .Values.configmap.sso.clientID }}"
     client_secret = "{{ .Values.configmap.sso.clientSecret }}"
-    backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-api-gateway:%v/auth/oidc/callback" .Release.Name .Values.microservices.apiGateway.httpPort) }}"
+    backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-aegis-api:%v/auth/oidc/callback" .Release.Name .Values.microservices.aegisApi.httpPort) }}"
     seed_secret_dump_path = "{{ .Values.configmap.sso.seedSecretDumpPath }}"
     console_redirect_uris = "{{ .Values.configmap.sso.consoleRedirectURIs }}"
     login_redirect = "{{ .Values.configmap.sso.loginRedirect }}"
@@ -101,18 +101,90 @@ data:
     {{- end }}
 
     [clients.runtime]
-    # api-gateway -> runtime-worker, query-only (queue/lock status).
+    # aegis-api -> runtime-worker, query-only (queue/lock status).
     target = "{{ .Values.configmap.clients.runtime.target | default (printf "%s-runtime-worker-service:%v" .Release.Name .Values.microservices.runtimeWorkerService.grpcPort) }}"
 
     [clients.runtime_intake]
-    # runtime-worker -> api-gateway, execution/injection state writes.
-    target = "{{ .Values.configmap.clients.runtimeIntake.target | default (printf "%s-api-gateway:%v" .Release.Name (.Values.microservices.apiGateway.intakeGrpcPort | default 9096)) }}"
+    # runtime-worker -> aegis-api, execution/injection state writes.
+    target = "{{ .Values.configmap.clients.runtimeIntake.target | default (printf "%s-aegis-api:%v" .Release.Name (.Values.microservices.aegisApi.intakeGrpcPort | default 9096)) }}"
 
     [runtime_worker.grpc]
     addr = ":{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
 
     [api_gateway.intake.grpc]
-    addr = ":{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}"
+    addr = ":{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}"
+
+    {{- if .Values.microservices.gateway.enabled }}
+    [gateway]
+    trusted_header_key = "{{ .Values.microservices.gateway.trustedHeaderKey }}"
+
+    [gateway.rate_limit]
+    rps   = {{ .Values.microservices.gateway.rateLimit.rps | default 200 }}
+    burst = {{ .Values.microservices.gateway.rateLimit.burst | default 400 }}
+
+    [gateway.cors]
+    allowed_origins   = {{ .Values.microservices.gateway.cors.allowedOrigins | toJson }}
+    allowed_methods   = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    allowed_headers   = ["Authorization", "Content-Type", "X-Aegis-Request-Id"]
+    allow_credentials = true
+    max_age_seconds   = 86400
+
+    [[gateway.routes]]
+    prefix   = "/v1/"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/.well-known/"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/authorize"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/login"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/token"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/userinfo"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix    = "/api/v2/inbox/"
+    upstream  = "{{ .Release.Name }}-notify:{{ .Values.microservices.notify.httpPort }}"
+    auth      = "jwt"
+    audiences = ["portal"]
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/notifications/"
+    upstream = "{{ .Release.Name }}-notify:{{ .Values.microservices.notify.httpPort }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/blob/"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.microservices.blob.httpPort }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/auth/"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "jwt"
+    {{- end }}
 
     {{- if .Values.loki.enabled }}
     [loki]

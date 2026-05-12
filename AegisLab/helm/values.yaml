@@ -74,7 +74,7 @@ images:
 # Disabled by default; enable per environment that has an external
 # LoadBalancer controller (e.g. Volcengine on byte-cluster). When enabled,
 # move the LB-binding annotations onto `edgeProxy.service.annotations` and
-# leave `microservices.apiGateway.service.annotations` empty so api-gateway
+# leave `microservices.aegisApi.service.annotations` empty so aegis-api
 # upgrades stop churning the EIP.
 edgeProxy:
   enabled: false
@@ -198,7 +198,7 @@ auth:
   jwtSecret: ""
 
 # SSO client configuration consumed by the backend (module/ssoclient).
-# Rendered as AEGIS_SSO_* env vars on the api-gateway pod so config.toml
+# Rendered as AEGIS_SSO_* env vars on the aegis-api pod so config.toml
 # template strings can pick them up. Bootstrap client secret is read from
 # a separate Secret (default: `sso-bootstrap`).
 ssoclient:
@@ -210,7 +210,7 @@ ssoclient:
     key: "aegis-backend-secret"
   # Name of a Secret (in the same namespace) containing the SSO private key.
   # The secret must have a key named `sso-private.pem`. When set, both
-  # api-gateway and runtime-worker-service mount it so jwtkeys.Signer can
+  # aegis-api and runtime-worker-service mount it so jwtkeys.Signer can
   # mint service tokens.
   privateKeySecretName: ""
 
@@ -375,7 +375,7 @@ configmap:
     jwksURL: "http://rcabench-aegis-sso:8083/.well-known/jwks.json"
     clientID: "aegis-backend"
     clientSecret: ""
-    # Defaults to http://<release-name>-api-gateway:<port>/auth/oidc/callback.
+    # Defaults to http://<release-name>-aegis-api:<port>/auth/oidc/callback.
     # Only override if the API gateway is exposed under a different host.
     backendRedirectURI: ""
     seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
@@ -383,13 +383,12 @@ configmap:
     loginRedirect: "http://localhost:3323/auth/login"
 
 microservices:
-  apiGateway:
+  aegisApi:
     replicaCount: 1
-    binaryName: "api-gateway"
+    binaryName: "aegis-api"
     service:
-      type: NodePort
-      nodePort: 30082
-      # Annotations rendered onto the api-gateway Service. Kept in chart
+      type: ClusterIP
+      # Annotations rendered onto the aegis-api Service. Kept in chart
       # values (not just stamped out-of-band) so `helm upgrade` doesn't
       # silently drop them — on byte-cluster the Volcengine LB controller
       # uses these to bind a stable EIP to the underlying CLB; if helm
@@ -399,7 +398,7 @@ microservices:
       # (kind, dev). See manifests/byte-cluster/values.yaml.
       annotations: {}
     httpPort: 8082
-    # Port for the runtime-intake gRPC server (runtime-worker -> api-gateway).
+    # Port for the runtime-intake gRPC server (runtime-worker -> aegis-api).
     intakeGrpcPort: 9096
     # Pod resource requests/limits. HPA targetCPUUtilizationPercentage requires
     # `requests.cpu` to be set; leave `resources: {}` to omit the block entirely.
@@ -430,8 +429,7 @@ microservices:
     httpPort: 8084
     binaryName: "aegis-notify"
     service:
-      type: NodePort
-      nodePort: 30084
+      type: ClusterIP
     resources: {}
   blob:
     enabled: true
@@ -440,14 +438,25 @@ microservices:
     binaryName: "aegis-blob"
     scratchRoot: "/var/lib/aegis-blob/scratch"
     service:
-      type: NodePort
-      nodePort: 30085
+      type: ClusterIP
     resources: {}
   gateway:
     enabled: true
     replicaCount: 1
     httpPort: 8086
     binaryName: "aegis-gateway"
+    service:
+      type: ClusterIP
+    # Gateway-level config rendered into `[gateway]` of the configmap.
+    # Routes are derived from release name + microservice ports.
+    trustedHeaderKey: ""
+    rateLimit:
+      rps: 200
+      burst: 400
+    cors:
+      allowedOrigins:
+        - http://localhost:3323
+        - http://127.0.0.1:3323
     resources: {}
   configcenter:
     enabled: true

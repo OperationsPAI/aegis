@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-api-gateway
+  name: {{ .Release.Name }}-aegis-api
 spec:
-  replicas: {{ .Values.microservices.apiGateway.replicaCount }}
+  replicas: {{ .Values.microservices.aegisApi.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-api-gateway
+      app: {{ .Release.Name }}-aegis-api
   template:
     metadata:
       annotations:
         rollout-timestamp: {{ now | quote }}
       labels:
-        app: {{ .Release.Name }}-api-gateway
+        app: {{ .Release.Name }}-aegis-api
     spec:
       serviceAccountName: {{ .Release.Name }}-sa
       initContainers:
@@ -74,19 +74,19 @@ spec:
               mountPath: /initial-config
               readOnly: true
       containers:
-        - name: api-gateway
+        - name: aegis-api
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
           args:
-            - {{ .Values.microservices.apiGateway.binaryName | default "api-gateway" }}
+            - {{ .Values.microservices.aegisApi.binaryName | default "aegis-api" }}
             - --conf
             - {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
             - --port
-            - {{ .Values.microservices.apiGateway.httpPort | quote }}
+            - {{ .Values.microservices.aegisApi.httpPort | quote }}
           ports:
-            - containerPort: {{ .Values.microservices.apiGateway.httpPort }}
+            - containerPort: {{ .Values.microservices.aegisApi.httpPort }}
               name: http
-            - containerPort: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+            - containerPort: {{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
               name: intake-grpc
           readinessProbe:
             tcpSocket:
@@ -126,7 +126,7 @@ spec:
                   optional: true
             {{- end }}
             {{- end }}
-          {{- with .Values.microservices.apiGateway.resources }}
+          {{- with .Values.microservices.aegisApi.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}

@@ -94,12 +94,12 @@ configmap:
       timezone: UTC
 
 microservices:
-  apiGateway:
+  aegisApi:
     service:
       type: ClusterIP
       # LB-binding annotations live on the edge-proxy Service (see
       # `edgeProxy.service.annotations` below), not here. Keeping this
-      # empty means routine api-gateway upgrades no longer touch any
+      # empty means routine aegis-api upgrades no longer touch any
       # object the Volcengine LB controller cares about, so the bound
       # EIP stays stable across `helm upgrade rcabench`.
       annotations: {}
@@ -111,7 +111,7 @@ edgeProxy:
     type: ClusterIP
     # Volcengine LB EIP is bound to this Service MANUALLY (kubectl annotate)
     # after the proxy is up — keeping helm out of the LB-binding loop entirely
-    # avoids the EIP-churn bugs we saw on the api-gateway Service. Once bound,
+    # avoids the EIP-churn bugs we saw on the aegis-api Service. Once bound,
     # the controller-output annotation (`service.beta.kubernetes.io/system-
     # volcengine-loadbalancer-create-response-id`) and the bound-EIP annotations
     # live ONLY on the live cluster Service, never in this values.yaml, so

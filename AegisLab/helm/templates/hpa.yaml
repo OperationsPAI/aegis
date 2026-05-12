@@ -1,33 +1,33 @@
-{{- if .Values.microservices.apiGateway.autoscaling.enabled }}
+{{- if .Values.microservices.aegisApi.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Release.Name }}-api-gateway
+  name: {{ .Release.Name }}-aegis-api
   labels:
-    app: {{ .Release.Name }}-api-gateway
+    app: {{ .Release.Name }}-aegis-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Release.Name }}-api-gateway
-  minReplicas: {{ .Values.microservices.apiGateway.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.microservices.apiGateway.autoscaling.maxReplicas }}
+    name: {{ .Release.Name }}-aegis-api
+  minReplicas: {{ .Values.microservices.aegisApi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.microservices.aegisApi.autoscaling.maxReplicas }}
   metrics:
-    {{- if .Values.microservices.apiGateway.autoscaling.targetCPUUtilizationPercentage }}
+    {{- if .Values.microservices.aegisApi.autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.microservices.apiGateway.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ .Values.microservices.aegisApi.autoscaling.targetCPUUtilizationPercentage }}
     {{- end }}
-    {{- if .Values.microservices.apiGateway.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- if .Values.microservices.aegisApi.autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.microservices.apiGateway.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ .Values.microservices.aegisApi.autoscaling.targetMemoryUtilizationPercentage }}
     {{- end }}
 {{- end }}
 {{- if .Values.microservices.runtimeWorkerService.autoscaling.enabled }}

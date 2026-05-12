@@ -160,12 +160,12 @@ spec:
 {{- end }}
 
 ---
-# API Gateway Service
+# Aegis API (monolith) Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-api-gateway
-  {{- with .Values.microservices.apiGateway.service.annotations }}
+  name: {{ .Release.Name }}-aegis-api
+  {{- with .Values.microservices.aegisApi.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -173,19 +173,19 @@ spec:
   {{- if eq .Values.configmap.system.env_mode "staging" }}
   type: NodePort
   {{- else }}
-  type: {{ .Values.microservices.apiGateway.service.type }}
+  type: {{ .Values.microservices.aegisApi.service.type }}
   {{- end }}
   selector:
-    app: {{ .Release.Name }}-api-gateway
+    app: {{ .Release.Name }}-aegis-api
   ports:
     - name: http
-      port: {{ .Values.microservices.apiGateway.httpPort }}
-      targetPort: {{ .Values.microservices.apiGateway.httpPort }}
-      {{- if or (eq .Values.configmap.system.env_mode "staging") (and (eq .Values.microservices.apiGateway.service.type "NodePort") .Values.microservices.apiGateway.service.nodePort) }}
-      nodePort: {{ .Values.microservices.apiGateway.service.nodePort }}
+      port: {{ .Values.microservices.aegisApi.httpPort }}
+      targetPort: {{ .Values.microservices.aegisApi.httpPort }}
+      {{- if or (eq .Values.configmap.system.env_mode "staging") (and (eq .Values.microservices.aegisApi.service.type "NodePort") .Values.microservices.aegisApi.service.nodePort) }}
+      nodePort: {{ .Values.microservices.aegisApi.service.nodePort }}
       {{- end }}
     - name: intake-grpc
-      port: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+      port: {{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
       targetPort: intake-grpc
 
 ---
@@ -313,13 +313,16 @@ kind: Service
 metadata:
   name: {{ .Release.Name }}-gateway
 spec:
-  type: ClusterIP
+  type: {{ .Values.microservices.gateway.service.type | default "ClusterIP" }}
   selector:
     app: {{ .Release.Name }}-gateway
   ports:
     - name: http
       port: {{ .Values.microservices.gateway.httpPort }}
       targetPort: http
+      {{- if and (eq (.Values.microservices.gateway.service.type | default "ClusterIP") "NodePort") .Values.microservices.gateway.service.nodePort }}
+      nodePort: {{ .Values.microservices.gateway.service.nodePort }}
+      {{- end }}
 {{- end }}
 
 {{- if .Values.microservices.configcenter.enabled }}

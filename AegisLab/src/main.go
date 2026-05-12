@@ -48,7 +48,7 @@ func main() {
 		Use:   "rcabench",
 		Short: "RCA Bench is a benchmarking tool",
 		Run: func(cmd *cobra.Command, args []string) {
-			logrus.Println("Please specify a mode: producer, consumer, both, api-gateway, runtime-worker-service, or sso")
+			logrus.Println("Please specify a mode: producer, consumer, both, aegis-api, runtime-worker-service, or sso")
 		},
 	}
 
@@ -71,7 +71,7 @@ func main() {
 	bothCmd := newModeCommand("both", "Run as both producer and consumer", func() {
 		fx.New(app.BothOptions(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
-	apiGatewayCmd := newModeCommand("api-gateway", "Run as the API gateway", func() {
+	aegisAPICmd := newModeCommand("aegis-api", "Run as the aegis API monolith", func() {
 		fx.New(monolith.Options(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
 	runtimeWorkerServiceCmd := newModeCommand("runtime-worker-service", "Run as the runtime worker service", func() {
@@ -89,7 +89,7 @@ func main() {
 		producerCmd,
 		consumerCmd,
 		bothCmd,
-		apiGatewayCmd,
+		aegisAPICmd,
 		runtimeWorkerServiceCmd,
 		ssoCmd,
 	)

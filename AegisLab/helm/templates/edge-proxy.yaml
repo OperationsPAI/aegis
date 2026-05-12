@@ -1,7 +1,7 @@
 {{- if .Values.edgeProxy.enabled }}
 # Edge proxy: stable Service to anchor the external LoadBalancer EIP.
-# The LB controller annotations live here (not on the api-gateway Service)
-# so routine api-gateway upgrades don't churn the EIP.
+# The LB controller annotations live here (not on the aegis-api Service)
+# so routine aegis-api upgrades don't churn the EIP.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,11 +12,11 @@ data:
         admin off
         auto_https off
     }
-    :{{ .Values.microservices.apiGateway.httpPort }} {
-        reverse_proxy {{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.httpPort }}
+    :{{ .Values.microservices.aegisApi.httpPort }} {
+        reverse_proxy {{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}
     }
-    :{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }} {
-        reverse_proxy h2c://{{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+    :{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }} {
+        reverse_proxy h2c://{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
     }
 ---
 apiVersion: apps/v1
@@ -40,9 +40,9 @@ spec:
           args: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
           ports:
             - name: http
-              containerPort: {{ .Values.microservices.apiGateway.httpPort }}
+              containerPort: {{ .Values.microservices.aegisApi.httpPort }}
             - name: intake-grpc
-              containerPort: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+              containerPort: {{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
           volumeMounts:
             - name: config
               mountPath: /etc/caddy
@@ -69,9 +69,9 @@ spec:
     app: {{ .Release.Name }}-edge-proxy
   ports:
     - name: http
-      port: {{ .Values.microservices.apiGateway.httpPort }}
+      port: {{ .Values.microservices.aegisApi.httpPort }}
       targetPort: http
     - name: intake-grpc
-      port: {{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}
+      port: {{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
       targetPort: intake-grpc
 {{- end }}

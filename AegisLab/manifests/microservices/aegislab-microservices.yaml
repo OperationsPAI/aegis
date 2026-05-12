@@ -6,11 +6,11 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  name: api-gateway
+  name: aegis-api
   namespace: aegislab
 spec:
   selector:
-    app: api-gateway
+    app: aegis-api
   ports:
     - name: http
       port: 8082
@@ -22,22 +22,22 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api-gateway
+  name: aegis-api
   namespace: aegislab
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: api-gateway
+      app: aegis-api
   template:
     metadata:
       labels:
-        app: api-gateway
+        app: aegis-api
     spec:
       containers:
-        - name: api-gateway
+        - name: aegis-api
           image: opspai/rcabench:latest
-          args: ["api-gateway", "--conf", "/etc/rcabench/config.toml", "--port", "8082"]
+          args: ["aegis-api", "--conf", "/etc/rcabench/config.toml", "--port", "8082"]
           ports:
             - containerPort: 8082
               name: http
