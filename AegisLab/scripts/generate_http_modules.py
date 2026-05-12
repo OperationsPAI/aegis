@@ -4,7 +4,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
-OUTPUT = SRC_ROOT / "app" / "http_modules_gen.go"
+OUTPUT = SRC_ROOT / "boot" / "http_modules_gen.go"
 
 # Walk these roots (relative to src/) for module.go discovery.
 # Each direct child subdirectory that contains a module.go is a candidate.
