@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,10 +43,24 @@ func seedDefaultAdmin(db *gorm.DB) error {
 		return nil
 	}
 
+	password := strings.TrimSpace(os.Getenv("AEGIS_SSO_BOOTSTRAP_PASSWORD"))
+	fromEnv := password != ""
+	if fromEnv {
+		if len(password) < 12 {
+			return fmt.Errorf("AEGIS_SSO_BOOTSTRAP_PASSWORD must be at least 12 characters")
+		}
+	} else {
+		generated, err := randomHex(16)
+		if err != nil {
+			return err
+		}
+		password = generated
+	}
+
 	admin := &model.User{
 		Username: "admin",
 		Email:    "admin@aegis.local",
-		Password: "admin123",
+		Password: password,
 		FullName: "Aegis Admin",
 		IsActive: true,
 		Status:   consts.CommonEnabled,
@@ -53,7 +68,27 @@ func seedDefaultAdmin(db *gorm.DB) error {
 	if err := db.Omit("active_username").Create(admin).Error; err != nil {
 		return err
 	}
-	logrus.Info("Seeded default SSO admin user")
+
+	if fromEnv {
+		logrus.Info("Seeded default SSO admin user (password from AEGIS_SSO_BOOTSTRAP_PASSWORD)")
+		return nil
+	}
+
+	logrus.Warnf("Seeded default SSO admin user. ONE-TIME PASSWORD: %s", password)
+	dumpPath := config.GetString("sso.seed_secret_dump_path")
+	if dumpPath == "" {
+		dumpPath = "/var/lib/sso/.first-boot-secret"
+	}
+	adminDumpPath := dumpPath + ".admin"
+	if _, err := os.Stat(adminDumpPath); os.IsNotExist(err) {
+		if mkErr := os.MkdirAll(filepath.Dir(adminDumpPath), 0o700); mkErr != nil {
+			logrus.WithError(mkErr).Warn("could not create dir for admin password dump")
+			return nil
+		}
+		if writeErr := os.WriteFile(adminDumpPath, []byte(password+"\n"), 0o600); writeErr != nil {
+			logrus.WithError(writeErr).Warn("could not write admin password dump file")
+		}
+	}
 	return nil
 }
 
