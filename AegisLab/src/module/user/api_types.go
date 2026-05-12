@@ -2,6 +2,7 @@ package user
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -224,13 +225,11 @@ type UserContainerInfo struct {
 	JoinedAt      time.Time `json:"joined_at"`
 }
 
-func NewUserContainerInfo(userContainer *model.UserContainer) *UserContainerInfo {
+func NewUserContainerInfo(userContainer *model.UserScopedRole) *UserContainerInfo {
+	id, _ := strconv.Atoi(userContainer.ScopeID)
 	resp := &UserContainerInfo{
-		ContainerID: userContainer.ContainerID,
+		ContainerID: id,
 		JoinedAt:    userContainer.CreatedAt,
-	}
-	if userContainer.Container != nil {
-		resp.ContainerName = userContainer.Container.Name
 	}
 	if userContainer.Role != nil {
 		resp.RoleName = userContainer.Role.Name
@@ -246,13 +245,11 @@ type UserDatasetInfo struct {
 	JoinedAt    time.Time `json:"joined_at"`
 }
 
-func NewUserDatasetInfo(userDataset *model.UserDataset) *UserDatasetInfo {
+func NewUserDatasetInfo(userDataset *model.UserScopedRole) *UserDatasetInfo {
+	id, _ := strconv.Atoi(userDataset.ScopeID)
 	resp := &UserDatasetInfo{
-		DatasetID: userDataset.DatasetID,
+		DatasetID: id,
 		JoinedAt:  userDataset.CreatedAt,
-	}
-	if userDataset.Dataset != nil {
-		resp.DatasetName = userDataset.Dataset.Name
 	}
 	if userDataset.Role != nil {
 		resp.RoleName = userDataset.Role.Name
@@ -268,13 +265,11 @@ type UserProjectInfo struct {
 	JoinedAt    time.Time `json:"joined_at"`
 }
 
-func NewUserProjectInfo(userProject *model.UserProject) *UserProjectInfo {
+func NewUserProjectInfo(userProject *model.UserScopedRole) *UserProjectInfo {
+	id, _ := strconv.Atoi(userProject.ScopeID)
 	resp := &UserProjectInfo{
-		ProjectID: userProject.ProjectID,
+		ProjectID: id,
 		JoinedAt:  userProject.CreatedAt,
-	}
-	if userProject.Project != nil {
-		resp.ProjectName = userProject.Project.Name
 	}
 	if userProject.Role != nil {
 		resp.RoleName = userProject.Role.Name

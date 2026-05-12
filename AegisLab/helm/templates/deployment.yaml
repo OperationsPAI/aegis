@@ -110,6 +110,22 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
+            {{- with .Values.ssoclient }}
+            - name: AEGIS_SSO_BASE_URL
+              value: {{ .baseURL | quote }}
+            - name: AEGIS_SSO_JWKS_URL
+              value: {{ .jwksURL | quote }}
+            - name: AEGIS_SSO_CLIENT_ID
+              value: {{ .clientID | quote }}
+            {{- if .clientSecretRef.name }}
+            - name: AEGIS_SSO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .clientSecretRef.name }}
+                  key: {{ .clientSecretRef.key }}
+                  optional: true
+            {{- end }}
+            {{- end }}
           {{- with .Values.microservices.apiGateway.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

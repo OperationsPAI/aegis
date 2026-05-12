@@ -17,6 +17,7 @@ import (
 	k8s "aegis/infra/k8s"
 	redis "aegis/infra/redis"
 	"aegis/model"
+	"aegis/module/ssoclient"
 	"aegis/service/common"
 	"aegis/utils"
 
@@ -54,6 +55,7 @@ type Service struct {
 	k8s          *k8s.Gateway
 	redis        *redis.Gateway
 	runtimeQuery runtimeQuerySource
+	sso          *ssoclient.Client
 }
 
 type serviceParams struct {
@@ -65,6 +67,7 @@ type serviceParams struct {
 	K8s          *k8s.Gateway
 	Redis        *redis.Gateway
 	RuntimeQuery runtimeQuerySource
+	SSO          *ssoclient.Client
 }
 
 func NewService(params serviceParams) *Service {
@@ -75,7 +78,22 @@ func NewService(params serviceParams) *Service {
 		k8s:          params.K8s,
 		redis:        params.Redis,
 		runtimeQuery: params.RuntimeQuery,
+		sso:          params.SSO,
 	}
+}
+
+// lookupUsers fetches user info from SSO for the given ids, swallowing errors
+// because audit/config display is best-effort enrichment, not load-bearing.
+func (s *Service) lookupUsers(ctx context.Context, ids []int) map[int]*ssoclient.UserInfo {
+	if len(ids) == 0 || s.sso == nil {
+		return nil
+	}
+	users, err := s.sso.GetUsers(ctx, ids)
+	if err != nil {
+		logrus.WithError(err).Warn("system: ssoclient.GetUsers failed; user names will be missing")
+		return nil
+	}
+	return users
 }
 
 func (s *Service) GetHealth(ctx context.Context) (*HealthCheckResp, error) {
@@ -157,7 +175,7 @@ func (s *Service) ListQueuedTasks(ctx context.Context) (*QueuedTasksResp, error)
 	return s.runtimeQuery.ListQueuedTasks(ctx)
 }
 
-func (s *Service) GetAuditLog(_ context.Context, id int) (*AuditLogDetailResp, error) {
+func (s *Service) GetAuditLog(ctx context.Context, id int) (*AuditLogDetailResp, error) {
 	log, err := s.repo.getAuditLogByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -166,10 +184,11 @@ func (s *Service) GetAuditLog(_ context.Context, id int) (*AuditLogDetailResp, e
 		return nil, fmt.Errorf("failed to get audit log: %w", err)
 	}
 
-	return NewAuditLogDetailResp(log), nil
+	users := s.lookupUsers(ctx, []int{log.UserID})
+	return NewAuditLogDetailResp(log, users), nil
 }
 
-func (s *Service) ListAuditLogs(_ context.Context, req *ListAuditLogReq) (*dto.ListResp[AuditLogResp], error) {
+func (s *Service) ListAuditLogs(ctx context.Context, req *ListAuditLogReq) (*dto.ListResp[AuditLogResp], error) {
 	limit, offset := req.ToGormParams()
 	filterOptions := req.ToFilterOptions()
 
@@ -178,11 +197,16 @@ func (s *Service) ListAuditLogs(_ context.Context, req *ListAuditLogReq) (*dto.L
 		return nil, fmt.Errorf("failed to list audit logs: %w", err)
 	}
 
-	return buildAuditLogListResp(logs, req, total), nil
+	ids := make([]int, 0, len(logs))
+	for i := range logs {
+		ids = append(ids, logs[i].UserID)
+	}
+	users := s.lookupUsers(ctx, ids)
+	return buildAuditLogListResp(logs, req, total, users), nil
 }
 
-func (s *Service) GetConfig(_ context.Context, configID int) (*ConfigDetailResp, error) {
-	cfg, err := s.repo.getConfigByID(configID, true)
+func (s *Service) GetConfig(ctx context.Context, configID int) (*ConfigDetailResp, error) {
+	cfg, err := s.repo.getConfigByID(configID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get config detail: %w", err)
 	}
@@ -192,10 +216,12 @@ func (s *Service) GetConfig(_ context.Context, configID int) (*ConfigDetailResp,
 		return nil, fmt.Errorf("failed to get config histories: %w", err)
 	}
 
-	return buildConfigDetailResp(cfg, histories), nil
+	ids := collectConfigUserIDs(cfg, histories)
+	users := s.lookupUsers(ctx, ids)
+	return buildConfigDetailResp(cfg, histories, users), nil
 }
 
-func (s *Service) ListConfigs(_ context.Context, req *ListConfigReq) (*dto.ListResp[ConfigResp], error) {
+func (s *Service) ListConfigs(ctx context.Context, req *ListConfigReq) (*dto.ListResp[ConfigResp], error) {
 	limit, offset := req.ToGormParams()
 
 	configs, total, err := s.repo.listConfigs(limit, offset, req.ValueType, req.Category, req.IsSecret, req.UpdatedBy)
@@ -203,7 +229,14 @@ func (s *Service) ListConfigs(_ context.Context, req *ListConfigReq) (*dto.ListR
 		return nil, fmt.Errorf("failed to list configs: %w", err)
 	}
 
-	return buildConfigListResp(configs, req, total), nil
+	ids := make([]int, 0, len(configs))
+	for i := range configs {
+		if configs[i].UpdatedBy != nil {
+			ids = append(ids, *configs[i].UpdatedBy)
+		}
+	}
+	users := s.lookupUsers(ctx, ids)
+	return buildConfigListResp(configs, req, total, users), nil
 }
 
 func (s *Service) RollbackConfigValue(ctx context.Context, req *RollbackConfigReq, configID, userID int, ipAddress, userAgent string) error {
@@ -219,7 +252,7 @@ func (s *Service) RollbackConfigValue(ctx context.Context, req *RollbackConfigRe
 		return fmt.Errorf("history entry %d is not a value change (field: %v)", req.HistoryID, history.ChangeField)
 	}
 
-	existingConfig, err := s.repo.getConfigByID(configID, false)
+	existingConfig, err := s.repo.getConfigByID(configID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("%w: configuration with id %d not found", consts.ErrNotFound, configID)
@@ -256,7 +289,7 @@ func (s *Service) RollbackConfigValue(ctx context.Context, req *RollbackConfigRe
 	return s.propagateValueChange(ctx, existingConfig, newValue, "rollback")
 }
 
-func (s *Service) RollbackConfigMetadata(_ context.Context, req *RollbackConfigReq, configID, userID int, ipAddress, userAgent string) (*ConfigResp, error) {
+func (s *Service) RollbackConfigMetadata(ctx context.Context, req *RollbackConfigReq, configID, userID int, ipAddress, userAgent string) (*ConfigResp, error) {
 	history, err := s.repo.getConfigHistory(req.HistoryID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -269,7 +302,7 @@ func (s *Service) RollbackConfigMetadata(_ context.Context, req *RollbackConfigR
 		return nil, fmt.Errorf("history entry %d is a value change, use RollbackConfigValue instead", req.HistoryID)
 	}
 
-	existingConfig, err := s.repo.getConfigByID(configID, false)
+	existingConfig, err := s.repo.getConfigByID(configID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: configuration with id %d not found", consts.ErrNotFound, configID)
@@ -299,11 +332,12 @@ func (s *Service) RollbackConfigMetadata(_ context.Context, req *RollbackConfigR
 		return nil, err
 	}
 
-	return NewConfigResp(updatedConfig), nil
+	users := s.lookupUsers(ctx, configUserIDs(updatedConfig))
+	return NewConfigResp(updatedConfig, users), nil
 }
 
 func (s *Service) UpdateConfigValue(ctx context.Context, req *UpdateConfigValueReq, configID, userID int, ipAddress, userAgent string) error {
-	existingConfig, err := s.repo.getConfigByID(configID, false)
+	existingConfig, err := s.repo.getConfigByID(configID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("%w: configuration with id %d not found", consts.ErrNotFound, configID)
@@ -344,8 +378,8 @@ func (s *Service) UpdateConfigValue(ctx context.Context, req *UpdateConfigValueR
 	return s.propagateValueChange(ctx, existingConfig, newValue, "update")
 }
 
-func (s *Service) UpdateConfigMetadata(_ context.Context, req *UpdateConfigMetadataReq, configID, userID int, ipAddress, userAgent string) (*ConfigResp, error) {
-	existingConfig, err := s.repo.getConfigByID(configID, false)
+func (s *Service) UpdateConfigMetadata(ctx context.Context, req *UpdateConfigMetadataReq, configID, userID int, ipAddress, userAgent string) (*ConfigResp, error) {
+	existingConfig, err := s.repo.getConfigByID(configID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: configuration with id %d not found", consts.ErrNotFound, configID)
@@ -390,10 +424,11 @@ func (s *Service) UpdateConfigMetadata(_ context.Context, req *UpdateConfigMetad
 		return nil, err
 	}
 
-	return NewConfigResp(updatedConfig), nil
+	users := s.lookupUsers(ctx, configUserIDs(updatedConfig))
+	return NewConfigResp(updatedConfig, users), nil
 }
 
-func (s *Service) ListConfigHistories(_ context.Context, req *ListConfigHistoryReq, configID int) (*dto.ListResp[ConfigHistoryResp], error) {
+func (s *Service) ListConfigHistories(ctx context.Context, req *ListConfigHistoryReq, configID int) (*dto.ListResp[ConfigHistoryResp], error) {
 	limit, offset := req.ToGormParams()
 
 	histories, total, err := s.repo.listConfigHistories(limit, offset, configID, req.ChangeType, req.OperatorID)
@@ -401,7 +436,31 @@ func (s *Service) ListConfigHistories(_ context.Context, req *ListConfigHistoryR
 		return nil, fmt.Errorf("failed to list config histories: %w", err)
 	}
 
-	return buildConfigHistoryListResp(histories, req, total), nil
+	ids := make([]int, 0, len(histories))
+	for i := range histories {
+		if histories[i].OperatorID != nil {
+			ids = append(ids, *histories[i].OperatorID)
+		}
+	}
+	users := s.lookupUsers(ctx, ids)
+	return buildConfigHistoryListResp(histories, req, total, users), nil
+}
+
+func configUserIDs(cfg *model.DynamicConfig) []int {
+	if cfg == nil || cfg.UpdatedBy == nil {
+		return nil
+	}
+	return []int{*cfg.UpdatedBy}
+}
+
+func collectConfigUserIDs(cfg *model.DynamicConfig, histories []model.ConfigHistory) []int {
+	ids := configUserIDs(cfg)
+	for i := range histories {
+		if histories[i].OperatorID != nil {
+			ids = append(ids, *histories[i].OperatorID)
+		}
+	}
+	return ids
 }
 
 func etcdPrefixForScope(scope consts.ConfigScope) string {
@@ -416,10 +475,10 @@ func etcdPrefixForScope(scope consts.ConfigScope) string {
 	return ""
 }
 
-func buildAuditLogListResp(logs []model.AuditLog, req *ListAuditLogReq, total int64) *dto.ListResp[AuditLogResp] {
+func buildAuditLogListResp(logs []model.AuditLog, req *ListAuditLogReq, total int64, users map[int]*ssoclient.UserInfo) *dto.ListResp[AuditLogResp] {
 	logResps := make([]AuditLogResp, 0, len(logs))
 	for i := range logs {
-		logResps = append(logResps, *NewAuditLogResp(&logs[i]))
+		logResps = append(logResps, *NewAuditLogResp(&logs[i], users))
 	}
 
 	return &dto.ListResp[AuditLogResp]{
@@ -428,18 +487,18 @@ func buildAuditLogListResp(logs []model.AuditLog, req *ListAuditLogReq, total in
 	}
 }
 
-func buildConfigDetailResp(cfg *model.DynamicConfig, histories []model.ConfigHistory) *ConfigDetailResp {
-	resp := NewConfigDetailResp(cfg)
+func buildConfigDetailResp(cfg *model.DynamicConfig, histories []model.ConfigHistory, users map[int]*ssoclient.UserInfo) *ConfigDetailResp {
+	resp := NewConfigDetailResp(cfg, users)
 	for _, history := range histories {
-		resp.Histories = append(resp.Histories, *NewConfigHistoryResp(&history))
+		resp.Histories = append(resp.Histories, *NewConfigHistoryResp(&history, users))
 	}
 	return resp
 }
 
-func buildConfigListResp(configs []model.DynamicConfig, req *ListConfigReq, total int64) *dto.ListResp[ConfigResp] {
+func buildConfigListResp(configs []model.DynamicConfig, req *ListConfigReq, total int64, users map[int]*ssoclient.UserInfo) *dto.ListResp[ConfigResp] {
 	configResps := make([]ConfigResp, 0, len(configs))
-	for _, cfg := range configs {
-		configResps = append(configResps, *NewConfigResp(&cfg))
+	for i := range configs {
+		configResps = append(configResps, *NewConfigResp(&configs[i], users))
 	}
 
 	return &dto.ListResp[ConfigResp]{
@@ -448,10 +507,10 @@ func buildConfigListResp(configs []model.DynamicConfig, req *ListConfigReq, tota
 	}
 }
 
-func buildConfigHistoryListResp(histories []model.ConfigHistory, req *ListConfigHistoryReq, total int64) *dto.ListResp[ConfigHistoryResp] {
+func buildConfigHistoryListResp(histories []model.ConfigHistory, req *ListConfigHistoryReq, total int64, users map[int]*ssoclient.UserInfo) *dto.ListResp[ConfigHistoryResp] {
 	historyResps := make([]ConfigHistoryResp, 0, len(histories))
-	for _, history := range histories {
-		historyResps = append(historyResps, *NewConfigHistoryResp(&history))
+	for i := range histories {
+		historyResps = append(historyResps, *NewConfigHistoryResp(&histories[i], users))
 	}
 
 	return &dto.ListResp[ConfigHistoryResp]{

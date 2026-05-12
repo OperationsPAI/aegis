@@ -7,6 +7,7 @@ import (
 	"aegis/consts"
 	"aegis/dto"
 	"aegis/model"
+	"aegis/module/ssoclient"
 	systemmetric "aegis/module/systemmetric"
 	task "aegis/module/task"
 )
@@ -136,7 +137,7 @@ type AuditLogResp struct {
 	CreatedAt  time.Time           `json:"created_at"`
 }
 
-func NewAuditLogResp(log *model.AuditLog) *AuditLogResp {
+func NewAuditLogResp(log *model.AuditLog, users map[int]*ssoclient.UserInfo) *AuditLogResp {
 	resp := &AuditLogResp{
 		ID:         log.ID,
 		Action:     log.Action,
@@ -149,8 +150,8 @@ func NewAuditLogResp(log *model.AuditLog) *AuditLogResp {
 		Status:     consts.GetStatusTypeName(log.Status),
 		CreatedAt:  log.CreatedAt,
 	}
-	if log.User != nil {
-		resp.Username = log.User.Username
+	if u, ok := users[log.UserID]; ok && u != nil {
+		resp.Username = u.Username
 	}
 	if log.Resource != nil {
 		resp.Resource = log.Resource.Name
@@ -164,9 +165,9 @@ type AuditLogDetailResp struct {
 	ErrorMsg string `json:"error_msg,omitempty"`
 }
 
-func NewAuditLogDetailResp(log *model.AuditLog) *AuditLogDetailResp {
+func NewAuditLogDetailResp(log *model.AuditLog, users map[int]*ssoclient.UserInfo) *AuditLogDetailResp {
 	return &AuditLogDetailResp{
-		AuditLogResp: *NewAuditLogResp(log),
+		AuditLogResp: *NewAuditLogResp(log, users),
 		Details:      log.Details,
 		ErrorMsg:     log.ErrorMsg,
 	}
@@ -325,7 +326,7 @@ type ConfigResp struct {
 	UpdatedByName string    `json:"updated_by_name"`
 }
 
-func NewConfigResp(config *model.DynamicConfig) *ConfigResp {
+func NewConfigResp(config *model.DynamicConfig, users map[int]*ssoclient.UserInfo) *ConfigResp {
 	resp := &ConfigResp{
 		ID:        config.ID,
 		Key:       config.Key,
@@ -333,8 +334,11 @@ func NewConfigResp(config *model.DynamicConfig) *ConfigResp {
 		Category:  config.Category,
 		UpdatedAt: config.UpdatedAt,
 	}
-	if config.UpdatedByUser != nil {
-		resp.UpdatedByName = config.UpdatedByUser.Username
+	if config.UpdatedBy != nil {
+		resp.UpdatedByID = *config.UpdatedBy
+		if u, ok := users[*config.UpdatedBy]; ok && u != nil {
+			resp.UpdatedByName = u.Username
+		}
 	}
 	return resp
 }
@@ -350,9 +354,9 @@ type ConfigDetailResp struct {
 	Histories    []ConfigHistoryResp `json:"histories,omitempty"`
 }
 
-func NewConfigDetailResp(config *model.DynamicConfig) *ConfigDetailResp {
+func NewConfigDetailResp(config *model.DynamicConfig, users map[int]*ssoclient.UserInfo) *ConfigDetailResp {
 	return &ConfigDetailResp{
-		ConfigResp:   *NewConfigResp(config),
+		ConfigResp:   *NewConfigResp(config, users),
 		DefaultValue: config.DefaultValue,
 		Description:  config.Description,
 		MinValue:     config.MinValue,
@@ -377,7 +381,7 @@ type ConfigHistoryResp struct {
 	CreatedAt        time.Time `json:"created_at"`
 }
 
-func NewConfigHistoryResp(history *model.ConfigHistory) *ConfigHistoryResp {
+func NewConfigHistoryResp(history *model.ConfigHistory, users map[int]*ssoclient.UserInfo) *ConfigHistoryResp {
 	resp := &ConfigHistoryResp{
 		ID:               history.ID,
 		ChangeType:       consts.GetConfigHistoryChangeTypeName(history.ChangeType),
@@ -391,8 +395,10 @@ func NewConfigHistoryResp(history *model.ConfigHistory) *ConfigHistoryResp {
 		RolledBackFromID: history.RolledBackFromID,
 		CreatedAt:        history.CreatedAt,
 	}
-	if history.Operator != nil {
-		resp.OperatorName = history.Operator.Username
+	if history.OperatorID != nil {
+		if u, ok := users[*history.OperatorID]; ok && u != nil {
+			resp.OperatorName = u.Username
+		}
 	}
 	return resp
 }

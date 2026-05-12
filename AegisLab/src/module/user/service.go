@@ -29,6 +29,14 @@ func (s *Service) GetByUsername(_ context.Context, username string) (*model.User
 	return s.repo.getUserByUsername(username)
 }
 
+func (s *Service) GetByEmail(_ context.Context, email string) (*model.User, error) {
+	return s.repo.getUserByEmail(email)
+}
+
+func (s *Service) GetByIDs(_ context.Context, ids []int) ([]*model.User, error) {
+	return s.repo.GetByIDs(ids)
+}
+
 func (s *Service) CreateUser(_ context.Context, req *CreateUserReq) (*UserResp, error) {
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
@@ -109,13 +117,20 @@ func (s *Service) GetUserDetail(_ context.Context, userID int) (*UserDetailResp,
 	return resp, nil
 }
 
-func (s *Service) ListUsers(_ context.Context, req *ListUserReq) (*dto.ListResp[UserResp], error) {
+func (s *Service) ListUsers(ctx context.Context, req *ListUserReq) (*dto.ListResp[UserResp], error) {
+	return s.ListUsersScoped(ctx, req, nil)
+}
+
+// ListUsersScoped is ListUsers restricted to users with grants in any of
+// viewScopes services (used by SSO delegated service admins, Task #13).
+// Empty viewScopes is equivalent to ListUsers.
+func (s *Service) ListUsersScoped(_ context.Context, req *ListUserReq, viewScopes []string) (*dto.ListResp[UserResp], error) {
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
 	limit, offset := req.ToGormParams()
-	users, total, err := s.repo.listUserViews(limit, offset, req.IsActive, req.Status)
+	users, total, err := s.repo.ListUserViewsScoped(limit, offset, req.IsActive, req.Status, viewScopes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
@@ -318,7 +333,7 @@ func (s *Service) RemoveProject(_ context.Context, userID, projectID int) error 
 	})
 }
 
-func buildUserResourceRoles(userContainers []model.UserContainer, userDatasets []model.UserDataset, userProjects []model.UserProject) ([]UserContainerInfo, []UserDatasetInfo, []UserProjectInfo) {
+func buildUserResourceRoles(userContainers []model.UserScopedRole, userDatasets []model.UserScopedRole, userProjects []model.UserScopedRole) ([]UserContainerInfo, []UserDatasetInfo, []UserProjectInfo) {
 	containerRoles := make([]UserContainerInfo, 0, len(userContainers))
 	for _, uc := range userContainers {
 		containerRoles = append(containerRoles, *NewUserContainerInfo(&uc))

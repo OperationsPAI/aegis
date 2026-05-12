@@ -75,6 +75,7 @@ const (
 	ResourceTrace            ResourceName = "trace"             // trace resource
 	ResourceInjection        ResourceName = "injection"         // fault injection resource
 	ResourceExecution        ResourceName = "execution"         // execution resource
+	ResourceAPIKey           ResourceName = "api_key"           // api key credential resource
 )
 
 func (r ResourceName) String() string {
@@ -147,6 +148,26 @@ func (r ResourceScope) String() string {
 	return string(r)
 }
 
+// Scope types for UserScopedRole (SSO extraction). Identifies the kind of
+// business object a scoped role grant applies to. The value is stored as a
+// string in the user_scoped_roles.scope_type column so other services can
+// register their own scope types (e.g. "yourservice.workspace").
+const (
+	ScopeTypeProject   = "aegis.project"
+	ScopeTypeTeam      = "aegis.team"
+	ScopeTypeContainer = "aegis.container"
+	ScopeTypeDataset   = "aegis.dataset"
+	// ScopeTypeService is the scope_type for delegated service-admin grants
+	// (Task #13). A user_scoped_roles row with this scope_type and
+	// scope_id=<downstream service name> makes the user admin over
+	// everything aegis-sso exposes for that one service — without
+	// granting global system_admin.
+	ScopeTypeService = "aegis-sso.service"
+
+	ServiceAegis    = "aegis"
+	ServiceAegisSSO = "aegis-sso"
+)
+
 // RoleName is the type for role constants
 type RoleName string
 
@@ -168,7 +189,38 @@ const (
 	RoleTeamAdmin            RoleName = "team_admin"             // Team Admin
 	RoleTeamMember           RoleName = "team_member"            // Team Member
 	RoleTeamViewer           RoleName = "team_viewer"            // Team Viewer
+	// RoleServiceAdmin is a built-in role for delegated service admins
+	// (Task #13). Grant it via user_scoped_roles with
+	// scope_type=ScopeTypeService and scope_id=<downstream service name>
+	// to scope a user to one service's SSO surface.
+	RoleServiceAdmin RoleName = "service_admin"
 )
+
+// SSO service-admin permission names — granted to RoleServiceAdmin. Live on
+// service=aegis-sso, scope_type=ScopeTypeService. The /v1 SSO admin gate
+// reads them to authorize delegated admins.
+const (
+	PermSSOUsersRead           = "sso.users.read"
+	PermSSOUsersWrite          = "sso.users.write"
+	PermSSORolesRead           = "sso.roles.read"
+	PermSSOGrantsRead          = "sso.grants.read"
+	PermSSOGrantsWrite         = "sso.grants.write"
+	PermSSOClientsRead         = "sso.clients.read"
+	PermSSOClientsWrite        = "sso.clients.write"
+	PermSSOPermissionsRegister = "sso.permissions.register"
+)
+
+// SSOServiceAdminPermissions is the canonical list seeded for RoleServiceAdmin.
+var SSOServiceAdminPermissions = []string{
+	PermSSOUsersRead,
+	PermSSOUsersWrite,
+	PermSSORolesRead,
+	PermSSOGrantsRead,
+	PermSSOGrantsWrite,
+	PermSSOClientsRead,
+	PermSSOClientsWrite,
+	PermSSOPermissionsRegister,
+}
 
 func (r RoleName) String() string {
 	return string(r)

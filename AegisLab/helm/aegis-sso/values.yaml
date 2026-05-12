@@ -1,0 +1,70 @@
+# aegis-sso chart values.
+
+replicaCount: 1
+
+image:
+  repository: opspai/rcabench
+  tag: latest
+  pullPolicy: Always
+
+# Optional global override (mirrors the rcabench chart's `global.imageRegistry`).
+global:
+  imageRegistry: ""
+
+service:
+  type: ClusterIP
+  port: 8083
+
+# Config rendered into a ConfigMap and mounted at /etc/aegis/config.toml.
+# Operators should override `database.mysql`, `redis.host`, `sso.*` per env.
+config:
+  port: 8083
+  database:
+    mysql:
+      host: "mysql"
+      port: "3306"
+      user: "root"
+      password: "yourpassword"
+      db: "rcabench"
+  redis:
+    host: "redis:6379"
+  sso:
+    issuer: "http://aegis-sso:8083"
+    baseURL: "http://aegis-sso:8083"
+    jwksURL: "http://aegis-sso:8083/.well-known/jwks.json"
+    kid: "aegis-sso-v1"
+    clientID: "aegis-backend"
+    backendRedirectURI: "http://aegis-backend:8082/auth/oidc/callback"
+    privateKeyPath: "/etc/aegis/sso-private.pem"
+    seedSecretDumpPath: "/var/lib/aegis-sso/.first-boot-secret"
+
+# RSA private key (PEM). MUST be provided per environment via --set-file or a
+# values override; chart does not ship a real key. Use the chart README for
+# generation instructions.
+privateKey:
+  # PEM contents (multi-line string). Empty means an external Secret must
+  # exist named <release>-aegis-sso-key with key `sso-private.pem`.
+  pem: ""
+  existingSecret: ""
+
+persistence:
+  # Persistent volume for [sso] seed_secret_dump_path. Stores the one-time
+  # OIDC client bootstrap secret recovered from first-boot.
+  enabled: true
+  storageClass: ""
+  size: 256Mi
+  accessMode: ReadWriteOnce
+  mountPath: /var/lib/aegis-sso
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -7,6 +7,7 @@ import (
 
 	"aegis/consts"
 	"aegis/dto"
+	"aegis/infra/jwtkeys"
 	"aegis/utils"
 
 	"github.com/gin-gonic/gin"
@@ -23,11 +24,12 @@ var wsUpgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	verifier *jwtkeys.Verifier
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, verifier *jwtkeys.Verifier) *Handler {
+	return &Handler{service: service, verifier: verifier}
 }
 
 // BatchDeleteTasks
@@ -206,7 +208,7 @@ func (h *Handler) GetTaskLogsWS(c *gin.Context) {
 		return
 	}
 
-	if _, err := utils.ValidateToken(token); err != nil {
+	if _, err := utils.ParseToken(token, h.verifier.Resolve); err != nil {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "invalid token: "+err.Error())
 		return
 	}

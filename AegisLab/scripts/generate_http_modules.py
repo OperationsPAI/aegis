@@ -6,11 +6,17 @@ SRC_ROOT = REPO_ROOT / 'src'
 MODULE_ROOT = SRC_ROOT / 'module'
 OUTPUT = SRC_ROOT / 'app' / 'http_modules_gen.go'
 
+# Modules owned by the standalone aegis-sso process; not loaded by the
+# AegisLab backend HTTP graph. See docs/sso-extraction-design.md §7.
+SSO_OWNED_MODULES = {'user', 'auth', 'rbac', 'sso', 'ssoclient'}
+
 
 def discover_modules() -> list[str]:
     modules: list[str] = []
     for entry in sorted(MODULE_ROOT.iterdir()):
         if not entry.is_dir():
+            continue
+        if entry.name in SSO_OWNED_MODULES:
             continue
         if (entry / 'module.go').exists():
             modules.append(entry.name)

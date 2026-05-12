@@ -32,6 +32,7 @@ func RuntimeWorkerStackOptions() fx.Option {
 		k8s.Module,
 		runtimeclient.Module,
 		consumer.Module,
+		consumer.JWTSignerModule,
 		fx.Provide(
 			consumer.NewMonitor,
 			fx.Annotate(consumer.NewRestartPedestalRateLimiter, fx.ResultTags(`name:"restart_limiter"`)),

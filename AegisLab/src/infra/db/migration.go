@@ -43,7 +43,8 @@ func centralEntities() []interface{} {
 		&model.ConfigLabel{},
 		&model.UserRole{},
 		&model.UserPermission{},
-		&model.UserTeam{},
+		// UserTeam/UserProject/UserContainer/UserDataset collapsed into UserScopedRole;
+		// migration moved to module/rbac/migrations.go.
 		&model.DynamicConfig{},
 		&model.ConfigHistory{},
 		// &model.Evaluation{} migrated to module/evaluation/migrations.go

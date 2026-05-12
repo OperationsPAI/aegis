@@ -69,7 +69,11 @@ func Init(configPath string) {
 
 	logrus.Printf("Config file loaded successfully: %v; configPath: %v, ", viper.ConfigFileUsed(), configPath)
 
-	// Automatically bind environment variables
+	// Automatically bind environment variables. The replacer maps dotted
+	// keys (e.g. `sso.login_redirect`) onto upper-snake-case env vars
+	// (`SSO_LOGIN_REDIRECT`) so per-deploy values can override TOML
+	// defaults without editing the file.
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	// Validate configuration

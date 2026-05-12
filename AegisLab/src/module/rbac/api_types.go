@@ -214,14 +214,15 @@ func (req *ListPermissionReq) Validate() error {
 
 // PermissionBaseResp contains common fields for permission responses.
 type PermissionBaseResp struct {
-	ID          int                  `json:"id"`
-	Name        string               `json:"name"`
-	DisplayName string               `json:"display_name"`
-	Action      consts.ActionName    `json:"action"`
-	Scope       consts.ResourceScope `json:"scope"`
-	IsSystem    bool                 `json:"is_system"`
-	Status      string               `json:"status"`
-	UpdatedAt   time.Time            `json:"updated_at"`
+	ID          int               `json:"id"`
+	Name        string            `json:"name"`
+	DisplayName string            `json:"display_name"`
+	Action      consts.ActionName `json:"action"`
+	Service     string            `json:"service"`
+	ScopeType   string            `json:"scope_type,omitempty"`
+	IsSystem    bool              `json:"is_system"`
+	Status      string            `json:"status"`
+	UpdatedAt   time.Time         `json:"updated_at"`
 }
 
 func NewPermissionBaseResp(perm *model.Permission) *PermissionBaseResp {
@@ -230,7 +231,8 @@ func NewPermissionBaseResp(perm *model.Permission) *PermissionBaseResp {
 		Name:        perm.Name,
 		DisplayName: perm.DisplayName,
 		Action:      perm.Action,
-		Scope:       perm.Scope,
+		Service:     perm.Service,
+		ScopeType:   perm.ScopeType,
 		IsSystem:    perm.IsSystem,
 		Status:      consts.GetStatusTypeName(perm.Status),
 		UpdatedAt:   perm.UpdatedAt,
@@ -240,37 +242,27 @@ func NewPermissionBaseResp(perm *model.Permission) *PermissionBaseResp {
 // PermissionResp represents permission summary information.
 type PermissionResp struct {
 	PermissionBaseResp
-	Resource string `json:"resource_name"`
 }
 
 func NewPermissionResp(perm *model.Permission) *PermissionResp {
-	resp := &PermissionResp{
+	return &PermissionResp{
 		PermissionBaseResp: *NewPermissionBaseResp(perm),
 	}
-	if perm.Resource != nil {
-		resp.Resource = perm.Resource.Name.String()
-	}
-	return resp
 }
 
 // PermissionDetailResp represents permission detail information.
 type PermissionDetailResp struct {
 	PermissionBaseResp
-	Description string                  `json:"description"`
-	Resource    *PermissionResourceResp `json:"resource,omitempty"`
-	CreatedAt   time.Time               `json:"created_at"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 func NewPermissionDetailResp(perm *model.Permission) *PermissionDetailResp {
-	resp := &PermissionDetailResp{
+	return &PermissionDetailResp{
 		PermissionBaseResp: *NewPermissionBaseResp(perm),
 		Description:        perm.Description,
 		CreatedAt:          perm.CreatedAt,
 	}
-	if perm.Resource != nil {
-		resp.Resource = NewPermissionResourceResp(perm.Resource)
-	}
-	return resp
 }
 
 // PermissionResourceResp keeps the resource snapshot embedded in permission detail responses.

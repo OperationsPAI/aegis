@@ -174,6 +174,21 @@ test-regression:
 # Development Tools
 # =============================================================================
 
+# 🔐 Generate RSA keypair for aegis-sso (first-time setup; idempotent)
+sso-keys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -f data/sso/sso-private.pem ]; then
+        printf "{{green}}✅ data/sso/sso-private.pem already exists, skipping{{reset}}\n"
+        exit 0
+    fi
+    printf "{{blue}}🔐 Generating RSA keypair for aegis-sso...{{reset}}\n"
+    mkdir -p data/sso data/sso-secrets
+    openssl genrsa -out data/sso/sso-private.pem 2048
+    openssl rsa -in data/sso/sso-private.pem -pubout -out data/sso/sso-public.pem
+    chmod 600 data/sso/sso-private.pem
+    printf "{{green}}✅ Wrote data/sso/sso-private.pem and data/sso/sso-public.pem{{reset}}\n"
+
 # 🐛 Start local debugging environment
 local-debug:
     #!/usr/bin/env bash

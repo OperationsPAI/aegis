@@ -75,10 +75,32 @@ addr = ":9094"
 addr = ":9096"
 
 [loki]
-address = "http://10.10.10.161:3100"
+address = "http://10.10.10.161:3101"
 timeout = "10s"
 max_entries = 5000
 
 [otlp_receiver]
 port = 4319
 max_request_size = 5242880
+
+[sso]
+private_key_path = "/etc/aegis/sso-private.pem"
+kid = "aegis-sso-v1"
+jwks_url = "http://aegis-sso:8083/.well-known/jwks.json"
+issuer = "http://aegis-sso:8083"
+base_url = "http://aegis-sso:8083"
+client_id = "aegis-backend"
+client_secret = ""
+backend_redirect_uri = "http://aegis-backend:8082/auth/oidc/callback"
+seed_secret_dump_path = "/var/lib/aegis-sso/.first-boot-secret"
+# Public OIDC client for the aegis-ui console (no client_secret, PKCE).
+# Comma-separated redirect URIs registered for the auth-code flow.
+# Override per deploy with env SSO_CONSOLE_REDIRECT_URIS.
+# Reconciled into the DB on every boot — change here and restart, no
+# manual DELETE on oidc_clients needed.
+console_redirect_uris = "http://localhost:3101/auth/callback,http://127.0.0.1:3101/auth/callback"
+# Optional: when non-empty, /authorize 302s here so the console renders
+# the login form instead of SSO's inline <form>. Console must POST the
+# OIDC params (incl. PKCE) back to /login unchanged.
+# Override per deploy with env SSO_LOGIN_REDIRECT.
+login_redirect = "http://localhost:3101/auth/login"

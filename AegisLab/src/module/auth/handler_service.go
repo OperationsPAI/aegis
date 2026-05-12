@@ -12,6 +12,7 @@ type HandlerService interface {
 	Register(context.Context, *RegisterReq) (*UserInfo, error)
 	RefreshToken(context.Context, *TokenRefreshReq) (*TokenRefreshResp, error)
 	Logout(context.Context, *utils.Claims) error
+	VerifyToken(context.Context, string) (*utils.Claims, error)
 	ChangePassword(context.Context, *ChangePasswordReq, int) error
 	GetProfile(context.Context, int) (*UserProfileResp, error)
 	CreateAPIKey(context.Context, int, *CreateAPIKeyReq) (*APIKeyWithSecretResp, error)

@@ -203,3 +203,8 @@ CLAUDE.md
 .vscode/
 
 client/typescript
+
+# SSO RSA keypair + first-boot client_secret dump — generated locally,
+# never in version control.
+data/sso/
+data/sso-secrets/

@@ -13,6 +13,7 @@ func Migrations() framework.MigrationRegistrar {
 			&model.Permission{},
 			&model.Resource{},
 			&model.RolePermission{},
+			&model.UserScopedRole{},
 		},
 	}
 }

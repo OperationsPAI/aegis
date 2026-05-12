@@ -36,9 +36,6 @@ type DynamicConfig struct {
 	CreatedAt time.Time `gorm:"autoCreateTime"` // Creation time
 	UpdatedAt time.Time `gorm:"autoUpdateTime"` // Last update time
 
-	// Foreign key association
-	UpdatedByUser *User `gorm:"foreignKey:UpdatedBy"`
-
 	// One-to-many relationship with ConfigHistory
 	History []ConfigHistory `gorm:"foreignKey:ConfigID"`
 
@@ -65,7 +62,6 @@ type ConfigHistory struct {
 
 	// Foreign key associations
 	Config         *DynamicConfig `gorm:"foreignKey:ConfigID"`
-	Operator       *User          `gorm:"foreignKey:OperatorID"`
 	RolledBackFrom *ConfigHistory `gorm:"foreignKey:RolledBackFromID"`
 }
 
@@ -128,7 +124,6 @@ type ContainerVersion struct {
 
 	// Foreign key association
 	Container *Container `gorm:"foreignKey:ContainerID"`
-	User      *User      `gorm:"foreignKey:UserID"`
 
 	// One-to-one relationship with HelmConfig
 	HelmConfig *HelmConfig `gorm:"foreignKey:ContainerVersionID;references:ID"`
@@ -338,7 +333,6 @@ type DatasetVersion struct {
 
 	// Foreign key association
 	Dataset *Dataset `gorm:"foreignKey:DatasetID"`
-	User    *User    `gorm:"foreignKey:UserID"`
 
 	Datapacks []FaultInjection `gorm:"many2many:dataset_version_injections"`
 }
@@ -481,13 +475,18 @@ type Role struct {
 
 // Permission table
 type Permission struct {
-	ID          int                  `gorm:"primaryKey;autoIncrement"`                 // Unique identifier
-	Name        string               `gorm:"not null;size:128"`                        // Permission name (unique)
-	DisplayName string               `gorm:"not null"`                                 // Display name
-	Description string               `gorm:"type:text"`                                // Permission description
-	Action      consts.ActionName    `gorm:"type:varchar(16);not null;index:idx_perm"` // Action (read, write, delete, execute, etc.)
-	Scope       consts.ResourceScope `gorm:"type:varchar(8);not null;index:idx_perm"`  // Resource scope (system, project, team, user, global)
-	ResourceID  int                  `gorm:"not null;index:idx_perm"`                  // Associated resource ID
+	ID          int               `gorm:"primaryKey;autoIncrement"`                 // Unique identifier
+	Name        string            `gorm:"not null;size:128"`                        // Permission name (unique)
+	DisplayName string            `gorm:"not null"`                                 // Display name
+	Description string            `gorm:"type:text"`                                // Permission description
+	Action      consts.ActionName `gorm:"type:varchar(16);not null;index:idx_perm"` // Action (read, write, delete, execute, etc.)
+
+	// Service identifies which downstream owns this permission (defaults to "aegis").
+	// Lets multiple services register permissions without name collisions.
+	Service string `gorm:"not null;size:64;default:'aegis';index"`
+	// ScopeType is empty for global permissions; otherwise the UserScopedRole
+	// scope_type the permission applies to (e.g. "aegis.project").
+	ScopeType string `gorm:"size:64;index"`
 
 	IsSystem  bool              `gorm:"not null;default:false"`   // Whether system permission
 	Status    consts.StatusType `gorm:"not null;default:1;index"` // 0:disabled 1:enabled -1:deleted
@@ -495,9 +494,6 @@ type Permission struct {
 	UpdatedAt time.Time         `gorm:"autoUpdateTime"`           // Update time
 
 	ActiveName string `gorm:"type:varchar(128) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN name ELSE NULL END) VIRTUAL;uniqueIndex:idx_active_permission_name"`
-
-	// Foreign key association
-	Resource *Resource `gorm:"foreignKey:ResourceID"`
 }
 
 // Resource table
@@ -534,8 +530,10 @@ type AuditLog struct {
 	Status    consts.StatusType    `gorm:"not null;default:1;index" json:"status"`                       // Status: -1:deleted 0:disabled 1:enabled
 	CreatedAt time.Time            `gorm:"autoCreateTime;index:idx_audit_user_time" json:"created_at"`   // When the action was performed
 
-	// Foreign key association
-	User     *User     `gorm:"foreignKey:UserID"`
+	// Foreign key association. The User association used to live here; AegisLab
+	// now resolves audit-log user info via ssoclient (the SSO process owns
+	// users). The DB-level FK can stay since both tables share the same MySQL
+	// instance in PR-1.
 	Resource *Resource `gorm:"foreignKey:ResourceID"`
 }
 
@@ -788,81 +786,36 @@ type ConfigLabel struct {
 	Label  *Label         `gorm:"foreignKey:LabelID"`
 }
 
-// UserContainer Many-to-many relationship table between User and Container (includes container-level permissions)
-type UserContainer struct {
-	ID          int `gorm:"primaryKey;autoIncrement"` // Unique identifier
-	UserID      int `gorm:"not null;index"`           // User ID
-	ContainerID int `gorm:"not null;index"`           // Container ID
-	RoleID      int // Role ID for this container
+// UserScopedRole is the single table that replaces the four scope-specific
+// join tables (user_projects / user_teams / user_containers / user_datasets).
+// ScopeType identifies the kind of business object (e.g. "aegis.project") and
+// ScopeID stores the business-side ID as a string so non-int IDs from other
+// services can fit. The schema is owned by the SSO process.
+type UserScopedRole struct {
+	ID        int               `gorm:"primaryKey;autoIncrement"`
+	UserID    int               `gorm:"not null;index:idx_usr_scope"`
+	RoleID    int               `gorm:"not null;index:idx_usr_scope"`
+	ScopeType string            `gorm:"not null;size:64;index:idx_usr_scope"`
+	ScopeID   string            `gorm:"not null;size:64;index:idx_usr_scope"`
+	Status    consts.StatusType `gorm:"not null;default:1;index"`
+	CreatedAt time.Time         `gorm:"autoCreateTime"`
+	UpdatedAt time.Time         `gorm:"autoUpdateTime"`
 
-	Status    consts.StatusType `gorm:"not null;default:1;index"` // 0:disabled 1:enabled -1:quit
-	CreatedAt time.Time         `gorm:"autoCreateTime"`           // Removed index - join table rarely queried by creation time
-	UpdatedAt time.Time         `gorm:"autoUpdateTime"`           // Update time
+	Active string `gorm:"type:varchar(160) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN CONCAT(user_id,':',role_id,':',scope_type,':',scope_id) ELSE NULL END) VIRTUAL;uniqueIndex:idx_active_user_scoped_role"`
 
-	ActiveUserContainer string `gorm:"type:varchar(32) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN CONCAT(user_id, ':', container_id, ':', role_id) ELSE NULL END) VIRTUAL;uniqueIndex:idx_user_container_unique"`
-
-	// Foreign key association
-	User      *User      `gorm:"foreignKey:UserID"`
-	Container *Container `gorm:"foreignKey:ContainerID"`
-	Role      *Role      `gorm:"foreignKey:RoleID"`
-}
-
-type UserDataset struct {
-	ID        int `gorm:"primaryKey;autoIncrement"` // Unique identifier
-	UserID    int `gorm:"not null;index"`           // User ID
-	DatasetID int `gorm:"not null;index"`           // DatasetID
-	RoleID    int // Role ID for this dataset
-
-	Status    consts.StatusType `gorm:"not null;default:1;index"` // 0:disabled 1:enabled -1:quit
-	CreatedAt time.Time         `gorm:"autoCreateTime"`           // Removed index - join table rarely queried by creation time
-	UpdatedAt time.Time         `gorm:"autoUpdateTime"`           // Update time
-
-	ActiveUserDataset string `gorm:"type:varchar(32) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN CONCAT(user_id, ':', dataset_id, ':', role_id) ELSE NULL END) VIRTUAL;uniqueIndex:idx_user_dataset_unique"`
-
-	// Foreign key association
-	User    *User    `gorm:"foreignKey:UserID"`
-	Dataset *Dataset `gorm:"foreignKey:DatasetID"`
-	Role    *Role    `gorm:"foreignKey:RoleID"`
-}
-
-// UserProject Many-to-many relationship table between User and Project (includes project-level permissions)
-type UserProject struct {
-	ID        int `gorm:"primaryKey;autoIncrement"` // Unique identifier
-	UserID    int `gorm:"not null;index"`           // User ID
-	ProjectID int `gorm:"not null;index"`           // Project ID
-	RoleID    int `gorm:"not null"`                 // Role ID in this project
-
-	WorkspaceConfig string `gorm:"type:text"` // JSON configuration (view type, filters, layout, favorites, etc.)
-
-	Status    consts.StatusType `gorm:"not null;default:1;index"` // 0:disabled 1:enabled -1:quit
-	CreatedAt time.Time         `gorm:"autoCreateTime"`           // Creation time
-	UpdatedAt time.Time         `gorm:"autoUpdateTime"`           // Update time
-
-	ActiveUserProject string `gorm:"type:varchar(32) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN CONCAT(user_id, ':', project_id, ':', role_id) ELSE NULL END) VIRTUAL;uniqueIndex:idx_user_project_unique"`
-
-	// Foreign key association
-	User    *User    `gorm:"foreignKey:UserID"`
-	Project *Project `gorm:"foreignKey:ProjectID"`
-	Role    *Role    `gorm:"foreignKey:RoleID"`
-}
-
-// UserTeam Many-to-many relationship table between User and Team (includes team-level permissions)
-type UserTeam struct {
-	ID     int `gorm:"primaryKey;autoIncrement"` // Unique identifier
-	UserID int `gorm:"not null;index"`           // User ID
-	TeamID int `gorm:"not null;index"`           // Team ID
-	RoleID int // Role ID in this team
-
-	Status    consts.StatusType `gorm:"not null;default:1;index"` // 0:disabled 1:enabled -1:quit
-	CreatedAt time.Time         `gorm:"autoCreateTime"`           // Creation time
-	UpdatedAt time.Time         `gorm:"autoUpdateTime"`           // Update time
-
-	ActiveUserTeam string `gorm:"type:varchar(32) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN CONCAT(user_id, ':', team_id, ':', role_id) ELSE NULL END) VIRTUAL;uniqueIndex:idx_user_team_unique"`
-
-	// Foreign key association
-	User *User `gorm:"foreignKey:UserID"`
-	Team *Team `gorm:"foreignKey:TeamID"`
 	Role *Role `gorm:"foreignKey:RoleID"`
+}
+
+// UserProjectWorkspace holds AegisLab business data that previously rode on
+// UserProject. It's separate from RBAC ownership (UserScopedRole) on purpose:
+// workspace preferences live with AegisLab, role grants live with SSO.
+type UserProjectWorkspace struct {
+	ID        int       `gorm:"primaryKey;autoIncrement"`
+	UserID    int       `gorm:"not null;uniqueIndex:idx_user_project_workspace,priority:1"`
+	ProjectID int       `gorm:"not null;uniqueIndex:idx_user_project_workspace,priority:2"`
+	Config    string    `gorm:"type:text"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 }
 
 // UserRole Many-to-many relationship table between User and global roles
@@ -1002,3 +955,24 @@ type EvaluationRolloutStats struct {
 func (EvaluationRolloutStats) TableName() string {
 	return "evaluation_rollout_stats"
 }
+
+// OIDCClient registers an OIDC relying-party that can obtain tokens from the
+// SSO. Service is the owner — Task #13 uses it for delegated admin filtering.
+type OIDCClient struct {
+	ID               int               `gorm:"primaryKey;autoIncrement"`
+	ClientID         string            `gorm:"not null;size:64;uniqueIndex"`
+	ClientSecretHash string            `gorm:"not null;size:255"`
+	Name             string            `gorm:"not null;size:128"`
+	Service          string            `gorm:"not null;size:64;index"`
+	RedirectURIs     []string          `gorm:"type:json;serializer:json"`
+	Grants           []string          `gorm:"type:json;serializer:json"`
+	Scopes           []string          `gorm:"type:json;serializer:json"`
+	IsConfidential   bool              `gorm:"not null;default:true"`
+	Status           consts.StatusType `gorm:"not null;default:1;index"`
+	CreatedAt        time.Time         `gorm:"autoCreateTime"`
+	UpdatedAt        time.Time         `gorm:"autoUpdateTime"`
+}
+
+// GORM's snake_case namer turns OIDCClient into "o_id_c_clients" because
+// it treats each capital letter as a word boundary. Pin the table name.
+func (OIDCClient) TableName() string { return "oidc_clients" }

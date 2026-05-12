@@ -173,6 +173,18 @@ auth:
   # generated on first install and retained across helm upgrades.
   jwtSecret: ""
 
+# SSO client configuration consumed by the backend (module/ssoclient).
+# Rendered as AEGIS_SSO_* env vars on the api-gateway pod so config.toml
+# template strings can pick them up. Bootstrap client secret is read from
+# a separate Secret (default: `aegis-sso-bootstrap`).
+ssoclient:
+  baseURL: "http://aegis-sso:8083"
+  jwksURL: "http://aegis-sso:8083/.well-known/jwks.json"
+  clientID: "aegis-backend"
+  clientSecretRef:
+    name: "aegis-sso-bootstrap"
+    key: "aegis-backend-secret"
+
 configmap:
   name: "rcabench"
   version: "1.0.0"

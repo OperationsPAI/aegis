@@ -183,7 +183,7 @@ func TestBuildConfigDetailRespIncludesHistories(t *testing.T) {
 		},
 	}
 
-	resp := buildConfigDetailResp(cfg, histories)
+	resp := buildConfigDetailResp(cfg, histories, nil)
 	if resp == nil {
 		t.Fatal("expected response")
 	}
@@ -210,7 +210,7 @@ func TestBuildAuditLogListRespIncludesPaginationAndItems(t *testing.T) {
 		{ID: 1, Action: "deploy", IPAddress: "127.0.0.1", State: consts.AuditLogStateSuccess, Status: consts.CommonEnabled, CreatedAt: time.Now()},
 	}
 
-	resp := buildAuditLogListResp(logs, req, 21)
+	resp := buildAuditLogListResp(logs, req, 21, nil)
 	if resp == nil {
 		t.Fatal("expected response")
 	}
@@ -222,36 +222,6 @@ func TestBuildAuditLogListRespIncludesPaginationAndItems(t *testing.T) {
 	}
 	if resp.Pagination == nil || resp.Pagination.Page != 2 {
 		t.Fatalf("expected page 2, got %+v", resp.Pagination)
-	}
-}
-
-func TestBuildConfigHistoryListRespIncludesOperatorName(t *testing.T) {
-	req := &ListConfigHistoryReq{
-		PaginationReq: dto.PaginationReq{Page: 1, Size: consts.PageSizeMedium},
-	}
-	operatorID := 5
-	histories := []model.ConfigHistory{
-		{
-			ID:          2,
-			ConfigID:    10,
-			ChangeType:  consts.ChangeTypeUpdate,
-			ChangeField: consts.ChangeFieldDescription,
-			OldValue:    "old desc",
-			NewValue:    "new desc",
-			OperatorID:  &operatorID,
-			Operator:    &model.User{Username: "tester"},
-		},
-	}
-
-	resp := buildConfigHistoryListResp(histories, req, 1)
-	if resp == nil {
-		t.Fatal("expected response")
-	}
-	if len(resp.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(resp.Items))
-	}
-	if resp.Items[0].OperatorName != "tester" {
-		t.Fatalf("expected operator name tester, got %q", resp.Items[0].OperatorName)
 	}
 }
 

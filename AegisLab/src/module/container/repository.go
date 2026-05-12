@@ -41,8 +41,8 @@ func (r *Repository) createContainer(container *model.Container) error {
 	return nil
 }
 
-func (r *Repository) createUserContainer(userContainer *model.UserContainer) error {
-	if err := r.db.Omit("active_user_container").Create(userContainer).Error; err != nil {
+func (r *Repository) createUserContainer(userScopedRole *model.UserScopedRole) error {
+	if err := r.db.Create(userScopedRole).Error; err != nil {
 		return fmt.Errorf("failed to create user-container association: %w", err)
 	}
 	return nil
@@ -59,8 +59,8 @@ func (r *Repository) batchDeleteContainerVersions(containerID int) (int64, error
 }
 
 func (r *Repository) removeUsersFromContainer(containerID int) (int64, error) {
-	result := r.db.Model(&model.UserContainer{}).
-		Where("container_id = ? AND status != ?", containerID, consts.CommonDeleted).
+	result := r.db.Model(&model.UserScopedRole{}).
+		Where("scope_type = ? AND scope_id = ? AND status != ?", consts.ScopeTypeContainer, fmt.Sprintf("%d", containerID), consts.CommonDeleted).
 		Update("status", consts.CommonDeleted)
 	if err := result.Error; err != nil {
 		return 0, fmt.Errorf("failed to delete user-container associations for container %d: %w", containerID, err)
@@ -129,10 +129,10 @@ func (r *Repository) batchGetContainerVersions(containerType consts.ContainerTyp
 
 	if userID > 0 {
 		query = query.Joins(
-			"LEFT JOIN user_containers uc ON uc.container_id = c.id AND uc.user_id = ? AND uc.status = ?",
-			userID, consts.CommonEnabled,
+			"LEFT JOIN user_scoped_roles uc ON uc.scope_type = ? AND uc.scope_id = CAST(c.id AS CHAR) AND uc.user_id = ? AND uc.status = ?",
+			consts.ScopeTypeContainer, userID, consts.CommonEnabled,
 		).Where(
-			r.db.Where("c.is_public = ?", true).Or("uc.container_id IS NOT NULL"),
+			r.db.Where("c.is_public = ?", true).Or("uc.id IS NOT NULL"),
 		)
 	}
 
@@ -149,10 +149,10 @@ func (r *Repository) checkContainerExistsWithDifferentType(containerName string,
 
 	if userID > 0 {
 		query = query.Joins(
-			"LEFT JOIN user_containers uc ON uc.container_id = containers.id AND uc.user_id = ? AND uc.status = ?",
-			userID, consts.CommonEnabled,
+			"LEFT JOIN user_scoped_roles uc ON uc.scope_type = ? AND uc.scope_id = CAST(containers.id AS CHAR) AND uc.user_id = ? AND uc.status = ?",
+			consts.ScopeTypeContainer, userID, consts.CommonEnabled,
 		).Where(
-			r.db.Where("containers.is_public = ?", true).Or("uc.container_id IS NOT NULL"),
+			r.db.Where("containers.is_public = ?", true).Or("uc.id IS NOT NULL"),
 		)
 	}
 

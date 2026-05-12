@@ -469,10 +469,11 @@ func (s *Service) createDatasetCore(repo *Repository, dataset *model.Dataset, ve
 		return nil, err
 	}
 
-	if err := repo.createUserDataset(&model.UserDataset{
+	if err := repo.createUserDataset(&model.UserScopedRole{
 		UserID:    userID,
-		DatasetID: dataset.ID,
 		RoleID:    role.ID,
+		ScopeType: consts.ScopeTypeDataset,
+		ScopeID:   fmt.Sprintf("%d", dataset.ID),
 		Status:    consts.CommonEnabled,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to associate dataset with user: %w", err)

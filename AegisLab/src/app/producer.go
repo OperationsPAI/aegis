@@ -8,6 +8,7 @@ import (
 	k8s "aegis/infra/k8s"
 	redis "aegis/infra/redis"
 	httpapi "aegis/interface/http"
+	"aegis/module/ssoclient"
 	commonservice "aegis/service/common"
 	"aegis/service/initialization"
 	"aegis/utils"
@@ -31,6 +32,7 @@ func ProducerHTTPOptions(port string) fx.Option {
 		fx.Invoke(registerProducerInitialization),
 		ProducerHTTPModules(),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
+		ssoclient.Module,
 		httpapi.Module,
 	)
 }

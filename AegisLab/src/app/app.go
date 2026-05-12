@@ -7,6 +7,7 @@ import (
 	etcd "aegis/infra/etcd"
 	harbor "aegis/infra/harbor"
 	helm "aegis/infra/helm"
+	jwtkeys "aegis/infra/jwtkeys"
 	logger "aegis/infra/logger"
 	loki "aegis/infra/loki"
 	redis "aegis/infra/redis"
@@ -20,6 +21,7 @@ func BaseOptions(confPath string) fx.Option {
 		fx.Supply(config.Params{Path: confPath}),
 		config.Module,
 		logger.Module,
+		jwtkeys.SignerModule,
 	)
 }
 

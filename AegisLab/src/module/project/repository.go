@@ -29,10 +29,11 @@ func (r *Repository) createProjectWithOwner(project *model.Project, userID int) 
 		return fmt.Errorf("failed to create project: %w", err)
 	}
 
-	if err := r.db.Omit("active_user_project").Create(&model.UserProject{
+	if err := r.db.Create(&model.UserScopedRole{
 		UserID:    userID,
-		ProjectID: project.ID,
 		RoleID:    role.ID,
+		ScopeType: consts.ScopeTypeProject,
+		ScopeID:   fmt.Sprintf("%d", project.ID),
 		Status:    consts.CommonEnabled,
 	}).Error; err != nil {
 		return fmt.Errorf("failed to create user-project association: %w", err)
@@ -41,8 +42,8 @@ func (r *Repository) createProjectWithOwner(project *model.Project, userID int) 
 }
 
 func (r *Repository) deleteProjectCascade(projectID int) (int64, error) {
-	if err := r.db.Model(&model.UserProject{}).
-		Where("project_id = ? AND status != ?", projectID, consts.CommonDeleted).
+	if err := r.db.Model(&model.UserScopedRole{}).
+		Where("scope_type = ? AND scope_id = ? AND status != ?", consts.ScopeTypeProject, fmt.Sprintf("%d", projectID), consts.CommonDeleted).
 		Update("status", consts.CommonDeleted).Error; err != nil {
 		return 0, fmt.Errorf("failed to remove users from project: %w", err)
 	}
@@ -63,8 +64,8 @@ func (r *Repository) loadProjectDetailBase(projectID int) (*model.Project, int, 
 	}
 
 	var userCount int64
-	if err := r.db.Model(&model.UserProject{}).
-		Where("project_id = ? AND status = ?", project.ID, consts.CommonEnabled).
+	if err := r.db.Model(&model.UserScopedRole{}).
+		Where("scope_type = ? AND scope_id = ? AND status = ?", consts.ScopeTypeProject, fmt.Sprintf("%d", project.ID), consts.CommonEnabled).
 		Count(&userCount).Error; err != nil {
 		return nil, 0, err
 	}

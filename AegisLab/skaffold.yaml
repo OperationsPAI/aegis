@@ -38,7 +38,13 @@ profiles:
               initialDataFiles.data_yaml: data/initial_data/staging/data.yaml
               initialDataFiles.otel_demo_yaml: data/initial_data/staging/otel-demo.yaml
               initialDataFiles.ts_yaml: data/initial_data/staging/ts.yaml
-              
+          - name: aegis-sso
+            chartPath: helm/aegis-sso
+            namespace: exp
+            createNamespace: true
+            setValueTemplates:
+              image.tag: "{{.IMAGE_TAG}}"
+
   - name: test
     activation:
       - env: ENV_MODE=test

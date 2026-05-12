@@ -2,7 +2,6 @@
 package app
 
 import (
-	auth "aegis/module/auth"
 	chaossystem "aegis/module/chaossystem"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
@@ -18,14 +17,12 @@ import (
 	pedestal "aegis/module/pedestal"
 	project "aegis/module/project"
 	ratelimiter "aegis/module/ratelimiter"
-	rbac "aegis/module/rbac"
 	sdk "aegis/module/sdk"
 	system "aegis/module/system"
 	systemmetric "aegis/module/systemmetric"
 	task "aegis/module/task"
 	team "aegis/module/team"
 	trace "aegis/module/trace"
-	user "aegis/module/user"
 	widget "aegis/module/widget"
 	"aegis/router"
 	"go.uber.org/fx"
@@ -33,7 +30,6 @@ import (
 
 func producerHTTPModules() []fx.Option {
 	return []fx.Option{
-		auth.Module,
 		chaossystem.Module,
 		container.Module,
 		dataset.Module,
@@ -49,14 +45,12 @@ func producerHTTPModules() []fx.Option {
 		pedestal.Module,
 		project.Module,
 		ratelimiter.Module,
-		rbac.Module,
 		sdk.Module,
 		system.Module,
 		systemmetric.Module,
 		task.Module,
 		team.Module,
 		trace.Module,
-		user.Module,
 		widget.Module,
 		router.Module,
 	}
@@ -64,7 +58,6 @@ func producerHTTPModules() []fx.Option {
 
 func producerHTTPModuleNames() []string {
 	return []string{
-		"auth",
 		"chaossystem",
 		"container",
 		"dataset",
@@ -80,14 +73,12 @@ func producerHTTPModuleNames() []string {
 		"pedestal",
 		"project",
 		"ratelimiter",
-		"rbac",
 		"sdk",
 		"system",
 		"systemmetric",
 		"task",
 		"team",
 		"trace",
-		"user",
 		"widget",
 	}
 }

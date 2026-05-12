@@ -97,6 +97,7 @@ var resourceDisplayNameMap = map[ResourceName]string{
 	ResourceTrace:            "Trace",
 	ResourceInjection:        "Fault Injection",
 	ResourceExecution:        "Execution",
+	ResourceAPIKey:           "API Key",
 }
 
 var resouceTypeMap = map[ResourceType]string{
@@ -172,6 +173,7 @@ var SystemRoleDisplayNames = map[RoleName]string{
 	RoleTeamAdmin:            "Team Admin",
 	RoleTeamMember:           "Team Member",
 	RoleTeamViewer:           "Team Viewer",
+	RoleServiceAdmin:         "Service Admin",
 }
 
 // ------------------- Functions to get names ------------------

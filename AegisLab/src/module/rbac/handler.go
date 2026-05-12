@@ -2,14 +2,22 @@ package rbac
 
 import (
 	"aegis/httpx"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"aegis/consts"
 	"aegis/dto"
+	"aegis/middleware"
 
 	"github.com/gin-gonic/gin"
 )
+
+func actorID(c *gin.Context) int {
+	id, _ := middleware.GetCurrentUserID(c)
+	return id
+}
 
 type Handler struct {
 	service HandlerService
@@ -43,10 +51,15 @@ func (h *Handler) CreateRole(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
 		return
 	}
+	start := time.Now()
+	actor := actorID(c)
 	resp, err := h.service.CreateRole(c.Request.Context(), &req)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "role.create", fmt.Sprintf(`{"name":%q}`, req.Name), err, start, actor, consts.ResourceRole)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "role.create", fmt.Sprintf(`{"role_id":%d,"name":%q}`, resp.ID, resp.Name), nil, start, actor, consts.ResourceRole)
 	dto.JSONResponse(c, http.StatusCreated, "Role created successfully", resp)
 }
 
@@ -72,9 +85,15 @@ func (h *Handler) DeleteRole(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.DeleteRole(c.Request.Context(), roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"role_id":%d}`, roleID)
+	if err := h.service.DeleteRole(c.Request.Context(), roleID); err != nil {
+		middleware.AuditAction(c, "role.delete", details, err, start, actor, consts.ResourceRole)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "role.delete", details, nil, start, actor, consts.ResourceRole)
 	dto.JSONResponse[any](c, http.StatusNoContent, "Role deleted successfully", nil)
 }
 
@@ -172,10 +191,16 @@ func (h *Handler) UpdateRole(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"role_id":%d}`, roleID)
 	resp, err := h.service.UpdateRole(c.Request.Context(), &req, roleID)
-	if httpx.HandleServiceError(c, err) {
+	if err != nil {
+		middleware.AuditAction(c, "role.update", details, err, start, actor, consts.ResourceRole)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "role.update", details, nil, start, actor, consts.ResourceRole)
 	dto.JSONResponse[any](c, http.StatusAccepted, "Role updated successfully", resp)
 }
 
@@ -208,9 +233,15 @@ func (h *Handler) AssignRolePermissions(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.AssignRolePermissions(c.Request.Context(), req.PermissionIDs, roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"role_id":%d,"permission_ids":%d}`, roleID, len(req.PermissionIDs))
+	if err := h.service.AssignRolePermissions(c.Request.Context(), req.PermissionIDs, roleID); err != nil {
+		middleware.AuditAction(c, "role.permissions.bind", details, err, start, actor, consts.ResourceRole)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "role.permissions.bind", details, nil, start, actor, consts.ResourceRole)
 	dto.JSONResponse[any](c, http.StatusOK, "Permissions assigned successfully", nil)
 }
 
@@ -243,9 +274,15 @@ func (h *Handler) RemoveRolePermissions(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.RemoveRolePermissions(c.Request.Context(), req.PermissionIDs, roleID)) {
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"role_id":%d,"permission_ids":%d}`, roleID, len(req.PermissionIDs))
+	if err := h.service.RemoveRolePermissions(c.Request.Context(), req.PermissionIDs, roleID); err != nil {
+		middleware.AuditAction(c, "role.permissions.unbind", details, err, start, actor, consts.ResourceRole)
+		httpx.HandleServiceError(c, err)
 		return
 	}
+	middleware.AuditAction(c, "role.permissions.unbind", details, nil, start, actor, consts.ResourceRole)
 	dto.JSONResponse[any](c, http.StatusOK, "Permissions removed successfully", nil)
 }
 
