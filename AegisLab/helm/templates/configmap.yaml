@@ -46,13 +46,13 @@ data:
     [k8s]
     namespace = "{{ .Values.configmap.k8s.namespace }}"
     [k8s.service]
-    internal_url = "http://{{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.httpPort }}"
+    internal_url = "{{ .Values.configmap.k8s.service.internalURL | default (printf "http://%s-api-gateway:%v" .Release.Name .Values.microservices.apiGateway.httpPort) }}"
     [k8s.init_container]
     {{- range $key, $value := .Values.configmap.k8s.init_container }}
     {{ $key }} = {{ $value | quote }}
     {{- end }}
     [k8s.job.service_account]
-    name = "{{ .Release.Name }}-sa"
+    name = "{{ .Values.configmap.k8s.job.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}"
     {{- range $key, $value := .Values.configmap.k8s.job.volume_mount }}
     [k8s.job.volume_mount.{{ $key }}]
     name = {{ $value.name | quote }}
@@ -85,7 +85,7 @@ data:
     jwks_url = "{{ .Values.configmap.sso.jwksURL }}"
     client_id = "{{ .Values.configmap.sso.clientID }}"
     client_secret = "{{ .Values.configmap.sso.clientSecret }}"
-    backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-api-gateway:%s/auth/oidc/callback" .Release.Name .Values.microservices.apiGateway.httpPort) }}"
+    backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-api-gateway:%v/auth/oidc/callback" .Release.Name .Values.microservices.apiGateway.httpPort) }}"
     seed_secret_dump_path = "{{ .Values.configmap.sso.seedSecretDumpPath }}"
     console_redirect_uris = "{{ .Values.configmap.sso.consoleRedirectURIs }}"
     login_redirect = "{{ .Values.configmap.sso.loginRedirect }}"
@@ -97,16 +97,16 @@ data:
 
     {{- if .Values.buildkit.enabled }}
     [buildkit]
-    address = "{{ .Release.Name }}-buildkit:1234"
+    address = "{{ .Values.configmap.buildkit.address | default (printf "%s-buildkit:1234" .Release.Name) }}"
     {{- end }}
 
     [clients.runtime]
     # api-gateway -> runtime-worker, query-only (queue/lock status).
-    target = "{{ .Release.Name }}-runtime-worker-service:{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
+    target = "{{ .Values.configmap.clients.runtime.target | default (printf "%s-runtime-worker-service:%v" .Release.Name .Values.microservices.runtimeWorkerService.grpcPort) }}"
 
     [clients.runtime_intake]
     # runtime-worker -> api-gateway, execution/injection state writes.
-    target = "{{ .Release.Name }}-api-gateway:{{ .Values.microservices.apiGateway.intakeGrpcPort | default 9096 }}"
+    target = "{{ .Values.configmap.clients.runtimeIntake.target | default (printf "%s-api-gateway:%v" .Release.Name (.Values.microservices.apiGateway.intakeGrpcPort | default 9096)) }}"
 
     [runtime_worker.grpc]
     addr = ":{{ .Values.microservices.runtimeWorkerService.grpcPort }}"
@@ -116,7 +116,7 @@ data:
 
     {{- if .Values.loki.enabled }}
     [loki]
-    address = "http://{{ .Release.Name }}-loki:3100"
+    address = "{{ .Values.configmap.loki.address | default (printf "http://%s-loki:3100" .Release.Name) }}"
     timeout = "{{ .Values.configmap.loki.timeout }}"
     max_entries = {{ .Values.configmap.loki.max_entries }}
     {{- end }}
@@ -182,10 +182,10 @@ metadata:
     {{- include "sso.labels" . | nindent 4 }}
 data:
   config.prod.toml: |
-    name = "sso"
-    version = "1.0.0"
+    name = "{{ .Values.sso.config.name | default "sso" }}"
+    version = "{{ .Values.sso.config.version | default "1.0.0" }}"
     port = {{ .Values.sso.config.port }}
-    workspace = "/app"
+    workspace = "{{ .Values.sso.config.workspace | default "/app" }}"
 
     [database.mysql]
     host = "{{ .Values.sso.config.database.mysql.host }}"

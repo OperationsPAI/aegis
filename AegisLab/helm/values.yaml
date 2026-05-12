@@ -5,6 +5,21 @@ global:
   # Set to empty string to use default public registries
   imageRegistry: ""
 
+servicePorts:
+  redis: 6379
+  mysql: 3306
+  etcd:
+    client: 2379
+    peer: 2380
+  jaeger:
+    grpc: 4317
+    http: 4318
+    thriftCompact: 6831
+    collectorHttp: 14268
+    query: 16686
+  loki: 3100
+  prometheus: 9090
+
 images:
   rcabench:
     name: opspai/rcabench
@@ -77,6 +92,9 @@ edgeProxy:
 
 buildkit:
   enabled: true
+  port: 1234
+  metricsPort: 5678
+  fallbackRegistry: ""
   resources:
     limits:
       cpu: "500m"
@@ -87,6 +105,8 @@ buildkit:
 
 alloy:
   enabled: true
+  appLabel: "rcabench"
+  metricsPort: 12345
   tolerations:
     - key: "node-role.kubernetes.io/control-plane"
       operator: "Exists"
@@ -101,6 +121,7 @@ alloy:
 
 loki:
   enabled: true
+  servicePort: 3100
   resources:
     limits:
       cpu: "1000m"
@@ -111,6 +132,8 @@ loki:
 
 prometheus:
   enabled: true
+  servicePort: 9090
+  selfScrapeTarget: "localhost:9090"
   resources:
     limits:
       cpu: "1000m"
@@ -144,6 +167,7 @@ harbor:
   namespace: "library"
   username: "admin"
   password: "Harbor12345"
+  certName: "harbor.lab.pj.crt"
 
 # Initialization settings for PVC setup during install/upgrade
 initialization:
@@ -202,11 +226,17 @@ sso:
     pullPolicy: Always
 
   service:
-    type: ClusterIP
+    type: NodePort
     port: 8083
+    nodePort: 30083
 
   config:
+    name: "sso"
+    version: "1.0.0"
     port: 8083
+    workspace: "/app"
+    binaryName: "sso"
+    subcommand: "sso"
     database:
       mysql:
         host: "mysql"
@@ -231,6 +261,8 @@ sso:
       backendRedirectURI: ""
       privateKeyPath: "/etc/aegis/sso-private.pem"
       seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
+      consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+      loginRedirect: "http://localhost:3323/auth/login"
 
   privateKey:
     pem: ""
@@ -265,6 +297,8 @@ configmap:
   version: "1.0.0"
   port: 8082
   workspace: "/app"
+  configFile: "/etc/rcabench/config.prod.toml"
+  configDir: "/etc/rcabench"
   system:
     env_mode: "prod"
     timezone: "Asia/Shanghai"
@@ -336,9 +370,9 @@ configmap:
   sso:
     privateKeyPath: "/etc/aegis/sso-private.pem"
     kid: "sso-v1"
-    issuer: "http://sso:8083"
-    baseURL: "http://sso:8083"
-    jwksURL: "http://sso:8083/.well-known/jwks.json"
+    issuer: "http://172.21.0.2:30083"
+    baseURL: "http://172.21.0.2:30083"
+    jwksURL: "http://rcabench-aegis-sso:8083/.well-known/jwks.json"
     clientID: "aegis-backend"
     clientSecret: ""
     # Defaults to http://<release-name>-api-gateway:<port>/auth/oidc/callback.
@@ -351,9 +385,10 @@ configmap:
 microservices:
   apiGateway:
     replicaCount: 1
+    binaryName: "api-gateway"
     service:
-      type: ClusterIP
-      nodePort: 32082
+      type: NodePort
+      nodePort: 30082
       # Annotations rendered onto the api-gateway Service. Kept in chart
       # values (not just stamped out-of-band) so `helm upgrade` doesn't
       # silently drop them — on byte-cluster the Volcengine LB controller
@@ -380,6 +415,7 @@ microservices:
       targetMemoryUtilizationPercentage: 0
   runtimeWorkerService:
     replicaCount: 1
+    binaryName: "runtime-worker-service"
     grpcPort: 9094
     resources: {}
     autoscaling:
@@ -392,21 +428,32 @@ microservices:
     enabled: true
     replicaCount: 1
     httpPort: 8084
+    binaryName: "aegis-notify"
+    service:
+      type: NodePort
+      nodePort: 30084
     resources: {}
   blob:
     enabled: true
     replicaCount: 1
     httpPort: 8085
+    binaryName: "aegis-blob"
+    scratchRoot: "/var/lib/aegis-blob/scratch"
+    service:
+      type: NodePort
+      nodePort: 30085
     resources: {}
   gateway:
     enabled: true
     replicaCount: 1
     httpPort: 8086
+    binaryName: "aegis-gateway"
     resources: {}
   configcenter:
     enabled: true
     replicaCount: 1
     httpPort: 8087
+    binaryName: "aegis-configcenter"
     resources: {}
 
 persistence:
@@ -481,6 +528,14 @@ juicefs:
 # The defaults are defined in helm/_helpers.tpl based on the environment
 initialConfig:
   force: false # Set to true to force reinitialize etcd config on pod restart
+  etcdInit:
+    endpoint: "" # Defaults to http://<release-name>-etcd-headless:2379
+    producer:
+      initKey: "/initialized_producer"
+      configPrefix: "/rcabench/config/producer"
+    consumer:
+      initKey: "/initialized_consumer"
+      configPrefix: "/rcabench/config/consumer"
   producer:
     settings: {}
 

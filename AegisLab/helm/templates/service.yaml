@@ -10,24 +10,24 @@ spec:
     app: {{ .Release.Name }}-jaeger
   ports:
     - name: grpc
-      port: 4317
-      targetPort: 4317
+      port: {{ .Values.servicePorts.jaeger.grpc | default 4317 }}
+      targetPort: {{ .Values.servicePorts.jaeger.grpc | default 4317 }}
       nodePort: 31317
     - name: http
-      port: 4318
-      targetPort: 4318
+      port: {{ .Values.servicePorts.jaeger.http | default 4318 }}
+      targetPort: {{ .Values.servicePorts.jaeger.http | default 4318 }}
       nodePort: 31318
     - name: thrift-compact
-      port: 6831
-      targetPort: 6831
+      port: {{ .Values.servicePorts.jaeger.thriftCompact | default 6831 }}
+      targetPort: {{ .Values.servicePorts.jaeger.thriftCompact | default 6831 }}
       nodePort: 31631
     - name: collector-http
-      port: 14268
-      targetPort: 14268
+      port: {{ .Values.servicePorts.jaeger.collectorHttp | default 14268 }}
+      targetPort: {{ .Values.servicePorts.jaeger.collectorHttp | default 14268 }}
       nodePort: 31468
     - name: query
-      port: 16686
-      targetPort: 16686
+      port: {{ .Values.servicePorts.jaeger.query | default 16686 }}
+      targetPort: {{ .Values.servicePorts.jaeger.query | default 16686 }}
       nodePort: 31686
 {{- else }}
 apiVersion: v1
@@ -40,20 +40,20 @@ spec:
     app: {{ .Release.Name }}-jaeger
   ports:
     - name: grpc
-      port: 4317
-      targetPort: 4317
+      port: {{ .Values.servicePorts.jaeger.grpc | default 4317 }}
+      targetPort: {{ .Values.servicePorts.jaeger.grpc | default 4317 }}
     - name: http
-      port: 4318
-      targetPort: 4318
+      port: {{ .Values.servicePorts.jaeger.http | default 4318 }}
+      targetPort: {{ .Values.servicePorts.jaeger.http | default 4318 }}
     - name: thrift-compact
-      port: 6831
-      targetPort: 6831
+      port: {{ .Values.servicePorts.jaeger.thriftCompact | default 6831 }}
+      targetPort: {{ .Values.servicePorts.jaeger.thriftCompact | default 6831 }}
     - name: collector-http
-      port: 14268
-      targetPort: 14268
+      port: {{ .Values.servicePorts.jaeger.collectorHttp | default 14268 }}
+      targetPort: {{ .Values.servicePorts.jaeger.collectorHttp | default 14268 }}
     - name: query
-      port: 16686
-      targetPort: 16686
+      port: {{ .Values.servicePorts.jaeger.query | default 16686 }}
+      targetPort: {{ .Values.servicePorts.jaeger.query | default 16686 }}
 {{- end }}
 
 ---
@@ -68,7 +68,7 @@ spec:
   selector:
     app: {{ .Release.Name }}-redis
   ports:
-    - port: 6379
+    - port: {{ .Values.servicePorts.redis | default 6379 }}
       nodePort: 32279
 {{- else }}
 apiVersion: v1
@@ -80,7 +80,7 @@ spec:
   selector:
     app: {{ .Release.Name }}-redis
   ports:
-    - port: 6379
+    - port: {{ .Values.servicePorts.redis | default 6379 }}
 {{- end }}
 
 ---
@@ -95,8 +95,8 @@ spec:
   selector:
     app: {{ .Release.Name }}-mysql
   ports:
-    - port: 3306
-      targetPort: 3306
+    - port: {{ .Values.servicePorts.mysql | default 3306 }}
+      targetPort: {{ .Values.servicePorts.mysql | default 3306 }}
       nodePort: 32206
 {{- else }}
 apiVersion: v1
@@ -108,8 +108,8 @@ spec:
   selector:
     app: {{ .Release.Name }}-mysql
   ports:
-    - port: 3306
-      targetPort: 3306
+    - port: {{ .Values.servicePorts.mysql | default 3306 }}
+      targetPort: {{ .Values.servicePorts.mysql | default 3306 }}
 {{- end }}
 
 ---
@@ -124,11 +124,11 @@ spec:
     app: {{ .Release.Name }}-etcd
   ports:
     - name: client
-      port: 2379
-      targetPort: 2379
+      port: {{ .Values.servicePorts.etcd.client | default 2379 }}
+      targetPort: {{ .Values.servicePorts.etcd.client | default 2379 }}
     - name: peer
-      port: 2380
-      targetPort: 2380
+      port: {{ .Values.servicePorts.etcd.peer | default 2380 }}
+      targetPort: {{ .Values.servicePorts.etcd.peer | default 2380 }}
 
 ---
 # etcd External Service
@@ -142,8 +142,8 @@ spec:
   selector:
     app: {{ .Release.Name }}-etcd
   ports:
-    - port: 2379
-      targetPort: 2379
+    - port: {{ .Values.servicePorts.etcd.client | default 2379 }}
+      targetPort: {{ .Values.servicePorts.etcd.client | default 2379 }}
       nodePort: 31379
 {{- else }}
 apiVersion: v1
@@ -155,8 +155,8 @@ spec:
   selector:
     app: {{ .Release.Name }}-etcd
   ports:
-    - port: 2379
-      targetPort: 2379
+    - port: {{ .Values.servicePorts.etcd.client | default 2379 }}
+      targetPort: {{ .Values.servicePorts.etcd.client | default 2379 }}
 {{- end }}
 
 ---
@@ -214,8 +214,8 @@ spec:
   selector:
     app: {{ .Release.Name }}-buildkit
   ports:
-    - port: 1234
-      targetPort: 1234
+    - port: {{ .Values.buildkit.port }}
+      targetPort: {{ .Values.buildkit.port }}
   type: ClusterIP
 
 {{- if .Values.loki.enabled }}
@@ -231,8 +231,8 @@ spec:
     app: {{ .Release.Name }}-loki
   ports:
     - name: http
-      port: 3100
-      targetPort: 3100
+      port: {{ .Values.servicePorts.loki | default 3100 }}
+      targetPort: {{ .Values.servicePorts.loki | default 3100 }}
 {{- end }}
 
 {{- if .Values.prometheus.enabled }}
@@ -249,8 +249,8 @@ spec:
     app: {{ .Release.Name }}-prometheus
   ports:
     - name: http
-      port: 9090
-      targetPort: 9090
+      port: {{ .Values.servicePorts.prometheus | default 9090 }}
+      targetPort: {{ .Values.servicePorts.prometheus | default 9090 }}
       nodePort: 32090
 {{- else }}
 apiVersion: v1
@@ -263,8 +263,8 @@ spec:
     app: {{ .Release.Name }}-prometheus
   ports:
     - name: http
-      port: 9090
-      targetPort: 9090
+      port: {{ .Values.servicePorts.prometheus | default 9090 }}
+      targetPort: {{ .Values.servicePorts.prometheus | default 9090 }}
 {{- end }}
 {{- end }}
 

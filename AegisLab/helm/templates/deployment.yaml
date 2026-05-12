@@ -23,10 +23,10 @@ spec:
             - sh
             - -c
             - |
-              INIT_KEY="/initialized_producer"
-              CONFIG_PREFIX="/rcabench/config/producer"
+              INIT_KEY="{{ .Values.initialConfig.etcdInit.producer.initKey }}"
+              CONFIG_PREFIX="{{ .Values.initialConfig.etcdInit.producer.configPrefix }}"
               CONFIG_YAML_PATH="/initial-config/etcd.yaml"
-              ETCD_ENDPOINT="http://{{ .Release.Name }}-etcd-headless:2379"
+              ETCD_ENDPOINT="{{ .Values.initialConfig.etcdInit.endpoint | default (printf "http://%s-etcd-headless:2379" .Release.Name) }}"
               FORCE_INIT="{{ .Values.initialConfig.force }}"
 
               b64enc() {
@@ -78,9 +78,9 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
           args:
-            - api-gateway
+            - {{ .Values.microservices.apiGateway.binaryName | default "api-gateway" }}
             - --conf
-            - /etc/rcabench/config.prod.toml
+            - {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
             - --port
             - {{ .Values.microservices.apiGateway.httpPort | quote }}
           ports:
@@ -132,7 +132,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: initial-data
               mountPath: "{{ .Values.configmap.initialization.data_path }}"
@@ -197,10 +197,10 @@ spec:
             - sh
             - -c
             - |
-              INIT_KEY="/initialized_consumer"
-              CONFIG_PREFIX="/rcabench/config/consumer"
+              INIT_KEY="{{ .Values.initialConfig.etcdInit.consumer.initKey }}"
+              CONFIG_PREFIX="{{ .Values.initialConfig.etcdInit.consumer.configPrefix }}"
               CONFIG_YAML_PATH="/initial-config/etcd.yaml"
-              ETCD_ENDPOINT="http://{{ .Release.Name }}-etcd-headless:2379"
+              ETCD_ENDPOINT="{{ .Values.initialConfig.etcdInit.endpoint | default (printf "http://%s-etcd-headless:2379" .Release.Name) }}"
               FORCE_INIT="{{ .Values.initialConfig.force }}"
 
               b64enc() {
@@ -252,9 +252,9 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
           args:
-            - runtime-worker-service
+            - {{ .Values.microservices.runtimeWorkerService.binaryName | default "runtime-worker-service" }}
             - --conf
-            - /etc/rcabench/config.prod.toml
+            - {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
           ports:
             - containerPort: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
               name: grpc
@@ -286,7 +286,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: initial-data
               mountPath: "{{ .Values.configmap.initialization.data_path }}"
@@ -295,7 +295,7 @@ spec:
               mountPath: /root/.docker/config.json
               subPath: config.json
             - name: harbor-cert
-              mountPath: /usr/local/share/ca-certificates/harbor.lab.pj.crt
+              mountPath: /usr/local/share/ca-certificates/{{ .Values.harbor.certName | default "harbor.lab.pj.crt" }}
               subPath: harbor.lab.pj.crt
             {{- end }}
             - name: containers-data
@@ -364,14 +364,14 @@ data:
     insecure-entitlements = ["security.insecure"]
 
     [grpc]
-    address = ["tcp://0.0.0.0:1234"]
+    address = ["tcp://0.0.0.0:{{ .Values.buildkit.port }}"]
 
     {{- if .Values.harbor.enabled }}
-    [registry."10.10.10.240"]
+    [registry."{{ .Values.harbor.registry }}"]
     http = false
-    ca = ["/usr/local/share/ca-certificates/harbor.lab.pj.crt"]
-    {{- else }}
-    [registry."pair-diag-cn-guangzhou.cr.volces.com/pair"]
+    ca = ["/usr/local/share/ca-certificates/{{ .Values.harbor.certName | default "harbor.lab.pj.crt" }}"]
+    {{- else if .Values.buildkit.fallbackRegistry }}
+    [registry."{{ .Values.buildkit.fallbackRegistry }}"]
     http = false
     {{- end }}
 ---
@@ -398,8 +398,8 @@ spec:
             - --config
             - /etc/buildkit/buildkitd.toml
           ports:
-            - containerPort: 1234
-            - containerPort: 5678
+            - containerPort: {{ .Values.buildkit.port }}
+            - containerPort: {{ .Values.buildkit.metricsPort | default 5678 }}
           {{- with .Values.buildkit.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -408,7 +408,7 @@ spec:
             privileged: true
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: containers-data
               mountPath: "{{ .Values.configmap.jfs.container_path }}"
@@ -419,7 +419,7 @@ spec:
               subPath: buildkitd.toml
             {{- if .Values.harbor.enabled }}
             - name: harbor-cert
-              mountPath: /usr/local/share/ca-certificates/harbor.lab.pj.crt
+              mountPath: /usr/local/share/ca-certificates/{{ .Values.harbor.certName | default "harbor.lab.pj.crt" }}
               subPath: harbor.lab.pj.crt
             {{- end }}
       volumes:
@@ -465,10 +465,10 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
           args:
-            - aegis-notify
+            - {{ .Values.microservices.notify.binaryName | default "aegis-notify" }}
             - serve
             - --conf
-            - /etc/rcabench
+            - {{ .Values.configmap.configDir | default "/etc/rcabench" }}
             - --port
             - {{ .Values.microservices.notify.httpPort | quote }}
           ports:
@@ -516,7 +516,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
       volumes:
         - name: config
@@ -545,10 +545,10 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
           args:
-            - aegis-blob
+            - {{ .Values.microservices.blob.binaryName | default "aegis-blob" }}
             - serve
             - --conf
-            - /etc/rcabench
+            - {{ .Values.configmap.configDir | default "/etc/rcabench" }}
             - --port
             - {{ .Values.microservices.blob.httpPort | quote }}
           ports:
@@ -591,17 +591,17 @@ spec:
             {{- end }}
             {{- end }}
             - name: BLOB_BUCKETS_SCRATCH_ROOT
-              value: "/var/lib/aegis-blob/scratch"
+              value: "{{ .Values.microservices.blob.scratchRoot | default "/var/lib/aegis-blob/scratch" }}"
           {{- with .Values.microservices.blob.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: blob-scratch
-              mountPath: /var/lib/aegis-blob/scratch
+              mountPath: {{ .Values.microservices.blob.scratchRoot | default "/var/lib/aegis-blob/scratch" }}
       volumes:
         - name: config
           configMap:
@@ -631,10 +631,10 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
           args:
-            - aegis-gateway
+            - {{ .Values.microservices.gateway.binaryName | default "aegis-gateway" }}
             - serve
             - --conf
-            - /etc/rcabench
+            - {{ .Values.configmap.configDir | default "/etc/rcabench" }}
             - --port
             - {{ .Values.microservices.gateway.httpPort | quote }}
           ports:
@@ -682,7 +682,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
       volumes:
         - name: config
@@ -711,10 +711,10 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
           args:
-            - aegis-configcenter
+            - {{ .Values.microservices.configcenter.binaryName | default "aegis-configcenter" }}
             - serve
             - --conf
-            - /etc/rcabench
+            - {{ .Values.configmap.configDir | default "/etc/rcabench" }}
             - --port
             - {{ .Values.microservices.configcenter.httpPort | quote }}
           ports:
@@ -762,7 +762,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
       volumes:
         - name: config
@@ -797,10 +797,10 @@ spec:
           image: {{ include "sso.image" . }}
           imagePullPolicy: {{ .Values.sso.image.pullPolicy }}
           args:
-            - sso
-            - sso
+            - {{ .Values.sso.config.binaryName | default "sso" }}
+            - {{ .Values.sso.config.subcommand | default "sso" }}
             - --conf
-            - /etc/rcabench/config.prod.toml
+            - {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
             - --port
             - {{ .Values.sso.service.port | quote }}
           ports:
@@ -830,7 +830,7 @@ spec:
             {{- toYaml .Values.sso.resources | nindent 12 }}
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.prod.toml
+              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: private-key
               mountPath: {{ .Values.sso.config.sso.privateKeyPath }}

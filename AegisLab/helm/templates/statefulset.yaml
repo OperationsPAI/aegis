@@ -19,11 +19,11 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.jaeger "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.jaeger.pullPolicy }}"
           ports:
-            - containerPort: 4317
-            - containerPort: 4318
-            - containerPort: 6831
-            - containerPort: 14268
-            - containerPort: 16686
+            - containerPort: {{ .Values.servicePorts.jaeger.grpc | default 4317 }}
+            - containerPort: {{ .Values.servicePorts.jaeger.http | default 4318 }}
+            - containerPort: {{ .Values.servicePorts.jaeger.thriftCompact | default 6831 }}
+            - containerPort: {{ .Values.servicePorts.jaeger.collectorHttp | default 14268 }}
+            - containerPort: {{ .Values.servicePorts.jaeger.query | default 16686 }}
           volumeMounts:
             - name: jaeger-data
               mountPath: /badger
@@ -69,7 +69,7 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.redis "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.redis.pullPolicy }}"
           ports:
-            - containerPort: 6379
+            - containerPort: {{ .Values.servicePorts.redis | default 6379 }}
           {{- if not .Values.persistence.redis.enabled }}
           resources:
             requests:
@@ -150,7 +150,7 @@ spec:
             - --innodb-flush-method=O_DIRECT_NO_FSYNC
             {{- end }}
           ports:
-            - containerPort: 3306
+            - containerPort: {{ .Values.servicePorts.mysql | default 3306 }}
           {{- if not .Values.persistence.mysql.enabled }}
           resources:
             requests:
@@ -212,25 +212,25 @@ spec:
             - name: ETCD_DATA_DIR
               value: "/etcd-data"
             - name: ETCD_LISTEN_CLIENT_URLS
-              value: "http://0.0.0.0:2379"
+              value: "http://0.0.0.0:{{ .Values.servicePorts.etcd.client | default 2379 }}"
             - name: ETCD_ADVERTISE_CLIENT_URLS
-              value: "http://{{ .Release.Name }}-etcd-external:2379"
+              value: "http://{{ .Release.Name }}-etcd-external:{{ .Values.servicePorts.etcd.client | default 2379 }}"
             - name: ETCD_LISTEN_PEER_URLS
-              value: "http://0.0.0.0:2380"
+              value: "http://0.0.0.0:{{ .Values.servicePorts.etcd.peer | default 2380 }}"
             - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
-              value: "http://{{ .Release.Name }}-etcd-0.{{ .Release.Name }}-etcd-headless:2380"
+              value: "http://{{ .Release.Name }}-etcd-0.{{ .Release.Name }}-etcd-headless:{{ .Values.servicePorts.etcd.peer | default 2380 }}"
             - name: ETCD_INITIAL_CLUSTER
-              value: "{{ .Values.configmap.etcd.cluster.name }}=http://{{ .Release.Name }}-etcd-0.{{ .Release.Name }}-etcd-headless:2380"
+              value: "{{ .Values.configmap.etcd.cluster.name }}=http://{{ .Release.Name }}-etcd-0.{{ .Release.Name }}-etcd-headless:{{ .Values.servicePorts.etcd.peer | default 2380 }}"
             - name: ETCD_INITIAL_CLUSTER_STATE
               value: "new"
             - name: ETCD_INITIAL_CLUSTER_TOKEN
               value: "{{ .Values.configmap.etcd.cluster.token }}"
           ports:
             - name: client
-              containerPort: 2379
+              containerPort: {{ .Values.servicePorts.etcd.client | default 2379 }}
               protocol: TCP
             - name: peer
-              containerPort: 2380
+              containerPort: {{ .Values.servicePorts.etcd.peer | default 2380 }}
               protocol: TCP
           {{- if not .Values.persistence.etcd.enabled }}
           resources:

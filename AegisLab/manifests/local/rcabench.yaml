@@ -43,15 +43,21 @@ grafana:
 harbor:
   enabled: false
 
-# Dev mode — backend runs with dev config template
+# Dev mode — backend runs with dev config template.
+# SSO issuer + baseURL point at the kind node's NodePort so the
+# host-side `apps/console` Vite dev server (localhost:3323) can complete
+# the OIDC code+PKCE flow. JWKS refresh stays on the internal cluster
+# DNS — api-gateway resolves rcabench-sso:8083 directly in-cluster.
 configmap:
   system:
     env_mode: "dev"
   sso:
-    issuer: "http://rcabench-sso:8083"
-    baseURL: "http://rcabench-sso:8083"
+    issuer: "http://172.21.0.2:30083"
+    baseURL: "http://172.21.0.2:30083"
     jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
     backendRedirectURI: "http://rcabench-api-gateway:8082/auth/oidc/callback"
+    consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+    loginRedirect: "http://localhost:3323/auth/login"
 
 # Mount the sso private key so api-gateway and runtime-worker-service
 # can mint service tokens via jwtkeys.Signer.
@@ -59,6 +65,40 @@ ssoclient:
   baseURL: "http://rcabench-sso:8083"
   jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
   privateKeySecretName: "rcabench-sso-key"
+
+# Expose api-gateway + sso + notify + blob via NodePort so the host-side
+# console (Vite dev server, defaults to localhost:3323) can hit them at
+# 172.21.0.2:3008x. Without these the chart only emits ClusterIP
+# services and the only access path is `kubectl port-forward`.
+microservices:
+  apiGateway:
+    service:
+      type: NodePort
+      nodePort: 30082
+  notify:
+    service:
+      type: NodePort
+      nodePort: 30084
+  blob:
+    service:
+      type: NodePort
+      nodePort: 30085
+
+sso:
+  service:
+    type: NodePort
+    port: 8083
+    nodePort: 30083
+  config:
+    sso:
+      # SSO stamps this as the `iss` claim and surfaces it from
+      # /.well-known/openid-configuration. The browser must be able to
+      # resolve `iss` (it fetches JWKS from it during id_token verify).
+      issuer: "http://172.21.0.2:30083"
+      baseURL: "http://172.21.0.2:30083"
+      jwksURL: "http://172.21.0.2:30083/.well-known/jwks.json"
+      consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+      loginRedirect: "http://localhost:3323/auth/login"
 
 # Disable init jobs that pull from private registries.
 # For local dev, seed pedestal charts manually via aegisctl if needed.

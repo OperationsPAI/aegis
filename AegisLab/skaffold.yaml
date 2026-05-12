@@ -35,9 +35,10 @@ profiles:
             setValues:
               sso.fullnameOverride: rcabench-sso
               sso.image.pullPolicy: IfNotPresent
-              sso.config.sso.issuer: "http://rcabench-sso:8083"
-              sso.config.sso.baseURL: "http://rcabench-sso:8083"
-              sso.config.sso.jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+              # SSO URL overrides (issuer/baseURL/jwksURL, etc.) live in
+              # manifests/local/rcabench.yaml so they can reference the
+              # kind node's NodePort (172.21.0.2:30083) — the host-side
+              # Vite dev server needs that to complete the OIDC flow.
               sso.auth.secretName: "rcabench-auth"
               sso.config.database.mysql.host: "rcabench-mysql"
               sso.config.redis.host: "rcabench-redis:6379"

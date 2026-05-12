@@ -150,7 +150,7 @@ data:
 
       stage.static_labels {
         values = {
-          app = "rcabench",
+          app = "{{ .Values.alloy.appLabel | default "rcabench" }}",
         }
       }
 
@@ -160,7 +160,7 @@ data:
     // 6. Write to Loki
     loki.write "default" {
       endpoint {
-        url = "http://{{ .Release.Name }}-loki:3100/loki/api/v1/push"
+        url = "http://{{ .Release.Name }}-loki:{{ .Values.loki.servicePort | default 3100 }}/loki/api/v1/push"
       }
     }
 
@@ -174,7 +174,7 @@ data:
     // 8. OTLP HTTP export to backend log receiver
     otelcol.exporter.otlphttp "backend" {
       client {
-        endpoint = "http://{{ .Release.Name }}-exp:4319"
+        endpoint = "http://{{ .Release.Name }}-exp:{{ .Values.configmap.otlp.port }}"
       }
 
       retry_on_failure {
@@ -193,7 +193,7 @@ data:
 
     prometheus.remote_write "default" {
       endpoint {
-        url = "http://{{ .Release.Name }}-prometheus:9090/api/v1/write"
+        url = "http://{{ .Release.Name }}-prometheus:{{ .Values.prometheus.servicePort | default 9090 }}/api/v1/write"
       }
     }
 ---
@@ -282,7 +282,7 @@ data:
     auth_enabled: false
 
     server:
-      http_listen_port: 3100
+      http_listen_port: {{ .Values.loki.servicePort | default 3100 }}
 
     common:
       path_prefix: /loki
@@ -385,12 +385,12 @@ data:
     scrape_configs:
       - job_name: "prometheus"
         static_configs:
-          - targets: ["localhost:9090"]
+          - targets: ["{{ .Values.prometheus.selfScrapeTarget | default "localhost:9090" }}"]
 
       {{- if .Values.loki.enabled }}
       - job_name: "loki"
         static_configs:
-          - targets: ["{{ .Release.Name }}-loki:3100"]
+          - targets: ["{{ .Release.Name }}-loki:{{ .Values.loki.servicePort | default 3100 }}"]
             labels:
               instance: "loki"
       {{- end }}
@@ -408,7 +408,7 @@ data:
           - source_labels: [__meta_kubernetes_pod_ip]
             action: replace
             target_label: __address__
-            replacement: $1:12345
+            replacement: $1:{{ .Values.alloy.metricsPort | default 12345 }}
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: instance
       {{- end }}
@@ -485,7 +485,7 @@ data:
       - name: Loki
         type: loki
         access: proxy
-        url: http://{{ .Release.Name }}-loki:3100
+        url: http://{{ .Release.Name }}-loki:{{ .Values.loki.servicePort | default 3100 }}
         isDefault: true
         editable: true
         jsonData:
@@ -495,7 +495,7 @@ data:
       - name: Prometheus
         type: prometheus
         access: proxy
-        url: http://{{ .Release.Name }}-prometheus:9090
+        url: http://{{ .Release.Name }}-prometheus:{{ .Values.prometheus.servicePort | default 9090 }}
         editable: true
         jsonData:
           timeInterval: 15s
