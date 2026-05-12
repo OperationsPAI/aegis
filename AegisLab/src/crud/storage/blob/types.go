@@ -4,7 +4,7 @@
 // works equally well in the monolith and in the standalone aegis-blob
 // microservice.
 //
-// Six-role separation (see RFC docs/rfcs/blob-storage.md):
+// Six-role separation:
 //
 //	Ingestion → Authorization → Routing (bucket) → Driver → Lifecycle → Observability
 package blob

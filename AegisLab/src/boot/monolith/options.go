@@ -18,9 +18,8 @@ import (
 // runtime-worker uses to write execution and injection state back into
 // the shared DB.
 //
-// Note: this used to live at app/gateway / cmd/api-gateway. Despite the
-// historical name it was always the monolith; the real L7 gateway lives
-// at app/gateway + cmd/aegis-gateway (see docs/rfcs/api-gateway.md).
+// Despite "gateway"-ish historical naming this is the monolith; the
+// real L7 gateway lives at boot/gateway + cmd/aegis-gateway.
 func Options(confPath, port string) fx.Option {
 	return fx.Options(
 		app.BaseOptions(confPath),

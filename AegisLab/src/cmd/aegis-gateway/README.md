@@ -2,12 +2,13 @@
 
 L7 application gateway. Default port `:8086`.
 
-Owns route → upstream mapping, JWT pre-auth via `module/ssoclient`,
+Owns route → upstream mapping, JWT pre-auth via `clients/sso`,
 trusted-header injection (HMAC-signed), global + per-route rate limit,
 CORS, and access logging with trace propagation.
 
-This binary has **no database** and **no business logic**. See
-`docs/rfcs/api-gateway.md` for the full design.
+This binary has **no database** and **no business logic**. The router
+implementation lives at `src/clients/gateway/`; the chart-side route
+table lives at `helm/templates/configmap.yaml` (`[[gateway.routes]]`).
 
 ## Run
 

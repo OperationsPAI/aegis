@@ -1,47 +1,50 @@
 # Contributing to AegisLab
 
 This document captures the rules that keep the codebase maintainable as
-more modules are added. The most important one:
+more modules are added.
 
 > **Adding a new module must NOT require editing any other module's
 > source code.**
 
-## Module self-registration (Phase 3+)
+Read [`README.md`](README.md) first for the repo layout and design
+model. This doc only covers the *rules* and the per-PR checklist.
 
-Every AegisLab module lives in `src/module/<name>/` and contributes to
-five framework plugin points via `fx` value-groups. The aggregation
-sites iterate these groups at startup, so adding a module never means
-editing a central list.
+## Module self-registration
 
-Plugin points (defined in `src/framework/`):
+Modules live in either `src/core/domain/<name>/` (business pipeline
+data) or `src/crud/<group>/<name>/` (supporting CRUD). Every module
+exposes a single `fx.Module` and contributes to framework plugin points
+via `fx` value-groups. Aggregation sites iterate those groups at
+startup — adding a module never means editing a central list.
 
-| Group               | Type                         | Consumed by                      |
-| ------------------- | ---------------------------- | -------------------------------- |
-| `routes`            | `framework.RouteRegistrar`   | `router.New`                     |
-| `permissions`       | `framework.PermissionRegistrar` | `module/rbac.AggregatePermissions` |
-| `role_grants`       | `framework.RoleGrantsRegistrar` | `module/rbac.AggregatePermissions` |
-| `migrations`        | `framework.MigrationRegistrar` | `infra/db.NewGormDB`             |
-| `task_executors`    | `framework.TaskExecutorRegistrar` | `service/consumer.NewTaskRegistry` |
+Plugin points (defined in `src/platform/framework/`):
 
-Middleware is NOT a plugin point — it is global policy, centralized
-intentionally (per issue #28).
+| Group               | Type                                | Consumed by                              |
+| ------------------- | ----------------------------------- | ---------------------------------------- |
+| `routes`            | `framework.RouteRegistrar`          | `platform/router.New`                    |
+| `permissions`       | `framework.PermissionRegistrar`     | `crud/iam/rbac.AggregatePermissions`     |
+| `role_grants`       | `framework.RoleGrantsRegistrar`     | `crud/iam/rbac.AggregatePermissions`     |
+| `migrations`        | `framework.MigrationRegistrar`      | `platform/db.NewGormDB`                  |
+| `task_executors`    | `framework.TaskExecutorRegistrar`   | `core/orchestrator/common.NewTaskRegistry` |
 
-### Reference module: `label`
+Middleware is **not** a plugin point — it's global policy, centralized
+intentionally.
 
-The `label` module is the Phase 3 reference migration. Copy its layout
-when migrating a new module in Phase 4:
+### Reference module
+
+`src/crud/iam/label/` is the smallest end-to-end example. Copy its
+layout:
 
 ```
-src/module/label/
-  module.go         # fx.Module wiring + fx.Annotate ResultTags for each group
+src/crud/iam/label/
+  module.go         # fx.Module + fx.Annotate ResultTags
   routes.go         # Routes() returns framework.RouteRegistrar
   permissions.go    # Permissions() + RoleGrants()
   migrations.go     # Migrations() returns framework.MigrationRegistrar
-  handler.go        # HTTP handlers (unchanged from Phase 2)
+  handler.go        # HTTP handlers
   handler_service.go
   repository.go
   service.go
-  core.go           # optional: low-level repo operations
   api_types.go
 ```
 
@@ -49,10 +52,8 @@ src/module/label/
 
 ```go
 var Module = fx.Module("label",
-    fx.Provide(NewRepository),
-    fx.Provide(NewService),
+    fx.Provide(NewRepository, NewService, NewHandler),
     fx.Provide(AsHandlerService),
-    fx.Provide(NewHandler),
     fx.Provide(
         fx.Annotate(Routes,       fx.ResultTags(`group:"routes"`)),
         fx.Annotate(Permissions,  fx.ResultTags(`group:"permissions"`)),
@@ -62,96 +63,142 @@ var Module = fx.Module("label",
 )
 ```
 
-### Routes audience
+### Route audiences
 
-`framework.RouteRegistrar` carries an `Audience` tag
-(`AudiencePublic | AudienceSDK | AudiencePortal | AudienceAdmin`)
-matching the pre-Phase-3 file split in `router/`. A module that exposes
-routes to multiple audiences (e.g. `injection` has portal + sdk)
-contributes **one `RouteRegistrar` per audience** from separate
-constructors, all tagged `group:"routes"`.
+`framework.RouteRegistrar` carries an `Audience` field
+(`AudiencePublic | AudienceSDK | AudiencePortal | AudienceAdmin`). A
+module that exposes routes to multiple audiences (e.g.
+`core/domain/injection` has portal + sdk) contributes **one
+`RouteRegistrar` per audience** from separate constructors, all tagged
+`group:"routes"`.
+
+### After creating a module
+
+Regenerate the HTTP module index so the monolith/aegis-api picks it up:
+
+```bash
+python3 src/scripts/generate_http_modules.py
+```
+
+That rewrites `src/boot/http_modules_gen.go`. **Never hand-edit that
+file** — it walks the directory tree.
+
+If a split-process binary (e.g. `cmd/aegis-gateway`, `cmd/aegis-blob`)
+also needs the module, add it to that binary's
+`src/boot/<role>/options.go` Options list.
 
 ## Cross-module access rule
 
 When module A needs data that module B owns:
 
-- ✅ **Module A imports `B.Reader` / `B.Writer` interfaces** (defined
-  in `module/b/reader.go` or `module/b/writer.go`) and calls methods
-  via the interface.
+- ✅ Module A imports `B.Reader` / `B.Writer` interfaces (defined in
+  `b/reader.go` / `b/writer.go`) and calls methods through the
+  interface.
 - ✅ Module B provides the concrete implementation via
-  `fx.Provide(fx.As(new(Reader)))` or `fx.Provide(AsReader)`.
-- ❌ **Never import `module/b/repository.go` directly** from A.
-- ❌ **Never run SQL against another module's tables** from A.
+  `fx.Provide(AsReader)` / `fx.Provide(AsWriter)` so the consumer
+  binds the interface, not the struct.
+- ❌ Never import another module's `repository.go` directly.
+- ❌ Never run SQL against another module's tables.
 
-This keeps the dependency graph a DAG even when modules grow. The
-Phase 4 migration for each module includes extracting its `Reader` /
-`Writer` interfaces; see `module/execution/`, `module/injection/` for
-examples already in place (their `ExecutionOwner` / `InjectionOwner`
-interfaces in `service/consumer/owner_adapter.go` are the pattern —
-generalized to `Reader` / `Writer` once Phase 4 lands).
+This keeps the dependency graph a DAG. See `core/domain/injection`
+(`InjectionWriter`) and `core/domain/execution` (`ExecutionOwner`) for
+the pattern, and `core/orchestrator/owner_adapter.go` for how the
+orchestrator consumes those interfaces.
 
 ### Example
 
 ```go
-// module/dataset/reader.go  (provider side)
+// core/domain/dataset/reader.go  (provider)
 type Reader interface {
     GetDataset(ctx context.Context, id int) (*DatasetItem, error)
 }
 
 func AsReader(s *Service) Reader { return s }
 
-// module/dataset/module.go
+// core/domain/dataset/module.go
 var Module = fx.Module("dataset",
     fx.Provide(NewService),
-    fx.Provide(AsReader),  // exposes interface; concrete type stays private
+    fx.Provide(AsReader),       // exposes interface; concrete type stays internal
     ...
 )
 
-// module/execution/service.go  (consumer side)
+// core/domain/execution/service.go  (consumer)
 type Service struct {
     datasetReader dataset.Reader
     ...
 }
 ```
 
-## Phase 3 coexistence
+## Layer rules
 
-During Phase 3 and 4, the central lists still exist as a baseline:
+`src/core/domain/boundary_test.go` enforces import direction at CI
+time. The rule is:
 
-- `router/{public,sdk,portal,admin}.go`
-- `consts/system.go` — `Perm*` vars + `SystemRolePermissions`
-- `infra/db/migration.go` — `centralEntities()`
+```
+cmd       -> boot, clients, platform        (thin main only)
+boot      -> core, crud, clients, platform  (wiring only)
+core      -> clients, platform              (no boot, no cmd)
+crud      -> clients, platform              (no boot, no cmd, no core)
+clients   -> platform                       (leaf clients)
+platform  -> (no internal deps)             (framework + infra)
+```
 
-Each Phase 4 PR migrates ONE module by:
-
-1. Creating `module/<name>/routes.go`, `permissions.go`, `migrations.go`
-   (copy the `label` module layout).
-2. Wiring them via `fx.Annotate(..., fx.ResultTags(...))` in the
-   module's `module.go`.
-3. **Removing** the corresponding entries from the central files (the
-   routes group in `router/*.go`, the role entries in `SystemRolePermissions`,
-   the entity in `centralEntities()`).
-4. Keeping the `Perm*` vars in `consts/system.go` if middleware still
-   references them.
-
-The PR should compile and pass tests at every commit. `go build`, `go vet`,
-and `go test ./router/... ./infra/db/... ./module/<name>/...` must stay
-green.
+`core` and `crud` are siblings; neither imports the other. If you find
+yourself wanting to, the dependency probably belongs in `platform/dto`
+or in a shared `Reader/Writer` interface.
 
 ## Verification
 
-Before opening a PR:
+Before opening a PR, the workspace-level gates from `../CLAUDE.md`
+apply:
 
 ```bash
 cd src
-go build -tags duckdb_arrow ./...
-go vet -tags duckdb_arrow ./...
-go test -tags duckdb_arrow ./module/<name>/... ./router/... ./service/consumer/... ./infra/db/...
+go build -tags duckdb_arrow -o /dev/null ./main.go
+golangci-lint run
+go test ./platform/... -count=1
+go test ./boot       -count=1
+go test ./core/domain -run TestDomainAvoidsBootImports -count=1
 ```
 
-If you touched HTTP behavior, also run the startup smoke test:
+If you changed any module that contributes to plugin groups, also:
 
 ```bash
-docker compose up redis mysql -d
-ENV_MODE=dev go run -tags duckdb_arrow . both -conf ./config.dev.toml -port 8082
+python3 src/scripts/generate_http_modules.py
+git diff --exit-code src/boot/http_modules_gen.go
 ```
+
+For HTTP behavior changes, run the dev-mode smoke:
+
+```bash
+docker compose up -d redis mysql etcd
+cd src
+go run -tags duckdb_arrow . both -conf ./config.dev.toml -port 8082
+```
+
+For deployment-affecting changes (chart, manifests, SSO/auth wiring):
+
+```bash
+just sso-keys                  # one-time
+skaffold run -p local
+```
+
+## Schema-diff gate
+
+Any change to `aegisctl`'s CLI surface (flags, command tree, help
+text) is detected by `.github/workflows/aegisctl-schema-diff.yml`. If
+the gate fires, add `schema-changes-acknowledged: true` to the PR body
+to acknowledge the change and re-trigger CI (an empty commit or a body
+edit both work).
+
+## Commits
+
+- Conventional commits: `feat(scope):`, `fix(scope):`, `refactor(scope):`,
+  `chore(scope):`.
+- Comments default to none. Add one only when the *why* is non-obvious
+  (a hidden constraint, a specific bug workaround). Never explain
+  *what* the code does, and never reference the PR / issue / caller in
+  source comments — that belongs in the commit message.
+- Tests: be skeptical of every new `*_test.go`. The bar is "this
+  catches a bug that other tests don't", not "this exercises code
+  path X". Prefer deleting weak tests over adding new ones.

@@ -1,8 +1,8 @@
 // Package gateway implements the aegis L7 application gateway.
 //
-// Responsibilities (see docs/rfcs/api-gateway.md):
-//   - Route → upstream mapping (config-driven).
-//   - JWT pre-auth via module/ssoclient + trusted-header injection.
+// Responsibilities:
+//   - Route → upstream mapping (config-driven, configmap [[gateway.routes]]).
+//   - JWT pre-auth via clients/sso + trusted-header injection.
 //   - Per-route + global rate limit.
 //   - CORS, access logging, trace propagation.
 //

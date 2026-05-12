@@ -1,116 +1,240 @@
-# AegisLab (RCABench)
+# AegisLab
 
-AegisLab is the backend and SDK workspace for RCABench, a root-cause-analysis benchmarking platform for microservice systems. It manages chaos systems, projects, datasets, injections, executions, evaluations, and the async runtime that drives build / inject / collect workflows.
+Root-cause-analysis benchmarking platform for microservice systems. AegisLab
+owns chaos systems, projects, datasets, fault injections, executions,
+evaluations, and the async runtime that drives the build → inject → collect →
+detect pipeline.
 
-## Current architecture
+## Repository at a glance
 
-Source of truth: code under `src/` as of 2026-04-20.
+```
+AegisLab/
+├── src/                       # single Go module (module path: aegis)
+│   ├── main.go                # rcabench multi-mode entrypoint (cobra)
+│   ├── cmd/                   # split-process binaries (aegis-api, aegis-gateway, ...)
+│   ├── cli/                   # aegisctl operator CLI
+│   ├── boot/                  # process wiring: fx Options per binary, lifecycle hooks
+│   │   ├── monolith/  runtime/  gateway/  sso/  notify/  blob/  configcenter/
+│   │   ├── wiring/http/       # shared HTTP server wiring used by every HTTP binary
+│   │   └── seed/              # first-boot DB seeding (admin/RBAC/containers/datasets)
+│   ├── core/                  # business core
+│   │   ├── domain/            # bounded contexts: injection, execution, container,
+│   │   │                      # dataset, task, group, chaossystem, pedestal
+│   │   └── orchestrator/      # async pipeline (Redis queues, CRD callbacks,
+│   │                          # build/inject/collect/detect stages, batch manager)
+│   ├── crud/                  # supporting CRUD surfaces
+│   │   ├── iam/               # user, auth, sso, rbac, label, team, project
+│   │   ├── admin/             # configcenter, ratelimiter, widget
+│   │   ├── messaging/         # notification
+│   │   ├── observability/     # system, trace, metric, sdk, observation,
+│   │   │                      # evaluation, systemmetric
+│   │   └── storage/           # blob
+│   ├── clients/               # outbound HTTP/gRPC clients
+│   │   ├── gateway/           # L7 gateway router + auth + proxy pool
+│   │   ├── sso/               # SSO/OIDC client (token, JWKS, permission check)
+│   │   ├── runtime/           # gRPC client to runtime-worker-service
+│   │   ├── notification/  blob/  configcenter/
+│   ├── platform/              # framework + infrastructure (zero domain logic)
+│   │   ├── config/            # viper loader + env mode (dev/test/prod)
+│   │   ├── framework/         # plugin point interfaces (RouteRegistrar,
+│   │   │                      # PermissionRegistrar, MigrationRegistrar, ...)
+│   │   ├── db/  redis/  etcd/ # connection gateways
+│   │   ├── router/  middleware/  httpx/   # gin router + middleware
+│   │   ├── jwtkeys/           # RS256 sign/verify (signer + remote JWKS verifier)
+│   │   ├── chaos/  k8s/  buildkit/  helm/  harbor/   # cluster integrations
+│   │   ├── tracing/  logger/  metrics/    # observability
+│   │   ├── consts/  dto/  model/  utils/  # cross-cutting types
+│   │   └── ...
+│   ├── docs/                  # generated swagger
+│   ├── scripts/               # generate_http_modules.py, etc.
+│   └── tools/                 # relayout.sh and other repo-maintenance tools
+├── sdk/python/                # auto-generated Python SDK
+├── helm/                      # Helm chart (rcabench + rcabench-frontend + rcabench-sso)
+├── manifests/                 # env-specific overlays (local, staging, kind, byte-cluster)
+├── scripts/                   # bootstrap, regression, publish helpers (uv-managed)
+├── data/                      # initial seed data (initial_data/{prod,staging}/*.yaml)
+└── CLAUDE.md  CONTRIBUTING.md  README.md
+```
 
-The backend is no longer organized around six dedicated business services. The current runtime surface is:
+## Design model
 
-- one root backend binary in `src/main.go`
-- five supported modes: `producer`, `consumer`, `both`, `api-gateway`, `runtime-worker-service`
-- two standalone backend binaries under `src/cmd/`: `api-gateway` and `runtime-worker-service`
-- one remaining internal gRPC seam: `proto/runtime/v1`
+**Modular monolith, configured per binary.** One Go module, one schema, one
+chart — but `cmd/aegis-*` binaries each link only the `boot/<role>` Options
+they need. The same module code runs in either the `rcabench both` developer
+process or as a split-process gateway + worker + sso + ... deployment.
 
-| Mode | What starts | Typical use |
-| --- | --- | --- |
-| `producer` | HTTP/OpenAPI stack only | API, router, handler, Swagger work |
-| `consumer` | runtime worker stack only | queue, controller, receiver, runtime-only debugging |
-| `both` | HTTP + runtime worker in one process set | fastest local end-to-end debugging |
-| `api-gateway` | dedicated HTTP process + `RuntimeIntakeService` gRPC | split-process API boundary validation |
-| `runtime-worker-service` | dedicated runtime worker + `RuntimeService` gRPC | split-process worker validation |
+**Layered dependencies (downward only).**
 
-The dedicated split-process deployment is therefore `api-gateway <-> runtime-worker-service`, not the older IAM/resource/orchestrator/system split.
+```
+cmd/        ─────  thin main() that picks a boot profile
+boot/       ─────  fx Options: which modules + lifecycle hooks
+core/       ─────  domain + orchestrator (uses platform, never imports boot)
+crud/       ─────  supporting CRUD modules (uses platform)
+clients/    ─────  outbound clients (sso, runtime, gateway, ...) — leaf layer
+platform/   ─────  framework + infra; depended on by everything, depends on nothing
+```
 
-## Runtime model
+`core` and `crud` are siblings: both depend only on `platform`. `boot`
+wires them together. `clients` are leaves used by `boot` and `core` callers.
 
-- `api-gateway` owns the full HTTP surface under `/api/v2` and serves the runtime-intake gRPC endpoint that worker processes use to write execution and injection state back into the API-owned graph.
-- `runtime-worker-service` owns the async worker stack: Redis consumption, controller / receiver / worker interfaces, K8s / Helm / BuildKit / Chaos runtime actions, and runtime status gRPC.
-- `producer`, `consumer`, and `both` remain supported as collocated developer modes.
-- Module HTTP wiring is generated from `src/module/*` by `scripts/generate_http_modules.py`; the generated registry lives in `src/app/http_modules_gen.go`.
-- Module self-registration uses five plugin points: `routes`, `permissions`, `role_grants`, `migrations`, and `task_executors`.
+**Plugin-point composition via `fx` value-groups.** Every domain/CRUD
+package exposes a `Module = fx.Module(...)` and contributes to five
+framework plugin points:
 
-## Repository layout
+| Group              | Aggregated by                          | What it adds                  |
+| ------------------ | -------------------------------------- | ----------------------------- |
+| `routes`           | `platform/router.New`                  | gin route registration        |
+| `permissions`      | `crud/iam/rbac.AggregatePermissions`   | RBAC permission definitions   |
+| `role_grants`      | `crud/iam/rbac.AggregatePermissions`   | role → permission bindings    |
+| `migrations`       | `platform/db.NewGormDB`                | GORM AutoMigrate entities     |
+| `task_executors`   | `core/orchestrator/common`             | async task handlers           |
 
-| Path | Purpose |
-| --- | --- |
-| `src/` | Go backend, runtime worker, router, modules, infra |
-| `src/cli/` | operator CLI |
-| `sdk/python/` | Python SDK |
-| `helm/` | Helm chart for the backend stack |
-| `manifests/` | Kubernetes manifests and environment-specific overlays |
-| `scripts/` | bootstrap, publish, regression, and command tooling |
-| `docs/` | AegisLab-local design notes |
-| `../docs/` | repo-root architecture, deployment, and troubleshooting docs |
+A new package never edits a central registry; it only adds its `fx.Module`
+to `boot/wiring/http_modules_gen.go` (which is **generated** — see
+"Adding a new module" below).
 
 ## Quick start
 
-### 1. Start local infrastructure
-
-From `AegisLab/`:
-
 ```bash
+# 0. one-time
+make check-prerequisites
+eval "$(devbox shellenv)"
+
+# 1. infra
 docker compose up -d redis mysql etcd jaeger buildkitd loki prometheus grafana
+
+# 2. backend (fastest end-to-end loop)
+cd src
+go run -tags duckdb_arrow . both -conf ./config.dev.toml -port 8082
+
+# Swagger: http://localhost:8082/docs/index.html
+# Health:  http://localhost:8082/system/health
 ```
 
-This starts infra only. It does not start the backend application.
-
-### 2. Start the backend
-
-Fast local API debugging:
+For a real K8s deployment:
 
 ```bash
-cd src
-go run . producer -conf ./config.dev.toml -port 8082
+just sso-keys                  # one-time RSA keypair under data/sso/
+skaffold run -p local          # build + helm install into current kubectx
 ```
 
-Fast local end-to-end debugging:
+Common workflows: `just build-aegisctl`, `just run`, `just test-regression`,
+`bash scripts/start.sh test` (bootstraps Chaos Mesh + cert-manager +
+OTel Kube Stack + demo workloads).
+
+## Multi-mode entrypoints
+
+`src/main.go` is a cobra root with six modes — historical convenience for
+developers. Production deployments use the split `cmd/aegis-*` binaries
+behind the chart.
+
+| Mode (rcabench)              | Equivalent split binary       | Purpose                                       |
+| ---------------------------- | ----------------------------- | --------------------------------------------- |
+| `producer`                   | (HTTP-only subset of aegis-api) | API server, no async workers                |
+| `consumer`                   | runtime-worker-service        | async pipeline only                           |
+| `both`                       | aegis-api (same boot)         | API + workers in one process (default for dev) |
+| `aegis-api`                  | `cmd/aegis-api`               | full monolith (HTTP + runtime in one)         |
+| `runtime-worker-service`     | `cmd/runtime-worker-service`  | dedicated async worker                        |
+| `sso`                        | `cmd/aegis-sso`               | identity service (port 8083)                  |
+
+The chart deploys: `aegis-api`, `aegis-gateway`, `aegis-sso`,
+`aegis-notify`, `aegis-blob`, `aegis-configcenter`,
+`runtime-worker-service`, plus infra (mysql, redis, etcd, jaeger, ...).
+The gateway terminates external traffic and fans out to the per-service
+backends.
+
+## Navigating the code
+
+**By question:**
+
+| If you want to … | Start at |
+| --- | --- |
+| understand startup wiring for a binary | `src/boot/<role>/options.go` |
+| find which packages a binary links | `src/boot/<role>/options.go` + `boot/http_modules_gen.go` |
+| trace an HTTP request | `platform/router/router.go` → module's `routes.go` → handler |
+| read pipeline orchestration | `src/core/orchestrator/{fault_injection,build_datapack,algo_execution,collect_result}.go` |
+| understand CRD callback flow | `core/orchestrator/k8s_handler.go` (HandleCRDSucceeded / HandleJobSucceeded) |
+| see what gets seeded on first boot | `src/boot/seed/producer.go`, `src/boot/seed/permissions.go` |
+| change L7 routing | `helm/templates/configmap.yaml` `[[gateway.routes]]` blocks |
+| swap SSO client behavior | `src/clients/sso/{client.go,module.go}` |
+| add or change a DB entity | the entity's `crud/<group>/<name>/migrations.go` (auto-registered) |
+
+**By layer (search prefix):**
 
 ```bash
-cd src
-go run . both -conf ./config.dev.toml -port 8082
+# any business operation:
+rg "func \(s \*Service\)"  src/core/domain/<name>/
+rg "func \(h \*Handler\)"  src/core/domain/<name>/
+rg "func \(r \*Repository\)" src/core/domain/<name>/
 ```
 
-Split-process debugging with the current dedicated topology:
+**By package boundaries:** `core` is allowed to import `platform` and
+`clients`. It is **not** allowed to import `boot` or `cmd`.
+`src/core/domain/boundary_test.go` enforces that. The cycle-check passes
+in CI.
 
-```bash
-# terminal 1
-cd src
-go run ./cmd/api-gateway -conf ./config.dev.toml -port 8082
+## Adding a new module
 
-# terminal 2
-cd src
-go run ./cmd/runtime-worker-service -conf ./config.dev.toml
-```
+A "module" is any self-contained CRUD or domain surface (`core/domain/<x>`
+or `crud/<group>/<x>`). Adding one should require **zero edits** to other
+modules.
 
-Docker Compose variant for the same split-process topology:
+1. **Create the directory** under the right layer:
+   - business-pipeline-shaped data → `src/core/domain/<name>/`
+   - supporting CRUD → `src/crud/<group>/<name>/`
+2. **Standard files:**
+   - `module.go` — exposes `var Module = fx.Module("<name>", ...)`
+   - `migrations.go` — returns a `framework.MigrationRegistrar` if the
+     module owns DB tables
+   - `service.go`, `repository.go`, `handler.go`, `routes.go`,
+     `permissions.go` — only the ones you actually need
+3. **Register plugin contributions** inside `module.go` using fx group tags:
+   ```go
+   var Module = fx.Module("foo",
+       fx.Provide(NewRepository, NewService, NewHandler),
+       fx.Provide(
+           fx.Annotate(Routes,       fx.ResultTags(`group:"routes"`)),
+           fx.Annotate(Permissions,  fx.ResultTags(`group:"permissions"`)),
+           fx.Annotate(Migrations,   fx.ResultTags(`group:"migrations"`)),
+       ),
+   )
+   ```
+4. **Regenerate the HTTP module index** so monolith + aegis-api pick the
+   module up:
+   ```bash
+   python3 src/scripts/generate_http_modules.py
+   ```
+   That rewrites `src/boot/http_modules_gen.go`. **Never hand-edit that
+   file** — it's reproducible from the directory walk.
+5. **(Optional) link into other roles.** If a non-monolith binary also
+   needs the module (e.g., aegis-gateway), add it to that binary's
+   `boot/<role>/options.go`.
+6. **Regenerate the SDK** if you added public API:
+   ```bash
+   make swag-init
+   make generate-typescript-sdk SDK_VERSION=0.0.0
+   make generate-python-sdk
+   ```
 
-```bash
-docker compose -f docker-compose.yaml -f docker-compose.microservices.yaml up \
-  api-gateway runtime-worker-service
-```
-
-Useful local endpoints when HTTP is running:
-
-- API root: `http://localhost:8082/api/v2`
-- Swagger UI: `http://localhost:8082/docs/index.html`
-- health endpoint: `http://localhost:8082/system/health`
+What you do **not** need to edit: any other module, any router/registry
+central file, the chart, or the gateway route table (unless your module
+mounts on a path the gateway doesn't already wildcard).
 
 ## Configuration
 
-The working sample config is `src/config.dev.toml`. Edit that file in place, or pass another config directory / file path with `-conf`.
+`src/config.dev.toml` is the working sample. `ENV` selects the profile
+(`dev` is the default; `prod` enables fail-closed behavior — empty
+`gateway.trusted_header_key` becomes fatal, dev fallbacks disappear,
+etc.).
 
-Current runtime-topology keys that matter most:
+Required keys for split-process deployments:
 
 ```toml
 [clients.runtime]
-# api-gateway -> runtime-worker query channel
-target = "localhost:9094"
+target = "runtime-worker-service:9094"      # api-gateway → worker queries
 
 [clients.runtime_intake]
-# runtime-worker -> api-gateway write-back channel
-target = "localhost:9096"
+target = "aegis-api:9096"                   # worker → api-gateway write-back
 
 [runtime_worker.grpc]
 addr = ":9094"
@@ -119,66 +243,45 @@ addr = ":9094"
 addr = ":9096"
 ```
 
-Notes:
+`platform/config` validates `name`, `version`, `port`, `workspace`,
+`database.mysql.*`, `redis.host`, `jaeger.endpoint`, and selected
+`k8s.*` settings at startup.
 
-- `runtime-worker-service` requires `clients.runtime_intake.target` or the legacy fallback `runtime_intake.grpc.target`.
-- `clients.runtime.target` is optional unless something needs the query side of `RuntimeService`.
-- The root config loader validates core fields such as `name`, `version`, `port`, `workspace`, `database.mysql.*`, `redis.host`, `jaeger.endpoint`, and selected `k8s.*` settings.
-
-## Common workflows
-
-- Build the CLI: `just build-aegisctl`
-- Run staging-profile cluster deploy: `just run`
-- Run the regression smoke path: `just test-regression`
-- Run a named repo-tracked case directly: `./aegisctl regression run otel-demo-guided --output json`
-- Bootstrap the broader cluster demo stack: `bash scripts/start.sh test`
-
-`just run` and `scripts/start.sh test` are different flows:
-
-- `just run` uses `skaffold` with the repo's staging profile.
-- `scripts/start.sh test` bootstraps cluster dependencies such as Chaos Mesh, cert-manager, ClickStack, OTel Kube Stack, and demo workloads.
-
-## Validation commands
-
-These are the fastest repo-native checks for the current backend topology:
+## Validation gates (per CLAUDE.md)
 
 ```bash
+# Backend
 cd src
-go test ./app -count=1
-go test ./module -run TestModulePackagesAvoidForeignRepositoryConstructors -count=1
-go test ./service/consumer -count=1
-go test ./router ./interface/http -count=1
+go build -tags duckdb_arrow -o /dev/null ./main.go
+golangci-lint run
+go test ./platform/... -count=1
+
+# Boundary + wiring smoke tests
+go test ./boot -count=1
+go test ./core/domain -run TestDomainAvoidsBootImports -count=1
+
+# Full deploy smoke
+skaffold run -p local
 ```
 
-Phase-6 topology-specific checks:
+The `aegisctl schema diff gate` CI workflow rebuilds aegisctl on both
+PR base and head and fails if the CLI surface changes without
+`schema-changes-acknowledged: true` in the PR body.
 
-- `src/app/http_modules_generated_test.go`
-- `src/module/widget/registration_test.go`
-- `src/module/boundary_test.go`
-- `src/service/consumer/task_executors_test.go`
+## Documentation
 
-## Documentation map
+This README + [`CONTRIBUTING.md`](CONTRIBUTING.md) + [`src/cli/README.md`](src/cli/README.md)
+are the current entry points. Cross-repo runbooks live in `../docs/`:
 
-Current docs to read first:
+- `../docs/code-topology/` — module call paths, dead-code map
+- `../docs/troubleshooting/benchmark-integration-playbook.md` — fresh-cluster pitfalls
+- `../docs/troubleshooting/datapack-schema.md` — parquet schema reference
+- `../CLAUDE.md` — workspace-wide working guidelines
 
-- [`../docs/code-topology/README.md`](../docs/code-topology/README.md) - current backend topology overview
-- [`../docs/code-topology/slices/01-app-wiring.md`](../docs/code-topology/slices/01-app-wiring.md) - `fx` graphs and startup modes
-- [`../docs/code-topology/slices/06-grpc-interfaces.md`](../docs/code-topology/slices/06-grpc-interfaces.md) - remaining runtime gRPC seam
-- [`../docs/deployment/README.md`](../docs/deployment/README.md) - deployment and smoke-test entrypoint map
-- [`../docs/troubleshooting/README.md`](../docs/troubleshooting/README.md) - cross-repo troubleshooting runbooks
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) - module self-registration and cross-module boundary rules
-- [`src/cli/README.md`](src/cli/README.md) - CLI usage
-- [`docs/inject-pipeline-design.md`](docs/inject-pipeline-design.md) - guided injection request pipeline
-
-Notes on older docs:
-
-- The repo-root `docs/code-topology/` directory contains some archival deep dives that predate the phase-2 collapse and phase-6 wiring cleanup.
-- Treat `../docs/code-topology/README.md`, `slices/01-app-wiring.md`, and `slices/06-grpc-interfaces.md` as the authoritative topology docs.
-
-## Troubleshooting shortcuts
-
-- Current cross-repo troubleshooting index: [`../docs/troubleshooting/README.md`](../docs/troubleshooting/README.md)
+Legacy in-repo design docs that drove past migrations (`sso-extraction-*`,
+`inject-pipeline-design`, `frontend-*`) have been removed; the code is
+the source of truth for current behavior.
 
 ## License
 
-This project is licensed under Apache 2.0. See [`LICENSE`](LICENSE).
+Apache 2.0 — see [`LICENSE`](LICENSE).

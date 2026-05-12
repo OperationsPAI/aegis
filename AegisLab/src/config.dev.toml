@@ -106,7 +106,7 @@ console_redirect_uris = "http://localhost:3323/auth/callback,http://127.0.0.1:33
 login_redirect = "http://localhost:3323/auth/login"
 
 # ---------------------------------------------------------------------
-# Blob storage — see RFC docs/rfcs/blob-storage.md and cmd/aegis-blob.
+# Blob storage — handler/router at src/crud/storage/blob, binary at cmd/aegis-blob.
 # In dev we only declare the localfs `scratch` bucket; real buckets
 # (dataset-artifacts, user-avatars) come online in Phase B.
 # ---------------------------------------------------------------------
@@ -129,7 +129,7 @@ inline_max_bytes = 65_536
 
 # ---------------------------------------------------------------------
 # [gateway] — aegis-gateway (cmd/aegis-gateway, default :8086).
-# See docs/rfcs/api-gateway.md. Routes are matched first-by-prefix
+# Router at src/clients/gateway. Routes are matched first-by-prefix
 # (longer prefixes win, ties broken by config order).
 # ---------------------------------------------------------------------
 [gateway]

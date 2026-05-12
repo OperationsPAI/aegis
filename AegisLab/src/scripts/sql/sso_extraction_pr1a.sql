@@ -1,7 +1,7 @@
 -- SSO Extraction PR-1a: collapse 4 scoped-role tables into user_scoped_roles
 -- and reshape the permissions table for the multi-service scope_type model.
 -- Run once when shipping PR-1a. Destructive: depends on the no-prod-data
--- assumption captured in docs/sso-extraction-design.md §9.
+-- assumption (pre-1.0, dev/staging only).
 
 DROP TABLE IF EXISTS user_projects;
 DROP TABLE IF EXISTS user_teams;

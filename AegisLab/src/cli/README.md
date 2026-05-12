@@ -4,8 +4,10 @@ Command-line client for the AegisLab (RCABench) platform. Designed for both
 human operators and AI agents to drive the supported validation workflow from
 the terminal.
 
-For the automation-facing CLI contract used by CI and agent workflows, see
-`docs/aegisctl-cli-contract.md`.
+The CLI surface is enforced by the `aegisctl schema diff gate` CI workflow:
+any change to flags, command tree, or help text requires
+`schema-changes-acknowledged: true` in the PR body. `aegisctl schema dump`
+emits the JSON contract that the gate diffs against.
 
 ## Build
 
@@ -13,7 +15,7 @@ For the automation-facing CLI contract used by CI and agent workflows, see
 cd AegisLab
 just build-aegisctl output=./bin/aegisctl
 # or manually:
-cd src && go build -o /tmp/aegisctl ./cmd/aegisctl
+cd src && go build -o /tmp/aegisctl ./cli
 ```
 
 Note: `aegisctl` does not require `-tags duckdb_arrow`.
@@ -45,9 +47,6 @@ printf %s\n "$AEGIS_PASSWORD" | ./bin/aegisctl auth login \
 # 5. Submit algorithm execution against a datapack or dataset
 ./bin/aegisctl execute create --project pair_diagnosis --input ./execution.yaml -o json
 ```
-
-The full CLI contract, including output and exit-code expectations, lives in
-[`../../../docs/aegisctl-cli-spec.md`](../../../docs/aegisctl-cli-spec.md).
 
 ## Subcommands
 
@@ -109,11 +108,9 @@ aegisctl regression run otel-demo-guided --ensure-env --wait --output json
 
 ## Related docs
 
-- [`../../../docs/aegisctl-cli-spec.md`](../../../docs/aegisctl-cli-spec.md) - single validation contract reference
-- [`../../../../regression/README.md`](../../../../regression/README.md) - repo-tracked regression case format and canonical cases
-- [`../../../README.md`](../../../README.md) - backend runtime modes and quick start
-- [`../../../../docs/deployment/README.md`](../../../../docs/deployment/README.md) - deploy and validation runbook map
-- [`../../../../docs/troubleshooting/README.md`](../../../../docs/troubleshooting/README.md) - cross-repo troubleshooting runbooks
+- [`../../regression/README.md`](../../regression/README.md) - repo-tracked regression case format and canonical cases
+- [`../../README.md`](../../README.md) - backend overview, layout, and quick start
+- [`../../../docs/troubleshooting/README.md`](../../../docs/troubleshooting/README.md) - cross-repo troubleshooting runbooks
 
 ## Cluster readiness commands
 

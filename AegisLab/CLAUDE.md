@@ -36,7 +36,7 @@ AegisLab (RCABench) is a comprehensive Root Cause Analysis (RCA) benchmarking pl
 ### Local Development
 
 - `docker compose up redis mysql jaeger buildkitd -d` - Start infrastructure services (REQUIRED before testing/building)
-- **SSO**: when working with auth/RBAC, the SSO service is `aegis-sso` running on port 8083 (chart at `helm/aegis-sso/`, compose service `aegis-sso`); see [`docs/sso-extraction-design.md`](docs/sso-extraction-design.md). First-time setup: `just sso-keys` to generate the RSA keypair under `data/sso/`.
+- **SSO**: when working with auth/RBAC, the SSO service is `aegis-sso` running on port 8083 (compose service `aegis-sso`; helm Deployment in `helm/templates/deployment.yaml`). Code lives under `src/crud/iam/{user,auth,sso,rbac}` + `src/boot/sso/` + `src/clients/sso/`. First-time setup: `just sso-keys` to generate the RSA keypair under `data/sso/`.
 - `make local-debug` - Start the Go application locally (runs `src/main.go both --port 8082`)
 - `cd src && go build -tags duckdb_arrow -o /tmp/rcabench ./main.go` - Build the application binary
 
@@ -46,9 +46,9 @@ AegisLab (RCABench) is a comprehensive Root Cause Analysis (RCA) benchmarking pl
 
 - `just build-aegisctl` - Build the aegisctl CLI binary (output: `/tmp/aegisctl`)
 - `just build-aegisctl output=./aegisctl` - Build with custom output path
-- `cd src && go build -o /tmp/aegisctl ./cmd/aegisctl` - Build manually (no `-tags duckdb_arrow` needed)
+- `cd src && go build -o /tmp/aegisctl ./cli` - Build manually (no `-tags duckdb_arrow` needed)
 
-aegisctl is the command-line client for the AegisLab platform. See `src/cmd/aegisctl/README.md` for usage and `docs/aegisctl-cli-spec.md` for the full specification.
+aegisctl is the command-line client for the AegisLab platform. See [`src/cli/README.md`](src/cli/README.md) for usage. The CLI schema is enforced by the `aegisctl schema diff gate` CI workflow.
 
 ### Testing
 
