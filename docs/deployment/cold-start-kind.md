@@ -1,14 +1,22 @@
-# Cold-start on kind (validated end-to-end 2026-04-22)
+# Cold-start on kind (last validated end-to-end 2026-05-12)
 
 Single-path runbook from zero to a Completed inject→datapack→algorithm trace
-on a fresh `kind` cluster. Walked through literally on 2026-04-22, ending with
-`state=Completed`, all 5 tasks green (RestartPedestal, FaultInjection,
-BuildDatapack, RunAlgorithm, CollectResult).
+on a fresh `kind` cluster. Each validation run lands with `status=passed`
+and all 5 tasks green (RestartPedestal, FaultInjection, BuildDatapack,
+RunAlgorithm, CollectResult).
 
 **Scope**: local kind cluster named `aegis-local`. Uses public Docker Hub
 images, in-cluster NFS for RWX, `opentelemetry-kube-stack` for
 traces+metrics+logs. Does **not** cover JuiceFS, Volcengine, Harbor, or any
 internal registry.
+
+## Validation log
+
+| Date | Repo SHA | Case | Result | Environment | Notes |
+|---|---|---|---|---|---|
+| 2026-04-22 | (pre-relayout) | otel-demo PodFailure on `cart` | Completed | kind v?, kube v?, helm v? | Initial walkthrough; needed seed-race DROP DATABASE recovery. |
+| 2026-04-23 | (pre-relayout) | otel-demo PodFailure on `cart` | Completed (5/5 tasks, 12 parquets, 4176 spans) | kind v?, kube v? | Re-walk green on first try; DROP DATABASE not needed. |
+| 2026-05-12 | `b3d1afa` | `regression run otel-demo-guided` (PodFailure on `frontend`) | passed; final event `datapack.no_anomaly` | kind 0.30.0, kube 1.34.0 (3 nodes), helm 3.20.1, kubectl 1.35.3 | Drove via regression runner; surfaced inject-guided flag drift, app-label-key, and pedestal version drift (see Rough edges #26–#28). |
 
 For per-benchmark onboarding (registering a new system, chart push, etc.)
 see [`../troubleshooting/benchmark-integration-playbook.md`](../troubleshooting/benchmark-integration-playbook.md)
@@ -194,52 +202,58 @@ kubectl port-forward -n exp svc/rcabench-api-gateway 8082:8082 &
 echo admin123 | /tmp/aegisctl auth login \
   --server http://localhost:8082 --username admin --password-stdin
 /tmp/aegisctl context set --name default --default-project pair_diagnosis
-
-# Pre-install the pedestal chart so submit doesn't race namespace creation.
-/tmp/aegisctl pedestal chart install otel-demo --wait
-
-# Submit a PodFailure. --reset-config avoids the "network pair not found"
-# trap from stale ~/.aegisctl/inject-guided.yaml.
-/tmp/aegisctl inject guided \
-  --reset-config --apply --project pair_diagnosis \
-  --pedestal-name otel-demo --pedestal-tag 0.1.1 \
-  --benchmark-name clickhouse --benchmark-tag 1.0.0 \
-  --chaos-type PodFailure --namespace otel-demo0 --app cart \
-  --duration 2 --interval 2 --pre-duration 1 \
-  --non-interactive
 ```
 
-Poll to terminal state:
+Verify the seed: `/tmp/aegisctl system list` should show 8 builtin systems
+(hs, media, ob, otel-demo, sn, sockshop, teastore, ts).
 
-```bash
-TRACE_ID=<id from submit output>
-while true; do
-  L=$(/tmp/aegisctl trace list --format tsv --columns id,state,last_event | grep "$TRACE_ID")
-  S=$(echo "$L" | awk -F'\t' '{print $2}')
-  case "$S" in
-    Succeeded|Failed|Completed|Error|Cancelled) echo "$L"; break ;;
-    *) echo "[$(date +%H:%M:%S)] $L"; sleep 30 ;;
-  esac
-done
-```
+The canonical end-to-end smoke is the regression runner (step 7b). It
+carries the required `interval` + `pre_duration` fields in the case YAML —
+the `inject guided` CLI no longer accepts `--duration` / `--interval` /
+`--pre-duration` flags (the backend still validates them as required, so
+submitting via `guided --apply` alone fails with
+`Field validation for 'Interval' failed on the 'required' tag`).
 
-Expected: `Completed` in roughly 4 minutes (pre=1min + duration=2min +
-build+run).
+If you want a hand-rolled submit anyway, copy a regression YAML, edit the
+`pedestal.version` to match what `aegisctl container version list-versions
+<system>` returns, and run `regression run` against it (see 7b).
 
 ### 7b. Regression tests per benchmark
 
-Once the smoke submit above completes, the tracked regression cases in
-`AegisLab/regression/*.yaml` are the canonical way to re-verify each
-benchmark. `--auto-install` makes aegisctl install the chart into the
-pedestal namespace if it isn't there yet.
+The tracked regression cases in `AegisLab/regression/*.yaml` are the
+canonical E2E smoke. `--auto-install` makes aegisctl install the chart
+into the pedestal namespace if it isn't there yet.
+
+Two flags you'll almost always need on kind:
+
+- `--app-label-key app.kubernetes.io/name` — every shipped chart labels
+  pods with `app.kubernetes.io/name`, not the bare `app` key the runner
+  defaults to. Without this the preflight fails `namespace X has no pods
+  matching app=Y` even though the workload is healthy.
+- A version override when the regression YAML's `pedestal.version` has
+  drifted from what the seed actually has. Check with
+  `aegisctl container version list-versions <name>`; if it mismatches,
+  copy the YAML to a temp dir, edit, and point `--cases-dir` at it. (As
+  of 2026-05-12: `otel-demo-guided.yaml` pins `0.1.4` while the seed in
+  `data/initial_data/prod/data.yaml` only has `0.1.1`.)
 
 ```bash
+# Run one case end-to-end (validated 2026-05-12 on kind-aegis-local):
+/tmp/aegisctl regression run otel-demo-guided \
+  --cases-dir AegisLab/regression \
+  --auto-install \
+  --app-label-key app.kubernetes.io/name \
+  --output json
+# Expected: passed, observed_task_chain = [RestartPedestal, FaultInjection,
+# BuildDatapack, RunAlgorithm, CollectResult], final event datapack.no_anomaly.
+
 # Run all shipped cases (one at a time — they share the aegis runner).
 for case in otel-demo-guided hotelreservation-guided socialnetwork-guided \
             mediamicroservices-guided teastore-guided ob-guided \
             sockshop-guided; do
   /tmp/aegisctl regression run "$case" \
-    --cases-dir AegisLab/regression --auto-install --output json || break
+    --cases-dir AegisLab/regression --auto-install \
+    --app-label-key app.kubernetes.io/name --output json || break
 done
 ```
 
@@ -314,3 +328,6 @@ backend log signatures are in
 | 15 | guided cache | Always pass `--reset-config` on first inject | workaround |
 | 18 | bitnami chart | Needed for `ts` pedestal only; not used in this runbook | as-designed |
 | 19 | `task list --state Running` | Fixed: backend accepts both names ("Running") and ints ("2") | **resolved** |
+| 26 | inject guided time flags | `--duration` / `--interval` / `--pre-duration` removed from CLI but still required by the backend; use the regression runner (or hand-edit a regression YAML) instead of `inject guided --apply` | open |
+| 27 | regression preflight label | Charts label pods with `app.kubernetes.io/name`; pass `--app-label-key app.kubernetes.io/name` or preflight always fails | workaround |
+| 28 | regression yaml version drift | `otel-demo-guided.yaml` pins pedestal `0.1.4` but seed has `0.1.1`; copy + override `--cases-dir` until seed/yaml are aligned | open |
