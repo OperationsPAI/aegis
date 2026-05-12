@@ -6,7 +6,7 @@ import (
 	dataset "aegis/module/dataset"
 	execution "aegis/module/execution"
 	injection "aegis/module/injection"
-	label "aegis/module/label"
+	label "aegis/crud/iam/label"
 
 	"go.uber.org/fx"
 )

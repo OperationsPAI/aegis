@@ -21,9 +21,9 @@ import (
 
 	"aegis/app"
 	httpapi "aegis/interface/http"
-	"aegis/module/notification"
-	"aegis/module/ssoclient"
-	"aegis/module/user"
+	"aegis/crud/messaging/notification"
+	"aegis/clients/sso"
+	"aegis/crud/iam/user"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"

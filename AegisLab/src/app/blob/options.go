@@ -18,8 +18,8 @@ import (
 
 	"aegis/app"
 	httpapi "aegis/interface/http"
-	"aegis/module/blob"
-	"aegis/module/ssoclient"
+	"aegis/crud/storage/blob"
+	"aegis/clients/sso"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"

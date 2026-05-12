@@ -10,7 +10,7 @@ import (
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
-	label "aegis/module/label"
+	label "aegis/crud/iam/label"
 	"aegis/service/common"
 
 	"gorm.io/gorm"

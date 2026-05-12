@@ -8,7 +8,7 @@ import (
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	httpapi "aegis/interface/http"
-	"aegis/module/ssoclient"
+	"aegis/clients/sso"
 	commonservice "aegis/service/common"
 	"aegis/service/initialization"
 	"aegis/platform/utils"

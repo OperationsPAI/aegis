@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"aegis/app"
-	gatewaymod "aegis/module/gateway"
-	"aegis/module/ssoclient"
+	gatewaymod "aegis/clients/gateway"
+	"aegis/clients/sso"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"

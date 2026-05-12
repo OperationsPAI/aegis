@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"aegis/platform/middleware"
-	"aegis/module/rbac"
+	"aegis/crud/iam/rbac"
 )
 
 // ssoLocalPermissionChecker plugs rbac.Repository into the request-time

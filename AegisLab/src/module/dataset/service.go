@@ -9,7 +9,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
-	label "aegis/module/label"
+	label "aegis/crud/iam/label"
 	"aegis/platform/utils"
 
 	"gorm.io/gorm"

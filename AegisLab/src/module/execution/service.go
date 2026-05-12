@@ -12,7 +12,7 @@ import (
 	"aegis/platform/model"
 	container "aegis/module/container"
 	injection "aegis/module/injection"
-	label "aegis/module/label"
+	label "aegis/crud/iam/label"
 	"aegis/service/common"
 	"aegis/platform/utils"
 

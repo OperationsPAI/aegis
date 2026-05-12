@@ -8,7 +8,7 @@ import (
 	grpcruntime "aegis/interface/grpc/runtime"
 	receiver "aegis/interface/receiver"
 	worker "aegis/interface/worker"
-	"aegis/internalclient/runtimeclient"
+	"aegis/clients/runtime"
 	"aegis/service/consumer"
 
 	"go.uber.org/fx"

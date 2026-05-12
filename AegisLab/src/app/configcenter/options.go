@@ -21,9 +21,9 @@ import (
 	"aegis/app"
 	"aegis/platform/etcd"
 	httpapi "aegis/interface/http"
-	"aegis/module/configcenter"
-	"aegis/module/ssoclient"
-	"aegis/module/user"
+	"aegis/crud/admin/configcenter"
+	"aegis/clients/sso"
+	"aegis/crud/iam/user"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"

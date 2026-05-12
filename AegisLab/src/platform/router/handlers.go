@@ -2,9 +2,9 @@ package router
 
 import (
 	container "aegis/module/container"
-	label "aegis/module/label"
-	project "aegis/module/project"
-	sdk "aegis/module/sdk"
+	label "aegis/crud/iam/label"
+	project "aegis/crud/iam/project"
+	sdk "aegis/crud/observability/sdk"
 )
 
 type Handlers struct {

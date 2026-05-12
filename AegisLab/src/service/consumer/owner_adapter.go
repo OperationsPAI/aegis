@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"aegis/platform/dto"
-	"aegis/internalclient/runtimeclient"
+	"aegis/clients/runtime"
 	execution "aegis/module/execution"
 	injection "aegis/module/injection"
 

@@ -14,7 +14,7 @@ import (
 	"aegis/platform/model"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
-	label "aegis/module/label"
+	label "aegis/crud/iam/label"
 	"aegis/service/common"
 
 	"github.com/sirupsen/logrus"

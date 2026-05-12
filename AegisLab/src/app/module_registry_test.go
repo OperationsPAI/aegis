@@ -23,7 +23,7 @@ import (
 	k8s "aegis/platform/k8s"
 	loki "aegis/platform/loki"
 	redisinfra "aegis/platform/redis"
-	"aegis/module/ssoclient"
+	"aegis/clients/sso"
 	"aegis/platform/testutil"
 
 	"github.com/gin-gonic/gin"

@@ -14,7 +14,7 @@ import (
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
-	ratelimiter "aegis/module/ratelimiter"
+	ratelimiter "aegis/crud/admin/ratelimiter"
 	"aegis/service/common"
 	"aegis/service/consumer"
 

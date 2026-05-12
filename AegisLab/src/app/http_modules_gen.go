@@ -2,98 +2,98 @@
 package app
 
 import (
-	blob "aegis/module/blob"
-	blobclient "aegis/module/blobclient"
 	chaossystem "aegis/module/chaossystem"
-	configcenter "aegis/module/configcenter"
-	configcenterclient "aegis/module/configcenterclient"
 	container "aegis/module/container"
 	dataset "aegis/module/dataset"
-	evaluation "aegis/module/evaluation"
 	execution "aegis/module/execution"
-	gateway "aegis/module/gateway"
 	group "aegis/module/group"
 	injection "aegis/module/injection"
-	label "aegis/module/label"
-	metric "aegis/module/metric"
-	notification "aegis/module/notification"
-	notificationclient "aegis/module/notificationclient"
-	observation "aegis/module/observation"
 	pedestal "aegis/module/pedestal"
-	project "aegis/module/project"
-	ratelimiter "aegis/module/ratelimiter"
-	sdk "aegis/module/sdk"
-	system "aegis/module/system"
-	systemmetric "aegis/module/systemmetric"
 	task "aegis/module/task"
-	team "aegis/module/team"
-	trace "aegis/module/trace"
-	widget "aegis/module/widget"
+	label "aegis/crud/iam/label"
+	project "aegis/crud/iam/project"
+	team "aegis/crud/iam/team"
+	evaluation "aegis/crud/observability/evaluation"
+	metric "aegis/crud/observability/metric"
+	observation "aegis/crud/observability/observation"
+	sdk "aegis/crud/observability/sdk"
+	system "aegis/crud/observability/system"
+	systemmetric "aegis/crud/observability/systemmetric"
+	trace "aegis/crud/observability/trace"
+	blob "aegis/crud/storage/blob"
+	notification "aegis/crud/messaging/notification"
+	configcenter "aegis/crud/admin/configcenter"
+	ratelimiter "aegis/crud/admin/ratelimiter"
+	widget "aegis/crud/admin/widget"
+	blobclient "aegis/clients/blob"
+	configcenterclient "aegis/clients/configcenter"
+	gateway "aegis/clients/gateway"
+	notificationclient "aegis/clients/notification"
 	"aegis/platform/router"
 	"go.uber.org/fx"
 )
 
 func producerHTTPModules() []fx.Option {
 	return []fx.Option{
-		blob.Module,
-		blobclient.Module,
 		chaossystem.Module,
-		configcenter.Module,
-		configcenterclient.Module,
 		container.Module,
 		dataset.Module,
-		evaluation.Module,
 		execution.Module,
-		gateway.Module,
 		group.Module,
 		injection.Module,
-		label.Module,
-		metric.Module,
-		notification.Module,
-		notificationclient.Module,
-		observation.Module,
 		pedestal.Module,
+		task.Module,
+		label.Module,
 		project.Module,
-		ratelimiter.Module,
+		team.Module,
+		evaluation.Module,
+		metric.Module,
+		observation.Module,
 		sdk.Module,
 		system.Module,
 		systemmetric.Module,
-		task.Module,
-		team.Module,
 		trace.Module,
+		blob.Module,
+		notification.Module,
+		configcenter.Module,
+		ratelimiter.Module,
 		widget.Module,
+		blobclient.Module,
+		configcenterclient.Module,
+		gateway.Module,
+		notificationclient.Module,
 		router.Module,
 	}
 }
 
 func producerHTTPModuleNames() []string {
 	return []string{
-		"blob",
-		"blobclient",
 		"chaossystem",
-		"configcenter",
-		"configcenterclient",
 		"container",
 		"dataset",
-		"evaluation",
 		"execution",
-		"gateway",
 		"group",
 		"injection",
-		"label",
-		"metric",
-		"notification",
-		"notificationclient",
-		"observation",
 		"pedestal",
+		"task",
+		"label",
 		"project",
-		"ratelimiter",
+		"team",
+		"evaluation",
+		"metric",
+		"observation",
 		"sdk",
 		"system",
 		"systemmetric",
-		"task",
-		"team",
 		"trace",
+		"blob",
+		"notification",
+		"configcenter",
+		"ratelimiter",
 		"widget",
+		"blobclient",
+		"configcenterclient",
+		"gateway",
+		"notificationclient",
 	}
 }

@@ -5,10 +5,10 @@ import (
 
 	"aegis/app"
 	httpapi "aegis/interface/http"
-	"aegis/module/auth"
-	"aegis/module/rbac"
-	ssomod "aegis/module/sso"
-	"aegis/module/user"
+	"aegis/crud/iam/auth"
+	"aegis/crud/iam/rbac"
+	ssomod "aegis/crud/iam/sso"
+	"aegis/crud/iam/user"
 	"aegis/platform/router"
 
 	"go.uber.org/fx"

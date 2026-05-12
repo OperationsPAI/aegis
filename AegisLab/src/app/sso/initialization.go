@@ -12,7 +12,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/model"
-	ssomod "aegis/module/sso"
+	ssomod "aegis/crud/iam/sso"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
