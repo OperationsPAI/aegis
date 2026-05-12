@@ -13,6 +13,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -181,7 +182,7 @@ Columns available for --columns (TSV only):
 			}
 		}
 
-		basePath := "/api/v2/traces"
+		basePath := consts.APIPathTraces
 		baseParams := map[string]string{
 			"project_id": projectIDStr,
 			"state":      traceListState,
@@ -294,7 +295,7 @@ func runTraceGet(traceID string) error {
 		}
 		c := newClient()
 
-		path := fmt.Sprintf("/api/v2/traces/%s", traceID)
+		path := consts.APIPathTrace(traceID)
 		var resp client.APIResponse[map[string]any]
 		if err := c.Get(path, &resp); err != nil {
 			return err
@@ -361,7 +362,7 @@ var (
 )
 
 func runTraceWatch(traceID string) error {
-		ssePath := fmt.Sprintf("/api/v2/traces/%s/stream", traceID)
+		ssePath := consts.APIPathTraceStream(traceID)
 		reader := client.NewSSEReader(flagServer, ssePath, flagToken)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -452,7 +453,7 @@ restarting the producer.`,
 		}
 
 		c := newClient()
-		path := fmt.Sprintf("/api/v2/traces/%s/cancel", traceID)
+		path := consts.APIPathTraceCancel(traceID)
 
 		var resp client.APIResponse[traceCancelResponseData]
 		err := c.Post(path, map[string]any{}, &resp)

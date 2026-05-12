@@ -6,6 +6,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -51,7 +52,7 @@ var datasetListCmd = &cobra.Command{
 		c := newClient()
 
 		var resp client.APIResponse[client.PaginatedData[datasetListItem]]
-		if err := c.Get("/api/v2/datasets?page=1&size=100", &resp); err != nil {
+		if err := c.Get(consts.APIPathDatasets+"?page=1&size=100", &resp); err != nil {
 			return err
 		}
 
@@ -91,7 +92,7 @@ var datasetGetCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[datasetDetail]
-		if err := c.Get(fmt.Sprintf("/api/v2/datasets/%d", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathDataset(id), &resp); err != nil {
 			return err
 		}
 
@@ -126,7 +127,7 @@ var datasetVersionsCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[client.PaginatedData[datasetVersionItem]]
-		if err := c.Get(fmt.Sprintf("/api/v2/datasets/%d/versions", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathDatasetVersions(id), &resp); err != nil {
 			return err
 		}
 
@@ -176,7 +177,7 @@ var datasetDeleteCmd = &cobra.Command{
 			return err
 		}
 		var resp client.APIResponse[any]
-		if err := c.Delete(fmt.Sprintf("/api/v2/datasets/%d", id), &resp); err != nil {
+		if err := c.Delete(consts.APIPathDataset(id), &resp); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("Dataset %q (id %d) deleted", name, id))

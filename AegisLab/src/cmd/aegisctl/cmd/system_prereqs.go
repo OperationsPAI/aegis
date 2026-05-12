@@ -10,6 +10,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -229,7 +230,7 @@ func targetSystemsForReconcile(c *client.Client, nameFilter string) ([]string, e
 		return []string{nameFilter}, nil
 	}
 	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-	if err := c.Get("/api/v2/systems?page=1&size=200", &resp); err != nil {
+	if err := c.Get(consts.APIPathSystems+"?page=1&size=200", &resp); err != nil {
 		return nil, err
 	}
 	names := make([]string, 0, len(resp.Data.Items))
@@ -243,7 +244,7 @@ func targetSystemsForReconcile(c *client.Client, nameFilter string) ([]string, e
 // fetchPrereqs wraps GET /api/v2/systems/by-name/:name/prerequisites.
 func fetchPrereqs(c *client.Client, systemName string) ([]systemPrereqResp, error) {
 	var resp client.APIResponse[[]systemPrereqResp]
-	if err := c.Get(fmt.Sprintf("/api/v2/systems/by-name/%s/prerequisites", systemName), &resp); err != nil {
+	if err := c.Get(consts.APIPathSystemByNamePrerequisites(systemName), &resp); err != nil {
 		return nil, err
 	}
 	return resp.Data, nil
@@ -271,7 +272,7 @@ func markPrereq(c *client.Client, systemName string, id int, status string) erro
 		Status string `json:"status"`
 	}{Status: status}
 	var resp client.APIResponse[systemPrereqResp]
-	return c.Post(fmt.Sprintf("/api/v2/systems/by-name/%s/prerequisites/%d/mark", systemName, id), body, &resp)
+	return c.Post(fmt.Sprintf("%s/%d/mark", consts.APIPathSystemByNamePrerequisites(systemName), id), body, &resp)
 }
 
 // writeReconcileReport emits the machine-parseable summary to stdout. Always

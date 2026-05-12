@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+
+	"aegis/consts"
 )
 
 // Resolver resolves human-readable names (e.g. "train-ticket") to numeric IDs
@@ -186,7 +188,7 @@ func min3(a, b, c int) int {
 
 // ProjectID resolves a project name to its numeric ID.
 func (r *Resolver) ProjectID(name string) (int, error) {
-	return resolve(r, "project", "/api/v2/projects", name,
+	return resolve(r, "project", consts.APIPathProjects, name,
 		func(p projectItem) (int, string) { return p.ID, p.Name })
 }
 
@@ -206,7 +208,7 @@ func (r *Resolver) InjectionID(name string) (int, error) {
 		return id, nil
 	}
 
-	basePath := fmt.Sprintf("/api/v2/projects/%d/injections", r.projectID)
+	basePath := consts.APIPathProjectInjections(r.projectID)
 	const pageSize = 100
 	const maxResolvePages = 100
 
@@ -248,13 +250,13 @@ func (r *Resolver) SetProjectScope(projectID int) {
 
 // ContainerID resolves a container name to its numeric ID.
 func (r *Resolver) ContainerID(name string) (int, error) {
-	return resolve(r, "container", "/api/v2/containers", name,
+	return resolve(r, "container", consts.APIPathContainers, name,
 		func(c containerItem) (int, string) { return c.ID, c.Name })
 }
 
 // DatasetID resolves a dataset name to its numeric ID.
 func (r *Resolver) DatasetID(name string) (int, error) {
-	return resolve(r, "dataset", "/api/v2/datasets", name,
+	return resolve(r, "dataset", consts.APIPathDatasets, name,
 		func(d datasetItem) (int, string) { return d.ID, d.Name })
 }
 
@@ -277,7 +279,7 @@ func resolveByID[T any](r *Resolver, path string, id int, extract func(T) (int, 
 // both the numeric ID and the project name.
 func (r *Resolver) ProjectIDOrName(arg string) (int, string, error) {
 	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
-		name, err := resolveByID(r, "/api/v2/projects", id,
+		name, err := resolveByID(r, consts.APIPathProjects, id,
 			func(p projectItem) (int, string) { return p.ID, p.Name })
 		if err != nil {
 			return 0, "", err
@@ -295,7 +297,7 @@ func (r *Resolver) ProjectIDOrName(arg string) (int, string, error) {
 // returns both the numeric ID and the container name.
 func (r *Resolver) ContainerIDOrName(arg string) (int, string, error) {
 	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
-		name, err := resolveByID(r, "/api/v2/containers", id,
+		name, err := resolveByID(r, consts.APIPathContainers, id,
 			func(c containerItem) (int, string) { return c.ID, c.Name })
 		if err != nil {
 			return 0, "", err
@@ -313,7 +315,7 @@ func (r *Resolver) ContainerIDOrName(arg string) (int, string, error) {
 // both the numeric ID and the dataset name.
 func (r *Resolver) DatasetIDOrName(arg string) (int, string, error) {
 	if id, err := strconv.Atoi(arg); err == nil && id > 0 {
-		name, err := resolveByID(r, "/api/v2/datasets", id,
+		name, err := resolveByID(r, consts.APIPathDatasets, id,
 			func(d datasetItem) (int, string) { return d.ID, d.Name })
 		if err != nil {
 			return 0, "", err

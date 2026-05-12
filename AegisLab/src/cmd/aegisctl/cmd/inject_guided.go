@@ -10,6 +10,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/spf13/cobra"
@@ -621,7 +622,7 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 			"project":    flagProject,
 			"project_id": pid,
 			"method":     "POST",
-			"path":       fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid),
+			"path":       consts.APIPathProjectInjectionsInject(pid),
 			"spec":       envelope,
 		})
 		return nil
@@ -685,7 +686,7 @@ func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedCon
 
 	c := newClient()
 	var resp client.APIResponse[injectSubmitResponse]
-	if err := c.Post(fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid), envelope, &resp); err != nil {
+	if err := c.Post(consts.APIPathProjectInjectionsInject(pid), envelope, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

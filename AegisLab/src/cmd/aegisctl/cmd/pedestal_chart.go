@@ -12,6 +12,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -362,7 +363,7 @@ func resolveChartSource(systemCode, tgz, repo, chartName, chartVersion, apiQuery
 	// return the helm_config_values for that specific container_version
 	// (issue #190 / #372). Empty value preserves the old "latest semver"
 	// behaviour.
-	chartPath := fmt.Sprintf("/api/v2/systems/by-name/%s/chart", systemCode)
+	chartPath := consts.APIPathSystemByNameChart(systemCode)
 	if apiQueryVersion != "" {
 		chartPath = fmt.Sprintf("%s?version=%s", chartPath, url.QueryEscape(apiQueryVersion))
 	}
@@ -574,7 +575,7 @@ func deriveNamespaceFromSystem(systemCode string) (string, error) {
 		NsPattern string `json:"ns_pattern"`
 	}
 	var resp client.APIResponse[client.PaginatedData[systemItem]]
-	if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
+	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
 		return "", fmt.Errorf("list systems: %w", err)
 	}
 	for _, s := range resp.Data.Items {

@@ -8,6 +8,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -161,7 +162,7 @@ func runContainerRegister(cmd *cobra.Command, args []string) error {
 
 	c := newClient()
 	var resp client.APIResponse[containerRegisterResponse]
-	if err := c.Post("/api/v2/containers/register", req, &resp); err != nil {
+	if err := c.Post(consts.APIPathContainersRegister, req, &resp); err != nil {
 		// The backend error message already embeds register_id when
 		// the failure originated from RegisterContainer. Print it
 		// prominently so it survives log truncation.

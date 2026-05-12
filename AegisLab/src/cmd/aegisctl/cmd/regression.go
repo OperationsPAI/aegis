@@ -14,6 +14,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -298,7 +299,7 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 	}
 
 	c := newClient()
-	path := fmt.Sprintf("/api/v2/projects/%d/injections/inject", pid)
+	path := consts.APIPathProjectInjectionsInject(pid)
 	// When --skip-restart-pedestal is set, hint the backend to no-op the
 	// helm install inside RestartPedestal (preflight already installed +
 	// waited for readiness). Backend falls back to a real install if the
@@ -367,7 +368,7 @@ func collectRegressionEvents(parentCtx context.Context, traceID string, timeoutS
 	ctx, cancel := context.WithTimeout(parentCtx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
-	reader := client.NewSSEReader(flagServer, fmt.Sprintf("/api/v2/traces/%s/stream", traceID), flagToken)
+	reader := client.NewSSEReader(flagServer, consts.APIPathTraceStream(traceID), flagToken)
 	events, errs := reader.Stream(ctx)
 
 	var observed []string
@@ -400,7 +401,7 @@ func collectRegressionEvents(parentCtx context.Context, traceID string, timeoutS
 
 func fetchTraceData(c *client.Client, traceID string) (map[string]any, error) {
 	var resp client.APIResponse[map[string]any]
-	if err := c.Get(fmt.Sprintf("/api/v2/traces/%s", traceID), &resp); err != nil {
+	if err := c.Get(consts.APIPathTrace(traceID), &resp); err != nil {
 		return nil, err
 	}
 	return resp.Data, nil
@@ -610,7 +611,7 @@ func (l *liveSystemsFetcher) FetchSystem(_ context.Context, name string) (string
 		Count     int    `json:"count"`
 	}
 	var resp client.APIResponse[client.PaginatedData[systemItem]]
-	if err := l.c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
+	if err := l.c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
 		return "", 0, err
 	}
 	for _, s := range resp.Data.Items {

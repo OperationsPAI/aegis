@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"aegis/consts"
 )
 
 // TokenSource produces a fresh Bearer token for cross-service calls.
@@ -70,7 +72,7 @@ func (c *RemoteClient) Publish(ctx context.Context, req PublishReq) (*PublishRes
 		return nil, fmt.Errorf("encode publish request: %w", err)
 	}
 	endpoint := *c.baseURL
-	endpoint.Path = trimSlash(endpoint.Path) + "/api/v2/events:publish"
+	endpoint.Path = trimSlash(endpoint.Path) + consts.APIPathEventsPublish
 
 	var lastErr error
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {

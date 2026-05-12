@@ -7,6 +7,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -67,7 +68,7 @@ var containerListCmd = &cobra.Command{
 	Short: "List containers",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
-		path := "/api/v2/containers?page=1&size=100"
+		path := consts.APIPathContainers + "?page=1&size=100"
 		if containerListType != "" {
 			typeInt, ok := containerTypeNameToInt[containerListType]
 			if !ok {
@@ -117,7 +118,7 @@ var containerGetCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[containerDetail]
-		if err := c.Get(fmt.Sprintf("/api/v2/containers/%d", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathContainer(id), &resp); err != nil {
 			return err
 		}
 
@@ -165,7 +166,7 @@ var containerVersionsCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[client.PaginatedData[containerVersionItem]]
-		if err := c.Get(fmt.Sprintf("/api/v2/containers/%d/versions", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathContainerVersionsFor(id), &resp); err != nil {
 			return err
 		}
 
@@ -268,7 +269,7 @@ Nested namespaces are preserved (e.g. docker.io/foo/bar/baz:tag -> namespace
 			Tag:        parsed.Tag,
 		}
 		var resp client.APIResponse[setImageResponse]
-		if err := c.Patch(fmt.Sprintf("/api/v2/container-versions/%d/image", setImageID), req, &resp); err != nil {
+		if err := c.Patch(consts.APIPathContainerVersionImage(setImageID), req, &resp); err != nil {
 			return err
 		}
 
@@ -305,7 +306,7 @@ var containerVersionListVersionsCmd = &cobra.Command{
 // Returns the version item and its parent container name.
 func fetchContainerVersionByID(c *client.Client, versionID int) (*containerVersionItem, error) {
 	var list client.APIResponse[client.PaginatedData[containerListItem]]
-	if err := c.Get("/api/v2/containers?page=1&size=1000", &list); err != nil {
+	if err := c.Get(consts.APIPathContainers+"?page=1&size=1000", &list); err != nil {
 		return nil, err
 	}
 	r := client.NewResolver(c)
@@ -315,7 +316,7 @@ func fetchContainerVersionByID(c *client.Client, versionID int) (*containerVersi
 			continue
 		}
 		var vResp client.APIResponse[client.PaginatedData[containerVersionItem]]
-		if err := c.Get(fmt.Sprintf("/api/v2/containers/%d/versions?page=1&size=1000", id), &vResp); err != nil {
+		if err := c.Get(consts.APIPathContainerVersionsFor(id)+"?page=1&size=1000", &vResp); err != nil {
 			continue
 		}
 		for _, v := range vResp.Data.Items {
@@ -350,7 +351,7 @@ func runListVersions(containerName string) error {
 	}
 
 	var resp client.APIResponse[client.PaginatedData[containerVersionItem]]
-	if err := c.Get(fmt.Sprintf("/api/v2/containers/%d/versions", id), &resp); err != nil {
+	if err := c.Get(consts.APIPathContainerVersionsFor(id), &resp); err != nil {
 		return err
 	}
 
@@ -407,7 +408,7 @@ var containerDeleteCmd = &cobra.Command{
 			return err
 		}
 		var resp client.APIResponse[any]
-		if err := c.Delete(fmt.Sprintf("/api/v2/containers/%d", id), &resp); err != nil {
+		if err := c.Delete(consts.APIPathContainer(id), &resp); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("Container %q (id %d) deleted", name, id))
@@ -464,7 +465,7 @@ var containerBuildCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[any]
-		if err := c.Post("/api/v2/containers/build", body, &resp); err != nil {
+		if err := c.Post(consts.APIPathContainersBuild, body, &resp); err != nil {
 			return err
 		}
 

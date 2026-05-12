@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"aegis/consts"
 	"aegis/module/configcenter"
 
 	"github.com/mitchellh/mapstructure"
@@ -82,7 +83,7 @@ func (c *RemoteClient) Bind(ctx context.Context, namespace, key string, out any,
 }
 
 func (c *RemoteClient) Get(ctx context.Context, namespace, key string) ([]byte, Layer, error) {
-	endpoint := c.url("/api/v2/config/" + namespace + "/" + key)
+	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/" + key)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, "", err
@@ -119,7 +120,7 @@ func (c *RemoteClient) Set(ctx context.Context, namespace, key string, value any
 	if err != nil {
 		return err
 	}
-	endpoint := c.url("/api/v2/config/" + namespace + "/" + key)
+	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/" + key)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -141,7 +142,7 @@ func (c *RemoteClient) Set(ctx context.Context, namespace, key string, value any
 }
 
 func (c *RemoteClient) Delete(ctx context.Context, namespace, key string) error {
-	endpoint := c.url("/api/v2/config/" + namespace + "/" + key)
+	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/" + key)
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
 		return err
@@ -162,7 +163,7 @@ func (c *RemoteClient) Delete(ctx context.Context, namespace, key string) error 
 }
 
 func (c *RemoteClient) List(ctx context.Context, namespace string) ([]Entry, error) {
-	endpoint := c.url("/api/v2/config/" + namespace)
+	endpoint := c.url(consts.APIPathConfigPrefix + namespace)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -211,7 +212,7 @@ func (c *RemoteClient) auth(ctx context.Context, req *http.Request) error {
 // short backoff; the configcenter is expected to be HA, but a
 // rolling restart should not kill consumers.
 func (c *RemoteClient) runWatch(ctx context.Context, namespace string) {
-	endpoint := c.url("/api/v2/config/" + namespace + "/watch")
+	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/watch")
 	backoff := time.Second
 	for {
 		if ctx.Err() != nil {

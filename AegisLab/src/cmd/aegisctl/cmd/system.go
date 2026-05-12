@@ -12,6 +12,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -197,7 +198,7 @@ set, in which case the prior entry is deleted first and then re-created.`,
 			Description:    seed.Description,
 		}
 		var resp client.APIResponse[chaosSystemResp]
-		if err := c.Post("/api/v2/systems", req, &resp); err != nil {
+		if err := c.Post(consts.APIPathSystems, req, &resp); err != nil {
 			// Any error here leaves nothing behind because the backend's
 			// CreateSystem bails on the first failed row/put; no client-side
 			// rollback is needed for partial writes inside one request.
@@ -230,7 +231,7 @@ var systemListCmd = &cobra.Command{
 		c := newClient()
 
 		var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-		if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
+		if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
 			return err
 		}
 
@@ -326,7 +327,7 @@ func setSystemStatus(c *client.Client, name string, status int) (*chaosSystemRes
 			name, strings.Join(known, ", "))
 	}
 	var resp client.APIResponse[chaosSystemResp]
-	if err := c.Put(fmt.Sprintf("/api/v2/systems/%d", existing.ID), setSystemStatusReq{Status: status}, &resp); err != nil {
+	if err := c.Put(consts.APIPathSystem(existing.ID), setSystemStatusReq{Status: status}, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.Data, nil
@@ -336,7 +337,7 @@ func setSystemStatus(c *client.Client, name string, status int) (*chaosSystemRes
 // in error messages. Never fatal: callers fall back to a generic message.
 func listSystemNames(c *client.Client) ([]string, error) {
 	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-	if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
+	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
 		return nil, err
 	}
 	names := make([]string, 0, len(resp.Data.Items))
@@ -432,7 +433,7 @@ Use --yes to skip the confirmation prompt.`,
 			return err
 		}
 		var resp client.APIResponse[chaosSystemResp]
-		if err := c.Put(fmt.Sprintf("/api/v2/systems/%d", existing.ID), setSystemStatusReq{Status: 0}, &resp); err != nil {
+		if err := c.Put(consts.APIPathSystem(existing.ID), setSystemStatusReq{Status: 0}, &resp); err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -613,7 +614,7 @@ func validateSystemSeed(seed *systemSeed) error {
 // registered (distinguished from lookup errors).
 func findSystemByName(c *client.Client, name string) (*chaosSystemResp, error) {
 	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-	if err := c.Get("/api/v2/systems?page=1&size=100", &resp); err != nil {
+	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
 		var apiErr *client.APIError
 		if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
 			return nil, nil
@@ -630,7 +631,7 @@ func findSystemByName(c *client.Client, name string) (*chaosSystemResp, error) {
 
 func deleteSystemByID(c *client.Client, id int) error {
 	var resp client.APIResponse[any]
-	return c.Delete(fmt.Sprintf("/api/v2/systems/%d", id), &resp)
+	return c.Delete(consts.APIPathSystem(id), &resp)
 }
 
 // --- init ---
@@ -736,7 +737,7 @@ What is written:
 			ResetOverrides: systemReseedResetOverrides,
 		}
 		var resp client.APIResponse[reseedReportResp]
-		if err := c.Post("/api/v2/systems/reseed", body, &resp); err != nil {
+		if err := c.Post(consts.APIPathSystemsReseed, body, &resp); err != nil {
 			return fmt.Errorf("reseed: %w (hint: retry with --apply=false to diff without writing; check backend logs for which subsystem failed)", err)
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {

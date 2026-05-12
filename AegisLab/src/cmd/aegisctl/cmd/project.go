@@ -10,6 +10,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -58,7 +59,7 @@ var projectListCmd = &cobra.Command{
 	Short: "List projects",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
-		path := fmt.Sprintf("/api/v2/projects?page=%d&size=%d", projectListPage, projectListSize)
+		path := fmt.Sprintf("%s?page=%d&size=%d", consts.APIPathProjects, projectListPage, projectListSize)
 
 		var resp client.APIResponse[client.PaginatedData[projectListItem]]
 		if err := c.Get(path, &resp); err != nil {
@@ -101,7 +102,7 @@ var projectGetCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[projectDetail]
-		if err := c.Get(fmt.Sprintf("/api/v2/projects/%d", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathProject(id), &resp); err != nil {
 			return err
 		}
 
@@ -141,7 +142,7 @@ var projectCreateCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[projectDetail]
-		if err := c.Post("/api/v2/projects", body, &resp); err != nil {
+		if err := c.Post(consts.APIPathProjects, body, &resp); err != nil {
 			return err
 		}
 
@@ -205,7 +206,7 @@ var projectUpdateCmd = &cobra.Command{
 
 		if flagDryRun {
 			var curResp client.APIResponse[projectDetail]
-			_ = c.Get(fmt.Sprintf("/api/v2/projects/%d", id), &curResp)
+			_ = c.Get(consts.APIPathProject(id), &curResp)
 
 			planned, _ := json.MarshalIndent(body, "", "  ")
 			fmt.Fprintf(os.Stderr, "Dry run — PATCH /api/v2/projects/%d\n%s\n", id, string(planned))
@@ -234,7 +235,7 @@ var projectUpdateCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[projectDetail]
-		if err := c.Patch(fmt.Sprintf("/api/v2/projects/%d", id), body, &resp); err != nil {
+		if err := c.Patch(consts.APIPathProject(id), body, &resp); err != nil {
 			return err
 		}
 
@@ -281,7 +282,7 @@ var projectDeleteCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[any]
-		if err := c.Delete(fmt.Sprintf("/api/v2/projects/%d", id), &resp); err != nil {
+		if err := c.Delete(consts.APIPathProject(id), &resp); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("Project %q (id %d) deleted", name, id))

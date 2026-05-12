@@ -7,6 +7,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -58,7 +59,7 @@ var rateLimiterStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
 		var resp client.APIResponse[rlListResp]
-		if err := c.Get("/api/v2/rate-limiters", &resp); err != nil {
+		if err := c.Get(consts.APIPathRateLimiters, &resp); err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -110,7 +111,7 @@ var rateLimiterResetCmd = &cobra.Command{
 		}
 		c := newClient()
 		var resp client.APIResponse[any]
-		if err := c.Delete("/api/v2/rate-limiters/"+rlResetBucket, &resp); err != nil {
+		if err := c.Delete(consts.APIPathRateLimiters+"/"+rlResetBucket, &resp); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("bucket %q reset", rlResetBucket))
@@ -126,7 +127,7 @@ var rateLimiterGCCmd = &cobra.Command{
 		doMutation := rlGCForce && !flagDryRun
 
 		var listResp client.APIResponse[rlListResp]
-		if err := c.Get("/api/v2/rate-limiters", &listResp); err != nil {
+		if err := c.Get(consts.APIPathRateLimiters, &listResp); err != nil {
 			return err
 		}
 		leaked := leakedRateLimiterBuckets(listResp.Data.Items)
@@ -154,7 +155,7 @@ var rateLimiterGCCmd = &cobra.Command{
 		}
 
 		var resp client.APIResponse[rlGCResp]
-		if err := c.Post("/api/v2/rate-limiters/gc", nil, &resp); err != nil {
+		if err := c.Post(consts.APIPathRateLimitersGC, nil, &resp); err != nil {
 			return err
 		}
 

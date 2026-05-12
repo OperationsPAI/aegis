@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"aegis/consts"
 )
 
 // TokenSource produces a fresh Bearer token for cross-service calls.
@@ -123,7 +125,7 @@ func (c *RemoteClient) do(ctx context.Context, method, path string, body any, ou
 
 func (c *RemoteClient) PresignPut(ctx context.Context, bucket string, req PresignPutReq) (*PresignPutResult, error) {
 	var out PresignPutResult
-	if err := c.do(ctx, http.MethodPost, "/api/v2/blob/buckets/"+url.PathEscape(bucket)+"/presign-put", req, &out); err != nil {
+	if err := c.do(ctx, http.MethodPost, consts.APIPathBlobBuckets+url.PathEscape(bucket)+"/presign-put", req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -135,7 +137,7 @@ func (c *RemoteClient) PresignGet(ctx context.Context, bucket, key string, req P
 		PresignGetReq
 	}{Key: key, PresignGetReq: req}
 	var out PresignedURL
-	if err := c.do(ctx, http.MethodPost, "/api/v2/blob/buckets/"+url.PathEscape(bucket)+"/presign-get", body, &out); err != nil {
+	if err := c.do(ctx, http.MethodPost, consts.APIPathBlobBuckets+url.PathEscape(bucket)+"/presign-get", body, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -143,7 +145,7 @@ func (c *RemoteClient) PresignGet(ctx context.Context, bucket, key string, req P
 
 func (c *RemoteClient) Stat(ctx context.Context, bucket, key string) (*ObjectMeta, error) {
 	var out ObjectMeta
-	path := "/api/v2/blob/buckets/" + url.PathEscape(bucket) + "/objects/" + url.PathEscape(key)
+	path := consts.APIPathBlobBuckets + url.PathEscape(bucket) + "/objects/" + url.PathEscape(key)
 	if err := c.do(ctx, http.MethodHead, path, nil, &out); err != nil {
 		return nil, err
 	}
@@ -151,7 +153,7 @@ func (c *RemoteClient) Stat(ctx context.Context, bucket, key string) (*ObjectMet
 }
 
 func (c *RemoteClient) Delete(ctx context.Context, bucket, key string) error {
-	path := "/api/v2/blob/buckets/" + url.PathEscape(bucket) + "/objects/" + url.PathEscape(key)
+	path := consts.APIPathBlobBuckets + url.PathEscape(bucket) + "/objects/" + url.PathEscape(key)
 	return c.do(ctx, http.MethodDelete, path, nil, nil)
 }
 

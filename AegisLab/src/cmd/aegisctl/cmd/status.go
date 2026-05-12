@@ -7,6 +7,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -68,7 +69,7 @@ var statusCmd = &cobra.Command{
 		connected := "yes"
 		username := "unknown"
 		var profileResp client.APIResponse[profileInfo]
-		if err := c.Get("/api/v2/auth/profile", &profileResp); err != nil {
+		if err := c.Get(consts.APIPathAuthProfile, &profileResp); err != nil {
 			connected = "no (not logged in)"
 		} else {
 			username = profileResp.Data.Username
@@ -84,7 +85,7 @@ var statusCmd = &cobra.Command{
 
 			// Tasks
 			var taskResp client.APIResponse[client.PaginatedData[taskItem]]
-			if err := c.Get("/api/v2/tasks?page=1&size=100", &taskResp); err == nil {
+			if err := c.Get(consts.APIPathTasks+"?page=1&size=100", &taskResp); err == nil {
 				counts := map[string]int{}
 				for _, t := range taskResp.Data.Items {
 					counts[t.State]++
@@ -94,13 +95,13 @@ var statusCmd = &cobra.Command{
 
 			// Traces
 			var traceResp client.APIResponse[client.PaginatedData[traceItem]]
-			if err := c.Get("/api/v2/traces?page=1&size=10", &traceResp); err == nil {
+			if err := c.Get(consts.APIPathTraces+"?page=1&size=10", &traceResp); err == nil {
 				result["recent_traces"] = traceResp.Data.Items
 			}
 
 			// Health
 			var healthResp client.APIResponse[healthCheckResp]
-			if err := c.Get("/api/v2/system/health", &healthResp); err == nil {
+			if err := c.Get(consts.APIPathSystemHealth, &healthResp); err == nil {
 				result["health"] = healthResp.Data
 			} else {
 				result["health"] = map[string]any{"status": "unreachable", "error": err.Error()}
@@ -118,7 +119,7 @@ var statusCmd = &cobra.Command{
 
 		// --- Tasks ---
 		var taskResp client.APIResponse[client.PaginatedData[taskItem]]
-		if err := c.Get("/api/v2/tasks?page=1&size=100", &taskResp); err == nil {
+		if err := c.Get(consts.APIPathTasks+"?page=1&size=100", &taskResp); err == nil {
 			counts := map[string]int{}
 			total := 0
 			for _, t := range taskResp.Data.Items {
@@ -134,7 +135,7 @@ var statusCmd = &cobra.Command{
 
 		// --- Recent Traces ---
 		var traceResp client.APIResponse[client.PaginatedData[traceItem]]
-		if err := c.Get("/api/v2/traces?page=1&size=10", &traceResp); err == nil && len(traceResp.Data.Items) > 0 {
+		if err := c.Get(consts.APIPathTraces+"?page=1&size=10", &traceResp); err == nil && len(traceResp.Data.Items) > 0 {
 			fmt.Println("Recent Traces:")
 
 			rows := make([][]string, 0, len(traceResp.Data.Items))
@@ -152,7 +153,7 @@ var statusCmd = &cobra.Command{
 		// --- Infrastructure Health ---
 		fmt.Println("Infrastructure Health:")
 		var healthResp client.APIResponse[healthCheckResp]
-		if err := c.Get("/api/v2/system/health", &healthResp); err != nil {
+		if err := c.Get(consts.APIPathSystemHealth, &healthResp); err != nil {
 			fmt.Printf("  %s Could not reach health endpoint: %v\n", output.ColorRed(os.Stdout, "\u2717"), err)
 		} else {
 			names := make([]string, 0, len(healthResp.Data.Services))

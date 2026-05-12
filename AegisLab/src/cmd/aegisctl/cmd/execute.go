@@ -6,6 +6,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -99,7 +100,7 @@ func runExecuteCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := fmt.Sprintf("/api/v2/projects/%d/executions/execute", pid)
+	path := consts.APIPathProjectExecutionsExecute(pid)
 	if flagDryRun {
 		plan := map[string]any{
 			"dry_run":    true,
@@ -149,7 +150,7 @@ var executeListCmd = &cobra.Command{
 			return err
 		}
 		c := newClient()
-		q := fmt.Sprintf("/api/v2/projects/%d/executions?page=%d&size=%d", pid, executeListPage, executeListSize)
+		q := fmt.Sprintf("%s?page=%d&size=%d", consts.APIPathProjectExecutions(pid), executeListPage, executeListSize)
 
 		var resp client.APIResponse[client.PaginatedData[executeListItem]]
 		if err := c.Get(q, &resp); err != nil {
@@ -195,7 +196,7 @@ var executeGetCmd = &cobra.Command{
 
 		c := newClient()
 		var resp client.APIResponse[any]
-		if err := c.Get(fmt.Sprintf("/api/v2/executions/%s", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathExecution(id), &resp); err != nil {
 			return err
 		}
 

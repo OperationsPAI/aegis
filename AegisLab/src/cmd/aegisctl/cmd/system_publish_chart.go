@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"aegis/cmd/aegisctl/client"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -206,7 +207,7 @@ func runSystemPublishChart(systemName, chartDir string, bumpVersion, keepTmp boo
 // types).
 func fetchSystemChart(c *client.Client, systemName string) (*chartLookupResp, error) {
 	var resp client.APIResponse[chartLookupResp]
-	if err := c.Get(fmt.Sprintf("/api/v2/systems/by-name/%s/chart", url.PathEscape(systemName)), &resp); err != nil {
+	if err := c.Get(consts.APIPathSystemByNameChart(url.PathEscape(systemName)), &resp); err != nil {
 		return nil, fmt.Errorf("lookup chart for system %q: %w", systemName, err)
 	}
 	return &resp.Data, nil
@@ -320,7 +321,7 @@ func bumpHelmConfigVersion(c *client.Client, systemName string, lookup *chartLoo
 		LocalPath: lookup.LocalPath,
 	}
 	var resp client.APIResponse[pedestalHelmConfig]
-	if err := c.Put(fmt.Sprintf("/api/v2/pedestal/helm/%d", cvID), body, &resp); err != nil {
+	if err := c.Put(consts.APIPathPedestalHelmByID(cvID), body, &resp); err != nil {
 		return fmt.Errorf("PUT /api/v2/pedestal/helm/%d: %w", cvID, err)
 	}
 	return nil
@@ -337,7 +338,7 @@ func resolveSystemContainerVersionID(c *client.Client, systemName, pedestalTag s
 		return 0, fmt.Errorf("resolve container id for system %q: %w", systemName, err)
 	}
 	var vResp client.APIResponse[client.PaginatedData[containerVersionItem]]
-	if err := c.Get(fmt.Sprintf("/api/v2/containers/%d/versions?page=1&size=1000", containerID), &vResp); err != nil {
+	if err := c.Get(consts.APIPathContainerVersionsFor(containerID)+"?page=1&size=1000", &vResp); err != nil {
 		return 0, fmt.Errorf("list versions for container %q: %w", systemName, err)
 	}
 	for _, v := range vResp.Data.Items {

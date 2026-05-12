@@ -179,7 +179,7 @@ var injectListCmd = &cobra.Command{
 		}
 
 		c := newClient()
-		basePath := fmt.Sprintf("/api/v2/projects/%d/injections", pid)
+		basePath := consts.APIPathProjectInjections(pid)
 		baseParams := map[string]string{
 			"state":      stateParam,
 			"fault_type": injectListFaultType,
@@ -264,7 +264,7 @@ func runInjectGet(name string) error {
 
 		c := newClient()
 		var resp client.APIResponse[any]
-		if err := c.Get(fmt.Sprintf("/api/v2/injections/%d", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathInjection(id), &resp); err != nil {
 			return err
 		}
 
@@ -373,7 +373,7 @@ var injectSearchCmd = &cobra.Command{
 
 		c := newClient()
 		var resp client.APIResponse[any]
-		if err := c.Post(fmt.Sprintf("/api/v2/projects/%d/injections/search", pid), body, &resp); err != nil {
+		if err := c.Post(consts.APIPathProjectInjectionsSearch(pid), body, &resp); err != nil {
 			return err
 		}
 
@@ -422,7 +422,7 @@ func runInjectFiles(name string) error {
 
 		c := newClient()
 		var resp client.APIResponse[filesPayload]
-		if err := c.Get(fmt.Sprintf("/api/v2/injections/%d/files", id), &resp); err != nil {
+		if err := c.Get(consts.APIPathInjectionFiles(id), &resp); err != nil {
 			return err
 		}
 
@@ -502,7 +502,7 @@ func listInjectionFiles(c *client.Client, id int) ([]string, error) {
 		Files []datapackFileEntry `json:"files"`
 	}
 	var resp client.APIResponse[fileTreeResp]
-	if err := c.Get(fmt.Sprintf("/api/v2/injections/%d/files", id), &resp); err != nil {
+	if err := c.Get(consts.APIPathInjectionFiles(id), &resp); err != nil {
 		return nil, err
 	}
 	var out []string
@@ -526,7 +526,7 @@ func downloadInjectionFile(httpClient *http.Client, server, token string, id int
 	if err := os.MkdirAll(filepathDir(outPath), 0o755); err != nil {
 		return err
 	}
-	url := fmt.Sprintf("%s/api/v2/injections/%d/files/download?path=%s", server, id, queryEscape(relPath))
+	url := fmt.Sprintf("%s%s/download?path=%s", server, consts.APIPathInjectionFiles(id), queryEscape(relPath))
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -689,7 +689,7 @@ func runInjectDownload(name string) error {
 		}
 
 		// Legacy path: server-side zip stream into a single file.
-		url := flagServer + fmt.Sprintf("/api/v2/injections/%d/download", id)
+		url := flagServer + consts.APIPathInjectionDownload(id)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
 			return fmt.Errorf("create request: %w", err)
@@ -919,7 +919,7 @@ func collectBatchTargetsByState(stateRaw string) ([]batchTarget, error) {
 	const pageSize = 100
 	var out []batchTarget
 	for page := 1; page <= 1000; page++ {
-		path := fmt.Sprintf("/api/v2/projects/%d/injections?page=%d&size=%d", pid, page, pageSize)
+		path := fmt.Sprintf("%s?page=%d&size=%d", consts.APIPathProjectInjections(pid), page, pageSize)
 		if stateParam != "" {
 			path += "&state=" + stateParam
 		}

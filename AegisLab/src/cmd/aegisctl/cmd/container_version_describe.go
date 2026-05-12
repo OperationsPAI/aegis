@@ -10,6 +10,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -80,7 +81,7 @@ a pedestal points at a particular chart/image.`,
 		// Fetch container detail to resolve version name-or-id and pick up
 		// status (not returned by the version detail endpoint).
 		var ctrResp client.APIResponse[containerDetail]
-		if err := c.Get(fmt.Sprintf("/api/v2/containers/%d", cid), &ctrResp); err != nil {
+		if err := c.Get(consts.APIPathContainer(cid), &ctrResp); err != nil {
 			return fmt.Errorf("failed to fetch container detail: %w", err)
 		}
 		vid, err := resolveContainerVersionID(ctrResp.Data.Versions, args[1])
@@ -89,7 +90,7 @@ a pedestal points at a particular chart/image.`,
 		}
 
 		var vResp client.APIResponse[containerVersionDescribe]
-		if err := c.Get(fmt.Sprintf("/api/v2/containers/%d/versions/%d", cid, vid), &vResp); err != nil {
+		if err := c.Get(consts.APIPathContainerVersion(cid, vid), &vResp); err != nil {
 			return fmt.Errorf("failed to fetch container version: %w", err)
 		}
 

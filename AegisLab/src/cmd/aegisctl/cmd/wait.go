@@ -6,6 +6,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -118,7 +119,7 @@ func runWait(id string) error {
 // or a task. Returns "trace" or "task".
 func detectResourceType(c *client.Client, id string) (string, error) {
 	var traceResp client.APIResponse[any]
-	err := c.Get(fmt.Sprintf("/api/v2/traces/%s", id), &traceResp)
+	err := c.Get(consts.APIPathTrace(id), &traceResp)
 	if err == nil {
 		return "trace", nil
 	}
@@ -126,7 +127,7 @@ func detectResourceType(c *client.Client, id string) (string, error) {
 	// Check if it was a 404.
 	if apiErr, ok := err.(*client.APIError); ok && apiErr.StatusCode == 404 {
 		var taskResp client.APIResponse[any]
-		err2 := c.Get(fmt.Sprintf("/api/v2/tasks/%s", id), &taskResp)
+		err2 := c.Get(consts.APIPathTask(id), &taskResp)
 		if err2 == nil {
 			return "task", nil
 		}
@@ -144,9 +145,9 @@ func pollState(c *client.Client, resourceType, id string) (string, any, error) {
 	var path string
 	switch resourceType {
 	case "trace":
-		path = fmt.Sprintf("/api/v2/traces/%s", id)
+		path = consts.APIPathTrace(id)
 	case "task":
-		path = fmt.Sprintf("/api/v2/tasks/%s", id)
+		path = consts.APIPathTask(id)
 	default:
 		return "", nil, fmt.Errorf("unknown resource type: %s", resourceType)
 	}

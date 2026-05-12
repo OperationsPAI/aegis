@@ -6,6 +6,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -76,8 +77,8 @@ var injectCandidatesLsCmd = &cobra.Command{
 		}
 
 		c := newClient()
-		path := fmt.Sprintf("/api/v2/systems/by-name/%s/inject-candidates?namespace=%s",
-			url.PathEscape(candidatesSystem),
+		path := fmt.Sprintf("%s?namespace=%s",
+			consts.APIPathSystemByNameInjectCandidates(url.PathEscape(candidatesSystem)),
 			url.QueryEscape(candidatesNamespace),
 		)
 		var resp client.APIResponse[injectCandidatesResp]

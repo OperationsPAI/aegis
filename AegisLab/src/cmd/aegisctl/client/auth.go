@@ -9,11 +9,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"aegis/consts"
 )
 
 const (
-	apiKeyTokenPath   = "/api/v2/auth/api-key/token"
-	passwordLoginPath = "/api/v2/auth/login"
+	apiKeyTokenPath   = consts.APIPathAuthAPIKeyToken
+	passwordLoginPath = consts.APIPathAuthLogin
 )
 
 // APIKeyTokenDebug contains the fully materialized signed request data for
@@ -150,7 +152,7 @@ func RefreshToken(server, currentToken string) (string, time.Time, error) {
 	c := NewClient(server, currentToken, 30*time.Second)
 
 	var resp APIResponse[tokenRefreshResponseData]
-	err := c.Post("/api/v2/auth/refresh", tokenRefreshRequest{
+	err := c.Post(consts.APIPathAuthRefresh, tokenRefreshRequest{
 		Token: currentToken,
 	}, &resp)
 	if err != nil {
@@ -173,7 +175,7 @@ func GetProfile(server, token string) (*ProfileData, error) {
 	c := NewClient(server, token, 30*time.Second)
 
 	var resp APIResponse[ProfileData]
-	if err := c.Get("/api/v2/auth/profile", &resp); err != nil {
+	if err := c.Get(consts.APIPathAuthProfile, &resp); err != nil {
 		return nil, fmt.Errorf("get profile failed: %w", err)
 	}
 

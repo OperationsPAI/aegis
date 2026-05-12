@@ -5,6 +5,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -47,7 +48,7 @@ var evalListCmd = &cobra.Command{
 	Short: "List evaluations",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
-		path := fmt.Sprintf("/api/v2/evaluations?page=%d&size=%d", evalListPage, evalListSize)
+		path := fmt.Sprintf("%s?page=%d&size=%d", consts.APIPathEvaluations, evalListPage, evalListSize)
 
 		var resp client.APIResponse[client.PaginatedData[evalListItem]]
 		if err := c.Get(path, &resp); err != nil {
@@ -84,7 +85,7 @@ var evalGetCmd = &cobra.Command{
 		c := newClient()
 
 		var resp client.APIResponse[evalDetail]
-		if err := c.Get(fmt.Sprintf("/api/v2/evaluations/%s", args[0]), &resp); err != nil {
+		if err := c.Get(consts.APIPathEvaluation(args[0]), &resp); err != nil {
 			return err
 		}
 

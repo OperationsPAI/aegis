@@ -9,6 +9,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,7 @@ type traceTask struct {
 // code 7) when no pending task exists so scripts can branch on it.
 func resolveNextPendingTask(traceID string) (*traceTask, error) {
 	c := newClient()
-	path := fmt.Sprintf("/api/v2/traces/%s", traceID)
+	path := consts.APIPathTrace(traceID)
 
 	var resp client.APIResponse[map[string]any]
 	if err := c.Get(path, &resp); err != nil {
@@ -145,7 +146,7 @@ task.`,
 		}
 
 		c := newClient()
-		path := fmt.Sprintf("/api/v2/tasks/%s/expedite", task.ID)
+		path := consts.APIPathTaskExpedite(task.ID)
 
 		var resp client.APIResponse[map[string]any]
 		if err := c.Post(path, nil, &resp); err != nil {

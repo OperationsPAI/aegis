@@ -9,6 +9,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -53,7 +54,7 @@ var taskListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
 
-		basePath := "/api/v2/tasks"
+		basePath := consts.APIPathTasks
 		baseParams := map[string]string{
 			"state": taskListState,
 			"type":  taskListType,
@@ -160,7 +161,7 @@ succeeds silently.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newClient()
-		path := fmt.Sprintf("/api/v2/tasks/%s/expedite", args[0])
+		path := consts.APIPathTaskExpedite(args[0])
 
 		var resp client.APIResponse[map[string]any]
 		if err := c.Post(path, nil, &resp); err != nil {
@@ -231,7 +232,7 @@ var (
 func runTaskGet(taskID string) error {
 		c := newClient()
 
-		path := fmt.Sprintf("/api/v2/tasks/%s", taskID)
+		path := consts.APIPathTask(taskID)
 		var resp client.APIResponse[map[string]any]
 		if err := c.Get(path, &resp); err != nil {
 			return err
@@ -272,7 +273,7 @@ var (
 )
 
 func runTaskLogs(taskID string) error {
-		wsPath := fmt.Sprintf("/api/v2/tasks/%s/logs/ws", taskID)
+		wsPath := consts.APIPathTaskLogsWS(taskID)
 		reader := client.NewWSReader(flagServer, wsPath, flagToken)
 
 		ctx, cancel := context.WithCancel(context.Background())

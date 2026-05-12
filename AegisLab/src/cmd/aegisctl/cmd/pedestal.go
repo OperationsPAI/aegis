@@ -7,6 +7,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
+	"aegis/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -83,7 +84,7 @@ var pedestalHelmGetCmd = &cobra.Command{
 		}
 		c := newClient()
 		var resp client.APIResponse[pedestalHelmConfig]
-		if err := c.Get(fmt.Sprintf("/api/v2/pedestal/helm/%d", pedestalHelmVersionID), &resp); err != nil {
+		if err := c.Get(consts.APIPathPedestalHelmByID(pedestalHelmVersionID), &resp); err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -137,7 +138,7 @@ var pedestalHelmSetCmd = &cobra.Command{
 		}
 		c := newClient()
 		var resp client.APIResponse[pedestalHelmConfig]
-		if err := c.Put(fmt.Sprintf("/api/v2/pedestal/helm/%d", pedestalHelmVersionID), body, &resp); err != nil {
+		if err := c.Put(consts.APIPathPedestalHelmByID(pedestalHelmVersionID), body, &resp); err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -158,7 +159,7 @@ var pedestalHelmVerifyCmd = &cobra.Command{
 		if pedestalHelmVersionID <= 0 {
 			return fmt.Errorf("--container-version-id is required and must be > 0")
 		}
-		path := fmt.Sprintf("/api/v2/pedestal/helm/%d/verify", pedestalHelmVersionID)
+		path := consts.APIPathPedestalHelmVerify(pedestalHelmVersionID)
 		if flagDryRun {
 			plan := map[string]any{
 				"dry_run":              true,
@@ -281,7 +282,7 @@ Idempotent: a re-run with no upstream change yields zero applied actions.`,
 			Apply:    pedestalHelmReseedApply,
 			Prune:    pedestalHelmReseedPrune,
 		}
-		path := fmt.Sprintf("/api/v2/pedestal/helm/%d/reseed", pedestalHelmVersionID)
+		path := consts.APIPathPedestalHelmReseed(pedestalHelmVersionID)
 		if flagDryRun {
 			plan := map[string]any{
 				"dry_run":              true,
