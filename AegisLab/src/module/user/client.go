@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"aegis/model"
+	"aegis/platform/model"
 )
 
 type Reader interface {

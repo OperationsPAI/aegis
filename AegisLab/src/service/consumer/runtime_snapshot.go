@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	buildkit "aegis/infra/buildkit"
-	helm "aegis/infra/helm"
-	k8s "aegis/infra/k8s"
-	redis "aegis/infra/redis"
+	"aegis/platform/consts"
+	buildkit "aegis/platform/buildkit"
+	helm "aegis/platform/helm"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
 
 	"gorm.io/gorm"
 )

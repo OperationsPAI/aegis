@@ -3,7 +3,7 @@ package sso
 import (
 	"context"
 
-	"aegis/middleware"
+	"aegis/platform/middleware"
 	"aegis/module/rbac"
 )
 

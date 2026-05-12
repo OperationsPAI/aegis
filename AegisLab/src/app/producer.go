@@ -3,15 +3,15 @@ package app
 import (
 	"context"
 
-	chaos "aegis/infra/chaos"
-	etcd "aegis/infra/etcd"
-	k8s "aegis/infra/k8s"
-	redis "aegis/infra/redis"
+	chaos "aegis/platform/chaos"
+	etcd "aegis/platform/etcd"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
 	httpapi "aegis/interface/http"
 	"aegis/module/ssoclient"
 	commonservice "aegis/service/common"
 	"aegis/service/initialization"
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	"go.uber.org/fx"
 	"gorm.io/gorm"

@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/infra/tracing"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/tracing"
+	"aegis/platform/model"
 	injection "aegis/module/injection"
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"

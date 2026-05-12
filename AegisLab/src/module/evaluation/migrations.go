@@ -1,8 +1,8 @@
 package evaluation
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 // Migrations declares the evaluation-owned tables for AutoMigrate.

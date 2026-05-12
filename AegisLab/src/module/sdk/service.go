@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 type Service struct {

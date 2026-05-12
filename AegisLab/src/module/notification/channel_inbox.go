@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	redisinfra "aegis/infra/redis"
+	redisinfra "aegis/platform/redis"
 )
 
 // InboxChannel is the only real channel in v1. It does two things:

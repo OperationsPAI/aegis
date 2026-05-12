@@ -11,14 +11,14 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	redis "aegis/infra/redis"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redis "aegis/platform/redis"
+	"aegis/platform/model"
 	container "aegis/module/container"
 	"aegis/service/common"
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 )

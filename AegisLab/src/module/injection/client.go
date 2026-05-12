@@ -3,9 +3,9 @@ package injection
 import (
 	"context"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 )
 
 // Reader exposes the injection-owned reads that other modules depend on.

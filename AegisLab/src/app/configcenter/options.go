@@ -19,12 +19,12 @@ import (
 	"strings"
 
 	"aegis/app"
-	"aegis/infra/etcd"
+	"aegis/platform/etcd"
 	httpapi "aegis/interface/http"
 	"aegis/module/configcenter"
 	"aegis/module/ssoclient"
 	"aegis/module/user"
-	"aegis/router"
+	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"

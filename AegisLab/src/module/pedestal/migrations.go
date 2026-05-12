@@ -1,8 +1,8 @@
 package pedestal
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 // Migrations contributes the pedestal-owned helm_configs table. The

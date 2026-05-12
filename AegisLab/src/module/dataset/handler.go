@@ -1,16 +1,16 @@
 package dataset
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"archive/zip"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/middleware"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/middleware"
+	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 )

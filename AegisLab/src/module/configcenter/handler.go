@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"aegis/dto"
-	"aegis/middleware"
+	"aegis/platform/dto"
+	"aegis/platform/middleware"
 
 	"github.com/gin-contrib/sse"
 	"github.com/gin-gonic/gin"

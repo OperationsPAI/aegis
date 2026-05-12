@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // HandlerService captures the user operations consumed by the HTTP handler.

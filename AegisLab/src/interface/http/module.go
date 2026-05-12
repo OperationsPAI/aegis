@@ -1,8 +1,8 @@
 package httpapi
 
 import (
-	"aegis/middleware"
-	"aegis/router"
+	"aegis/platform/middleware"
+	"aegis/platform/router"
 
 	"go.uber.org/fx"
 )

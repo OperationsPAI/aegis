@@ -1,8 +1,8 @@
 package label
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 // Migrations is the label module's MigrationRegistrar. It owns the

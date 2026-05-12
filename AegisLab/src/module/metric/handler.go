@@ -1,10 +1,10 @@
 package metric
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"net/http"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 
 	"github.com/gin-gonic/gin"
 )

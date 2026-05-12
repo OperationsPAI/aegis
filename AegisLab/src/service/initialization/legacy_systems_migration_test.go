@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	etcd "aegis/infra/etcd"
-	"aegis/model"
+	"aegis/platform/consts"
+	etcd "aegis/platform/etcd"
+	"aegis/platform/model"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

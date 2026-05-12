@@ -6,8 +6,8 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"aegis/consts"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/utils"
 )
 
 func packageDatapackDirectoryToZip(zipWriter *zip.Writer, workDir string, excludeRules []utils.ExculdeRule) error {

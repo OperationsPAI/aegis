@@ -1,8 +1,8 @@
 package dataset
 
 import (
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 )
 
 type Reader interface {

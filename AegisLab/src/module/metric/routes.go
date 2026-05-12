@@ -1,9 +1,9 @@
 package metric
 
 import (
-	"aegis/consts"
-	"aegis/framework"
-	"aegis/middleware"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )

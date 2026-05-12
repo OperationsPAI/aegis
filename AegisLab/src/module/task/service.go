@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	redisinfra "aegis/infra/redis"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redisinfra "aegis/platform/redis"
+	"aegis/platform/model"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"

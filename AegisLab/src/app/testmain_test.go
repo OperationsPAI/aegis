@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"aegis/utils"
+	"aegis/platform/utils"
 )
 
 func TestMain(m *testing.M) {

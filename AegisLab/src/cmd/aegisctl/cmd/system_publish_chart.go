@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"aegis/cmd/aegisctl/client"
-	"aegis/consts"
+	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )

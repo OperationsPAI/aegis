@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 
 	"github.com/stretchr/testify/assert"
 )

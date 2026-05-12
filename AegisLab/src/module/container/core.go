@@ -1,7 +1,7 @@
 package container
 
 import (
-	"aegis/model"
+	"aegis/platform/model"
 )
 
 func (r *Repository) CreateContainerCore(container *model.Container, userID int) (*model.Container, error) {

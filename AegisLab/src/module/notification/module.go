@@ -1,7 +1,7 @@
 package notification
 
 import (
-	redisinfra "aegis/infra/redis"
+	redisinfra "aegis/platform/redis"
 
 	"go.uber.org/fx"
 	"gorm.io/gorm"

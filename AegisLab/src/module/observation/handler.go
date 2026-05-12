@@ -3,9 +3,9 @@ package observation
 import (
 	"net/http"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/httpx"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/httpx"
 
 	"github.com/gin-gonic/gin"
 )

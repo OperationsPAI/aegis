@@ -1,8 +1,8 @@
 package widget
 
 import (
-	"aegis/framework"
-	"aegis/middleware"
+	"aegis/platform/framework"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )

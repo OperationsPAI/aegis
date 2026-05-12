@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 	execution "aegis/module/execution"
 	injection "aegis/module/injection"
-	runtimev1 "aegis/proto/runtime/v1"
+	runtimev1 "aegis/platform/proto/runtime/v1"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )

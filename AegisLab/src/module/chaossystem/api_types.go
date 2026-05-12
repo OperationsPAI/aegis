@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"aegis/config"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 )
 
 // CreateChaosSystemReq represents the request to create a new chaos system.

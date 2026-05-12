@@ -1,7 +1,7 @@
 package configcenter
 
 import (
-	"aegis/infra/etcd"
+	"aegis/platform/etcd"
 
 	"go.uber.org/fx"
 )

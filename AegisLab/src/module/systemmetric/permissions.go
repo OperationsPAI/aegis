@@ -1,8 +1,8 @@
 package systemmetric
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 )
 
 // Permissions is intentionally empty. The systemmetric module reuses the

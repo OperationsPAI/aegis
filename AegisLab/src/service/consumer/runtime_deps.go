@@ -1,10 +1,10 @@
 package consumer
 
 import (
-	buildkit "aegis/infra/buildkit"
-	helm "aegis/infra/helm"
-	k8s "aegis/infra/k8s"
-	redis "aegis/infra/redis"
+	buildkit "aegis/platform/buildkit"
+	helm "aegis/platform/helm"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
 
 	"gorm.io/gorm"
 )

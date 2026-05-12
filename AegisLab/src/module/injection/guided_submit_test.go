@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"aegis/consts"
-	"aegis/dto"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/stretchr/testify/require"

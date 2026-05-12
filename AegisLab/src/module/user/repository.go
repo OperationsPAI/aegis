@@ -1,8 +1,8 @@
 package user
 
 import (
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 	"fmt"
 
 	"gorm.io/gorm"

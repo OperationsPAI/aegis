@@ -3,7 +3,7 @@ package label
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // HandlerService captures the label operations consumed by HTTP and resource gRPC handlers.

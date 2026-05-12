@@ -1,8 +1,8 @@
 package widget
 
 import (
-	"aegis/dto"
-	"aegis/httpx"
+	"aegis/platform/dto"
+	"aegis/platform/httpx"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

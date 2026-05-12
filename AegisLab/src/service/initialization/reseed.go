@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"aegis/consts"
-	etcd "aegis/infra/etcd"
-	"aegis/model"
+	"aegis/platform/consts"
+	etcd "aegis/platform/etcd"
+	"aegis/platform/model"
 	containerrepo "aegis/module/container"
 	"aegis/service/common"
 

@@ -1,6 +1,6 @@
 package notification
 
-import "aegis/framework"
+import "aegis/platform/framework"
 
 // Migrations registers the inbox tables.
 func Migrations() framework.MigrationRegistrar {

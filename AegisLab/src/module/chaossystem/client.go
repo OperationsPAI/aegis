@@ -3,7 +3,7 @@ package chaossystem
 import (
 	"context"
 
-	"aegis/model"
+	"aegis/platform/model"
 )
 
 // Reader is the cross-module read contract for chaos-system metadata.

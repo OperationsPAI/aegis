@@ -10,12 +10,12 @@ import (
 	"net/url"
 	"strings"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/httpx"
-	"aegis/middleware"
-	"aegis/model"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/httpx"
+	"aegis/platform/middleware"
+	"aegis/platform/model"
+	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"

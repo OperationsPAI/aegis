@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	"github.com/spf13/viper"
 )

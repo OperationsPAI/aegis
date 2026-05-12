@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 	"fmt"
 	"time"
 

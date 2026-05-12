@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

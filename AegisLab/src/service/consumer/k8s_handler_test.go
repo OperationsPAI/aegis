@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"

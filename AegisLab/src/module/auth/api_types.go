@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 	user "aegis/module/user"
-	"aegis/utils"
+	"aegis/platform/utils"
 )
 
 const usernamePattern = `^[a-zA-Z0-9_]{3,20}$`

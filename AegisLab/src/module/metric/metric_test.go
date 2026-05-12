@@ -3,7 +3,7 @@ package metric
 import (
 	"testing"
 
-	"aegis/framework"
+	"aegis/platform/framework"
 
 	"github.com/gin-gonic/gin"
 )

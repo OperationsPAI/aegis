@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 	"testing"
 
 	"github.com/gin-gonic/gin"

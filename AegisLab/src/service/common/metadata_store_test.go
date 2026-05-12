@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	"aegis/model"
+	"aegis/platform/model"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"gorm.io/driver/sqlite"

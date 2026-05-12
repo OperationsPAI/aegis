@@ -1,12 +1,12 @@
 package evaluation
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"net/http"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/middleware"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )

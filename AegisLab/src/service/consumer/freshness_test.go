@@ -5,7 +5,7 @@ import (
 
 	chdriver "github.com/ClickHouse/clickhouse-go/v2"
 
-	db "aegis/infra/db"
+	db "aegis/platform/db"
 )
 
 // TestFreshnessProbeOptions_UsesHTTPProtocol pins the regression fix for

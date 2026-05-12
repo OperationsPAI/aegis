@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"aegis/config"
-	"aegis/framework"
-	"aegis/middleware"
+	"aegis/platform/config"
+	"aegis/platform/framework"
+	"aegis/platform/middleware"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"

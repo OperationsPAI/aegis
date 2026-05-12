@@ -3,7 +3,7 @@ package configcenterclient
 import (
 	"fmt"
 
-	"aegis/config"
+	"aegis/platform/config"
 	"aegis/module/configcenter"
 
 	"go.uber.org/fx"

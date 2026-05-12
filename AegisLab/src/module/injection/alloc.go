@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	redisinfra "aegis/infra/redis"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	redisinfra "aegis/platform/redis"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	goredis "github.com/redis/go-redis/v9"

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"aegis/cmd/aegisctl/output"
-	clistdin "aegis/internal/cli/stdin"
+	clistdin "aegis/platform/internalcli/stdin"
 
 	"github.com/spf13/cobra"
 )

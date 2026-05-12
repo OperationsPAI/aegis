@@ -1,6 +1,6 @@
 package configcenter
 
-import "aegis/framework"
+import "aegis/platform/framework"
 
 // Migrations registers the config_audit table.
 func Migrations() framework.MigrationRegistrar {

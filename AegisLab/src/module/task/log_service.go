@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	redisinfra "aegis/infra/redis"
+	"aegis/platform/consts"
+	redisinfra "aegis/platform/redis"
 
 	"github.com/spf13/viper"
 )

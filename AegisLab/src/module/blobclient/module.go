@@ -3,7 +3,7 @@ package blobclient
 import (
 	"fmt"
 
-	"aegis/config"
+	"aegis/platform/config"
 	"aegis/module/blob"
 
 	"go.uber.org/fx"

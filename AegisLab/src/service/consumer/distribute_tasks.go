@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/infra/tracing"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/tracing"
 
 	"github.com/sirupsen/logrus"
 )

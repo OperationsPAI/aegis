@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	redisinfra "aegis/infra/redis"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redisinfra "aegis/platform/redis"
 	task "aegis/module/task"
 
 	goredis "github.com/redis/go-redis/v9"

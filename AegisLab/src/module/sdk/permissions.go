@@ -1,8 +1,8 @@
 package sdk
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 )
 
 // Permissions intentionally contributes no PermissionRules.

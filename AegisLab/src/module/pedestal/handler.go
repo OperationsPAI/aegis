@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"aegis/dto"
-	"aegis/middleware"
-	"aegis/model"
+	"aegis/platform/dto"
+	"aegis/platform/middleware"
+	"aegis/platform/model"
 	"aegis/service/initialization"
 
 	"github.com/gin-gonic/gin"

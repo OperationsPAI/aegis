@@ -1,15 +1,15 @@
 package auth
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"fmt"
 	"net/http"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/middleware"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/middleware"
+	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 )

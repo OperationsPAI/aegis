@@ -1,6 +1,6 @@
 package blob
 
-import "aegis/framework"
+import "aegis/platform/framework"
 
 // Migrations registers the blob_objects table.
 func Migrations() framework.MigrationRegistrar {

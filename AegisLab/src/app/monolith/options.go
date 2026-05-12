@@ -2,8 +2,8 @@ package monolith
 
 import (
 	"aegis/app"
-	chaos "aegis/infra/chaos"
-	k8s "aegis/infra/k8s"
+	chaos "aegis/platform/chaos"
+	k8s "aegis/platform/k8s"
 	grpcruntimeintake "aegis/interface/grpc/runtimeintake"
 	rbac "aegis/module/rbac"
 

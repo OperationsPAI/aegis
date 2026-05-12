@@ -3,9 +3,9 @@ package injection
 import (
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 )

@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"aegis/consts"
-	"aegis/infra/jwtkeys"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/jwtkeys"
+	"aegis/platform/utils"
 
 	"github.com/golang-jwt/jwt/v5"
 	lru "github.com/hashicorp/golang-lru/v2/expirable"

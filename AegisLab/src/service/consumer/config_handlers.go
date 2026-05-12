@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	k8s "aegis/infra/k8s"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	k8s "aegis/platform/k8s"
 	"aegis/service/common"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"

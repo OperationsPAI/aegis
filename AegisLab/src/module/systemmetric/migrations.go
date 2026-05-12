@@ -1,6 +1,6 @@
 package systemmetric
 
-import "aegis/framework"
+import "aegis/platform/framework"
 
 // Migrations is intentionally empty. The systemmetric module stores its
 // rolling metric history in Redis and does not own any SQL tables, so

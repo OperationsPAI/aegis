@@ -1,8 +1,8 @@
 package system
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 // Migrations owns the system module's persistence layer. ConfigLabel belongs

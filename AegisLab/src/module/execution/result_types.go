@@ -1,7 +1,7 @@
 package execution
 
 import (
-	"aegis/model"
+	"aegis/platform/model"
 	"fmt"
 	"time"
 )

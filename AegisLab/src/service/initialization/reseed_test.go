@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 
 	"github.com/spf13/viper"
 	"gorm.io/driver/sqlite"

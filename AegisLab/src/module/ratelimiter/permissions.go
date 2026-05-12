@@ -1,6 +1,6 @@
 package ratelimiter
 
-import "aegis/framework"
+import "aegis/platform/framework"
 
 // Permissions exists for Phase 4 consistency. The ratelimiter module does not
 // define module-specific PermissionRule constants today; its mutating routes are

@@ -1,10 +1,10 @@
 package common
 
 import (
-	"aegis/consts"
-	"aegis/dto"
-	redis "aegis/infra/redis"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redis "aegis/platform/redis"
+	"aegis/platform/utils"
 	"context"
 	"fmt"
 	"time"

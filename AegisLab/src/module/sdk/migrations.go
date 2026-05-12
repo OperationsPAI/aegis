@@ -1,6 +1,6 @@
 package sdk
 
-import "aegis/framework"
+import "aegis/platform/framework"
 
 // Migrations documents that the SDK module owns no AutoMigrate-managed tables.
 //

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
+	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 )

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 )
 
 // UserInfoResp is the SSO-facing user projection. Password and APIKeys are

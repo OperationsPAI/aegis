@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"strings"
 
-	"aegis/consts"
-	redisinfra "aegis/infra/redis"
-	"aegis/model"
+	"aegis/platform/consts"
+	redisinfra "aegis/platform/redis"
+	"aegis/platform/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

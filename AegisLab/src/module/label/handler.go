@@ -1,12 +1,12 @@
 package label
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"net/http"
 	"strconv"
 
-	"aegis/consts"
-	"aegis/dto"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
 
 	"github.com/gin-gonic/gin"
 )

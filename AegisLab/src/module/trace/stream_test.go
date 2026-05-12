@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"aegis/consts"
-	"aegis/dto"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
 	"aegis/module/execution"
 
 	"github.com/redis/go-redis/v9"

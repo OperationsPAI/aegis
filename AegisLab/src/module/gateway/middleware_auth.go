@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
+	"aegis/platform/config"
+	"aegis/platform/consts"
 	"aegis/module/ssoclient"
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
 )

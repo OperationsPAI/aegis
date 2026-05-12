@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	lokiinfra "aegis/infra/loki"
-	"aegis/model"
+	"aegis/platform/consts"
+	lokiinfra "aegis/platform/loki"
+	"aegis/platform/model"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/spf13/viper"

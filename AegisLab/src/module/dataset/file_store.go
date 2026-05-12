@@ -6,10 +6,10 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/model"
-	"aegis/utils"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/model"
+	"aegis/platform/utils"
 )
 
 type DatapackFileStore struct {

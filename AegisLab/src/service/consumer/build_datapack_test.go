@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 
 	"github.com/sirupsen/logrus"
 )

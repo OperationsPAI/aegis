@@ -24,7 +24,7 @@ import (
 	"aegis/module/notification"
 	"aegis/module/ssoclient"
 	"aegis/module/user"
-	"aegis/router"
+	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"

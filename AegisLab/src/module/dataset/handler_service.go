@@ -4,8 +4,8 @@ import (
 	"archive/zip"
 	"context"
 
-	"aegis/dto"
-	"aegis/utils"
+	"aegis/platform/dto"
+	"aegis/platform/utils"
 )
 
 // HandlerService captures the dataset operations consumed by the HTTP handler.

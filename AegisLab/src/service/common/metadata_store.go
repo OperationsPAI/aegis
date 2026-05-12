@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"aegis/model"
+	"aegis/platform/model"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"gorm.io/gorm"

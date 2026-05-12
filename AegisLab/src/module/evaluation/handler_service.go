@@ -3,7 +3,7 @@ package evaluation
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // HandlerService captures evaluation operations consumed by the HTTP handler.

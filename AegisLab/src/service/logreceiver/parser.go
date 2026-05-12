@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
 
 	collogspb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"

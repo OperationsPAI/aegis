@@ -1,7 +1,7 @@
 package sso
 
 import (
-	"aegis/middleware"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )

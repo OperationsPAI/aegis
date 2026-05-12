@@ -3,8 +3,8 @@ package task
 import (
 	"context"
 
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 
 	"github.com/gorilla/websocket"
 )

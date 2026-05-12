@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	redis "aegis/infra/redis"
+	"aegis/platform/consts"
+	redis "aegis/platform/redis"
 )
 
 type namespaceCatalogStore struct {

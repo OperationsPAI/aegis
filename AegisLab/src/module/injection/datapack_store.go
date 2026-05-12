@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/model"
-	"aegis/utils"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/model"
+	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
 )

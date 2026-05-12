@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 )
 
 // Auth currently owns authentication and API-key flows but no standalone

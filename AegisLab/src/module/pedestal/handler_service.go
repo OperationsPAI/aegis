@@ -3,7 +3,7 @@ package pedestal
 import (
 	"context"
 
-	"aegis/model"
+	"aegis/platform/model"
 	"aegis/service/initialization"
 )
 

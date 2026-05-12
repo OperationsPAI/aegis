@@ -1,8 +1,8 @@
 package rbac
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"

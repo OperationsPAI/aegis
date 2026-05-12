@@ -3,8 +3,8 @@ package sso
 import (
 	"errors"
 
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 
 	"gorm.io/gorm"
 )

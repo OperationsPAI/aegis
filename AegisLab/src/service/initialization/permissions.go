@@ -3,9 +3,9 @@ package initialization
 import (
 	"fmt"
 
-	"aegis/consts"
-	"aegis/model"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/model"
+	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

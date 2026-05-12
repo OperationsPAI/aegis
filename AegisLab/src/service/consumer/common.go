@@ -1,8 +1,8 @@
 package consumer
 
 import (
-	"aegis/consts"
-	k8s "aegis/infra/k8s"
+	"aegis/platform/consts"
+	k8s "aegis/platform/k8s"
 	"fmt"
 
 	"github.com/sirupsen/logrus"

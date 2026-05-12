@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	redis "aegis/infra/redis"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redis "aegis/platform/redis"
+	"aegis/platform/model"
 	execution "aegis/module/execution"
 	injection "aegis/module/injection"
 

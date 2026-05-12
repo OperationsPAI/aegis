@@ -3,8 +3,8 @@ package container
 import (
 	"fmt"
 
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

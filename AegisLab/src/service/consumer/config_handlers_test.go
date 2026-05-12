@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/spf13/viper"

@@ -3,11 +3,11 @@ package worker
 import (
 	"context"
 
-	buildkit "aegis/infra/buildkit"
-	etcd "aegis/infra/etcd"
-	helm "aegis/infra/helm"
-	k8s "aegis/infra/k8s"
-	redis "aegis/infra/redis"
+	buildkit "aegis/platform/buildkit"
+	etcd "aegis/platform/etcd"
+	helm "aegis/platform/helm"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
 	commonservice "aegis/service/common"
 	"aegis/service/consumer"
 	"aegis/service/initialization"

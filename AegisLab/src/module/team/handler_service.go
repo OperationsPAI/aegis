@@ -3,7 +3,7 @@ package team
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // HandlerService captures the team operations consumed by the HTTP handler.

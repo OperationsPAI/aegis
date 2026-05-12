@@ -1,9 +1,9 @@
 package app
 
 import (
-	chaos "aegis/infra/chaos"
-	k8s "aegis/infra/k8s"
-	runtimeinfra "aegis/infra/runtime"
+	chaos "aegis/platform/chaos"
+	k8s "aegis/platform/k8s"
+	runtimeinfra "aegis/platform/runtime"
 	controller "aegis/interface/controller"
 	grpcruntime "aegis/interface/grpc/runtime"
 	receiver "aegis/interface/receiver"

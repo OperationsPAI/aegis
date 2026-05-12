@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	"aegis/utils"
+	"aegis/platform/utils"
 )
 
 // HandlerService captures the auth operations consumed by the HTTP handler.

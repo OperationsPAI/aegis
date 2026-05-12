@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"

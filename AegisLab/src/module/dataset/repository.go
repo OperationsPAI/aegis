@@ -1,10 +1,10 @@
 package dataset
 
 import (
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
-	"aegis/searchx"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
+	"aegis/platform/searchx"
 	"fmt"
 
 	"gorm.io/gorm"

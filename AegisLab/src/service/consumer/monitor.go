@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	redisinfra "aegis/infra/redis"
-	"aegis/utils"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redisinfra "aegis/platform/redis"
+	"aegis/platform/utils"
 
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"

@@ -1,14 +1,14 @@
 package execution
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"context"
 	"net/http"
 	"strconv"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/middleware"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"

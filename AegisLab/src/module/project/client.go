@@ -3,7 +3,7 @@ package project
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // Reader is the forward-compatible project read surface for downstream

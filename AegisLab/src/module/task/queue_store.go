@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	redisinfra "aegis/infra/redis"
+	redisinfra "aegis/platform/redis"
 	goredis "github.com/redis/go-redis/v9"
 )
 

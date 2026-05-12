@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"testing"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"

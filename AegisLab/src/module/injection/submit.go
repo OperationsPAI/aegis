@@ -1,8 +1,8 @@
 package injection
 
 import (
-	"aegis/dto"
-	"aegis/infra/k8s"
+	"aegis/platform/dto"
+	"aegis/platform/k8s"
 	"context"
 	"encoding/json"
 	"fmt"

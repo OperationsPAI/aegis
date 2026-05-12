@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"aegis/model"
+	"aegis/platform/model"
 
 	"gorm.io/gorm"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"aegis/dto"
-	loki "aegis/infra/loki"
+	"aegis/platform/dto"
+	loki "aegis/platform/loki"
 )
 
 type LokiGateway struct {

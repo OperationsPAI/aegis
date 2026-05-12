@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 )

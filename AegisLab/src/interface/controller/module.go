@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	k8s "aegis/infra/k8s"
-	redis "aegis/infra/redis"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
 	"aegis/service/consumer"
 
 	"github.com/go-logr/stdr"

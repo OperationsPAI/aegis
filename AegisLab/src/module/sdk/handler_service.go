@@ -3,7 +3,7 @@ package sdk
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // HandlerService captures the SDK operations consumed by the HTTP handler.

@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 )
 
 // TokenSource produces a fresh Bearer token for cross-service calls.

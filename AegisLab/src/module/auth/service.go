@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	"aegis/infra/jwtkeys"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/jwtkeys"
+	"aegis/platform/model"
 	user "aegis/module/user"
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

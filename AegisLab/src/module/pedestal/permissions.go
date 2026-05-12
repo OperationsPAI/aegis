@@ -1,8 +1,8 @@
 package pedestal
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 )
 
 // Permissions is intentionally empty for pedestal. Its HTTP endpoints reuse

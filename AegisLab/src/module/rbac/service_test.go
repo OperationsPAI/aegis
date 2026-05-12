@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"

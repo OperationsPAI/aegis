@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	redis "aegis/infra/redis"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	redis "aegis/platform/redis"
 
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"

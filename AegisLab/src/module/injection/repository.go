@@ -1,10 +1,10 @@
 package injection
 
 import (
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
-	"aegis/searchx"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
+	"aegis/platform/searchx"
 	"encoding/json"
 	"fmt"
 	"strings"

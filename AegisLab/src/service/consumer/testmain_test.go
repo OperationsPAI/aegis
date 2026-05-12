@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"aegis/infra/jwtkeys"
+	"aegis/platform/jwtkeys"
 )
 
 func TestMain(m *testing.M) {

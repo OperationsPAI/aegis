@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 	"aegis/service/initialization"
 )
 

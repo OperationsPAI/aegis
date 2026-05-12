@@ -1,15 +1,15 @@
 package consumer
 
 import (
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	helm "aegis/infra/helm"
-	k8s "aegis/infra/k8s"
-	redis "aegis/infra/redis"
-	"aegis/infra/tracing"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	helm "aegis/platform/helm"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
+	"aegis/platform/tracing"
 	"aegis/service/common"
-	"aegis/utils"
+	"aegis/platform/utils"
 	"context"
 	"errors"
 	"fmt"

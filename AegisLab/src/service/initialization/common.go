@@ -1,8 +1,8 @@
 package initialization
 
 import (
-	"aegis/config"
-	"aegis/consts"
+	"aegis/platform/config"
+	"aegis/platform/consts"
 	"aegis/service/common"
 	"fmt"
 

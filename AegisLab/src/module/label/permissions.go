@@ -1,8 +1,8 @@
 package label
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 )
 
 // Permissions is the label module's PermissionRegistrar. It contributes

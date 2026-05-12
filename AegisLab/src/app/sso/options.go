@@ -9,7 +9,7 @@ import (
 	"aegis/module/rbac"
 	ssomod "aegis/module/sso"
 	"aegis/module/user"
-	"aegis/router"
+	"aegis/platform/router"
 
 	"go.uber.org/fx"
 )

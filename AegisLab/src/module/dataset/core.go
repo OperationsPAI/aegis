@@ -1,7 +1,7 @@
 package dataset
 
 import (
-	"aegis/model"
+	"aegis/platform/model"
 )
 
 func (r *Repository) CreateDatasetCore(dataset *model.Dataset, versions []model.DatasetVersion, userID int) (*model.Dataset, error) {

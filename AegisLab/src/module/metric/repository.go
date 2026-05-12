@@ -1,7 +1,7 @@
 package metric
 
 import (
-	"aegis/model"
+	"aegis/platform/model"
 
 	"gorm.io/gorm"
 )

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"aegis/consts"
-	runtimev1 "aegis/proto/runtime/v1"
+	"aegis/platform/consts"
+	runtimev1 "aegis/platform/proto/runtime/v1"
 	"aegis/service/consumer"
 )
 

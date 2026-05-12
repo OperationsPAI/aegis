@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"aegis/infra/etcd"
+	"aegis/platform/etcd"
 
 	"github.com/sirupsen/logrus"
 )

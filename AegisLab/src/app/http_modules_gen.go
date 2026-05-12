@@ -29,7 +29,7 @@ import (
 	team "aegis/module/team"
 	trace "aegis/module/trace"
 	widget "aegis/module/widget"
-	"aegis/router"
+	"aegis/platform/router"
 	"go.uber.org/fx"
 )
 

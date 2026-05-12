@@ -1,8 +1,8 @@
 package trace
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 )
 
 func Permissions() framework.PermissionRegistrar {

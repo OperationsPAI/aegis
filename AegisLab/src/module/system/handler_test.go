@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 )

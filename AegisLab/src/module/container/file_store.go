@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"aegis/config"
-	"aegis/utils"
+	"aegis/platform/config"
+	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
 )

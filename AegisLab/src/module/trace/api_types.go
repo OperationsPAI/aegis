@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 	task "aegis/module/task"
-	"aegis/utils"
+	"aegis/platform/utils"
 )
 
 type GetTraceStreamReq struct {

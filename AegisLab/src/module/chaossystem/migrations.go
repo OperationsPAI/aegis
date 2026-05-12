@@ -1,8 +1,8 @@
 package chaossystem
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 // Migrations keeps SystemMetadata under this module. The systems table itself

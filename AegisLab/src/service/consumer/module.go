@@ -1,8 +1,8 @@
 package consumer
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 
 	"go.uber.org/fx"
 )

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"testing"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 	"aegis/module/rbac"
 	"aegis/module/user"
 

@@ -1,17 +1,17 @@
 package app
 
 import (
-	buildkit "aegis/infra/buildkit"
-	config "aegis/infra/config"
-	db "aegis/infra/db"
-	etcd "aegis/infra/etcd"
-	harbor "aegis/infra/harbor"
-	helm "aegis/infra/helm"
-	jwtkeys "aegis/infra/jwtkeys"
-	logger "aegis/infra/logger"
-	loki "aegis/infra/loki"
-	redis "aegis/infra/redis"
-	tracing "aegis/infra/tracing"
+	buildkit "aegis/platform/buildkit"
+	config "aegis/platform/configfx"
+	db "aegis/platform/db"
+	etcd "aegis/platform/etcd"
+	harbor "aegis/platform/harbor"
+	helm "aegis/platform/helm"
+	jwtkeys "aegis/platform/jwtkeys"
+	logger "aegis/platform/logger"
+	loki "aegis/platform/loki"
+	redis "aegis/platform/redis"
+	tracing "aegis/platform/tracing"
 
 	"go.uber.org/fx"
 )

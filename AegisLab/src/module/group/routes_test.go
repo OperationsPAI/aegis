@@ -1,7 +1,7 @@
 package group
 
 import (
-	"aegis/framework"
+	"aegis/platform/framework"
 	"testing"
 
 	"github.com/gin-gonic/gin"

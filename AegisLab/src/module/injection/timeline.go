@@ -7,10 +7,10 @@ import (
 	"sort"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/httpx"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/httpx"
+	"aegis/platform/model"
 
 	"github.com/gin-gonic/gin"
 )

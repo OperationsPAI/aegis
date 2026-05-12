@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	k8sinfra "aegis/infra/k8s"
-	redisinfra "aegis/infra/redis"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	k8sinfra "aegis/platform/k8s"
+	redisinfra "aegis/platform/redis"
 
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"

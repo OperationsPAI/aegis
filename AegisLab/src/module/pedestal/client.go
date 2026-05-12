@@ -3,7 +3,7 @@ package pedestal
 import (
 	"context"
 
-	"aegis/model"
+	"aegis/platform/model"
 )
 
 // Reader is the forward-compatible cross-module access surface for pedestal

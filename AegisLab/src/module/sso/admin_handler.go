@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"aegis/dto"
-	"aegis/httpx"
+	"aegis/platform/dto"
+	"aegis/platform/httpx"
 
 	"github.com/gin-gonic/gin"
 )

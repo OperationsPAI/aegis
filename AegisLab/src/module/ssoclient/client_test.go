@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"aegis/dto"
-	"aegis/infra/jwtkeys"
-	"aegis/utils"
+	"aegis/platform/dto"
+	"aegis/platform/jwtkeys"
+	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

@@ -3,7 +3,7 @@ package sdk
 import (
 	"testing"
 
-	"aegis/framework"
+	"aegis/platform/framework"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"

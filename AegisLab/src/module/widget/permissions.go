@@ -1,8 +1,8 @@
 package widget
 
 import (
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 )
 
 var PermWidgetReadAll = consts.PermissionRule{

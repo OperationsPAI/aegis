@@ -3,7 +3,7 @@ package notificationclient
 import (
 	"fmt"
 
-	"aegis/config"
+	"aegis/platform/config"
 	"aegis/module/notification"
 
 	"go.uber.org/fx"

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

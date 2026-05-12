@@ -12,10 +12,10 @@ import (
 	chrow "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/sirupsen/logrus"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	db "aegis/infra/db"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	db "aegis/platform/db"
 )
 
 // FreshnessProbe is the minimum surface waitForCHFreshness needs to read

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 	"aegis/module/ssoclient"
 	systemmetric "aegis/module/systemmetric"
 	task "aegis/module/task"

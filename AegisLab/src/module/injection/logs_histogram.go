@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/httpx"
-	loki "aegis/infra/loki"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/httpx"
+	loki "aegis/platform/loki"
 
 	"github.com/gin-gonic/gin"
 )

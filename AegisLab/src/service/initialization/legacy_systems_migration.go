@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	etcd "aegis/infra/etcd"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	etcd "aegis/platform/etcd"
+	"aegis/platform/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

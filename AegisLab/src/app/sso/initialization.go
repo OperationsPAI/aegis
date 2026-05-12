@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 	ssomod "aegis/module/sso"
 
 	"github.com/sirupsen/logrus"

@@ -1,8 +1,8 @@
 package user
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 // Migrations owns only the user-identity table. &model.APIKey{}

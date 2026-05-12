@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"aegis/consts"
-	"aegis/dto"
-	redis "aegis/infra/redis"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redis "aegis/platform/redis"
 )
 
 func consumerDetachedContext() context.Context {

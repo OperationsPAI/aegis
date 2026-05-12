@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"aegis/config"
-	"aegis/infra/etcd"
+	"aegis/platform/config"
+	"aegis/platform/etcd"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"

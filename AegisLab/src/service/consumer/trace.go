@@ -1,10 +1,10 @@
 package consumer
 
 import (
-	"aegis/consts"
-	"aegis/dto"
-	redis "aegis/infra/redis"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	redis "aegis/platform/redis"
+	"aegis/platform/model"
 	group "aegis/module/group"
 	"context"
 	"fmt"

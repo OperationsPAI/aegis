@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	etcd "aegis/infra/etcd"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	etcd "aegis/platform/etcd"
+	"aegis/platform/model"
 	"aegis/service/common"
 	"aegis/service/initialization"
 

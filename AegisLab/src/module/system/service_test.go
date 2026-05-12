@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 )
 
 type fakeConfigHistoryWriter struct {

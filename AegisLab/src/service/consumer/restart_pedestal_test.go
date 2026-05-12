@@ -1,7 +1,7 @@
 package consumer
 
 import (
-	"aegis/consts"
+	"aegis/platform/consts"
 	"testing"
 	"time"
 )

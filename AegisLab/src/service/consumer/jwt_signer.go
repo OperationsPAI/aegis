@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"aegis/infra/jwtkeys"
-	"aegis/utils"
+	"aegis/platform/jwtkeys"
+	"aegis/platform/utils"
 
 	"go.uber.org/fx"
 )

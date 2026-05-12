@@ -1,8 +1,8 @@
 package rbac
 
 import (
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 	"errors"
 	"fmt"
 	"time"

@@ -3,7 +3,7 @@ package pedestal
 import (
 	"testing"
 
-	"aegis/model"
+	"aegis/platform/model"
 )
 
 func TestMigrationsModule(t *testing.T) {

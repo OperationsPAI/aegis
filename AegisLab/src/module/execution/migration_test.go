@@ -3,8 +3,8 @@ package execution
 import (
 	"testing"
 
-	"aegis/consts"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
 
 	"github.com/stretchr/testify/require"
 )

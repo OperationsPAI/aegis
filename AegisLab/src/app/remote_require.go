@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"aegis/config"
+	"aegis/platform/config"
 
 	"go.uber.org/fx"
 )

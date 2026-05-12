@@ -3,7 +3,7 @@ package system
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // HandlerService captures the system operations consumed by the HTTP handler.

@@ -1,16 +1,16 @@
 package group
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/utils"
 
 	"github.com/gin-contrib/sse"
 	"github.com/gin-gonic/gin"

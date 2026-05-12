@@ -3,7 +3,7 @@ package sdk
 import (
 	"fmt"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // ListSDKEvaluationReq represents the request for listing SDK evaluation samples.

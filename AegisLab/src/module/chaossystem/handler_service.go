@@ -3,7 +3,7 @@ package chaossystem
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 	"aegis/service/initialization"
 )
 

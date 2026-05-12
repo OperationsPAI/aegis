@@ -1,14 +1,14 @@
 package task
 
 import (
-	"aegis/httpx"
+	"aegis/platform/httpx"
 	"errors"
 	"net/http"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/infra/jwtkeys"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/jwtkeys"
+	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"

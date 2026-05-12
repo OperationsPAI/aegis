@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 	"aegis/module/configcenter"
 
 	"github.com/mitchellh/mapstructure"

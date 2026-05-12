@@ -1,9 +1,9 @@
 package container
 
 import (
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 	"errors"
 	"fmt"
 	"strings"

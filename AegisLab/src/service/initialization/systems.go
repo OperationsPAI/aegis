@@ -1,7 +1,7 @@
 package initialization
 
 import (
-	"aegis/config"
+	"aegis/platform/config"
 	"aegis/service/common"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"

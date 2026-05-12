@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 	label "aegis/module/label"
-	"aegis/utils"
+	"aegis/platform/utils"
 
 	"gorm.io/gorm"
 )

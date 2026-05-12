@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/config"
-	"aegis/dto"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/dto"
+	"aegis/platform/model"
 	execution "aegis/module/execution"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"

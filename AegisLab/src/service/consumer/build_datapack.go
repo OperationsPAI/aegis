@@ -15,15 +15,15 @@ import (
 	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/dto"
-	db "aegis/infra/db"
-	k8s "aegis/infra/k8s"
-	redis "aegis/infra/redis"
-	"aegis/infra/tracing"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	db "aegis/platform/db"
+	k8s "aegis/platform/k8s"
+	redis "aegis/platform/redis"
+	"aegis/platform/tracing"
 	"aegis/service/common"
-	"aegis/utils"
+	"aegis/platform/utils"
 )
 
 type datapackPayload struct {

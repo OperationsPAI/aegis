@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 	"aegis/module/rbac"
 	"aegis/module/user"
 

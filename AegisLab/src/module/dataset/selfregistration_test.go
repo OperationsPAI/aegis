@@ -3,9 +3,9 @@ package dataset
 import (
 	"testing"
 
-	"aegis/consts"
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/consts"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 func TestMigrationsRegistrar(t *testing.T) {

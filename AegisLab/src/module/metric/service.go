@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"aegis/model"
+	"aegis/platform/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

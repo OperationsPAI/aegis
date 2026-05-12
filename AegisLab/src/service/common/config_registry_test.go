@@ -3,7 +3,7 @@ package common
 import (
 	"testing"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 )
 
 func TestRegisterGlobalHandlersIsIdempotent(t *testing.T) {

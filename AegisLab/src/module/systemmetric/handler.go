@@ -3,7 +3,7 @@ package systemmetric
 import (
 	"net/http"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"

@@ -10,7 +10,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
-	"aegis/consts"
+	"aegis/platform/consts"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/spf13/cobra"

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
 	execution "aegis/module/execution"
 	injection "aegis/module/injection"
 )

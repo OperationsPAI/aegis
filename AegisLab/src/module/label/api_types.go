@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/model"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/model"
+	"aegis/platform/utils"
 )
 
 // BatchDeleteLabelReq represents the request to batch delete labels.

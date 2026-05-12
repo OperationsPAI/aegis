@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strconv"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 )
 
 // Resolver resolves human-readable names (e.g. "train-ticket") to numeric IDs

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	"aegis/model"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	"aegis/platform/model"
 	"aegis/service/common"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"

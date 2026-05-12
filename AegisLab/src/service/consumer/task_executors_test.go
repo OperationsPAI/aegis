@@ -3,7 +3,7 @@ package consumer
 import (
 	"testing"
 
-	"aegis/consts"
+	"aegis/platform/consts"
 )
 
 func TestBuiltinTaskExecutorsIncludeInjectToCollectChain(t *testing.T) {

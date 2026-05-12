@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 
-	"aegis/config"
-	"aegis/httpx"
-	runtimev1 "aegis/proto/runtime/v1"
+	"aegis/platform/config"
+	"aegis/platform/httpx"
+	runtimev1 "aegis/platform/proto/runtime/v1"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"

@@ -6,7 +6,7 @@ import (
 
 	"aegis/cmd/aegisctl/client"
 	"aegis/cmd/aegisctl/output"
-	"aegis/consts"
+	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"

@@ -3,8 +3,8 @@ package receiver
 import (
 	"context"
 
-	"aegis/config"
-	redis "aegis/infra/redis"
+	"aegis/platform/config"
+	redis "aegis/platform/redis"
 	"aegis/service/logreceiver"
 
 	"github.com/sirupsen/logrus"

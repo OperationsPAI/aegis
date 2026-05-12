@@ -20,7 +20,7 @@ import (
 	httpapi "aegis/interface/http"
 	"aegis/module/blob"
 	"aegis/module/ssoclient"
-	"aegis/router"
+	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"

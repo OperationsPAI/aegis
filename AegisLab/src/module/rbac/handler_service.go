@@ -3,7 +3,7 @@ package rbac
 import (
 	"context"
 
-	"aegis/dto"
+	"aegis/platform/dto"
 )
 
 // HandlerService captures the RBAC operations consumed by the HTTP handler.

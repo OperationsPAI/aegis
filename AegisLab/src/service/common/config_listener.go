@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"aegis/config"
-	"aegis/consts"
-	etcd "aegis/infra/etcd"
+	"aegis/platform/config"
+	"aegis/platform/consts"
+	etcd "aegis/platform/etcd"
 
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"

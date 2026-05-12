@@ -9,10 +9,10 @@ import (
 	"os"
 	"testing"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/middleware"
-	"aegis/utils"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/middleware"
+	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"

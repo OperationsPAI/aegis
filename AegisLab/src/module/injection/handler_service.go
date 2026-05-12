@@ -5,8 +5,8 @@ import (
 	"context"
 	"io"
 
-	"aegis/dto"
-	"aegis/utils"
+	"aegis/platform/dto"
+	"aegis/platform/utils"
 )
 
 // HandlerService captures the injection operations consumed by the HTTP handler.

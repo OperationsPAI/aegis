@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"aegis/consts"
-	"aegis/dto"
-	"aegis/framework"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
+	"aegis/platform/framework"
 )
 
 // BuiltinTaskExecutors returns the registry fragment that holds every

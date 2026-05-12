@@ -1,8 +1,8 @@
 package execution
 
 import (
-	"aegis/framework"
-	"aegis/model"
+	"aegis/platform/framework"
+	"aegis/platform/model"
 )
 
 // Migrations is the execution module's MigrationRegistrar. It owns the

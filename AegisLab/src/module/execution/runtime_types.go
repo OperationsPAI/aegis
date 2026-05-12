@@ -1,8 +1,8 @@
 package execution
 
 import (
-	"aegis/consts"
-	"aegis/dto"
+	"aegis/platform/consts"
+	"aegis/platform/dto"
 )
 
 // RuntimeCreateExecutionReq captures execution writes initiated by runtime-worker-service.

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/consts"
-	redis "aegis/infra/redis"
+	"aegis/platform/consts"
+	redis "aegis/platform/redis"
 )
 
 // tokenBlacklistPrefix keys every revoked token by its JWT ID (claims.ID).
