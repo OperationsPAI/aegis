@@ -66,6 +66,9 @@ func New(params Params) *gin.Engine {
 	// Swagger documentation
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Well-known endpoints (RFC 8615) — no auth, no api/v2 prefix.
+	registerWellKnownRoutes(router)
+
 	return router
 }
 
