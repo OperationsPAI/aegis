@@ -18,8 +18,8 @@ import (
 
 	"aegis/app"
 	httpapi "aegis/interface/http"
-	"aegis/module/auth"
 	"aegis/module/blob"
+	"aegis/module/ssoclient"
 	"aegis/router"
 
 	"github.com/gin-gonic/gin"
@@ -32,10 +32,10 @@ func Options(confPath, port string) fx.Option {
 		app.ObserveOptions(),
 		app.DataOptions(),
 
-		auth.Module,
+		// ssoclient brings remote JWKS Verifier, TokenVerifier, and
+		// PermissionChecker. Verify-only binary — no WithSigner.
+		ssoclient.Module,
 		blob.Module,
-
-		fx.Provide(auth.NewTokenVerifier),
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),

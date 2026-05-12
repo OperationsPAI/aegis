@@ -34,22 +34,6 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	}
 }
 
-// RoutesSDK mounts the cross-service blob endpoints (same handlers,
-// service-token auth). Producers calling the standalone aegis-blob
-// binary land here.
-func RoutesSDK(handler *Handler) framework.RouteRegistrar {
-	return framework.RouteRegistrar{
-		Audience: framework.AudienceSDK,
-		Name:     "blob.sdk",
-		Register: func(v2 *gin.RouterGroup) {
-			g := v2.Group("/blob", middleware.JWTAuth())
-			{
-				g.POST("/buckets/:bucket/presign-put", handler.PresignPut)
-				g.POST("/buckets/:bucket/presign-get", handler.PresignGet)
-				g.HEAD("/buckets/:bucket/objects/:key", handler.Stat)
-				g.DELETE("/buckets/:bucket/objects/:key", handler.Delete)
-				g.GET("/buckets/:bucket/objects", handler.List)
-			}
-		},
-	}
-}
+// RoutesPortal already accepts both human and service tokens (JWTAuth
+// without RequireHumanUserAuth), so producers calling the standalone
+// aegis-blob binary use the same routes.

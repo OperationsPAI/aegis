@@ -21,8 +21,8 @@ import (
 	"aegis/app"
 	"aegis/infra/etcd"
 	httpapi "aegis/interface/http"
-	"aegis/module/auth"
 	"aegis/module/configcenter"
+	"aegis/module/ssoclient"
 	"aegis/module/user"
 	"aegis/router"
 
@@ -38,10 +38,10 @@ func Options(confPath, port string) fx.Option {
 
 		etcd.Module,
 		user.Module,
-		auth.Module,
+		// ssoclient brings remote JWKS Verifier, TokenVerifier, and
+		// PermissionChecker. Verify-only binary — no WithSigner.
+		ssoclient.Module,
 		configcenter.Module,
-
-		fx.Provide(auth.NewTokenVerifier),
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),

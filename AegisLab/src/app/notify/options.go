@@ -21,8 +21,8 @@ import (
 
 	"aegis/app"
 	httpapi "aegis/interface/http"
-	"aegis/module/auth"
 	"aegis/module/notification"
+	"aegis/module/ssoclient"
 	"aegis/module/user"
 	"aegis/router"
 
@@ -37,13 +37,12 @@ func Options(confPath, port string) fx.Option {
 		app.DataOptions(),
 
 		user.Module,
-		auth.Module,
+		// ssoclient brings: jwtkeys.VerifierModule (remote JWKS),
+		// middleware.TokenVerifier, middleware.PermissionChecker.
+		// This binary verifies tokens minted by aegis-sso; it does not
+		// mint its own, so no WithSigner.
+		ssoclient.Module,
 		notification.Module,
-
-		// auth in this binary owns the JWT verifier so it can validate
-		// service tokens issued by SSO and human-user tokens issued by
-		// the same SSO. Matches the sso binary's pattern.
-		fx.Provide(auth.NewTokenVerifier),
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
