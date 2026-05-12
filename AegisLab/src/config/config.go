@@ -13,6 +13,29 @@ import (
 	"github.com/spf13/viper"
 )
 
+// EnvVar is the env var that selects the config profile and gates
+// dev-only fallbacks (HMAC keys, OIDC issuer, bootstrap passwords).
+const (
+	EnvVar  = "ENV"
+	EnvDev  = "dev"
+	EnvTest = "test"
+	EnvProd = "prod"
+)
+
+// Env reports the active environment. Empty $ENV defaults to dev so
+// `go run ./main.go` works without setup.
+func Env() string {
+	if e := strings.TrimSpace(os.Getenv(EnvVar)); e != "" {
+		return e
+	}
+	return EnvDev
+}
+
+// IsProduction is the gate for fail-closed behavior. Anything that
+// silently falls back to a dev-only default in non-prod MUST refuse to
+// start when this returns true.
+func IsProduction() bool { return Env() == EnvProd }
+
 // detectorName holds the current detector algorithm name as a global atomic variable.
 var detectorName atomic.Value
 
@@ -35,12 +58,7 @@ func SetDetectorName(name string) {
 
 // Init Initialize configuration
 func Init(configPath string) {
-	env := os.Getenv("ENV")
-	if env == "" {
-		env = "dev"
-	}
-
-	viper.SetConfigName("config." + env)
+	viper.SetConfigName("config." + Env())
 	viper.SetConfigType("toml")
 
 	if configPath != "" {
