@@ -52,29 +52,23 @@ func (a localExecutionOwner) UpdateExecutionState(ctx context.Context, req *exec
 	return a.svc.UpdateExecutionState(ctx, req)
 }
 
-// localInjectionOwner delegates directly to the in-process injection.Service.
+// localInjectionOwner delegates to the injection.Writer port. The only
+// translation is the method rename: injection.Writer.CreateInjectionRecord →
+// InjectionOwner.CreateInjection. Orchestrator callers hold InjectionOwner
+// (the interface), never the concrete *injection.Service.
 type localInjectionOwner struct {
-	svc *injection.Service
+	svc injection.Writer
 }
 
 func (a localInjectionOwner) CreateInjection(ctx context.Context, req *injection.RuntimeCreateInjectionReq) (*dto.InjectionItem, error) {
-	if a.svc == nil {
-		return nil, fmt.Errorf("missing injection owner service")
-	}
 	return a.svc.CreateInjectionRecord(ctx, req)
 }
 
 func (a localInjectionOwner) UpdateInjectionState(ctx context.Context, req *injection.RuntimeUpdateInjectionStateReq) error {
-	if a.svc == nil {
-		return fmt.Errorf("missing injection owner service")
-	}
 	return a.svc.UpdateInjectionState(ctx, req)
 }
 
 func (a localInjectionOwner) UpdateInjectionTimestamps(ctx context.Context, req *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error) {
-	if a.svc == nil {
-		return nil, fmt.Errorf("missing injection owner service")
-	}
 	return a.svc.UpdateInjectionTimestamps(ctx, req)
 }
 
@@ -136,9 +130,11 @@ func NewExecutionOwner(svc *execution.Service) ExecutionOwner {
 	return localExecutionOwner{svc: svc}
 }
 
-// NewInjectionOwner is used by in-process runtimes (both / consumer / gateway-collocated)
-// that wire injection.Service directly.
-func NewInjectionOwner(svc *injection.Service) InjectionOwner {
+// NewInjectionOwner wires the injection.Writer port into the InjectionOwner
+// adapter used by in-process runtimes (both / consumer / gateway-collocated).
+// fx resolves injection.Writer from the injection module's AsWriter provider,
+// so orchestrator never holds a direct reference to *injection.Service.
+func NewInjectionOwner(svc injection.Writer) InjectionOwner {
 	return localInjectionOwner{svc: svc}
 }
 
