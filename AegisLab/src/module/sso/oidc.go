@@ -458,7 +458,7 @@ func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClie
 	claims := jwt.MapClaims{
 		"iss":        s.issuer,
 		"sub":        "service:" + cli.Service,
-		"aud":        []string{"aegis-sso"},
+		"aud":        []string{"sso"},
 		"exp":        exp.Unix(),
 		"iat":        time.Now().Unix(),
 		"service":    cli.Service,

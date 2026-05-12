@@ -35,7 +35,7 @@ type Config struct {
 	JWKSURL      string
 }
 
-// Client is the AegisLab-side bridge to aegis-sso. Use NewClient via fx; tests
+// Client is the AegisLab-side bridge to sso. Use NewClient via fx; tests
 // can construct it directly via newClientForTest.
 type Client struct {
 	cfg        Config

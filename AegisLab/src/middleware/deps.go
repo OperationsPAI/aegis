@@ -53,7 +53,7 @@ const middlewareServiceContextKey = "middleware.service"
 
 // NewService constructs the request-time middleware service.
 //
-// Token verification and RBAC permission checks are delegated to aegis-sso via
+// Token verification and RBAC permission checks are delegated to sso via
 // the provided verifier and checker. The *gorm.DB is retained for two
 // AegisLab-owned reads/writes that are not SSO concerns: the audit_logs table
 // and the teams table (used by IsTeamPublic to enforce public-team access).

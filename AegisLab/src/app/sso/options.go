@@ -14,7 +14,7 @@ import (
 	"go.uber.org/fx"
 )
 
-// Options builds the aegis-sso runtime. Identity, auth, and RBAC only.
+// Options builds the sso runtime. Identity, auth, and RBAC only.
 // No chaos/k8s/business modules — this process exists solely to issue
 // tokens and answer permission checks (the latter lands in Task #6).
 func Options(confPath, port string) fx.Option {

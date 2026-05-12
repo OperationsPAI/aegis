@@ -1,7 +1,6 @@
 FROM golang:1.26-bookworm AS builder
 
 ARG GO_BUILD_TAGS
-ARG GOPROXY="https://proxy.golang.org,direct"
 
 ENV TZ=Asia/Shanghai
 WORKDIR /app
@@ -15,14 +14,20 @@ RUN apt-get update && apt-get install -y g++ gcc
 COPY chaos-experiment /chaos-experiment
 
 COPY AegisLab/src/go.mod AegisLab/src/go.sum ./
-ENV GOPROXY=$GOPROXY
+RUN go env -w GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 
 COPY AegisLab/src/ .
 RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/exp
-# aegis-sso is the standalone SSO/identity binary. Reuses the same build tag
+# sso is the standalone SSO/identity binary. Reuses the same build tag
 # set as /app/exp so the dependency download cache layer above is shared.
-RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-sso ./cmd/aegis-sso
+RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/sso ./cmd/aegis-sso
+
+# Additional microservice binaries (notify, blob, gateway, configcenter)
+RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-notify ./cmd/aegis-notify
+RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-blob ./cmd/aegis-blob
+RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-gateway ./cmd/aegis-gateway
+RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-configcenter ./cmd/aegis-configcenter
 FROM debian:bookworm AS runner
 
 ARG INSTALL_CERTS=false
@@ -48,7 +53,11 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/exp /app/exp
-COPY --from=builder /app/aegis-sso /app/aegis-sso
+COPY --from=builder /app/sso /app/sso
+COPY --from=builder /app/aegis-notify /app/aegis-notify
+COPY --from=builder /app/aegis-blob /app/aegis-blob
+COPY --from=builder /app/aegis-gateway /app/aegis-gateway
+COPY --from=builder /app/aegis-configcenter /app/aegis-configcenter
 COPY AegisLab/src/entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh

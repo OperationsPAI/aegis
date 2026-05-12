@@ -1,0 +1,97 @@
+# Local-cluster profile (kind/minikube) for integrated development & debugging.
+#
+# Assumes:
+#   - kind or minikube cluster with default storageclass "standard" (local-path)
+#   - chaos-mesh installed (for fault injection)
+#   - skaffold handles image build + cluster-load automatically (local.push: false)
+#
+# One-command deploy:
+#   skaffold run -p local
+#
+# Dev mode (auto-rebuild on source change):
+#   skaffold dev -p local
+
+images:
+  rcabench:
+    name: opspai/rcabench
+    tag: local
+    pullPolicy: IfNotPresent
+
+# Enable frontend for full-stack debugging
+rcabench-frontend:
+  enabled: true
+  image:
+    repository: docker.io/opspai/rcabench-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# Enable buildkit for datapack builds
+buildkit:
+  enabled: true
+
+# Enable observability stack for debugging traces/metrics/logs
+alloy:
+  enabled: true
+loki:
+  enabled: true
+prometheus:
+  enabled: true
+grafana:
+  enabled: true
+
+# No external registry proxy needed in local mode
+harbor:
+  enabled: false
+
+# Dev mode — backend runs with dev config template
+configmap:
+  system:
+    env_mode: "dev"
+  sso:
+    issuer: "http://rcabench-sso:8083"
+    baseURL: "http://rcabench-sso:8083"
+    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    backendRedirectURI: "http://rcabench-api-gateway:8082/auth/oidc/callback"
+
+# Mount the sso private key so api-gateway and runtime-worker-service
+# can mint service tokens via jwtkeys.Signer.
+ssoclient:
+  baseURL: "http://rcabench-sso:8083"
+  jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+  privateKeySecretName: "rcabench-sso-key"
+
+# Disable init jobs that pull from private registries.
+# For local dev, seed pedestal charts manually via aegisctl if needed.
+initialization:
+  initDrainTemplate:
+    enabled: false
+  initHelmCharts:
+    enabled: false
+
+# Local clusters use the built-in local-path provisioner (StorageClass "standard").
+# Single-node local clusters don't need RWX — RWO is sufficient.
+persistence:
+  storageType: external
+  storageClassNames:
+    external: standard
+  jaeger:
+    storageClass: standard
+  redis:
+    storageClass: standard
+  mysql:
+    storageClass: standard
+  etcd:
+    storageClass: standard
+  containers:
+    accessMode: ReadWriteOnce
+  observability:
+    enabled: true
+    accessMode: ReadWriteOnce
+  juicefs:
+    enabled: true
+    useStaticPV: false
+    external:
+      accessMode: ReadWriteOnce
+
+juicefs:
+  metaurl: "redis://rcabench-redis:6379/1"

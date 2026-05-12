@@ -37,7 +37,7 @@ func Options(confPath, port string) fx.Option {
 		app.DataOptions(),
 
 		user.Module,
-		// Verify-only binary: tokens are minted by aegis-sso, not here.
+		// Verify-only binary: tokens are minted by sso, not here.
 		// WithRemoteVerifier wires the JWKS-backed *Verifier; ssoclient
 		// adds TokenVerifier + PermissionChecker on top of it.
 		app.WithRemoteVerifier(),

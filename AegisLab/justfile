@@ -135,9 +135,17 @@ rcabench-install:
     just port-forward
 
 # 🛠️ Setup local development environment with basic services
-local-deploy:
+local-deploy-legacy:
     just run-command rcabench local-deploy -f
     just etcd-init
+
+# 🚀 Build and deploy to local kind/minikube cluster (one-shot)
+local-up:
+    devbox run skaffold run -p local
+
+# 🔄 Dev mode: auto-rebuild & redeploy on source change
+local-dev:
+    devbox run skaffold dev -p local
 
 # 🚀 Build and deploy application (using skaffold)
 run: check-prerequisites
@@ -174,7 +182,7 @@ test-regression:
 # Development Tools
 # =============================================================================
 
-# 🔐 Generate RSA keypair for aegis-sso (first-time setup; idempotent)
+# 🔐 Generate RSA keypair for sso (first-time setup; idempotent)
 sso-keys:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -182,7 +190,7 @@ sso-keys:
         printf "{{green}}✅ data/sso/sso-private.pem already exists, skipping{{reset}}\n"
         exit 0
     fi
-    printf "{{blue}}🔐 Generating RSA keypair for aegis-sso...{{reset}}\n"
+    printf "{{blue}}🔐 Generating RSA keypair for sso...{{reset}}\n"
     mkdir -p data/sso data/sso-secrets
     openssl genrsa -out data/sso/sso-private.pem 2048
     openssl rsa -in data/sso/sso-private.pem -pubout -out data/sso/sso-public.pem

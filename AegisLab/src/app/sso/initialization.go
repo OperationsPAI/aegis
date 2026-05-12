@@ -105,7 +105,7 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 
 	dumpPath := config.GetString("sso.seed_secret_dump_path")
 	if dumpPath == "" {
-		dumpPath = "/var/lib/aegis-sso/.first-boot-secret"
+		dumpPath = "/var/lib/sso/.first-boot-secret"
 	}
 	if _, err := os.Stat(dumpPath); os.IsNotExist(err) {
 		if mkErr := os.MkdirAll(filepath.Dir(dumpPath), 0o700); mkErr != nil {

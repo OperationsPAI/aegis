@@ -38,7 +38,7 @@ func newSSOMock(t *testing.T, priv *rsa.PrivateKey) (*httptest.Server, *atomic.I
 		claims := jwt.MapClaims{
 			"iss":        "sso-test",
 			"sub":        "service:aegis-backend",
-			"aud":        []string{"aegis-sso"},
+			"aud":        []string{"sso"},
 			"exp":        time.Now().Add(time.Hour).Unix(),
 			"iat":        time.Now().Unix(),
 			"token_type": "service",

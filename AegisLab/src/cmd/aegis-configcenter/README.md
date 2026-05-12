@@ -8,7 +8,7 @@ write credentials.
 ## Run locally
 
 ```bash
-docker compose up -d mysql etcd aegis-sso
+docker compose up -d mysql etcd sso
 cd src
 go build -tags duckdb_arrow -o /tmp/aegis-configcenter ./cmd/aegis-configcenter
 ENV_MODE=dev AEGIS_JWT_SECRET=... /tmp/aegis-configcenter serve --port 8087 --conf /etc/rcabench

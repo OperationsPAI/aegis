@@ -8,7 +8,7 @@ services:
     image: golang:1.26-bookworm
     working_dir: /workspace/src
     command: ["go", "run", "./cmd/aegis-api", "-conf", "/workspace/src/config.dev.toml", "-port", "8082"]
-    # Match aegis-sso/notify/blob: host network so the shared dev TOML's
+    # Match sso/notify/blob: host network so the shared dev TOML's
     # "localhost" DB/redis/etcd targets resolve directly. With host mode
     # the port maps below are noops (the binary already binds 8082/9096
     # on the host).
@@ -17,12 +17,12 @@ services:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
       # api-gateway's ssoclient module derives its Verifier from a Signer
-      # built off the same private key aegis-sso uses. Share the file.
+      # built off the same private key sso uses. Share the file.
       - ./data/sso/sso-private.pem:/etc/aegis/sso-private.pem:ro
-      # Same first-boot-secret dump aegis-sso writes; ssoclient's
+      # Same first-boot-secret dump sso writes; ssoclient's
       # client_credentials grant reads it when [sso] client_secret is
-      # empty in the toml. Keep :ro — only aegis-sso writes here.
-      - ./data/sso-secrets:/var/lib/aegis-sso:ro
+      # empty in the toml. Keep :ro — only sso writes here.
+      - ./data/sso-secrets:/var/lib/sso:ro
       # Monolith pulls in chaos/k8s modules. Mount the host's kubeconfig
       # plus the minikube cert tree it points at, so dev runs without
       # an in-cluster service account. Override KUBECONFIG_HOST_PATH /
@@ -40,7 +40,7 @@ services:
       etcd:
         condition: service_started
 
-  aegis-sso:
+  sso:
     image: golang:1.26-bookworm
     working_dir: /workspace/src
     command: ["go", "run", "./cmd/aegis-sso", "sso", "--conf", "/workspace/src/config.dev.toml", "--port", "8083"]
@@ -49,7 +49,7 @@ services:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
       - ./data/sso/sso-private.pem:/etc/aegis/sso-private.pem:ro
-      - ./data/sso-secrets:/var/lib/aegis-sso
+      - ./data/sso-secrets:/var/lib/sso
     environment:
       GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
@@ -83,7 +83,7 @@ services:
         condition: service_started
 
   # NOTE: all aegis-* go-run entries use `network_mode: host` to match
-  # aegis-sso in docker-compose.yaml. The shared dev TOML
+  # sso in docker-compose.yaml. The shared dev TOML
   # (src/config.dev.toml) points DB/redis/etcd at "localhost"; with
   # host networking, every service reaches them directly on the host's
   # exposed ports. Container-name DNS (mysql/redis/etcd) would also
@@ -98,7 +98,7 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
-      - ./data/sso-secrets:/var/lib/aegis-sso:ro
+      - ./data/sso-secrets:/var/lib/sso:ro
     environment:
       GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
@@ -107,7 +107,7 @@ services:
         condition: service_healthy
       mysql:
         condition: service_healthy
-      aegis-sso:
+      sso:
         condition: service_started
 
   aegis-blob:
@@ -118,7 +118,7 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
-      - ./data/sso-secrets:/var/lib/aegis-sso:ro
+      - ./data/sso-secrets:/var/lib/sso:ro
       - aegis-blob-scratch:/var/lib/aegis-blob/scratch
     environment:
       GOPROXY: https://goproxy.cn,direct
@@ -131,7 +131,7 @@ services:
         condition: service_healthy
       mysql:
         condition: service_healthy
-      aegis-sso:
+      sso:
         condition: service_started
 
   aegis-gateway:
@@ -142,12 +142,12 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
-      - ./data/sso-secrets:/var/lib/aegis-sso:ro
+      - ./data/sso-secrets:/var/lib/sso:ro
     environment:
       GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
     depends_on:
-      aegis-sso:
+      sso:
         condition: service_started
       aegis-notify:
         condition: service_started
@@ -164,7 +164,7 @@ services:
     volumes:
       - ./:/workspace
       - ../chaos-experiment:/chaos-experiment:ro
-      - ./data/sso-secrets:/var/lib/aegis-sso:ro
+      - ./data/sso-secrets:/var/lib/sso:ro
     environment:
       GOPROXY: https://goproxy.cn,direct
       AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-dev-kek-seed-not-for-production-but-long-enough-32bytes}
@@ -175,7 +175,7 @@ services:
         condition: service_healthy
       etcd:
         condition: service_started
-      aegis-sso:
+      sso:
         condition: service_started
 
 volumes:

@@ -14,9 +14,9 @@ import (
 	"go.uber.org/fx"
 )
 
-// firstBootSecretFile is the conventional path used by helm/aegis-sso to drop
+// firstBootSecretFile is the conventional path used by helm/sso to drop
 // the bootstrap client_secret on first install.
-const firstBootSecretFile = "/var/lib/aegis-sso/.first-boot-secret"
+const firstBootSecretFile = "/var/lib/sso/.first-boot-secret"
 
 func newConfig() Config {
 	secret := config.GetString("sso.client_secret")
@@ -117,7 +117,7 @@ func flattenSpecs(rs []framework.PermissionRegistrar) []PermissionSpec {
 //
 // Depends on `*jwtkeys.Verifier` being provided by the caller. Pick one:
 //
-//   - aegis-sso / monolith / runtime-worker bring `app.WithSigner()` —
+//   - sso / monolith / runtime-worker bring `app.WithSigner()` —
 //     the signer's pubkey doubles as the verifier (same key both ways).
 //   - verify-only binaries (aegis-notify, aegis-blob, aegis-gateway,
 //     aegis-configcenter) bring `app.WithRemoteVerifier()` — verifier

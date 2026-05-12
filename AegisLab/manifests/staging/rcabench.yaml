@@ -55,3 +55,6 @@ configmap:
   k8s:
     init_container:
       busybox_image: 10.10.10.240/library/busybox:1.35
+
+juicefs:
+  metaurl: "redis://10.10.10.119:6379/1"

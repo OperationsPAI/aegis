@@ -240,7 +240,7 @@ func ParseServiceToken(tokenString string, resolve PublicKeyResolver) (*ServiceC
 	}
 
 	// Accept legacy "rcabench-service" issuer + any token tagged token_type=service
-	// (OIDC client_credentials grants from aegis-sso use the issuer URL).
+	// (OIDC client_credentials grants from sso use the issuer URL).
 	if claims.Issuer != "rcabench-service" && claims.TokenType != "service" {
 		return nil, errors.New("not a valid service token")
 	}

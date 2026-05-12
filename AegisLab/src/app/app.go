@@ -18,7 +18,7 @@ import (
 
 // BaseOptions provides only config + logger. JWT key material is no
 // longer baked in — each binary picks WithSigner (owns the private
-// key, like aegis-sso / the monolith / runtime-worker) or
+// key, like sso / the monolith / runtime-worker) or
 // WithRemoteVerifier (verify-only, like aegis-notify / aegis-blob /
 // aegis-configcenter / aegis-gateway). Pick exactly one — fx fails to
 // start if `*jwtkeys.Verifier` is provided twice.

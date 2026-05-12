@@ -3,6 +3,54 @@ kind: Config
 metadata:
   name: rcabench
 profiles:
+  - name: local
+    build:
+      artifacts:
+        - image: opspai/rcabench
+          context: ..
+          docker:
+            dockerfile: AegisLab/src/Dockerfile
+            buildArgs:
+              GO_BUILD_TAGS: duckdb_arrow
+            network: host
+      local:
+        push: false
+      tagPolicy:
+        sha256: {}
+    deploy:
+      helm:
+        flags:
+          install: ["--timeout=15m"]
+          upgrade: ["--timeout=15m"]
+        releases:
+          - name: rcabench
+            chartPath: helm
+            namespace: exp
+            createNamespace: true
+            valuesFiles:
+              - manifests/local/rcabench.yaml
+            setValueTemplates:
+              images.rcabench.tag: "{{.IMAGE_TAG}}"
+              sso.image.tag: "{{.IMAGE_TAG}}"
+            setValues:
+              sso.fullnameOverride: rcabench-sso
+              sso.image.pullPolicy: IfNotPresent
+              sso.config.sso.issuer: "http://rcabench-sso:8083"
+              sso.config.sso.baseURL: "http://rcabench-sso:8083"
+              sso.config.sso.jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+              sso.auth.secretName: "rcabench-auth"
+              sso.config.database.mysql.host: "rcabench-mysql"
+              sso.config.redis.host: "rcabench-redis:6379"
+              sso.config.jaeger.endpoint: "http://rcabench-jaeger:4318"
+              sso.config.k8s.namespace: "exp"
+              sso.config.k8s.serviceAccount.name: "rcabench-sa"
+              sso.config.sso.backendRedirectURI: "http://rcabench-api-gateway:8082/auth/oidc/callback"
+            setFiles:
+              initialDataFiles.data_yaml: data/initial_data/prod/data.yaml
+              initialDataFiles.otel_demo_yaml: data/initial_data/prod/otel-demo.yaml
+              initialDataFiles.ts_yaml: data/initial_data/prod/ts.yaml
+              sso.privateKey.pem: /tmp/sso-keys/sso-private.pem
+
   - name: staging
     activation:
       - env: ENV_MODE=staging
@@ -38,12 +86,6 @@ profiles:
               initialDataFiles.data_yaml: data/initial_data/staging/data.yaml
               initialDataFiles.otel_demo_yaml: data/initial_data/staging/otel-demo.yaml
               initialDataFiles.ts_yaml: data/initial_data/staging/ts.yaml
-          - name: aegis-sso
-            chartPath: helm/aegis-sso
-            namespace: exp
-            createNamespace: true
-            setValueTemplates:
-              image.tag: "{{.IMAGE_TAG}}"
 
   - name: test
     activation:

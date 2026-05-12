@@ -654,6 +654,19 @@ func (s *Service) createContainerVersionsCore(repo *Repository, versions []model
 		return nil, fmt.Errorf("failed to list helm parameter configs: %w", err)
 	}
 
+	// DEBUG: log what we got back vs what we expected
+	if len(actualHelmValues) != len(helmValuesWithIdx) {
+		expectedKeys := make([]string, 0, len(helmValuesWithIdx))
+		for _, item := range helmValuesWithIdx {
+			expectedKeys = append(expectedKeys, paramConfigMapKey(systemID, item.value.Key, int(item.value.Type), int(item.value.Category)))
+		}
+		gotKeys := make([]string, 0, len(actualHelmValues))
+		for _, cfg := range actualHelmValues {
+			gotKeys = append(gotKeys, paramConfigMapKey(cfg.SystemID, cfg.Key, int(cfg.Type), int(cfg.Category)))
+		}
+		return nil, fmt.Errorf("helm parameter config count mismatch: expected %d (%v), got %d (%v)", len(helmValuesWithIdx), expectedKeys, len(actualHelmValues), gotKeys)
+	}
+
 	configMap := make(map[string]int, len(actualHelmValues))
 	for _, cfg := range actualHelmValues {
 		key := paramConfigMapKey(cfg.SystemID, cfg.Key, int(cfg.Type), int(cfg.Category))

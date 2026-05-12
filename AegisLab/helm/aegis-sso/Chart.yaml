@@ -1,6 +1,0 @@
-apiVersion: v2
-name: aegis-sso
-description: Aegis SSO/identity service (OIDC provider + admin REST). Standalone chart; sibling to the rcabench backend chart.
-type: application
-version: 0.1.0
-appVersion: "1.0.0"

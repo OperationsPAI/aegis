@@ -127,6 +127,57 @@ Returns: merged JSON configuration
 {{- end -}}
 
 {{/*
+Aegis SSO helpers (merged from standalone aegis-sso chart).
+*/}}
+{{- define "sso.name" -}}
+{{- default "sso" .Values.sso.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "sso.fullname" -}}
+{{- if .Values.sso.fullnameOverride }}
+{{- .Values.sso.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default "sso" .Values.sso.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- define "sso.labels" -}}
+app.kubernetes.io/name: {{ include "sso.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "sso.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "sso.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{- define "sso.image" -}}
+{{- $registry := .Values.global.imageRegistry -}}
+{{- $name := .Values.sso.image.repository -}}
+{{- $tag := .Values.sso.image.tag | default "latest" | toString -}}
+{{- if $registry -}}
+{{- printf "%s/%s:%s" $registry $name $tag -}}
+{{- else -}}
+{{- printf "%s:%s" $name $tag -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "sso.secretName" -}}
+{{- if .Values.sso.privateKey.existingSecret -}}
+{{- .Values.sso.privateKey.existingSecret -}}
+{{- else -}}
+{{- printf "%s-key" (include "sso.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Generate system helm config list from data.yaml containers (type=2 only)
 Usage: {{ include "helm.systemHelmConfigs" . }}
 Returns: JSON array of system helm configurations

@@ -21,7 +21,7 @@ service. Ship:
 - `module/configcenterclient` — local + remote dual-mode SDK, matching
   the `notificationclient` pattern.
 - `cmd/aegis-configcenter` — standalone microservice, default `:8087`,
-  composed identically to `aegis-notify` / `aegis-sso`. **It does NOT
+  composed identically to `aegis-notify` / `sso`. **It does NOT
   replace etcd**; etcd remains the storage backend. The service owns
   the typed admin API, audit log, schema validation, watch fanout,
   and the only place that holds write credentials to etcd.

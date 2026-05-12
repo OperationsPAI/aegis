@@ -77,6 +77,19 @@ data:
     {{- end }}
     {{- end }}
 
+    [sso]
+    private_key_path = "{{ .Values.configmap.sso.privateKeyPath }}"
+    kid = "{{ .Values.configmap.sso.kid }}"
+    issuer = "{{ .Values.configmap.sso.issuer }}"
+    base_url = "{{ .Values.configmap.sso.baseURL }}"
+    jwks_url = "{{ .Values.configmap.sso.jwksURL }}"
+    client_id = "{{ .Values.configmap.sso.clientID }}"
+    client_secret = "{{ .Values.configmap.sso.clientSecret }}"
+    backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-api-gateway:%s/auth/oidc/callback" .Release.Name .Values.microservices.apiGateway.httpPort) }}"
+    seed_secret_dump_path = "{{ .Values.configmap.sso.seedSecretDumpPath }}"
+    console_redirect_uris = "{{ .Values.configmap.sso.consoleRedirectURIs }}"
+    login_redirect = "{{ .Values.configmap.sso.loginRedirect }}"
+
     [jfs]
     container_path = "{{ .Values.configmap.jfs.container_path }}"
     dataset_path = "{{ .Values.configmap.jfs.dataset_path }}"
@@ -159,3 +172,45 @@ metadata:
 data:
   system_helm_configs.json: |
 {{ include "helm.systemHelmConfigs" . | indent 4 }}
+---
+# Aegis SSO ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sso.fullname" . }}-config
+  labels:
+    {{- include "sso.labels" . | nindent 4 }}
+data:
+  config.prod.toml: |
+    name = "sso"
+    version = "1.0.0"
+    port = {{ .Values.sso.config.port }}
+    workspace = "/app"
+
+    [database.mysql]
+    host = "{{ .Values.sso.config.database.mysql.host }}"
+    port = "{{ .Values.sso.config.database.mysql.port }}"
+    user = "{{ .Values.sso.config.database.mysql.user }}"
+    password = "{{ .Values.sso.config.database.mysql.password }}"
+    db = "{{ .Values.sso.config.database.mysql.db }}"
+
+    [redis]
+    host = "{{ .Values.sso.config.redis.host }}"
+
+    [jaeger]
+    endpoint = "{{ .Values.sso.config.jaeger.endpoint | default (printf "http://%s-jaeger:4318" .Release.Name) }}"
+
+    [k8s]
+    namespace = "{{ .Values.sso.config.k8s.namespace | default .Release.Namespace }}"
+    [k8s.job.service_account]
+    name = "{{ .Values.sso.config.k8s.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}"
+
+    [sso]
+    issuer = "{{ .Values.sso.config.sso.issuer }}"
+    base_url = "{{ .Values.sso.config.sso.baseURL }}"
+    jwks_url = "{{ .Values.sso.config.sso.jwksURL }}"
+    kid = "{{ .Values.sso.config.sso.kid }}"
+    client_id = "{{ .Values.sso.config.sso.clientID }}"
+    backend_redirect_uri = "{{ .Values.sso.config.sso.backendRedirectURI }}"
+    private_key_path = "{{ .Values.sso.config.sso.privateKeyPath }}"
+    seed_secret_dump_path = "{{ .Values.sso.config.sso.seedSecretDumpPath }}"

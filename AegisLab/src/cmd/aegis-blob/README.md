@@ -8,7 +8,7 @@ service-token-signed requests.
 ## Run locally
 
 ```bash
-docker compose up -d mysql aegis-sso
+docker compose up -d mysql sso
 cd src
 go build -tags duckdb_arrow -o /tmp/aegis-blob ./cmd/aegis-blob
 ENV_MODE=dev /tmp/aegis-blob serve --port 8085 --conf /etc/rcabench

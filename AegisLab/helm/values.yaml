@@ -176,14 +176,89 @@ auth:
 # SSO client configuration consumed by the backend (module/ssoclient).
 # Rendered as AEGIS_SSO_* env vars on the api-gateway pod so config.toml
 # template strings can pick them up. Bootstrap client secret is read from
-# a separate Secret (default: `aegis-sso-bootstrap`).
+# a separate Secret (default: `sso-bootstrap`).
 ssoclient:
-  baseURL: "http://aegis-sso:8083"
-  jwksURL: "http://aegis-sso:8083/.well-known/jwks.json"
+  baseURL: "http://sso:8083"
+  jwksURL: "http://sso:8083/.well-known/jwks.json"
   clientID: "aegis-backend"
   clientSecretRef:
-    name: "aegis-sso-bootstrap"
+    name: "sso-bootstrap"
     key: "aegis-backend-secret"
+  # Name of a Secret (in the same namespace) containing the SSO private key.
+  # The secret must have a key named `sso-private.pem`. When set, both
+  # api-gateway and runtime-worker-service mount it so jwtkeys.Signer can
+  # mint service tokens.
+  privateKeySecretName: ""
+
+# Aegis SSO service deployment (OIDC provider + admin REST).
+# Previously a standalone chart at helm/sso/; merged into rcabench
+# so one release deploys the entire stack.
+sso:
+  replicaCount: 1
+
+  image:
+    repository: opspai/rcabench
+    tag: latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8083
+
+  config:
+    port: 8083
+    database:
+      mysql:
+        host: "mysql"
+        port: "3306"
+        user: "root"
+        password: "yourpassword"
+        db: "rcabench"
+    redis:
+      host: "redis:6379"
+    jaeger:
+      endpoint: ""
+    k8s:
+      namespace: ""
+      serviceAccount:
+        name: ""
+    sso:
+      issuer: "http://sso:8083"
+      baseURL: "http://sso:8083"
+      jwksURL: "http://sso:8083/.well-known/jwks.json"
+      kid: "sso-v1"
+      clientID: "aegis-backend"
+      backendRedirectURI: ""
+      privateKeyPath: "/etc/aegis/sso-private.pem"
+      seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
+
+  privateKey:
+    pem: ""
+    existingSecret: ""
+
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 256Mi
+    accessMode: ReadWriteOnce
+    mountPath: /var/lib/sso
+
+  auth:
+    jwtSecret: ""
+    secretName: ""
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 configmap:
   name: "rcabench"
@@ -197,6 +272,7 @@ configmap:
     data_path: "/app/data/initial_data"
   database:
     mysql:
+      host: ""
       user: "root"
       port: "3306"
       password: "yourpassword"
@@ -208,7 +284,12 @@ configmap:
       password: "otelcollectorpass"
       db: "otel"
       timezone: "UTC"
+  redis:
+    host: ""
+  jaeger:
+    endpoint: ""
   etcd:
+    endpoints: []
     username: ""
     password: ""
     cluster:
@@ -216,9 +297,13 @@ configmap:
       token: "rcabench-etcd-cluster"
   k8s:
     namespace: "exp"
+    service:
+      internalURL: ""
     init_container:
       busybox_image: "busybox:1.35"
     job:
+      serviceAccount:
+        name: ""
       volume_mount:
         dataset:
           name: "dataset"
@@ -234,12 +319,33 @@ configmap:
     container_path: "/app/containers"
     dataset_path: "/var/lib/rcabench/dataset"
     experiment_storage_path: "/var/lib/rcabench/experiment_storage"
+  buildkit:
+    address: ""
+  clients:
+    runtime:
+      target: ""
+    runtimeIntake:
+      target: ""
   loki:
     timeout: "10s"
     max_entries: 5000
   otlp:
     port: 4319
     max_request_size: 5242880
+  sso:
+    privateKeyPath: "/etc/aegis/sso-private.pem"
+    kid: "sso-v1"
+    issuer: "http://sso:8083"
+    baseURL: "http://sso:8083"
+    jwksURL: "http://sso:8083/.well-known/jwks.json"
+    clientID: "aegis-backend"
+    clientSecret: ""
+    # Defaults to http://<release-name>-api-gateway:<port>/auth/oidc/callback.
+    # Only override if the API gateway is exposed under a different host.
+    backendRedirectURI: ""
+    seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
+    consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+    loginRedirect: "http://localhost:3323/auth/login"
 
 microservices:
   apiGateway:
@@ -281,6 +387,26 @@ microservices:
       maxReplicas: 8
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 0
+  notify:
+    enabled: true
+    replicaCount: 1
+    httpPort: 8084
+    resources: {}
+  blob:
+    enabled: true
+    replicaCount: 1
+    httpPort: 8085
+    resources: {}
+  gateway:
+    enabled: true
+    replicaCount: 1
+    httpPort: 8086
+    resources: {}
+  configcenter:
+    enabled: true
+    replicaCount: 1
+    httpPort: 8087
+    resources: {}
 
 persistence:
   # Global storage type setting - applies to containers, logs, and juicefs sections
@@ -340,7 +466,8 @@ persistence:
 # JuiceFS Configuration
 juicefs:
   name: "jfs"
-  metaurl: "redis://10.10.10.119:6379/1"
+  # JuiceFS metadata engine. Override per environment (e.g. local Redis or shared staging Redis).
+  metaurl: ""
   cacheSize: "1024"
   # Optional: configure object storage if needed
   # storage: "s3"

@@ -28,13 +28,34 @@ set -o pipefail
 #     done
 # fi
 
-# Dispatch: when invoked with first arg `aegis-sso` (e.g. compose/helm args[0]=aegis-sso),
-# run the SSO binary; otherwise fall through to the monorepo backend binary.
-if [ "${1:-}" = "aegis-sso" ]; then
-    shift
-    echo "Executing /app/aegis-sso with command: $@"
-    exec /app/aegis-sso "$@"
-fi
+# Dispatch: route to the correct binary based on the first argument.
+case "${1:-}" in
+    sso)
+        shift
+        echo "Executing /app/sso with command: $@"
+        exec /app/sso "$@"
+        ;;
+    aegis-notify)
+        shift
+        echo "Executing /app/aegis-notify with command: $@"
+        exec /app/aegis-notify "$@"
+        ;;
+    aegis-blob)
+        shift
+        echo "Executing /app/aegis-blob with command: $@"
+        exec /app/aegis-blob "$@"
+        ;;
+    aegis-gateway)
+        shift
+        echo "Executing /app/aegis-gateway with command: $@"
+        exec /app/aegis-gateway "$@"
+        ;;
+    aegis-configcenter)
+        shift
+        echo "Executing /app/aegis-configcenter with command: $@"
+        exec /app/aegis-configcenter "$@"
+        ;;
+esac
 
 echo "Executing /app/exp with command: $@"
 exec /app/exp "$@"

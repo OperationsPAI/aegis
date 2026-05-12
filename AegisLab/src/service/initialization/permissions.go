@@ -259,7 +259,7 @@ func reconcileSystemPermissionsTx(store *bootstrapStore, resources []model.Resou
 
 	// --- SSO service-admin permissions ------------------------------------
 	// These don't follow the resource:action:scope naming so they're seeded
-	// separately. service=aegis-sso, scope_type=ScopeTypeService, granted to
+	// separately. service=sso, scope_type=ScopeTypeService, granted to
 	// RoleServiceAdmin (delegated service-admin role, Task #13).
 	if err := seedSSOServiceAdminPermissions(store); err != nil {
 		return fmt.Errorf("seed sso service-admin permissions: %w", err)

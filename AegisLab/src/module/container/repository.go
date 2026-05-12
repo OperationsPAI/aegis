@@ -6,6 +6,7 @@ import (
 	"aegis/model"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -289,6 +290,15 @@ func (r *Repository) batchCreateOrFindParameterConfigs(params []model.ParameterC
 	if len(params) == 0 {
 		return nil
 	}
+	// Explicitly sync SystemIDKey because BeforeSave may not fire reliably
+	// during batch Create with clause.OnConflict on some GORM + MySQL paths.
+	for i := range params {
+		if params[i].SystemID == nil {
+			params[i].SystemIDKey = 0
+		} else {
+			params[i].SystemIDKey = *params[i].SystemID
+		}
+	}
 	if err := r.db.Clauses(clause.OnConflict{OnConstraint: "idx_unique_config", DoNothing: true}).Create(&params).Error; err != nil {
 		return fmt.Errorf("failed to batch create parameter configs: %w", err)
 	}
@@ -306,17 +316,20 @@ func (r *Repository) listParameterConfigsByKeys(configs []model.ParameterConfig)
 
 	var results []model.ParameterConfig
 	query := r.db.Model(&model.ParameterConfig{})
-	conditions := r.db.Where("1 = 0")
+
+	parts := make([]string, 0, len(configs))
+	args := make([]interface{}, 0, len(configs)*4)
 	for _, cfg := range configs {
-		base := r.db.Where("config_key = ? AND type = ? AND category = ?", cfg.Key, cfg.Type, cfg.Category)
 		if cfg.SystemID == nil {
-			base = base.Where("system_id IS NULL")
+			parts = append(parts, "(config_key = ? AND type = ? AND category = ? AND system_id IS NULL)")
+			args = append(args, cfg.Key, cfg.Type, cfg.Category)
 		} else {
-			base = base.Where("system_id = ?", *cfg.SystemID)
+			parts = append(parts, "(config_key = ? AND type = ? AND category = ? AND system_id = ?)")
+			args = append(args, cfg.Key, cfg.Type, cfg.Category, *cfg.SystemID)
 		}
-		conditions = conditions.Or(base)
 	}
-	if err := query.Where(conditions).Find(&results).Error; err != nil {
+
+	if err := query.Where(strings.Join(parts, " OR "), args...).Find(&results).Error; err != nil {
 		return nil, fmt.Errorf("failed to list parameter configs by keys: %w", err)
 	}
 	return results, nil

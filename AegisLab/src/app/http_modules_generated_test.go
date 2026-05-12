@@ -12,7 +12,7 @@ import (
 
 // ssoOwnedModules mirrors SSO_OWNED_MODULES in
 // scripts/generate_http_modules.py — modules whose HTTP graph belongs to the
-// standalone aegis-sso process, not the AegisLab backend producer.
+// standalone sso process, not the AegisLab backend producer.
 var ssoOwnedModules = map[string]bool{
 	"user":      true,
 	"auth":      true,

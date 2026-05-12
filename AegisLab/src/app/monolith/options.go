@@ -5,6 +5,7 @@ import (
 	chaos "aegis/infra/chaos"
 	k8s "aegis/infra/k8s"
 	grpcruntimeintake "aegis/interface/grpc/runtimeintake"
+	rbac "aegis/module/rbac"
 
 	"go.uber.org/fx"
 )
@@ -31,6 +32,7 @@ func Options(confPath, port string) fx.Option {
 		chaos.Module,
 		k8s.Module,
 		app.ProducerHTTPOptions(port),
+		rbac.Module,
 		grpcruntimeintake.Module,
 	)
 }

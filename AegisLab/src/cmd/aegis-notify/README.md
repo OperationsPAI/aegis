@@ -7,7 +7,7 @@ minimum auth surface needed to accept service-token-signed events.
 ## Run locally
 
 ```bash
-docker compose up -d redis mysql aegis-sso
+docker compose up -d redis mysql sso
 cd src
 go build -tags duckdb_arrow -o /tmp/aegis-notify ./cmd/aegis-notify
 ENV_MODE=dev AEGIS_JWT_SECRET=... /tmp/aegis-notify serve --port 8084 --conf /etc/rcabench

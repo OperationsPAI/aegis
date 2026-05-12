@@ -801,7 +801,7 @@ type UserScopedRole struct {
 	CreatedAt time.Time         `gorm:"autoCreateTime"`
 	UpdatedAt time.Time         `gorm:"autoUpdateTime"`
 
-	Active string `gorm:"type:varchar(160) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN CONCAT(user_id,':',role_id,':',scope_type,':',scope_id) ELSE NULL END) VIRTUAL;uniqueIndex:idx_active_user_scoped_role"`
+	Active string `gorm:"->;type:varchar(160) GENERATED ALWAYS AS (CASE WHEN status >= 0 THEN CONCAT(user_id,':',role_id,':',scope_type,':',scope_id) ELSE NULL END) VIRTUAL;uniqueIndex:idx_active_user_scoped_role"`
 
 	Role *Role `gorm:"foreignKey:RoleID"`
 }

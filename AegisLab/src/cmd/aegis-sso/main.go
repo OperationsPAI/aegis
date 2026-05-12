@@ -16,7 +16,7 @@ func main() {
 	var conf string
 
 	rootCmd := &cobra.Command{
-		Use:   "aegis-sso",
+		Use:   "sso",
 		Short: "Aegis SSO identity service",
 	}
 

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """SSO extraction E2E smoke test.
 
-Validates the aegis-sso + aegis-backend split end-to-end against a live
-docker-compose stack. Run after `docker compose up -d mysql redis aegis-sso
+Validates the sso + aegis-backend split end-to-end against a live
+docker-compose stack. Run after `docker compose up -d mysql redis sso
 aegis-backend`. See AegisLab/docs/sso-extraction-design.md §10.
 
 Stdlib-only (urllib + json) — no pip install needed. Run with:
 
     cd AegisLab
     just sso-keys
-    docker compose up -d mysql redis aegis-sso aegis-backend
+    docker compose up -d mysql redis sso aegis-backend
     python3 regression/sso_smoke.py
 
 Exit code 0 = all checks passed; non-zero = failure (test prints which step).
@@ -46,6 +46,7 @@ WAIT_TIMEOUT = int(os.environ.get("WAIT_TIMEOUT", "120"))
 
 # ----- pretty output -----------------------------------------------------
 
+
 def step(msg: str) -> None:
     print(f"\n=== {msg}")
 
@@ -60,6 +61,7 @@ def fail(msg: str) -> None:
 
 
 # ----- HTTP helpers ------------------------------------------------------
+
 
 def http(
     method: str,
@@ -100,11 +102,15 @@ def http(
 
 def post_form(url: str, fields: dict, **kw) -> tuple[int, dict | None, bytes]:
     data = urllib.parse.urlencode(fields).encode()
-    headers = kw.pop("headers", {}) | {"Content-Type": "application/x-www-form-urlencoded"}
+    headers = kw.pop("headers", {}) | {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
     return http("POST", url, headers=headers, data=data, **kw)
 
 
-def post_json(url: str, body: dict, *, token: str | None = None, **kw) -> tuple[int, dict | None, bytes]:
+def post_json(
+    url: str, body: dict, *, token: str | None = None, **kw
+) -> tuple[int, dict | None, bytes]:
     data = json.dumps(body).encode()
     headers = kw.pop("headers", {}) | {"Content-Type": "application/json"}
     if token:
@@ -113,6 +119,7 @@ def post_json(url: str, body: dict, *, token: str | None = None, **kw) -> tuple[
 
 
 # ----- waiting -----------------------------------------------------------
+
 
 def wait_for(label: str, check) -> None:
     deadline = time.time() + WAIT_TIMEOUT
@@ -142,13 +149,14 @@ def backend_up() -> bool:
 
 # ----- client_secret discovery ------------------------------------------
 
+
 def read_client_secret() -> str:
     env_secret = os.environ.get("CLIENT_SECRET", "").strip()
     if env_secret:
         return env_secret
     for path in (
         "data/sso-secrets/.first-boot-secret",
-        "/var/lib/aegis-sso/.first-boot-secret",
+        "/var/lib/sso/.first-boot-secret",
     ):
         try:
             with open(path) as fp:
@@ -157,10 +165,10 @@ def read_client_secret() -> str:
                     return val
         except FileNotFoundError:
             continue
-    # As a last resort, try to read it inside the aegis-sso container.
+    # As a last resort, try to read it inside the sso container.
     try:
         out = subprocess.run(
-            ["docker", "exec", "aegis-sso", "cat", "/var/lib/aegis-sso/.first-boot-secret"],
+            ["docker", "exec", "sso", "cat", "/var/lib/sso/.first-boot-secret"],
             check=True,
             capture_output=True,
             timeout=10,
@@ -177,6 +185,7 @@ def read_client_secret() -> str:
 
 # ----- JWT helpers -------------------------------------------------------
 
+
 def decode_jwt_unverified(token: str) -> dict:
     parts = token.split(".")
     if len(parts) != 3:
@@ -187,9 +196,10 @@ def decode_jwt_unverified(token: str) -> dict:
 
 # ----- main steps --------------------------------------------------------
 
+
 def step_wait_services() -> None:
-    step("1. wait for aegis-sso + aegis-backend")
-    wait_for("aegis-sso :8083", sso_up)
+    step("1. wait for sso + aegis-backend")
+    wait_for("sso :8083", sso_up)
     wait_for("aegis-backend :8082", backend_up)
 
 
@@ -211,7 +221,9 @@ def step_service_token() -> str:
     claims = decode_jwt_unverified(tok)
     if claims.get("token_type") != "service":
         fail(f"expected token_type=service, got {claims.get('token_type')}")
-    ok(f"service token issued (sub={claims.get('sub')}, exp_in={body.get('expires_in')}s)")
+    ok(
+        f"service token issued (sub={claims.get('sub')}, exp_in={body.get('expires_in')}s)"
+    )
     return tok
 
 
@@ -219,7 +231,12 @@ def step_v1_check_admin(service_token: str) -> None:
     step("3. POST /v1/check (admin → system:read:all)")
     status, body, _ = post_json(
         f"{SSO_BASE}/v1/check",
-        {"user_id": 1, "permission": "system:read:all", "scope_type": "", "scope_id": ""},
+        {
+            "user_id": 1,
+            "permission": "system:read:all",
+            "scope_type": "",
+            "scope_id": "",
+        },
         token=service_token,
     )
     data = (body or {}).get("data") or {}
@@ -228,7 +245,9 @@ def step_v1_check_admin(service_token: str) -> None:
     ok(f"admin allowed (reason={data.get('reason')})")
 
 
-def step_password_login(username: str, password: str, expect_success: bool = True) -> str | None:
+def step_password_login(
+    username: str, password: str, expect_success: bool = True
+) -> str | None:
     step(f"4/7. POST /token grant_type=password ({username})")
     secret = read_client_secret()
     status, body, _ = post_form(
@@ -251,7 +270,9 @@ def step_password_login(username: str, password: str, expect_success: bool = Tru
     if not tok:
         fail(f"no access_token for {username}: {body}")
     claims = decode_jwt_unverified(tok)
-    ok(f"{username} access_token issued (sub={claims.get('sub')}, username={claims.get('username')})")
+    ok(
+        f"{username} access_token issued (sub={claims.get('sub')}, username={claims.get('username')})"
+    )
     return tok
 
 
@@ -264,7 +285,9 @@ def step_backend_authed(user_token: str) -> None:
         expect=(),
     )
     if status != 200:
-        fail(f"admin GET /system/health → {status}; body={raw[:300].decode('utf-8','replace')}")
+        fail(
+            f"admin GET /system/health → {status}; body={raw[:300].decode('utf-8', 'replace')}"
+        )
     ok("admin can read /system/health (200)")
 
 
@@ -278,7 +301,9 @@ def step_backend_unauthed() -> None:
 
 def step_create_nonadmin_and_403(admin_token: str) -> None:
     step("7. create non-admin user + 403 on admin endpoint")
-    suffix = "".join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(6))
+    suffix = "".join(
+        secrets.choice(string.ascii_lowercase + string.digits) for _ in range(6)
+    )
     username = f"smoke_{suffix}"
     password = "Smoke_Test_123!"
 
@@ -296,7 +321,7 @@ def step_create_nonadmin_and_403(admin_token: str) -> None:
     )
     if status not in (200, 201):
         fail(
-            f"POST /api/v2/users → {status}, body={raw[:300].decode('utf-8','replace')} "
+            f"POST /api/v2/users → {status}, body={raw[:300].decode('utf-8', 'replace')} "
             f"(admin token may not carry user.create permission?)"
         )
     ok(f"created user {username}")
@@ -320,16 +345,22 @@ def step_create_nonadmin_and_403(admin_token: str) -> None:
 def step_oidc_discovery() -> None:
     step("8. OIDC discovery + JWKS sanity")
     status, body, _ = http("GET", f"{SSO_BASE}/.well-known/openid-configuration")
-    required = ("issuer", "authorization_endpoint", "token_endpoint", "jwks_uri", "userinfo_endpoint")
+    required = (
+        "issuer",
+        "authorization_endpoint",
+        "token_endpoint",
+        "jwks_uri",
+        "userinfo_endpoint",
+    )
     missing = [k for k in required if not (body or {}).get(k)]
     if missing:
         fail(f"discovery missing keys: {missing}")
     ok("discovery has all required keys")
 
     jwks_uri = body["jwks_uri"]
-    # docker-compose issuer uses internal hostname `aegis-sso`; rewrite for host-side test.
+    # docker-compose issuer uses internal hostname `sso`; rewrite for host-side test.
     parsed = urllib.parse.urlparse(jwks_uri)
-    if parsed.hostname in ("aegis-sso", None):
+    if parsed.hostname in ("sso", None):
         jwks_uri = f"{SSO_BASE}/.well-known/jwks.json"
     status, jwks, _ = http("GET", jwks_uri)
     keys = (jwks or {}).get("keys") or []
@@ -353,11 +384,18 @@ def step_users_batch(service_token: str) -> None:
 
 def step_audit_log() -> None:
     step("10. mysql audit_logs has auth.login.success row")
-    if subprocess.run(["docker", "inspect", MYSQL_CONTAINER], capture_output=True).returncode != 0:
+    if (
+        subprocess.run(
+            ["docker", "inspect", MYSQL_CONTAINER], capture_output=True
+        ).returncode
+        != 0
+    ):
         ok(f"mysql container '{MYSQL_CONTAINER}' not present; skipping audit-log check")
         return
     cmd = [
-        "docker", "exec", MYSQL_CONTAINER,
+        "docker",
+        "exec",
+        MYSQL_CONTAINER,
         "mysql",
         f"-u{MYSQL_USER}",
         f"-p{MYSQL_PASSWORD}",
@@ -375,7 +413,9 @@ def step_audit_log() -> None:
     except ValueError:
         n = 0
     if n < 1:
-        fail(f"no audit_logs.auth.login.success rows after admin login (count={count!r})")
+        fail(
+            f"no audit_logs.auth.login.success rows after admin login (count={count!r})"
+        )
     ok(f"audit_logs has {n} auth.login.success row(s)")
 
 

@@ -4,14 +4,14 @@ Status: design (PR-1)
 Author: 2026-05-11
 
 This doc is the contract for splitting AegisLab's `module/{user,auth,rbac}` into
-a standalone `aegis-sso` service. Every other PR-1 task references this file
+a standalone `sso` service. Every other PR-1 task references this file
 for table shapes, API shapes, and module boundaries.
 
 ## 1. Goals & non-goals
 
 **Goals (PR-1):**
-1. `aegis-sso` runs as a separate process inside the AegisLab monorepo
-   (`cmd/aegis-sso`), exposing OIDC + admin REST.
+1. `sso` runs as a separate process inside the AegisLab monorepo
+   (`cmd/sso`), exposing OIDC + admin REST.
 2. AegisLab backend consumes SSO via HTTP only; never reads SSO-owned tables
    directly.
 3. Any other internal service (any language) can authenticate users and check
@@ -28,7 +28,7 @@ for table shapes, API shapes, and module boundaries.
 
 ## 2. Table ownership
 
-**SSO-owned tables** (only `aegis-sso` process writes; only SSO repository
+**SSO-owned tables** (only `sso` process writes; only SSO repository
 code reads):
 
 | Table | Purpose |
@@ -107,11 +107,11 @@ public key from `GET /.well-known/jwks.json` at startup, refresh every 10min.
   "token_type": "access"
 }
 
-// Service token (machine-to-machine, audience=aegis-sso for management API)
+// Service token (machine-to-machine, audience=sso for management API)
 {
   "iss": "https://sso.aegis.local",
   "sub": "service:aegis-backend",
-  "aud": ["aegis-sso"],
+  "aud": ["sso"],
   "exp": ...,
   "service": "aegis-backend",
   "scopes": ["users:read", "check"],
@@ -141,7 +141,7 @@ client_credentials entry per service that needs to call /v1/check.
 ## 5. Admin REST API (`/v1/*`)
 
 All `/v1/*` require a service_token (client_credentials JWT,
-`aud=aegis-sso`). Returned as standard `{data, error}` envelope to match
+`aud=sso`). Returned as standard `{data, error}` envelope to match
 existing AegisLab conventions.
 
 ### 5.1 `GET /v1/users/{id}`
@@ -246,27 +246,27 @@ Internals:
 |---|---|
 | `model.User`, `model.APIKey`, `model.Role`, `model.Permission`, `model.RolePermission`, `model.UserRole`, `model.UserScopedRole`, `model.OIDCClient` | `module/user/model.go` (moved out of central `model/entity.go`) |
 | `*User`, `*Role` GORM preloads in business tables | **deleted** |
-| `module/user`, `module/auth`, `module/rbac` | only loaded by `cmd/aegis-sso`'s fx graph; removed from `app/http_modules_gen.go` |
+| `module/user`, `module/auth`, `module/rbac` | only loaded by `cmd/sso`'s fx graph; removed from `app/http_modules_gen.go` |
 | `middleware.TokenVerifier` + permissionChecker | implemented by `module/ssoclient` |
-| `framework.PermissionRegistrar` fx group | still used inside `cmd/aegis-sso` for SSO-internal modules; for AegisLab consumers, `module/ssoclient` collects them at startup and calls `/v1/permissions:register` once. |
+| `framework.PermissionRegistrar` fx group | still used inside `cmd/sso` for SSO-internal modules; for AegisLab consumers, `module/ssoclient` collects them at startup and calls `/v1/permissions:register` once. |
 
 ## 8. Process / deployment topology
 
 ```
 docker-compose / helm:
-  aegis-sso       :8083   (cmd/aegis-sso)
+  sso       :8083   (cmd/sso)
   aegis-backend   :8082   (cmd: rcabench both)
   mysql, redis    shared
 ```
 
-Helm: new chart `helm/aegis-sso/`. Backend chart's values gain:
+Helm: new chart `helm/sso/`. Backend chart's values gain:
 
 ```yaml
 ssoclient:
-  baseURL: http://aegis-sso:8083
+  baseURL: http://sso:8083
   clientID: aegis-backend
   clientSecret: # k8s Secret ref
-  jwksURL: http://aegis-sso:8083/.well-known/jwks.json
+  jwksURL: http://sso:8083/.well-known/jwks.json
 ```
 
 ## 9. Migration plan (destructive, no data preservation)
@@ -312,7 +312,7 @@ docker compose + python3.
 
 ```bash
 just sso-keys                                      # one-time: RSA keypair
-docker compose up -d mysql redis aegis-sso aegis-backend
+docker compose up -d mysql redis sso aegis-backend
 python3 regression/sso_smoke.py
 ```
 
@@ -323,7 +323,7 @@ admin-gated).
 
 **What it validates**
 
-1. `aegis-sso` `/healthz` and `aegis-backend` are listening.
+1. `sso` `/healthz` and `aegis-backend` are listening.
 2. `POST /token` with `grant_type=client_credentials` → service token whose
    `token_type` claim is `service`.
 3. `POST /v1/check` with the service token, `user_id=1`,
@@ -346,8 +346,8 @@ The client secret for `aegis-backend` is read in this order:
 
 - `$CLIENT_SECRET` env var, if set
 - `AegisLab/data/sso-secrets/.first-boot-secret` (mounted into the
-  `aegis-sso` container as `/var/lib/aegis-sso/.first-boot-secret`)
-- `docker exec aegis-sso cat /var/lib/aegis-sso/.first-boot-secret`
+  `sso` container as `/var/lib/sso/.first-boot-secret`)
+- `docker exec sso cat /var/lib/sso/.first-boot-secret`
 
 **Known limitations**
 
@@ -361,7 +361,7 @@ The client secret for `aegis-backend` is read in this order:
   reached via a different mechanism the check no-ops with a notice
   rather than failing the run.
 - The OIDC discovery `jwks_uri` is rewritten host-side because the
-  compose-internal issuer points at hostname `aegis-sso`, which is not
+  compose-internal issuer points at hostname `sso`, which is not
   resolvable from the test runner. Production deployments behind a real
   ingress won't need this rewrite.
 
@@ -369,7 +369,7 @@ The client secret for `aegis-backend` is read in this order:
 
 | PR | Scope | Tasks |
 |---|---|---|
-| PR-1a | schema collapse + RS256 keys + scaffold cmd/aegis-sso (no behavior yet) | #3, #4, #2 |
+| PR-1a | schema collapse + RS256 keys + scaffold cmd/sso (no behavior yet) | #3, #4, #2 |
 | PR-1b | OIDC + /v1 endpoints on SSO server | #5, #6 |
 | PR-1c | AegisLab consumer: module/ssoclient + middleware swap | #7, #8 |
 | PR-1d | AegisLab cleanup: remove modules, refactor *User preloads | #9 |
@@ -380,12 +380,12 @@ Each PR keeps AegisLab buildable + e2e green.
 ## 12. Delegated admin (service_admin) — Task #13
 
 Beyond the global `system_admin` role and the pre-existing service token
-(machine-to-machine), `aegis-sso` supports a third principal: a
+(machine-to-machine), `sso` supports a third principal: a
 **delegated service admin** scoped to one downstream service.
 
 **Concept.** Granting role `service_admin` with `scope_type =
-"aegis-sso.service"` and `scope_id = "<downstream service>"` makes the
-target user admin of everything `aegis-sso` exposes for that one service.
+"sso.service"` and `scope_id = "<downstream service>"` makes the
+target user admin of everything `sso` exposes for that one service.
 Global admins always win (bypass every service filter); a service admin
 sees and edits only their service's slice.
 
@@ -396,13 +396,13 @@ POST /v1/grants
 {
   "user_id": 42,
   "role": "service_admin",
-  "scope_type": "aegis-sso.service",
+  "scope_type": "sso.service",
   "scope_id": "aegis-backend"
 }
 ```
 
 **Permissions packaged into the role** (seeded at startup;
-`service = aegis-sso`, `scope_type = aegis-sso.service`):
+`service = sso`, `scope_type = sso.service`):
 
 | Name | Used by |
 |---|---|
@@ -429,7 +429,7 @@ POST /v1/grants
 
 - `/v1/grants` POST / DELETE — three rules, OR'd:
   1. Global admin → allowed.
-  2. Request `scope_type = "aegis-sso.service"` → `scope_id` must be in
+  2. Request `scope_type = "sso.service"` → `scope_id` must be in
      the caller's admin set.
   3. Request `scope_type = aegis.project` / `aegis.team` / etc → the
      role being granted must only carry permissions whose `service` is

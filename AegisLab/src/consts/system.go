@@ -160,12 +160,12 @@ const (
 	// ScopeTypeService is the scope_type for delegated service-admin grants
 	// (Task #13). A user_scoped_roles row with this scope_type and
 	// scope_id=<downstream service name> makes the user admin over
-	// everything aegis-sso exposes for that one service — without
+	// everything sso exposes for that one service — without
 	// granting global system_admin.
-	ScopeTypeService = "aegis-sso.service"
+	ScopeTypeService = "sso.service"
 
 	ServiceAegis    = "aegis"
-	ServiceAegisSSO = "aegis-sso"
+	ServiceAegisSSO = "sso"
 )
 
 // RoleName is the type for role constants
@@ -197,7 +197,7 @@ const (
 )
 
 // SSO service-admin permission names — granted to RoleServiceAdmin. Live on
-// service=aegis-sso, scope_type=ScopeTypeService. The /v1 SSO admin gate
+// service=sso, scope_type=ScopeTypeService. The /v1 SSO admin gate
 // reads them to authorize delegated admins.
 const (
 	PermSSOUsersRead           = "sso.users.read"

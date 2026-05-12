@@ -267,3 +267,83 @@ spec:
       targetPort: 9090
 {{- end }}
 {{- end }}
+
+{{- if .Values.microservices.notify.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-notify
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}-notify
+  ports:
+    - name: http
+      port: {{ .Values.microservices.notify.httpPort }}
+      targetPort: http
+{{- end }}
+
+{{- if .Values.microservices.blob.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-blob
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}-blob
+  ports:
+    - name: http
+      port: {{ .Values.microservices.blob.httpPort }}
+      targetPort: http
+{{- end }}
+
+{{- if .Values.microservices.gateway.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-gateway
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}-gateway
+  ports:
+    - name: http
+      port: {{ .Values.microservices.gateway.httpPort }}
+      targetPort: http
+{{- end }}
+
+{{- if .Values.microservices.configcenter.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-configcenter
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}-configcenter
+  ports:
+    - name: http
+      port: {{ .Values.microservices.configcenter.httpPort }}
+      targetPort: http
+{{- end }}
+---
+# Aegis SSO Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sso.fullname" . }}
+  labels:
+    {{- include "sso.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.sso.service.type }}
+  selector:
+    {{- include "sso.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.sso.service.port }}
+      targetPort: http
