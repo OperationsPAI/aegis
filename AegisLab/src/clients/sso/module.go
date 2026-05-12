@@ -25,11 +25,17 @@ func newConfig() Config {
 			secret = strings.TrimSpace(string(data))
 		}
 	}
+	// Optional hot-reload path. When set (typically to a mounted K8s Secret
+	// projected by SSO at bootstrap), refreshServiceToken re-reads this file
+	// on each /token call so a rotated secret takes effect without a pod
+	// restart.
+	secretFile := config.GetString("sso.client_secret_file")
 	return Config{
-		BaseURL:      config.GetString("sso.base_url"),
-		ClientID:     config.GetString("sso.client_id"),
-		ClientSecret: secret,
-		JWKSURL:      config.GetString("sso.jwks_url"),
+		BaseURL:          config.GetString("sso.base_url"),
+		ClientID:         config.GetString("sso.client_id"),
+		ClientSecret:     secret,
+		ClientSecretFile: secretFile,
+		JWKSURL:          config.GetString("sso.jwks_url"),
 	}
 }
 

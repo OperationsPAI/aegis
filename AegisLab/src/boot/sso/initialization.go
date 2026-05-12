@@ -18,6 +18,11 @@ import (
 	"go.uber.org/fx"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 func registerSSOInitialization(lc fx.Lifecycle, db *gorm.DB, clients *ssomod.Service) {
@@ -145,13 +150,57 @@ func seedDefaultOIDCClient(ctx context.Context, db *gorm.DB, _ *ssomod.Service) 
 	if _, err := os.Stat(dumpPath); os.IsNotExist(err) {
 		if mkErr := os.MkdirAll(filepath.Dir(dumpPath), 0o700); mkErr != nil {
 			logrus.WithError(mkErr).Warn("could not create dir for seed-secret dump")
-			return nil
-		}
-		if writeErr := os.WriteFile(dumpPath, []byte(secret+"\n"), 0o600); writeErr != nil {
+		} else if writeErr := os.WriteFile(dumpPath, []byte(secret+"\n"), 0o600); writeErr != nil {
 			logrus.WithError(writeErr).Warn("could not write seed-secret dump file")
 		}
 	}
+
+	// Mirror the bootstrap secret into a K8s Secret so downstream services
+	// (aegis-api etc.) can pick it up via envFrom without needing access to
+	// the SSO PVC. Best-effort — silently no-op when running outside of K8s.
+	upsertBootstrapK8sSecret(ctx, secret)
 	return nil
+}
+
+func upsertBootstrapK8sSecret(ctx context.Context, plaintext string) {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		logrus.WithError(err).Debug("sso bootstrap: not running in cluster, skipping K8s Secret upsert")
+		return
+	}
+	cs, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		logrus.WithError(err).Warn("sso bootstrap: build kubernetes client failed")
+		return
+	}
+	nsBytes, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		logrus.WithError(err).Warn("sso bootstrap: read pod namespace failed")
+		return
+	}
+	namespace := strings.TrimSpace(string(nsBytes))
+
+	secretName := config.GetString("sso.bootstrap_secret_name")
+	if secretName == "" {
+		secretName = "sso-bootstrap"
+	}
+	desired := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace},
+		Type:       corev1.SecretTypeOpaque,
+		StringData: map[string]string{"aegis-backend-secret": plaintext},
+	}
+	if _, err := cs.CoreV1().Secrets(namespace).Create(ctx, desired, metav1.CreateOptions{}); err == nil {
+		logrus.WithField("secret", secretName).Info("sso bootstrap: created K8s Secret with backend client_secret")
+		return
+	} else if !apierrors.IsAlreadyExists(err) {
+		logrus.WithError(err).Warn("sso bootstrap: create K8s Secret failed")
+		return
+	}
+	if _, err := cs.CoreV1().Secrets(namespace).Update(ctx, desired, metav1.UpdateOptions{}); err != nil {
+		logrus.WithError(err).Warn("sso bootstrap: update K8s Secret failed")
+		return
+	}
+	logrus.WithField("secret", secretName).Info("sso bootstrap: updated K8s Secret with backend client_secret")
 }
 
 // seedConsoleOIDCClient ensures the public client used by the aegis-ui

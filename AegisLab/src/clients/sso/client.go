@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,10 +31,15 @@ const (
 )
 
 type Config struct {
-	BaseURL      string
-	ClientID     string
-	ClientSecret string
-	JWKSURL      string
+	BaseURL string
+	ClientID string
+	// ClientSecret is the static fallback. Prefer ClientSecretFile when the
+	// secret is rotated at runtime (e.g. via a hot-reloaded K8s Secret mount):
+	// each /token refresh re-reads the file so we pick up the current value
+	// without restarting the pod.
+	ClientSecret     string
+	ClientSecretFile string
+	JWKSURL          string
 }
 
 // Client is the AegisLab-side bridge to sso. Use NewClient via fx; tests
@@ -272,11 +278,22 @@ func (c *Client) getServiceToken(ctx context.Context) (string, error) {
 	return c.refreshServiceToken(ctx)
 }
 
+func (c *Client) currentClientSecret() string {
+	if c.cfg.ClientSecretFile != "" {
+		if data, err := os.ReadFile(c.cfg.ClientSecretFile); err == nil {
+			if s := strings.TrimSpace(string(data)); s != "" {
+				return s
+			}
+		}
+	}
+	return c.cfg.ClientSecret
+}
+
 func (c *Client) refreshServiceToken(ctx context.Context) (string, error) {
 	form := url.Values{}
 	form.Set("grant_type", consts.OIDCGrantClientCredentials)
 	form.Set("client_id", c.cfg.ClientID)
-	form.Set("client_secret", c.cfg.ClientSecret)
+	form.Set("client_secret", c.currentClientSecret())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.BaseURL+"/token", strings.NewReader(form.Encode()))
 	if err != nil {

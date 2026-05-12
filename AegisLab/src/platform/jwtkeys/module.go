@@ -40,6 +40,13 @@ func (v *Verifier) Resolve(kid string) (*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("verifier not configured")
 	}
 	keys := v.keys.Load()
+	if (keys == nil || len(*keys) == 0) && v.url != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := v.Refresh(ctx); err == nil {
+			keys = v.keys.Load()
+		}
+	}
 	if keys == nil {
 		return nil, fmt.Errorf("verifier has no keys loaded")
 	}

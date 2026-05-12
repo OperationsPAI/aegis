@@ -106,14 +106,18 @@ func producerSeedRequired(db *gorm.DB, initialData *InitialData) (bool, error) {
 		return false, fmt.Errorf("initial data admin user username is empty")
 	}
 
-	_, err := newBootstrapStore(db).getUserByUsername(adminUsername)
-	if err == nil {
+	// SSO bootstraps its own admin user, so admin-existence alone is not a
+	// reliable gate for "producer already seeded". Require that containers
+	// have been seeded too — they're producer-owned and won't appear by
+	// accident.
+	var containerCount int64
+	if err := db.Table("containers").Count(&containerCount).Error; err != nil {
+		return false, fmt.Errorf("failed to count containers: %w", err)
+	}
+	if containerCount > 0 {
 		return false, nil
 	}
-	if errors.Is(err, consts.ErrNotFound) {
-		return true, nil
-	}
-	return false, err
+	return true, nil
 }
 
 func initializeProducer(db *gorm.DB, initialData *InitialData) error {
@@ -164,10 +168,16 @@ func initializeProducer(db *gorm.DB, initialData *InitialData) error {
 func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User, error) {
 	adminUser := data.AdminUser.ConvertToDBUser()
 	if err := store.createUser(adminUser); err != nil {
-		if errors.Is(err, consts.ErrAlreadyExists) {
-			return nil, fmt.Errorf("admin user already exists")
+		if !errors.Is(err, consts.ErrAlreadyExists) {
+			return nil, fmt.Errorf("failed to create admin user: %w", err)
 		}
-		return nil, fmt.Errorf("failed to create admin user: %w", err)
+		// SSO may have bootstrapped this admin already; fetch the existing row
+		// so we can still link the super_admin role.
+		existing, getErr := store.getUserByUsername(adminUser.Username)
+		if getErr != nil {
+			return nil, fmt.Errorf("admin user reportedly exists but lookup failed: %w", getErr)
+		}
+		adminUser = existing
 	}
 
 	superAdminRole, err := store.getRoleByName("super_admin")
@@ -182,10 +192,7 @@ func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User,
 		UserID: adminUser.ID,
 		RoleID: superAdminRole.ID,
 	}
-	if err := store.createUserRole(&userRole); err != nil {
-		if errors.Is(err, consts.ErrAlreadyExists) {
-			return nil, fmt.Errorf("admin user already has super_admin role")
-		}
+	if err := store.createUserRole(&userRole); err != nil && !errors.Is(err, consts.ErrAlreadyExists) {
 		return nil, fmt.Errorf("failed to assign super_admin role to admin user: %w", err)
 	}
 
@@ -195,20 +202,14 @@ func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User,
 func initializeProjectsAndTeams(store *bootstrapStore, data *InitialData) error {
 	for _, teamData := range data.Teams {
 		team := teamData.ConvertToDBTeam()
-		if err := store.createTeam(team); err != nil {
-			if errors.Is(err, consts.ErrAlreadyExists) {
-				return fmt.Errorf("team %s already exists", team.Name)
-			}
+		if err := store.createTeam(team); err != nil && !errors.Is(err, consts.ErrAlreadyExists) {
 			return fmt.Errorf("failed to create team %s: %w", team.Name, err)
 		}
 	}
 
 	for _, projectData := range data.Projects {
 		project := projectData.ConvertToDBProject()
-		if err := store.createProject(project); err != nil {
-			if errors.Is(err, consts.ErrAlreadyExists) {
-				return fmt.Errorf("project %s already exists", project.Name)
-			}
+		if err := store.createProject(project); err != nil && !errors.Is(err, consts.ErrAlreadyExists) {
 			return fmt.Errorf("failed to create project %s: %w", project.Name, err)
 		}
 	}

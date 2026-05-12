@@ -124,6 +124,8 @@ spec:
                   name: {{ .clientSecretRef.name }}
                   key: {{ .clientSecretRef.key }}
                   optional: true
+            - name: SSO_CLIENT_SECRET_FILE
+              value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
           {{- with .Values.microservices.aegisApi.resources }}
@@ -145,6 +147,11 @@ spec:
             - name: sso-private-key
               mountPath: {{ .Values.configmap.sso.privateKeyPath }}
               subPath: sso-private.pem
+              readOnly: true
+            {{- end }}
+            {{- if .Values.ssoclient.clientSecretRef.name }}
+            - name: sso-client-secret
+              mountPath: /etc/aegis/sso
               readOnly: true
             {{- end }}
       volumes:
@@ -170,6 +177,15 @@ spec:
             items:
               - key: sso-private.pem
                 path: sso-private.pem
+        {{- end }}
+        {{- if .Values.ssoclient.clientSecretRef.name }}
+        - name: sso-client-secret
+          secret:
+            secretName: {{ .Values.ssoclient.clientSecretRef.name }}
+            optional: true
+            items:
+              - key: {{ .Values.ssoclient.clientSecretRef.key }}
+                path: client-secret
         {{- end }}
 ---
 apiVersion: apps/v1
@@ -310,6 +326,11 @@ spec:
               subPath: sso-private.pem
               readOnly: true
             {{- end }}
+            {{- if .Values.ssoclient.clientSecretRef.name }}
+            - name: sso-client-secret
+              mountPath: /etc/aegis/sso
+              readOnly: true
+            {{- end }}
       volumes:
         - name: config
           configMap:
@@ -350,6 +371,15 @@ spec:
             items:
               - key: sso-private.pem
                 path: sso-private.pem
+        {{- end }}
+        {{- if .Values.ssoclient.clientSecretRef.name }}
+        - name: sso-client-secret
+          secret:
+            secretName: {{ .Values.ssoclient.clientSecretRef.name }}
+            optional: true
+            items:
+              - key: {{ .Values.ssoclient.clientSecretRef.key }}
+                path: client-secret
         {{- end }}
 {{- if .Values.buildkit.enabled }}
 ---
@@ -508,6 +538,8 @@ spec:
                   name: {{ .clientSecretRef.name }}
                   key: {{ .clientSecretRef.key }}
                   optional: true
+            - name: SSO_CLIENT_SECRET_FILE
+              value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
           {{- with .Values.microservices.notify.resources }}
@@ -588,6 +620,8 @@ spec:
                   name: {{ .clientSecretRef.name }}
                   key: {{ .clientSecretRef.key }}
                   optional: true
+            - name: SSO_CLIENT_SECRET_FILE
+              value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
             - name: BLOB_BUCKETS_SCRATCH_ROOT
@@ -674,6 +708,8 @@ spec:
                   name: {{ .clientSecretRef.name }}
                   key: {{ .clientSecretRef.key }}
                   optional: true
+            - name: SSO_CLIENT_SECRET_FILE
+              value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
           {{- with .Values.microservices.gateway.resources }}
@@ -754,6 +790,8 @@ spec:
                   name: {{ .clientSecretRef.name }}
                   key: {{ .clientSecretRef.key }}
                   optional: true
+            - name: SSO_CLIENT_SECRET_FILE
+              value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
           {{- with .Values.microservices.configcenter.resources }}
@@ -792,6 +830,7 @@ spec:
       labels:
         {{- include "sso.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ .Release.Name }}-sa
       containers:
         - name: sso
           image: {{ include "sso.image" . }}

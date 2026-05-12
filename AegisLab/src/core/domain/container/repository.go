@@ -16,7 +16,7 @@ const (
 	containerCommonOmitFields       = "active_name"
 	containerModelOmitFields        = "Versions"
 	containerVersionModelOmitFields = "active_version_key,HelmConfig,EnvVars"
-	helmConfigModelOmitFields       = "Values"
+	helmConfigModelOmitFields       = "DynamicValues"
 )
 
 type Repository struct {

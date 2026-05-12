@@ -53,6 +53,22 @@ func centralEntities() []interface{} {
 }
 
 func migrate(db *gorm.DB, contribs []framework.MigrationRegistrar) {
+	// Every microservice pod runs the full schema migration on startup. Without
+	// coordination, two pods race between HasTable and CreateTable and one
+	// fails with "Table X already exists". Serialize via MySQL advisory lock.
+	var locked int
+	if err := db.Raw("SELECT GET_LOCK('aegis_migrate', 120)").Scan(&locked).Error; err != nil {
+		logrus.Warnf("migrate: GET_LOCK failed (proceeding without lock): %v", err)
+	} else if locked != 1 {
+		logrus.Warnf("migrate: GET_LOCK returned %d (timed out or error), proceeding anyway", locked)
+	} else {
+		defer func() {
+			if err := db.Exec("SELECT RELEASE_LOCK('aegis_migrate')").Error; err != nil {
+				logrus.Warnf("migrate: RELEASE_LOCK failed: %v", err)
+			}
+		}()
+	}
+
 	for _, hook := range framework.FlattenPreMigrates(contribs) {
 		if err := hook(db); err != nil {
 			logrus.Fatalf("Failed pre-migrate hook: %v", err)

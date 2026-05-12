@@ -177,7 +177,7 @@ data:
 
     [[gateway.routes]]
     prefix   = "/api/v2/auth/"
-    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
     auth     = "none"
 
     [[gateway.routes]]
