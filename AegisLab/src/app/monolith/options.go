@@ -4,7 +4,7 @@ import (
 	"aegis/app"
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
-	grpcruntimeintake "aegis/interface/grpc/runtimeintake"
+	grpcruntimeintake "aegis/core/orchestrator/transport/grpc/runtimeintake"
 	rbac "aegis/crud/iam/rbac"
 
 	"go.uber.org/fx"

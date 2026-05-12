@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"aegis/platform/dto"
-	"aegis/service/initialization"
+	"aegis/boot/seed"
 )
 
 // HandlerService captures chaos system operations consumed by HTTP and resource gRPC handlers.

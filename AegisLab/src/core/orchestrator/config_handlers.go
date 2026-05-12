@@ -9,7 +9,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	k8s "aegis/platform/k8s"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/sirupsen/logrus"

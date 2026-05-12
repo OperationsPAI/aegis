@@ -10,7 +10,7 @@ import (
 	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
 	execution "aegis/core/domain/execution"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"

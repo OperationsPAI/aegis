@@ -18,7 +18,7 @@ import (
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
 	"aegis/clients/sso"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"

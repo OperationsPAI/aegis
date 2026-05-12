@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"aegis/platform/model"
-	"aegis/service/initialization"
+	"aegis/boot/seed"
 )
 
 // HandlerService captures the pedestal operations consumed by the HTTP handler.

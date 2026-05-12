@@ -8,7 +8,7 @@ import (
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
 	"aegis/platform/model"
-	"aegis/service/initialization"
+	"aegis/boot/seed"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

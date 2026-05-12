@@ -20,7 +20,7 @@ import (
 
 	"aegis/app"
 	"aegis/platform/etcd"
-	httpapi "aegis/interface/http"
+	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/admin/configcenter"
 	"aegis/clients/sso"
 	"aegis/crud/iam/user"

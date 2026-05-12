@@ -14,7 +14,7 @@ import (
 	etcd "aegis/platform/etcd"
 	"aegis/platform/model"
 	containerrepo "aegis/core/domain/container"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

@@ -5,7 +5,7 @@ import (
 
 	"aegis/platform/config"
 	redis "aegis/platform/redis"
-	"aegis/service/logreceiver"
+	"aegis/core/orchestrator/logreceiver"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"

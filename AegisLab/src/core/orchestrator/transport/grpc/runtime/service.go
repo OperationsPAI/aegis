@@ -14,7 +14,7 @@ import (
 	redis "aegis/platform/redis"
 	task "aegis/core/domain/task"
 	runtimev1 "aegis/platform/proto/runtime/v1"
-	"aegis/service/consumer"
+	"aegis/core/orchestrator"
 
 	"go.uber.org/fx"
 	"google.golang.org/grpc/codes"

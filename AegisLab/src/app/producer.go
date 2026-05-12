@@ -7,10 +7,10 @@ import (
 	etcd "aegis/platform/etcd"
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
-	httpapi "aegis/interface/http"
+	httpapi "aegis/boot/wiring/http"
 	"aegis/clients/sso"
-	commonservice "aegis/service/common"
-	"aegis/service/initialization"
+	commonservice "aegis/core/orchestrator/common"
+	"aegis/boot/seed"
 	"aegis/platform/utils"
 
 	"go.uber.org/fx"

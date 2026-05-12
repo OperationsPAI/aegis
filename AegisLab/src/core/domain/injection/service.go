@@ -19,7 +19,7 @@ import (
 	container "aegis/core/domain/container"
 	dataset "aegis/core/domain/dataset"
 	label "aegis/crud/iam/label"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"

@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"aegis/app"
-	httpapi "aegis/interface/http"
+	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/storage/blob"
 	"aegis/clients/sso"
 	"aegis/platform/router"

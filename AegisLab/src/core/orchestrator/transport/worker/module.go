@@ -8,9 +8,9 @@ import (
 	helm "aegis/platform/helm"
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
-	commonservice "aegis/service/common"
-	"aegis/service/consumer"
-	"aegis/service/initialization"
+	commonservice "aegis/core/orchestrator/common"
+	"aegis/core/orchestrator"
+	"aegis/boot/seed"
 
 	"go.uber.org/fx"
 	"gorm.io/gorm"

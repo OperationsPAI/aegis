@@ -15,8 +15,8 @@ import (
 	"aegis/platform/dto"
 	etcd "aegis/platform/etcd"
 	"aegis/platform/model"
-	"aegis/service/common"
-	"aegis/service/initialization"
+	"aegis/core/orchestrator/common"
+	"aegis/boot/seed"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"

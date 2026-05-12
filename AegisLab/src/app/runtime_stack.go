@@ -4,12 +4,12 @@ import (
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
 	runtimeinfra "aegis/platform/runtime"
-	controller "aegis/interface/controller"
-	grpcruntime "aegis/interface/grpc/runtime"
-	receiver "aegis/interface/receiver"
-	worker "aegis/interface/worker"
+	controller "aegis/core/orchestrator/lifecycle"
+	grpcruntime "aegis/core/orchestrator/transport/grpc/runtime"
+	receiver "aegis/core/orchestrator/transport/receiver"
+	worker "aegis/core/orchestrator/transport/worker"
 	"aegis/clients/runtime"
-	"aegis/service/consumer"
+	"aegis/core/orchestrator"
 
 	"go.uber.org/fx"
 )

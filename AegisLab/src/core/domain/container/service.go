@@ -11,7 +11,7 @@ import (
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
 	label "aegis/crud/iam/label"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 
 	"gorm.io/gorm"
 )

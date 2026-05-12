@@ -7,7 +7,7 @@ import (
 
 	"aegis/platform/consts"
 	runtimev1 "aegis/platform/proto/runtime/v1"
-	"aegis/service/consumer"
+	"aegis/core/orchestrator"
 )
 
 func TestRuntimeServerStatusEndpoints(t *testing.T) {

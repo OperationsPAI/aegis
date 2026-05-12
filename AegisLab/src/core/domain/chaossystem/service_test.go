@@ -10,7 +10,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/model"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/spf13/viper"

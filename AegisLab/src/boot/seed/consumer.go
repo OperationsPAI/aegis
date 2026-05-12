@@ -15,8 +15,8 @@ import (
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
 	ratelimiter "aegis/crud/admin/ratelimiter"
-	"aegis/service/common"
-	"aegis/service/consumer"
+	"aegis/core/orchestrator/common"
+	"aegis/core/orchestrator"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

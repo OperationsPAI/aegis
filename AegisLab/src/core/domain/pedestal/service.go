@@ -8,7 +8,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/model"
-	"aegis/service/initialization"
+	"aegis/boot/seed"
 )
 
 // Service is the pedestal module's application-layer facade. It keeps the

@@ -14,7 +14,7 @@ import (
 	redisinfra "aegis/platform/redis"
 	"aegis/platform/tracing"
 	"aegis/platform/model"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
 	"github.com/prometheus/client_golang/prometheus"

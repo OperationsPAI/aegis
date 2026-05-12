@@ -2,7 +2,7 @@ package runtimeapp
 
 import (
 	"aegis/app"
-	"aegis/service/consumer"
+	"aegis/core/orchestrator"
 
 	"go.uber.org/fx"
 )

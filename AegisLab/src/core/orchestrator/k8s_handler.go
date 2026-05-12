@@ -14,7 +14,7 @@ import (
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
 	container "aegis/core/domain/container"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"

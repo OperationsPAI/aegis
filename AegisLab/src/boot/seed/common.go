@@ -3,7 +3,7 @@ package initialization
 import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"fmt"
 
 	"github.com/sirupsen/logrus"

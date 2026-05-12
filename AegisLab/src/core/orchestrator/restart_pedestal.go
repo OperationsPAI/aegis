@@ -8,7 +8,7 @@ import (
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 	"context"
 	"errors"

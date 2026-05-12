@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"aegis/app"
-	httpapi "aegis/interface/http"
+	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/iam/auth"
 	"aegis/crud/iam/rbac"
 	ssomod "aegis/crud/iam/sso"

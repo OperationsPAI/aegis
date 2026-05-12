@@ -7,7 +7,7 @@ import (
 
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
-	"aegis/service/consumer"
+	"aegis/core/orchestrator"
 
 	"github.com/go-logr/stdr"
 	"go.uber.org/fx"

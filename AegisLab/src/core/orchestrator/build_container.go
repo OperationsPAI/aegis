@@ -13,7 +13,7 @@ import (
 	buildkit "aegis/platform/buildkit"
 	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
 	con "github.com/docker/cli/cli/config"

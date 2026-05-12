@@ -2,7 +2,7 @@ package initialization
 
 import (
 	"aegis/platform/config"
-	"aegis/service/common"
+	"aegis/core/orchestrator/common"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/sirupsen/logrus"

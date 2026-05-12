@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"aegis/app"
-	httpapi "aegis/interface/http"
+	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/messaging/notification"
 	"aegis/clients/sso"
 	"aegis/crud/iam/user"
