@@ -20,8 +20,6 @@ const (
 	// anymore — JWTs are RS256-signed via an SSO-owned RSA keypair.
 	JWTSecretEnvVar = "AEGIS_JWT_SECRET"
 
-	LegacyJWTSecretDefault = "your-secret-key-change-this-in-production"
-
 	TokenExpiration        = 24 * time.Hour
 	RefreshTokenExpiration = 7 * 24 * time.Hour
 	ServiceTokenExpiration = 24 * time.Hour
@@ -34,9 +32,6 @@ func InitJWTSecret() error {
 	if secret == "" {
 		return fmt.Errorf("%s environment variable is not set", JWTSecretEnvVar)
 	}
-	if secret == LegacyJWTSecretDefault {
-		return fmt.Errorf("%s is set to the legacy hardcoded default; refusing to start", JWTSecretEnvVar)
-	}
 	JWTSecret = secret
 	return nil
 }
@@ -44,9 +39,6 @@ func InitJWTSecret() error {
 func ValidateJWTSecret() error {
 	if JWTSecret == "" {
 		return fmt.Errorf("API-key KEK secret is not initialized; set %s and call InitJWTSecret at startup", JWTSecretEnvVar)
-	}
-	if JWTSecret == LegacyJWTSecretDefault {
-		return fmt.Errorf("API-key KEK secret equals the legacy hardcoded default; set %s to a unique value", JWTSecretEnvVar)
 	}
 	return nil
 }
