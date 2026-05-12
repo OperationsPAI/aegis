@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"strings"
 
-	"aegis/app"
+	"aegis/boot"
 	gatewaymod "aegis/clients/gateway"
 	"aegis/clients/sso"
 

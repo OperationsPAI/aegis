@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	runtimeapp "aegis/app/runtime"
+	runtimeapp "aegis/boot/runtime"
 
 	"go.uber.org/fx"
 )

@@ -19,7 +19,7 @@ package notify
 import (
 	"strings"
 
-	"aegis/app"
+	"aegis/boot"
 	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/messaging/notification"
 	"aegis/clients/sso"

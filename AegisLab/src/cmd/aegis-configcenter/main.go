@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	configcenter "aegis/app/configcenter"
+	configcenter "aegis/boot/configcenter"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

@@ -1,7 +1,7 @@
 package runtimeapp
 
 import (
-	"aegis/app"
+	"aegis/boot"
 	"aegis/core/orchestrator"
 
 	"go.uber.org/fx"

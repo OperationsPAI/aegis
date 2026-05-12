@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"aegis/app"
-	monolith "aegis/app/monolith"
-	runtimeapp "aegis/app/runtime"
+	"aegis/boot"
+	monolith "aegis/boot/monolith"
+	runtimeapp "aegis/boot/runtime"
 	buildkit "aegis/platform/buildkit"
 	etcd "aegis/platform/etcd"
 	harbor "aegis/platform/harbor"

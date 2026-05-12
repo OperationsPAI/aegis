@@ -1,7 +1,7 @@
 package monolith
 
 import (
-	"aegis/app"
+	"aegis/boot"
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
 	grpcruntimeintake "aegis/core/orchestrator/transport/grpc/runtimeintake"

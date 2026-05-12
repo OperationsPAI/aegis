@@ -3,7 +3,7 @@ package sso
 import (
 	"strings"
 
-	"aegis/app"
+	"aegis/boot"
 	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/iam/auth"
 	"aegis/crud/iam/rbac"

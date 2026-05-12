@@ -1,29 +1,25 @@
-// Package configcenter hosts the fx composition for the standalone
-// configuration-center microservice. Mirrors `app/notify/options.go`
-// in shape.
+// Package blob hosts the fx composition for the standalone blob
+// microservice (aegis-blob). Mirrors `app/notify/options.go`.
 //
 // What's in this binary:
 //
-//   - module/configcenter — Center + audit + admin HTTP surface
-//   - module/auth         — JWT verifier (service tokens + human users)
-//   - module/user         — actor lookups for audit rows
-//   - infra/etcd          — this is the ONLY binary that holds etcd
-//                           write credentials in v1
-//   - http server         — admin endpoints under /api/v2/config
+//   - module/blob   — driver registry, repository, handler, lifecycle
+//   - module/auth   — JWT verifier (service & human-user tokens)
+//   - infra (db, redis, jwtkeys)
+//   - http server   — exposes only the blob routes + /healthz
 //
 // What's NOT in this binary: chaos/k8s/dataset/injection/business
-// modules. This binary's job is "be the typed face of etcd".
-package configcenter
+// modules. Producers live elsewhere and reach this binary through
+// module/blobclient with `mode = "remote"`.
+package blob
 
 import (
 	"strings"
 
-	"aegis/app"
-	"aegis/platform/etcd"
+	"aegis/boot"
 	httpapi "aegis/boot/wiring/http"
-	"aegis/crud/admin/configcenter"
+	"aegis/crud/storage/blob"
 	"aegis/clients/sso"
-	"aegis/crud/iam/user"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
@@ -36,14 +32,12 @@ func Options(confPath, port string) fx.Option {
 		app.ObserveOptions(),
 		app.DataOptions(),
 
-		etcd.Module,
-		user.Module,
 		// Verify-only binary: no WithSigner. ssoclient brings
 		// TokenVerifier + PermissionChecker; WithRemoteVerifier supplies
 		// the JWKS-backed *Verifier ssoclient depends on.
 		app.WithRemoteVerifier(),
 		ssoclient.Module,
-		configcenter.Module,
+		blob.Module,
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
@@ -57,17 +51,12 @@ func decorateEngineWithHealthz(engine *gin.Engine) *gin.Engine {
 	engine.GET("/healthz", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-	engine.GET("/readyz", func(c *gin.Context) {
-		// TODO: probe etcd reachability + last-successful-watch
-		// timestamp. v1 stub returns ok so kube-readiness can wire up.
-		c.JSON(200, gin.H{"status": "ok"})
-	})
 	return engine
 }
 
 func normalizeAddr(port string) string {
 	if port == "" {
-		return ":8087"
+		return ":8085"
 	}
 	if strings.HasPrefix(port, ":") {
 		return port

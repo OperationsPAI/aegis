@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	blobapp "aegis/app/blob"
+	blobapp "aegis/boot/blob"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
