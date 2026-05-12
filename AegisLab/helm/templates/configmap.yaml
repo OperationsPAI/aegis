@@ -16,7 +16,7 @@ data:
     data_path = "{{ .Values.configmap.initialization.data_path }}"
 
     [database.mysql]
-    host = "{{ .Release.Name }}-mysql"
+    host = "{{ .Values.configmap.database.mysql.host | default (printf "%s-mysql" .Release.Name) }}"
     port = "{{ .Values.configmap.database.mysql.port }}"
     user = "{{ .Values.configmap.database.mysql.user }}"
     password = "{{ .Values.configmap.database.mysql.password }}"
@@ -33,13 +33,13 @@ data:
     {{- end }}
 
     [jaeger]
-    endpoint = "{{ .Release.Name }}-jaeger:4318"
+    endpoint = "{{ .Values.configmap.jaeger.endpoint | default (printf "http://%s-jaeger:4318" .Release.Name) }}"
 
     [redis]
-    host = "{{ .Release.Name }}-redis:6379"
+    host = "{{ .Values.configmap.redis.host | default (printf "%s-redis:6379" .Release.Name) }}"
 
     [etcd]
-    endpoints = ["http://{{ .Release.Name }}-etcd-headless:2379"]
+    endpoints = {{ .Values.configmap.etcd.endpoints | default (list (printf "http://%s-etcd-headless:2379" .Release.Name)) | toJson }}
     username = "{{ .Values.configmap.etcd.username }}"
     password = "{{ .Values.configmap.etcd.password }}"
 
@@ -214,3 +214,5 @@ data:
     backend_redirect_uri = "{{ .Values.sso.config.sso.backendRedirectURI }}"
     private_key_path = "{{ .Values.sso.config.sso.privateKeyPath }}"
     seed_secret_dump_path = "{{ .Values.sso.config.sso.seedSecretDumpPath }}"
+    console_redirect_uris = "{{ .Values.sso.config.sso.consoleRedirectURIs }}"
+    login_redirect = "{{ .Values.sso.config.sso.loginRedirect }}"

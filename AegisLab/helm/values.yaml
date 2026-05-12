@@ -327,6 +327,7 @@ configmap:
     runtimeIntake:
       target: ""
   loki:
+    address: ""
     timeout: "10s"
     max_entries: 5000
   otlp:
