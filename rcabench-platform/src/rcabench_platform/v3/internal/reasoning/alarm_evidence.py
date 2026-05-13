@@ -649,9 +649,7 @@ def _build_leg_alarm_accounting(
                 or any(str(rule).startswith(manifest_rule_prefix) for rule in (path.rules or []))
             )
         ]
-        explained_ids = {
-            path.nodes[-1] for path in leg_paths if path.nodes and path.nodes[-1] in alarm_nodes
-        }
+        explained_ids = {path.nodes[-1] for path in leg_paths if path.nodes and path.nodes[-1] in alarm_nodes}
         explained_details = [
             _alarm_detail(nid, graph, evidence_by_name, reason="path_terminal", path_status="explained")
             | {"path_ids": terminal_path_ids.get(nid, [])}
