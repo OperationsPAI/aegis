@@ -1,0 +1,64 @@
+# gateway subchart defaults.
+#
+# Self-contained values for the aegis-gateway microservice. The parent
+# rcabench chart can drive this subchart by setting top-level `gateway:`
+# overrides (Helm maps top-level keys matching a subchart name into that
+# subchart's scope).
+#
+# NOTE on configmap split: the gateway pod's runtime config (rateLimit,
+# cors, trustedHeaderKey) is rendered into the SHARED parent ConfigMap
+# (`<release>-rcabench-config`) under the `[gateway]` section, because
+# the same ConfigMap is consumed by aegis-api / edge-proxy for
+# consumer-side route definitions and we keep one ConfigMap. The parent
+# reads `rateLimit` / `cors` / `trustedHeaderKey` from this subchart's
+# forwarded values; treat those keys as the source of truth.
+
+enabled: true
+replicaCount: 1
+httpPort: 8086
+binaryName: "aegis-gateway"
+
+service:
+  type: ClusterIP
+  # nodePort: 30086   # only honored when service.type == NodePort
+
+# ServiceAccount binding. Empty `name` falls back to `{{ .Release.Name }}-sa`.
+serviceAccount:
+  name: ""
+
+# JWT secret reference. Empty `name` falls back to `{{ .Release.Name }}-auth`.
+auth:
+  jwtSecretRef:
+    name: ""
+    key: "jwt_secret"
+
+# ConfigMap mounted at the config path. Empty `name` falls back to
+# `{{ .Release.Name }}-rcabench-config`.
+configMap:
+  name: ""
+
+# Literal env-var values injected into the container.
+env:
+  ENV: "prod"
+  GOPRIVATE: "github.com/OperationsPAI/chaos-experiment"
+
+# SSO client-side wiring.
+ssoClient:
+  secretFilePath: "/etc/aegis/sso/client-secret"
+
+extraEnv: []
+extraEnvFrom: []
+
+# Gateway-pod-specific runtime knobs. These are read by the PARENT
+# ConfigMap (so all consumer-side route definitions stay in one place);
+# the gateway pod loads them from the shared ConfigMap mount.
+trustedHeaderKey: ""
+rateLimit:
+  rps: 200
+  burst: 400
+cors:
+  allowedOrigins:
+    - http://localhost:3323
+    - http://127.0.0.1:3323
+
+resources: {}

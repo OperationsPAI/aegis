@@ -11,5 +11,8 @@ dependencies:
 - name: blob
   repository: ""
   version: 0.1.0
-digest: sha256:d898aa88662d58ab792a2238fb371e6acbf428b70f0b8f892b2fc76dd5f0ebd8
-generated: "2026-05-13T11:12:13.592680261+01:00"
+- name: gateway
+  repository: ""
+  version: 0.1.0
+digest: sha256:ae958fbd823d9b705d818d0adf874c578de39516a05ea7751b4365272cd65093
+generated: "2026-05-13T11:14:26.823215633+01:00"

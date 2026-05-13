@@ -44,3 +44,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: blob.enabled
+  - name: gateway
+    version: "0.1.0"
+    repository: ""
+    condition: gateway.enabled

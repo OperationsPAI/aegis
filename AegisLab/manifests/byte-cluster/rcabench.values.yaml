@@ -198,11 +198,6 @@ microservices:
       minReplicas: 2
       maxReplicas: 8
       targetCPUUtilizationPercentage: 70
-  # aegis-gateway refuses to start in `env=prod` without a non-empty
-  # `gateway.trusted_header_key`. Set a stable cluster-internal value
-  # (rotate by helm upgrade --set).
-  gateway:
-    trustedHeaderKey: "byte-cluster-trusted-key-please-rotate"
 
 edgeProxy:
   enabled: true
@@ -230,6 +225,12 @@ edgeProxy:
     minReplicas: 2
     maxReplicas: 4
     targetCPUUtilizationPercentage: 70
+
+# aegis-gateway refuses to start in `env=prod` without a non-empty
+# `gateway.trusted_header_key`. Set a stable cluster-internal value
+# (rotate by helm upgrade --set).
+gateway:
+  trustedHeaderKey: "byte-cluster-trusted-key-please-rotate"
 
 # blob microservice (aegis-blob) needs the same S3 credential envFrom so
 # its in-process s3 driver can resolve `access_key_env` / `secret_key_env`

@@ -391,24 +391,8 @@ microservices:
   # `charts/notify/`). Top-level `notify:` block below drives it.
   # NOTE: blob has been extracted into the `blob` subchart (see
   # `charts/blob/`). Top-level `blob:` block below drives it.
-  gateway:
-    enabled: true
-    replicaCount: 1
-    httpPort: 8086
-    binaryName: "aegis-gateway"
-    service:
-      type: ClusterIP
-    # Gateway-level config rendered into `[gateway]` of the configmap.
-    # Routes are derived from release name + microservice ports.
-    trustedHeaderKey: ""
-    rateLimit:
-      rps: 200
-      burst: 400
-    cors:
-      allowedOrigins:
-        - http://localhost:3323
-        - http://127.0.0.1:3323
-    resources: {}
+  # NOTE: gateway has been extracted into the `gateway` subchart (see
+  # `charts/gateway/`). Top-level `gateway:` block below drives it.
   configcenter:
     enabled: true
     replicaCount: 1
@@ -623,6 +607,29 @@ notify:
   binaryName: "aegis-notify"
   service:
     type: ClusterIP
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# gateway subchart values (forwarded into `charts/gateway/`).
+# Parent configmap reads `trustedHeaderKey` / `rateLimit` / `cors` from
+# this block to render the shared `[gateway]` ConfigMap section consumed
+# by the gateway pod and the consumer-side route table.
+# ---------------------------------------------------------------------------
+gateway:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8086
+  binaryName: "aegis-gateway"
+  service:
+    type: ClusterIP
+  trustedHeaderKey: ""
+  rateLimit:
+    rps: 200
+    burst: 400
+  cors:
+    allowedOrigins:
+      - http://localhost:3323
+      - http://127.0.0.1:3323
   resources: {}
 
 # ---------------------------------------------------------------------------

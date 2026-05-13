@@ -114,16 +114,16 @@ data:
     [api_gateway.intake.grpc]
     addr = ":{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}"
 
-    {{- if .Values.microservices.gateway.enabled }}
+    {{- if .Values.gateway.enabled }}
     [gateway]
-    trusted_header_key = "{{ .Values.microservices.gateway.trustedHeaderKey }}"
+    trusted_header_key = "{{ .Values.gateway.trustedHeaderKey }}"
 
     [gateway.rate_limit]
-    rps   = {{ .Values.microservices.gateway.rateLimit.rps | default 200 }}
-    burst = {{ .Values.microservices.gateway.rateLimit.burst | default 400 }}
+    rps   = {{ .Values.gateway.rateLimit.rps | default 200 }}
+    burst = {{ .Values.gateway.rateLimit.burst | default 400 }}
 
     [gateway.cors]
-    allowed_origins   = {{ .Values.microservices.gateway.cors.allowedOrigins | toJson }}
+    allowed_origins   = {{ .Values.gateway.cors.allowedOrigins | toJson }}
     allowed_methods   = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
     allowed_headers   = ["Authorization", "Content-Type", "X-Aegis-Request-Id"]
     allow_credentials = true
