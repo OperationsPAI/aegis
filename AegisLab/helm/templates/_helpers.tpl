@@ -63,7 +63,7 @@ Create the name of the service account to use
 
 {{/*
 Return the proper image name with global registry support
-Usage: {{ include "helm.image" (dict "imageConfig" .Values.images.redis "global" .Values.global) }}
+Usage: {{ include "helm.image" (dict "imageConfig" .Values.images.busybox "global" .Values.global) }}
 */}}
 {{- define "helm.image" -}}
 {{- $registry := .global.imageRegistry -}}

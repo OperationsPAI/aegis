@@ -6,12 +6,6 @@ global:
       tag: "1.0.0"
 
 images:
-  redis:
-    name: pair/redis
-  mysql:
-    name: pair/mysql
-  etcd:
-    name: pair/etcd
   busybox:
     name: pair/busybox
   buildkit:
@@ -21,11 +15,6 @@ images:
 
 buildkit:
   enabled: false
-
-rcabench-frontend:
-  image:
-    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/rcabench-frontend
-    tag: "0.1.2"
 
 harbor:
   enabled: false
@@ -49,15 +38,6 @@ configmap:
 persistence:
   storageType: volcengine
 
-  redis:
-    storageClass: rcabench
-  mysql:
-    storageClass: rcabench
-  etcd:
-    storageClass: rcabench
-  
-
-# mysql subchart overrides (mirrors legacy images.mysql + persistence.mysql).
 mysql:
   image:
     name: pair/mysql

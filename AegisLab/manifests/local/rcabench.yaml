@@ -22,15 +22,6 @@ global:
     jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
     privateKeySecretName: "rcabench-sso-key"
 
-# Enable frontend for full-stack debugging
-rcabench-frontend:
-  enabled: true
-  image:
-    repository: docker.io/opspai/rcabench-frontend
-    tag: latest
-    pullPolicy: IfNotPresent
-
-# Enable buildkit for datapack builds
 buildkit:
   enabled: true
 
@@ -67,9 +58,6 @@ gateway:
     nodePort: 30082
   trustedHeaderKey: "aegis-local-dev-trusted-header-key-not-for-prod"
 
-rcabench-frontend:
-  apiTarget: "http://rcabench-aegis-api:8082"
-
 sso:
   service:
     type: ClusterIP
@@ -99,16 +87,7 @@ persistence:
   storageType: external
   storageClassNames:
     external: standard
-  redis:
-    storageClass: standard
-  mysql:
-    storageClass: standard
-  etcd:
-    storageClass: standard
   containers:
-    accessMode: ReadWriteOnce
-  observability:
-    enabled: true
     accessMode: ReadWriteOnce
   juicefs:
     enabled: true

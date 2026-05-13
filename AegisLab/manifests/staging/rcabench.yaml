@@ -6,27 +6,12 @@ global:
   envMode: "staging"
 
 images:
-  redis:
-    name: library/redis
-  mysql:
-    name: library/mysql
-  etcd:
-    name: library/etcd
   busybox:
     name: library/busybox
   buildkit:
     name: library/buildkit
 buildkit:
   enabled: false
-
-rcabench-frontend:
-  image:
-    repository: 10.10.10.240/library/rcabench-frontend
-
-  service:
-    type: NodePort
-    port: 80
-    nodePort: 32180
 
 harbor:
   enabled: true

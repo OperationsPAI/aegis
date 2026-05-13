@@ -10,18 +10,6 @@ global:
       pullPolicy: IfNotPresent
 
 images:
-  redis:
-    name: pair-diag-cn-guangzhou.cr.volces.com/pair/redis
-    tag: "8.0-M02-alpine3.20"
-    pullPolicy: IfNotPresent
-  mysql:
-    name: pair-diag-cn-guangzhou.cr.volces.com/pair/mysql
-    tag: "8.0.43"
-    pullPolicy: IfNotPresent
-  etcd:
-    name: pair-diag-cn-guangzhou.cr.volces.com/pair/etcd
-    tag: "v3.6.7"
-    pullPolicy: IfNotPresent
   busybox:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox
     tag: "1.35"
@@ -49,9 +37,6 @@ otelCollector:
     pullPolicy: IfNotPresent
 
 buildkit:
-  enabled: false
-
-rcabench-frontend:
   enabled: false
 
 harbor:
@@ -246,14 +231,6 @@ sso:
 
 persistence:
   storageType: volcengine
-  redis:
-    storageClass: rcabench
-  mysql:
-    storageClass: rcabench
-  etcd:
-    storageClass: rcabench
-
-# etcd subchart overrides (mirrors legacy images.etcd + persistence.etcd).
 etcd:
   image:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/etcd

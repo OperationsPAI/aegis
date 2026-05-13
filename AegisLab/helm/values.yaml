@@ -49,26 +49,7 @@ global:
   # NodePort variants without depending on the parent scope.
   envMode: "prod"
 
-servicePorts:
-  redis: 6379
-  mysql: 3306
-  etcd:
-    client: 2379
-    peer: 2380
-
 images:
-  redis:
-    name: redis
-    tag: "8.0-M02-alpine3.20"
-    pullPolicy: IfNotPresent
-  mysql:
-    name: mysql
-    tag: "8.0.43"
-    pullPolicy: IfNotPresent
-  etcd:
-    name: quay.io/coreos/etcd
-    tag: "v3.6.7"
-    pullPolicy: IfNotPresent
   busybox:
     name: busybox
     tag: "1.35"
@@ -121,17 +102,9 @@ buildkit:
       cpu: "100m"
       memory: "128Mi"
 
-rcabench-frontend:
-  enabled: true
-  image:
-    repository: docker.io/opspai/rcabench-frontend
-    tag: latest
-    pullPolicy: Always
-
 harbor:
   enabled: true
   registry: "10.10.10.240"
-  namespace: "library"
   username: "admin"
   password: "Harbor12345"
   certName: "harbor.lab.pj.crt"
@@ -178,7 +151,6 @@ sso:
 configmap:
   name: "rcabench"
   version: "1.0.0"
-  port: 8082
   workspace: "/app"
   # configFile / configDir live under `global.configmap` so subcharts
   # (notify) share the same mount paths.
@@ -330,31 +302,10 @@ persistence:
     juicefs: "juicefs-sc"
     volcengine: "rcabench"
     external: ""
-  redis:
-    enabled: true
-    accessMode: ReadWriteOnce
-    size: 1Gi
-    storageClass: "openebs-hostpath"
-  mysql:
-    enabled: true
-    accessMode: ReadWriteOnce
-    size: 1Gi
-    storageClass: "openebs-hostpath"
-  etcd:
-    enabled: true
-    accessMode: ReadWriteOnce
-    size: 1Gi
-    storageClass: "openebs-hostpath"
   containers:
     enabled: true
     accessMode: ReadWriteMany
     size: 20Gi
-    # storageClass is determined by persistence.storageType
-  observability:
-    enabled: true
-    accessMode: ReadWriteMany
-    size: 50Gi
-    # storageClass is determined by persistence.storageType
   juicefs:
     enabled: true
     size: 1000Gi

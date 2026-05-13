@@ -24,9 +24,6 @@ buildkit:
   enabled: false
 harbor:
   enabled: false
-rcabench-frontend:
-  enabled: false
-
 configmap:
   system:
     env_mode: "prod"
@@ -119,14 +116,6 @@ persistence:
   storageType: external
   storageClassNames:
     external: nfs
-  redis:
-    storageClass: standard
-  mysql:
-    storageClass: standard
-  etcd:
-    storageClass: standard
-  observability:
-    enabled: false
   juicefs:
     enabled: true
     useStaticPV: false
