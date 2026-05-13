@@ -1,0 +1,43 @@
+# configcenter subchart defaults.
+#
+# Self-contained values for the aegis-configcenter microservice. The parent
+# rcabench chart can drive this subchart by setting top-level `configcenter:`
+# overrides (Helm maps top-level keys matching a subchart name into that
+# subchart's scope).
+
+enabled: true
+replicaCount: 1
+httpPort: 8087
+binaryName: "aegis-configcenter"
+
+service:
+  type: ClusterIP
+
+# ServiceAccount binding. Empty `name` falls back to `{{ .Release.Name }}-sa`.
+serviceAccount:
+  name: ""
+
+# JWT secret reference. Empty `name` falls back to `{{ .Release.Name }}-auth`.
+auth:
+  jwtSecretRef:
+    name: ""
+    key: "jwt_secret"
+
+# ConfigMap mounted at the config path. Empty `name` falls back to
+# `{{ .Release.Name }}-rcabench-config`.
+configMap:
+  name: ""
+
+# Literal env-var values injected into the container.
+env:
+  ENV: "prod"
+  GOPRIVATE: "github.com/OperationsPAI/chaos-experiment"
+
+# SSO client-side wiring.
+ssoClient:
+  secretFilePath: "/etc/aegis/sso/client-secret"
+
+extraEnv: []
+extraEnvFrom: []
+
+resources: {}

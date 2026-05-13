@@ -48,3 +48,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: gateway.enabled
+  - name: configcenter
+    version: "0.1.0"
+    repository: ""
+    condition: configcenter.enabled

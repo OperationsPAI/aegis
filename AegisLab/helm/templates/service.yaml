@@ -215,19 +215,5 @@ spec:
 
 {{/* aegis-gateway Service moved to charts/gateway/ subchart. */}}
 
-{{- if .Values.microservices.configcenter.enabled }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-configcenter
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-configcenter
-  ports:
-    - name: http
-      port: {{ .Values.microservices.configcenter.httpPort }}
-      targetPort: http
-{{- end }}
+{{/* aegis-configcenter Service moved to charts/configcenter/ subchart. */}}
 {{/* Aegis SSO Service now rendered by the sso subchart. */}}

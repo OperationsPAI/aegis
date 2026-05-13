@@ -14,5 +14,8 @@ dependencies:
 - name: gateway
   repository: ""
   version: 0.1.0
-digest: sha256:ae958fbd823d9b705d818d0adf874c578de39516a05ea7751b4365272cd65093
-generated: "2026-05-13T11:14:26.823215633+01:00"
+- name: configcenter
+  repository: ""
+  version: 0.1.0
+digest: sha256:54575f1d3fb3fe5e8aff539f137278bb898fa5b0a29ec4e8379a14f1481a0347
+generated: "2026-05-13T11:20:40.31669266+01:00"

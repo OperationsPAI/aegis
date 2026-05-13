@@ -1,0 +1,88 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "configcenter.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "configcenter.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "configcenter.fullname" . }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      containers:
+        - name: configcenter
+          image: {{ include "configcenter.image" . }}
+          imagePullPolicy: "{{ include "configcenter.imagePullPolicy" . }}"
+          args:
+            - {{ .Values.binaryName | default "aegis-configcenter" }}
+            - serve
+            - --conf
+            - {{ dig "configmap" "configDir" "/etc/rcabench" (.Values.global | default dict) }}
+            - --port
+            - {{ .Values.httpPort | quote }}
+          ports:
+            - containerPort: {{ .Values.httpPort }}
+              name: http
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          env:
+            - name: GOPRIVATE
+              value: {{ .Values.env.GOPRIVATE | quote }}
+            - name: ENV
+              value: {{ .Values.env.ENV | quote }}
+            - name: AEGIS_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.jwtSecretRef.name | default (printf "%s-auth" .Release.Name) }}
+                  key: {{ .Values.auth.jwtSecretRef.key | default "jwt_secret" }}
+            {{- with dig "ssoclient" dict (.Values.global | default dict) }}
+            - name: SSO_BASE_URL
+              value: {{ .baseURL | quote }}
+            - name: SSO_JWKS_URL
+              value: {{ .jwksURL | quote }}
+            - name: SSO_CLIENT_ID
+              value: {{ .clientID | quote }}
+            {{- if .clientSecretRef.name }}
+            - name: SSO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .clientSecretRef.name }}
+                  key: {{ .clientSecretRef.key }}
+                  optional: true
+            - name: SSO_CLIENT_SECRET_FILE
+              value: {{ $.Values.ssoClient.secretFilePath | quote }}
+            {{- end }}
+            {{- end }}
+            {{- range .Values.extraEnv }}
+            - {{ toYaml . | nindent 14 | trim }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: {{ dig "configmap" "configFile" "/etc/rcabench/config.prod.toml" (.Values.global | default dict) }}
+              subPath: config.prod.toml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.configMap.name | default (printf "%s-rcabench-config" .Release.Name) }}
+{{- end }}

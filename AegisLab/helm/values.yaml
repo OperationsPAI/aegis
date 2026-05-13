@@ -393,12 +393,9 @@ microservices:
   # `charts/blob/`). Top-level `blob:` block below drives it.
   # NOTE: gateway has been extracted into the `gateway` subchart (see
   # `charts/gateway/`). Top-level `gateway:` block below drives it.
-  configcenter:
-    enabled: true
-    replicaCount: 1
-    httpPort: 8087
-    binaryName: "aegis-configcenter"
-    resources: {}
+  # NOTE: configcenter has been extracted into the `configcenter` subchart
+  # (see `charts/configcenter/`). Top-level `configcenter:` block below
+  # drives it.
 
 persistence:
   # Global storage type setting - applies to containers, logs, and juicefs sections
@@ -630,6 +627,16 @@ gateway:
     allowedOrigins:
       - http://localhost:3323
       - http://127.0.0.1:3323
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# configcenter subchart values (forwarded into `charts/configcenter/`).
+# ---------------------------------------------------------------------------
+configcenter:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8087
+  binaryName: "aegis-configcenter"
   resources: {}
 
 # ---------------------------------------------------------------------------
