@@ -21,7 +21,7 @@ spec:
       labels:
         {{- include "sso.selectorLabels" . | nindent 8 }}
     spec:
-      serviceAccountName: {{ .Release.Name }}-sa
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
       containers:
         - name: sso
           image: {{ include "sso.image" . }}
@@ -38,12 +38,15 @@ spec:
               name: http
           env:
             - name: ENV
-              value: "prod"
+              value: {{ .Values.env.ENV | quote }}
             - name: AEGIS_JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.auth.secretName | default (printf "%s-auth" .Release.Name) }}
                   key: jwt_secret
+            {{- range .Values.extraEnv }}
+            - {{ toYaml . | nindent 14 | trim }}
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /.well-known/jwks.json

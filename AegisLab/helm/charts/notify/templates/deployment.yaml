@@ -13,7 +13,7 @@ spec:
       labels:
         app: {{ include "notify.fullname" . }}
     spec:
-      serviceAccountName: {{ .Release.Name }}-sa
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
       containers:
         - name: notify
           image: {{ include "notify.image" . }}
@@ -40,14 +40,14 @@ spec:
             periodSeconds: 15
           env:
             - name: GOPRIVATE
-              value: "github.com/OperationsPAI/chaos-experiment"
+              value: {{ .Values.env.GOPRIVATE | quote }}
             - name: ENV
-              value: "prod"
+              value: {{ .Values.env.ENV | quote }}
             - name: AEGIS_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-auth
-                  key: jwt_secret
+                  name: {{ .Values.auth.jwtSecretRef.name | default (printf "%s-auth" .Release.Name) }}
+                  key: {{ .Values.auth.jwtSecretRef.key | default "jwt_secret" }}
             {{- with dig "ssoclient" dict (.Values.global | default dict) }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}
@@ -63,8 +63,11 @@ spec:
                   key: {{ .clientSecretRef.key }}
                   optional: true
             - name: SSO_CLIENT_SECRET_FILE
-              value: "/etc/aegis/sso/client-secret"
+              value: {{ $.Values.ssoClient.secretFilePath | quote }}
             {{- end }}
+            {{- end }}
+            {{- range .Values.extraEnv }}
+            - {{ toYaml . | nindent 14 | trim }}
             {{- end }}
           {{- with .Values.resources }}
           resources:
@@ -77,5 +80,5 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ .Release.Name }}-rcabench-config
+            name: {{ .Values.configMap.name | default (printf "%s-rcabench-config" .Release.Name) }}
 {{- end }}

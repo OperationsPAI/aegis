@@ -80,6 +80,19 @@ auth:
   jwtSecret: ""
   secretName: ""
 
+# ServiceAccount binding. Empty `name` falls back to `{{ .Release.Name }}-sa`
+# (preserves legacy rcabench parent behavior).
+serviceAccount:
+  name: ""
+
+# Literal env-var values injected into the container.
+env:
+  ENV: "prod"
+
+# Arbitrary additional env vars appended as-is (list of `{name,value}` /
+# `{name,valueFrom}` maps).
+extraEnv: []
+
 resources:
   requests:
     cpu: 50m
