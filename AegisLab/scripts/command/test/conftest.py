@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Generator
 from pathlib import Path
 
@@ -17,10 +18,21 @@ def setup_environment() -> Generator[ApiClient, None, None]:
     manager = PortForwardManager(env=ENV.TEST)
     manager.start_forwarding()
 
+    # Admin password is seeded by rcabench-sso on first boot and dumped into
+    # `/var/lib/sso/.first-boot-secret.admin` inside the SSO pod's PVC. Set
+    # AEGIS_ADMIN_PASSWORD in your shell from `kubectl exec ... -- cat` before
+    # running the suite — there is no static default credential anymore.
+    admin_password = os.environ.get("AEGIS_ADMIN_PASSWORD")
+    if not admin_password:
+        pytest.skip(
+            "AEGIS_ADMIN_PASSWORD not set; retrieve from "
+            "/var/lib/sso/.first-boot-secret.admin in the rcabench-sso pod"
+        )
+
     with RCABenchClient(
         base_url=manager.get_service_url("rcabench-exp"),
         username="admin",
-        password="admin123",
+        password=admin_password,
     ).get_client() as client:
         yield client
 

@@ -33,7 +33,16 @@ import urllib.request
 SSO_BASE = os.environ.get("SSO_BASE", "http://localhost:8083")
 BACKEND_BASE = os.environ.get("BACKEND_BASE", "http://localhost:8082")
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+# SSO seeds the admin password on first boot and dumps it to
+# /var/lib/sso/.first-boot-secret.admin inside the rcabench-sso pod's PVC.
+# Retrieve it via `kubectl exec ... -- cat /var/lib/sso/.first-boot-secret.admin`
+# and export ADMIN_PASSWORD before running this smoke test. No default.
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+if not ADMIN_PASSWORD:
+    raise SystemExit(
+        "ADMIN_PASSWORD is required; retrieve from "
+        "/var/lib/sso/.first-boot-secret.admin in the rcabench-sso pod"
+    )
 CLIENT_ID = os.environ.get("SSO_CLIENT_ID", "aegis-backend")
 
 MYSQL_CONTAINER = os.environ.get("MYSQL_CONTAINER", "mysql")

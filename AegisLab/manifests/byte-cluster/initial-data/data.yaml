@@ -789,15 +789,13 @@ teams:
     status: 1
 admin_user:
   username: admin
-  email: admin@rcabench.local
-  password: admin123
+  email: admin@aegis.local
   full_name: System Admin
   status: 1
   is_active: true
 users:
   - username: rainysteven1
     email: rainysteven1@rcabench.local
-    password: rainy123
     full_name: Rainy Steven1
     status: 1
     is_active: true
@@ -809,7 +807,6 @@ users:
             role: project_admin
   - username: rainysteven2
     email: rainysteven2@rcabench.local
-    password: rainy123
     full_name: Rainy Steven2
     status: 1
     is_active: true
@@ -821,7 +818,6 @@ users:
             role: project_algo_developer
   - username: rainysteven3
     email: rainysteven3@rcabench.local
-    password: rainy123
     full_name: Rainy Steven3
     status: 1
     is_active: true

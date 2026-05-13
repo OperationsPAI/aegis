@@ -220,10 +220,16 @@ type InitialUserTeam struct {
 	Projects []InitialUserProject `yaml:"projects"`
 }
 
+// InitialDataUser seeds ownership rows in rcabench's own users table.
+// It deliberately has NO password field — login is driven by SSO
+// (`rcabench-sso` seeds its own admin user on first boot and writes the
+// plaintext to `/var/lib/sso/.first-boot-secret.admin` inside its PVC).
+// The rcabench-side users table records project/team ownership; it does
+// not authenticate anyone. Removing the field also drops the old
+// `admin/admin123` myth out of overlay data.yaml files.
 type InitialDataUser struct {
 	Username string               `yaml:"username"`
 	Email    string               `yaml:"email"`
-	Password string               `yaml:"password"`
 	FullName string               `yaml:"full_name"`
 	Status   consts.StatusType    `yaml:"status"`
 	IsActive bool                 `yaml:"is_active"`
@@ -235,7 +241,6 @@ func (u *InitialDataUser) ConvertToDBUser() *model.User {
 	return &model.User{
 		Username: u.Username,
 		Email:    u.Email,
-		Password: u.Password,
 		FullName: u.FullName,
 		Status:   u.Status,
 		IsActive: u.IsActive,
