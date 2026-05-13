@@ -11,11 +11,16 @@
 # Dev mode (auto-rebuild on source change):
 #   skaffold dev -p local
 
-images:
-  rcabench:
-    name: opspai/rcabench
-    tag: local
-    pullPolicy: IfNotPresent
+global:
+  images:
+    rcabench:
+      name: opspai/rcabench
+      tag: local
+      pullPolicy: IfNotPresent
+  ssoclient:
+    baseURL: "http://rcabench-sso:8083"
+    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    privateKeySecretName: "rcabench-sso-key"
 
 # Enable frontend for full-stack debugging
 rcabench-frontend:
@@ -60,23 +65,17 @@ configmap:
     consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
     loginRedirect: "http://localhost:3323/auth/login"
 
-# Mount the sso private key so aegis-api and runtime-worker-service
-# can mint service tokens via jwtkeys.Signer.
-ssoclient:
-  baseURL: "http://rcabench-sso:8083"
-  jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
-  privateKeySecretName: "rcabench-sso-key"
-
 # Single external entry: aegis-gateway on NodePort 30082 fronts the
 # whole stack (sso, notify, blob, aegis-api). The monolith and other
 # microservices stay ClusterIP. Host-side console at localhost:3323
 # proxies all paths to 172.21.0.2:30082.
-microservices:
-  gateway:
-    service:
-      type: NodePort
-      nodePort: 30082
-    trustedHeaderKey: "aegis-local-dev-trusted-header-key-not-for-prod"
+# (gateway extracted to helm/charts/gateway/; ssoclient consumer config
+# moved to global.ssoclient above.)
+gateway:
+  service:
+    type: NodePort
+    nodePort: 30082
+  trustedHeaderKey: "aegis-local-dev-trusted-header-key-not-for-prod"
 
 rcabench-frontend:
   apiTarget: "http://rcabench-aegis-api:8082"

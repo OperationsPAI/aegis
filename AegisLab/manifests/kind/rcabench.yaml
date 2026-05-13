@@ -12,11 +12,12 @@
 #
 # Used by `aegisctl` regression flow; aligns with skills in .claude/skills/.
 
-images:
-  rcabench:
-    name: opspai/rcabench
-    tag: latest
-    pullPolicy: IfNotPresent
+global:
+  images:
+    rcabench:
+      name: opspai/rcabench
+      tag: latest
+      pullPolicy: IfNotPresent
 
 # In-chart observability is redundant when otel-pipeline.yaml runs separately.
 alloy:
@@ -77,8 +78,8 @@ configmap:
     bucket: "shared"
     publicBaseURL: ""
 
-# Wire blob microservice + aegis-api + runtime-worker-service to the
-# rustfs-admin Secret so the s3 driver can resolve BLOB_S3_*_*_KEY env.
+# Wire aegis-api + runtime-worker-service to the rustfs-admin Secret so
+# the in-process s3 driver can resolve BLOB_S3_*_*_KEY env at boot.
 microservices:
   aegisApi:
     extraEnvFrom:
@@ -88,10 +89,13 @@ microservices:
     extraEnvFrom:
       - secretRef:
           name: rustfs-admin
-  blob:
-    extraEnvFrom:
-      - secretRef:
-          name: rustfs-admin
+
+# Blob microservice (extracted to helm/charts/blob/) — same envFrom wiring
+# at the top-level subchart values key.
+blob:
+  extraEnvFrom:
+    - secretRef:
+        name: rustfs-admin
 
 # In-chart rustfs (S3 backend). Kind uses local-path provisioner
 # (storageClass `standard`), not the byte-cluster `rcabench` SC.

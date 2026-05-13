@@ -1,10 +1,11 @@
 global:
   imageRegistry: pair-diag-cn-guangzhou.cr.volces.com
+  images:
+    rcabench:
+      name: pair/rcabench
+      pullPolicy: IfNotPresent
 
 images:
-  rcabench:
-    name: pair/rcabench
-    pullPolicy: IfNotPresent
   redis:
     name: pair/redis
   mysql:

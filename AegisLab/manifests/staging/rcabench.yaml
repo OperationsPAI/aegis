@@ -1,9 +1,10 @@
 global:
   imageRegistry: 10.10.10.240
+  images:
+    rcabench:
+      name: library/rcabench
 
 images:
-  rcabench:
-    name: library/rcabench
   redis:
     name: library/redis
   mysql:
