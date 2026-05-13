@@ -208,47 +208,13 @@ data:
     port = {{ .Values.configmap.otlp.port }}
     max_request_size = {{ .Values.configmap.otlp.max_request_size }}
 
-    {{- with .Values.configmap.blob }}
-
-    [blob.client]
-    mode = {{ .client.mode | default "local" | quote }}
-    {{- if .client.endpoint }}
-    endpoint = {{ .client.endpoint | quote }}
-    {{- end }}
-    {{- range $name, $b := .buckets }}
-
-    [blob.buckets.{{ $name }}]
-    driver = {{ $b.driver | quote }}
-    {{- if eq $b.driver "s3" }}
-    endpoint = {{ $b.endpoint | quote }}
-    bucket = {{ $b.bucket | quote }}
-    region = {{ $b.region | default "us-east-1" | quote }}
-    use_ssl = {{ $b.use_ssl | default false }}
-    path_style = {{ $b.path_style | default true }}
-    {{- if $b.access_key_env }}
-    access_key_env = {{ $b.access_key_env | quote }}
-    {{- end }}
-    {{- if $b.secret_key_env }}
-    secret_key_env = {{ $b.secret_key_env | quote }}
-    {{- end }}
-    {{- end }}
-    {{- if eq $b.driver "localfs" }}
-    root = {{ $b.root | quote }}
-    {{- end }}
-    {{- end }}
-    {{- end }}
-
-    {{- with .Values.configmap.share }}
-
-    [share]
-    bucket               = {{ .bucket | default "shared" | quote }}
-    public_base_url      = {{ .publicBaseURL | default "" | quote }}
-    default_ttl_seconds  = {{ .defaultTtlSeconds | default 604800 | int64 }}
-    max_ttl_seconds      = {{ .maxTtlSeconds | default 2592000 | int64 }}
-    max_views            = {{ .maxViews | default 10000 | int64 }}
-    max_upload_bytes     = {{ .maxUploadBytes | default 1073741824 | int64 }}
-    user_quota_bytes     = {{ .userQuotaBytes | default 10737418240 | int64 }}
-    {{- end }}
+    {{- /*
+      Blob client / buckets / share — schema and rendering live in the
+      `blob` subchart (helm/charts/blob/). Embedding it here keeps the
+      shared config.prod.toml the single artifact every component
+      mounts (aegis-api, runtime-worker, sso, blob itself).
+    */ -}}
+    {{- include "blob.tomlSection" (dict "ctx" . "indent" 4) }}
 ---
 apiVersion: v1
 kind: ConfigMap

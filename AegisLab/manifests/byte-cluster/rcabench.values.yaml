@@ -88,54 +88,6 @@ configmap:
     namespace: "exp"
     init_container:
       busybox_image: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox:1.35
-  blob:
-    # The byte-cluster pack runs aegis-blob as a sidecar microservice and
-    # backs its buckets with the in-cluster rustfs S3 server (see
-    # `rustfs.yaml`). Producers (api-gateway, runtime-worker-service) keep
-    # using the in-process blob client; only the underlying driver changes
-    # to `s3` per bucket. Credentials come from envFrom on the
-    # `rustfs-admin` Secret (see `extraEnvFrom` below).
-    client:
-      mode: "local"
-    buckets:
-      datapack:
-        driver: "s3"
-        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
-        bucket: "aegis-datapack"
-        region: "us-east-1"
-        use_ssl: false
-        path_style: true
-        access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
-        secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
-      execution:
-        driver: "s3"
-        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
-        bucket: "aegis-execution"
-        region: "us-east-1"
-        use_ssl: false
-        path_style: true
-        access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
-        secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
-      shared:
-        # Bucket backing the ephemeral file-sharing feature
-        # (`POST /api/v2/share/upload` + `GET /s/:code`). Lives on the
-        # same rustfs instance as datapack/execution; the `aegis-shared`
-        # bucket is created by the `rustfs-init-bucket` Job.
-        driver: "s3"
-        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
-        bucket: "aegis-shared"
-        region: "us-east-1"
-        use_ssl: false
-        path_style: true
-        access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
-        secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
-  share:
-    bucket: "shared"
-    # Externally-reachable URL prefix for `/s/:code` redirect URLs.
-    # Override with the bound LB EIP once known
-    # (`kubectl -n exp get svc rcabench-edge-proxy`). Empty string is
-    # also fine — the handler then returns relative `/s/<code>` URLs.
-    publicBaseURL: ""
   database:
     clickhouse:
       # Operator-managed ClickStack cluster (chart 2.x). The chart helper
@@ -236,10 +188,62 @@ gateway:
 # its in-process s3 driver can resolve `access_key_env` / `secret_key_env`
 # at boot — without this the blob registry build fails with
 # "s3 driver requires access_key + secret_key (or *_env)".
+#
+# Wire-format blob/share configuration (previously under parent
+# `configmap.blob` / `configmap.share`) now lives directly under the
+# `blob` subchart's values — schema and rendering co-located in
+# `helm/charts/blob/`.
 blob:
   extraEnvFrom:
     - secretRef:
         name: rustfs-admin
+  # The byte-cluster pack runs aegis-blob as a sidecar microservice and
+  # backs its buckets with the in-cluster rustfs S3 server (see
+  # `rustfs.yaml`). Producers (api-gateway, runtime-worker-service) keep
+  # using the in-process blob client; only the underlying driver changes
+  # to `s3` per bucket. Credentials come from envFrom on the
+  # `rustfs-admin` Secret (above).
+  client:
+    mode: "local"
+  buckets:
+    datapack:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-datapack"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+    execution:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-execution"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
+    shared:
+      # Bucket backing the ephemeral file-sharing feature
+      # (`POST /api/v2/share/upload` + `GET /s/:code`). Lives on the
+      # same rustfs instance as datapack/execution; the `aegis-shared`
+      # bucket is created by the `rustfs-init-bucket` Job.
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-shared"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
+  share:
+    bucket: "shared"
+    # Externally-reachable URL prefix for `/s/:code` redirect URLs.
+    # Override with the bound LB EIP once known
+    # (`kubectl -n exp get svc rcabench-edge-proxy`). Empty string is
+    # also fine — the handler then returns relative `/s/<code>` URLs.
+    publicBaseURL: ""
 
 sso:
   image:

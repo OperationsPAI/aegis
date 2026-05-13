@@ -40,43 +40,6 @@ rcabench-frontend:
 configmap:
   system:
     env_mode: "prod"
-  # rustfs-backed buckets for blob / share — matches byte-cluster topology
-  # so the same code path is exercised in kind. Endpoint targets the
-  # chart-rendered `<release>-rustfs` Service in namespace `exp`.
-  blob:
-    client:
-      mode: "local"
-    buckets:
-      datapack:
-        driver: "s3"
-        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
-        bucket: "aegis-datapack"
-        region: "us-east-1"
-        use_ssl: false
-        path_style: true
-        access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
-        secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
-      execution:
-        driver: "s3"
-        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
-        bucket: "aegis-execution"
-        region: "us-east-1"
-        use_ssl: false
-        path_style: true
-        access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
-        secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
-      shared:
-        driver: "s3"
-        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
-        bucket: "aegis-shared"
-        region: "us-east-1"
-        use_ssl: false
-        path_style: true
-        access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
-        secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
-  share:
-    bucket: "shared"
-    publicBaseURL: ""
 
 # Wire aegis-api + runtime-worker-service to the rustfs-admin Secret so
 # the in-process s3 driver can resolve BLOB_S3_*_*_KEY env at boot.
@@ -90,12 +53,49 @@ microservices:
       - secretRef:
           name: rustfs-admin
 
-# Blob microservice (extracted to helm/charts/blob/) — same envFrom wiring
-# at the top-level subchart values key.
+# Blob microservice (extracted to helm/charts/blob/). The same subchart
+# now owns its wire-format configuration: schema (values) and rendering
+# (`blob.tomlSection` helper) live together under `helm/charts/blob/`.
+# rustfs-backed buckets for blob / share — matches byte-cluster topology
+# so the same code path is exercised in kind. Endpoint targets the
+# chart-rendered `<release>-rustfs` Service in namespace `exp`.
 blob:
   extraEnvFrom:
     - secretRef:
         name: rustfs-admin
+  client:
+    mode: "local"
+  buckets:
+    datapack:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-datapack"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+    execution:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-execution"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
+    shared:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-shared"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
+  share:
+    bucket: "shared"
+    publicBaseURL: ""
 
 # In-chart rustfs (S3 backend). Kind uses local-path provisioner
 # (storageClass `standard`), not the byte-cluster `rcabench` SC.

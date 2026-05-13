@@ -58,3 +58,36 @@ extraEnv: []
 extraEnvFrom: []
 
 resources: {}
+
+# ---------------------------------------------------------------------------
+# Wire-format configuration consumed by every component that links the blob
+# client (aegis-api, runtime-worker, sso, and aegis-blob itself).
+#
+# The parent rcabench chart's `config.prod.toml` ConfigMap embeds this block
+# via the `blob.tomlSection` library helper, so schema and rendering live
+# together in this subchart. Standalone consumers (e.g. AgentM) can include
+# the same helper from their own ConfigMap to stay in lockstep.
+#
+# `client.mode` chooses between in-process drivers (`local`) and the remote
+# blob microservice (`remote` + `endpoint`). `buckets.<name>` declares each
+# logical bucket's storage backend; `share` configures the ephemeral
+# file-share feature served out of the `shared` bucket.
+# ---------------------------------------------------------------------------
+
+# Blob client wiring. Empty (`{}`) suppresses the `[blob.client]` section.
+client: {}
+
+# Logical buckets. Empty map (`{}`) suppresses all `[blob.buckets.*]`
+# sections — manifest packs that don't use blob storage stay unchanged.
+buckets: {}
+
+# Ephemeral file-share feature defaults (mirrors the legacy parent
+# `configmap.share` block). Overlays only need to set what differs.
+share:
+  bucket: "shared"
+  publicBaseURL: ""
+  defaultTtlSeconds: 604800
+  maxTtlSeconds: 2592000
+  maxViews: 10000
+  maxUploadBytes: 1073741824
+  userQuotaBytes: 10737418240

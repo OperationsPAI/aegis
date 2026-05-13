@@ -318,14 +318,6 @@ configmap:
   otlp:
     port: 4319
     max_request_size: 5242880
-  share:
-    bucket: "shared"
-    publicBaseURL: ""
-    defaultTtlSeconds: 604800
-    maxTtlSeconds: 2592000
-    maxViews: 10000
-    maxUploadBytes: 1073741824
-    userQuotaBytes: 10737418240
   sso:
     privateKeyPath: "/etc/aegis/sso-private.pem"
     kid: "sso-v1"
