@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	blobclient "aegis/clients/blob"
 	"aegis/platform/config"
 	"aegis/platform/utils"
 
@@ -30,11 +31,16 @@ func NewFilesystemHelmFileStore() *FilesystemHelmFileStore {
 	return &FilesystemHelmFileStore{basePath: config.GetString("jfs.dataset_path")}
 }
 
-// NewHelmFileStore returns the default ContainerFileStorage
-// implementation. Kept for fx wiring and to avoid touching every call
-// site; new code should depend on the ContainerFileStorage interface.
-func NewHelmFileStore() ContainerFileStorage {
-	return NewFilesystemHelmFileStore()
+// NewHelmFileStore returns the ContainerFileStorage implementation
+// selected by `jfs.backend` ("filesystem" — default — or "s3"). The
+// blob client is injected by fx and is unused on the filesystem path.
+func NewHelmFileStore(client blobclient.Client) ContainerFileStorage {
+	switch config.GetString("jfs.backend") {
+	case "s3":
+		return NewS3HelmFileStore(client, config.GetString("jfs.s3.helm_chart_bucket"))
+	default:
+		return NewFilesystemHelmFileStore()
+	}
 }
 
 var _ ContainerFileStorage = (*FilesystemHelmFileStore)(nil)

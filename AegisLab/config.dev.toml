@@ -53,9 +53,22 @@ source_type = "pvc"
 claim_name = "rcabench-juicefs-experiment-storage"
 
 [jfs]
+# backend selects how datapack / helm-chart / dataset artefacts are
+# persisted. "filesystem" (default) writes under dataset_path on a local /
+# network FS; "s3" stores them as objects in the buckets below (typically
+# served by in-cluster rustfs).
+backend = "filesystem"
 container_path = "/home/faydev/workspace/aegis/AegisLab/containers"
 dataset_path = "/tmp/aegislab/dataset"
 experiment_storage_path = "/tmp/aegislab/experiment_storage"
+
+[jfs.s3]
+# Buckets are only consulted when [jfs] backend = "s3". Region /
+# endpoint / credentials come from process env (AWS_* or BLOB_S3_*),
+# which the blob client already reads.
+datapack_bucket = "aegis-datapack"
+helm_chart_bucket = "aegis-helm-chart"
+dataset_bucket = "aegis-dataset"
 
 [buildkit]
 address = "localhost:1234"

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path/filepath"
 
+	blobclient "aegis/clients/blob"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/model"
@@ -30,11 +31,16 @@ func NewFilesystemDatapackFileStore() *FilesystemDatapackFileStore {
 	return &FilesystemDatapackFileStore{basePath: config.GetString("jfs.dataset_path")}
 }
 
-// NewDatapackFileStore returns the default DatasetFileStorage
-// implementation. Kept for fx wiring and to avoid touching every call
-// site; new code should depend on the DatasetFileStorage interface.
-func NewDatapackFileStore() DatasetFileStorage {
-	return NewFilesystemDatapackFileStore()
+// NewDatapackFileStore returns the DatasetFileStorage implementation
+// selected by `jfs.backend` ("filesystem" — default — or "s3"). The
+// blob client is injected by fx and is unused on the filesystem path.
+func NewDatapackFileStore(client blobclient.Client) DatasetFileStorage {
+	switch config.GetString("jfs.backend") {
+	case "s3":
+		return NewS3DatapackFileStore(client, config.GetString("jfs.s3.dataset_bucket"))
+	default:
+		return NewFilesystemDatapackFileStore()
+	}
 }
 
 var _ DatasetFileStorage = (*FilesystemDatapackFileStore)(nil)

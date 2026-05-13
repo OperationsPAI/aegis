@@ -208,9 +208,19 @@ configmap:
           source_type: "pvc"
           claim_name: "rcabench-juicefs-experiment-storage"
   jfs:
+    # backend selects how datapack / helm-chart / dataset artefacts are
+    # persisted. "filesystem" (default) writes under dataset_path;
+    # "s3" stores them as objects in the buckets in s3.* below
+    # (typically served by in-cluster rustfs). Default stays
+    # "filesystem" for backward compatibility — overlays can flip.
+    backend: "filesystem"
     container_path: "/app/containers"
     dataset_path: "/var/lib/rcabench/dataset"
     experiment_storage_path: "/var/lib/rcabench/experiment_storage"
+    s3:
+      datapack_bucket: "aegis-datapack"
+      helm_chart_bucket: "aegis-helm-chart"
+      dataset_bucket: "aegis-dataset"
   buildkit:
     address: ""
   clients:

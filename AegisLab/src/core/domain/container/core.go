@@ -5,12 +5,12 @@ import (
 )
 
 func (r *Repository) CreateContainerCore(container *model.Container, userID int) (*model.Container, error) {
-	service := NewService(r, NewBuildGateway(), NewHelmFileStore(), nil, nil)
+	service := NewService(r, NewBuildGateway(), NewFilesystemHelmFileStore(), nil, nil)
 	return service.createContainerCore(r, container, userID)
 }
 
 func (r *Repository) UploadHelmValueFileFromPath(containerName string, helmConfig *model.HelmConfig, srcFilePath string) error {
-	store := NewHelmFileStore()
+	store := NewFilesystemHelmFileStore()
 	targetPath, err := store.SaveValueFile(containerName, nil, srcFilePath)
 	if err != nil {
 		return err

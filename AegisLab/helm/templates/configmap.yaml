@@ -91,9 +91,15 @@ data:
     login_redirect = "{{ .Values.configmap.sso.loginRedirect }}"
 
     [jfs]
+    backend = "{{ .Values.configmap.jfs.backend | default "filesystem" }}"
     container_path = "{{ .Values.configmap.jfs.container_path }}"
     dataset_path = "{{ .Values.configmap.jfs.dataset_path }}"
     experiment_storage_path = "{{ .Values.configmap.jfs.experiment_storage_path }}"
+
+    [jfs.s3]
+    datapack_bucket = "{{ .Values.configmap.jfs.s3.datapack_bucket | default "aegis-datapack" }}"
+    helm_chart_bucket = "{{ .Values.configmap.jfs.s3.helm_chart_bucket | default "aegis-helm-chart" }}"
+    dataset_bucket = "{{ .Values.configmap.jfs.s3.dataset_bucket | default "aegis-dataset" }}"
 
     {{- if .Values.buildkit.enabled }}
     [buildkit]
