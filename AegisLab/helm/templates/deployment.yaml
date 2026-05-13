@@ -75,12 +75,12 @@ spec:
               readOnly: true
       containers:
         - name: aegis-api
-          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
-          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" .Values.global.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.global.images.rcabench.pullPolicy }}"
           args:
             - {{ .Values.microservices.aegisApi.binaryName | default "aegis-api" }}
             - --conf
-            - {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+            - {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
             - --port
             - {{ .Values.microservices.aegisApi.httpPort | quote }}
           ports:
@@ -117,7 +117,7 @@ spec:
                   name: {{ .Release.Name }}-aegis-environments
                   key: manifest.json
             {{- end }}
-            {{- with .Values.ssoclient }}
+            {{- with .Values.global.ssoclient }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}
             - name: SSO_JWKS_URL
@@ -145,7 +145,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: initial-data
               mountPath: "{{ .Values.configmap.initialization.data_path }}"
@@ -158,7 +158,7 @@ spec:
               mountPath: {{ .Values.configmap.sso.privateKeyPath }}
               subPath: sso-private.pem
               readOnly: true
-            {{- if .Values.ssoclient.clientSecretRef.name }}
+            {{- if .Values.global.ssoclient.clientSecretRef.name }}
             - name: sso-client-secret
               mountPath: /etc/aegis/sso
               readOnly: true
@@ -181,17 +181,17 @@ spec:
             claimName: {{ .Release.Name }}-juicefs-dataset
         - name: sso-private-key
           secret:
-            secretName: {{ default (include "sso.secretName" .) .Values.ssoclient.privateKeySecretName }}
+            secretName: {{ default (include "sso.secretName" .) .Values.global.ssoclient.privateKeySecretName }}
             items:
               - key: sso-private.pem
                 path: sso-private.pem
-        {{- if .Values.ssoclient.clientSecretRef.name }}
+        {{- if .Values.global.ssoclient.clientSecretRef.name }}
         - name: sso-client-secret
           secret:
-            secretName: {{ .Values.ssoclient.clientSecretRef.name }}
+            secretName: {{ .Values.global.ssoclient.clientSecretRef.name }}
             optional: true
             items:
-              - key: {{ .Values.ssoclient.clientSecretRef.key }}
+              - key: {{ .Values.global.ssoclient.clientSecretRef.key }}
                 path: client-secret
         {{- end }}
 ---
@@ -272,12 +272,12 @@ spec:
               readOnly: true
       containers:
         - name: runtime-worker-service
-          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
-          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" .Values.global.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.global.images.rcabench.pullPolicy }}"
           args:
             - {{ .Values.microservices.runtimeWorkerService.binaryName | default "runtime-worker-service" }}
             - --conf
-            - {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+            - {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
           ports:
             - containerPort: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
               name: grpc
@@ -313,7 +313,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: initial-data
               mountPath: "{{ .Values.configmap.initialization.data_path }}"
@@ -335,7 +335,7 @@ spec:
               mountPath: {{ .Values.configmap.sso.privateKeyPath }}
               subPath: sso-private.pem
               readOnly: true
-            {{- if .Values.ssoclient.clientSecretRef.name }}
+            {{- if .Values.global.ssoclient.clientSecretRef.name }}
             - name: sso-client-secret
               mountPath: /etc/aegis/sso
               readOnly: true
@@ -375,17 +375,17 @@ spec:
             claimName: {{ .Release.Name }}-juicefs-experiment-storage
         - name: sso-private-key
           secret:
-            secretName: {{ default (include "sso.secretName" .) .Values.ssoclient.privateKeySecretName }}
+            secretName: {{ default (include "sso.secretName" .) .Values.global.ssoclient.privateKeySecretName }}
             items:
               - key: sso-private.pem
                 path: sso-private.pem
-        {{- if .Values.ssoclient.clientSecretRef.name }}
+        {{- if .Values.global.ssoclient.clientSecretRef.name }}
         - name: sso-client-secret
           secret:
-            secretName: {{ .Values.ssoclient.clientSecretRef.name }}
+            secretName: {{ .Values.global.ssoclient.clientSecretRef.name }}
             optional: true
             items:
-              - key: {{ .Values.ssoclient.clientSecretRef.key }}
+              - key: {{ .Values.global.ssoclient.clientSecretRef.key }}
                 path: client-secret
         {{- end }}
 {{- if .Values.buildkit.enabled }}
@@ -445,7 +445,7 @@ spec:
             privileged: true
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: containers-data
               mountPath: "{{ .Values.configmap.jfs.container_path }}"
@@ -500,13 +500,13 @@ spec:
       serviceAccountName: {{ .Release.Name }}-sa
       containers:
         - name: blob
-          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
-          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" .Values.global.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.global.images.rcabench.pullPolicy }}"
           args:
             - {{ .Values.microservices.blob.binaryName | default "aegis-blob" }}
             - serve
             - --conf
-            - {{ .Values.configmap.configDir | default "/etc/rcabench" }}
+            - {{ .Values.global.configmap.configDir | default "/etc/rcabench" }}
             - --port
             - {{ .Values.microservices.blob.httpPort | quote }}
           ports:
@@ -532,7 +532,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
-            {{- with .Values.ssoclient }}
+            {{- with .Values.global.ssoclient }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}
             - name: SSO_JWKS_URL
@@ -562,7 +562,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: blob-scratch
               mountPath: {{ .Values.microservices.blob.scratchRoot | default "/var/lib/aegis-blob/scratch" }}
@@ -592,13 +592,13 @@ spec:
       serviceAccountName: {{ .Release.Name }}-sa
       containers:
         - name: gateway
-          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
-          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" .Values.global.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.global.images.rcabench.pullPolicy }}"
           args:
             - {{ .Values.microservices.gateway.binaryName | default "aegis-gateway" }}
             - serve
             - --conf
-            - {{ .Values.configmap.configDir | default "/etc/rcabench" }}
+            - {{ .Values.global.configmap.configDir | default "/etc/rcabench" }}
             - --port
             - {{ .Values.microservices.gateway.httpPort | quote }}
           ports:
@@ -624,7 +624,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
-            {{- with .Values.ssoclient }}
+            {{- with .Values.global.ssoclient }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}
             - name: SSO_JWKS_URL
@@ -648,7 +648,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
       volumes:
         - name: config
@@ -674,13 +674,13 @@ spec:
       serviceAccountName: {{ .Release.Name }}-sa
       containers:
         - name: configcenter
-          image: {{ include "helm.image" (dict "imageConfig" .Values.images.rcabench "global" .Values.global) }}
-          imagePullPolicy: "{{ .Values.images.rcabench.pullPolicy }}"
+          image: {{ include "helm.image" (dict "imageConfig" .Values.global.images.rcabench "global" .Values.global) }}
+          imagePullPolicy: "{{ .Values.global.images.rcabench.pullPolicy }}"
           args:
             - {{ .Values.microservices.configcenter.binaryName | default "aegis-configcenter" }}
             - serve
             - --conf
-            - {{ .Values.configmap.configDir | default "/etc/rcabench" }}
+            - {{ .Values.global.configmap.configDir | default "/etc/rcabench" }}
             - --port
             - {{ .Values.microservices.configcenter.httpPort | quote }}
           ports:
@@ -706,7 +706,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
-            {{- with .Values.ssoclient }}
+            {{- with .Values.global.ssoclient }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}
             - name: SSO_JWKS_URL
@@ -730,7 +730,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
       volumes:
         - name: config
@@ -769,7 +769,7 @@ spec:
             - {{ .Values.sso.config.binaryName | default "sso" }}
             - {{ .Values.sso.config.subcommand | default "sso" }}
             - --conf
-            - {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+            - {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
             - --port
             - {{ .Values.sso.service.port | quote }}
           ports:
@@ -799,7 +799,7 @@ spec:
             {{- toYaml .Values.sso.resources | nindent 12 }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
               subPath: config.prod.toml
             - name: private-key
               mountPath: {{ .Values.sso.config.sso.privateKeyPath }}

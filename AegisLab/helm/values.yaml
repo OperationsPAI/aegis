@@ -1,32 +1,40 @@
 # values.yaml
 
-# Global image registry configuration.
+# Global values shared between the parent chart and every subchart.
 #
 # `global.*` keys are propagated by Helm into every subchart's scope.
-# We surface here the bits that extracted subcharts (notify, future
-# sso/blob) need to consume from the parent — shared image, SSO client
-# wiring, config mount paths. Parent templates keep reading their
-# original top-level paths (.Values.images.rcabench etc.) so the diff
-# stays minimal; the duplication is deliberate.
+# These are the bits both the parent templates and extracted subcharts
+# (notify, future sso/blob) consume — shared backend image, SSO client
+# wiring, config mount paths. Parent templates read these directly via
+# `.Values.global.*`; this block is the single source of truth.
 global:
   # Set to empty string to use default public registries
   imageRegistry: ""
-  # Shared backend image (re-used by notify/blob/gateway subcharts).
-  # Mirrored from top-level `images.rcabench` below; keep in sync.
+  # Shared backend image (re-used by parent + notify/blob/gateway subcharts).
   images:
     rcabench:
       name: opspai/rcabench
       tag: latest
       pullPolicy: Always
-  # SSO client config (mirrored from top-level `ssoclient`).
+  # SSO client config consumed by the backend (module/ssoclient).
+  # Rendered as AEGIS_SSO_* env vars on the aegis-api pod so config.toml
+  # template strings can pick them up. Bootstrap client secret is read
+  # from a separate Secret (default: `sso-bootstrap`).
   ssoclient:
+    # Defaults assume `helm install rcabench ...` — chart Service is
+    # `<release>-sso`. Override only for split releases or external SSO.
     baseURL: "http://rcabench-sso:8083"
     jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
     clientID: "aegis-backend"
     clientSecretRef:
       name: "sso-bootstrap"
       key: "aegis-backend-secret"
-  # Config mount paths (mirrored from top-level `configmap`).
+    # Name of a Secret (in the same namespace) containing the SSO private
+    # key. The secret must have a key named `sso-private.pem`. When set,
+    # both aegis-api and runtime-worker-service mount it so jwtkeys.Signer
+    # can mint service tokens.
+    privateKeySecretName: ""
+  # Config mount paths shared by every microservice container.
   configmap:
     configFile: "/etc/rcabench/config.prod.toml"
     configDir: "/etc/rcabench"
@@ -41,10 +49,6 @@ servicePorts:
   prometheus: 9090
 
 images:
-  rcabench:
-    name: opspai/rcabench
-    tag: latest
-    pullPolicy: Always
   redis:
     name: redis
     tag: "8.0-M02-alpine3.20"
@@ -219,24 +223,9 @@ auth:
   # generated on first install and retained across helm upgrades.
   jwtSecret: ""
 
-# SSO client configuration consumed by the backend (module/ssoclient).
-# Rendered as AEGIS_SSO_* env vars on the aegis-api pod so config.toml
-# template strings can pick them up. Bootstrap client secret is read from
-# a separate Secret (default: `sso-bootstrap`).
-ssoclient:
-  # Defaults assume `helm install rcabench ...` — chart Service is
-  # `<release>-sso`. Override only for split releases or external SSO.
-  baseURL: "http://rcabench-sso:8083"
-  jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
-  clientID: "aegis-backend"
-  clientSecretRef:
-    name: "sso-bootstrap"
-    key: "aegis-backend-secret"
-  # Name of a Secret (in the same namespace) containing the SSO private key.
-  # The secret must have a key named `sso-private.pem`. When set, both
-  # aegis-api and runtime-worker-service mount it so jwtkeys.Signer can
-  # mint service tokens.
-  privateKeySecretName: ""
+# SSO client configuration (consumed by aegis-api + notify) lives under
+# `global.ssoclient` above — both parent templates and subcharts read it
+# from there.
 
 # Aegis SSO service deployment (OIDC provider + admin REST).
 # Previously a standalone chart at helm/sso/; merged into rcabench
@@ -324,8 +313,8 @@ configmap:
   version: "1.0.0"
   port: 8082
   workspace: "/app"
-  configFile: "/etc/rcabench/config.prod.toml"
-  configDir: "/etc/rcabench"
+  # configFile / configDir live under `global.configmap` so subcharts
+  # (notify) share the same mount paths.
   system:
     env_mode: "prod"
     timezone: "Asia/Shanghai"

@@ -1,9 +1,8 @@
 global:
   imageRegistry: ""
-  # Mirror of top-level `images.rcabench` so extracted subcharts
-  # (notify, future sso/blob) see the same byte-cluster image. Keep these
-  # two blocks in lockstep; the parent chart's templates still read the
-  # top-level path.
+  # Single source of truth for the shared backend image — consumed by
+  # parent-chart deployments and every extracted subchart (notify, future
+  # sso/blob).
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
@@ -11,10 +10,6 @@ global:
       pullPolicy: IfNotPresent
 
 images:
-  rcabench:
-    name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260513-s3-blob-v2
-    pullPolicy: IfNotPresent
   redis:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/redis
     tag: "8.0-M02-alpine3.20"
