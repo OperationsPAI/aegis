@@ -3,7 +3,7 @@ entries:
   rcabench:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-05-13T10:42:12.010056737Z"
+    created: "2026-05-13T11:54:14.368100853Z"
     dependencies:
     - condition: notify.enabled
       name: notify
@@ -29,11 +29,28 @@ entries:
       name: configcenter
       repository: ""
       version: 0.1.0
+    - alias: otelCollector
+      condition: otelCollector.enabled
+      name: otel-collector
+      repository: ""
+      version: 0.1.0
+    - condition: mysql.enabled
+      name: mysql
+      repository: ""
+      version: 0.1.0
+    - condition: redis.enabled
+      name: redis
+      repository: ""
+      version: 0.1.0
+    - condition: etcd.enabled
+      name: etcd
+      repository: ""
+      version: 0.1.0
     description: A Helm chart for Kubernetes
-    digest: 0174bc68fc32293e2138776960e9625adf160f31377f4d16a19590195e8a927f
+    digest: c680d1cd206810852900fd2f9694fcfdd9310bf80823497c85fb633a3b874459
     name: rcabench
     type: application
     urls:
     - https://operationspai.github.io/aegis/rcabench-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-13T10:42:12.006607277Z"
+generated: "2026-05-13T11:54:14.364302556Z"
