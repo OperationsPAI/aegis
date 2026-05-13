@@ -129,3 +129,45 @@ profiles:
             - host:
                 command: ["just", "test-regression"]
                 os: [darwin, linux]
+
+  - name: byte-cluster
+    activation:
+      - env: ENV_MODE=byte-cluster
+    build:
+      artifacts:
+        - image: docker.io/opspai/rcabench
+          context: ..
+          docker:
+            dockerfile: AegisLab/src/Dockerfile
+            buildArgs:
+              GO_BUILD_TAGS: duckdb_arrow
+              GOPROXY: https://goproxy.cn,direct
+            network: host
+      local:
+        # Docker push to docker.io/opspai; volces pair registry auto-mirrors
+        # within minutes so the cluster's `pair-cn-shanghai.cr.volces.com`
+        # references resolve to the same digest.
+        push: true
+      tagPolicy:
+        gitCommit:
+          variant: AbbrevCommitSha
+    deploy:
+      helm:
+        flags:
+          install: ["--timeout=15m"]
+          upgrade: ["--timeout=15m"]
+        releases:
+          - name: rcabench
+            chartPath: helm
+            namespace: exp
+            createNamespace: true
+            valuesFiles:
+              - manifests/byte-cluster/rcabench.values.yaml
+            setValueTemplates:
+              # The byte-cluster values pin a known-good tag. Skaffold lets
+              # devs override it with their fresh build's git-sha tag.
+              images.rcabench.tag: "{{.IMAGE_TAG}}"
+            setFiles:
+              initialDataFiles.data_yaml: manifests/byte-cluster/initial-data/data.yaml
+              initialDataFiles.otel_demo_yaml: manifests/byte-cluster/initial-data/otel-demo.yaml
+              initialDataFiles.ts_yaml: manifests/byte-cluster/initial-data/ts.yaml

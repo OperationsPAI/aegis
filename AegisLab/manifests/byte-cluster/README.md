@@ -254,6 +254,14 @@ mechanism (TargetAllocator or equivalent).
 
 ## 4. Install AegisLab backend/runtime
 
+> rustfs (in-cluster S3 backend for aegis-blob) is now rendered by the chart
+> itself when `rustfs.enabled: true` — see the `rustfs:` block in
+> `rcabench.values.yaml`. There's no separate `kubectl apply` step. Override
+> `rustfs.auth.rootPassword` and the `rustfs.bucketEnvAliases.*` placeholders
+> for non-dev environments (the defaults are `change-me-in-prod-please`).
+> The bucket-bootstrap Job (`rustfs-init-bucket`) runs as a `post-install` /
+> `post-upgrade` helm hook and creates `aegis-datapack` + `aegis-execution`.
+
 Install the backend chart with this pack's values and seed files. The frontend is deployed separately, so this path no longer depends on the removed remote frontend subchart:
 
 ```bash
@@ -457,6 +465,39 @@ kubectl -n monitoring exec "$POD" -c clickhouse -- clickhouse-client --query "SH
 
 - `--skip-preflight` is currently needed on this Byte cluster even when the target namespace already has matching pods
 - keep `ts1` free from experiments if it is reserved for other users
+
+## 9. Validation log — 2026-05-13 (skaffold + rustfs + aegis-ui)
+
+Full re-validation on context `cd5n1vu2talcp90v8b7r0@…`:
+
+- **Skaffold profile**: `cd AegisLab && ENV_MODE=byte-cluster skaffold run --profile=byte-cluster --status-check=false`
+  builds `docker.io/opspai/rcabench:<git-sha>`, pushes (volces auto-mirrors),
+  and runs `helm upgrade rcabench` with this pack's values + seed files.
+  Tag override flows through `--set images.rcabench.tag=<sha>`. Verified rev 6 deployed,
+  14 pods Running.
+- **rustfs in-chart**: `rustfs.enabled: true` renders Secret/PVC/Deployment/Service
+  + a post-install `rcabench-rustfs-init-bucket` Job that creates `aegis-datapack` +
+  `aegis-execution`. `aegis-api`, `aegis-blob`, `runtime-worker-service` get rustfs
+  S3 creds via `extraEnvFrom: [{ secretRef: { name: rustfs-admin } }]`.
+- **Single edge-proxy entrypoint**: `edgeProxy.enabled: true` is now the chart default.
+  Caddy fronts `aegis-gateway:8086` for HTTP (which federates sso/notify/blob/aegis-api)
+  and `aegis-api:9096` for the gRPC intake. Bind the Volcengine LB EIP to
+  `svc/rcabench-edge-proxy` (not aegis-api) so routine api upgrades don't churn the EIP.
+- **aegis-ui (`/home/ddq/AoyangSpace/aegis-ui`) via the same proxy**:
+
+  ```bash
+  kubectl -n exp port-forward svc/rcabench-edge-proxy 8082:8082 &
+  cd /home/ddq/AoyangSpace/aegis-ui
+  VITE_API_TARGET=http://127.0.0.1:8082 pnpm dev   # serves on :3323
+  ```
+
+  Vite proxies `/api/*`, `/.well-known/*`, `/authorize`, `/login`, `/token`,
+  `/userinfo`, `/v1`, `/api/v2/inbox` (ws), `/api/v2/blob` to the same target —
+  single port, all microservices. Verified `/.well-known/jwks.json` and
+  `/api/v2/auth/login` both 200 through the proxied path.
+- **Admin password**: fresh MySQL → sso auto-seeds admin with a random hex
+  password to `/var/lib/sso/.first-boot-secret.admin` inside the sso pod:
+  `kubectl -n exp exec deploy/rcabench-sso -- cat /var/lib/sso/.first-boot-secret.admin`.
 
 ## Notes
 

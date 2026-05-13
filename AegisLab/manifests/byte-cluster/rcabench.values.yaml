@@ -4,7 +4,7 @@ global:
 images:
   rcabench:
     name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260501-system
+    tag: byte-20260513-s3-blob-v2
     pullPolicy: IfNotPresent
   jaeger:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/jaeger
@@ -77,6 +77,34 @@ configmap:
     namespace: "exp"
     init_container:
       busybox_image: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox:1.35
+  blob:
+    # The byte-cluster pack runs aegis-blob as a sidecar microservice and
+    # backs its buckets with the in-cluster rustfs S3 server (see
+    # `rustfs.yaml`). Producers (api-gateway, runtime-worker-service) keep
+    # using the in-process blob client; only the underlying driver changes
+    # to `s3` per bucket. Credentials come from envFrom on the
+    # `rustfs-admin` Secret (see `extraEnvFrom` below).
+    client:
+      mode: "local"
+    buckets:
+      datapack:
+        driver: "s3"
+        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+        bucket: "aegis-datapack"
+        region: "us-east-1"
+        use_ssl: false
+        path_style: true
+        access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+        secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+      execution:
+        driver: "s3"
+        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+        bucket: "aegis-execution"
+        region: "us-east-1"
+        use_ssl: false
+        path_style: true
+        access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
+        secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
   database:
     clickhouse:
       # Operator-managed ClickStack cluster (chart 2.x). The chart helper
@@ -93,8 +121,28 @@ configmap:
       db: otel
       timezone: UTC
 
+# rustfs (in-cluster S3 backend for aegis-blob). The chart renders the
+# Secret/PVC/Deployment/Service/Job — no separate manifest apply needed.
+# OVERRIDE rustfs.auth.rootPassword + bucketEnvAliases before prod use.
+rustfs:
+  enabled: true
+  image:
+    name: pair-cn-shanghai.cr.volces.com/opspai/rustfs
+    tag: latest
+  initBuckets:
+    image:
+      name: pair-cn-shanghai.cr.volces.com/opspai/mc
+      tag: latest
+
 microservices:
   aegisApi:
+    # Inject rustfs S3 credentials so the in-process blob client's s3 driver
+    # can read BLOB_S3_*_ACCESS_KEY / BLOB_S3_*_SECRET_KEY at startup. The
+    # chart gates this on the field being non-empty so other manifest packs
+    # (kind, prod, cn_mirror) are unaffected.
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
     service:
       type: ClusterIP
       # LB-binding annotations live on the edge-proxy Service (see
@@ -103,6 +151,35 @@ microservices:
       # object the Volcengine LB controller cares about, so the bound
       # EIP stays stable across `helm upgrade rcabench`.
       annotations: {}
+  runtimeWorkerService:
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+  # blob microservice (aegis-blob) needs the same S3 credential envFrom so
+  # its in-process s3 driver can resolve `access_key_env` / `secret_key_env`
+  # at boot — without this the blob registry build fails with
+  # "s3 driver requires access_key + secret_key (or *_env)".
+  blob:
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
+  # aegis-gateway refuses to start in `env=prod` without a non-empty
+  # `gateway.trusted_header_key`. Set a stable cluster-internal value
+  # (rotate by helm upgrade --set).
+  gateway:
+    trustedHeaderKey: "byte-cluster-trusted-key-please-rotate"
 
 edgeProxy:
   enabled: true
@@ -117,39 +194,30 @@ edgeProxy:
     # live ONLY on the live cluster Service, never in this values.yaml, so
     # `helm upgrade` is a no-op against them. See aegis#335 / aegis#336.
     annotations: {}
+  # CPU requests are required for HPA targetCPUUtilizationPercentage to work.
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
+      cpu: 200m
       memory: 256Mi
-    # CPU requests are required for HPA targetCPUUtilizationPercentage to work.
-    resources:
-      requests:
-        cpu: 200m
-        memory: 256Mi
-      limits:
-        cpu: "1"
-        memory: 1Gi
-    autoscaling:
-      enabled: true
-      minReplicas: 2
-      maxReplicas: 4
-      targetCPUUtilizationPercentage: 70
-  runtimeWorkerService:
-    resources:
-      requests:
-        cpu: 500m
-        memory: 512Mi
-      limits:
-        cpu: "2"
-        memory: 2Gi
-    autoscaling:
-      enabled: true
-      minReplicas: 2
-      maxReplicas: 8
-      targetCPUUtilizationPercentage: 70
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
+sso:
+  image:
+    # SSO microservice runs the same `opspai/rcabench` image (different
+    # entrypoint). Pin to the volces mirror + matching tag so the byte
+    # cluster doesn't try docker.io (unreachable from this VPC).
+    repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
+    tag: byte-20260513-s3-blob-v2
+    pullPolicy: IfNotPresent
+  persistence:
+    storageClass: rcabench
 
 persistence:
   storageType: volcengine

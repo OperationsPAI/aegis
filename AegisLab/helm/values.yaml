@@ -77,7 +77,13 @@ images:
 # leave `microservices.aegisApi.service.annotations` empty so aegis-api
 # upgrades stop churning the EIP.
 edgeProxy:
-  enabled: false
+  # Caddy fronting aegis-api + intake-grpc. Enabled by default so every pack
+  # (kind / local / byte-cluster / prod) presents the same external surface:
+  # consumers point at `<release>-edge-proxy:<port>` rather than the
+  # aegis-api Service. Byte-cluster anchors a Volcengine LB EIP on this
+  # Service (see edgeProxy.service.annotations override) so routine
+  # aegis-api upgrades don't churn the LB.
+  enabled: true
   replicaCount: 1
   service:
     type: ClusterIP
@@ -202,8 +208,10 @@ auth:
 # template strings can pick them up. Bootstrap client secret is read from
 # a separate Secret (default: `sso-bootstrap`).
 ssoclient:
-  baseURL: "http://sso:8083"
-  jwksURL: "http://sso:8083/.well-known/jwks.json"
+  # Defaults assume `helm install rcabench ...` — chart Service is
+  # `<release>-sso`. Override only for split releases or external SSO.
+  baseURL: "http://rcabench-sso:8083"
+  jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
   clientID: "aegis-backend"
   clientSecretRef:
     name: "sso-bootstrap"
@@ -239,13 +247,13 @@ sso:
     subcommand: "sso"
     database:
       mysql:
-        host: "mysql"
+        host: "rcabench-mysql"
         port: "3306"
         user: "root"
         password: "yourpassword"
         db: "rcabench"
     redis:
-      host: "redis:6379"
+      host: "rcabench-redis:6379"
     jaeger:
       endpoint: ""
     k8s:
@@ -253,9 +261,9 @@ sso:
       serviceAccount:
         name: ""
     sso:
-      issuer: "http://sso:8083"
-      baseURL: "http://sso:8083"
-      jwksURL: "http://sso:8083/.well-known/jwks.json"
+      issuer: "http://rcabench-sso:8083"
+      baseURL: "http://rcabench-sso:8083"
+      jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
       kid: "sso-v1"
       clientID: "aegis-backend"
       backendRedirectURI: ""
@@ -367,12 +375,25 @@ configmap:
   otlp:
     port: 4319
     max_request_size: 5242880
+  share:
+    bucket: "shared"
+    publicBaseURL: ""
+    defaultTtlSeconds: 604800
+    maxTtlSeconds: 2592000
+    maxViews: 10000
+    maxUploadBytes: 1073741824
+    userQuotaBytes: 10737418240
   sso:
     privateKeyPath: "/etc/aegis/sso-private.pem"
     kid: "sso-v1"
-    issuer: "http://172.21.0.2:30083"
-    baseURL: "http://172.21.0.2:30083"
-    jwksURL: "http://rcabench-aegis-sso:8083/.well-known/jwks.json"
+    # In-cluster defaults — kind / byte-cluster / prod all use the chart-rendered
+    # `<release>-sso` Service. The legacy kind-NodePort host (172.21.0.2:30083)
+    # was kept so the host-side console could reach SSO during dev with
+    # `make local-debug` + kind; that flow now uses the chart edge-proxy
+    # instead, so the cluster-internal hostname is the right default.
+    issuer: "http://rcabench-sso:8083"
+    baseURL: "http://rcabench-sso:8083"
+    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
     clientID: "aegis-backend"
     clientSecret: ""
     # Defaults to http://<release-name>-aegis-api:<port>/auth/oidc/callback.
@@ -439,6 +460,11 @@ microservices:
     scratchRoot: "/var/lib/aegis-blob/scratch"
     service:
       type: ClusterIP
+    # Extra envFrom for the blob microservice. Byte-cluster wires the
+    # rustfs-admin Secret here so the in-process s3 driver can resolve
+    # BLOB_S3_*_ACCESS_KEY / *_SECRET_KEY at boot. Empty default keeps
+    # other packs (kind, prod, cn_mirror) rendering unchanged.
+    extraEnvFrom: []
     resources: {}
   gateway:
     enabled: true
@@ -574,3 +600,62 @@ aegisEnvironments:
     # Each entry: { id, label, baseUrl, badge }.
     # `badge` is one of: default | info | warning | danger.
     environments: []
+
+# rustfs — in-cluster S3-compatible storage server backing aegis-blob's s3
+# driver. Off by default so existing kind/prod/cn_mirror packs that pre-date
+# the s3 driver render identically. Byte-cluster pack flips `enabled: true`.
+#
+# When enabled, this chart renders:
+#   - Secret `rustfs-admin` (creds + per-bucket env aliases). Use
+#     `rustfs.auth.existingSecret` to pin a pre-created Secret instead.
+#   - PVC `rustfs-data` (kept on uninstall via `helm.sh/resource-policy`)
+#   - Deployment `rustfs` (single replica, Recreate strategy)
+#   - Service `rustfs` (ClusterIP, ports 9000 s3 / 9001 console)
+#   - Job `rustfs-init-bucket` as a post-install/upgrade hook that creates
+#     each bucket in `rustfs.initBuckets.names` via `mc mb -p`. Idempotent.
+rustfs:
+  enabled: false
+  image:
+    name: docker.io/opspai/rustfs
+    tag: latest
+    pullPolicy: IfNotPresent
+  auth:
+    # When set, the chart skips the Secret render and points envFrom at this
+    # name instead. Otherwise the chart renders `rustfs-admin` from rootUser
+    # / rootPassword / bucketEnvAliases below.
+    existingSecret: ""
+    rootUser: "aegis-rustfs"
+    # OVERRIDE in production — the default value is a placeholder.
+    rootPassword: "change-me-in-prod-please"
+  persistence:
+    storageClass: "rcabench"
+    size: 200Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+  extraEnv: []
+  # Buckets to create on install. The init Job calls `mc mb -p` for each.
+  initBuckets:
+    enabled: true
+    names:
+      - aegis-datapack
+      - aegis-execution
+      - aegis-shared
+    image:
+      name: docker.io/opspai/mc
+      tag: latest
+      pullPolicy: IfNotPresent
+  # Optional per-bucket env aliases written into the rustfs-admin Secret.
+  # Producers reference these names through `configmap.blob.buckets.<x>.{access_key_env,secret_key_env}`.
+  # Keep the values in sync with rootUser/rootPassword (default does).
+  bucketEnvAliases:
+    BLOB_S3_DATAPACK_ACCESS_KEY: "aegis-rustfs"
+    BLOB_S3_DATAPACK_SECRET_KEY: "change-me-in-prod-please"
+    BLOB_S3_EXECUTION_ACCESS_KEY: "aegis-rustfs"
+    BLOB_S3_EXECUTION_SECRET_KEY: "change-me-in-prod-please"
+    BLOB_S3_SHARED_ACCESS_KEY: "aegis-rustfs"
+    BLOB_S3_SHARED_SECRET_KEY: "change-me-in-prod-please"

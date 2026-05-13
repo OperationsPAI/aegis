@@ -12,9 +12,19 @@ data:
         admin off
         auto_https off
     }
+    # HTTP: front aegis-gateway (the L7 router that federates sso / notify /
+    # blob / aegis-api). One port, every microservice reachable through it.
+    # When `microservices.gateway.enabled=false`, fall back to aegis-api so
+    # this proxy still works on minimal installs.
     :{{ .Values.microservices.aegisApi.httpPort }} {
+        {{- if .Values.microservices.gateway.enabled }}
+        reverse_proxy {{ .Release.Name }}-gateway:{{ .Values.microservices.gateway.httpPort | default 8086 }}
+        {{- else }}
         reverse_proxy {{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}
+        {{- end }}
     }
+    # gRPC intake stays direct: gateway is HTTP-only, intake speaks raw gRPC
+    # to aegis-api on a dedicated port.
     :{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }} {
         reverse_proxy h2c://{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
     }

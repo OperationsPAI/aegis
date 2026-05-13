@@ -299,6 +299,11 @@ func (r *Repository) batchCreateOrFindParameterConfigs(params []model.ParameterC
 			params[i].SystemIDKey = *params[i].SystemID
 		}
 	}
+	// Caller (service.createContainerVersions) is responsible for deduping
+	// across container_versions before invoking — `params` here must already
+	// be unique on (system_id_key, config_key, type, category). Re-deduping
+	// inside the repo would hide caller bugs where the cross-version
+	// dedup-then-relation-build invariant has broken.
 	if err := r.db.Clauses(clause.OnConflict{OnConstraint: "idx_unique_config", DoNothing: true}).Create(&params).Error; err != nil {
 		return fmt.Errorf("failed to batch create parameter configs: %w", err)
 	}

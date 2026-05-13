@@ -19,6 +19,7 @@ import (
 	"aegis/boot"
 	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/storage/blob"
+	"aegis/crud/storage/share"
 	"aegis/clients/sso"
 	"aegis/platform/router"
 
@@ -38,6 +39,7 @@ func Options(confPath, port string) fx.Option {
 		app.WithRemoteVerifier(),
 		ssoclient.Module,
 		blob.Module,
+		share.Module,
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),

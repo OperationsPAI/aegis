@@ -135,6 +135,10 @@ spec:
               value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
+          {{- with .Values.microservices.aegisApi.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.microservices.aegisApi.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -150,12 +154,10 @@ spec:
               mountPath: "{{ .Values.configmap.jfs.container_path }}"
             - name: dataset
               mountPath: "{{ .Values.configmap.jfs.dataset_path }}"
-            {{- if .Values.ssoclient.privateKeySecretName }}
             - name: sso-private-key
               mountPath: {{ .Values.configmap.sso.privateKeyPath }}
               subPath: sso-private.pem
               readOnly: true
-            {{- end }}
             {{- if .Values.ssoclient.clientSecretRef.name }}
             - name: sso-client-secret
               mountPath: /etc/aegis/sso
@@ -177,14 +179,12 @@ spec:
         - name: dataset
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-juicefs-dataset
-        {{- if .Values.ssoclient.privateKeySecretName }}
         - name: sso-private-key
           secret:
-            secretName: {{ .Values.ssoclient.privateKeySecretName }}
+            secretName: {{ default (include "sso.secretName" .) .Values.ssoclient.privateKeySecretName }}
             items:
               - key: sso-private.pem
                 path: sso-private.pem
-        {{- end }}
         {{- if .Values.ssoclient.clientSecretRef.name }}
         - name: sso-client-secret
           secret:
@@ -303,6 +303,10 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
+          {{- with .Values.microservices.runtimeWorkerService.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.microservices.runtimeWorkerService.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -327,12 +331,10 @@ spec:
               mountPath: "{{ .Values.configmap.jfs.dataset_path }}"
             - name: experiment-storage
               mountPath: "{{ .Values.configmap.jfs.experiment_storage_path }}"
-            {{- if .Values.ssoclient.privateKeySecretName }}
             - name: sso-private-key
               mountPath: {{ .Values.configmap.sso.privateKeyPath }}
               subPath: sso-private.pem
               readOnly: true
-            {{- end }}
             {{- if .Values.ssoclient.clientSecretRef.name }}
             - name: sso-client-secret
               mountPath: /etc/aegis/sso
@@ -371,14 +373,12 @@ spec:
         - name: experiment-storage
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-juicefs-experiment-storage
-        {{- if .Values.ssoclient.privateKeySecretName }}
         - name: sso-private-key
           secret:
-            secretName: {{ .Values.ssoclient.privateKeySecretName }}
+            secretName: {{ default (include "sso.secretName" .) .Values.ssoclient.privateKeySecretName }}
             items:
               - key: sso-private.pem
                 path: sso-private.pem
-        {{- end }}
         {{- if .Values.ssoclient.clientSecretRef.name }}
         - name: sso-client-secret
           secret:
@@ -633,6 +633,10 @@ spec:
             {{- end }}
             - name: BLOB_BUCKETS_SCRATCH_ROOT
               value: "{{ .Values.microservices.blob.scratchRoot | default "/var/lib/aegis-blob/scratch" }}"
+          {{- with .Values.microservices.blob.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.microservices.blob.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

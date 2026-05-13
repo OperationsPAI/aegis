@@ -22,7 +22,13 @@ type BucketConfig struct {
 	Region       string
 	AccessKeyEnv string
 	SecretKeyEnv string
-	Bucket       string
+	// AccessKey / SecretKey allow embedding credentials directly in the
+	// TOML (dev only — prefer *Env in shared deploys).
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	UseSSL    bool
+	PathStyle bool
 
 	// policy
 	MaxObjectBytes      int64
@@ -119,7 +125,11 @@ func parseBucketConfig(name string) (BucketConfig, error) {
 		Region:              viper.GetString(prefix + ".region"),
 		AccessKeyEnv:        viper.GetString(prefix + ".access_key_env"),
 		SecretKeyEnv:        viper.GetString(prefix + ".secret_key_env"),
+		AccessKey:           viper.GetString(prefix + ".access_key"),
+		SecretKey:           viper.GetString(prefix + ".secret_key"),
 		Bucket:              viper.GetString(prefix + ".bucket"),
+		UseSSL:              viper.GetBool(prefix + ".use_ssl"),
+		PathStyle:           viper.GetBool(prefix + ".path_style"),
 		MaxObjectBytes:      viper.GetInt64(prefix + ".max_object_bytes"),
 		AllowedContentTypes: viper.GetStringSlice(prefix + ".allowed_content_types"),
 		PublicRead:          viper.GetBool(prefix + ".public_read"),

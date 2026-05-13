@@ -37,5 +37,25 @@ v1 supports two drivers:
 
 - `localfs` — bytes on disk; presign mints HMAC-signed token URLs
   served by `/raw/:token` on this binary.
-- `s3` — stub returning `ErrDriverNotImplemented`. Real
-  implementation lands in Phase B (see RFC).
+- `s3` — any S3-compatible backend (RustFS, MinIO, AWS, Aliyun OSS)
+  via `minio-go`. Presign returns native S3 V4 URLs (no `/raw/:token`).
+  The driver verifies the remote bucket exists at boot and creates it
+  if missing (idempotent). Default presign TTL is 15 minutes,
+  clamped to 7 days.
+
+  ```toml
+  [blob.buckets.datapack]
+  driver = "s3"
+  endpoint = "http://rustfs.exp.svc:9000"
+  access_key = "..."          # or access_key_env = "AEGIS_BLOB_S3_AK"
+  secret_key = "..."          # or secret_key_env = "AEGIS_BLOB_S3_SK"
+  bucket = "aegis-datapack"   # remote bucket; defaults to the logical bucket name
+  region = "us-east-1"
+  use_ssl = false              # also auto-true when endpoint starts with https://
+  path_style = true            # required for rustfs / minio
+  max_object_bytes = 5_368_709_120
+  retention_days = 30
+  ```
+
+  Single-shot `PutObject` covers objects up to ~5 GiB; larger objects
+  go through minio-go's automatic multipart upload.

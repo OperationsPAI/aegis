@@ -1,0 +1,165 @@
+{{- if .Values.rustfs.enabled }}
+# rustfs — S3-compatible storage server backing aegis-blob's s3 driver.
+#
+# Single replica + RWO PVC + Recreate strategy: two pods can't share one
+# RWO volume, so we never run a second one. Override credentials via
+# `rustfs.auth.*` or pre-create a Secret matching `rustfs.auth.existingSecret`.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "rustfs.secretName" . }}
+  namespace: {{ .Values.configmap.k8s.namespace }}
+  annotations:
+    "helm.sh/resource-policy": keep
+type: Opaque
+stringData:
+  RUSTFS_ROOT_USER: {{ .Values.rustfs.auth.rootUser | quote }}
+  RUSTFS_ROOT_PASSWORD: {{ .Values.rustfs.auth.rootPassword | quote }}
+  # Convenience aliases consumed via envFrom by api-gateway and runtime-worker.
+  # The blob s3 driver reads these via `access_key_env` / `secret_key_env`
+  # bucket settings in the configmap.
+  {{- range $name, $cfg := .Values.rustfs.bucketEnvAliases }}
+  {{ $name }}: {{ $cfg | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-rustfs-data
+  namespace: {{ .Values.configmap.k8s.namespace }}
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.rustfs.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.rustfs.persistence.size | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-rustfs
+  namespace: {{ .Values.configmap.k8s.namespace }}
+  labels:
+    app: {{ .Release.Name }}-rustfs
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-rustfs
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-rustfs
+    spec:
+      containers:
+        - name: rustfs
+          image: "{{ .Values.rustfs.image.name }}:{{ .Values.rustfs.image.tag }}"
+          imagePullPolicy: {{ .Values.rustfs.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "rustfs.secretName" . }}
+          env:
+            - name: RUSTFS_VOLUMES
+              value: /data
+            - name: RUSTFS_ADDRESS
+              value: ":9000"
+            - name: RUSTFS_CONSOLE_ADDRESS
+              value: ":9001"
+            {{- with .Values.rustfs.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: s3
+              containerPort: 9000
+            - name: console
+              containerPort: 9001
+          readinessProbe:
+            tcpSocket:
+              port: s3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: s3
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.rustfs.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-rustfs-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-rustfs
+  namespace: {{ .Values.configmap.k8s.namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}-rustfs
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: s3
+    - name: console
+      port: 9001
+      targetPort: console
+{{- if .Values.rustfs.initBuckets.enabled }}
+---
+# One-shot bucket bootstrap. `mc mb -p` is idempotent so re-applying is safe.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-rustfs-init-bucket
+  namespace: {{ .Values.configmap.k8s.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-rustfs-init-bucket
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: "{{ .Values.rustfs.initBuckets.image.name }}:{{ .Values.rustfs.initBuckets.image.tag }}"
+          imagePullPolicy: {{ .Values.rustfs.initBuckets.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "rustfs.secretName" . }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              for i in $(seq 1 60); do
+                if mc alias set local http://{{ .Release.Name }}-rustfs.{{ .Values.configmap.k8s.namespace }}.svc.cluster.local:9000 \
+                    "$RUSTFS_ROOT_USER" "$RUSTFS_ROOT_PASSWORD" >/dev/null 2>&1; then
+                  break
+                fi
+                echo "waiting for rustfs ($i/60)..."
+                sleep 5
+              done
+              mc alias set local http://{{ .Release.Name }}-rustfs.{{ .Values.configmap.k8s.namespace }}.svc.cluster.local:9000 \
+                "$RUSTFS_ROOT_USER" "$RUSTFS_ROOT_PASSWORD"
+              {{- range .Values.rustfs.initBuckets.names }}
+              mc mb -p local/{{ . }} || true
+              {{- end }}
+              mc ls local/
+{{- end }}
+{{- end }}

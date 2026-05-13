@@ -212,3 +212,10 @@ Returns: JSON array of system helm configurations
 {{- end -}}
 {{- $systemConfigs | toJson -}}
 {{- end -}}
+
+{{/*
+rustfs Secret name (rustfs-admin by default, overridable for shared-secret setups).
+*/}}
+{{- define "rustfs.secretName" -}}
+{{- default "rustfs-admin" .Values.rustfs.auth.existingSecret -}}
+{{- end -}}

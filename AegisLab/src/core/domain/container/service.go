@@ -639,10 +639,24 @@ func (s *Service) createContainerVersionsCore(repo *Repository, versions []model
 		return versions, nil
 	}
 
-	helmValues := make([]model.ParameterConfig, len(helmValuesWithIdx))
-	for i, item := range helmValuesWithIdx {
-		helmValues[i] = item.value
-		helmValues[i].SystemID = systemID
+	// parameter_configs is per-system (uniqueIndex on system_id, key, type,
+	// category). Multiple container_versions of the same system can declare
+	// the same parameter — they're meant to share one parameter_configs row
+	// and tie back to it through helm_config_values. Dedupe by the unique-
+	// index tuple before insert so the SQL batch doesn't carry duplicates
+	// (also avoids MySQL 8 "Error 1869: Auto-increment value in UPDATE
+	// conflicts with internally generated values" on ODKU + autoinc).
+	helmValues := make([]model.ParameterConfig, 0, len(helmValuesWithIdx))
+	seenParam := make(map[string]struct{}, len(helmValuesWithIdx))
+	for _, item := range helmValuesWithIdx {
+		v := item.value
+		v.SystemID = systemID
+		k := paramConfigMapKey(systemID, v.Key, int(v.Type), int(v.Category))
+		if _, ok := seenParam[k]; ok {
+			continue
+		}
+		seenParam[k] = struct{}{}
+		helmValues = append(helmValues, v)
 	}
 
 	if err := repo.batchCreateOrFindParameterConfigs(helmValues); err != nil {
@@ -654,17 +668,16 @@ func (s *Service) createContainerVersionsCore(repo *Repository, versions []model
 		return nil, fmt.Errorf("failed to list helm parameter configs: %w", err)
 	}
 
-	// DEBUG: log what we got back vs what we expected
-	if len(actualHelmValues) != len(helmValuesWithIdx) {
-		expectedKeys := make([]string, 0, len(helmValuesWithIdx))
-		for _, item := range helmValuesWithIdx {
-			expectedKeys = append(expectedKeys, paramConfigMapKey(systemID, item.value.Key, int(item.value.Type), int(item.value.Category)))
+	if len(actualHelmValues) != len(helmValues) {
+		expectedKeys := make([]string, 0, len(helmValues))
+		for _, v := range helmValues {
+			expectedKeys = append(expectedKeys, paramConfigMapKey(systemID, v.Key, int(v.Type), int(v.Category)))
 		}
 		gotKeys := make([]string, 0, len(actualHelmValues))
 		for _, cfg := range actualHelmValues {
 			gotKeys = append(gotKeys, paramConfigMapKey(cfg.SystemID, cfg.Key, int(cfg.Type), int(cfg.Category)))
 		}
-		return nil, fmt.Errorf("helm parameter config count mismatch: expected %d (%v), got %d (%v)", len(helmValuesWithIdx), expectedKeys, len(actualHelmValues), gotKeys)
+		return nil, fmt.Errorf("helm parameter config count mismatch: expected %d (%v), got %d (%v)", len(helmValues), expectedKeys, len(actualHelmValues), gotKeys)
 	}
 
 	configMap := make(map[string]int, len(actualHelmValues))

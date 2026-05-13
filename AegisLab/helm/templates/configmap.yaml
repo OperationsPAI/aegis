@@ -196,6 +196,36 @@ data:
     [otlp_receiver]
     port = {{ .Values.configmap.otlp.port }}
     max_request_size = {{ .Values.configmap.otlp.max_request_size }}
+
+    {{- with .Values.configmap.blob }}
+
+    [blob.client]
+    mode = {{ .client.mode | default "local" | quote }}
+    {{- if .client.endpoint }}
+    endpoint = {{ .client.endpoint | quote }}
+    {{- end }}
+    {{- range $name, $b := .buckets }}
+
+    [blob.buckets.{{ $name }}]
+    driver = {{ $b.driver | quote }}
+    {{- if eq $b.driver "s3" }}
+    endpoint = {{ $b.endpoint | quote }}
+    bucket = {{ $b.bucket | quote }}
+    region = {{ $b.region | default "us-east-1" | quote }}
+    use_ssl = {{ $b.use_ssl | default false }}
+    path_style = {{ $b.path_style | default true }}
+    {{- if $b.access_key_env }}
+    access_key_env = {{ $b.access_key_env | quote }}
+    {{- end }}
+    {{- if $b.secret_key_env }}
+    secret_key_env = {{ $b.secret_key_env | quote }}
+    {{- end }}
+    {{- end }}
+    {{- if eq $b.driver "localfs" }}
+    root = {{ $b.root | quote }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

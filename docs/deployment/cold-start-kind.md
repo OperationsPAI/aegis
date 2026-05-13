@@ -197,7 +197,7 @@ sockshop, hs, sn, media, teastore) with `Builtin=true`.
 ## 7. aegisctl + first inject
 
 ```bash
-kubectl port-forward -n exp svc/rcabench-api-gateway 8082:8082 &
+kubectl port-forward -n exp svc/rcabench-edge-proxy 8082:8082 &
 
 echo admin123 | /tmp/aegisctl auth login \
   --server http://localhost:8082 --username admin --password-stdin
