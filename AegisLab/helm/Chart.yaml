@@ -65,3 +65,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: redis.enabled
+  - name: etcd
+    version: "0.1.0"
+    repository: ""
+    condition: etcd.enabled

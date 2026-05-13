@@ -1,0 +1,48 @@
+{{- if .Values.enabled }}
+# etcd Headless Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "etcd.headlessName" . }}
+spec:
+  clusterIP: None
+  selector:
+    app: {{ include "etcd.statefulsetName" . }}
+  ports:
+    - name: client
+      port: {{ .Values.service.clientPort | default 2379 }}
+      targetPort: {{ .Values.service.clientPort | default 2379 }}
+    - name: peer
+      port: {{ .Values.service.peerPort | default 2380 }}
+      targetPort: {{ .Values.service.peerPort | default 2380 }}
+
+---
+# etcd External Service
+{{- $envMode := ((.Values.global | default dict).envMode) | default .Values.envMode | default "" -}}
+{{- if eq $envMode "staging" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "etcd.externalName" . }}
+spec:
+  type: NodePort
+  selector:
+    app: {{ include "etcd.statefulsetName" . }}
+  ports:
+    - port: {{ .Values.service.clientPort | default 2379 }}
+      targetPort: {{ .Values.service.clientPort | default 2379 }}
+      nodePort: {{ .Values.service.nodePort | default 31379 }}
+{{- else }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "etcd.externalName" . }}
+spec:
+  type: {{ .Values.service.externalType | default "ClusterIP" }}
+  selector:
+    app: {{ include "etcd.statefulsetName" . }}
+  ports:
+    - port: {{ .Values.service.clientPort | default 2379 }}
+      targetPort: {{ .Values.service.clientPort | default 2379 }}
+{{- end }}
+{{- end }}

@@ -586,6 +586,33 @@ otelCollector:
     ttl: "72h"
 
 # ---------------------------------------------------------------------------
+# etcd subchart values (forwarded into `charts/etcd/`).
+#
+# `cluster.{name,token}` mirror the legacy
+# `configmap.etcd.cluster.{name,token}` keys.
+# ---------------------------------------------------------------------------
+etcd:
+  enabled: true
+  replicaCount: 1
+  image:
+    name: quay.io/coreos/etcd
+    tag: "v3.6.7"
+    pullPolicy: IfNotPresent
+  cluster:
+    name: "etcd0"
+    token: "rcabench-etcd-cluster"
+  service:
+    clientPort: 2379
+    peerPort: 2380
+    externalType: ClusterIP
+    nodePort: 31379
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClass: "openebs-hostpath"
+
+# ---------------------------------------------------------------------------
 # redis subchart values (forwarded into `charts/redis/`).
 # ---------------------------------------------------------------------------
 redis:

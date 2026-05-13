@@ -1,52 +1,6 @@
 {{/* Redis Service moved to charts/redis/ subchart. */}}
 {{/* MySQL Service moved to charts/mysql/ subchart. */}}
----
-# etcd Headless Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-etcd-headless
-spec:
-  clusterIP: None
-  selector:
-    app: {{ .Release.Name }}-etcd
-  ports:
-    - name: client
-      port: {{ .Values.servicePorts.etcd.client | default 2379 }}
-      targetPort: {{ .Values.servicePorts.etcd.client | default 2379 }}
-    - name: peer
-      port: {{ .Values.servicePorts.etcd.peer | default 2380 }}
-      targetPort: {{ .Values.servicePorts.etcd.peer | default 2380 }}
-
----
-# etcd External Service
-{{- if eq .Values.configmap.system.env_mode "staging" }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-etcd-external
-spec:
-  type: NodePort
-  selector:
-    app: {{ .Release.Name }}-etcd
-  ports:
-    - port: {{ .Values.servicePorts.etcd.client | default 2379 }}
-      targetPort: {{ .Values.servicePorts.etcd.client | default 2379 }}
-      nodePort: 31379
-{{- else }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-etcd-external
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-etcd
-  ports:
-    - port: {{ .Values.servicePorts.etcd.client | default 2379 }}
-      targetPort: {{ .Values.servicePorts.etcd.client | default 2379 }}
-{{- end }}
-
+{{/* etcd Services (headless + external) moved to charts/etcd/ subchart. */}}
 ---
 # Aegis API (monolith) Service
 apiVersion: v1

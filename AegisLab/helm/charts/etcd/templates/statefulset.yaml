@@ -1,0 +1,87 @@
+{{- if .Values.enabled }}
+# etcd
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "etcd.statefulsetName" . }}
+spec:
+  serviceName: {{ include "etcd.headlessName" . }}
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ include "etcd.statefulsetName" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "etcd.statefulsetName" . }}
+    spec:
+      {{- with .Values.serviceAccount.name }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+      containers:
+        - name: etcd
+          image: {{ include "etcd.image" . }}
+          imagePullPolicy: "{{ include "etcd.imagePullPolicy" . }}"
+          env:
+            - name: ETCD_NAME
+              value: "{{ .Values.cluster.name }}"
+            - name: ETCD_DATA_DIR
+              value: "/etcd-data"
+            - name: ETCD_LISTEN_CLIENT_URLS
+              value: "http://0.0.0.0:{{ .Values.service.clientPort | default 2379 }}"
+            - name: ETCD_ADVERTISE_CLIENT_URLS
+              value: "http://{{ include "etcd.externalName" . }}:{{ .Values.service.clientPort | default 2379 }}"
+            - name: ETCD_LISTEN_PEER_URLS
+              value: "http://0.0.0.0:{{ .Values.service.peerPort | default 2380 }}"
+            - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
+              value: "http://{{ include "etcd.statefulsetName" . }}-0.{{ include "etcd.headlessName" . }}:{{ .Values.service.peerPort | default 2380 }}"
+            - name: ETCD_INITIAL_CLUSTER
+              value: "{{ .Values.cluster.name }}=http://{{ include "etcd.statefulsetName" . }}-0.{{ include "etcd.headlessName" . }}:{{ .Values.service.peerPort | default 2380 }}"
+            - name: ETCD_INITIAL_CLUSTER_STATE
+              value: "new"
+            - name: ETCD_INITIAL_CLUSTER_TOKEN
+              value: "{{ .Values.cluster.token }}"
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: client
+              containerPort: {{ .Values.service.clientPort | default 2379 }}
+              protocol: TCP
+            - name: peer
+              containerPort: {{ .Values.service.peerPort | default 2380 }}
+              protocol: TCP
+          {{- if not .Values.persistence.enabled }}
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          {{- end }}
+          volumeMounts:
+            - name: etcd-data
+              mountPath: /etcd-data
+      {{- if not .Values.persistence.enabled }}
+      volumes:
+        - name: etcd-data
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "512Mi"
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: etcd-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}
+{{- end }}

@@ -265,6 +265,15 @@ persistence:
   etcd:
     storageClass: rcabench
 
+# etcd subchart overrides (mirrors legacy images.etcd + persistence.etcd).
+etcd:
+  image:
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/etcd
+    tag: "v3.6.7"
+    pullPolicy: IfNotPresent
+  persistence:
+    storageClass: rcabench
+
 # redis subchart overrides (mirrors legacy images.redis + persistence.redis).
 redis:
   image:

@@ -152,3 +152,8 @@ mysql:
 redis:
   persistence:
     storageClass: standard
+
+# etcd subchart overrides (mirrors legacy persistence.etcd).
+etcd:
+  persistence:
+    storageClass: standard

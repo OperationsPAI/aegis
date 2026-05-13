@@ -73,3 +73,10 @@ redis:
     name: library/redis
     tag: "8.0-M02-alpine3.20"
     pullPolicy: IfNotPresent
+
+# etcd subchart overrides (mirrors legacy images.etcd).
+etcd:
+  image:
+    name: library/etcd
+    tag: "v3.6.7"
+    pullPolicy: IfNotPresent
