@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -230,17 +231,22 @@ func (d *LocalFSDriver) Delete(_ context.Context, key string) error {
 	return nil
 }
 
-func (d *LocalFSDriver) List(_ context.Context, prefix, cursor string, limit int) (*ListResult, error) {
+// List walks the filesystem under Root, applies prefix + delimiter (S3
+// semantics), and paginates with a key-as-continuation-token scheme.
+// The token is the last key returned on the previous page; the next
+// page starts strictly after it in lexicographic order.
+func (d *LocalFSDriver) List(_ context.Context, opts ListObjectsOpts) (*ListResult, error) {
+	limit := opts.MaxKeys
 	if limit <= 0 || limit > 1000 {
-		limit = 100
+		limit = 1000
 	}
-	root := d.cfg.Root
-	if prefix != "" {
-		clean := filepath.Clean("/" + prefix)
-		root = filepath.Join(d.cfg.Root, clean)
-	}
-	var items []ObjectMeta
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	// Walk from Root and collect every file's relative key. We then
+	// filter and paginate in-memory. Acceptable for localfs which is
+	// dev/test only; production lists go through S3.
+	var allKeys []string
+	keyToInfo := map[string]os.FileInfo{}
+	keyToPath := map[string]string{}
+	err := filepath.Walk(d.cfg.Root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil
@@ -255,24 +261,70 @@ func (d *LocalFSDriver) List(_ context.Context, prefix, cursor string, limit int
 			return relErr
 		}
 		key := filepath.ToSlash(rel)
-		if cursor != "" && key <= cursor {
-			return nil
-		}
-		items = append(items, ObjectMeta{
-			Key: key, Size: info.Size(), UpdatedAt: info.ModTime(),
-			ContentType: mime.TypeByExtension(filepath.Ext(path)),
-		})
-		if len(items) >= limit {
-			return filepath.SkipDir
-		}
+		allKeys = append(allKeys, key)
+		keyToInfo[key] = info
+		keyToPath[key] = path
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	res := &ListResult{Items: items}
-	if len(items) == limit {
-		res.NextCursor = items[len(items)-1].Key
+	sort.Strings(allKeys)
+
+	res := &ListResult{}
+	seenPrefixes := map[string]bool{}
+	for _, key := range allKeys {
+		if opts.Prefix != "" && !strings.HasPrefix(key, opts.Prefix) {
+			continue
+		}
+		if opts.ContinuationToken != "" && key <= opts.ContinuationToken {
+			continue
+		}
+		// Delimiter rolls up everything sharing a common prefix into
+		// one CommonPrefix entry, S3-style.
+		if opts.Delimiter != "" {
+			rest := key[len(opts.Prefix):]
+			if idx := strings.Index(rest, opts.Delimiter); idx >= 0 {
+				cp := opts.Prefix + rest[:idx+len(opts.Delimiter)]
+				if !seenPrefixes[cp] {
+					seenPrefixes[cp] = true
+					res.CommonPrefixes = append(res.CommonPrefixes, cp)
+					if len(res.Items)+len(res.CommonPrefixes) >= limit {
+						res.IsTruncated = true
+						res.NextContinuationToken = key
+						return res, nil
+					}
+				}
+				continue
+			}
+		}
+		info := keyToInfo[key]
+		path := keyToPath[key]
+		res.Items = append(res.Items, ObjectMeta{
+			Key: key, Size: info.Size(), UpdatedAt: info.ModTime(),
+			ContentType: mime.TypeByExtension(filepath.Ext(path)),
+		})
+		if len(res.Items)+len(res.CommonPrefixes) >= limit {
+			// Look-ahead: is there at least one more candidate?
+			res.NextContinuationToken = key
+			// Determine truncation by scanning what remains.
+			truncated := false
+			for _, k2 := range allKeys {
+				if k2 <= key {
+					continue
+				}
+				if opts.Prefix != "" && !strings.HasPrefix(k2, opts.Prefix) {
+					continue
+				}
+				truncated = true
+				break
+			}
+			res.IsTruncated = truncated
+			if !truncated {
+				res.NextContinuationToken = ""
+			}
+			return res, nil
+		}
 	}
 	return res, nil
 }

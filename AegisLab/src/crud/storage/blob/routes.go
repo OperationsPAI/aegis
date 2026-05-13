@@ -24,6 +24,13 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				g.HEAD("/buckets/:bucket/objects/:key", handler.Stat)
 				g.DELETE("/buckets/:bucket/objects/:key", handler.Delete)
 				g.GET("/buckets/:bucket/objects", handler.List)
+				// Driver-level list (storage source-of-truth), distinct
+				// from /objects above which queries the metadata DB.
+				g.GET("/buckets/:bucket/object-list", handler.ListObjects)
+				// Streaming GET that accepts keys-with-slashes
+				// (zip streaming, file tree responses). Distinct from
+				// /objects/:key which matches single-segment keys only.
+				g.GET("/buckets/:bucket/stream/*key", handler.StreamGet)
 			}
 
 			// /raw/:token is auth-free (the HMAC token IS the auth).

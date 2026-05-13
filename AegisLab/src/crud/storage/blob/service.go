@@ -159,6 +159,27 @@ func (s *Service) List(ctx context.Context, f ListFilter) ([]ObjectRecord, error
 	return s.repo.List(ctx, f)
 }
 
+// ListObjects performs a driver-level paginated list and returns the
+// raw storage view (S3-style continuation tokens, optional delimiter).
+// Distinct from List(ctx, ListFilter) which reads from the metadata
+// DB — this method is the source of truth for "what bytes does the
+// backend actually hold under this prefix".
+func (s *Service) ListObjects(ctx context.Context, bucket string, opts ListObjectsOpts) (*ListResult, error) {
+	b, err := s.registry.Lookup(bucket)
+	if err != nil {
+		return nil, err
+	}
+	return b.Driver.List(ctx, opts)
+}
+
+// GetReader is the streaming counterpart of GetBytes. It returns a
+// reader the caller is responsible for closing. Callers use it for
+// HTTP range responses and zip streaming where loading into memory is
+// undesirable.
+func (s *Service) GetReader(ctx context.Context, bucket, key string) (io.ReadCloser, *ObjectMeta, error) {
+	return s.Get(ctx, bucket, key)
+}
+
 // PutBytes is the small-payload helper used by LocalClient.
 func (s *Service) PutBytes(ctx context.Context, in PresignPutInput, body io.Reader) (*ObjectRecord, *ObjectMeta, error) {
 	b, err := s.registry.Lookup(in.Bucket)

@@ -211,33 +211,44 @@ func (d *S3Driver) Delete(ctx context.Context, key string) error {
 	return fmt.Errorf("s3 delete %q: %w", key, err)
 }
 
-func (d *S3Driver) List(ctx context.Context, prefix, cursor string, limit int) (*ListResult, error) {
+// List paginates via minio's StartAfter. We treat the continuation
+// token as the last key returned on the previous page. Delimiter rolls
+// up subtrees into CommonPrefixes (S3 native semantics).
+func (d *S3Driver) List(ctx context.Context, opts ListObjectsOpts) (*ListResult, error) {
+	limit := opts.MaxKeys
 	if limit <= 0 || limit > 1000 {
-		limit = 100
+		limit = 1000
 	}
 	ch := d.client.ListObjects(ctx, d.bucket, minio.ListObjectsOptions{
-		Prefix:     prefix,
-		StartAfter: cursor,
-		Recursive:  true,
+		Prefix:     opts.Prefix,
+		StartAfter: opts.ContinuationToken,
+		Recursive:  opts.Delimiter == "",
 	})
 	res := &ListResult{}
+	var lastKey string
 	for obj := range ch {
 		if obj.Err != nil {
 			return nil, fmt.Errorf("s3 list: %w", obj.Err)
 		}
-		res.Items = append(res.Items, ObjectMeta{
-			Key:         obj.Key,
-			Size:        obj.Size,
-			ContentType: obj.ContentType,
-			ETag:        obj.ETag,
-			UpdatedAt:   obj.LastModified,
-		})
-		if len(res.Items) >= limit {
+		// minio surfaces CommonPrefixes as zero-size entries whose Key
+		// ends with the delimiter. Split them out for the caller.
+		if opts.Delimiter != "" && strings.HasSuffix(obj.Key, opts.Delimiter) && obj.Size == 0 {
+			res.CommonPrefixes = append(res.CommonPrefixes, obj.Key)
+		} else {
+			res.Items = append(res.Items, ObjectMeta{
+				Key:         obj.Key,
+				Size:        obj.Size,
+				ContentType: obj.ContentType,
+				ETag:        obj.ETag,
+				UpdatedAt:   obj.LastModified,
+			})
+		}
+		lastKey = obj.Key
+		if len(res.Items)+len(res.CommonPrefixes) >= limit {
+			res.IsTruncated = true
+			res.NextContinuationToken = lastKey
 			break
 		}
-	}
-	if len(res.Items) == limit {
-		res.NextCursor = res.Items[len(res.Items)-1].Key
 	}
 	return res, nil
 }

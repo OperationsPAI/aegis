@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"aegis/platform/dto"
@@ -253,6 +254,64 @@ func (h *Handler) List(c *gin.Context) {
 		resp.NextCursor = strconv.FormatInt(rows[len(rows)-1].ID, 10)
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// StreamGet is the wildcard-key counterpart of InlineGet. It streams
+// the object bytes directly to the response writer. Used by clients
+// that need keys-with-slashes (zip streaming, file tree responses)
+// without per-segment routing constraints.
+func (h *Handler) StreamGet(c *gin.Context) {
+	bucket := c.Param("bucket")
+	key := strings.TrimPrefix(c.Param("key"), "/")
+	b, err := h.svc.Registry().Lookup(bucket)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+	rec, err := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	if !h.auth.CanRead(&b.Config, subjectFromContext(c), rec.UploadedBy) {
+		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return
+	}
+	rc, meta, err := h.svc.GetReader(c.Request.Context(), bucket, key)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	if meta.ContentType != "" {
+		c.Header("Content-Type", meta.ContentType)
+	}
+	c.Header("Content-Length", strconv.FormatInt(meta.Size, 10))
+	_, _ = io.Copy(c.Writer, rc)
+}
+
+// ListObjects exposes the driver-level (backend storage) listing,
+// distinct from List which reads the metadata DB. Query params follow
+// the S3 list-objects-v2 conventions: prefix, max_keys,
+// continuation_token, delimiter.
+func (h *Handler) ListObjects(c *gin.Context) {
+	bucket := c.Param("bucket")
+	opts := ListObjectsOpts{
+		Prefix:            c.Query("prefix"),
+		ContinuationToken: c.Query("continuation_token"),
+		Delimiter:         c.Query("delimiter"),
+	}
+	if s := c.Query("max_keys"); s != "" {
+		if v, err := strconv.Atoi(s); err == nil {
+			opts.MaxKeys = v
+		}
+	}
+	res, err := h.svc.ListObjects(c.Request.Context(), bucket, opts)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 // Raw serves the localfs driver's signed token URLs. Verifies the

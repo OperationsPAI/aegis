@@ -84,6 +84,39 @@ func (c *LocalClient) GetBytes(ctx context.Context, bucket, key string) ([]byte,
 	return body, toClientMeta(meta), nil
 }
 
+func (c *LocalClient) List(ctx context.Context, bucket, prefix string, opts ListOpts) (*ListResult, error) {
+	res, err := c.svc.ListObjects(ctx, bucket, blob.ListObjectsOpts{
+		Prefix:            prefix,
+		ContinuationToken: opts.ContinuationToken,
+		Delimiter:         opts.Delimiter,
+		MaxKeys:           opts.MaxKeys,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := &ListResult{
+		CommonPrefixes:        res.CommonPrefixes,
+		NextContinuationToken: res.NextContinuationToken,
+		IsTruncated:           res.IsTruncated,
+	}
+	out.Objects = make([]ObjectMeta, 0, len(res.Items))
+	for _, m := range res.Items {
+		out.Objects = append(out.Objects, ObjectMeta{
+			Key: m.Key, Size: m.Size, ContentType: m.ContentType, ETag: m.ETag,
+			UpdatedAt: m.UpdatedAt, Metadata: m.Metadata,
+		})
+	}
+	return out, nil
+}
+
+func (c *LocalClient) GetReader(ctx context.Context, bucket, key string) (io.ReadCloser, *ObjectMeta, error) {
+	rc, meta, err := c.svc.GetReader(ctx, bucket, key)
+	if err != nil {
+		return nil, nil, err
+	}
+	return rc, toClientMeta(meta), nil
+}
+
 func toClientPresigned(pr *blob.PresignedRequest) *PresignedURL {
 	if pr == nil {
 		return nil

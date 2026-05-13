@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"aegis/platform/consts"
@@ -58,6 +59,16 @@ func NewRemoteClient(cfg RemoteClientConfig, tokenSrc TokenSource) (*RemoteClien
 	}, nil
 }
 
+// escapeKeyPath percent-escapes each segment of key but leaves the
+// "/" separators alone so the result still matches a wildcard route.
+func escapeKeyPath(key string) string {
+	parts := strings.Split(key, "/")
+	for i, p := range parts {
+		parts[i] = url.PathEscape(p)
+	}
+	return strings.Join(parts, "/")
+}
+
 func trimSlash(s string) string {
 	for len(s) > 0 && s[len(s)-1] == '/' {
 		s = s[:len(s)-1]
@@ -69,6 +80,74 @@ func (c *RemoteClient) endpoint(path string) string {
 	u := *c.baseURL
 	u.Path = trimSlash(u.Path) + path
 	return u.String()
+}
+
+func (c *RemoteClient) endpointWithQuery(path string, q url.Values) string {
+	u := *c.baseURL
+	u.Path = trimSlash(u.Path) + path
+	if q != nil {
+		u.RawQuery = q.Encode()
+	}
+	return u.String()
+}
+
+// doWithQuery mirrors do() but lets callers pass URL query params
+// without smuggling "?..." through the path.
+func (c *RemoteClient) doWithQuery(ctx context.Context, method, path string, q url.Values, body any, out any) error {
+	var rdr io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("encode request: %w", err)
+		}
+		rdr = bytes.NewReader(b)
+	}
+	var lastErr error
+	for attempt := 0; attempt <= c.maxRetries; attempt++ {
+		var token string
+		if c.tokenSrc != nil {
+			t, err := c.tokenSrc.Token(ctx)
+			if err != nil {
+				return fmt.Errorf("acquire service token: %w", err)
+			}
+			token = t
+		}
+		req, err := http.NewRequestWithContext(ctx, method, c.endpointWithQuery(path, q), rdr)
+		if err != nil {
+			return err
+		}
+		if body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		resp, err := c.http.Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if resp.StatusCode >= 500 {
+			lastErr = fmt.Errorf("blob service responded %d", resp.StatusCode)
+			_ = resp.Body.Close()
+			continue
+		}
+		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode == http.StatusNoContent {
+			return nil
+		}
+		if resp.StatusCode >= 400 {
+			b, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("blob request failed (%d): %s", resp.StatusCode, string(b))
+		}
+		if out != nil {
+			if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+				return fmt.Errorf("decode response: %w", err)
+			}
+		}
+		return nil
+	}
+	return fmt.Errorf("blob request failed after %d retries: %w", c.maxRetries, lastErr)
 }
 
 func (c *RemoteClient) do(ctx context.Context, method, path string, body any, out any) error {
@@ -211,6 +290,91 @@ func (c *RemoteClient) GetBytes(ctx context.Context, bucket, key string) ([]byte
 		return nil, nil, err
 	}
 	return body, &ObjectMeta{Key: key, Size: int64(len(body)), UpdatedAt: time.Now()}, nil
+}
+
+// List GETs /blob/buckets/{bucket}/object-list with S3-style query
+// params and decodes the driver-shaped response into the client
+// ListResult shape.
+func (c *RemoteClient) List(ctx context.Context, bucket, prefix string, opts ListOpts) (*ListResult, error) {
+	q := url.Values{}
+	if prefix != "" {
+		q.Set("prefix", prefix)
+	}
+	if opts.ContinuationToken != "" {
+		q.Set("continuation_token", opts.ContinuationToken)
+	}
+	if opts.Delimiter != "" {
+		q.Set("delimiter", opts.Delimiter)
+	}
+	if opts.MaxKeys > 0 {
+		q.Set("max_keys", fmt.Sprintf("%d", opts.MaxKeys))
+	}
+	path := consts.APIPathBlobBuckets + url.PathEscape(bucket) + "/object-list"
+	// Server returns blob.ListResult ({items, common_prefixes,
+	// next_continuation_token, is_truncated}). Decode into a wire
+	// struct and translate to the client shape (items → objects).
+	var wire struct {
+		Items                 []ObjectMeta `json:"items"`
+		CommonPrefixes        []string     `json:"common_prefixes"`
+		NextContinuationToken string       `json:"next_continuation_token"`
+		IsTruncated           bool         `json:"is_truncated"`
+	}
+	if err := c.doWithQuery(ctx, http.MethodGet, path, q, nil, &wire); err != nil {
+		return nil, err
+	}
+	return &ListResult{
+		Objects:               wire.Items,
+		CommonPrefixes:        wire.CommonPrefixes,
+		NextContinuationToken: wire.NextContinuationToken,
+		IsTruncated:           wire.IsTruncated,
+	}, nil
+}
+
+// GetReader streams the object bytes from the InlineGet endpoint. The
+// response body is NOT read fully — callers must Close the returned
+// reader to release the connection. Meta is built from response
+// headers (Content-Type / Content-Length).
+func (c *RemoteClient) GetReader(ctx context.Context, bucket, key string) (io.ReadCloser, *ObjectMeta, error) {
+	// /stream/*key route accepts keys-with-slashes. Don't percent-
+	// escape the slashes themselves — the route is a wildcard.
+	path := consts.APIPathBlobBuckets + url.PathEscape(bucket) + "/stream/" + escapeKeyPath(key)
+	var token string
+	if c.tokenSrc != nil {
+		t, err := c.tokenSrc.Token(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("acquire service token: %w", err)
+		}
+		token = t
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.endpoint(path), nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		_ = resp.Body.Close()
+		return nil, nil, fmt.Errorf("blob get-reader: object not found")
+	}
+	if resp.StatusCode >= 400 {
+		b, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		return nil, nil, fmt.Errorf("blob get-reader failed (%d): %s", resp.StatusCode, string(b))
+	}
+	meta := &ObjectMeta{
+		Key:         key,
+		ContentType: resp.Header.Get("Content-Type"),
+		UpdatedAt:   time.Now(),
+	}
+	if resp.ContentLength > 0 {
+		meta.Size = resp.ContentLength
+	}
+	return resp.Body, meta, nil
 }
 
 var _ Client = (*RemoteClient)(nil)

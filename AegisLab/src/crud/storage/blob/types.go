@@ -27,7 +27,19 @@ type Driver interface {
 	Get(ctx context.Context, key string) (io.ReadCloser, *ObjectMeta, error)
 	Stat(ctx context.Context, key string) (*ObjectMeta, error)
 	Delete(ctx context.Context, key string) error
-	List(ctx context.Context, prefix, cursor string, limit int) (*ListResult, error)
+	List(ctx context.Context, opts ListObjectsOpts) (*ListResult, error)
+}
+
+// ListObjectsOpts is the driver-level paginated list request. The
+// continuation token is opaque to callers — drivers may carry a key
+// (localfs) or an S3-native continuation token. Delimiter switches the
+// listing to hierarchical mode and surfaces CommonPrefixes on the
+// result.
+type ListObjectsOpts struct {
+	Prefix            string
+	ContinuationToken string
+	Delimiter         string
+	MaxKeys           int
 }
 
 // PresignedRequest is what a driver returns from PresignPut/PresignGet
@@ -69,10 +81,14 @@ type ObjectMeta struct {
 	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
-// ListResult is one page of a List call.
+// ListResult is one page of a List call. Drivers populate Items
+// always; CommonPrefixes is non-empty only when ListObjectsOpts.Delimiter
+// was set; NextContinuationToken is non-empty iff IsTruncated.
 type ListResult struct {
-	Items      []ObjectMeta `json:"items"`
-	NextCursor string       `json:"next_cursor,omitempty"`
+	Items                 []ObjectMeta `json:"items"`
+	CommonPrefixes        []string     `json:"common_prefixes,omitempty"`
+	NextContinuationToken string       `json:"next_continuation_token,omitempty"`
+	IsTruncated           bool         `json:"is_truncated,omitempty"`
 }
 
 // Operation tags a signed token's intent. Localfs driver embeds this

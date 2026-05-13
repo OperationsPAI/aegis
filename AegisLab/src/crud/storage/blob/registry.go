@@ -88,6 +88,17 @@ func (r *Registry) Names() []string {
 	return out
 }
 
+// NewTestRegistry builds a Registry from a pre-assembled bucket map.
+// Intended for tests that wire drivers by hand and want to bypass the
+// viper-config path used in production.
+func NewTestRegistry(buckets map[string]*Bucket) *Registry {
+	cp := make(map[string]*Bucket, len(buckets))
+	for k, v := range buckets {
+		cp[k] = v
+	}
+	return &Registry{buckets: cp}
+}
+
 // RegistryDeps lets the fx wiring inject the signing key (used by
 // localfs presign).
 type RegistryDeps struct {

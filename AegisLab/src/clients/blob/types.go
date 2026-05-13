@@ -16,6 +16,7 @@ package blobclient
 
 import (
 	"context"
+	"io"
 	"time"
 )
 
@@ -29,6 +30,30 @@ type Client interface {
 	// need the presign round trip.
 	PutBytes(ctx context.Context, bucket string, body []byte, req PresignPutReq) (*ObjectMeta, error)
 	GetBytes(ctx context.Context, bucket, key string) ([]byte, *ObjectMeta, error)
+	// List enumerates objects under prefix with S3-native pagination.
+	// Prefix == "" lists the whole bucket. Set ListOpts.Delimiter to
+	// fold sub-trees into CommonPrefixes for hierarchical listings.
+	List(ctx context.Context, bucket, prefix string, opts ListOpts) (*ListResult, error)
+	// GetReader returns a streaming reader over the object bytes plus
+	// metadata. Callers must Close the reader. Used for HTTP range
+	// responses and zip-streaming where loading into memory is wrong.
+	GetReader(ctx context.Context, bucket, key string) (io.ReadCloser, *ObjectMeta, error)
+}
+
+// ListOpts is the producer-facing list request. ContinuationToken is
+// opaque — pass back the NextContinuationToken from the previous page.
+type ListOpts struct {
+	MaxKeys           int    // 0 = backend default (e.g. 1000)
+	ContinuationToken string // for pagination; empty = first page
+	Delimiter         string // optional, e.g. "/" for hierarchical listing
+}
+
+// ListResult is one page of a List call.
+type ListResult struct {
+	Objects               []ObjectMeta `json:"objects"`
+	CommonPrefixes        []string     `json:"common_prefixes,omitempty"` // populated when Delimiter is set
+	NextContinuationToken string       `json:"next_continuation_token,omitempty"`
+	IsTruncated           bool         `json:"is_truncated,omitempty"`
 }
 
 // PresignPutReq is the producer-facing payload, kept simple — JSON-ish
