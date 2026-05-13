@@ -22,7 +22,7 @@ spec:
             - {{ .Values.binaryName | default "aegis-notify" }}
             - serve
             - --conf
-            - {{ .Values.global.configmap.configDir | default "/etc/rcabench" }}
+            - {{ dig "configmap" "configDir" "/etc/rcabench" (.Values.global | default dict) }}
             - --port
             - {{ .Values.httpPort | quote }}
           ports:
@@ -48,7 +48,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
-            {{- with .Values.global.ssoclient }}
+            {{- with dig "ssoclient" dict (.Values.global | default dict) }}
             - name: SSO_BASE_URL
               value: {{ .baseURL | quote }}
             - name: SSO_JWKS_URL
@@ -72,7 +72,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ dig "configmap" "configFile" "/etc/rcabench/config.prod.toml" (.Values.global | default dict) }}
               subPath: config.prod.toml
       volumes:
         - name: config

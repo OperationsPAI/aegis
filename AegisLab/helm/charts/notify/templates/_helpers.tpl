@@ -21,9 +21,11 @@ Inputs (all under .Values.global, populated by the parent chart):
   global.images.rcabench    {name|repository, tag, pullPolicy}
 */}}
 {{- define "notify.image" -}}
-{{- $registry := .Values.global.imageRegistry | default "" -}}
-{{- $cfg := .Values.global.images.rcabench -}}
-{{- $name := $cfg.repository | default $cfg.name -}}
+{{- $global := .Values.global | default dict -}}
+{{- $registry := $global.imageRegistry | default "" -}}
+{{- $images := $global.images | default dict -}}
+{{- $cfg := $images.rcabench | default dict -}}
+{{- $name := $cfg.repository | default ($cfg.name | default "") -}}
 {{- $tag := $cfg.tag | default "latest" | toString -}}
 {{- $image := $name -}}
 {{- if $registry -}}
@@ -40,5 +42,8 @@ Inputs (all under .Values.global, populated by the parent chart):
 notify.imagePullPolicy — pull policy from the shared rcabench image.
 */}}
 {{- define "notify.imagePullPolicy" -}}
-{{- .Values.global.images.rcabench.pullPolicy -}}
+{{- $global := .Values.global | default dict -}}
+{{- $images := $global.images | default dict -}}
+{{- $cfg := $images.rcabench | default dict -}}
+{{- $cfg.pullPolicy | default "IfNotPresent" -}}
 {{- end -}}
