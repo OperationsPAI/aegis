@@ -1,0 +1,60 @@
+# blob subchart defaults.
+#
+# Self-contained values for the aegis-blob microservice. The parent
+# rcabench chart can drive this subchart by setting top-level `blob:`
+# overrides (Helm maps top-level keys matching a subchart name into that
+# subchart's scope).
+#
+# Shared cross-chart settings — container image, SSO client config, config
+# mount directory, the auth Secret name, and the consumer-side ConfigMap
+# name — are read from `.Values.global.*` so the parent chart can publish
+# them in one place without duplicating per-microservice.
+#
+# S3 credentials (rustfs-admin) are wired via `extraEnvFrom` from whatever
+# Secret holds them. Byte-cluster overlay points this at the rustfs
+# subchart's `rustfs-admin` Secret; external-S3 installs can point it
+# wherever they store the bucket creds.
+
+enabled: true
+replicaCount: 1
+httpPort: 8085
+binaryName: "aegis-blob"
+scratchRoot: "/var/lib/aegis-blob/scratch"
+
+service:
+  type: ClusterIP
+  # nodePort: 30085   # only honored when service.type == NodePort
+
+# ServiceAccount binding. Empty `name` falls back to `{{ .Release.Name }}-sa`.
+serviceAccount:
+  name: ""
+
+# JWT secret reference. Empty `name` falls back to `{{ .Release.Name }}-auth`.
+auth:
+  jwtSecretRef:
+    name: ""
+    key: "jwt_secret"
+
+# ConfigMap mounted at the config path. Empty `name` falls back to
+# `{{ .Release.Name }}-rcabench-config`.
+configMap:
+  name: ""
+
+# Literal env-var values injected into the container.
+env:
+  ENV: "prod"
+  GOPRIVATE: "github.com/OperationsPAI/chaos-experiment"
+
+# SSO client-side wiring.
+ssoClient:
+  secretFilePath: "/etc/aegis/sso/client-secret"
+
+# Arbitrary additional env vars appended as-is (list of `{name,value}` /
+# `{name,valueFrom}` maps).
+extraEnv: []
+
+# envFrom list (e.g. rustfs-admin Secret for s3 driver creds). Empty default
+# keeps non-S3 manifest packs rendering unchanged.
+extraEnvFrom: []
+
+resources: {}

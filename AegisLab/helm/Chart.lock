@@ -8,5 +8,8 @@ dependencies:
 - name: rustfs
   repository: ""
   version: 0.1.0
-digest: sha256:83c3551b839a59d4e5acbedb56ae3f01167b720511d4491fe55f69240a8b4eba
-generated: "2026-05-13T11:09:46.986525286+01:00"
+- name: blob
+  repository: ""
+  version: 0.1.0
+digest: sha256:d898aa88662d58ab792a2238fb371e6acbf428b70f0b8f892b2fc76dd5f0ebd8
+generated: "2026-05-13T11:12:13.592680261+01:00"

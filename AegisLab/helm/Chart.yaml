@@ -40,3 +40,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: rustfs.enabled
+  - name: blob
+    version: "0.1.0"
+    repository: ""
+    condition: blob.enabled

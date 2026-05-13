@@ -172,18 +172,18 @@ data:
 
     [[gateway.routes]]
     prefix   = "/api/v2/blob/"
-    upstream = "{{ .Release.Name }}-blob:{{ .Values.microservices.blob.httpPort }}"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth     = "jwt"
 
     [[gateway.routes]]
     prefix    = "/api/v2/share/"
-    upstream  = "{{ .Release.Name }}-blob:{{ .Values.microservices.blob.httpPort }}"
+    upstream  = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth      = "jwt"
     audiences = ["portal"]
 
     [[gateway.routes]]
     prefix   = "/s/"
-    upstream = "{{ .Release.Name }}-blob:{{ .Values.microservices.blob.httpPort }}"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth     = "none"
 
     [[gateway.routes]]

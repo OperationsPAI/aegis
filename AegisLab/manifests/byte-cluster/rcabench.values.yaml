@@ -198,14 +198,6 @@ microservices:
       minReplicas: 2
       maxReplicas: 8
       targetCPUUtilizationPercentage: 70
-  # blob microservice (aegis-blob) needs the same S3 credential envFrom so
-  # its in-process s3 driver can resolve `access_key_env` / `secret_key_env`
-  # at boot — without this the blob registry build fails with
-  # "s3 driver requires access_key + secret_key (or *_env)".
-  blob:
-    extraEnvFrom:
-      - secretRef:
-          name: rustfs-admin
   # aegis-gateway refuses to start in `env=prod` without a non-empty
   # `gateway.trusted_header_key`. Set a stable cluster-internal value
   # (rotate by helm upgrade --set).
@@ -238,6 +230,15 @@ edgeProxy:
     minReplicas: 2
     maxReplicas: 4
     targetCPUUtilizationPercentage: 70
+
+# blob microservice (aegis-blob) needs the same S3 credential envFrom so
+# its in-process s3 driver can resolve `access_key_env` / `secret_key_env`
+# at boot — without this the blob registry build fails with
+# "s3 driver requires access_key + secret_key (or *_env)".
+blob:
+  extraEnvFrom:
+    - secretRef:
+        name: rustfs-admin
 
 sso:
   image:

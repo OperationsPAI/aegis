@@ -389,20 +389,8 @@ microservices:
       targetMemoryUtilizationPercentage: 0
   # NOTE: notify has been extracted into the `notify` subchart (see
   # `charts/notify/`). Top-level `notify:` block below drives it.
-  blob:
-    enabled: true
-    replicaCount: 1
-    httpPort: 8085
-    binaryName: "aegis-blob"
-    scratchRoot: "/var/lib/aegis-blob/scratch"
-    service:
-      type: ClusterIP
-    # Extra envFrom for the blob microservice. Byte-cluster wires the
-    # rustfs-admin Secret here so the in-process s3 driver can resolve
-    # BLOB_S3_*_ACCESS_KEY / *_SECRET_KEY at boot. Empty default keeps
-    # other packs (kind, prod, cn_mirror) rendering unchanged.
-    extraEnvFrom: []
-    resources: {}
+  # NOTE: blob has been extracted into the `blob` subchart (see
+  # `charts/blob/`). Top-level `blob:` block below drives it.
   gateway:
     enabled: true
     replicaCount: 1
@@ -635,4 +623,22 @@ notify:
   binaryName: "aegis-notify"
   service:
     type: ClusterIP
+  resources: {}
+
+# ---------------------------------------------------------------------------
+# blob subchart values (forwarded into `charts/blob/`).
+# ---------------------------------------------------------------------------
+blob:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8085
+  binaryName: "aegis-blob"
+  scratchRoot: "/var/lib/aegis-blob/scratch"
+  service:
+    type: ClusterIP
+  # Extra envFrom for the blob microservice. Byte-cluster wires the
+  # rustfs-admin Secret here so the in-process s3 driver can resolve
+  # BLOB_S3_*_ACCESS_KEY / *_SECRET_KEY at boot. Empty default keeps
+  # other packs (kind, prod, cn_mirror) rendering unchanged.
+  extraEnvFrom: []
   resources: {}
