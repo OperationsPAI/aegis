@@ -113,9 +113,9 @@ func (s *Service) GetHealth(ctx context.Context) (*HealthCheckResp, error) {
 		overallStatus = "unhealthy"
 	}
 
-	jaegerInfo := s.checkJaegerHealth(ctx)
-	services["jaeger"] = jaegerInfo
-	if jaegerInfo.Status != "healthy" {
+	tracingInfo := s.checkTracingHealth(ctx)
+	services["tracing"] = tracingInfo
+	if tracingInfo.Status != "healthy" {
 		overallStatus = "unhealthy"
 	}
 
@@ -749,29 +749,29 @@ func (s *Service) checkDatabaseHealth(parent context.Context) ServiceInfo {
 	return ServiceInfo{Status: "healthy", LastChecked: time.Now(), ResponseTime: responseTime.String()}
 }
 
-func (s *Service) checkJaegerHealth(parent context.Context) ServiceInfo {
+func (s *Service) checkTracingHealth(parent context.Context) ServiceInfo {
 	start := time.Now()
-	jaegerURL := fmt.Sprintf("http://%s/v1/traces", config.GetString("jaeger.endpoint"))
+	otlpURL := fmt.Sprintf("http://%s/v1/traces", config.GetString("tracing.endpoint"))
 	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, jaegerURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, otlpURL, nil)
 	if err != nil {
-		return ServiceInfo{Status: "unhealthy", LastChecked: time.Now(), ResponseTime: time.Since(start).String(), Error: "Failed to create Jaeger OTLP request", Details: err.Error()}
+		return ServiceInfo{Status: "unhealthy", LastChecked: time.Now(), ResponseTime: time.Since(start).String(), Error: "Failed to create OTLP request", Details: err.Error()}
 	}
 
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 	resp, err := httpClient.Do(req)
 	responseTime := time.Since(start)
 	if err != nil {
-		return ServiceInfo{Status: "unhealthy", LastChecked: time.Now(), ResponseTime: responseTime.String(), Error: "Jaeger OTLP endpoint unreachable", Details: err.Error()}
+		return ServiceInfo{Status: "unhealthy", LastChecked: time.Now(), ResponseTime: responseTime.String(), Error: "Tracing OTLP endpoint unreachable", Details: err.Error()}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusOK {
-		return ServiceInfo{Status: "unhealthy", LastChecked: time.Now(), ResponseTime: responseTime.String(), Error: fmt.Sprintf("Jaeger OTLP returned unexpected status %d", resp.StatusCode)}
+		return ServiceInfo{Status: "unhealthy", LastChecked: time.Now(), ResponseTime: responseTime.String(), Error: fmt.Sprintf("Tracing OTLP returned unexpected status %d", resp.StatusCode)}
 	}
-	return ServiceInfo{Status: "healthy", LastChecked: time.Now(), ResponseTime: responseTime.String(), Details: "Jaeger OTLP endpoint responding"}
+	return ServiceInfo{Status: "healthy", LastChecked: time.Now(), ResponseTime: responseTime.String(), Details: "Tracing OTLP endpoint responding"}
 }
 
 func (s *Service) checkKubernetesHealth(parent context.Context) ServiceInfo {

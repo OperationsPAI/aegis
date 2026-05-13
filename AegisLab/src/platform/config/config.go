@@ -240,9 +240,9 @@ func validate() error {
 		return fmt.Errorf("required field 'redis.host' is missing")
 	}
 
-	// Jaeger configuration
-	if !viper.IsSet("jaeger.endpoint") {
-		return fmt.Errorf("required field 'jaeger.endpoint' is missing")
+	// Tracing OTLP receiver
+	if !viper.IsSet("tracing.endpoint") {
+		return fmt.Errorf("required field 'tracing.endpoint' is missing")
 	}
 
 	// Kubernetes configuration

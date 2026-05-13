@@ -110,8 +110,6 @@ persistence:
   storageType: external
   storageClassNames:
     external: standard
-  jaeger:
-    storageClass: standard
   redis:
     storageClass: standard
   mysql:

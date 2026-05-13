@@ -17,7 +17,7 @@ user = "root"
 password = "yourpassword"
 db = "rcabench"
 
-[jaeger]
+[tracing]
 endpoint = "localhost:4318"
 
 [redis]

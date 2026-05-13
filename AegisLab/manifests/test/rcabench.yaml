@@ -5,8 +5,6 @@ images:
   rcabench:
     name: pair/rcabench
     pullPolicy: IfNotPresent
-  jaeger:
-    name: pair/jaeger
   redis:
     name: pair/redis
   mysql:
@@ -40,9 +38,6 @@ configmap:
       busybox_image: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox:1.35
 
 persistence:
-  jaeger:
-    enabled: false
-
   redis:
     enabled: false
 

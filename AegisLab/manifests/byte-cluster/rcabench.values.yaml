@@ -6,10 +6,6 @@ images:
     name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
     tag: byte-20260513-s3-blob-v2
     pullPolicy: IfNotPresent
-  jaeger:
-    name: pair-diag-cn-guangzhou.cr.volces.com/pair/jaeger
-    tag: latest
-    pullPolicy: IfNotPresent
   redis:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/redis
     tag: "8.0-M02-alpine3.20"
@@ -35,6 +31,17 @@ images:
     # on 2026-05-01; volces auto-mirror serves it as pair-cn-shanghai/opspai/caddy.
     name: pair-cn-shanghai.cr.volces.com/opspai/caddy
     tag: "2-alpine"
+    pullPolicy: IfNotPresent
+
+# In-namespace otel-collector. The chart-default image is docker.io/otel/*
+# which the byte VPC can't reach — use the volces pair mirror that the
+# monitoring stack already uses.
+otelCollector:
+  image:
+    # Tag matches what the monitoring otel-kube-stack uses (the only tag
+    # actually published in the pair-diag mirror).
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/opentelemetry-collector-contrib
+    tag: "0.142.0-amd64"
     pullPolicy: IfNotPresent
 
 buildkit:
@@ -234,15 +241,13 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260513-s3-blob-v2
+    tag: 1cdff0f-dirty
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench
 
 persistence:
   storageType: volcengine
-  jaeger:
-    storageClass: rcabench
   redis:
     storageClass: rcabench
   mysql:

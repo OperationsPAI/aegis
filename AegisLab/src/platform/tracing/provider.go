@@ -20,7 +20,7 @@ func NewProvider() (*sdktrace.TracerProvider, error) {
 
 	exporter, err := otlptracehttp.New(ctx,
 		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithEndpoint(config.GetString("jaeger.endpoint")),
+		otlptracehttp.WithEndpoint(config.GetString("tracing.endpoint")),
 	)
 	if err != nil {
 		return nil, err

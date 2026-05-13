@@ -42,7 +42,7 @@ profiles:
               sso.auth.secretName: "rcabench-auth"
               sso.config.database.mysql.host: "rcabench-mysql"
               sso.config.redis.host: "rcabench-redis:6379"
-              sso.config.jaeger.endpoint: "http://rcabench-jaeger:4318"
+              sso.config.tracing.endpoint: "opentelemetry-kube-stack-daemon-collector.monitoring.svc.cluster.local:4318"
               sso.config.k8s.namespace: "exp"
               sso.config.k8s.serviceAccount.name: "rcabench-sa"
               sso.config.sso.backendRedirectURI: "http://rcabench-api-gateway:8082/auth/oidc/callback"

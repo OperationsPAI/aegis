@@ -1224,13 +1224,13 @@ requirements:
     priority: P0
     status: implemented
     confidence: confirmed
-    source: "src/middleware/middleware.go, src/client/jaeger.go"
+    source: "src/middleware/middleware.go, src/platform/tracing/provider.go"
 
     code:
       - path: src/middleware/middleware.go
         description: "TracerMiddleware creates OTel spans; GroupID middleware assigns UUIDs to POST requests"
-      - path: src/client/jaeger.go
-        description: "InitTraceProvider configures OTLP HTTP exporter for Jaeger"
+      - path: src/platform/tracing/provider.go
+        description: "NewProvider configures OTLP HTTP exporter; endpoint from `tracing.endpoint` config (defaults to monitoring/opentelemetry-kube-stack-daemon-collector:4318)"
 
     frontend: []
     has_mock: false

@@ -125,8 +125,6 @@ persistence:
   storageType: external
   storageClassNames:
     external: nfs
-  jaeger:
-    storageClass: standard
   redis:
     storageClass: standard
   mysql:

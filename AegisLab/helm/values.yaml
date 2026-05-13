@@ -11,12 +11,6 @@ servicePorts:
   etcd:
     client: 2379
     peer: 2380
-  jaeger:
-    grpc: 4317
-    http: 4318
-    thriftCompact: 6831
-    collectorHttp: 14268
-    query: 16686
   loki: 3100
   prometheus: 9090
 
@@ -25,10 +19,6 @@ images:
     name: opspai/rcabench
     tag: latest
     pullPolicy: Always
-  jaeger:
-    name: jaegertracing/all-in-one
-    tag: latest
-    pullPolicy: IfNotPresent
   redis:
     name: redis
     tag: "8.0-M02-alpine3.20"
@@ -254,8 +244,11 @@ sso:
         db: "rcabench"
     redis:
       host: "rcabench-redis:6379"
-    jaeger:
-      endpoint: ""
+    tracing:
+      # OTLP HTTP receiver (host:port — `otlptracehttp.WithEndpoint` expects
+      # no scheme). Points at the chart-rendered in-namespace otel-collector
+      # which exports to the shared ClickStack ClickHouse.
+      endpoint: "rcabench-otel-collector:4318"
     k8s:
       namespace: ""
       serviceAccount:
@@ -328,8 +321,11 @@ configmap:
       timezone: "UTC"
   redis:
     host: ""
-  jaeger:
-    endpoint: ""
+  tracing:
+    # OTLP HTTP receiver (host:port). Points at the chart-rendered
+    # `<release>-otel-collector` Service which exports to ClickStack
+    # ClickHouse — no separate Jaeger anymore.
+    endpoint: "rcabench-otel-collector:4318"
   etcd:
     endpoints: []
     username: ""
@@ -501,11 +497,6 @@ persistence:
     juicefs: "juicefs-sc"
     volcengine: "rcabench"
     external: ""
-  jaeger:
-    enabled: true
-    accessMode: ReadWriteOnce
-    size: 2Gi
-    storageClass: "openebs-hostpath"
   redis:
     enabled: true
     accessMode: ReadWriteOnce
@@ -659,3 +650,31 @@ rustfs:
     BLOB_S3_EXECUTION_SECRET_KEY: "change-me-in-prod-please"
     BLOB_S3_SHARED_ACCESS_KEY: "aegis-rustfs"
     BLOB_S3_SHARED_SECRET_KEY: "change-me-in-prod-please"
+
+# In-namespace OpenTelemetry Collector. Receives OTLP from every Aegis
+# microservice (`tracing.endpoint = <release>-otel-collector:4318`) and
+# exports to the operator-managed ClickStack ClickHouse. Replaces the
+# old `<release>-jaeger` StatefulSet.
+otelCollector:
+  enabled: true
+  replicaCount: 1
+  image:
+    name: otel/opentelemetry-collector-contrib
+    tag: "0.122.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  clickhouse:
+    # ClickHouse native protocol endpoint. Default points at the
+    # operator-managed ClickStack cluster in the `monitoring` namespace.
+    endpoint: "tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default"
+    database: "otel"
+    tracesTable: "otel_traces"
+    logsTable: "otel_logs"
+    metricsTable: "otel_metrics"
+    ttl: "72h"

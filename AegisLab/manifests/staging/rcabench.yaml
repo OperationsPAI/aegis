@@ -4,8 +4,6 @@ global:
 images:
   rcabench:
     name: library/rcabench
-  jaeger:
-    name: library/jaeger
   redis:
     name: library/redis
   mysql:

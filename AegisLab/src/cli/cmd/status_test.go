@@ -29,7 +29,7 @@ func healthyResponse() map[string]any {
 				"database":   map[string]any{"status": "healthy", "response_time": "3.5ms"},
 				"kubernetes": map[string]any{"status": "healthy", "response_time": "5ms"},
 				"buildkit":   map[string]any{"status": "healthy", "response_time": "2ms"},
-				"jaeger":     map[string]any{"status": "healthy", "response_time": "1ms"},
+				"tracing":    map[string]any{"status": "healthy", "response_time": "1ms"},
 			},
 		},
 	}
@@ -48,7 +48,7 @@ func unhealthyResponse() map[string]any {
 				"database":   map[string]any{"status": "unhealthy", "response_time": "N/A", "error": "connection refused"},
 				"kubernetes": map[string]any{"status": "healthy", "response_time": "5ms"},
 				"buildkit":   map[string]any{"status": "unhealthy", "response_time": "N/A", "error": "daemon not running"},
-				"jaeger":     map[string]any{"status": "healthy", "response_time": "1ms"},
+				"tracing":    map[string]any{"status": "healthy", "response_time": "1ms"},
 			},
 		},
 	}

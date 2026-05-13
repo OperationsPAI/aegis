@@ -32,8 +32,8 @@ data:
     timezone = "{{ .Values.configmap.database.clickhouse.timezone }}"
     {{- end }}
 
-    [jaeger]
-    endpoint = "{{ .Values.configmap.jaeger.endpoint | default (printf "http://%s-jaeger:4318" .Release.Name) }}"
+    [tracing]
+    endpoint = "{{ .Values.configmap.tracing.endpoint }}"
 
     [redis]
     host = "{{ .Values.configmap.redis.host | default (printf "%s-redis:6379" .Release.Name) }}"
@@ -322,8 +322,8 @@ data:
     [redis]
     host = "{{ .Values.sso.config.redis.host }}"
 
-    [jaeger]
-    endpoint = "{{ .Values.sso.config.jaeger.endpoint | default (printf "http://%s-jaeger:4318" .Release.Name) }}"
+    [tracing]
+    endpoint = "{{ .Values.sso.config.tracing.endpoint }}"
 
     [k8s]
     namespace = "{{ .Values.sso.config.k8s.namespace | default .Release.Namespace }}"
