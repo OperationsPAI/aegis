@@ -39,6 +39,75 @@ rcabench-frontend:
 configmap:
   system:
     env_mode: "prod"
+  # rustfs-backed buckets for blob / share — matches byte-cluster topology
+  # so the same code path is exercised in kind. Endpoint targets the
+  # chart-rendered `<release>-rustfs` Service in namespace `exp`.
+  blob:
+    client:
+      mode: "local"
+    buckets:
+      datapack:
+        driver: "s3"
+        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+        bucket: "aegis-datapack"
+        region: "us-east-1"
+        use_ssl: false
+        path_style: true
+        access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+        secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+      execution:
+        driver: "s3"
+        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+        bucket: "aegis-execution"
+        region: "us-east-1"
+        use_ssl: false
+        path_style: true
+        access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
+        secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
+      shared:
+        driver: "s3"
+        endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+        bucket: "aegis-shared"
+        region: "us-east-1"
+        use_ssl: false
+        path_style: true
+        access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
+        secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
+  share:
+    bucket: "shared"
+    publicBaseURL: ""
+
+# Wire blob microservice + aegis-api + runtime-worker-service to the
+# rustfs-admin Secret so the s3 driver can resolve BLOB_S3_*_*_KEY env.
+microservices:
+  aegisApi:
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
+  runtimeWorkerService:
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
+  blob:
+    extraEnvFrom:
+      - secretRef:
+          name: rustfs-admin
+
+# In-chart rustfs (S3 backend). Kind uses local-path provisioner
+# (storageClass `standard`), not the byte-cluster `rcabench` SC.
+rustfs:
+  enabled: true
+  image:
+    # Mirror via opspai/rustfs:latest works for kind (Docker Hub reachable).
+    name: docker.io/opspai/rustfs
+    tag: latest
+  persistence:
+    storageClass: "standard"
+    size: 20Gi
+  initBuckets:
+    image:
+      name: docker.io/opspai/mc
+      tag: latest
 
 # Drain template + init-helm-charts are not required for regression-only paths.
 initialization:

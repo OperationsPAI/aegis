@@ -176,6 +176,17 @@ data:
     auth     = "jwt"
 
     [[gateway.routes]]
+    prefix    = "/api/v2/share/"
+    upstream  = "{{ .Release.Name }}-blob:{{ .Values.microservices.blob.httpPort }}"
+    auth      = "jwt"
+    audiences = ["portal"]
+
+    [[gateway.routes]]
+    prefix   = "/s/"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.microservices.blob.httpPort }}"
+    auth     = "none"
+
+    [[gateway.routes]]
     prefix   = "/api/v2/auth/"
     upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
     auth     = "none"
@@ -225,6 +236,18 @@ data:
     root = {{ $b.root | quote }}
     {{- end }}
     {{- end }}
+    {{- end }}
+
+    {{- with .Values.configmap.share }}
+
+    [share]
+    bucket               = {{ .bucket | default "shared" | quote }}
+    public_base_url      = {{ .publicBaseURL | default "" | quote }}
+    default_ttl_seconds  = {{ .defaultTtlSeconds | default 604800 | int64 }}
+    max_ttl_seconds      = {{ .maxTtlSeconds | default 2592000 | int64 }}
+    max_views            = {{ .maxViews | default 10000 | int64 }}
+    max_upload_bytes     = {{ .maxUploadBytes | default 1073741824 | int64 }}
+    user_quota_bytes     = {{ .userQuotaBytes | default 10737418240 | int64 }}
     {{- end }}
 ---
 apiVersion: v1
