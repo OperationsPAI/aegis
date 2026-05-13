@@ -1,0 +1,50 @@
+{{- if .Values.enabled }}
+# In-namespace OpenTelemetry Collector for Aegis-self traces.
+# Replaces the deleted `<release>-jaeger`. Receives OTLP from every
+# Aegis microservice on 4317/4318 and writes to the operator-managed
+# ClickStack ClickHouse so traces land alongside benchmark observability
+# data — distinguished by `resource.attribute.deployment.scope=aegis`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "otel-collector.fullname" . }}-config
+data:
+  collector.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch:
+        send_batch_size: 1000
+        timeout: 5s
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      resource:
+        attributes:
+          - key: deployment.scope
+            value: aegis
+            action: upsert
+    exporters:
+      clickhouse:
+        endpoint: {{ .Values.clickhouse.endpoint | quote }}
+        database: {{ .Values.clickhouse.database | default "otel" | quote }}
+        traces_table_name: {{ .Values.clickhouse.tracesTable | default "otel_traces" | quote }}
+        logs_table_name: {{ .Values.clickhouse.logsTable | default "otel_logs" | quote }}
+        metrics_table_name: {{ .Values.clickhouse.metricsTable | default "otel_metrics" | quote }}
+        ttl: {{ .Values.clickhouse.ttl | default "72h" | quote }}
+        timeout: 5s
+      debug:
+        verbosity: basic
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [clickhouse, debug]
+{{- end }}

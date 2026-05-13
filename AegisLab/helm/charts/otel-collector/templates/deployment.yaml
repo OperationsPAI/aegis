@@ -1,0 +1,44 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "otel-collector.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ include "otel-collector.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "otel-collector.fullname" . }}
+    spec:
+      {{- with .Values.serviceAccount.name }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+      containers:
+        - name: otel-collector
+          image: {{ include "otel-collector.image" . }}
+          imagePullPolicy: "{{ include "otel-collector.imagePullPolicy" . }}"
+          args: ["--config=/etc/otel/collector.yaml"]
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "otel-collector.fullname" . }}-config
+{{- end }}

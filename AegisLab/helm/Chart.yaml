@@ -52,3 +52,8 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: configcenter.enabled
+  - name: otel-collector
+    version: "0.1.0"
+    repository: ""
+    alias: otelCollector
+    condition: otelCollector.enabled

@@ -17,5 +17,8 @@ dependencies:
 - name: configcenter
   repository: ""
   version: 0.1.0
-digest: sha256:54575f1d3fb3fe5e8aff539f137278bb898fa5b0a29ec4e8379a14f1481a0347
-generated: "2026-05-13T11:20:40.31669266+01:00"
+- name: otel-collector
+  repository: ""
+  version: 0.1.0
+digest: sha256:5d80882d266a88afd4501642652c87940f1674f7666d1a69f7e3ec880a79ab2c
+generated: "2026-05-13T12:28:51.054028877+01:00"
