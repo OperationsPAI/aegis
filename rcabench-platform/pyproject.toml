@@ -35,6 +35,8 @@ sdk = [
     "networkx>=3.4.2",
     # Computation (algorithms)
     "scipy>=1.15.0",
+    # Optional S3 backend for serde save_* (pandas / pyarrow pick it up via fsspec)
+    "s3fs>=2024.10.0",
 ]
 internal = [
     # Platform server API client
@@ -111,12 +113,14 @@ dev = [ #
     "ruff>=0.12.3",
     "pre-commit>=4.5.1",
     "pytest>=8.3.0",
+    "moto[s3,server]>=5.0.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = [
     "src/rcabench_platform/v3/internal/reasoning/ir_tests",
     "src/rcabench_platform/v3/sdk/evaluation/v2_tests",
+    "tests",
 ]
 
 [build-system]

@@ -13,11 +13,19 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from rcabench_platform.v3.internal.reasoning.models.graph import CallsEdgeData, DepKind, HyperGraph, PlaceKind
+from rcabench_platform.v3.sdk.utils.serde import save_parquet
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     pass
+
+
+def _join(base: str | Path, name: str) -> str | Path:
+    """Join a child filename onto ``base``. Preserves s3:// strings; otherwise Path/."""
+    if isinstance(base, str) and base.startswith("s3://"):
+        return base.rstrip("/") + "/" + name
+    return Path(base) / name
 
 
 # Canonical-state vocabulary (Phase 2 IR): non-abnormal states.
@@ -33,7 +41,7 @@ def is_abnormal_state(state: str, node_kind: PlaceKind) -> bool:
 def export_abnormal_nodes(
     graph: HyperGraph,
     node_states: dict[int, str],
-    output_path: Path,
+    output_path: str | Path,
 ) -> pd.DataFrame:
     """Export all abnormal nodes to a parquet file.
 
@@ -65,7 +73,7 @@ def export_abnormal_nodes(
 
     df = pd.DataFrame(records)
     if not df.empty:
-        df.to_parquet(output_path / "abnormal_nodes.parquet", index=False)
+        save_parquet(df, path=_join(output_path, "abnormal_nodes.parquet"))
         logger.info(f"  ✓ Exported {len(df)} abnormal nodes to abnormal_nodes.parquet")
     else:
         logger.warning("  ⚠ No abnormal nodes found")
@@ -76,7 +84,7 @@ def export_abnormal_nodes(
 def export_abnormal_edges(
     graph: HyperGraph,
     node_states: dict[int, str],
-    output_path: Path,
+    output_path: str | Path,
 ) -> pd.DataFrame:
     """Export edges connecting abnormal nodes to a parquet file.
 
@@ -146,7 +154,7 @@ def export_abnormal_edges(
 
     df = pd.DataFrame(records)
     if not df.empty:
-        df.to_parquet(output_path / "abnormal_edges.parquet", index=False)
+        save_parquet(df, path=_join(output_path, "abnormal_edges.parquet"))
         logger.info(f"  ✓ Exported {len(df)} edges connecting abnormal nodes to abnormal_edges.parquet")
     else:
         logger.warning("  ⚠ No edges connecting abnormal nodes found")
@@ -157,7 +165,7 @@ def export_abnormal_edges(
 def export_propagation_patterns(
     graph: HyperGraph,
     node_states: dict[int, str],
-    output_path: Path,
+    output_path: str | Path,
 ) -> pd.DataFrame:
     """Export propagation patterns (abnormal src -> edge -> dst with states) to parquet.
 
@@ -240,7 +248,7 @@ def export_propagation_patterns(
     if not df.empty:
         # Sort by pattern_type to group forward/backward propagations
         df = df.sort_values(["pattern_type", "src_kind", "edge_kind", "dst_kind"])
-        df.to_parquet(output_path / "propagation_patterns.parquet", index=False)
+        save_parquet(df, path=_join(output_path, "propagation_patterns.parquet"))
         logger.info(f"  ✓ Exported {len(df)} propagation patterns to propagation_patterns.parquet")
 
         # Log summary
@@ -274,7 +282,7 @@ def _classify_pattern(src_abnormal: bool, dst_abnormal: bool) -> str:
 def export_all_patterns(
     graph: HyperGraph,
     node_states: dict[int, str],
-    output_dir: Path,
+    output_dir: str | Path,
 ) -> dict[str, pd.DataFrame]:
     """Export all abnormal patterns to parquet files.
 
@@ -291,7 +299,8 @@ def export_all_patterns(
     Returns:
         Dictionary mapping filename to DataFrame
     """
-    output_dir.mkdir(parents=True, exist_ok=True)
+    if not (isinstance(output_dir, str) and output_dir.startswith("s3://")):
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     logger.info("\n[3.5/7] Exporting abnormal patterns for LLM analysis...")
 
