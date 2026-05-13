@@ -21,6 +21,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	lru "github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const (
@@ -63,11 +64,11 @@ func NewClient(cfg Config, verifier *jwtkeys.Verifier) *Client {
 		cfg: cfg,
 		httpClient: &http.Client{
 			Timeout: defaultHTTPTimeout,
-			Transport: &http.Transport{
+			Transport: otelhttp.NewTransport(&http.Transport{
 				MaxIdleConns:        100,
 				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,
-			},
+			}),
 		},
 		verifier: verifier,
 		cache:    lru.NewLRU[string, bool](checkCacheSize, nil, checkCacheTTL),

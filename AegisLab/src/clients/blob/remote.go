@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"aegis/platform/consts"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // TokenSource produces a fresh Bearer token for cross-service calls.
@@ -47,7 +49,10 @@ func NewRemoteClient(cfg RemoteClientConfig, tokenSrc TokenSource) (*RemoteClien
 	}
 	return &RemoteClient{
 		baseURL:    u,
-		http:       &http.Client{Timeout: cfg.Timeout},
+		http: &http.Client{
+			Timeout:   cfg.Timeout,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
 		tokenSrc:   tokenSrc,
 		maxRetries: cfg.MaxRetries,
 	}, nil

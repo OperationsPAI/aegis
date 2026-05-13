@@ -22,6 +22,7 @@ import (
 	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
@@ -760,7 +761,10 @@ func (s *Service) checkTracingHealth(parent context.Context) ServiceInfo {
 		return ServiceInfo{Status: "unhealthy", LastChecked: time.Now(), ResponseTime: time.Since(start).String(), Error: "Failed to create OTLP request", Details: err.Error()}
 	}
 
-	httpClient := &http.Client{Timeout: 5 * time.Second}
+	httpClient := &http.Client{
+		Timeout:   5 * time.Second,
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
 	resp, err := httpClient.Do(req)
 	responseTime := time.Since(start)
 	if err != nil {

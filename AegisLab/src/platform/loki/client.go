@@ -16,6 +16,7 @@ import (
 	"aegis/platform/dto"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type Client struct {
@@ -81,7 +82,8 @@ func NewClient() *Client {
 	return &Client{
 		address: address,
 		httpClient: &http.Client{
-			Timeout: timeoutDuration,
+			Timeout:   timeoutDuration,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
 	}
 }

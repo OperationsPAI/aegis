@@ -18,6 +18,7 @@ import (
 	"aegis/crud/admin/configcenter"
 
 	"github.com/mitchellh/mapstructure"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // RemoteClient talks to `aegis-configcenter` over HTTP and subscribes
@@ -49,7 +50,10 @@ func NewRemoteClient(cfg RemoteClientConfig, tokenSrc TokenSource) (*RemoteClien
 	}
 	return &RemoteClient{
 		baseURL:  u,
-		http:     &http.Client{Timeout: cfg.Timeout},
+		http: &http.Client{
+			Timeout:   cfg.Timeout,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
 		tokenSrc: tokenSrc,
 		timeout:  cfg.Timeout,
 		bindings: make(map[string][]*remoteBinding),
@@ -225,7 +229,9 @@ func (c *RemoteClient) runWatch(ctx context.Context, namespace string) {
 		_ = c.auth(ctx, req)
 		req.Header.Set("Accept", "text/event-stream")
 		// no client timeout for SSE; rely on ctx
-		client := &http.Client{}
+		client := &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}
 		resp, err := client.Do(req)
 		if err != nil {
 			time.Sleep(backoff)

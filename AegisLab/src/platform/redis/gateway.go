@@ -9,6 +9,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
@@ -417,6 +418,9 @@ func newClient() *redis.Client {
 	})
 	if err := client.Ping(context.Background()).Err(); err != nil {
 		logrus.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	if err := redisotel.InstrumentTracing(client); err != nil {
+		logrus.Fatalf("Failed to instrument Redis tracing: %v", err)
 	}
 	return client
 }

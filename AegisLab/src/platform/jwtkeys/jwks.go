@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type JWK struct {
@@ -66,7 +68,10 @@ func FetchJWKS(ctx context.Context, url string) (map[string]*rsa.PublicKey, erro
 	if err != nil {
 		return nil, fmt.Errorf("build jwks request: %w", err)
 	}
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch jwks: %w", err)
