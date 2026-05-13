@@ -76,7 +76,7 @@ type ChaosSystemWriter interface {
 
 type Service struct {
 	repo         *Repository
-	store        *DatapackStore
+	store        DatapackStorage
 	lokiClient   *loki.Client
 	containers   container.Reader
 	datasets     dataset.Reader
@@ -85,7 +85,7 @@ type Service struct {
 	chaosSystems ChaosSystemWriter
 }
 
-func NewService(repo *Repository, store *DatapackStore, lokiClient *loki.Client, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter) *Service {
+func NewService(repo *Repository, store DatapackStorage, lokiClient *loki.Client, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter) *Service {
 	return &Service{
 		repo:         repo,
 		store:        store,

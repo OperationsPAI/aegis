@@ -18,19 +18,40 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type DatapackStore struct {
+// FilesystemDatapackStore is the local-filesystem implementation of
+// DatapackStorage. The legacy name `DatapackStore` is preserved as a type
+// alias below so existing call sites and test struct-literals keep
+// compiling without behavioural change.
+type FilesystemDatapackStore struct {
 	basePath string
 }
 
-func NewDatapackStore() *DatapackStore {
-	return &DatapackStore{basePath: config.GetString("jfs.dataset_path")}
+// DatapackStore is a backward-compat alias for FilesystemDatapackStore so
+// that existing code paths (tests using struct literals, etc.) keep
+// working unmodified.
+type DatapackStore = FilesystemDatapackStore
+
+// NewFilesystemDatapackStore constructs the filesystem-backed
+// DatapackStorage implementation.
+func NewFilesystemDatapackStore() *FilesystemDatapackStore {
+	return &FilesystemDatapackStore{basePath: config.GetString("jfs.dataset_path")}
 }
 
-func (s *DatapackStore) RootDir(datapackName string) string {
+// NewDatapackStore returns the default DatapackStorage implementation.
+// Kept for fx wiring and to avoid touching every call site; new code
+// should depend on the DatapackStorage interface rather than this
+// concrete constructor.
+func NewDatapackStore() DatapackStorage {
+	return NewFilesystemDatapackStore()
+}
+
+var _ DatapackStorage = (*FilesystemDatapackStore)(nil)
+
+func (s *FilesystemDatapackStore) RootDir(datapackName string) string {
 	return filepath.Join(s.basePath, datapackName)
 }
 
-func (s *DatapackStore) Package(zipWriter *zip.Writer, datapackName string, excludeRules []utils.ExculdeRule) error {
+func (s *FilesystemDatapackStore) Package(zipWriter *zip.Writer, datapackName string, excludeRules []utils.ExculdeRule) error {
 	workDir := s.RootDir(datapackName)
 	if !utils.IsAllowedPath(workDir) {
 		return fmt.Errorf("invalid path access to %s", workDir)
@@ -38,7 +59,7 @@ func (s *DatapackStore) Package(zipWriter *zip.Writer, datapackName string, excl
 	return packageDatapackDirectoryToZip(zipWriter, workDir, excludeRules)
 }
 
-func (s *DatapackStore) BuildFileTree(datapackName, baseURL string, datapackID int) (*DatapackFilesResp, error) {
+func (s *FilesystemDatapackStore) BuildFileTree(datapackName, baseURL string, datapackID int) (*DatapackFilesResp, error) {
 	workDir := s.RootDir(datapackName)
 	if !utils.IsAllowedPath(workDir) {
 		return nil, fmt.Errorf("invalid path access to %s", workDir)
@@ -61,7 +82,7 @@ func (s *DatapackStore) BuildFileTree(datapackName, baseURL string, datapackID i
 	return resp, nil
 }
 
-func (s *DatapackStore) OpenFile(datapackName, filePath string) (string, string, int64, io.ReadSeekCloser, error) {
+func (s *FilesystemDatapackStore) OpenFile(datapackName, filePath string) (string, string, int64, io.ReadSeekCloser, error) {
 	fullPath, err := s.resolveFilePath(datapackName, filePath)
 	if err != nil {
 		return "", "", 0, nil, err
@@ -104,11 +125,11 @@ func (s *DatapackStore) OpenFile(datapackName, filePath string) (string, string,
 	return fileName, contentType, stat.Size(), file, nil
 }
 
-func (s *DatapackStore) ResolveFilePath(datapackName, filePath string) (string, error) {
+func (s *FilesystemDatapackStore) ResolveFilePath(datapackName, filePath string) (string, error) {
 	return s.resolveFilePath(datapackName, filePath)
 }
 
-func (s *DatapackStore) resolveFilePath(datapackName, filePath string) (string, error) {
+func (s *FilesystemDatapackStore) resolveFilePath(datapackName, filePath string) (string, error) {
 	workDir := s.RootDir(datapackName)
 	if !utils.IsAllowedPath(workDir) {
 		return "", fmt.Errorf("invalid path access to %s", workDir)
@@ -203,11 +224,11 @@ func formatFileSize(bytes int64) string {
 	return fmt.Sprintf("%.1fMB", float64(bytes)/float64(mb))
 }
 
-func (s *DatapackStore) CreateUploadTempFile() (*os.File, error) {
+func (s *FilesystemDatapackStore) CreateUploadTempFile() (*os.File, error) {
 	return os.CreateTemp("", "datapack-upload-*.zip")
 }
 
-func (s *DatapackStore) ValidateArchive(zipPath string) error {
+func (s *FilesystemDatapackStore) ValidateArchive(zipPath string) error {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return fmt.Errorf("failed to open zip archive: %w", err)
@@ -224,7 +245,7 @@ func (s *DatapackStore) ValidateArchive(zipPath string) error {
 	return fmt.Errorf("archive must contain at least one parquet file from: abnormal_traces.parquet, abnormal_metrics.parquet, abnormal_logs.parquet, normal_traces.parquet, normal_metrics.parquet, normal_logs.parquet")
 }
 
-func (s *DatapackStore) EnsureDatapackDirAvailable(datapackName string) (string, error) {
+func (s *FilesystemDatapackStore) EnsureDatapackDirAvailable(datapackName string) (string, error) {
 	if s.basePath == "" {
 		return "", fmt.Errorf("dataset path not configured")
 	}
@@ -235,7 +256,7 @@ func (s *DatapackStore) EnsureDatapackDirAvailable(datapackName string) (string,
 	return targetDir, nil
 }
 
-func (s *DatapackStore) ExtractArchive(zipPath, targetDir string) error {
+func (s *FilesystemDatapackStore) ExtractArchive(zipPath, targetDir string) error {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return fmt.Errorf("failed to open zip archive: %w", err)
@@ -286,15 +307,15 @@ func (s *DatapackStore) ExtractArchive(zipPath, targetDir string) error {
 	return nil
 }
 
-func (s *DatapackStore) RemoveAll(path string) error {
+func (s *FilesystemDatapackStore) RemoveAll(path string) error {
 	return os.RemoveAll(path)
 }
 
-func (s *DatapackStore) Remove(path string) error {
+func (s *FilesystemDatapackStore) Remove(path string) error {
 	return os.Remove(path)
 }
 
-func (s *DatapackStore) ExtractGroundtruths(dir string) []model.Groundtruth {
+func (s *FilesystemDatapackStore) ExtractGroundtruths(dir string) []model.Groundtruth {
 	jsonPath := filepath.Join(dir, "injection.json")
 	data, err := os.ReadFile(jsonPath)
 	if err != nil {

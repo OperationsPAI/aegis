@@ -12,15 +12,34 @@ import (
 	"aegis/platform/utils"
 )
 
-type DatapackFileStore struct {
+// FilesystemDatapackFileStore is the local-filesystem implementation of
+// DatasetFileStorage. The legacy name `DatapackFileStore` is kept as a
+// type alias below so existing struct-literal call sites (notably tests)
+// keep compiling without behavioural change.
+type FilesystemDatapackFileStore struct {
 	basePath string
 }
 
-func NewDatapackFileStore() *DatapackFileStore {
-	return &DatapackFileStore{basePath: config.GetString("jfs.dataset_path")}
+// DatapackFileStore is a backward-compat alias for
+// FilesystemDatapackFileStore.
+type DatapackFileStore = FilesystemDatapackFileStore
+
+// NewFilesystemDatapackFileStore constructs the filesystem-backed
+// DatasetFileStorage implementation.
+func NewFilesystemDatapackFileStore() *FilesystemDatapackFileStore {
+	return &FilesystemDatapackFileStore{basePath: config.GetString("jfs.dataset_path")}
 }
 
-func (s *DatapackFileStore) PackageToZip(zipWriter *zip.Writer, datapacks []model.FaultInjection, excludeRules []utils.ExculdeRule) error {
+// NewDatapackFileStore returns the default DatasetFileStorage
+// implementation. Kept for fx wiring and to avoid touching every call
+// site; new code should depend on the DatasetFileStorage interface.
+func NewDatapackFileStore() DatasetFileStorage {
+	return NewFilesystemDatapackFileStore()
+}
+
+var _ DatasetFileStorage = (*FilesystemDatapackFileStore)(nil)
+
+func (s *FilesystemDatapackFileStore) PackageToZip(zipWriter *zip.Writer, datapacks []model.FaultInjection, excludeRules []utils.ExculdeRule) error {
 	for i := range datapacks {
 		if err := s.packageDatapackToZip(zipWriter, &datapacks[i], excludeRules); err != nil {
 			return err
@@ -29,7 +48,7 @@ func (s *DatapackFileStore) PackageToZip(zipWriter *zip.Writer, datapacks []mode
 	return nil
 }
 
-func (s *DatapackFileStore) packageDatapackToZip(zipWriter *zip.Writer, datapack *model.FaultInjection, excludeRules []utils.ExculdeRule) error {
+func (s *FilesystemDatapackFileStore) packageDatapackToZip(zipWriter *zip.Writer, datapack *model.FaultInjection, excludeRules []utils.ExculdeRule) error {
 	if datapack.State < consts.DatapackBuildSuccess {
 		return fmt.Errorf("datapack %s is not in a downloadable state", datapack.Name)
 	}

@@ -8,10 +8,10 @@ import (
 
 type Service struct {
 	injections injection.Reader
-	store      *injection.DatapackStore
+	store      injection.DatapackStorage
 }
 
-func NewService(injections injection.Reader, store *injection.DatapackStore) *Service {
+func NewService(injections injection.Reader, store injection.DatapackStorage) *Service {
 	return &Service{injections: injections, store: store}
 }
 

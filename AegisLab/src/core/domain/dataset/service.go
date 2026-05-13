@@ -17,11 +17,11 @@ import (
 
 type Service struct {
 	repo      *Repository
-	datapacks *DatapackFileStore
+	datapacks DatasetFileStorage
 	labels    label.Writer
 }
 
-func NewService(repo *Repository, datapacks *DatapackFileStore, labels label.Writer) *Service {
+func NewService(repo *Repository, datapacks DatasetFileStorage, labels label.Writer) *Service {
 	return &Service{repo: repo, datapacks: datapacks, labels: labels}
 }
 

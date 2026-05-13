@@ -19,12 +19,12 @@ import (
 type Service struct {
 	repo      *Repository
 	build     *BuildGateway
-	helmFiles *HelmFileStore
+	helmFiles ContainerFileStorage
 	labels    label.Writer
 	redis     *redis.Gateway
 }
 
-func NewService(repo *Repository, build *BuildGateway, helmFiles *HelmFileStore, labels label.Writer, redis *redis.Gateway) *Service {
+func NewService(repo *Repository, build *BuildGateway, helmFiles ContainerFileStorage, labels label.Writer, redis *redis.Gateway) *Service {
 	return &Service{repo: repo, build: build, helmFiles: helmFiles, labels: labels, redis: redis}
 }
 

@@ -13,15 +13,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type HelmFileStore struct {
+// FilesystemHelmFileStore is the local-filesystem implementation of
+// ContainerFileStorage. The legacy name `HelmFileStore` is kept as a type
+// alias below so existing struct-literal call sites (notably tests) keep
+// compiling without behavioural change.
+type FilesystemHelmFileStore struct {
 	basePath string
 }
 
-func NewHelmFileStore() *HelmFileStore {
-	return &HelmFileStore{basePath: config.GetString("jfs.dataset_path")}
+// HelmFileStore is a backward-compat alias for FilesystemHelmFileStore.
+type HelmFileStore = FilesystemHelmFileStore
+
+// NewFilesystemHelmFileStore constructs the filesystem-backed
+// ContainerFileStorage implementation.
+func NewFilesystemHelmFileStore() *FilesystemHelmFileStore {
+	return &FilesystemHelmFileStore{basePath: config.GetString("jfs.dataset_path")}
 }
 
-func (s *HelmFileStore) SaveChart(containerName string, file *multipart.FileHeader) (string, string, error) {
+// NewHelmFileStore returns the default ContainerFileStorage
+// implementation. Kept for fx wiring and to avoid touching every call
+// site; new code should depend on the ContainerFileStorage interface.
+func NewHelmFileStore() ContainerFileStorage {
+	return NewFilesystemHelmFileStore()
+}
+
+var _ ContainerFileStorage = (*FilesystemHelmFileStore)(nil)
+
+func (s *FilesystemHelmFileStore) SaveChart(containerName string, file *multipart.FileHeader) (string, string, error) {
 	if s.basePath == "" {
 		return "", "", fmt.Errorf("jfs.dataset_path is not configured")
 	}
@@ -53,7 +71,7 @@ func (s *HelmFileStore) SaveChart(containerName string, file *multipart.FileHead
 	return targetPath, checksum, nil
 }
 
-func (s *HelmFileStore) SaveValueFile(containerName string, srcFileHeader *multipart.FileHeader, srcFilePath string) (string, error) {
+func (s *FilesystemHelmFileStore) SaveValueFile(containerName string, srcFileHeader *multipart.FileHeader, srcFilePath string) (string, error) {
 	if s.basePath == "" {
 		return "", fmt.Errorf("jfs.dataset_path is not configured")
 	}
