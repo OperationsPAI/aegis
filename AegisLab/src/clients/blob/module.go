@@ -21,20 +21,27 @@ var Module = fx.Module("blobclient",
 	fx.Provide(provideClient),
 )
 
-func provideClient(
-	svc *blob.Service, // available iff module/blob is also loaded
-	tokenSrc TokenSource, // available iff app wires an adapter
-) (Client, error) {
+// clientDeps lets `Svc` and `TokenSrc` resolve as optional dependencies —
+// LocalClient never needs a TokenSource (no HTTP auth), and RemoteClient
+// tolerates a nil source for unauthenticated calls. Same shape lets
+// in-process mode work without dragging blob.Module into every fx graph.
+type clientDeps struct {
+	fx.In
+	Svc      *blob.Service `optional:"true"`
+	TokenSrc TokenSource   `optional:"true"`
+}
+
+func provideClient(deps clientDeps) (Client, error) {
 	mode := config.GetString("blob.client.mode")
 	if mode == "" {
 		mode = "local"
 	}
 	switch mode {
 	case "local":
-		if svc == nil {
+		if deps.Svc == nil {
 			return nil, fmt.Errorf("blobclient mode=local but no blob.Service in graph")
 		}
-		return NewLocalClient(svc), nil
+		return NewLocalClient(deps.Svc), nil
 	case "remote":
 		base := config.GetString("blob.client.endpoint")
 		if base == "" {
@@ -43,7 +50,7 @@ func provideClient(
 		return NewRemoteClient(RemoteClientConfig{
 			BaseURL:    base,
 			MaxRetries: config.GetInt("blob.client.max_retries"),
-		}, tokenSrc)
+		}, deps.TokenSrc)
 	default:
 		return nil, fmt.Errorf("blobclient: unknown mode %q (want local|remote)", mode)
 	}
