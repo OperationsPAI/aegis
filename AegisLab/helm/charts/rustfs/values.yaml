@@ -45,6 +45,8 @@ initBuckets:
     - aegis-datapack
     - aegis-execution
     - aegis-shared
+    - aegis-helm-chart
+    - aegis-dataset
   image:
     name: docker.io/opspai/mc
     tag: latest
