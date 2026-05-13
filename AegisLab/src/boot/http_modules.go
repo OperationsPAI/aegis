@@ -1,12 +1,14 @@
 package app
 
 import (
+	blobclient "aegis/clients/blob"
 	chaossystem "aegis/core/domain/chaossystem"
 	container "aegis/core/domain/container"
 	dataset "aegis/core/domain/dataset"
 	execution "aegis/core/domain/execution"
 	injection "aegis/core/domain/injection"
 	label "aegis/crud/iam/label"
+	blob "aegis/crud/storage/blob"
 
 	"go.uber.org/fx"
 )
@@ -30,6 +32,12 @@ func ExecutionInjectionOwnerModules() fx.Option {
 		execution.Module,
 		injection.Module,
 		label.Module,
+		// injection/container/dataset constructors switch on
+		// `jfs.backend` and need a blob.Client when backend = "s3".
+		// blob.Module provides the in-process Service that LocalClient
+		// wraps. Filesystem mode still works without exercising it.
+		blob.Module,
+		blobclient.Module,
 		fx.Provide(chaosSystemWriterAdapter),
 	)
 }
