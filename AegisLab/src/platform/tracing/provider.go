@@ -26,10 +26,13 @@ func NewProvider() (*sdktrace.TracerProvider, error) {
 		return nil, err
 	}
 
+	// Pass the empty SchemaURL so Merge() doesn't reject our overrides
+	// when `resource.Default()` ships a newer schema URL than the version
+	// of semconv we import.
 	res, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
-			semconv.SchemaURL,
+			"",
 			semconv.ServiceName(config.GetString("name")),
 			semconv.ServiceVersion(config.GetString("version")),
 		),
