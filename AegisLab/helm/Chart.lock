@@ -1,0 +1,6 @@
+dependencies:
+- name: notify
+  repository: ""
+  version: 0.1.0
+digest: sha256:659e94322be4db88ee2d6311319b0fd12509035ead47743c59d8fe622cd752ea
+generated: "2026-05-13T09:33:07.576728665+01:00"

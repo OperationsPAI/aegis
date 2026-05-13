@@ -1,0 +1,22 @@
+# notify subchart defaults.
+#
+# Self-contained values for the aegis-notify microservice. The parent
+# rcabench chart can drive this subchart by setting top-level `notify:`
+# overrides (Helm maps top-level keys matching a subchart name into that
+# subchart's scope).
+#
+# Shared cross-chart settings — container image, SSO client config, config
+# mount directory, the auth Secret name, and the consumer-side ConfigMap
+# name — are read from `.Values.global.*` so the parent chart can publish
+# them in one place without duplicating per-microservice.
+
+enabled: true
+replicaCount: 1
+httpPort: 8084
+binaryName: "aegis-notify"
+
+service:
+  type: ClusterIP
+  # nodePort: 30084   # only honored when service.type == NodePort
+
+resources: {}

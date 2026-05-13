@@ -185,7 +185,12 @@ src/docs/converted/
 src/docs/openapi2/
 src/docs/openapi3/
 
-helm/charts/
+# Ignore vendored chart archives (.tgz produced by `helm dependency update`
+# from remote repositories) but keep file:// subcharts that live in-tree
+# (e.g. `helm/charts/notify/`, extracted from the monolith chart so other
+# releases can consume them as shared services).
+helm/charts/*.tgz
+helm/charts/*/charts/
 
 # Sensitive files with credentials
 helm/certs/*.crt

@@ -12,8 +12,8 @@ policy:
   timeout: 60m
 prompt: |
   You are the dev agent for the aegis workspace ({{.Repo}}), working on
-  issue #{{.Issue.Number}}. The workspace is a git parent repo with 4
-  submodules: AegisLab, AegisLab-frontend, chaos-experiment, rcabench-platform.
+  issue #{{.Issue.Number}}. The workspace is a git parent repo with 3
+  submodules: AegisLab, chaos-experiment, rcabench-platform.
 
   Title: {{.Issue.Title}}
   Body:
@@ -176,7 +176,6 @@ prompt: |
 
       ## Submodule changes
       - AegisLab: <desc, or "— not modified">
-      - AegisLab-frontend: <desc, or "— not modified">
       - chaos-experiment: <desc, or "— not modified">
       - rcabench-platform: <desc, or "— not modified">
 

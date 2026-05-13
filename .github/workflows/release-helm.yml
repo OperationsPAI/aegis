@@ -1,33 +1,31 @@
 name: Release Helm charts
 
-# Monorepo replacement for the two separate release-helm workflows under
-# AegisLab/ and AegisLab-frontend/. Publishes both charts to the *same*
-# gh-pages branch of this monorepo, preserving existing chart versions in the
-# merged index.yaml (no force-orphan — that would clobber sibling charts).
+# Publishes the AegisLab helm chart to this repo's gh-pages branch,
+# preserving existing chart versions in the merged index.yaml (no
+# force-orphan — that would clobber any sibling chart tarballs published
+# under the same URL). The frontend chart is now published from the
+# separate `aegis-ui` repository.
 #
 # Consumers point to:   https://operationspai.github.io/aegis/
 # (Make sure GitHub Pages is enabled on this repo's gh-pages branch.)
 #
 # Triggers:
 #   - Tag `release-helm-backend/v<ver>`  → package AegisLab/helm
-#   - Tag `release-helm-frontend/v<ver>` → package AegisLab-frontend/helm
-#   - push to main touching either chart → repackage whichever changed
-#   - workflow_dispatch                  → repackage both
+#   - push to main touching the chart    → repackage
+#   - workflow_dispatch                  → repackage
 #
 # Version selection:
 #   - Tag push:    chart is packaged at the tag's version (stripped of prefix)
-#   - Non-tag:     chart is packaged at the version declared in its Chart.yaml
+#   - Non-tag:     chart is packaged at the version declared in Chart.yaml
 
 on:
   push:
     branches: [main]
     paths:
       - "AegisLab/helm/**"
-      - "AegisLab-frontend/helm/**"
       - ".github/workflows/release-helm.yml"
     tags:
       - "release-helm-backend/v[0-9]+.[0-9]+.[0-9]+*"
-      - "release-helm-frontend/v[0-9]+.[0-9]+.[0-9]+*"
   workflow_dispatch:
 
 permissions:
@@ -64,31 +62,26 @@ jobs:
 
           case "$EVENT" in
             workflow_dispatch)
-              selections+=("AegisLab/helm|" "AegisLab-frontend/helm|")
+              selections+=("AegisLab/helm|")
               ;;
             push)
               if [[ "$REF" == refs/tags/release-helm-backend/v* ]]; then
                 ver="${REF#refs/tags/release-helm-backend/v}"
                 selections+=("AegisLab/helm|$ver")
-              elif [[ "$REF" == refs/tags/release-helm-frontend/v* ]]; then
-                ver="${REF#refs/tags/release-helm-frontend/v}"
-                selections+=("AegisLab-frontend/helm|$ver")
               else
-                # branch push to main: pick charts whose files changed
+                # branch push to main: pick chart only if its files changed
                 if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-                  mapfile -t files < <(git ls-files AegisLab/helm AegisLab-frontend/helm)
+                  mapfile -t files < <(git ls-files AegisLab/helm)
                 else
                   mapfile -t files < <(git diff --name-only "$BEFORE" "$HEAD")
                 fi
-                touched_backend=0; touched_frontend=0
+                touched_backend=0
                 for f in "${files[@]:-}"; do
                   case "$f" in
-                    AegisLab/helm/*)          touched_backend=1 ;;
-                    AegisLab-frontend/helm/*) touched_frontend=1 ;;
+                    AegisLab/helm/*) touched_backend=1 ;;
                   esac
                 done
-                [ "$touched_backend"  = 1 ] && selections+=("AegisLab/helm|")
-                [ "$touched_frontend" = 1 ] && selections+=("AegisLab-frontend/helm|")
+                [ "$touched_backend" = 1 ] && selections+=("AegisLab/helm|")
               fi
               ;;
           esac
