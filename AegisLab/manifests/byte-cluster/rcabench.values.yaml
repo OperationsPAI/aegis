@@ -57,13 +57,12 @@ initialization:
 configmap:
   system:
     env_mode: "prod"
-  # Datapack / helm-chart / dataset storage backend. Defaulted to
-  # "filesystem" here so this overlay is functionally unchanged from
-  # before round-2; flipping to "s3" routes the three stores at the
-  # in-cluster rustfs buckets declared under `blob.buckets` below
-  # (PR6 will perform that flip + bucket bootstrap).
+  # Datapack / helm-chart / dataset storage backend. Routes the three
+  # stores at the in-cluster rustfs buckets declared under `blob.buckets`
+  # below. Bucket creation is handled by rustfs.initBuckets (one-shot Job)
+  # which seeds aegis-datapack / aegis-helm-chart / aegis-dataset.
   jfs:
-    backend: "filesystem"
+    backend: "s3"
     s3:
       datapack_bucket: "aegis-datapack"
       helm_chart_bucket: "aegis-helm-chart"
