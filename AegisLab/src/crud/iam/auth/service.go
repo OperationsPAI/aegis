@@ -6,19 +6,25 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"aegis/platform/consts"
 	"aegis/platform/jwtkeys"
 	"aegis/platform/model"
 	user "aegis/crud/iam/user"
+	"aegis/platform/tracing"
 	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
 	"gorm.io/gorm"
 )
 
-const accessKeySignatureTTL = 5 * time.Minute
+const (
+	accessKeySignatureTTL = 5 * time.Minute
+	iamTracerName         = "aegis/iam"
+)
 
 type Service struct {
 	userRepo   *UserRepository
@@ -41,6 +47,9 @@ func NewService(userRepo *UserRepository, roleRepo *RoleRepository, apiKeyRepo *
 }
 
 func (s *Service) Register(ctx context.Context, req *RegisterReq) (*UserInfo, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/register")
+	defer span.End()
+
 	if req == nil {
 		return nil, fmt.Errorf("register request is nil")
 	}
@@ -80,6 +89,9 @@ func (s *Service) Register(ctx context.Context, req *RegisterReq) (*UserInfo, er
 }
 
 func (s *Service) Login(ctx context.Context, req *LoginReq) (*LoginResp, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/login")
+	defer span.End()
+
 	if req == nil {
 		return nil, fmt.Errorf("login request is nil")
 	}
@@ -143,6 +155,8 @@ func (s *Service) Login(ctx context.Context, req *LoginReq) (*LoginResp, error) 
 
 	info := NewUserInfo(loginedUser)
 	info.Role = roles[0].Name
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(loginedUser.ID))
+	tracing.SetSpanAttribute(ctx, "user.role", info.Role)
 
 	return &LoginResp{
 		Token:     token,
@@ -152,6 +166,9 @@ func (s *Service) Login(ctx context.Context, req *LoginReq) (*LoginResp, error) 
 }
 
 func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*TokenRefreshResp, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/refresh_token")
+	defer span.End()
+
 	if req == nil {
 		return nil, fmt.Errorf("token refresh request is nil")
 	}
@@ -165,6 +182,7 @@ func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*Toke
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(user.ID))
 
 	newToken, expiresAt, err := s.generateTokenWithRoles(s.roleRepo, user)
 	if err != nil {
@@ -178,6 +196,10 @@ func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*Toke
 }
 
 func (s *Service) Logout(ctx context.Context, claims *utils.Claims) error {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/logout")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(claims.UserID))
+
 	metaData := map[string]any{
 		"user_id": claims.UserID,
 		"reason":  "User logout",
@@ -190,10 +212,14 @@ func (s *Service) Logout(ctx context.Context, claims *utils.Claims) error {
 }
 
 func (s *Service) VerifyToken(ctx context.Context, token string) (*utils.Claims, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/verify_token")
+	defer span.End()
+
 	claims, err := utils.ParseToken(token, s.verifier.Resolve)
 	if err != nil {
 		return nil, err
 	}
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(claims.UserID))
 
 	if s.tokenStore != nil {
 		blacklisted, err := s.tokenStore.IsTokenBlacklisted(ctx, claims.ID)
@@ -213,6 +239,10 @@ func (s *Service) VerifyServiceToken(ctx context.Context, token string) (*utils.
 }
 
 func (s *Service) ChangePassword(ctx context.Context, req *ChangePasswordReq, userID int) error {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/change_password")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
+
 	if req == nil {
 		return fmt.Errorf("change password request is nil")
 	}
@@ -426,6 +456,9 @@ func (s *Service) RotateAPIKey(ctx context.Context, userID, accessKeyID int) (*A
 }
 
 func (s *Service) ExchangeAPIKeyToken(ctx context.Context, req *APIKeyTokenReq, method, path string) (*APIKeyTokenResp, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/exchange_api_key_token")
+	defer span.End()
+
 	if req == nil {
 		return nil, fmt.Errorf("api key token request is nil")
 	}
@@ -478,6 +511,7 @@ func (s *Service) ExchangeAPIKeyToken(ctx context.Context, req *APIKeyTokenReq, 
 	if !user.IsActive || user.Status != consts.CommonEnabled {
 		return nil, fmt.Errorf("%w: api key owner is inactive", consts.ErrAuthenticationFailed)
 	}
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(user.ID))
 
 	token, expiresAt, err := s.generateAPIKeyTokenWithRoles(s.roleRepo, user, key.ID, key.Scopes)
 	if err != nil {

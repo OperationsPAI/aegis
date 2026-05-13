@@ -9,7 +9,9 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/model"
+	"aegis/platform/tracing"
 
+	"go.opentelemetry.io/otel"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -42,6 +44,9 @@ func hashSecret(secret string) (string, error) {
 // clients (IsConfidential=false) the secret check is skipped — they prove
 // possession via PKCE at the /token endpoint instead.
 func (s *Service) VerifySecret(ctx context.Context, clientID, secret string) (*model.OIDCClient, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/sso/verify_client_secret")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "sso.client_id", clientID)
 	c, err := s.repo.GetByClientID(clientID)
 	if err != nil {
 		return nil, err
@@ -59,7 +64,9 @@ func (s *Service) GetByClientID(_ context.Context, clientID string) (*model.OIDC
 	return s.repo.GetByClientID(clientID)
 }
 
-func (s *Service) Create(_ context.Context, req *CreateClientReq) (*CreateClientResp, error) {
+func (s *Service) Create(ctx context.Context, req *CreateClientReq) (*CreateClientResp, error) {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/sso/client_create")
+	defer span.End()
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", consts.ErrBadRequest, err)
 	}
@@ -145,7 +152,9 @@ func (s *Service) ListForServices(_ context.Context, services []string) ([]Clien
 	return out, nil
 }
 
-func (s *Service) Update(_ context.Context, id int, req *UpdateClientReq) (*ClientResp, error) {
+func (s *Service) Update(ctx context.Context, id int, req *UpdateClientReq) (*ClientResp, error) {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/sso/client_update")
+	defer span.End()
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", consts.ErrBadRequest, err)
 	}
@@ -171,7 +180,9 @@ func (s *Service) Update(_ context.Context, id int, req *UpdateClientReq) (*Clie
 	return NewClientResp(c), nil
 }
 
-func (s *Service) RotateSecret(_ context.Context, id int) (*RotateSecretResp, error) {
+func (s *Service) RotateSecret(ctx context.Context, id int) (*RotateSecretResp, error) {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/sso/client_rotate_secret")
+	defer span.End()
 	c, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -191,6 +202,8 @@ func (s *Service) RotateSecret(_ context.Context, id int) (*RotateSecretResp, er
 	return &RotateSecretResp{ClientID: c.ClientID, ClientSecret: secret}, nil
 }
 
-func (s *Service) Delete(_ context.Context, id int) error {
+func (s *Service) Delete(ctx context.Context, id int) error {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/sso/client_delete")
+	defer span.End()
 	return s.repo.SoftDelete(id)
 }

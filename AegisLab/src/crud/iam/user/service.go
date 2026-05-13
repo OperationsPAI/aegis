@@ -4,14 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
 	rbac "aegis/crud/iam/rbac"
+	"aegis/platform/tracing"
 
+	"go.opentelemetry.io/otel"
 	"gorm.io/gorm"
 )
+
+const iamTracerName = "aegis/iam"
 
 type Service struct {
 	repo *Repository
@@ -42,7 +47,9 @@ func (s *Service) ListRoleNames(_ context.Context, userID int) ([]string, error)
 	return s.repo.ListRoleNames(userID)
 }
 
-func (s *Service) CreateUser(_ context.Context, req *CreateUserReq) (*UserResp, error) {
+func (s *Service) CreateUser(ctx context.Context, req *CreateUserReq) (*UserResp, error) {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/create")
+	defer span.End()
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
@@ -68,7 +75,10 @@ func (s *Service) CreateUser(_ context.Context, req *CreateUserReq) (*UserResp, 
 	return NewUserResp(user), nil
 }
 
-func (s *Service) DeleteUser(_ context.Context, userID int) error {
+func (s *Service) DeleteUser(ctx context.Context, userID int) error {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/delete")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		if err := repo.ensureActiveRecordExists(&model.User{}, userID, "user"); err != nil {
@@ -89,7 +99,10 @@ func (s *Service) DeleteUser(_ context.Context, userID int) error {
 	})
 }
 
-func (s *Service) GetUserDetail(_ context.Context, userID int) (*UserDetailResp, error) {
+func (s *Service) GetUserDetail(ctx context.Context, userID int) (*UserDetailResp, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/get_detail")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
 	user, err := s.repo.getUserDetailBase(userID)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) {
@@ -129,7 +142,9 @@ func (s *Service) ListUsers(ctx context.Context, req *ListUserReq) (*dto.ListRes
 // ListUsersScoped is ListUsers restricted to users with grants in any of
 // viewScopes services (used by SSO delegated service admins, Task #13).
 // Empty viewScopes is equivalent to ListUsers.
-func (s *Service) ListUsersScoped(_ context.Context, req *ListUserReq, viewScopes []string) (*dto.ListResp[UserResp], error) {
+func (s *Service) ListUsersScoped(ctx context.Context, req *ListUserReq, viewScopes []string) (*dto.ListResp[UserResp], error) {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/list")
+	defer span.End()
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
@@ -151,7 +166,10 @@ func (s *Service) ListUsersScoped(_ context.Context, req *ListUserReq, viewScope
 	}, nil
 }
 
-func (s *Service) UpdateUser(_ context.Context, req *UpdateUserReq, userID int) (*UserResp, error) {
+func (s *Service) UpdateUser(ctx context.Context, req *UpdateUserReq, userID int) (*UserResp, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/update")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
@@ -179,7 +197,11 @@ func (s *Service) UpdateUser(_ context.Context, req *UpdateUserReq, userID int) 
 	return NewUserResp(updatedUser), nil
 }
 
-func (s *Service) AssignRole(_ context.Context, userID, roleID int) error {
+func (s *Service) AssignRole(ctx context.Context, userID, roleID int) error {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/assign_role")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
+	tracing.SetSpanAttribute(ctx, "role.id", strconv.Itoa(roleID))
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		if err := repo.assignGlobalRole(userID, roleID); err != nil {
@@ -198,7 +220,11 @@ func (s *Service) AssignRole(_ context.Context, userID, roleID int) error {
 	})
 }
 
-func (s *Service) RemoveRole(_ context.Context, userID, roleID int) error {
+func (s *Service) RemoveRole(ctx context.Context, userID, roleID int) error {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/remove_role")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
+	tracing.SetSpanAttribute(ctx, "role.id", strconv.Itoa(roleID))
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		if err := repo.removeGlobalRole(userID, roleID); err != nil {
@@ -214,7 +240,10 @@ func (s *Service) RemoveRole(_ context.Context, userID, roleID int) error {
 	})
 }
 
-func (s *Service) AssignPermissions(_ context.Context, req *AssignUserPermissionReq, userID int) error {
+func (s *Service) AssignPermissions(ctx context.Context, req *AssignUserPermissionReq, userID int) error {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/assign_permissions")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		userPermissions, err := repo.buildUserPermissions(userID, req.Items)
@@ -235,7 +264,10 @@ func (s *Service) AssignPermissions(_ context.Context, req *AssignUserPermission
 	})
 }
 
-func (s *Service) RemovePermissions(_ context.Context, req *RemoveUserPermissionReq, userID int) error {
+func (s *Service) RemovePermissions(ctx context.Context, req *RemoveUserPermissionReq, userID int) error {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/remove_permissions")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(userID))
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		if err := repo.batchDeleteUserPermissions(userID, req.PermissionIDs); err != nil {
@@ -248,7 +280,9 @@ func (s *Service) RemovePermissions(_ context.Context, req *RemoveUserPermission
 	})
 }
 
-func (s *Service) AssignContainer(_ context.Context, userID, containerID, roleID int) error {
+func (s *Service) AssignContainer(ctx context.Context, userID, containerID, roleID int) error {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/assign_container")
+	defer span.End()
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		if err := repo.assignContainerRole(userID, containerID, roleID); err != nil {
@@ -264,7 +298,9 @@ func (s *Service) AssignContainer(_ context.Context, userID, containerID, roleID
 	})
 }
 
-func (s *Service) RemoveContainer(_ context.Context, userID, containerID int) error {
+func (s *Service) RemoveContainer(ctx context.Context, userID, containerID int) error {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/remove_container")
+	defer span.End()
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		rows, err := repo.removeContainerRole(userID, containerID)
@@ -278,7 +314,9 @@ func (s *Service) RemoveContainer(_ context.Context, userID, containerID int) er
 	})
 }
 
-func (s *Service) AssignDataset(_ context.Context, userID, datasetID, roleID int) error {
+func (s *Service) AssignDataset(ctx context.Context, userID, datasetID, roleID int) error {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/assign_dataset")
+	defer span.End()
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		if err := repo.assignDatasetRole(userID, datasetID, roleID); err != nil {
@@ -294,7 +332,9 @@ func (s *Service) AssignDataset(_ context.Context, userID, datasetID, roleID int
 	})
 }
 
-func (s *Service) RemoveDataset(_ context.Context, userID, datasetID int) error {
+func (s *Service) RemoveDataset(ctx context.Context, userID, datasetID int) error {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/remove_dataset")
+	defer span.End()
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		rows, err := repo.removeDatasetRole(userID, datasetID)
@@ -308,7 +348,9 @@ func (s *Service) RemoveDataset(_ context.Context, userID, datasetID int) error 
 	})
 }
 
-func (s *Service) AssignProject(_ context.Context, userID, projectID, roleID int) error {
+func (s *Service) AssignProject(ctx context.Context, userID, projectID, roleID int) error {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/assign_project")
+	defer span.End()
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		if err := repo.assignProjectRole(userID, projectID, roleID); err != nil {
@@ -324,7 +366,9 @@ func (s *Service) AssignProject(_ context.Context, userID, projectID, roleID int
 	})
 }
 
-func (s *Service) RemoveProject(_ context.Context, userID, projectID int) error {
+func (s *Service) RemoveProject(ctx context.Context, userID, projectID int) error {
+	_, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/remove_project")
+	defer span.End()
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
 		rows, err := repo.removeProjectRole(userID, projectID)

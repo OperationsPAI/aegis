@@ -22,11 +22,15 @@ import (
 	"aegis/platform/redis"
 	"aegis/platform/model"
 	"aegis/crud/iam/user"
+	"aegis/platform/tracing"
 	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.opentelemetry.io/otel"
 )
+
+const iamTracerName = "aegis/iam"
 
 const (
 	authReqRedisPrefix = "sso:authreq:"
@@ -135,6 +139,8 @@ func (s *OIDCService) discovery(c *gin.Context) {
 }
 
 func (s *OIDCService) jwks(c *gin.Context) {
+	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/jwks")
+	defer span.End()
 	c.Data(http.StatusOK, "application/json", s.jwksHandler.json)
 }
 
@@ -142,7 +148,10 @@ func (s *OIDCService) jwks(c *gin.Context) {
 // for a frontend SPA; PR-1b ships an inline form so e2e tests can drive
 // the auth_code flow without depending on AegisLab-frontend.
 func (s *OIDCService) authorizeGet(c *gin.Context) {
+	ctx, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/authorize")
+	defer span.End()
 	clientID := c.Query("client_id")
+	tracing.SetSpanAttribute(ctx, "sso.client_id", clientID)
 	redirectURI := c.Query("redirect_uri")
 	state := c.Query("state")
 	scope := c.Query("scope")
@@ -228,7 +237,10 @@ func htmlEscape(s string) string {
 }
 
 func (s *OIDCService) loginPost(c *gin.Context) {
+	ctx, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/login")
+	defer span.End()
 	clientID := c.PostForm("client_id")
+	tracing.SetSpanAttribute(ctx, "sso.client_id", clientID)
 	redirectURI := c.PostForm("redirect_uri")
 	state := c.PostForm("state")
 	scope := c.PostForm("scope")
@@ -254,6 +266,7 @@ func (s *OIDCService) loginPost(c *gin.Context) {
 		c.String(http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(u.ID))
 
 	code, err := randomToken(24)
 	if err != nil {
@@ -354,7 +367,10 @@ type tokenResp struct {
 }
 
 func (s *OIDCService) token(c *gin.Context) {
+	ctx, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/token")
+	defer span.End()
 	grant := c.PostForm("grant_type")
+	tracing.SetSpanAttribute(ctx, "sso.grant_type", grant)
 	cli, ok := s.authenticateClient(c)
 	if !ok {
 		return
@@ -530,6 +546,8 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 }
 
 func (s *OIDCService) userinfo(c *gin.Context) {
+	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/userinfo")
+	defer span.End()
 	token, err := utils.ExtractTokenFromHeader(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
@@ -561,6 +579,8 @@ func (s *OIDCService) userinfo(c *gin.Context) {
 }
 
 func (s *OIDCService) logout(c *gin.Context) {
+	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/logout")
+	defer span.End()
 	rt := c.PostForm("refresh_token")
 	if rt != "" {
 		_, _ = s.redis.DeleteKey(c.Request.Context(), refreshRedisPrefix+rt)
