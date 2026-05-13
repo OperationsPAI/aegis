@@ -39,12 +39,14 @@ data:
         metrics_table_name: {{ .Values.otelCollector.clickhouse.metricsTable | default "otel_metrics" | quote }}
         ttl: {{ .Values.otelCollector.clickhouse.ttl | default "72h" | quote }}
         timeout: 5s
+      debug:
+        verbosity: basic
     service:
       pipelines:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, resource, batch]
-          exporters: [clickhouse]
+          exporters: [clickhouse, debug]
 ---
 apiVersion: apps/v1
 kind: Deployment
