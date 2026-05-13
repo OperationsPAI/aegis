@@ -17,10 +17,12 @@ import (
 
 func NewProvider() (*sdktrace.TracerProvider, error) {
 	ctx := context.Background()
+	endpoint := config.GetString("tracing.endpoint")
+	logrus.Infof("tracing: initializing OTLP HTTP exporter -> %s", endpoint)
 
 	exporter, err := otlptracehttp.New(ctx,
 		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithEndpoint(config.GetString("tracing.endpoint")),
+		otlptracehttp.WithEndpoint(endpoint),
 	)
 	if err != nil {
 		return nil, err
@@ -47,6 +49,10 @@ func NewProvider() (*sdktrace.TracerProvider, error) {
 	)
 	otel.SetTracerProvider(provider)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		logrus.Warnf("otel error: %v", err)
+	}))
+	logrus.Info("tracing: TracerProvider installed as otel global")
 	return provider, nil
 }
 
