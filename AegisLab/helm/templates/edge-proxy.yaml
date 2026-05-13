@@ -17,6 +17,9 @@ data:
     # When `microservices.gateway.enabled=false`, fall back to aegis-api so
     # this proxy still works on minimal installs.
     :{{ .Values.microservices.aegisApi.httpPort }} {
+        tracing {
+            span aegis-edge-proxy
+        }
         {{- if .Values.gateway.enabled }}
         reverse_proxy {{ .Release.Name }}-gateway:{{ .Values.gateway.httpPort | default 8086 }}
         {{- else }}
@@ -26,6 +29,9 @@ data:
     # gRPC intake stays direct: gateway is HTTP-only, intake speaks raw gRPC
     # to aegis-api on a dedicated port.
     :{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }} {
+        tracing {
+            span aegis-edge-proxy-grpc
+        }
         reverse_proxy h2c://{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.intakeGrpcPort | default 9096 }}
     }
 ---
@@ -48,6 +54,15 @@ spec:
           image: {{ include "helm.image" (dict "imageConfig" .Values.images.caddy "global" .Values.global) }}
           imagePullPolicy: "{{ .Values.images.caddy.pullPolicy }}"
           args: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://{{ .Release.Name }}-otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_SERVICE_NAME
+              value: "aegis-edge-proxy"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.scope=aegis"
           ports:
             - name: http
               containerPort: {{ .Values.microservices.aegisApi.httpPort }}
