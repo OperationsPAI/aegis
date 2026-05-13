@@ -142,3 +142,8 @@ persistence:
     useStaticPV: false
     external:
       accessMode: ReadWriteMany
+
+# mysql subchart overrides (mirrors legacy persistence.mysql).
+mysql:
+  persistence:
+    storageClass: standard

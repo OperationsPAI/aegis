@@ -47,3 +47,13 @@ persistence:
 
   etcd:
     enabled: false
+
+# mysql subchart overrides (mirrors legacy images.mysql; persistence
+# disabled to match the previous test-overlay behavior).
+mysql:
+  image:
+    name: pair/mysql
+    tag: "8.0.43"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: false

@@ -1,0 +1,30 @@
+{{- if .Values.enabled }}
+# MySQL Service
+{{- $envMode := ((.Values.global | default dict).envMode) | default .Values.envMode | default "" -}}
+{{- if eq $envMode "staging" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mysql.fullname" . }}
+spec:
+  type: NodePort
+  selector:
+    app: {{ include "mysql.fullname" . }}
+  ports:
+    - port: {{ .Values.service.port | default 3306 }}
+      targetPort: {{ .Values.service.port | default 3306 }}
+      nodePort: {{ .Values.service.nodePort | default 32206 }}
+{{- else }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mysql.fullname" . }}
+spec:
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  selector:
+    app: {{ include "mysql.fullname" . }}
+  ports:
+    - port: {{ .Values.service.port | default 3306 }}
+      targetPort: {{ .Values.service.port | default 3306 }}
+{{- end }}
+{{- end }}

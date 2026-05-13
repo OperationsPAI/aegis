@@ -20,5 +20,8 @@ dependencies:
 - name: otel-collector
   repository: ""
   version: 0.1.0
-digest: sha256:5d80882d266a88afd4501642652c87940f1674f7666d1a69f7e3ec880a79ab2c
-generated: "2026-05-13T12:28:51.054028877+01:00"
+- name: mysql
+  repository: ""
+  version: 0.1.0
+digest: sha256:10537e5ffb3504ba0915760873af8ebe412ce71bb26e87d2bf6082c616f29dca
+generated: "2026-05-13T12:33:10.429134572+01:00"

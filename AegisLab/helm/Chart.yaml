@@ -57,3 +57,7 @@ dependencies:
     repository: ""
     alias: otelCollector
     condition: otelCollector.enabled
+  - name: mysql
+    version: "0.1.0"
+    repository: ""
+    condition: mysql.enabled

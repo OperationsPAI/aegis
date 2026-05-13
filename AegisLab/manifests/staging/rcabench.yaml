@@ -3,6 +3,7 @@ global:
   images:
     rcabench:
       name: library/rcabench
+  envMode: "staging"
 
 images:
   redis:
@@ -57,3 +58,11 @@ configmap:
 
 juicefs:
   metaurl: "redis://10.10.10.119:6379/1"
+
+# mysql subchart overrides (mirrors legacy images.mysql; env_mode=staging
+# is forwarded via the top-level `global.envMode` already set above).
+mysql:
+  image:
+    name: library/mysql
+    tag: "8.0.43"
+    pullPolicy: IfNotPresent

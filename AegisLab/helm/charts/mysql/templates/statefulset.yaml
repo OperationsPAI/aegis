@@ -1,0 +1,87 @@
+{{- if .Values.enabled }}
+# mysql
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mysql.fullname" . }}
+spec:
+  serviceName: {{ include "mysql.fullname" . }}
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ include "mysql.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "mysql.fullname" . }}
+    spec:
+      {{- with .Values.serviceAccount.name }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsGroup: 999
+      containers:
+        - name: mysql
+          image: {{ include "mysql.image" . }}
+          imagePullPolicy: "{{ include "mysql.imagePullPolicy" . }}"
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          env:
+            - name: MYSQL_DATABASE
+              value: "{{ .Values.auth.db }}"
+            - name: MYSQL_ROOT_PASSWORD
+              value: "{{ .Values.auth.rootPassword }}"
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          args:
+            - --default-authentication-plugin=mysql_native_password
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+            {{- if not .Values.persistence.enabled }}
+            - --innodb-flush-log-at-trx-commit=2
+            - --innodb-buffer-pool-size=256M
+            - --innodb-log-file-size=32M
+            - --skip-innodb-doublewrite
+            - --innodb-flush-method=O_DIRECT_NO_FSYNC
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.service.port | default 3306 }}
+          {{- if not .Values.persistence.enabled }}
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          {{- end }}
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+      {{- if not .Values.persistence.enabled }}
+      volumes:
+        - name: mysql-data
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1Gi"
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}
+{{- end }}

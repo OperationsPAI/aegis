@@ -128,3 +128,8 @@ persistence:
 
 juicefs:
   metaurl: "redis://rcabench-redis:6379/1"
+
+# mysql subchart overrides (mirrors legacy persistence.mysql).
+mysql:
+  persistence:
+    storageClass: standard
