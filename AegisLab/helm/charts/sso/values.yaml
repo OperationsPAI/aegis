@@ -1,0 +1,94 @@
+# sso subchart defaults.
+#
+# Self-contained values for the aegis-sso microservice. The parent
+# rcabench chart can drive this subchart by setting top-level `sso:`
+# overrides (Helm maps top-level keys matching a subchart name into that
+# subchart's scope).
+#
+# Shared cross-chart settings — container image registry, SSO client
+# config, config mount paths — are read from `.Values.global.*` so the
+# parent chart can publish them in one place without duplicating
+# per-microservice.
+#
+# NOTE: defaults below reference shared in-cluster services by the
+# parent release name (`rcabench-mysql`, `rcabench-redis`,
+# `rcabench-otel-collector`). When deployed under a different release
+# name, override via parent `sso.config.database.mysql.host` etc.
+
+enabled: true
+replicaCount: 1
+
+image:
+  repository: opspai/rcabench
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: NodePort
+  port: 8083
+  nodePort: 30083
+
+config:
+  name: "sso"
+  version: "1.0.0"
+  port: 8083
+  workspace: "/app"
+  binaryName: "sso"
+  subcommand: "sso"
+  database:
+    mysql:
+      host: "rcabench-mysql"
+      port: "3306"
+      user: "root"
+      password: "yourpassword"
+      db: "rcabench"
+  redis:
+    host: "rcabench-redis:6379"
+  tracing:
+    # OTLP HTTP receiver (host:port — `otlptracehttp.WithEndpoint` expects
+    # no scheme). Points at the chart-rendered in-namespace otel-collector
+    # which exports to the shared ClickStack ClickHouse.
+    endpoint: "rcabench-otel-collector:4318"
+  k8s:
+    namespace: ""
+    serviceAccount:
+      name: ""
+  sso:
+    issuer: "http://rcabench-sso:8083"
+    baseURL: "http://rcabench-sso:8083"
+    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    kid: "sso-v1"
+    clientID: "aegis-backend"
+    backendRedirectURI: ""
+    privateKeyPath: "/etc/aegis/sso-private.pem"
+    seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
+    consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+    loginRedirect: "http://localhost:3323/auth/login"
+
+privateKey:
+  pem: ""
+  existingSecret: ""
+
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 256Mi
+  accessMode: ReadWriteOnce
+  mountPath: /var/lib/sso
+
+auth:
+  jwtSecret: ""
+  secretName: ""
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

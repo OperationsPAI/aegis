@@ -264,22 +264,4 @@ spec:
       port: {{ .Values.microservices.configcenter.httpPort }}
       targetPort: http
 {{- end }}
----
-# Aegis SSO Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ include "sso.fullname" . }}
-  labels:
-    {{- include "sso.labels" . | nindent 4 }}
-spec:
-  type: {{ .Values.sso.service.type }}
-  selector:
-    {{- include "sso.selectorLabels" . | nindent 4 }}
-  ports:
-    - name: http
-      port: {{ .Values.sso.service.port }}
-      targetPort: http
-      {{- if and (eq .Values.sso.service.type "NodePort") .Values.sso.service.nodePort }}
-      nodePort: {{ .Values.sso.service.nodePort }}
-      {{- end }}
+{{/* Aegis SSO Service now rendered by the sso subchart. */}}

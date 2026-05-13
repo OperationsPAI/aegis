@@ -98,23 +98,5 @@ spec:
       storage: {{ .Values.persistence.juicefs.size }}
 {{- end }}
 
-{{- if .Values.sso.persistence.enabled }}
----
-# Aegis SSO PVC
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "sso.fullname" . }}-secrets
-  labels:
-    {{- include "sso.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.sso.persistence.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.sso.persistence.size }}
-  {{- if .Values.sso.persistence.storageClass }}
-  storageClassName: {{ .Values.sso.persistence.storageClass | quote }}
-  {{- end }}
-{{- end }}
+{{/* Aegis SSO PVC now rendered by the sso subchart. */}}
 

@@ -1,0 +1,45 @@
+{{- if .Values.enabled }}
+# Aegis SSO ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sso.fullname" . }}-config
+  labels:
+    {{- include "sso.labels" . | nindent 4 }}
+data:
+  config.prod.toml: |
+    name = "{{ .Values.config.name | default "sso" }}"
+    version = "{{ .Values.config.version | default "1.0.0" }}"
+    port = {{ .Values.config.port }}
+    workspace = "{{ .Values.config.workspace | default "/app" }}"
+
+    [database.mysql]
+    host = "{{ .Values.config.database.mysql.host }}"
+    port = "{{ .Values.config.database.mysql.port }}"
+    user = "{{ .Values.config.database.mysql.user }}"
+    password = "{{ .Values.config.database.mysql.password }}"
+    db = "{{ .Values.config.database.mysql.db }}"
+
+    [redis]
+    host = "{{ .Values.config.redis.host }}"
+
+    [tracing]
+    endpoint = "{{ .Values.config.tracing.endpoint }}"
+
+    [k8s]
+    namespace = "{{ .Values.config.k8s.namespace | default .Release.Namespace }}"
+    [k8s.job.service_account]
+    name = "{{ .Values.config.k8s.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}"
+
+    [sso]
+    issuer = "{{ .Values.config.sso.issuer }}"
+    base_url = "{{ .Values.config.sso.baseURL }}"
+    jwks_url = "{{ .Values.config.sso.jwksURL }}"
+    kid = "{{ .Values.config.sso.kid }}"
+    client_id = "{{ .Values.config.sso.clientID }}"
+    backend_redirect_uri = "{{ .Values.config.sso.backendRedirectURI }}"
+    private_key_path = "{{ .Values.config.sso.privateKeyPath }}"
+    seed_secret_dump_path = "{{ .Values.config.sso.seedSecretDumpPath }}"
+    console_redirect_uris = "{{ .Values.config.sso.consoleRedirectURIs }}"
+    login_redirect = "{{ .Values.config.sso.loginRedirect }}"
+{{- end }}

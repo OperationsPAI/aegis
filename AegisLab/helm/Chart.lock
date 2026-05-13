@@ -2,5 +2,8 @@ dependencies:
 - name: notify
   repository: ""
   version: 0.1.0
-digest: sha256:659e94322be4db88ee2d6311319b0fd12509035ead47743c59d8fe622cd752ea
-generated: "2026-05-13T09:33:07.576728665+01:00"
+- name: sso
+  repository: ""
+  version: 0.1.0
+digest: sha256:3a70ec1266f07f3fdacb4dece1bd0dee87aae3465af1fbc485fe60cb9a85200a
+generated: "2026-05-13T10:25:05.656575582+01:00"

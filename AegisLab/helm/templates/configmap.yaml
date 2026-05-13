@@ -297,47 +297,4 @@ metadata:
 data:
   system_helm_configs.json: |
 {{ include "helm.systemHelmConfigs" . | indent 4 }}
----
-# Aegis SSO ConfigMap
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "sso.fullname" . }}-config
-  labels:
-    {{- include "sso.labels" . | nindent 4 }}
-data:
-  config.prod.toml: |
-    name = "{{ .Values.sso.config.name | default "sso" }}"
-    version = "{{ .Values.sso.config.version | default "1.0.0" }}"
-    port = {{ .Values.sso.config.port }}
-    workspace = "{{ .Values.sso.config.workspace | default "/app" }}"
-
-    [database.mysql]
-    host = "{{ .Values.sso.config.database.mysql.host }}"
-    port = "{{ .Values.sso.config.database.mysql.port }}"
-    user = "{{ .Values.sso.config.database.mysql.user }}"
-    password = "{{ .Values.sso.config.database.mysql.password }}"
-    db = "{{ .Values.sso.config.database.mysql.db }}"
-
-    [redis]
-    host = "{{ .Values.sso.config.redis.host }}"
-
-    [tracing]
-    endpoint = "{{ .Values.sso.config.tracing.endpoint }}"
-
-    [k8s]
-    namespace = "{{ .Values.sso.config.k8s.namespace | default .Release.Namespace }}"
-    [k8s.job.service_account]
-    name = "{{ .Values.sso.config.k8s.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}"
-
-    [sso]
-    issuer = "{{ .Values.sso.config.sso.issuer }}"
-    base_url = "{{ .Values.sso.config.sso.baseURL }}"
-    jwks_url = "{{ .Values.sso.config.sso.jwksURL }}"
-    kid = "{{ .Values.sso.config.sso.kid }}"
-    client_id = "{{ .Values.sso.config.sso.clientID }}"
-    backend_redirect_uri = "{{ .Values.sso.config.sso.backendRedirectURI }}"
-    private_key_path = "{{ .Values.sso.config.sso.privateKeyPath }}"
-    seed_secret_dump_path = "{{ .Values.sso.config.sso.seedSecretDumpPath }}"
-    console_redirect_uris = "{{ .Values.sso.config.sso.consoleRedirectURIs }}"
-    login_redirect = "{{ .Values.sso.config.sso.loginRedirect }}"
+{{/* Aegis SSO ConfigMap now rendered by the sso subchart. */}}
