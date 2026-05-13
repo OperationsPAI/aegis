@@ -33,6 +33,11 @@ func (d *DatabaseConfig) ToDSN() (string, error) {
 		return "", fmt.Errorf("unsupported database type: %s", d.Type)
 	}
 
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	// Pin connection collation to match the schema's table collation
+	// (utf8mb4_unicode_ci). Without this MySQL 8 defaults the connection
+	// to utf8mb4_0900_ai_ci, which makes literal-vs-column comparisons
+	// fail with "Illegal mix of collations". Symptom we hit: `inject
+	// submit` 500s in mapPedestalContainerRefToVersion.
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=True&loc=Local",
 		d.User, d.Password, d.Host, d.Port, d.Database), nil
 }
