@@ -57,3 +57,12 @@ mysql:
     pullPolicy: IfNotPresent
   persistence:
     enabled: false
+
+# redis subchart overrides (mirrors legacy images.redis; persistence disabled).
+redis:
+  image:
+    name: pair/redis
+    tag: "8.0-M02-alpine3.20"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: false

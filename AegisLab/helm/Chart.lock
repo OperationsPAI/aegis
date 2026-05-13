@@ -23,5 +23,8 @@ dependencies:
 - name: mysql
   repository: ""
   version: 0.1.0
-digest: sha256:10537e5ffb3504ba0915760873af8ebe412ce71bb26e87d2bf6082c616f29dca
-generated: "2026-05-13T12:33:10.429134572+01:00"
+- name: redis
+  repository: ""
+  version: 0.1.0
+digest: sha256:4cfc8e42603e1ae3e3e005d395bbd254f17a2c109129c8aeeda833b76f40de3e
+generated: "2026-05-13T12:36:32.526582269+01:00"

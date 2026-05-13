@@ -73,3 +73,12 @@ mysql:
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench
+
+# redis subchart overrides (mirrors legacy images.redis + persistence.redis).
+redis:
+  image:
+    name: pair/redis
+    tag: "8.0-M02-alpine3.20"
+    pullPolicy: IfNotPresent
+  persistence:
+    storageClass: rcabench

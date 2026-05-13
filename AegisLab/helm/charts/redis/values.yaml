@@ -1,0 +1,33 @@
+# redis subchart defaults.
+#
+# Single-replica Redis StatefulSet plus its Service. The Service name
+# `<release>-redis` is load-bearing — consumed by the parent
+# `[redis]` ConfigMap section and the JuiceFS metaurl in some overlays.
+
+enabled: true
+replicaCount: 1
+
+image:
+  name: redis
+  tag: "8.0-M02-alpine3.20"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 6379
+  nodePort: 32279
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  storageClass: "openebs-hostpath"
+
+# `staging` env_mode triggers the NodePort variant. Mirrors
+# `configmap.system.env_mode` via `global.envMode`.
+envMode: ""
+
+serviceAccount:
+  name: ""
+
+extraEnv: []

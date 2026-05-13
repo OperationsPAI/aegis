@@ -66,3 +66,10 @@ mysql:
     name: library/mysql
     tag: "8.0.43"
     pullPolicy: IfNotPresent
+
+# redis subchart overrides (mirrors legacy images.redis).
+redis:
+  image:
+    name: library/redis
+    tag: "8.0-M02-alpine3.20"
+    pullPolicy: IfNotPresent

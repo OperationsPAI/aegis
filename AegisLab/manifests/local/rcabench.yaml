@@ -133,3 +133,8 @@ juicefs:
 mysql:
   persistence:
     storageClass: standard
+
+# redis subchart overrides (mirrors legacy persistence.redis).
+redis:
+  persistence:
+    storageClass: standard

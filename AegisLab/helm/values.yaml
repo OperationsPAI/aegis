@@ -586,6 +586,26 @@ otelCollector:
     ttl: "72h"
 
 # ---------------------------------------------------------------------------
+# redis subchart values (forwarded into `charts/redis/`).
+# ---------------------------------------------------------------------------
+redis:
+  enabled: true
+  replicaCount: 1
+  image:
+    name: redis
+    tag: "8.0-M02-alpine3.20"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 6379
+    nodePort: 32279
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClass: "openebs-hostpath"
+
+# ---------------------------------------------------------------------------
 # mysql subchart values (forwarded into `charts/mysql/`).
 #
 # `auth.{db,rootPassword}` mirror the legacy

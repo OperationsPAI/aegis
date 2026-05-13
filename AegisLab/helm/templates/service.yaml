@@ -1,29 +1,4 @@
-# Redis Service
-{{- if eq .Values.configmap.system.env_mode "staging" }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-redis
-spec:
-  type: NodePort
-  selector:
-    app: {{ .Release.Name }}-redis
-  ports:
-    - port: {{ .Values.servicePorts.redis | default 6379 }}
-      nodePort: 32279
-{{- else }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-redis
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-redis
-  ports:
-    - port: {{ .Values.servicePorts.redis | default 6379 }}
-{{- end }}
-
+{{/* Redis Service moved to charts/redis/ subchart. */}}
 {{/* MySQL Service moved to charts/mysql/ subchart. */}}
 ---
 # etcd Headless Service

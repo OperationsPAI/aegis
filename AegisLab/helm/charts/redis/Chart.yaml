@@ -1,0 +1,6 @@
+apiVersion: v2
+name: redis
+description: Redis StatefulSet for Aegis (extracted from rcabench monolith chart)
+type: application
+version: 0.1.0
+appVersion: "8.0"

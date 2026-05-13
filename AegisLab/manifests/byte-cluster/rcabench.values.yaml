@@ -265,6 +265,15 @@ persistence:
   etcd:
     storageClass: rcabench
 
+# redis subchart overrides (mirrors legacy images.redis + persistence.redis).
+redis:
+  image:
+    name: pair-diag-cn-guangzhou.cr.volces.com/pair/redis
+    tag: "8.0-M02-alpine3.20"
+    pullPolicy: IfNotPresent
+  persistence:
+    storageClass: rcabench
+
 # mysql subchart overrides (mirrors legacy images.mysql + persistence.mysql).
 mysql:
   image:

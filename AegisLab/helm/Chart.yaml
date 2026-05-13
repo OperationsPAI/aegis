@@ -61,3 +61,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: mysql.enabled
+  - name: redis
+    version: "0.1.0"
+    repository: ""
+    condition: redis.enabled
