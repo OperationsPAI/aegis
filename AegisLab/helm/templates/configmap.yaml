@@ -161,13 +161,13 @@ data:
 
     [[gateway.routes]]
     prefix    = "/api/v2/inbox/"
-    upstream  = "{{ .Release.Name }}-notify:{{ .Values.microservices.notify.httpPort }}"
+    upstream  = "{{ .Release.Name }}-notify:{{ .Values.notify.httpPort }}"
     auth      = "jwt"
     audiences = ["portal"]
 
     [[gateway.routes]]
     prefix   = "/api/v2/notifications/"
-    upstream = "{{ .Release.Name }}-notify:{{ .Values.microservices.notify.httpPort }}"
+    upstream = "{{ .Release.Name }}-notify:{{ .Values.notify.httpPort }}"
     auth     = "jwt"
 
     [[gateway.routes]]

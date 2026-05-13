@@ -1,5 +1,14 @@
 global:
   imageRegistry: ""
+  # Mirror of top-level `images.rcabench` so extracted subcharts
+  # (notify, future sso/blob) see the same byte-cluster image. Keep these
+  # two blocks in lockstep; the parent chart's templates still read the
+  # top-level path.
+  images:
+    rcabench:
+      name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
+      tag: byte-20260513-s3-blob-v2
+      pullPolicy: IfNotPresent
 
 images:
   rcabench:

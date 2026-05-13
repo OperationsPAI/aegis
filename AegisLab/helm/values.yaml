@@ -1,9 +1,35 @@
 # values.yaml
 
-# Global image registry configuration
+# Global image registry configuration.
+#
+# `global.*` keys are propagated by Helm into every subchart's scope.
+# We surface here the bits that extracted subcharts (notify, future
+# sso/blob) need to consume from the parent — shared image, SSO client
+# wiring, config mount paths. Parent templates keep reading their
+# original top-level paths (.Values.images.rcabench etc.) so the diff
+# stays minimal; the duplication is deliberate.
 global:
   # Set to empty string to use default public registries
   imageRegistry: ""
+  # Shared backend image (re-used by notify/blob/gateway subcharts).
+  # Mirrored from top-level `images.rcabench` below; keep in sync.
+  images:
+    rcabench:
+      name: opspai/rcabench
+      tag: latest
+      pullPolicy: Always
+  # SSO client config (mirrored from top-level `ssoclient`).
+  ssoclient:
+    baseURL: "http://rcabench-sso:8083"
+    jwksURL: "http://rcabench-sso:8083/.well-known/jwks.json"
+    clientID: "aegis-backend"
+    clientSecretRef:
+      name: "sso-bootstrap"
+      key: "aegis-backend-secret"
+  # Config mount paths (mirrored from top-level `configmap`).
+  configmap:
+    configFile: "/etc/rcabench/config.prod.toml"
+    configDir: "/etc/rcabench"
 
 servicePorts:
   redis: 6379
@@ -440,14 +466,8 @@ microservices:
       maxReplicas: 8
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 0
-  notify:
-    enabled: true
-    replicaCount: 1
-    httpPort: 8084
-    binaryName: "aegis-notify"
-    service:
-      type: ClusterIP
-    resources: {}
+  # NOTE: notify has been extracted into the `notify` subchart (see
+  # `charts/notify/`). Top-level `notify:` block below drives it.
   blob:
     enabled: true
     replicaCount: 1
@@ -678,3 +698,20 @@ otelCollector:
     logsTable: "otel_logs"
     metricsTable: "otel_metrics"
     ttl: "72h"
+
+# ---------------------------------------------------------------------------
+# notify subchart values (forwarded into `charts/notify/`).
+#
+# Top-level keys matching a subchart name are passed straight into that
+# subchart's scope by Helm — so this block becomes the subchart's
+# `.Values`. The subchart additionally consumes `global.images.rcabench`,
+# `global.ssoclient`, and `global.configmap` from the parent.
+# ---------------------------------------------------------------------------
+notify:
+  enabled: true
+  replicaCount: 1
+  httpPort: 8084
+  binaryName: "aegis-notify"
+  service:
+    type: ClusterIP
+  resources: {}

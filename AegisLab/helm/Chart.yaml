@@ -22,3 +22,13 @@ version: 0.1.0
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
 appVersion: "1.0.0"
+
+# Subcharts extracted from this monolith so other releases (AgentM, etc.)
+# can consume them as shared services. Phase 1: notify only. SSO and Blob
+# will follow in subsequent phases. Subcharts live under `helm/charts/`
+# (local file:// reference, no external repo).
+dependencies:
+  - name: notify
+    version: "0.1.0"
+    repository: ""
+    condition: notify.enabled
