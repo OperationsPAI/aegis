@@ -36,3 +36,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: sso.enabled
+  - name: rustfs
+    version: "0.1.0"
+    repository: ""
+    condition: rustfs.enabled

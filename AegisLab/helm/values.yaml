@@ -38,6 +38,12 @@ global:
   configmap:
     configFile: "/etc/rcabench/config.prod.toml"
     configDir: "/etc/rcabench"
+  # Kubernetes deployment hints shared with subcharts. Mirrors
+  # `configmap.k8s.namespace` so subcharts (rustfs) that need to
+  # pin a namespace can read it without depending on the parent-only
+  # `configmap.*` tree. Empty string falls back to `.Release.Namespace`.
+  k8s:
+    namespace: "exp"
 
 servicePorts:
   redis: 6379

@@ -5,5 +5,8 @@ dependencies:
 - name: sso
   repository: ""
   version: 0.1.0
-digest: sha256:3a70ec1266f07f3fdacb4dece1bd0dee87aae3465af1fbc485fe60cb9a85200a
-generated: "2026-05-13T10:25:05.656575582+01:00"
+- name: rustfs
+  repository: ""
+  version: 0.1.0
+digest: sha256:83c3551b839a59d4e5acbedb56ae3f01167b720511d4491fe55f69240a8b4eba
+generated: "2026-05-13T11:09:46.986525286+01:00"

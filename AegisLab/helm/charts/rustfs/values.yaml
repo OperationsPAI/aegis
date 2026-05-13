@@ -1,0 +1,62 @@
+# rustfs subchart defaults.
+#
+# Self-contained values for the in-cluster S3-compatible storage backend
+# used by aegis-blob's `s3` driver. The parent rcabench chart can drive
+# this subchart by setting top-level `rustfs:` overrides (Helm maps
+# top-level keys matching a subchart name into that subchart's scope).
+#
+# Off by default so existing kind/prod/cn_mirror packs that pre-date the
+# s3 driver render identically. Byte-cluster pack flips `enabled: true`.
+
+enabled: false
+
+image:
+  name: docker.io/opspai/rustfs
+  tag: latest
+  pullPolicy: IfNotPresent
+
+auth:
+  # When set, the chart skips the Secret render and points envFrom at this
+  # name instead. Otherwise the chart renders `rustfs-admin` from rootUser
+  # / rootPassword / bucketEnvAliases below.
+  existingSecret: ""
+  rootUser: "aegis-rustfs"
+  # OVERRIDE in production — the default value is a placeholder.
+  rootPassword: "change-me-in-prod-please"
+
+persistence:
+  storageClass: "rcabench"
+  size: 200Gi
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+extraEnv: []
+
+# Buckets to create on install. The init Job calls `mc mb -p` for each.
+initBuckets:
+  enabled: true
+  names:
+    - aegis-datapack
+    - aegis-execution
+    - aegis-shared
+  image:
+    name: docker.io/opspai/mc
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# Optional per-bucket env aliases written into the rustfs-admin Secret.
+# Producers reference these names through `configmap.blob.buckets.<x>.{access_key_env,secret_key_env}`.
+# Keep the values in sync with rootUser/rootPassword (default does).
+bucketEnvAliases:
+  BLOB_S3_DATAPACK_ACCESS_KEY: "aegis-rustfs"
+  BLOB_S3_DATAPACK_SECRET_KEY: "change-me-in-prod-please"
+  BLOB_S3_EXECUTION_ACCESS_KEY: "aegis-rustfs"
+  BLOB_S3_EXECUTION_SECRET_KEY: "change-me-in-prod-please"
+  BLOB_S3_SHARED_ACCESS_KEY: "aegis-rustfs"
+  BLOB_S3_SHARED_SECRET_KEY: "change-me-in-prod-please"

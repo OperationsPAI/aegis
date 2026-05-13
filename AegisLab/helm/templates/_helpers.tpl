@@ -169,9 +169,7 @@ Returns: JSON array of system helm configurations
 {{- $systemConfigs | toJson -}}
 {{- end -}}
 
-{{/*
-rustfs Secret name (rustfs-admin by default, overridable for shared-secret setups).
-*/}}
-{{- define "rustfs.secretName" -}}
-{{- default "rustfs-admin" .Values.rustfs.auth.existingSecret -}}
-{{- end -}}
+# rustfs.secretName helper now lives in the rustfs subchart at
+# helm/charts/rustfs/templates/_helpers.tpl. Helm template helpers are
+# global within a release, so parent-chart consumers that still
+# `include "rustfs.secretName" .` resolve through the subchart helper.
