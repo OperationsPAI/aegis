@@ -11,6 +11,8 @@ import (
 	chdriver "github.com/ClickHouse/clickhouse-go/v2"
 	chrow "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"aegis/platform/config"
 	"aegis/platform/consts"
@@ -50,6 +52,13 @@ func NewClickHouseFreshnessProbe() FreshnessProbe {
 }
 
 func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namespace string) (time.Time, bool, error) {
+	ctx, span := otel.Tracer("aegis/observability").Start(ctx, "observability/clickhouse/MaxTraceTimestamp")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("db.system", "clickhouse"),
+		attribute.String("db.namespace", namespace),
+	)
+
 	if p.cfg == nil || p.cfg.Host == "" {
 		return time.Time{}, false, fmt.Errorf("clickhouse host not configured")
 	}
@@ -62,6 +71,7 @@ func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namesp
 	var (
 		row chrow.Row
 		ts  time.Time
+		stmt string
 	)
 	// Why the Timestamp >= now() - INTERVAL 1 HOUR + max_partitions_to_read=2:
 	// otel.otel_traces is `PARTITION BY toDate(Timestamp) ORDER BY (ServiceName,
@@ -78,19 +88,18 @@ func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namesp
 	// detected, and a namespace with zero recent ingest still returns a zero
 	// timestamp (treated as "not fresh") exactly as before.
 	if namespace != "" {
-		row = conn.QueryRow(ctx,
-			"SELECT max(Timestamp) FROM otel.otel_traces "+
-				"WHERE ResourceAttributes['service.namespace'] = ? "+
-				"AND Timestamp >= now() - INTERVAL 1 HOUR "+
-				"SETTINGS max_partitions_to_read = 2",
-			namespace,
-		)
+		stmt = "SELECT max(Timestamp) FROM otel.otel_traces " +
+			"WHERE ResourceAttributes['service.namespace'] = ? " +
+			"AND Timestamp >= now() - INTERVAL 1 HOUR " +
+			"SETTINGS max_partitions_to_read = 2"
+		row = conn.QueryRow(ctx, stmt, namespace)
 	} else {
-		row = conn.QueryRow(ctx,
-			"SELECT max(Timestamp) FROM otel.otel_traces "+
-				"WHERE Timestamp >= now() - INTERVAL 1 HOUR "+
-				"SETTINGS max_partitions_to_read = 2")
+		stmt = "SELECT max(Timestamp) FROM otel.otel_traces " +
+			"WHERE Timestamp >= now() - INTERVAL 1 HOUR " +
+			"SETTINGS max_partitions_to_read = 2"
+		row = conn.QueryRow(ctx, stmt)
 	}
+	span.SetAttributes(attribute.String("db.statement", truncateStmt(stmt, 500)))
 	if err := row.Scan(&ts); err != nil {
 		return time.Time{}, false, fmt.Errorf("clickhouse query max(Timestamp): %w", err)
 	}
@@ -126,6 +135,13 @@ func freshnessProbeOptions(cfg *db.DatabaseConfig) *chdriver.Options {
 		Protocol:    chdriver.HTTP,
 		DialTimeout: 3 * time.Second,
 	}
+}
+
+func truncateStmt(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
 }
 
 func orDefaultStr(s, def string) string {
