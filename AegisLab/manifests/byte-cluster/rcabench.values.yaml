@@ -54,6 +54,16 @@ initialization:
       tag: latest
       pullPolicy: IfNotPresent
 
+# Byte-cluster anchors a public Volcengine LoadBalancer on the edge-proxy
+# Service so external clients (humans, aegisctl, Feishu bot, …) can reach
+# the API without kubectl port-forward. The EIP comes from Volcengine's
+# pool and is released if the Service is deleted or `.spec.type` is
+# stripped (helm reverts to ClusterIP otherwise) — keep this set, and do
+# NOT delete the Service during chart refactors or the EIP will rotate.
+edgeProxy:
+  service:
+    type: LoadBalancer
+
 configmap:
   system:
     env_mode: "prod"
