@@ -34,16 +34,6 @@ rcabench-frontend:
 buildkit:
   enabled: true
 
-# Enable observability stack for debugging traces/metrics/logs
-alloy:
-  enabled: true
-loki:
-  enabled: true
-prometheus:
-  enabled: true
-grafana:
-  enabled: true
-
 # No external registry proxy needed in local mode
 harbor:
   enabled: false

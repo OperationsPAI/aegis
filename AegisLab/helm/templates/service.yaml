@@ -60,55 +60,8 @@ spec:
       targetPort: {{ .Values.buildkit.port }}
   type: ClusterIP
 
-{{- if .Values.loki.enabled }}
----
-# Loki Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-loki
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-loki
-  ports:
-    - name: http
-      port: {{ .Values.servicePorts.loki | default 3100 }}
-      targetPort: {{ .Values.servicePorts.loki | default 3100 }}
-{{- end }}
-
-{{- if .Values.prometheus.enabled }}
----
-# Prometheus Service
-{{- if eq .Values.configmap.system.env_mode "staging" }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-prometheus
-spec:
-  type: NodePort
-  selector:
-    app: {{ .Release.Name }}-prometheus
-  ports:
-    - name: http
-      port: {{ .Values.servicePorts.prometheus | default 9090 }}
-      targetPort: {{ .Values.servicePorts.prometheus | default 9090 }}
-      nodePort: 32090
-{{- else }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-prometheus
-spec:
-  type: ClusterIP
-  selector:
-    app: {{ .Release.Name }}-prometheus
-  ports:
-    - name: http
-      port: {{ .Values.servicePorts.prometheus | default 9090 }}
-      targetPort: {{ .Values.servicePorts.prometheus | default 9090 }}
-{{- end }}
-{{- end }}
+{{/* Loki / Prometheus Services removed — OTel + ClickHouse replaced the
+     legacy Loki/Prom/Grafana/Alloy observability stack. */}}
 
 {{/* aegis-notify Service moved to charts/notify/ subchart. */}}
 

@@ -51,18 +51,6 @@ otelCollector:
 buildkit:
   enabled: false
 
-alloy:
-  enabled: false
-
-loki:
-  enabled: false
-
-prometheus:
-  enabled: false
-
-grafana:
-  enabled: false
-
 rcabench-frontend:
   enabled: false
 

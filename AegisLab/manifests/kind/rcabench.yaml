@@ -19,16 +19,6 @@ global:
       tag: latest
       pullPolicy: IfNotPresent
 
-# In-chart observability is redundant when otel-pipeline.yaml runs separately.
-alloy:
-  enabled: false
-loki:
-  enabled: false
-prometheus:
-  enabled: false
-grafana:
-  enabled: false
-
 # Not needed for regression smoke.
 buildkit:
   enabled: false

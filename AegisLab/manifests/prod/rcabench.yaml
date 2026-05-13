@@ -16,14 +16,6 @@ images:
     name: pair/busybox
   buildkit:
     name: pair/buildkit
-  alloy:
-    name: pair/alloy
-  loki:
-    name: pair/loki
-  prometheus:
-    name: pair/prometheus
-  grafana:
-    name: pair/grafana
   init_data:
     name: pair/init-data
 

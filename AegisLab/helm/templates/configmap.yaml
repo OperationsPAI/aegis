@@ -197,13 +197,6 @@ data:
     auth     = "jwt"
     {{- end }}
 
-    {{- if .Values.loki.enabled }}
-    [loki]
-    address = "{{ .Values.configmap.loki.address | default (printf "http://%s-loki:3100" .Release.Name) }}"
-    timeout = "{{ .Values.configmap.loki.timeout }}"
-    max_entries = {{ .Values.configmap.loki.max_entries }}
-    {{- end }}
-
     [otlp_receiver]
     port = {{ .Values.configmap.otlp.port }}
     max_request_size = {{ .Values.configmap.otlp.max_request_size }}

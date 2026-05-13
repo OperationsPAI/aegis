@@ -55,8 +55,6 @@ servicePorts:
   etcd:
     client: 2379
     peer: 2380
-  loki: 3100
-  prometheus: 9090
 
 images:
   redis:
@@ -78,22 +76,6 @@ images:
   buildkit:
     name: moby/buildkit
     tag: buildx-stable-1
-    pullPolicy: IfNotPresent
-  alloy:
-    name: grafana/alloy
-    tag: "v1.13.1"
-    pullPolicy: IfNotPresent
-  loki:
-    name: grafana/loki
-    tag: "3.5.10"
-    pullPolicy: IfNotPresent
-  prometheus:
-    name: prom/prometheus
-    tag: "v3.9.1"
-    pullPolicy: IfNotPresent
-  grafana:
-    name: grafana/grafana
-    tag: "12.3.0"
     pullPolicy: IfNotPresent
   caddy:
     name: caddy
@@ -135,57 +117,6 @@ buildkit:
     limits:
       cpu: "500m"
       memory: "512Mi"
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-
-alloy:
-  enabled: true
-  appLabel: "rcabench"
-  metricsPort: 12345
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
-  resources:
-    limits:
-      cpu: "200m"
-      memory: "256Mi"
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-
-loki:
-  enabled: true
-  servicePort: 3100
-  resources:
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-
-prometheus:
-  enabled: true
-  servicePort: 9090
-  selfScrapeTarget: "localhost:9090"
-  resources:
-    limits:
-      cpu: "1000m"
-      memory: "2Gi"
-    requests:
-      cpu: "200m"
-      memory: "512Mi"
-
-grafana:
-  enabled: true
-  adminUser: "admin"
-  adminPassword: "admin"
-  resources:
-    limits:
-      cpu: "200m"
-      memory: "256Mi"
     requests:
       cpu: "100m"
       memory: "128Mi"
@@ -315,10 +246,6 @@ configmap:
       target: ""
     runtimeIntake:
       target: ""
-  loki:
-    address: ""
-    timeout: "10s"
-    max_entries: 5000
   otlp:
     port: 4319
     max_request_size: 5242880
