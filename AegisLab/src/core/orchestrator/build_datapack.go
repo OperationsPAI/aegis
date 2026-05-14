@@ -250,9 +250,16 @@ func createDatapackJob(ctx context.Context, gateway *k8s.Gateway, params *datapa
 
 // s3DatapackEnvVars constructs the AWS-SDK-flavoured env consumed by
 // rcabench-platform's serde / copy_files when OUTPUT_PATH is an s3:// URL.
-// Endpoint + path-style + region come from `blob.buckets.datapack` (same
-// keys the API-side blob.Client reads from); credentials are sourced via
-// the existing `*_env` indirection so secrets never live in argv.
+// Every k8s-side handle is config-driven so this works against any
+// S3-compatible backend (rustfs, MinIO, real AWS, Volcengine TOS, …) by
+// reconfiguring `blob.buckets.datapack` — no Go change required.
+//
+//	blob.buckets.datapack.endpoint            → AWS_ENDPOINT_URL_S3
+//	blob.buckets.datapack.region              → AWS_REGION / AWS_DEFAULT_REGION
+//	blob.buckets.datapack.access_key_env      → name of Secret key holding AK
+//	blob.buckets.datapack.secret_key_env      → name of Secret key holding SK
+//	blob.buckets.datapack.creds_secret_name   → k8s Secret in the job namespace
+//	                                            that holds those two keys
 func s3DatapackEnvVars() []corev1.EnvVar {
 	endpoint := config.GetString("blob.buckets.datapack.endpoint")
 	region := config.GetString("blob.buckets.datapack.region")
@@ -261,31 +268,38 @@ func s3DatapackEnvVars() []corev1.EnvVar {
 	}
 	envAK := config.GetString("blob.buckets.datapack.access_key_env")
 	envSK := config.GetString("blob.buckets.datapack.secret_key_env")
-	if envAK == "" {
-		envAK = "BLOB_S3_DATAPACK_ACCESS_KEY"
-	}
-	if envSK == "" {
-		envSK = "BLOB_S3_DATAPACK_SECRET_KEY"
-	}
-	return []corev1.EnvVar{
+	credsSecret := config.GetString("blob.buckets.datapack.creds_secret_name")
+
+	envs := []corev1.EnvVar{
 		{Name: "AWS_ENDPOINT_URL_S3", Value: endpoint},
 		{Name: "AWS_REGION", Value: region},
 		{Name: "AWS_DEFAULT_REGION", Value: region},
-		{Name: "AWS_ACCESS_KEY_ID", ValueFrom: &corev1.EnvVarSource{
-			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: "rustfs-admin"},
-				Key:                  envAK,
-				Optional:             ptrBool(true),
-			},
-		}},
-		{Name: "AWS_SECRET_ACCESS_KEY", ValueFrom: &corev1.EnvVarSource{
-			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: "rustfs-admin"},
-				Key:                  envSK,
-				Optional:             ptrBool(true),
-			},
-		}},
 	}
+	if credsSecret != "" && envAK != "" {
+		envs = append(envs, corev1.EnvVar{
+			Name: "AWS_ACCESS_KEY_ID",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: credsSecret},
+					Key:                  envAK,
+					Optional:             ptrBool(true),
+				},
+			},
+		})
+	}
+	if credsSecret != "" && envSK != "" {
+		envs = append(envs, corev1.EnvVar{
+			Name: "AWS_SECRET_ACCESS_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: credsSecret},
+					Key:                  envSK,
+					Optional:             ptrBool(true),
+				},
+			},
+		})
+	}
+	return envs
 }
 
 func ptrBool(b bool) *bool { return &b }

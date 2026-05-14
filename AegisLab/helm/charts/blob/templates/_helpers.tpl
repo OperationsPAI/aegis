@@ -90,6 +90,9 @@ work without callers needing to adapt.
 {{- if $b.secret_key_env }}
 {{ $pad }}secret_key_env = {{ $b.secret_key_env | quote }}
 {{- end }}
+{{- if $b.creds_secret_name }}
+{{ $pad }}creds_secret_name = {{ $b.creds_secret_name | quote }}
+{{- end }}
 {{- end }}
 {{- if eq $b.driver "localfs" }}
 {{ $pad }}root = {{ $b.root | quote }}

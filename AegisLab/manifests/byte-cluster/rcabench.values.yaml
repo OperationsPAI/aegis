@@ -208,6 +208,10 @@ blob:
       path_style: true
       access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
       secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+      # Secret holding access_key_env / secret_key_env values. Consumed
+      # by the BuildDatapack k8s Job to project AWS_* env into the
+      # rcabench-platform CLI when OUTPUT_PATH=s3://… (PR7).
+      creds_secret_name: "rustfs-admin"
     execution:
       driver: "s3"
       endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
