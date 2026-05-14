@@ -6,6 +6,7 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
+	"aegis/platform/dockerutil"
 	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -146,7 +147,7 @@ func (cv *ContainerVersion) BeforeCreate(tx *gorm.DB) error {
 	}
 
 	if cv.ImageRef != "" {
-		registry, namespace, repository, tag, err := utils.ParseFullImageRefernce(cv.ImageRef)
+		registry, namespace, repository, tag, err := dockerutil.ParseFullImageRefernce(cv.ImageRef)
 		if err != nil {
 			return fmt.Errorf("invalid image reference: %w", err)
 		}

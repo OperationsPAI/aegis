@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"aegis/platform/consts"
+	"aegis/platform/dockerutil"
 	"aegis/platform/dto"
 	"aegis/platform/model"
 	"aegis/platform/utils"
@@ -204,7 +205,7 @@ func (req *CreateContainerVersionReq) Validate() error {
 	if _, _, _, err := utils.ParseSemanticVersion(req.Name); err != nil {
 		return fmt.Errorf("invalid semantic version: %s, %v", req.Name, err)
 	}
-	if _, _, _, _, err := utils.ParseFullImageRefernce(req.ImageRef); err != nil {
+	if _, _, _, _, err := dockerutil.ParseFullImageRefernce(req.ImageRef); err != nil {
 		return fmt.Errorf("invalid docker image reference: %s, %v", req.ImageRef, err)
 	}
 

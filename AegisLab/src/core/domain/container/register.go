@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"aegis/platform/consts"
+	"aegis/platform/dockerutil"
 	"aegis/platform/dto"
 	"aegis/platform/httpx"
 	"aegis/platform/middleware"
@@ -101,7 +102,7 @@ func (req *RegisterContainerReq) Validate() error {
 		}
 		// The image triple must resolve to a non-empty image_ref.
 		ref := composeImageRef(req.Registry, req.Repo, req.Tag)
-		if _, _, _, _, err := utils.ParseFullImageRefernce(ref); err != nil {
+		if _, _, _, _, err := dockerutil.ParseFullImageRefernce(ref); err != nil {
 			return fmt.Errorf("%w: benchmark image triple does not resolve: %v", consts.ErrBadRequest, err)
 		}
 		for i, e := range req.EnvVars {
