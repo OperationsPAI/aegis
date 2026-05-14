@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"aegis/platform/consts"
 	"aegis/platform/model"
 
 	"github.com/sirupsen/logrus"
@@ -143,7 +144,7 @@ func buildInjectionMetrics(injections []model.FaultInjection) *InjectionMetrics 
 	failedCount := 0
 
 	for _, inj := range injections {
-		stateName := fmt.Sprintf("%d", inj.State)
+		stateName := consts.GetDatapackStateName(inj.State)
 		metrics.StateDistrib[stateName]++
 
 		faultTypeName := fmt.Sprintf("%d", inj.FaultType)
@@ -161,9 +162,9 @@ func buildInjectionMetrics(injections []model.FaultInjection) *InjectionMetrics 
 		}
 
 		switch inj.State {
-		case 2:
+		case consts.DatapackInjectSuccess:
 			successCount++
-		case 3:
+		case consts.DatapackBuildFailed:
 			failedCount++
 		}
 	}
@@ -188,7 +189,7 @@ func buildExecutionMetrics(executions []model.Execution) *ExecutionMetrics {
 	failedCount := 0
 
 	for _, exec := range executions {
-		stateName := fmt.Sprintf("%d", exec.State)
+		stateName := consts.GetExecutionStateName(exec.State)
 		metrics.StateDistrib[stateName]++
 		if exec.Duration > 0 {
 			totalDuration += exec.Duration
@@ -200,9 +201,9 @@ func buildExecutionMetrics(executions []model.Execution) *ExecutionMetrics {
 			}
 		}
 		switch exec.State {
-		case 2:
+		case consts.ExecutionSuccess:
 			successCount++
-		case 3:
+		case consts.ExecutionFailed:
 			failedCount++
 		}
 	}
@@ -235,9 +236,9 @@ func buildAlgorithmMetricItem(algo model.Container, executions []model.Execution
 			totalDuration += exec.Duration
 		}
 		switch exec.State {
-		case 2:
+		case consts.ExecutionSuccess:
 			successCount++
-		case 3:
+		case consts.ExecutionFailed:
 			failedCount++
 		}
 	}
