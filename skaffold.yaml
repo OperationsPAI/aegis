@@ -65,6 +65,7 @@ profiles:
             network: host
       local:
         push: false
+        useBuildkit: true
       tagPolicy:
         sha256: {}
     deploy:
@@ -244,8 +245,10 @@ profiles:
       local:
         # docker.io push; volces pair-cn-shanghai mirror picks up the digest
         # within minutes so the in-cluster `pair-cn-shanghai.cr.volces.com`
-        # references resolve to the same image.
+        # references resolve to the same image. BuildKit required because
+        # rcabench-platform/Dockerfile uses `--mount=type=cache` for uv sync.
         push: true
+        useBuildkit: true
       tagPolicy:
         gitCommit:
           variant: AbbrevCommitSha

@@ -12,7 +12,7 @@ containers:
       # combo, every non-ts datapack silently failed at "No entrance traffic"
       # because the detector looked for ts-ui-dashboard everywhere.
       - name: 1.0.1
-        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260501-system
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260514-stable-0236525
         command: bash /entrypoint.sh
   - type: 0
     name: random
@@ -36,7 +36,7 @@ containers:
     status: 1
     versions:
       - name: 1.0.0
-        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:latest
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:byte-20260514-stable-0236525
         command: bash /entrypoint.sh
         env_vars:
           - key: NAMESPACE
@@ -424,7 +424,7 @@ containers:
     status: 1
     versions:
       - name: 0.1.0-e2e-kind-20260421
-        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:latest
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:byte-20260514-stable-0236525
         command: bash /entrypoint.sh
         env_vars:
           - key: NAMESPACE

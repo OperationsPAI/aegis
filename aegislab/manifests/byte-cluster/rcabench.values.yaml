@@ -6,7 +6,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260514-stable-0b0ea6b
+      tag: byte-20260514-stable-0236525
       pullPolicy: IfNotPresent
 
 images:
@@ -267,7 +267,7 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260514-stable-0b0ea6b
+    tag: byte-20260514-stable-0236525
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench
