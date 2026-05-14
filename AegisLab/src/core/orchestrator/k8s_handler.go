@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	k8s "aegis/platform/k8s"
@@ -461,27 +460,11 @@ func (h *k8sHandler) HandleJobAdd(name string, annotations map[string]string, la
 		return
 	}
 
-	var message string
-	var eventType consts.EventType
-	var payload any
-	switch parsedLabels.taskType {
-	case consts.TaskTypeBuildDatapack:
-		message = fmt.Sprintf("building dataset for task %s", parsedLabels.taskID)
-		eventType = consts.EventDatapackBuildStarted
-		payload = dto.DatapackInfo{
-			Datapack: parsedAnnotations.datapack,
-			JobName:  name,
-		}
-	case consts.TaskTypeRunAlgorithm:
-		message = fmt.Sprintf("running algorithm for task %s", parsedLabels.taskID)
-		eventType = consts.EventAlgoRunStarted
-		payload = dto.ExecutionInfo{
-			Algorithm:   parsedAnnotations.algorithm,
-			Datapack:    parsedAnnotations.datapack,
-			ExecutionID: *parsedLabels.ExecutionID,
-			JobName:     name,
-		}
+	handlerSet, ok := taskHandlers[parsedLabels.taskType]
+	if !ok || handlerSet.onJobAdd == nil {
+		return
 	}
+	dispatch := handlerSet.onJobAdd(parsedAnnotations, parsedLabels, name)
 
 	taskCtx := otel.GetTextMapPropagator().Extract(consumerDetachedContext(), parsedAnnotations.taskCarrier)
 	_ = tracing.WithSpanNamed(taskCtx, "k8s/callback/JobAdd", func(ctx context.Context) error {
@@ -494,8 +477,8 @@ func (h *k8sHandler) HandleJobAdd(name string, annotations map[string]string, la
 				parsedLabels.taskID,
 				parsedLabels.taskType,
 				consts.TaskRunning,
-				message,
-			).withEvent(eventType, payload).withDB(h.db).withRedis(h.redisGateway),
+				dispatch.message,
+			).withEvent(dispatch.eventType, dispatch.payload).withDB(h.db).withRedis(h.redisGateway),
 		)
 		return nil
 	})
@@ -564,78 +547,13 @@ func (h *k8sHandler) HandleJobFailed(job *batchv1.Job, annotations map[string]st
 		},
 	}, withCallerLevel(4))
 
-	var eventName consts.EventType
-	var payload any
-	switch parsedLabels.taskType {
-	case consts.TaskTypeBuildDatapack:
-		// Release the BuildDatapack token first so a flood of failures
-		// does not wedge the bucket. Release-on-failure mirrors the
-		// algorithm path below.
-		if rateLimiter := h.buildDatapackLimiter; rateLimiter != nil {
-			if releaseErr := rateLimiter.ReleaseToken(taskCtx, parsedLabels.taskID, parsedLabels.traceID); releaseErr != nil {
-				errCtx.Warn(nil, "failed to release build datapack token on job failure", releaseErr)
-			} else {
-				logEntry.Info("successfully released build datapack token on job failure")
-				taskSpan.AddEvent("successfully released build datapack token on job failure")
-			}
-		} else {
-			errCtx.Warn(nil, "build datapack rate limiter not initialized on job failure", fmt.Errorf("build datapack rate limiter not initialized"))
-		}
-
-		logEntry.Error("datapack build failed")
-		taskSpan.AddEvent("datapack build failed")
-
-		eventName = consts.EventDatapackBuildFailed
-		payload = dto.DatapackResult{
-			Datapack: parsedAnnotations.datapack.Name,
-			JobName:  job.Name,
-		}
-
-		if err := h.store.updateInjectionState(taskCtx, parsedAnnotations.datapack.Name, consts.DatapackBuildFailed); err != nil {
-			errCtx.Warn(nil, "update injection state failed", err)
-		}
-
-	case consts.TaskTypeRunAlgorithm:
-		rateLimiter := h.algoLimiter
-		if rateLimiter == nil {
-			errCtx.Warn(nil, "algorithm execution rate limiter not initialized on job failure", fmt.Errorf("algorithm execution rate limiter not initialized"))
-			return nil
-		}
-		if releaseErr := rateLimiter.ReleaseToken(taskCtx, parsedLabels.taskID, parsedLabels.traceID); releaseErr != nil {
-			errCtx.Warn(nil, "failed to release algorithm execution token on job failure", releaseErr)
-		} else {
-			logEntry.Info("successfully released algorithm execution token on job failure")
-			taskSpan.AddEvent("successfully released algorithm execution token on job failure")
-		}
-
-		if parsedAnnotations.algorithm == nil {
-			errCtx.Fatal(nil, "missing algorithm information in annotations", nil)
-			return nil
-		}
-		if parsedLabels.ExecutionID == nil {
-			errCtx.Fatal(nil, "missing execution ID in job labels", nil)
-			return nil
-		}
-
-		logEntry.Error("algorithm execute failed")
-		taskSpan.AddEvent("algorithm execute failed")
-
-		eventName = consts.EventAlgoRunFailed
-		payload = dto.ExecutionResult{
-			Algorithm: parsedAnnotations.algorithm.ContainerName,
-			JobName:   job.Name,
-		}
-
-		if parsedAnnotations.algorithm.ContainerName == config.GetDetectorName() {
-			if err := h.store.updateInjectionState(taskCtx, parsedAnnotations.datapack.Name, consts.DatapackDetectorFailed); err != nil {
-				errCtx.Warn(nil, "update injection state failed", err)
-			}
-		}
-
-		if err := h.store.updateExecutionState(taskCtx, *parsedLabels.ExecutionID, consts.ExecutionFailed); err != nil {
-			errCtx.Fatal(nil, "update execution state failed", err)
-			return nil
-		}
+	handlerSet, ok := taskHandlers[parsedLabels.taskType]
+	if !ok || handlerSet.onJobFailed == nil {
+		return nil
+	}
+	dispatch, cont := handlerSet.onJobFailed(h, taskCtx, parsedAnnotations, parsedLabels, job, errCtx, logEntry, taskSpan)
+	if !cont {
+		return nil
 	}
 
 	updateTaskState(taskCtx,
@@ -645,7 +563,7 @@ func (h *k8sHandler) HandleJobFailed(job *batchv1.Job, annotations map[string]st
 			parsedLabels.taskType,
 			consts.TaskError,
 			fmt.Sprintf(consts.TaskMsgFailed, parsedLabels.taskID),
-		).withEvent(eventName, payload).withDB(h.db).withRedis(h.redisGateway),
+		).withEvent(dispatch.eventName, dispatch.payload).withDB(h.db).withRedis(h.redisGateway),
 	)
 	return nil
 	})
@@ -698,164 +616,11 @@ func (h *k8sHandler) HandleJobSucceeded(job *batchv1.Job, annotations map[string
 		},
 	}, withCallerLevel(4))
 
-	switch parsedLabels.taskType {
-	case consts.TaskTypeBuildDatapack:
-		// Release the BuildDatapack token now that the job has finished;
-		// holding it any longer would slow-leak the bucket. Mirrors the
-		// release-on-success of the algorithm path below.
-		if rateLimiter := h.buildDatapackLimiter; rateLimiter != nil {
-			if releaseErr := rateLimiter.ReleaseToken(taskCtx, parsedLabels.taskID, parsedLabels.traceID); releaseErr != nil {
-				errCtx.Warn(nil, "failed to release build datapack token on job success", releaseErr)
-			} else {
-				logEntry.Info("successfully released build datapack token on job success")
-				taskSpan.AddEvent("successfully released build datapack token on job success")
-			}
-		} else {
-			errCtx.Warn(nil, "build datapack rate limiter not initialized on job success", fmt.Errorf("build datapack rate limiter not initialized"))
-		}
-
-		logEntry.Info("datapack build successfully")
-		taskSpan.AddEvent("datapack build successfully")
-
-		if err := h.store.updateInjectionState(taskCtx, parsedAnnotations.datapack.Name, consts.DatapackBuildSuccess); err != nil {
-			errCtx.Fatal(nil, "update injection state failed", err)
-			return nil
-		}
-
-		updateTaskState(taskCtx,
-			newTaskStateUpdate(
-				parsedLabels.traceID,
-				parsedLabels.taskID,
-				parsedLabels.taskType,
-				consts.TaskCompleted,
-				fmt.Sprintf(consts.TaskMsgCompleted, parsedLabels.taskID),
-			).withEvent(
-				consts.EventDatapackBuildSucceed,
-				dto.DatapackResult{
-					Datapack: parsedAnnotations.datapack.Name,
-					JobName:  job.Name,
-				},
-			).withDB(h.db).withRedis(h.redisGateway),
-		)
-
-		ref := &dto.ContainerRef{
-			Name: config.GetDetectorName(),
-		}
-
-		algorithmVersionResults, err := container.NewRepository(h.db).ResolveContainerVersions([]*dto.ContainerRef{ref}, consts.ContainerTypeAlgorithm, parsedLabels.userID)
-		if err != nil {
-			errCtx.Fatal(nil, "failed to map container refs to versions", err)
-			return nil
-		}
-		if len(algorithmVersionResults) == 0 {
-			errCtx.Fatal(nil, "no valid algorithm versions found", nil)
-			return nil
-		}
-
-		algorithmVersion, exists := algorithmVersionResults[ref]
-		if !exists {
-			errCtx.Fatal(nil, "algorithm version not found for item", nil)
-			return nil
-		}
-
-		payload := map[string]any{
-			consts.ExecuteAlgorithm:        dto.NewContainerVersionItem(&algorithmVersion),
-			consts.ExecuteDatapack:         parsedAnnotations.datapack,
-			consts.ExecuteDatasetVersionID: consts.DefaultInvalidID,
-		}
-
-		task := &dto.UnifiedTask{
-			Type:         consts.TaskTypeRunAlgorithm,
-			Immediate:    true,
-			Payload:      payload,
-			ParentTaskID: utils.StringPtr(parsedLabels.taskID),
-			TraceID:      parsedLabels.traceID,
-			GroupID:      parsedLabels.groupID,
-			ProjectID:    parsedLabels.projectID,
-			UserID:       parsedLabels.userID,
-		}
-		task.SetTraceCtx(traceCtx)
-
-		if err := common.SubmitTaskWithDB(taskCtx, h.db, h.redisGateway, task); err != nil {
-			errCtx.Warn(nil, "submit algorithm execution task failed", err)
-		}
-
-	case consts.TaskTypeRunAlgorithm:
-		rateLimiter := h.algoLimiter
-		if rateLimiter == nil {
-			errCtx.Warn(nil, "algorithm execution rate limiter not initialized on job success", fmt.Errorf("algorithm execution rate limiter not initialized"))
-			return nil
-		}
-		if releaseErr := rateLimiter.ReleaseToken(taskCtx, parsedLabels.taskID, parsedLabels.traceID); releaseErr != nil {
-			errCtx.Warn(nil, "failed to release algorithm execution token on job success", releaseErr)
-		} else {
-			logEntry.Info("successfully released algorithm execution token on job success")
-			taskSpan.AddEvent("successfully released algorithm execution token on job success")
-		}
-
-		if parsedAnnotations.algorithm == nil {
-			errCtx.Fatal(nil, "missing algorithm information in annotations", nil)
-			return nil
-		}
-
-		if parsedLabels.ExecutionID == nil {
-			errCtx.Fatal(nil, "missing execution ID in job labels", nil)
-			return nil
-		}
-
-		logEntry.Info("algorithm execute successfully")
-		taskSpan.AddEvent("algorithm execute successfully")
-
-		if parsedAnnotations.algorithm.ContainerName == config.GetDetectorName() {
-			if err := h.store.updateInjectionState(taskCtx, parsedAnnotations.datapack.Name, consts.DatapackDetectorSuccess); err != nil {
-				errCtx.Fatal(nil, "update injection state failed", err)
-				return nil
-			}
-		}
-
-		if err := h.store.updateExecutionState(taskCtx, *parsedLabels.ExecutionID, consts.ExecutionSuccess); err != nil {
-			errCtx.Fatal(nil, "update execution state failed", err)
-			return nil
-		}
-
-		updateTaskState(taskCtx,
-			newTaskStateUpdate(
-				parsedLabels.traceID,
-				parsedLabels.taskID,
-				parsedLabels.taskType,
-				consts.TaskCompleted,
-				fmt.Sprintf(consts.TaskMsgCompleted, parsedLabels.taskID),
-			).withEvent(
-				consts.EventAlgoRunSucceed,
-				dto.ExecutionResult{
-					Algorithm: parsedAnnotations.algorithm.ContainerName,
-					JobName:   job.Name,
-				},
-			).withDB(h.db).withRedis(h.redisGateway),
-		)
-
-		payload := map[string]any{
-			consts.CollectAlgorithm:   parsedAnnotations.algorithm,
-			consts.CollectDatapack:    parsedAnnotations.datapack,
-			consts.CollectExecutionID: *parsedLabels.ExecutionID,
-		}
-
-		task := &dto.UnifiedTask{
-			Type:         consts.TaskTypeCollectResult,
-			Immediate:    true,
-			Payload:      payload,
-			ParentTaskID: utils.StringPtr(parsedLabels.taskID),
-			TraceID:      parsedLabels.traceID,
-			GroupID:      parsedLabels.groupID,
-			ProjectID:    parsedLabels.projectID,
-			UserID:       parsedLabels.userID,
-		}
-		task.SetTraceCtx(traceCtx)
-
-		if err := common.SubmitTaskWithDB(taskCtx, h.db, h.redisGateway, task); err != nil {
-			errCtx.Warn(nil, "submit result collection task failed", err)
-		}
+	handlerSet, ok := taskHandlers[parsedLabels.taskType]
+	if !ok || handlerSet.onJobSucceeded == nil {
+		return nil
 	}
+	handlerSet.onJobSucceeded(h, taskCtx, traceCtx, parsedAnnotations, parsedLabels, job, errCtx, logEntry, taskSpan)
 	return nil
 	})
 }
