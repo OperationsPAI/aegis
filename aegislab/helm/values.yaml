@@ -10,6 +10,12 @@
 global:
   # Set to empty string to use default public registries
   imageRegistry: ""
+  # Externally-reachable origin of this install (e.g.
+  # https://aegis.example.com, http://118.196.98.178:8082). Single source of
+  # truth — templates derive SSO consoleRedirectURIs + loginRedirect and any
+  # other "where does the browser reach us" value from it. Leave empty for
+  # in-cluster / dev installs (subcharts fall back to localhost defaults).
+  publicBaseURL: ""
   # Shared backend image (re-used by parent + notify/blob/gateway subcharts).
   images:
     rcabench:
@@ -259,8 +265,11 @@ configmap:
     # Only override if the API gateway is exposed under a different host.
     backendRedirectURI: ""
     seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
-    consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
-    loginRedirect: "http://localhost:3323/auth/login"
+    # Leave blank to derive from the top-level `publicBaseURL` (one URL +
+    # `/auth/callback` and `/auth/login`). Set explicitly for multi-origin
+    # whitelists or to keep localhost defaults when no public URL exists.
+    consoleRedirectURIs: ""
+    loginRedirect: ""
 
 microservices:
   aegisApi:

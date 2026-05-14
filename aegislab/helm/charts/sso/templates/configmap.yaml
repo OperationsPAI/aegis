@@ -40,6 +40,20 @@ data:
     backend_redirect_uri = "{{ .Values.config.sso.backendRedirectURI }}"
     private_key_path = "{{ .Values.config.sso.privateKeyPath }}"
     seed_secret_dump_path = "{{ .Values.config.sso.seedSecretDumpPath }}"
-    console_redirect_uris = "{{ .Values.config.sso.consoleRedirectURIs }}"
-    login_redirect = "{{ .Values.config.sso.loginRedirect }}"
+    {{- /*
+      Derive console redirect URI + login redirect from `global.publicBaseURL`
+      (set at the parent chart root) when the explicit values are empty.
+      Explicit values still win for multi-origin whitelists.
+    */}}
+    {{- $pub := (.Values.global).publicBaseURL | default "" -}}
+    {{- $consoleURIs := .Values.config.sso.consoleRedirectURIs -}}
+    {{- if and (not $consoleURIs) $pub }}
+      {{- $consoleURIs = printf "%s/auth/callback" $pub -}}
+    {{- end }}
+    {{- $loginRedir := .Values.config.sso.loginRedirect -}}
+    {{- if and (not $loginRedir) $pub }}
+      {{- $loginRedir = printf "%s/auth/login" $pub -}}
+    {{- end }}
+    console_redirect_uris = "{{ $consoleURIs }}"
+    login_redirect = "{{ $loginRedir }}"
 {{- end }}

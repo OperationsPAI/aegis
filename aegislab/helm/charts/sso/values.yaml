@@ -65,8 +65,12 @@ config:
     backendRedirectURI: ""
     privateKeyPath: "/etc/aegis/sso-private.pem"
     seedSecretDumpPath: "/var/lib/sso/.first-boot-secret"
-    consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
-    loginRedirect: "http://localhost:3323/auth/login"
+    # Leave blank to derive from `global.publicBaseURL` (consumed via Helm
+    # subchart propagation). When both are empty the seed falls back to
+    # localhost so dev clients (`make local-debug`, kind kubeconfig) still
+    # work; override explicitly for multi-origin whitelists.
+    consoleRedirectURIs: ""
+    loginRedirect: ""
 
 privateKey:
   pem: ""

@@ -87,8 +87,23 @@ data:
     client_secret = "{{ .Values.configmap.sso.clientSecret }}"
     backend_redirect_uri = "{{ .Values.configmap.sso.backendRedirectURI | default (printf "http://%s-aegis-api:%v/auth/oidc/callback" .Release.Name .Values.microservices.aegisApi.httpPort) }}"
     seed_secret_dump_path = "{{ .Values.configmap.sso.seedSecretDumpPath }}"
-    console_redirect_uris = "{{ .Values.configmap.sso.consoleRedirectURIs }}"
-    login_redirect = "{{ .Values.configmap.sso.loginRedirect }}"
+    {{- /*
+      consoleRedirectURIs / loginRedirect derive from `publicBaseURL` when set
+      (single source of truth for "where the browser reaches this install").
+      Explicit configmap.sso.* values still win for callers that need to point
+      at multiple origins.
+    */}}
+    {{- $pub := .Values.global.publicBaseURL | default "" -}}
+    {{- $consoleURIs := .Values.configmap.sso.consoleRedirectURIs -}}
+    {{- if and (not $consoleURIs) $pub }}
+      {{- $consoleURIs = printf "%s/auth/callback" $pub -}}
+    {{- end }}
+    {{- $loginRedir := .Values.configmap.sso.loginRedirect -}}
+    {{- if and (not $loginRedir) $pub }}
+      {{- $loginRedir = printf "%s/auth/login" $pub -}}
+    {{- end }}
+    console_redirect_uris = "{{ $consoleURIs }}"
+    login_redirect = "{{ $loginRedir }}"
 
     [jfs]
     backend = "{{ .Values.configmap.jfs.backend | default "filesystem" }}"
