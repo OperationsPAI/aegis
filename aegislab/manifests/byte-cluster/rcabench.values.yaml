@@ -279,6 +279,14 @@ sso:
   persistence:
     storageClass: rcabench
 
+configmap:
+  sso:
+    # Browser-facing redirect URLs. localhost ones are kept so dev clients
+    # (`make local-debug`, kind kubeconfig) still work; the bytecluster LB
+    # EIP is appended so the public console can complete the OIDC code flow.
+    consoleRedirectURIs: "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback,http://118.196.98.178:8082/auth/callback"
+    loginRedirect: "http://118.196.98.178:8082/auth/login"
+
 persistence:
   storageType: volcengine
 etcd:

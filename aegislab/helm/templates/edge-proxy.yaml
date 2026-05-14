@@ -25,6 +25,15 @@ data:
         {{- $apiBackend = printf "%s-gateway:%d" .Release.Name (int (.Values.gateway.httpPort | default 8086)) }}
         {{- end }}
         {{- if .Values.frontend.enabled }}
+        # SSO public OIDC endpoints live at the SSO service root (not under
+        # /api/v2). Route them directly so the browser's OAuth2 code-flow
+        # redirect lands on the real handler instead of the SPA shell.
+        @sso {
+            path /authorize /token /userinfo /login /v1/logout /.well-known/openid-configuration /.well-known/jwks.json
+        }
+        handle @sso {
+            reverse_proxy {{ .Release.Name }}-sso:{{ .Values.microservices.sso.httpPort | default 8083 }}
+        }
         @api {
             path /api/* /auth/* /s/* /healthz /metrics /readyz /livez
         }
