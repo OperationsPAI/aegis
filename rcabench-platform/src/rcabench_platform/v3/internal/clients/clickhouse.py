@@ -14,6 +14,14 @@ def get_clickhouse_client() -> ClickHouseClient:
     username = os.environ.get("DB_USER", None)
     password = os.environ.get("DB_PASSWORD", "")
     database = os.environ.get("DB_DATABASE", "default")
+    # CH server is configured at UTC; callers like prepare_inputs build
+    # WHERE-clause time literals via convert_to_clickhouse_time(unix, DB_TIMEZONE)
+    # which already formats in DB_TIMEZONE. But clickhouse-connect derives the
+    # session_timezone from the container's TZ env by default (the Dockerfile
+    # bakes Asia/Shanghai), which makes the server reinterpret the literal in
+    # Shanghai time and silently drop 8 hours' worth of rows. Pin the session
+    # to DB_TIMEZONE so both sides agree.
+    session_tz = os.environ.get("DB_TIMEZONE", "UTC")
 
     client = clickhouse_connect.get_client(
         host=host,
@@ -21,6 +29,7 @@ def get_clickhouse_client() -> ClickHouseClient:
         password=password,
         database=database,
         port=port,
+        settings={"session_timezone": session_tz},
     )
 
     return client
