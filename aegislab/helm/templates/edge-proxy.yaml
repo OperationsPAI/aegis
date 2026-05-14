@@ -76,8 +76,11 @@ data:
         handle @sso {
             reverse_proxy {{ .Release.Name }}-sso:{{ .Values.sso.service.port | default 8083 }}
         }
+        # /auth/* is a SPA route family (login / register / callback /
+        # forgot-password). The real auth API lives under /api/v2/auth/*
+        # and is covered by the /api/* matcher below.
         @api {
-            path /api/* /auth/* /s/* /healthz /metrics /readyz /livez
+            path /api/* /s/* /healthz /metrics /readyz /livez
         }
         handle @api {
             reverse_proxy {{ $apiBackend }}
