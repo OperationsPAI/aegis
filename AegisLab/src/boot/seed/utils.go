@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert/yaml"
+	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
 )
 

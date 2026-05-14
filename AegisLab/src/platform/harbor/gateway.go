@@ -102,13 +102,21 @@ func newClientSet() *harbor.ClientSet {
 	registry := config.GetString("harbor.registry")
 	username := config.GetString("harbor.username")
 	password := config.GetString("harbor.password")
-	harborURL := fmt.Sprintf("http://%s", registry)
+	scheme := config.GetString("harbor.scheme")
+	if scheme == "" {
+		scheme = "http"
+	}
+	insecure := true
+	if v := config.Get("harbor.insecure"); v != nil {
+		insecure = config.GetBool("harbor.insecure")
+	}
+	harborURL := fmt.Sprintf("%s://%s", scheme, registry)
 
 	clientSet, err := harbor.NewClientSet(&harbor.ClientSetConfig{
 		URL:      harborURL,
 		Username: username,
 		Password: password,
-		Insecure: true,
+		Insecure: insecure,
 	})
 	if err != nil {
 		return nil

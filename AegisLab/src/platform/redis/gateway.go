@@ -413,8 +413,8 @@ func newClient() *redis.Client {
 	logrus.Infof("Connecting to Redis %s", config.GetString("redis.host"))
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.GetString("redis.host"),
-		Password: "",
-		DB:       0,
+		Password: config.GetString("redis.password"),
+		DB:       config.GetInt("redis.db"),
 	})
 	if err := client.Ping(context.Background()).Err(); err != nil {
 		logrus.Fatalf("Failed to connect to Redis: %v", err)

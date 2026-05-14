@@ -188,11 +188,36 @@ func buildJobLogQL(taskID string, opts QueryOpts) string {
 	logQL := fmt.Sprintf(`{app="rcabench"} | task_id=%q`, taskID)
 	switch {
 	case strings.TrimSpace(opts.RawLogQL) != "":
-		logQL = logQL + " " + strings.TrimSpace(opts.RawLogQL)
+		if raw, ok := sanitizeRawLogQL(opts.RawLogQL); ok {
+			logQL = logQL + " " + raw
+		} else if strings.TrimSpace(opts.Substring) != "" {
+			logQL = fmt.Sprintf(`%s |= %q`, logQL, opts.Substring)
+		}
 	case strings.TrimSpace(opts.Substring) != "":
 		logQL = fmt.Sprintf(`%s |= %q`, logQL, opts.Substring)
 	}
 	return logQL
+}
+
+// sanitizeRawLogQL rejects RawLogQL fragments that could escape the base
+// `{app="rcabench"} | task_id=<id>` selector. Callers feed this from
+// user-supplied HTTP query strings (see core/domain/injection/logs_*.go),
+// so we must refuse anything that introduces a closing `}` (would terminate
+// the stream selector), newlines, or backticks (used to delimit raw strings
+// in LogQL). The fragment must also start with `|` so it can only chain
+// onto the existing pipeline rather than replace it.
+func sanitizeRawLogQL(raw string) (string, bool) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return "", false
+	}
+	if !strings.HasPrefix(s, "|") {
+		return "", false
+	}
+	if strings.ContainsAny(s, "}\n\r`") {
+		return "", false
+	}
+	return s, true
 }
 
 // QueryJobLogHistogram returns log-volume buckets for a task using Loki's

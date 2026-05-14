@@ -17,6 +17,7 @@ import (
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -48,10 +49,15 @@ func NewClient(lc fx.Lifecycle) (*Client, error) {
 		intakeTarget: resolveIntakeTarget(),
 	}
 
+	transportCreds, err := resolveTransportCredentials()
+	if err != nil {
+		return nil, err
+	}
+
 	if client.queryTarget != "" {
 		conn, err := grpc.NewClient(
 			client.queryTarget,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithTransportCredentials(transportCreds),
 			grpc.WithUnaryInterceptor(httpx.UnaryClientRequestIDInterceptor()),
 		)
 		if err != nil {
@@ -64,7 +70,7 @@ func NewClient(lc fx.Lifecycle) (*Client, error) {
 	if client.intakeTarget != "" {
 		conn, err := grpc.NewClient(
 			client.intakeTarget,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithTransportCredentials(transportCreds),
 			grpc.WithUnaryInterceptor(httpx.UnaryClientRequestIDInterceptor()),
 		)
 		if err != nil {
@@ -92,6 +98,21 @@ func NewClient(lc fx.Lifecycle) (*Client, error) {
 	})
 
 	return client, nil
+}
+
+func resolveTransportCredentials() (credentials.TransportCredentials, error) {
+	if !config.GetBool("runtime.tls.enabled") {
+		return insecure.NewCredentials(), nil
+	}
+	caFile := config.GetString("runtime.tls.ca_file")
+	if caFile == "" {
+		return nil, fmt.Errorf("runtime.tls.enabled is true but runtime.tls.ca_file is empty")
+	}
+	creds, err := credentials.NewClientTLSFromFile(caFile, "")
+	if err != nil {
+		return nil, fmt.Errorf("load runtime TLS credentials from %s: %w", caFile, err)
+	}
+	return creds, nil
 }
 
 func resolveQueryTarget() string {

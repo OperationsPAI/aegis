@@ -17,7 +17,7 @@ import (
 	"aegis/platform/config"
 
 	"github.com/BurntSushi/toml"
-	"github.com/stretchr/testify/assert/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 type ExculdeRule struct {
