@@ -223,7 +223,7 @@ func anyPermission(permissions []consts.PermissionRule) permissionCheckFunc {
 				},
 			)
 			if err != nil {
-				logrus.Warnf("Permission check error: %f", err)
+				logrus.Warnf("Permission check error: %v", err)
 				continue
 			}
 			if hasPermission {

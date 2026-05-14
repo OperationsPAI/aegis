@@ -92,7 +92,8 @@ type monitor struct {
 
 func NewMonitor(gateway *redisinfra.Gateway) NamespaceMonitor {
 	return &monitor{
-		ctx:          context.TODO(),
+		// placeholder until SetContext wires the consumer-loop ctx
+		ctx:          context.Background(),
 		redisGateway: gateway,
 		namespaces:   state.NewCatalogStore(gateway),
 		locks:        state.NewLockStore(gateway),
@@ -129,7 +130,8 @@ func (m *monitor) currentContext() context.Context {
 	if m.ctx != nil {
 		return m.ctx
 	}
-	return context.TODO()
+	// SetContext not yet called (e.g. early startup, unit tests)
+	return context.Background()
 }
 
 func (m *monitor) listNamespaces() ([]string, error) {
@@ -391,7 +393,7 @@ func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
 	// section would try to re-acquire m.mu via an RLock and self-deadlock.
 	ctx := m.ctx
 	if ctx == nil {
-		ctx = context.TODO()
+		ctx = context.Background()
 	}
 
 	result := &NamespaceRefreshResult{

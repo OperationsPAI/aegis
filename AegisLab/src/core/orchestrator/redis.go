@@ -10,7 +10,9 @@ import (
 )
 
 func consumerDetachedContext() context.Context {
-	return context.TODO()
+	// detached from any request ctx: callers use this for fire-and-forget
+	// publishes that must outlive the originating request
+	return context.Background()
 }
 
 type redisStreamEvent interface {
