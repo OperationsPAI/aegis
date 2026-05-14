@@ -44,6 +44,17 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.auth.secretName | default (printf "%s-auth" .Release.Name) }}
                   key: jwt_secret
+            {{- if or .Values.bootstrap.adminPassword .Values.bootstrap.existingSecret }}
+            # Pinned admin bootstrap password — consumed by
+            # `seedAdminUser` on first boot. Once the admin user exists
+            # this env is ignored (idempotent seed), so rotating means
+            # deleting the row + restarting SSO.
+            - name: AEGIS_SSO_BOOTSTRAP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.bootstrap.existingSecret | default (printf "%s-bootstrap" (include "sso.fullname" .)) }}
+                  key: {{ .Values.bootstrap.existingSecretKey | default "admin_password" }}
+            {{- end }}
             {{- range .Values.extraEnv }}
             - {{ toYaml . | nindent 14 | trim }}
             {{- end }}

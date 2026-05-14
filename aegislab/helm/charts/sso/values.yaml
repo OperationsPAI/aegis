@@ -76,6 +76,24 @@ privateKey:
   pem: ""
   existingSecret: ""
 
+# First-boot admin password seeded by `seedAdminUser` in
+# `aegislab/src/boot/sso/initialization.go`. The seed is idempotent — once
+# the admin row exists this value is ignored, so rotation means deleting
+# the user (or chunk-resetting the DB) and restarting the pod.
+#
+# Modes (mutually exclusive, in priority order):
+#   - existingSecret: name of a pre-created Secret with `existingSecretKey`
+#     (default `admin_password`). Use for sops / sealed-secrets pipelines.
+#   - adminPassword: inline value. The chart writes
+#     `<release>-sso-bootstrap` automatically with
+#     `helm.sh/resource-policy: keep` so re-installs don't churn it.
+# Leave both empty to let the SSO pod generate a random hex32 and dump it
+# to `/var/lib/sso/.first-boot-secret.admin` (dev / kind default).
+bootstrap:
+  adminPassword: ""
+  existingSecret: ""
+  existingSecretKey: "admin_password"
+
 persistence:
   enabled: true
   storageClass: ""

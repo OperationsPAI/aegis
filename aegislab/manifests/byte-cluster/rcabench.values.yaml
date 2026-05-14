@@ -289,6 +289,11 @@ sso:
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench
+  bootstrap:
+    # First-boot admin password. Idempotent — ignored after the row
+    # exists. For prod replace with `existingSecret: <name>` and seed the
+    # value via sops / sealed-secrets so it doesn't sit in values.
+    adminPassword: "TempAdminPass2026!"
 
 
 persistence:
