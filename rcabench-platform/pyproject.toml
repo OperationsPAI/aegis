@@ -101,6 +101,11 @@ detector = [
     "scipy>=1.15.0",
     "networkx>=3.4.2",
     "rcabench>=1.1.51",
+    # sdk.datasets.rcabench imports reasoning.manifests.loader which uses yaml.
+    "pyyaml>=6.0.0",
+    # cli/detector._stage_s3_input_locally mirrors s3://INPUT_PATH bucket
+    # contents into a tempdir via fsspec/s3fs (same dep prepare_inputs uses).
+    "s3fs>=2024.10.0",
 ]
 
 [dependency-groups]

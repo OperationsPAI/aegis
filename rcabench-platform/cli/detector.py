@@ -889,9 +889,15 @@ def platform_convert(
     assert input_path.exists(), f"Input path does not exist: {input_path}"
     assert output_path.exists(), f"Output path does not exist: {output_path}"
 
-    # Check if conclusion.csv exists before proceeding with conversion
-    conclusion_csv = input_path / "conclusion.csv"
-    if not conclusion_csv.exists():
+    # conclusion.csv is written to OUTPUT_PATH by save_analysis_results, not
+    # INPUT_PATH. Check both: byte-cluster s3 mode has read-only staged input
+    # so the marker lives at output_path; batch patch_detection passes
+    # in_p==ou_p so either path resolves to the same file.
+    conclusion_csv = next(
+        (p for p in (output_path / "conclusion.csv", input_path / "conclusion.csv") if p.exists()),
+        None,
+    )
+    if conclusion_csv is None:
         logger.warning("conclusion.csv not found, skipping platform conversion")
         return
 
@@ -913,7 +919,14 @@ def platform_convert(
 
     logger.info(f"Trace files validated: normal={normal_count} records, abnormal={abnormal_count} records")
 
-    converted_input_path = output_path / "converted"
+    # Write the converted parquet next to the input parquet so
+    # `RCABenchAnalyzerLoader._get_datapack_folder` picks it up via the
+    # `in_p / "converted"` short-circuit. Previously this went under
+    # `output_path / "converted"` (i.e. /experiment_storage/...), forcing the
+    # downstream loader to fall back to `data/rcabench_dataset/<name>/converted`
+    # which doesn't exist on the algo pod. For the batch `patch_detection`
+    # flow input_path == ou_p == datapack, so this is a no-op there.
+    converted_input_path = input_path / "converted"
 
     convert_datapack(
         loader=RCABenchDatapackLoader(input_path, datapack=injection_name, system=system),

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository struct {
@@ -105,7 +106,12 @@ func (r *Repository) addInjectionLabels(injectionID int, labelIDs []int) error {
 			LabelID:          labelID,
 		})
 	}
-	if err := r.db.Create(&links).Error; err != nil {
+	// Idempotent insert: detector reruns + downstream retries send the same
+	// (injection_id, label_id) pairs, and the unique index on
+	// fault_injection_labels was previously surfacing every re-attempt as a
+	// 500 with "duplicated key not allowed". `ON CONFLICT DO NOTHING` keeps
+	// the first writer's row and silently drops dupes.
+	if err := r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&links).Error; err != nil {
 		return fmt.Errorf("failed to add injection labels: %w", err)
 	}
 	return nil

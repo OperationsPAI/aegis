@@ -1,12 +1,12 @@
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import polars as pl
-from drain3 import TemplateMiner
-from drain3.file_persistence import FilePersistence
-from drain3.template_miner_config import TemplateMinerConfig
+
+if TYPE_CHECKING:
+    from drain3 import TemplateMiner
 
 from ...sdk.datasets.rcabench import get_service_names
 from ...sdk.logging import logger, timeit
@@ -380,8 +380,19 @@ class RCABenchDatapackLoader(DatapackLoader):
         return ans
 
 
-def create_template_miner(config_path: Path, persistence_path: Path) -> TemplateMiner:
-    """Create a Drain3 template miner with file persistence."""
+def create_template_miner(config_path: Path, persistence_path: Path) -> "TemplateMiner":
+    """Create a Drain3 template miner with file persistence.
+
+    `drain3` is only used by offline `cli/dataset_transform/` batch flows,
+    not by the byte-cluster detector. Importing it lazily keeps the slim
+    detector image (which dispatches into this module for the polars-only
+    `RCABenchDatapackLoader` but never calls this helper) from needing the
+    drain3 wheel.
+    """
+    from drain3 import TemplateMiner
+    from drain3.file_persistence import FilePersistence
+    from drain3.template_miner_config import TemplateMinerConfig
+
     persistence = FilePersistence(str(persistence_path))
     miner_config = TemplateMinerConfig()
     miner_config.load(str(config_path))
