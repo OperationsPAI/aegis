@@ -8,33 +8,33 @@ dependencies = [
     "dynaconf>=3.2.13",
     "kubernetes>=35.0.0",
     "psutil>=7.2.2",
-    "pydantic>=2.13.3",
+    "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
-    "requests>=2.33.1",
+    "requests>=2.34.1",
     "rich>=15.0.0",
     "ruamel-yaml>=0.19.1",
     "toml>=0.10.2",
-    "tomlkit>=0.14.0",
-    "typer>=0.24.2",
-    "uv>=0.11.7",
+    "tomlkit>=0.15.0",
+    "typer>=0.25.1",
+    "uv>=0.11.14",
 ]
 
 [dependency-groups]
 dev = [
-    "gitpython>=3.1.47",
+    "gitpython>=3.1.50",
     "jinja2>=3.1.6",
-    "pymysql>=1.1.2",
+    "pymysql>=1.1.3",
     "python-on-whales>=0.81.0",
     "redis>=7.4.0",
     "ruamel-yaml>=0.19.1",
-    "ruff>=0.15.11",
+    "ruff>=0.15.12",
     "sqlalchemy>=2.0.49",
-    "tomlkit>=0.14.0",
+    "tomlkit>=0.15.0",
 ]
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
-    "pytest-order>=1.3.0",
+    "pytest-order>=1.4.0",
     "rcabench",
 ]
 
