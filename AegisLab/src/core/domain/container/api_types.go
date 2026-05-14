@@ -10,6 +10,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dockerutil"
 	"aegis/platform/dto"
+	"aegis/platform/githubutil"
 	"aegis/platform/model"
 	"aegis/platform/utils"
 )
@@ -198,7 +199,7 @@ func (req *CreateContainerVersionReq) Validate() error {
 
 	if req.GithubLink != "" {
 		req.GithubLink = strings.TrimSpace(req.GithubLink)
-		if err := utils.IsValidGitHubLink(req.GithubLink); err != nil {
+		if err := githubutil.IsValidGitHubLink(req.GithubLink); err != nil {
 			return fmt.Errorf("invalid github link: %s, %v", req.GithubLink, err)
 		}
 	}
@@ -423,19 +424,19 @@ func (req *SubmitBuildContainerReq) Validate() error {
 	}
 	if req.GithubBranch != "" {
 		req.GithubBranch = strings.TrimSpace(req.GithubBranch)
-		if err := utils.IsValidGitHubBranch(req.GithubBranch); err != nil {
+		if err := githubutil.IsValidGitHubBranch(req.GithubBranch); err != nil {
 			return err
 		}
 	}
 	if req.GithubCommit != "" {
 		req.GithubCommit = strings.TrimSpace(req.GithubCommit)
-		if err := utils.IsValidGitHubCommit(req.GithubCommit); err != nil {
+		if err := githubutil.IsValidGitHubCommit(req.GithubCommit); err != nil {
 			return err
 		}
 	}
 	if req.GithubToken != "" {
 		req.GithubToken = strings.TrimSpace(req.GithubToken)
-		if err := utils.IsValidGitHubToken(req.GithubToken); err != nil {
+		if err := githubutil.IsValidGitHubToken(req.GithubToken); err != nil {
 			return err
 		}
 	}
@@ -480,7 +481,7 @@ func (req *UpdateContainerVersionReq) Validate() error {
 		trimmedLink := strings.TrimSpace(*req.GithubLink)
 		*req.GithubLink = trimmedLink
 		if trimmedLink != "" {
-			if err := utils.IsValidGitHubLink(trimmedLink); err != nil {
+			if err := githubutil.IsValidGitHubLink(trimmedLink); err != nil {
 				return fmt.Errorf("invalid GitHub link '%s': %v", trimmedLink, err)
 			}
 		}

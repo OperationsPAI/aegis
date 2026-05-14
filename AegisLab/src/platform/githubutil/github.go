@@ -1,4 +1,4 @@
-package utils
+package githubutil
 
 import (
 	"fmt"
