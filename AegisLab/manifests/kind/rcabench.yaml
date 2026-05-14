@@ -16,7 +16,7 @@ global:
   images:
     rcabench:
       name: opspai/rcabench
-      tag: byte-20260514-stable-ba7e3aa
+      tag: byte-20260514-stable-0b0ea6b
       pullPolicy: IfNotPresent
 
 # Not needed for regression smoke.
