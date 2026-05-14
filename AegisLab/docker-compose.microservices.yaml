@@ -126,6 +126,11 @@ services:
       # Override the localfs scratch bucket root so it lives on a named
       # volume instead of the container layer (which dies on rebuild).
       BLOB_BUCKETS_SCRATCH_ROOT: /var/lib/aegis-blob/scratch
+      # Lifecycle sweep tunables — short values for the local dev /
+      # smoke flow so expired uploads get cleaned within seconds.
+      BLOB_LIFECYCLE_INTERVAL: 5s
+      BLOB_LIFECYCLE_ORPHAN_AGE: 30s
+      BLOB_LIFECYCLE_BATCH: "200"
     depends_on:
       redis:
         condition: service_healthy

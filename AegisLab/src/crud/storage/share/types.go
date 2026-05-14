@@ -17,6 +17,7 @@ import (
 // real driver wiring.
 type BlobBackend interface {
 	Put(ctx context.Context, bucket, key string, r io.Reader, opts blob.PutOpts) (*blob.ObjectMeta, error)
+	Get(ctx context.Context, bucket, key string) (io.ReadCloser, *blob.ObjectMeta, error)
 	Stat(ctx context.Context, bucket, key string) (*blob.ObjectMeta, error)
 	Delete(ctx context.Context, bucket, key string) error
 	PresignGet(ctx context.Context, bucket, key string, opts blob.GetOpts) (*blob.PresignedRequest, error)
@@ -33,6 +34,14 @@ func (b *registryBackend) Put(ctx context.Context, bucket, key string, r io.Read
 		return nil, err
 	}
 	return bkt.Driver.Put(ctx, key, r, opts)
+}
+
+func (b *registryBackend) Get(ctx context.Context, bucket, key string) (io.ReadCloser, *blob.ObjectMeta, error) {
+	bkt, err := b.reg.Lookup(bucket)
+	if err != nil {
+		return nil, nil, err
+	}
+	return bkt.Driver.Get(ctx, key)
 }
 
 func (b *registryBackend) Stat(ctx context.Context, bucket, key string) (*blob.ObjectMeta, error) {

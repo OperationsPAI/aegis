@@ -92,6 +92,14 @@ func (b *fakeBackend) Put(_ context.Context, bucket, key string, r io.Reader, _ 
 	return &blob.ObjectMeta{Key: key, Size: int64(len(body))}, nil
 }
 
+func (b *fakeBackend) Get(_ context.Context, bucket, key string) (io.ReadCloser, *blob.ObjectMeta, error) {
+	body, ok := b.puts[bucket+"/"+key]
+	if !ok {
+		return nil, nil, blob.ErrObjectNotFound
+	}
+	return io.NopCloser(bytes.NewReader(body)), &blob.ObjectMeta{Key: key, Size: int64(len(body))}, nil
+}
+
 func (b *fakeBackend) Stat(_ context.Context, _, key string) (*blob.ObjectMeta, error) {
 	return &blob.ObjectMeta{Key: key}, nil
 }

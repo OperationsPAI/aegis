@@ -105,6 +105,16 @@ func addDetectorJoins(query *gorm.DB) *gorm.DB {
 }
 
 func createDetectorViews(db *gorm.DB) {
+	// Microservices that don't import the injection / execution modules
+	// (aegis-blob, aegis-notify, …) never see the `datapacks` or
+	// `fault_injections` tables. Skip view creation rather than logging
+	// a misleading "Table doesn't exist" warning on every boot.
+	for _, t := range []string{"datapacks", "fault_injections", "executions"} {
+		if !db.Migrator().HasTable(t) {
+			return
+		}
+	}
+
 	_ = db.Migrator().DropView("fault_injection_no_issues")
 	_ = db.Migrator().DropView("fault_injection_with_issues")
 

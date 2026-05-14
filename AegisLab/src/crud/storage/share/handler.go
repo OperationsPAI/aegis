@@ -2,6 +2,7 @@ package share
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -154,22 +155,51 @@ func (h *Handler) Revoke(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Redirect is the unauthenticated `/s/:code` entry point.
+// Redirect is the unauthenticated `/s/:code` entry point. When the
+// `[share] public_base_url` is configured (driver presign URLs are
+// publicly resolvable), it 302s. Otherwise — the common in-cluster
+// setup where presign URLs target an internal Service DNS not reachable
+// from outside — it streams the bytes through this handler so
+// edge-proxy can deliver them.
 func (h *Handler) Redirect(c *gin.Context) {
 	code := c.Param("code")
-	url, err := h.svc.View(c.Request.Context(), code)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrShareNotFound):
-			c.String(http.StatusNotFound, "not found")
-		case errors.Is(err, ErrShareGone):
-			c.String(http.StatusGone, "share link no longer available")
-		default:
-			c.String(http.StatusInternalServerError, err.Error())
+	if h.svc.Config().PublicBaseURL != "" {
+		url, err := h.svc.View(c.Request.Context(), code)
+		if err != nil {
+			h.writeRedirectError(c, err)
+			return
 		}
+		c.Redirect(http.StatusFound, url)
 		return
 	}
-	c.Redirect(http.StatusFound, url)
+	rc, meta, link, err := h.svc.Stream(c.Request.Context(), code)
+	if err != nil {
+		h.writeRedirectError(c, err)
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	if link.ContentType != "" {
+		c.Header("Content-Type", link.ContentType)
+	} else if meta != nil && meta.ContentType != "" {
+		c.Header("Content-Type", meta.ContentType)
+	}
+	if meta != nil && meta.Size > 0 {
+		c.Header("Content-Length", strconv.FormatInt(meta.Size, 10))
+	}
+	c.Header("Content-Disposition", contentDisposition(link.OriginalFilename))
+	c.Status(http.StatusOK)
+	_, _ = io.Copy(c.Writer, rc)
+}
+
+func (h *Handler) writeRedirectError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrShareNotFound):
+		c.String(http.StatusNotFound, "not found")
+	case errors.Is(err, ErrShareGone):
+		c.String(http.StatusGone, "share link no longer available")
+	default:
+		c.String(http.StatusInternalServerError, err.Error())
+	}
 }
 
 func (h *Handler) writeServiceError(c *gin.Context, err error) {

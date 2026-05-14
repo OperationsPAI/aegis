@@ -131,27 +131,54 @@ func (s *Service) Upload(ctx context.Context, in UploadInput) (*UploadResult, er
 
 // View resolves a code to a presigned GET URL, after checking
 // status/expiry/views and atomically incrementing view_count.
-func (s *Service) View(ctx context.Context, code string) (string, error) {
+// resolveLink runs the View-side validation (status / TTL / view-cap)
+// and bumps the view counter exactly once. Returns the live link row so
+// the caller can either presign (View) or stream (Stream).
+func (s *Service) resolveLink(ctx context.Context, code string) (*ShareLink, error) {
 	link, err := s.repo.FindByCode(ctx, code)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if link.Status != 1 {
-		return "", ErrShareGone
+		return nil, ErrShareGone
 	}
 	now := s.clock.Now()
 	if link.ExpiresAt != nil && !link.ExpiresAt.After(now) {
-		return "", ErrShareGone
+		return nil, ErrShareGone
 	}
 	if link.MaxViews != nil && link.ViewCount >= *link.MaxViews {
-		return "", ErrShareGone
+		return nil, ErrShareGone
 	}
 	newCount, err := s.repo.IncrementViewCount(ctx, link.ID)
 	if err != nil {
-		return "", fmt.Errorf("share: bump view: %w", err)
+		return nil, fmt.Errorf("share: bump view: %w", err)
 	}
 	if link.MaxViews != nil && newCount > *link.MaxViews {
-		return "", ErrShareGone
+		return nil, ErrShareGone
+	}
+	return link, nil
+}
+
+// Stream returns the live byte stream for a share code, used by the
+// `/s/:code` handler when the underlying presigned URL host is internal
+// (S3 / RustFS) and not externally reachable. Caller must close the
+// returned reader.
+func (s *Service) Stream(ctx context.Context, code string) (io.ReadCloser, *blob.ObjectMeta, *ShareLink, error) {
+	link, err := s.resolveLink(ctx, code)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	rc, meta, err := s.backend.Get(ctx, link.Bucket, link.ObjectKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("share: get: %w", err)
+	}
+	return rc, meta, link, nil
+}
+
+func (s *Service) View(ctx context.Context, code string) (string, error) {
+	link, err := s.resolveLink(ctx, code)
+	if err != nil {
+		return "", err
 	}
 	pr, err := s.backend.PresignGet(ctx, link.Bucket, link.ObjectKey, blob.GetOpts{
 		ResponseContentType:        link.ContentType,

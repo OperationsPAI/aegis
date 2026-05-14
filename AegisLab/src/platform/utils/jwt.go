@@ -113,6 +113,11 @@ func generateUserToken(userID int, username, email string, isActive, isAdmin boo
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    consts.JWTIssuerUser,
 			Subject:   strconv.Itoa(userID),
+			// Human-user tokens carry the "portal" audience so the
+			// gateway's per-route `audiences = ["portal"]` check (e.g.
+			// /api/v2/share/) accepts them. Service tokens stay on
+			// AudienceSSOInternal — they have no human user.
+			Audience: jwt.ClaimStrings{"portal"},
 		},
 	}
 
