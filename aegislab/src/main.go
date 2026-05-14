@@ -21,7 +21,7 @@ import (
 	"os"
 
 	"aegis/boot"
-	monolith "aegis/boot/monolith"
+	apiboot "aegis/boot/api"
 	runtimeapp "aegis/boot/runtime"
 	sso "aegis/boot/sso"
 
@@ -71,8 +71,8 @@ func main() {
 	bothCmd := newModeCommand("both", "Run as both producer and consumer", func() {
 		fx.New(app.BothOptions(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
-	aegisAPICmd := newModeCommand("aegis-api", "Run as the aegis API monolith", func() {
-		fx.New(monolith.Options(viper.GetString("conf"), viper.GetString("port"))).Run()
+	aegisAPICmd := newModeCommand("aegis-api", "Run as the aegis business API process", func() {
+		fx.New(apiboot.Options(viper.GetString("conf"), viper.GetString("port"))).Run()
 	})
 	runtimeWorkerServiceCmd := newModeCommand("runtime-worker-service", "Run as the runtime worker service", func() {
 		fx.New(runtimeapp.Options(viper.GetString("conf"))).Run()

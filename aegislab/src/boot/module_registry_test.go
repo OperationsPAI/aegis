@@ -53,14 +53,12 @@ type moduleRegistryParams struct {
 	Migrations  []framework.MigrationRegistrar  `group:"migrations"`
 }
 
-// allModuleOptions returns the generated list of HTTP-registering
-// fx.Modules. This delegates to producerHTTPModules() (from the
-// generated http_modules_gen.go) so the test automatically tracks
-// additions/removals of modules without being edited — and so the
-// TestProducerHTTPModuleRegistryAllowsDeletingOneModule scratch build
-// still compiles after a module dir is removed.
+// allModuleOptions returns the canonical list of HTTP-registering
+// fx.Modules wired into aegis-api. Delegates to apiHTTPModules()
+// (boot/http_modules.go) so the test automatically tracks edits to that
+// list without further changes here.
 func allModuleOptions() fx.Option {
-	return fx.Options(producerHTTPModules()...)
+	return fx.Options(apiHTTPModules()...)
 }
 
 // buildModuleRegistrySnapshot constructs an fx app spanning every

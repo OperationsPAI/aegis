@@ -190,8 +190,33 @@ auth     = "jwt"
 
 [[gateway.routes]]
 prefix   = "/api/v2/auth/"
-upstream = "aegis-api:8080"
+upstream = "sso:8083"
 auth     = "none"
+
+[[gateway.routes]]
+prefix   = "/api/v2/users"
+upstream = "sso:8083"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/api-keys"
+upstream = "sso:8083"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/roles"
+upstream = "sso:8083"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/permissions"
+upstream = "sso:8083"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/resources"
+upstream = "sso:8083"
+auth     = "jwt"
 
 [[gateway.routes]]
 prefix   = "/"

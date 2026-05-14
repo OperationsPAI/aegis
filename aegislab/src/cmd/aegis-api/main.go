@@ -3,15 +3,15 @@ package main
 import (
 	"flag"
 
-	monolith "aegis/boot/monolith"
+	"aegis/boot/api"
 
 	"go.uber.org/fx"
 )
 
 func main() {
 	conf := flag.String("conf", "/etc/aegis/config.prod.toml", "path to configuration file")
-	port := flag.String("port", "8080", "port to run the API gateway on")
+	port := flag.String("port", "8080", "port to run the API on")
 	flag.Parse()
 
-	fx.New(monolith.Options(*conf, *port)).Run()
+	fx.New(api.Options(*conf, *port)).Run()
 }

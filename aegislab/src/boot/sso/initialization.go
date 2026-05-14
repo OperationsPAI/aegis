@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"aegis/boot/seed"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/model"
@@ -37,7 +38,19 @@ func registerSSOInitialization(lc fx.Lifecycle, db *gorm.DB, clients *ssomod.Ser
 			if err := seedConsoleOIDCClient(ctx, db); err != nil {
 				return err
 			}
-			return seedCLIOIDCClient(ctx, db)
+			if err := seedCLIOIDCClient(ctx, db); err != nil {
+				return err
+			}
+			// SSO must run this in addition to aegis-api: user/auth/rbac
+			// PermissionRegistrar entries only populate the in-process
+			// consts.SystemRolePermissions map of THIS binary's fx graph,
+			// so without this call super_admin never gets `user:update:all`
+			// et al. The reconcile is idempotent — running from both
+			// processes is safe and converges.
+			if err := initialization.ReconcileSystemPermissions(db); err != nil {
+				return fmt.Errorf("reconcile system permissions: %w", err)
+			}
+			return nil
 		},
 	})
 }

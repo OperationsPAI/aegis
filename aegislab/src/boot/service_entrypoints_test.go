@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"aegis/boot"
-	monolith "aegis/boot/monolith"
+	apiboot "aegis/boot/api"
 	runtimeapp "aegis/boot/runtime"
 	buildkit "aegis/platform/buildkit"
 	etcd "aegis/platform/etcd"
@@ -186,7 +186,7 @@ func TestDedicatedServiceOptionsValidate(t *testing.T) {
 		name   string
 		option fx.Option
 	}{
-		{name: "gateway", option: monolith.Options("..", "0")},
+		{name: "gateway", option: apiboot.Options("..", "0")},
 		{name: "runtime", option: runtimeapp.Options("..")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestAPIGatewayStandaloneHTTPIntegrationSmoke(t *testing.T) {
 
 	addr := reserveLoopbackAddr(t)
 	appInstance := fx.New(
-		monolith.Options("..", "0"),
+		apiboot.Options("..", "0"),
 		replacements,
 		fx.Replace(httpapi.ServerConfig{Addr: addr}),
 	)

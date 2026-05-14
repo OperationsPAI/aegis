@@ -201,6 +201,31 @@ data:
     auth     = "none"
 
     [[gateway.routes]]
+    prefix   = "/api/v2/users"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/api-keys"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/roles"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/permissions"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
+    prefix   = "/api/v2/resources"
+    upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
+    auth     = "jwt"
+
+    [[gateway.routes]]
     prefix   = "/"
     upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
     auth     = "jwt"

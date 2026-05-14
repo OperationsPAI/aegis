@@ -18,13 +18,13 @@ import (
 
 // BaseOptions provides only config + logger. JWT key material is no
 // longer baked in — each binary picks WithSigner (owns the private
-// key, like sso / the monolith / runtime-worker) or
-// WithRemoteVerifier (verify-only, like aegis-notify / aegis-blob /
-// aegis-configcenter / aegis-gateway). Pick exactly one — fx fails to
-// start if `*jwtkeys.Verifier` is provided twice.
+// key, like sso / aegis-api / runtime-worker) or WithRemoteVerifier
+// (verify-only, like aegis-notify / aegis-blob / aegis-configcenter /
+// aegis-gateway). Pick exactly one — fx fails to start if
+// `*jwtkeys.Verifier` is provided twice.
 //
 // `module/ssoclient` used to add a remote Verifier transitively, which
-// collided with WithSigner in the monolith. It no longer does; every
+// collided with WithSigner in aegis-api. It no longer does; every
 // binary that loads ssoclient.Module must pair it with one of these.
 func BaseOptions(confPath string) fx.Option {
 	return fx.Options(
