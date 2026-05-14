@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -61,10 +62,18 @@ func Init(configPath string) {
 	viper.SetConfigName("config." + Env())
 	viper.SetConfigType("toml")
 
+	// Callers pass either a file (/etc/aegis/config.prod.toml) or a search
+	// directory (/etc/aegis). Detect explicit files via extension and feed
+	// them through SetConfigFile; otherwise treat as directory.
 	if configPath != "" {
-		viper.AddConfigPath(configPath)
+		if ext := filepath.Ext(configPath); ext == ".toml" || ext == ".yaml" || ext == ".yml" {
+			viper.SetConfigFile(configPath)
+		} else {
+			viper.AddConfigPath(configPath)
+		}
 	}
 	viper.AddConfigPath("$HOME/.rcabench")
+	viper.AddConfigPath("/etc/aegis")
 	viper.AddConfigPath("/etc/rcabench")
 	viper.AddConfigPath(".")
 
