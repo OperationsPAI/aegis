@@ -54,16 +54,6 @@ initialization:
       tag: latest
       pullPolicy: IfNotPresent
 
-# Byte-cluster anchors a public Volcengine LoadBalancer on the edge-proxy
-# Service so external clients (humans, aegisctl, Feishu bot, …) can reach
-# the API without kubectl port-forward. The EIP comes from Volcengine's
-# pool and is released if the Service is deleted or `.spec.type` is
-# stripped (helm reverts to ClusterIP otherwise) — keep this set, and do
-# NOT delete the Service during chart refactors or the EIP will rotate.
-edgeProxy:
-  service:
-    type: LoadBalancer
-
 configmap:
   system:
     env_mode: "prod"
@@ -148,14 +138,13 @@ edgeProxy:
   enabled: true
   replicaCount: 1
   service:
-    type: ClusterIP
-    # Volcengine LB EIP is bound to this Service MANUALLY (kubectl annotate)
-    # after the proxy is up — keeping helm out of the LB-binding loop entirely
-    # avoids the EIP-churn bugs we saw on the aegis-api Service. Once bound,
-    # the controller-output annotation (`service.beta.kubernetes.io/system-
-    # volcengine-loadbalancer-create-response-id`) and the bound-EIP annotations
-    # live ONLY on the live cluster Service, never in this values.yaml, so
-    # `helm upgrade` is a no-op against them. See aegis#335 / aegis#336.
+    # Public-facing entrypoint for byte-cluster. Volcengine VKE
+    # provisions a CLB from its EIP pool on first apply; the EIP is
+    # released if .spec.type ever flips back to ClusterIP or if the
+    # Service is deleted, so do NOT strip this here (we've burned an EIP
+    # twice this way — see aegis#335 / aegis#336). LB-controller-output
+    # annotations live ONLY on the live Service.
+    type: LoadBalancer
     annotations: {}
   # CPU requests are required for HPA targetCPUUtilizationPercentage to work.
   resources:
