@@ -464,18 +464,6 @@ func collectConfigUserIDs(cfg *model.DynamicConfig, histories []model.ConfigHist
 	return ids
 }
 
-func etcdPrefixForScope(scope consts.ConfigScope) string {
-	switch scope {
-	case consts.ConfigScopeProducer:
-		return consts.ConfigEtcdProducerPrefix
-	case consts.ConfigScopeConsumer:
-		return consts.ConfigEtcdConsumerPrefix
-	case consts.ConfigScopeGlobal:
-		return consts.ConfigEtcdGlobalPrefix
-	}
-	return ""
-}
-
 func buildAuditLogListResp(logs []model.AuditLog, req *ListAuditLogReq, total int64, users map[int]*ssoclient.UserInfo) *dto.ListResp[AuditLogResp] {
 	logResps := make([]AuditLogResp, 0, len(logs))
 	for i := range logs {
@@ -615,13 +603,6 @@ func rollbackMetaFieldValue(cfg *model.DynamicConfig, changeField consts.ConfigH
 	}
 
 	return oldValue, newValue, nil
-}
-
-func setViperIfNeeded(cfg *model.DynamicConfig, newValue string) error {
-	if cfg.Scope == consts.ConfigScopeConsumer {
-		return nil
-	}
-	return config.SetViperValue(cfg.Key, newValue, cfg.ValueType)
 }
 
 func (s *Service) propagateValueChange(ctx context.Context, cfg *model.DynamicConfig, newValue, opDesc string) error {
