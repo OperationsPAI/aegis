@@ -34,7 +34,10 @@ func registerSSOInitialization(lc fx.Lifecycle, db *gorm.DB, clients *ssomod.Ser
 			if err := seedDefaultOIDCClient(ctx, db, clients); err != nil {
 				return err
 			}
-			return seedConsoleOIDCClient(ctx, db)
+			if err := seedConsoleOIDCClient(ctx, db); err != nil {
+				return err
+			}
+			return seedCLIOIDCClient(ctx, db)
 		},
 	})
 }
@@ -266,6 +269,53 @@ func seedConsoleOIDCClient(_ context.Context, db *gorm.DB) error {
 	}
 	logrus.WithFields(logrus.Fields{"client_id": "aegis-console", "redirect_uris": uris}).
 		Info("Reconciled public OIDC client for aegis-ui console")
+	return nil
+}
+
+// seedCLIOIDCClient ensures a public `aegis-cli` OIDC client exists so
+// the aegisctl binary can do `grant_type=password` (and refresh_token)
+// against /token without shipping a client_secret. Public client
+// (IsConfidential=false) → VerifySecret short-circuits the bcrypt check
+// in crud/iam/sso/service.go.
+func seedCLIOIDCClient(_ context.Context, db *gorm.DB) error {
+	desired := &model.OIDCClient{
+		ClientID:         "aegis-cli",
+		ClientSecretHash: "",
+		Name:             "Aegis CLI",
+		Service:          "aegis-cli",
+		RedirectURIs:     []string{},
+		Grants:           []string{"password", "refresh_token"},
+		Scopes:           []string{"openid", "profile", "email"},
+		IsConfidential:   false,
+		Status:           consts.CommonEnabled,
+	}
+
+	var existing model.OIDCClient
+	err := db.Where("client_id = ?", "aegis-cli").First(&existing).Error
+	switch {
+	case err == gorm.ErrRecordNotFound:
+		if err := db.Create(desired).Error; err != nil {
+			return err
+		}
+	case err != nil:
+		return err
+	default:
+		desired.ID = existing.ID
+		desired.CreatedAt = existing.CreatedAt
+		if err := db.Model(&existing).
+			Select("Name", "Service", "RedirectURIs", "Grants", "Scopes",
+				"ClientSecretHash", "Status").
+			Updates(desired).Error; err != nil {
+			return err
+		}
+	}
+	// Same gotcha as aegis-console: GORM skips bool(false) zero-values.
+	if err := db.Model(&model.OIDCClient{}).
+		Where("client_id = ?", "aegis-cli").
+		Update("is_confidential", false).Error; err != nil {
+		return err
+	}
+	logrus.WithField("client_id", "aegis-cli").Info("Reconciled public OIDC client for aegisctl")
 	return nil
 }
 

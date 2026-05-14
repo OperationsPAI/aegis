@@ -5,7 +5,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -14,8 +18,14 @@ import (
 )
 
 const (
-	apiKeyTokenPath   = consts.APIPathAuthAPIKeyToken
-	passwordLoginPath = consts.APIPathAuthLogin
+	apiKeyTokenPath = consts.APIPathAuthAPIKeyToken
+	// ssoTokenPath is the OIDC token endpoint exposed by the aegis-sso
+	// service. Reachable via the cluster gateway (auth=none route on
+	// `/token`) so aegisctl can use it through the same `--server` URL.
+	ssoTokenPath = "/token"
+	// ssoCLIClientID is a public OIDC client (no client_secret) seeded
+	// by aegis-sso for the CLI to use the password grant.
+	ssoCLIClientID = "aegis-cli"
 )
 
 // APIKeyTokenDebug contains the fully materialized signed request data for
@@ -49,21 +59,6 @@ type apiKeyTokenResponseData struct {
 	KeyID     string    `json:"key_id"`
 }
 
-// passwordLoginRequest matches auth.LoginReq.
-type passwordLoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-// passwordLoginResponseData matches auth.LoginResp.
-type passwordLoginResponseData struct {
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
-	User      struct {
-		Username string `json:"username"`
-	} `json:"user"`
-}
-
 // tokenRefreshRequest matches dto.TokenRefreshReq.
 type tokenRefreshRequest struct {
 	Token string `json:"token"`
@@ -84,7 +79,27 @@ type LoginResult struct {
 	Username  string
 }
 
-// LoginWithPassword exchanges a username/password pair for a bearer token.
+// ssoTokenResponse mirrors the OIDC /token success body. All other
+// fields (refresh_token, scope, id_token) are returned by aegis-sso but
+// the CLI only needs the access token + lifetime today.
+type ssoTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int64  `json:"expires_in"`
+	IDToken     string `json:"id_token,omitempty"`
+}
+
+type ssoTokenError struct {
+	Code        string `json:"error"`
+	Description string `json:"error_description,omitempty"`
+}
+
+// LoginWithPassword exchanges a username/password pair for a bearer
+// token via the SSO `/token` endpoint (OIDC password grant against the
+// public `aegis-cli` client). This replaces the legacy
+// /api/v2/auth/login flow — both ultimately route to the aegis-sso
+// process and mint the same JWT, but the OIDC path is the supported
+// surface going forward.
 func LoginWithPassword(server, username, password string) (*LoginResult, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
@@ -94,26 +109,54 @@ func LoginWithPassword(server, username, password string) (*LoginResult, error) 
 		return nil, fmt.Errorf("password is required")
 	}
 
-	c := NewClient(server, "", 30*time.Second)
+	form := url.Values{}
+	form.Set("grant_type", "password")
+	form.Set("client_id", ssoCLIClientID)
+	form.Set("username", username)
+	form.Set("password", password)
 
-	var resp APIResponse[passwordLoginResponseData]
-	if err := c.Post(passwordLoginPath, passwordLoginRequest{
-		Username: username,
-		Password: password,
-	}, &resp); err != nil {
+	tokURL := strings.TrimRight(server, "/") + ssoTokenPath
+	req, err := http.NewRequest(http.MethodPost, tokURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("build token request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	resp, err := httpClient.Do(req)
+	if err != nil {
 		return nil, fmt.Errorf("login failed: %w", err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 
-	loggedInUsername := resp.Data.User.Username
-	if strings.TrimSpace(loggedInUsername) == "" {
-		loggedInUsername = username
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var oerr ssoTokenError
+		_ = json.Unmarshal(body, &oerr)
+		switch {
+		case oerr.Description != "":
+			return nil, fmt.Errorf("login failed: %s (%s)", oerr.Description, oerr.Code)
+		case oerr.Code != "":
+			return nil, fmt.Errorf("login failed: %s", oerr.Code)
+		default:
+			return nil, fmt.Errorf("login failed: HTTP %d: %s", resp.StatusCode, string(body))
+		}
+	}
+
+	var tok ssoTokenResponse
+	if err := json.Unmarshal(body, &tok); err != nil {
+		return nil, fmt.Errorf("decode token response: %w", err)
+	}
+	if tok.AccessToken == "" {
+		return nil, fmt.Errorf("login failed: empty access_token in /token response")
 	}
 
 	return &LoginResult{
-		Token:     resp.Data.Token,
-		ExpiresAt: resp.Data.ExpiresAt,
+		Token:     tok.AccessToken,
+		ExpiresAt: time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second),
 		AuthType:  "password",
-		Username:  loggedInUsername,
+		Username:  username,
 	}, nil
 }
 

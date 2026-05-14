@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -80,28 +79,31 @@ func TestPrepareAPIKeyTokenDebug(t *testing.T) {
 }
 
 func TestLoginWithPassword(t *testing.T) {
-	expiresAt := time.Date(2026, 4, 20, 15, 4, 5, 0, time.UTC)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("unexpected method: %s", r.Method)
 		}
-		if r.URL.Path != passwordLoginPath {
+		if r.URL.Path != ssoTokenPath {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-
-		var req passwordLoginRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+		if err := r.ParseForm(); err != nil {
+			t.Fatalf("parse form: %v", err)
 		}
-		if req.Username != "bootstrap" {
-			t.Fatalf("unexpected username: %q", req.Username)
+		if got := r.PostForm.Get("grant_type"); got != "password" {
+			t.Fatalf("unexpected grant_type: %q", got)
 		}
-		if req.Password != "super-secret" {
-			t.Fatalf("unexpected password: %q", req.Password)
+		if got := r.PostForm.Get("client_id"); got != ssoCLIClientID {
+			t.Fatalf("unexpected client_id: %q", got)
+		}
+		if got := r.PostForm.Get("username"); got != "bootstrap" {
+			t.Fatalf("unexpected username: %q", got)
+		}
+		if got := r.PostForm.Get("password"); got != "super-secret" {
+			t.Fatalf("unexpected password: %q", got)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":0,"message":"ok","data":{"token":"jwt-token","expires_at":"` + expiresAt.Format(time.RFC3339) + `","user":{"username":"bootstrap"}}}`))
+		_, _ = w.Write([]byte(`{"access_token":"jwt-token","token_type":"Bearer","expires_in":3600}`))
 	}))
 	defer server.Close()
 
@@ -116,10 +118,10 @@ func TestLoginWithPassword(t *testing.T) {
 		t.Fatalf("unexpected auth type: %q", result.AuthType)
 	}
 	if result.Username != "bootstrap" {
-		t.Fatalf("unexpected username: %q", result.Username)
+		t.Fatalf("unexpected username (got %q)", result.Username)
 	}
-	if !result.ExpiresAt.Equal(expiresAt) {
-		t.Fatalf("unexpected expiry: %s", result.ExpiresAt)
+	if d := time.Until(result.ExpiresAt); d < time.Hour-time.Minute || d > time.Hour+time.Minute {
+		t.Fatalf("expires_at not roughly +1h: got %s", d)
 	}
 }
 
@@ -127,7 +129,7 @@ func TestLoginWithPasswordInvalidCredentials(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte(`{"code":401,"message":"invalid username or password"}`))
+		_, _ = w.Write([]byte(`{"error":"invalid_grant","error_description":"invalid credentials"}`))
 	}))
 	defer server.Close()
 
@@ -135,8 +137,8 @@ func TestLoginWithPasswordInvalidCredentials(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected login error")
 	}
-	if got := err.Error(); got != "login failed: API error 401: invalid username or password" {
-		t.Fatalf("unexpected error: %q", got)
+	if !strings.Contains(err.Error(), "invalid credentials") || !strings.Contains(err.Error(), "invalid_grant") {
+		t.Fatalf("unexpected error: %q", err)
 	}
 	if strings.Contains(err.Error(), "super-secret") {
 		t.Fatal("password leaked into error output")
