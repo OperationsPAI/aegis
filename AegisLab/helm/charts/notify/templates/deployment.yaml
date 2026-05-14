@@ -75,7 +75,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ dig "configmap" "configFile" "/etc/rcabench/config.prod.toml" (.Values.global | default dict) }}
+              mountPath: {{ dig "configmap" "configFile" "/etc/aegis/config.prod.toml" (.Values.global | default dict) }}
               subPath: config.prod.toml
       volumes:
         - name: config

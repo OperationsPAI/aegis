@@ -53,7 +53,7 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&port, "port", "p", "8080", "Port to run the server on")
-	rootCmd.PersistentFlags().StringVarP(&conf, "conf", "c", "/etc/rcabench/config.prod.toml", "Path to configuration file")
+	rootCmd.PersistentFlags().StringVarP(&conf, "conf", "c", "/etc/aegis/config.prod.toml", "Path to configuration file")
 
 	if err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port")); err != nil {
 		logrus.Fatalf("failed to bind flag: %v", err)

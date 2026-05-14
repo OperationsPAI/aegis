@@ -80,7 +80,7 @@ spec:
           args:
             - {{ .Values.microservices.aegisApi.binaryName | default "aegis-api" }}
             - --conf
-            - {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+            - {{ .Values.global.configmap.configFile | default "/etc/aegis/config.prod.toml" }}
             - --port
             - {{ .Values.microservices.aegisApi.httpPort | quote }}
           ports:
@@ -145,7 +145,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/aegis/config.prod.toml" }}
               subPath: config.prod.toml
             - name: initial-data
               mountPath: "{{ .Values.configmap.initialization.data_path }}"
@@ -277,7 +277,7 @@ spec:
           args:
             - {{ .Values.microservices.runtimeWorkerService.binaryName | default "runtime-worker-service" }}
             - --conf
-            - {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+            - {{ .Values.global.configmap.configFile | default "/etc/aegis/config.prod.toml" }}
           ports:
             - containerPort: {{ .Values.microservices.runtimeWorkerService.grpcPort }}
               name: grpc
@@ -313,7 +313,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/aegis/config.prod.toml" }}
               subPath: config.prod.toml
             - name: initial-data
               mountPath: "{{ .Values.configmap.initialization.data_path }}"
@@ -445,7 +445,7 @@ spec:
             privileged: true
           volumeMounts:
             - name: config
-              mountPath: {{ .Values.global.configmap.configFile | default "/etc/rcabench/config.prod.toml" }}
+              mountPath: {{ .Values.global.configmap.configFile | default "/etc/aegis/config.prod.toml" }}
               subPath: config.prod.toml
             - name: containers-data
               mountPath: "{{ .Values.configmap.jfs.container_path }}"

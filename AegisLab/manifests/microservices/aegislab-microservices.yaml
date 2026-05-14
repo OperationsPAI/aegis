@@ -37,7 +37,7 @@ spec:
       containers:
         - name: aegis-api
           image: opspai/rcabench:latest
-          args: ["aegis-api", "--conf", "/etc/rcabench/config.toml", "--port", "8082"]
+          args: ["aegis-api", "--conf", "/etc/aegis/config.toml", "--port", "8082"]
           ports:
             - containerPort: 8082
               name: http
@@ -57,7 +57,7 @@ spec:
             periodSeconds: 15
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.toml
+              mountPath: /etc/aegis/config.toml
               subPath: config.toml
       volumes:
         - name: config
@@ -95,7 +95,7 @@ spec:
       containers:
         - name: runtime-worker-service
           image: opspai/rcabench:latest
-          args: ["runtime-worker-service", "--conf", "/etc/rcabench/config.toml"]
+          args: ["runtime-worker-service", "--conf", "/etc/aegis/config.toml"]
           ports:
             - containerPort: 9094
               name: grpc
@@ -111,7 +111,7 @@ spec:
             periodSeconds: 15
           volumeMounts:
             - name: config
-              mountPath: /etc/rcabench/config.toml
+              mountPath: /etc/aegis/config.toml
               subPath: config.toml
       volumes:
         - name: config

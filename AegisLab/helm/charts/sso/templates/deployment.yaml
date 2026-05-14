@@ -30,7 +30,7 @@ spec:
             - {{ .Values.config.binaryName | default "sso" }}
             - {{ .Values.config.subcommand | default "sso" }}
             - --conf
-            - {{ dig "configmap" "configFile" "/etc/rcabench/config.prod.toml" (.Values.global | default dict) }}
+            - {{ dig "configmap" "configFile" "/etc/aegis/config.prod.toml" (.Values.global | default dict) }}
             - --port
             - {{ .Values.service.port | quote }}
           ports:
@@ -63,7 +63,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: config
-              mountPath: {{ dig "configmap" "configFile" "/etc/rcabench/config.prod.toml" (.Values.global | default dict) }}
+              mountPath: {{ dig "configmap" "configFile" "/etc/aegis/config.prod.toml" (.Values.global | default dict) }}
               subPath: config.prod.toml
             - name: private-key
               mountPath: {{ .Values.config.sso.privateKeyPath }}

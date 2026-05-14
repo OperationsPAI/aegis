@@ -36,7 +36,7 @@ global:
     privateKeySecretName: ""
   # Config mount paths shared by every microservice container.
   configmap:
-    configFile: "/etc/rcabench/config.prod.toml"
+    configFile: "/etc/aegis/config.prod.toml"
     configDir: "/etc/rcabench"
   # Kubernetes deployment hints shared with subcharts. Mirrors
   # `configmap.k8s.namespace` so subcharts (rustfs) that need to

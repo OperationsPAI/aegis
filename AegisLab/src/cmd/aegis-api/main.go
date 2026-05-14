@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	conf := flag.String("conf", "/etc/rcabench/config.prod.toml", "path to configuration file")
+	conf := flag.String("conf", "/etc/aegis/config.prod.toml", "path to configuration file")
 	port := flag.String("port", "8080", "port to run the API gateway on")
 	flag.Parse()
 
