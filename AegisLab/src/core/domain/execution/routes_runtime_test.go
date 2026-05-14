@@ -12,7 +12,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -26,12 +26,12 @@ func testResolver(_ string) (*rsa.PublicKey, error) {
 
 type runtimeRouteVerifier struct{}
 
-func (runtimeRouteVerifier) VerifyToken(context.Context, string) (*utils.Claims, error) {
+func (runtimeRouteVerifier) VerifyToken(context.Context, string) (*crypto.Claims, error) {
 	return nil, context.Canceled
 }
 
-func (runtimeRouteVerifier) VerifyServiceToken(_ context.Context, token string) (*utils.ServiceClaims, error) {
-	return utils.ParseServiceToken(token, testResolver)
+func (runtimeRouteVerifier) VerifyServiceToken(_ context.Context, token string) (*crypto.ServiceClaims, error) {
+	return crypto.ParseServiceToken(token, testResolver)
 }
 
 type runtimeRouteService struct{ middleware.Service }
@@ -54,7 +54,7 @@ func (runtimeRouteService) LogUserAction(string, string, string, string, int, in
 }
 
 func TestRuntimeExecutionRoutesAcceptServiceToken(t *testing.T) {
-	token, _, err := utils.GenerateServiceToken("task-123", testPrivateKey, "test-kid")
+	token, _, err := crypto.GenerateServiceToken("task-123", testPrivateKey, "test-kid")
 	require.NoError(t, err)
 
 	gin.SetMode(gin.TestMode)
@@ -80,8 +80,8 @@ func TestRuntimeExecutionRoutesAcceptServiceToken(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	_ = os.Setenv(utils.JWTSecretEnvVar, "test-jwt-secret-please-ignore-not-for-prod")
-	if err := utils.InitJWTSecret(); err != nil {
+	_ = os.Setenv(crypto.JWTSecretEnvVar, "test-jwt-secret-please-ignore-not-for-prod")
+	if err := crypto.InitJWTSecret(); err != nil {
 		panic(err)
 	}
 	k, err := rsa.GenerateKey(rand.Reader, 2048)

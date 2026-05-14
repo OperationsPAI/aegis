@@ -6,15 +6,15 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 )
 
 type permissionCheckerStub struct{}
 
-func (permissionCheckerStub) VerifyToken(context.Context, string) (*utils.Claims, error) {
+func (permissionCheckerStub) VerifyToken(context.Context, string) (*crypto.Claims, error) {
 	return nil, nil
 }
-func (permissionCheckerStub) VerifyServiceToken(context.Context, string) (*utils.ServiceClaims, error) {
+func (permissionCheckerStub) VerifyServiceToken(context.Context, string) (*crypto.ServiceClaims, error) {
 	return nil, nil
 }
 func (permissionCheckerStub) CheckUserPermission(context.Context, *dto.CheckPermissionParams) (bool, error) {

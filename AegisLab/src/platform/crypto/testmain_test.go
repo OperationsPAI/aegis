@@ -1,16 +1,25 @@
 package crypto
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"os"
 	"testing"
-
-	"aegis/platform/utils"
 )
 
+var testRSAKey *rsa.PrivateKey
+
+// TestMain primes the API-key KEK secret used by access_key_crypto.go and
+// generates an ephemeral RSA keypair the JWT tests sign with.
 func TestMain(m *testing.M) {
-	_ = os.Setenv(utils.JWTSecretEnvVar, "test-jwt-secret-please-ignore-not-for-prod")
-	if err := utils.InitJWTSecret(); err != nil {
+	_ = os.Setenv(JWTSecretEnvVar, "test-jwt-secret-please-ignore-not-for-prod")
+	if err := InitJWTSecret(); err != nil {
 		panic(err)
 	}
+	k, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+	testRSAKey = k
 	os.Exit(m.Run())
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"aegis/platform/consts"
+	"aegis/platform/crypto"
 	"aegis/platform/dto"
 	"aegis/platform/jwtkeys"
 	"aegis/platform/utils"
@@ -208,7 +209,7 @@ func (h *Handler) GetTaskLogsWS(c *gin.Context) {
 		return
 	}
 
-	if _, err := utils.ParseToken(token, h.verifier.Resolve); err != nil {
+	if _, err := crypto.ParseToken(token, h.verifier.Resolve); err != nil {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "invalid token: "+err.Error())
 		return
 	}

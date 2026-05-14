@@ -14,7 +14,7 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/clients/sso"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 
 	"github.com/sirupsen/logrus"
 )
@@ -108,7 +108,7 @@ func (a *Authenticator) enforce(r *http.Request, route *Route) error {
 	return nil
 }
 
-func (a *Authenticator) injectUserHeaders(r *http.Request, c *utils.Claims) {
+func (a *Authenticator) injectUserHeaders(r *http.Request, c *crypto.Claims) {
 	aud := ""
 	if c.Audience != nil && len(c.Audience) > 0 {
 		aud = c.Audience[0]
@@ -123,7 +123,7 @@ func (a *Authenticator) injectUserHeaders(r *http.Request, c *utils.Claims) {
 	a.applyAndSign(r, headers)
 }
 
-func (a *Authenticator) injectServiceHeaders(r *http.Request, c *utils.ServiceClaims) {
+func (a *Authenticator) injectServiceHeaders(r *http.Request, c *crypto.ServiceClaims) {
 	aud := ""
 	if c.Audience != nil && len(c.Audience) > 0 {
 		aud = c.Audience[0]
@@ -166,7 +166,7 @@ func bearer(r *http.Request) string {
 	return strings.TrimSpace(h[len(consts.AuthSchemeBearer):])
 }
 
-func checkAudience(c *utils.Claims, want []string) error {
+func checkAudience(c *crypto.Claims, want []string) error {
 	if len(want) == 0 {
 		return nil
 	}

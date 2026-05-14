@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 )
 
 // HandlerService captures the auth operations consumed by the HTTP handler.
@@ -11,8 +11,8 @@ type HandlerService interface {
 	Login(context.Context, *LoginReq) (*LoginResp, error)
 	Register(context.Context, *RegisterReq) (*UserInfo, error)
 	RefreshToken(context.Context, *TokenRefreshReq) (*TokenRefreshResp, error)
-	Logout(context.Context, *utils.Claims) error
-	VerifyToken(context.Context, string) (*utils.Claims, error)
+	Logout(context.Context, *crypto.Claims) error
+	VerifyToken(context.Context, string) (*crypto.Claims, error)
 	ChangePassword(context.Context, *ChangePasswordReq, int) error
 	GetProfile(context.Context, int) (*UserProfileResp, error)
 	CreateAPIKey(context.Context, int, *CreateAPIKeyReq) (*APIKeyWithSecretResp, error)

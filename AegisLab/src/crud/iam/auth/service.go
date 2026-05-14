@@ -15,7 +15,6 @@ import (
 	"aegis/platform/model"
 	user "aegis/crud/iam/user"
 	"aegis/platform/tracing"
-	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
@@ -174,7 +173,7 @@ func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*Toke
 		return nil, fmt.Errorf("token refresh request is nil")
 	}
 
-	refreshClaims, err := utils.ParseToken(req.Token, s.verifier.Resolve)
+	refreshClaims, err := crypto.ParseToken(req.Token, s.verifier.Resolve)
 	if err != nil {
 		return nil, fmt.Errorf("token refresh failed: %w", err)
 	}
@@ -196,7 +195,7 @@ func (s *Service) RefreshToken(ctx context.Context, req *TokenRefreshReq) (*Toke
 	}, nil
 }
 
-func (s *Service) Logout(ctx context.Context, claims *utils.Claims) error {
+func (s *Service) Logout(ctx context.Context, claims *crypto.Claims) error {
 	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/logout")
 	defer span.End()
 	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(claims.UserID))
@@ -212,11 +211,11 @@ func (s *Service) Logout(ctx context.Context, claims *utils.Claims) error {
 	return nil
 }
 
-func (s *Service) VerifyToken(ctx context.Context, token string) (*utils.Claims, error) {
+func (s *Service) VerifyToken(ctx context.Context, token string) (*crypto.Claims, error) {
 	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/auth/verify_token")
 	defer span.End()
 
-	claims, err := utils.ParseToken(token, s.verifier.Resolve)
+	claims, err := crypto.ParseToken(token, s.verifier.Resolve)
 	if err != nil {
 		return nil, err
 	}
@@ -235,8 +234,8 @@ func (s *Service) VerifyToken(ctx context.Context, token string) (*utils.Claims,
 	return claims, nil
 }
 
-func (s *Service) VerifyServiceToken(ctx context.Context, token string) (*utils.ServiceClaims, error) {
-	return utils.ParseServiceToken(token, s.verifier.Resolve)
+func (s *Service) VerifyServiceToken(ctx context.Context, token string) (*crypto.ServiceClaims, error) {
+	return crypto.ParseServiceToken(token, s.verifier.Resolve)
 }
 
 func (s *Service) ChangePassword(ctx context.Context, req *ChangePasswordReq, userID int) error {
@@ -547,7 +546,7 @@ func (s *Service) generateTokenWithRoles(roleRepo *RoleRepository, user *model.U
 		}
 	}
 
-	token, expiresAt, err := utils.GenerateToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, s.signer.PrivateKey, s.signer.Kid)
+	token, expiresAt, err := crypto.GenerateToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -570,7 +569,7 @@ func (s *Service) generateAPIKeyTokenWithRoles(roleRepo *RoleRepository, user *m
 		}
 	}
 
-	token, expiresAt, err := utils.GenerateAPIKeyToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, apiKeyID, apiKeyScopes, s.signer.PrivateKey, s.signer.Kid)
+	token, expiresAt, err := crypto.GenerateAPIKeyToken(user.ID, user.Username, user.Email, user.IsActive, isAdmin, roleNames, apiKeyID, apiKeyScopes, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to generate api key token: %w", err)
 	}

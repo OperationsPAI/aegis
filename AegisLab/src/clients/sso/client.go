@@ -16,7 +16,7 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/jwtkeys"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 
 	"github.com/golang-jwt/jwt/v5"
 	lru "github.com/hashicorp/golang-lru/v2/expirable"
@@ -75,14 +75,14 @@ func NewClient(cfg Config, verifier *jwtkeys.Verifier) *Client {
 	}
 }
 
-func (c *Client) VerifyToken(ctx context.Context, raw string) (*utils.Claims, error) {
+func (c *Client) VerifyToken(ctx context.Context, raw string) (*crypto.Claims, error) {
 	_ = ctx
-	return utils.ParseToken(raw, c.verifier.Resolve)
+	return crypto.ParseToken(raw, c.verifier.Resolve)
 }
 
-func (c *Client) VerifyServiceToken(ctx context.Context, raw string) (*utils.ServiceClaims, error) {
+func (c *Client) VerifyServiceToken(ctx context.Context, raw string) (*crypto.ServiceClaims, error) {
 	_ = ctx
-	return utils.ParseServiceToken(raw, c.verifier.Resolve)
+	return crypto.ParseServiceToken(raw, c.verifier.Resolve)
 }
 
 func (c *Client) GetUser(ctx context.Context, id int) (*UserInfo, error) {

@@ -14,7 +14,6 @@ import (
 	"aegis/platform/crypto"
 	"aegis/platform/model"
 	"aegis/platform/tracing"
-	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
@@ -356,12 +355,12 @@ func (s *OIDCService) authenticateClient(c *gin.Context) (*model.OIDCClient, boo
 func (s *OIDCService) userinfo(c *gin.Context) {
 	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/userinfo")
 	defer span.End()
-	token, err := utils.ExtractTokenFromHeader(c.GetHeader("Authorization"))
+	token, err := crypto.ExtractTokenFromHeader(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
 		return
 	}
-	claims, err := utils.ParseToken(token, func(kid string) (*rsa.PublicKey, error) {
+	claims, err := crypto.ParseToken(token, func(kid string) (*rsa.PublicKey, error) {
 		if kid != "" && kid != s.signer.Kid {
 			return nil, errors.New("unknown kid")
 		}

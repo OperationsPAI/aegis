@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	"aegis/platform/jwtkeys"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 
 	"go.uber.org/fx"
 )
@@ -27,6 +27,6 @@ func issueServiceToken(taskID string) (string, error) {
 	if s == nil {
 		return "", fmt.Errorf("jwt signer not initialized")
 	}
-	token, _, err := utils.GenerateServiceToken(taskID, s.PrivateKey, s.Kid)
+	token, _, err := crypto.GenerateServiceToken(taskID, s.PrivateKey, s.Kid)
 	return token, err
 }

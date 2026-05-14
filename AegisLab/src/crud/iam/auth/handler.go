@@ -9,7 +9,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 
 	"github.com/gin-gonic/gin"
 )
@@ -151,7 +151,7 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 func (h *Handler) Logout(c *gin.Context) {
 	start := time.Now()
 	authHeader := c.GetHeader("Authorization")
-	token, err := utils.ExtractTokenFromHeader(authHeader)
+	token, err := crypto.ExtractTokenFromHeader(authHeader)
 	if err != nil {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid authorization header")
 		return

@@ -5,7 +5,7 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +13,7 @@ import (
 // setUserClaims stashes JWT claims onto the Gin context using the canonical
 // keys from consts/context_keys.go. Both JWTAuth and OptionalJWTAuth funnel
 // successful validations through this helper so the key list is in one place.
-func setUserClaims(c *gin.Context, claims *utils.Claims) {
+func setUserClaims(c *gin.Context, claims *crypto.Claims) {
 	c.Set(consts.CtxKeyUserID, claims.UserID)
 	c.Set(consts.CtxKeyUsername, claims.Username)
 	c.Set(consts.CtxKeyEmail, claims.Email)
@@ -26,7 +26,7 @@ func setUserClaims(c *gin.Context, claims *utils.Claims) {
 }
 
 func extractTokenFromHeader(header string) (string, error) {
-	return utils.ExtractTokenFromHeader(header)
+	return crypto.ExtractTokenFromHeader(header)
 }
 
 // JWTAuth is the JWT authentication middleware

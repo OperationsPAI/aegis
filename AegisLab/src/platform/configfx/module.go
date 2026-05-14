@@ -2,7 +2,7 @@ package config
 
 import (
 	"aegis/platform/config"
-	"aegis/platform/utils"
+	"aegis/platform/crypto"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
@@ -22,10 +22,10 @@ func Init(params Params) {
 	// Fail-fast on missing API-key KEK secret (AEGIS_JWT_SECRET; no longer used
 	// for JWT signing — that moved to RS256 — but still seeds the api-key
 	// envelope KEK in utils/access_key_crypto.go).
-	if err := utils.InitJWTSecret(); err != nil {
+	if err := crypto.InitJWTSecret(); err != nil {
 		logrus.Fatalf("API-key KEK secret validation failed: %v", err)
 	}
-	if err := utils.ValidateJWTSecret(); err != nil {
+	if err := crypto.ValidateJWTSecret(); err != nil {
 		logrus.Fatalf("API-key KEK secret validation failed: %v", err)
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
 	"aegis/platform/model"
-	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -104,7 +103,7 @@ func (s *OIDCService) grantRefresh(c *gin.Context, cli *model.OIDCClient) {
 //	@Success		200	{object}	tokenResp			"Service token response"
 //	@Failure		500	{object}	map[string]string	"Token signing failed"
 func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClient) {
-	exp := time.Now().Add(utils.ServiceTokenExpiration)
+	exp := time.Now().Add(crypto.ServiceTokenExpiration)
 	claims := jwt.MapClaims{
 		"iss":                     s.issuer,
 		consts.OIDCClaimSubject:   consts.ClaimSubjectServicePrefix + cli.Service,
@@ -162,7 +161,7 @@ func (s *OIDCService) respondUserToken(c *gin.Context, cli *model.OIDCClient, u 
 			break
 		}
 	}
-	access, expiresAt, err := utils.GenerateToken(u.ID, u.Username, u.Email, u.IsActive, isAdmin, roles, s.signer.PrivateKey, s.signer.Kid)
+	access, expiresAt, err := crypto.GenerateToken(u.ID, u.Username, u.Email, u.IsActive, isAdmin, roles, s.signer.PrivateKey, s.signer.Kid)
 	if err != nil {
 		tokenError(c, http.StatusInternalServerError, consts.OIDCErrorServerError, err.Error())
 		return
