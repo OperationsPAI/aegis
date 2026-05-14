@@ -6,7 +6,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260513-s3-blob-v2
+      tag: byte-20260514-stable-ba7e3aa
       pullPolicy: IfNotPresent
 
 images:
@@ -35,6 +35,14 @@ otelCollector:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/opentelemetry-collector-contrib
     tag: "0.142.0-amd64"
     pullPolicy: IfNotPresent
+  clickhouse:
+    # ClickStack ClickHouse is a 2-replica cluster (see
+    # `clickstack.values.yaml`: shards=1 replicas=2). The exporter must know
+    # the cluster name so it provisions schema as ReplicatedMergeTree +
+    # Distributed ON CLUSTER; otherwise each replica accumulates its own
+    # disjoint subset of telemetry. Cluster name is `default`
+    # (operator-managed `<remote_servers>`).
+    clusterName: "default"
 
 buildkit:
   enabled: false
@@ -259,7 +267,7 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: 4773a1b-dirty
+    tag: byte-20260514-stable-ba7e3aa
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench
