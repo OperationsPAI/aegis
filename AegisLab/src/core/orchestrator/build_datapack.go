@@ -208,23 +208,87 @@ func createDatapackJob(ctx context.Context, gateway *k8s.Gateway, params *datapa
 			"datapack_id": params.payload.datapack.ID,
 		})
 
-		volumeMountConfigs, err := getRequiredVolumeMountConfigs(gateway, []consts.VolumeMountName{
-			consts.VolumeMountDataset,
-		})
-		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to get volume mount configurations", err)
+		// jfs.backend=s3 routes the job's OUTPUT_PATH at an s3:// URL
+		// (handled by rcabench-platform's serde + copy_files) and skips
+		// the dataset PVC mount entirely — the bucket *is* the dataset
+		// store on the read side (S3DatapackStore), so leaving the NAS
+		// mount would just write parquet files that the API never reads.
+		// AWS_* env vars give rcabench-platform's fsspec/s3fs the same
+		// endpoint/credentials the API-side blob.Client already uses.
+		var (
+			volumeMountConfigs []k8s.VolumeMountConfig
+			datapackPathPrefix string
+			extraEnvVars       []corev1.EnvVar
+		)
+		if config.GetString("jfs.backend") == "s3" {
+			bucket := config.GetString("jfs.s3.datapack_bucket")
+			if bucket == "" {
+				return handleExecutionError(span, logEntry, "jfs.s3.datapack_bucket not configured", fmt.Errorf("missing jfs.s3.datapack_bucket"))
+			}
+			datapackPathPrefix = "s3://" + bucket
+			extraEnvVars = s3DatapackEnvVars()
+		} else {
+			var err error
+			volumeMountConfigs, err = getRequiredVolumeMountConfigs(gateway, []consts.VolumeMountName{
+				consts.VolumeMountDataset,
+			})
+			if err != nil {
+				return handleExecutionError(span, logEntry, "failed to get volume mount configurations", err)
+			}
+			datapackPathPrefix = volumeMountConfigs[0].MountPath
 		}
-
-		datapackPathPrefix := volumeMountConfigs[0].MountPath
 
 		jobEnvVars, err := getDatapackJobEnvVars(params.jobName, datapackPathPrefix, params.payload, params.dbConfig)
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to get job environment variables", err)
 		}
+		jobEnvVars = append(jobEnvVars, extraEnvVars...)
 
 		return gateway.CreateJob(childCtx, params.toK8sJobConfig(jobEnvVars, volumeMountConfigs))
 	})
 }
+
+// s3DatapackEnvVars constructs the AWS-SDK-flavoured env consumed by
+// rcabench-platform's serde / copy_files when OUTPUT_PATH is an s3:// URL.
+// Endpoint + path-style + region come from `blob.buckets.datapack` (same
+// keys the API-side blob.Client reads from); credentials are sourced via
+// the existing `*_env` indirection so secrets never live in argv.
+func s3DatapackEnvVars() []corev1.EnvVar {
+	endpoint := config.GetString("blob.buckets.datapack.endpoint")
+	region := config.GetString("blob.buckets.datapack.region")
+	if region == "" {
+		region = "us-east-1"
+	}
+	envAK := config.GetString("blob.buckets.datapack.access_key_env")
+	envSK := config.GetString("blob.buckets.datapack.secret_key_env")
+	if envAK == "" {
+		envAK = "BLOB_S3_DATAPACK_ACCESS_KEY"
+	}
+	if envSK == "" {
+		envSK = "BLOB_S3_DATAPACK_SECRET_KEY"
+	}
+	return []corev1.EnvVar{
+		{Name: "AWS_ENDPOINT_URL_S3", Value: endpoint},
+		{Name: "AWS_REGION", Value: region},
+		{Name: "AWS_DEFAULT_REGION", Value: region},
+		{Name: "AWS_ACCESS_KEY_ID", ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "rustfs-admin"},
+				Key:                  envAK,
+				Optional:             ptrBool(true),
+			},
+		}},
+		{Name: "AWS_SECRET_ACCESS_KEY", ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "rustfs-admin"},
+				Key:                  envSK,
+				Optional:             ptrBool(true),
+			},
+		}},
+	}
+}
+
+func ptrBool(b bool) *bool { return &b }
 
 func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *datapackPayload, dbConfig *db.DatabaseConfig) ([]corev1.EnvVar, error) {
 	tz := config.GetString("system.timezone")
