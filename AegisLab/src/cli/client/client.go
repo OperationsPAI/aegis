@@ -5,10 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -261,86 +258,6 @@ func (c *Client) Patch(path string, body any, dest any) error {
 // Delete sends a DELETE request.
 func (c *Client) Delete(path string, dest any) error {
 	return c.doRequest(http.MethodDelete, path, nil, nil, dest)
-}
-
-// PostMultipart streams a multipart/form-data POST. `extraFields` are
-// added as form fields. `fileField` and `filePath` are wired into the
-// `file` part. Used by the `aegisctl share upload` command. The
-// response body is decoded into `dest` (assumed to be APIResponse[T]).
-func (c *Client) PostMultipart(path, fileField, filePath string, extraFields map[string]string, dest any) error {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("open %q: %w", filePath, err)
-	}
-	defer func() { _ = f.Close() }()
-	stat, err := f.Stat()
-	if err != nil {
-		return fmt.Errorf("stat %q: %w", filePath, err)
-	}
-
-	pr, pw := io.Pipe()
-	mw := multipart.NewWriter(pw)
-	go func() {
-		defer func() { _ = pw.Close() }()
-		for k, v := range extraFields {
-			if err := mw.WriteField(k, v); err != nil {
-				_ = pw.CloseWithError(err)
-				return
-			}
-		}
-		part, err := mw.CreateFormFile(fileField, filepath.Base(filePath))
-		if err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
-		if _, err := io.Copy(part, f); err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
-		if err := mw.Close(); err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
-	}()
-
-	url := c.BaseURL + path
-	req, err := http.NewRequest(http.MethodPost, url, pr)
-	if err != nil {
-		return fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Content-Type", mw.FormDataContentType())
-	req.Header.Set("Accept", "application/json")
-	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-	}
-	// We can't set Content-Length without buffering — but the gin
-	// handler reads via multipart Reader which doesn't need it.
-	_ = stat // reserved for a future progress reporter
-
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read response: %w", err)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		msg := summarizeServerCause(body)
-		if msg == "" {
-			msg = strings.TrimSpace(string(body))
-		}
-		return &APIError{StatusCode: resp.StatusCode, Message: msg}
-	}
-	if dest == nil {
-		return nil
-	}
-	if err := json.Unmarshal(body, dest); err != nil {
-		return fmt.Errorf("decode response: %w", err)
-	}
-	return nil
 }
 
 // GetRaw streams the raw response body to `out`. Used by the

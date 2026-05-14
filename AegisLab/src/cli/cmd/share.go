@@ -4,37 +4,14 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
-	"aegis/cli/client"
+	"aegis/cli/apiclient"
 	"aegis/cli/output"
 
 	"github.com/spf13/cobra"
 )
-
-// share API DTOs (mirror what blob's share handler returns).
-
-type shareUploadResp struct {
-	ShortCode string `json:"short_code"`
-	ShareURL  string `json:"share_url"`
-	ExpiresAt string `json:"expires_at,omitempty"`
-	Size      int64  `json:"size"`
-}
-
-type shareLinkView struct {
-	ShortCode        string `json:"short_code"`
-	OriginalFilename string `json:"original_filename"`
-	ContentType      string `json:"content_type"`
-	SizeBytes        int64  `json:"size_bytes"`
-	ViewCount        int    `json:"view_count"`
-	MaxViews         *int   `json:"max_views,omitempty"`
-	CreatedAt        string `json:"created_at"`
-	ExpiresAt        string `json:"expires_at,omitempty"`
-	Status           int    `json:"status"`
-	ShareURL         string `json:"share_url"`
-}
 
 var shareCmd = &cobra.Command{
 	Use:   "share",
@@ -65,41 +42,49 @@ var shareUploadCmd = &cobra.Command{
 		if st.IsDir() {
 			return fmt.Errorf("%q is a directory; share upload takes a single file", path)
 		}
+		f, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("open %q: %w", path, err)
+		}
+		defer func() { _ = f.Close() }()
 
-		fields := map[string]string{}
+		cli, ctx := newAPIClient()
+		req := cli.ShareAPI.ShareUpload(ctx).File(f)
 		if shareUploadTTL != "" {
 			secs, err := parseTTL(shareUploadTTL)
 			if err != nil {
 				return err
 			}
-			fields["ttl_seconds"] = strconv.FormatInt(secs, 10)
+			req = req.TtlSeconds(int32(secs))
 		}
 		if shareUploadMaxViews > 0 {
-			fields["max_views"] = strconv.Itoa(shareUploadMaxViews)
+			req = req.MaxViews(int32(shareUploadMaxViews))
 		}
 
-		c := newClient()
-		var resp shareUploadResp
-		if err := c.PostMultipart("/api/v2/share/upload", "file", path, fields, &resp); err != nil {
+		resp, _, err := req.Execute()
+		if err != nil {
 			return fmt.Errorf("share upload: %w", err)
 		}
+		data := resp.Data
+		if data == nil {
+			return fmt.Errorf("share upload: empty response")
+		}
 
-		fullURL := joinURL(flagServer, resp.ShareURL)
-
+		fullURL := joinURL(flagServer, data.GetShareUrl())
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
 			output.PrintJSON(map[string]any{
-				"short_code": resp.ShortCode,
+				"short_code": data.GetShortCode(),
 				"share_url":  fullURL,
-				"size_bytes": resp.Size,
-				"expires_at": resp.ExpiresAt,
+				"size_bytes": data.GetSize(),
+				"expires_at": data.GetExpiresAt(),
 			})
 			return nil
 		}
-		fmt.Printf("Short code:  %s\n", resp.ShortCode)
+		fmt.Printf("Short code:  %s\n", data.GetShortCode())
 		fmt.Printf("Share URL:   %s\n", fullURL)
-		fmt.Printf("Size bytes:  %d\n", resp.Size)
-		if resp.ExpiresAt != "" {
-			fmt.Printf("Expires at:  %s\n", resp.ExpiresAt)
+		fmt.Printf("Size bytes:  %d\n", data.GetSize())
+		if exp := data.GetExpiresAt(); exp != "" {
+			fmt.Printf("Expires at:  %s\n", exp)
 		}
 		return nil
 	},
@@ -117,38 +102,36 @@ var shareListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the share links you own",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		q := url.Values{}
-		q.Set("page", strconv.Itoa(shareListPage))
-		q.Set("size", strconv.Itoa(shareListSize))
-		if shareListIncludeExpired {
-			q.Set("include_expired", "true")
-		}
-
-		c := newClient()
-		var resp client.APIResponse[client.PaginatedData[shareLinkView]]
-		// Gateway prefix is /api/v2/share/ — without the trailing slash it
-		// falls through to the catch-all aegis-api route and 404s.
-		if err := c.Get("/api/v2/share/?"+q.Encode(), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ShareAPI.ShareList(ctx).
+			Page(int32(shareListPage)).
+			Size(int32(shareListSize)).
+			IncludeExpired(shareListIncludeExpired).
+			Execute()
+		if err != nil {
 			return err
 		}
+		items := []apiclient.ShareLinkView{}
+		if resp.Data != nil {
+			items = resp.Data.GetItems()
+		}
+
 		switch output.OutputFormat(flagOutput) {
 		case output.FormatJSON:
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(items)
 			return nil
 		case output.FormatNDJSON:
-			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
-				return err
-			}
-			return output.PrintNDJSON(resp.Data.Items)
+			return output.PrintNDJSON(items)
 		}
-		rows := make([][]string, 0, len(resp.Data.Items))
-		for _, it := range resp.Data.Items {
+
+		rows := make([][]string, 0, len(items))
+		for _, it := range items {
 			rows = append(rows, []string{
-				it.ShortCode,
-				it.OriginalFilename,
-				strconv.FormatInt(it.SizeBytes, 10),
-				strconv.Itoa(it.ViewCount),
-				it.ExpiresAt,
+				it.GetShortCode(),
+				it.GetOriginalFilename(),
+				strconv.FormatInt(int64(it.GetSizeBytes()), 10),
+				strconv.FormatInt(int64(it.GetViewCount()), 10),
+				it.GetExpiresAt(),
 			})
 		}
 		output.PrintTable(
@@ -167,10 +150,8 @@ var shareRevokeCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		code := args[0]
-		c := newClient()
-		// Server returns 204 No Content; pass nil dest so the client
-		// doesn't try to JSON-decode an empty body.
-		if err := c.Delete("/api/v2/share/"+url.PathEscape(code), nil); err != nil {
+		cli, ctx := newAPIClient()
+		if _, _, err := cli.ShareAPI.ShareRevoke(ctx, code).Execute(); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("share link %q revoked", code))
@@ -193,8 +174,9 @@ var shareDownloadCmd = &cobra.Command{
 			out = code + ".bin"
 		}
 
-		// /s/:code is auth=none on the gateway, but the client still sends the
-		// Authorization header if a token is loaded — that's harmless.
+		// /s/:code is auth=none and streams bytes; the generated client's
+		// ShareRedirect treats 302 as an error and never returns the body
+		// stream, so keep the manual streaming path here.
 		c := newClient()
 		f, err := os.Create(out)
 		if err != nil {
@@ -230,8 +212,6 @@ func parseTTL(s string) (int64, error) {
 		}
 		return days * 24 * 60 * 60, nil
 	}
-	// time.ParseDuration is overkill but handles m/h naturally; do it lazily.
-	// We only need a rough bridge — duplicate it inline rather than pulling time here.
 	mult := int64(1)
 	num := s
 	switch {
@@ -252,8 +232,7 @@ func parseTTL(s string) (int64, error) {
 }
 
 // joinURL forms an absolute URL by combining `base` (e.g. http://host:8082)
-// with a server-side path/relative URL. If `rel` is already absolute,
-// it's returned unchanged.
+// with a server-side path. Absolute `rel` is returned unchanged.
 func joinURL(base, rel string) string {
 	if rel == "" {
 		return base
@@ -263,9 +242,6 @@ func joinURL(base, rel string) string {
 	}
 	return strings.TrimRight(base, "/") + "/" + strings.TrimLeft(rel, "/")
 }
-
-// _ keeps filepath imported if future helpers need it.
-var _ = filepath.Base
 
 func init() {
 	shareUploadCmd.Flags().StringVar(&shareUploadTTL, "ttl", "", "Link lifetime: seconds, e.g. 3600, 30m, 24h, 7d (server default if unset)")
