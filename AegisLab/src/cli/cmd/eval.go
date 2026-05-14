@@ -2,35 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 
-	"aegis/cli/client"
+	"aegis/cli/apiclient"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
-
-// Local structs for evaluation API responses.
-
-type evalListItem struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	Type      string `json:"type"`
-	ProjectID int    `json:"project_id"`
-	CreatedAt string `json:"created_at"`
-}
-
-type evalDetail struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	Type      string `json:"type"`
-	ProjectID int    `json:"project_id"`
-	Result    any    `json:"result"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-}
 
 var evalCmd = &cobra.Command{
 	Use:     "eval",
@@ -47,11 +25,12 @@ var evalListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List evaluations",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		path := fmt.Sprintf("%s?page=%d&size=%d", consts.APIPathEvaluations, evalListPage, evalListSize)
-
-		var resp client.APIResponse[client.PaginatedData[evalListItem]]
-		if err := c.Get(path, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.EvaluationsAPI.ListEvaluations(ctx).
+			Page(int32(evalListPage)).
+			Size(int32(evalListSize)).
+			Execute()
+		if err != nil {
 			return err
 		}
 
@@ -60,14 +39,18 @@ var evalListCmd = &cobra.Command{
 			return nil
 		}
 
-		rows := make([][]string, 0, len(resp.Data.Items))
-		for _, e := range resp.Data.Items {
+		var items []apiclient.EvaluationEvaluationResp
+		if resp.Data != nil {
+			items = resp.Data.GetItems()
+		}
+		rows := make([][]string, 0, len(items))
+		for _, e := range items {
 			rows = append(rows, []string{
-				fmt.Sprintf("%d", e.ID),
-				e.Name,
-				e.Type,
-				e.Status,
-				e.CreatedAt,
+				strconv.FormatInt(int64(e.GetId()), 10),
+				e.GetAlgorithmName(),
+				e.GetEvalType(),
+				"",
+				e.GetCreatedAt(),
 			})
 		}
 		output.PrintTable([]string{"ID", "Name", "Type", "Status", "Created"}, rows)
@@ -82,28 +65,34 @@ var evalGetCmd = &cobra.Command{
 	Short: "Get evaluation details by ID",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-
-		var resp client.APIResponse[evalDetail]
-		if err := c.Get(consts.APIPathEvaluation(args[0]), &resp); err != nil {
+		idInt, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("evaluation id must be numeric: %w", err)
+		}
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.EvaluationsAPI.GetEvaluationById(ctx, int32(idInt)).Execute()
+		if err != nil {
 			return err
 		}
+		d := resp.Data
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(d)
 			return nil
 		}
+		if d == nil {
+			return fmt.Errorf("empty evaluation response")
+		}
 
-		fmt.Printf("ID:        %d\n", resp.Data.ID)
-		fmt.Printf("Name:      %s\n", resp.Data.Name)
-		fmt.Printf("Type:      %s\n", resp.Data.Type)
-		fmt.Printf("Status:    %s\n", resp.Data.Status)
-		fmt.Printf("Project:   %d\n", resp.Data.ProjectID)
-		fmt.Printf("Created:   %s\n", resp.Data.CreatedAt)
-		fmt.Printf("Updated:   %s\n", resp.Data.UpdatedAt)
-		if resp.Data.Result != nil {
-			fmt.Printf("Result:\n")
-			output.PrintJSON(resp.Data.Result)
+		fmt.Printf("ID:        %d\n", d.GetId())
+		fmt.Printf("Name:      %s\n", d.GetAlgorithmName())
+		fmt.Printf("Type:      %s\n", d.GetEvalType())
+		fmt.Printf("Status:    %s\n", "")
+		fmt.Printf("Project:   %d\n", d.GetProjectId())
+		fmt.Printf("Created:   %s\n", d.GetCreatedAt())
+		fmt.Printf("Updated:   %s\n", d.GetUpdatedAt())
+		if rj := d.GetResultJson(); rj != "" {
+			fmt.Printf("Result:\n%s\n", rj)
 		}
 		return nil
 	},

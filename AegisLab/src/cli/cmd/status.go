@@ -1,63 +1,29 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
 
-	"aegis/cli/client"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
 
-// Local structs for status command responses.
-
-type profileInfo struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-}
-
-type taskItem struct {
-	ID    int    `json:"id"`
-	State string `json:"state"`
-}
-
-type traceItem struct {
-	ID        string `json:"id"`
-	TraceID   string `json:"trace_id"`
-	State     string `json:"state"`
-	Type      string `json:"type"`
-	Project   string `json:"project_name"`
-	ProjectID int    `json:"project_id"`
-}
-
-func traceID(item traceItem) string {
-	if item.ID != "" {
-		return item.ID
-	}
-	return item.TraceID
-}
-
+// healthServiceInfo decodes one entry of SystemHealthCheckResp.Services
+// (which the generated client exposes as map[string]interface{}).
 type healthServiceInfo struct {
 	Status       string `json:"status"`
 	ResponseTime string `json:"response_time"`
 	Error        string `json:"error,omitempty"`
 }
 
-type healthCheckResp struct {
-	Status   string                       `json:"status"`
-	Version  string                       `json:"version"`
-	Uptime   string                       `json:"uptime"`
-	Services map[string]healthServiceInfo `json:"services"`
-}
-
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show cluster status and infrastructure health",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
+		cli, ctx := newAPIClient()
 
 		// Determine context name.
 		ctxName := "unknown"
@@ -68,11 +34,11 @@ var statusCmd = &cobra.Command{
 		// --- User info ---
 		connected := "yes"
 		username := "unknown"
-		var profileResp client.APIResponse[profileInfo]
-		if err := c.Get(consts.APIPathAuthProfile, &profileResp); err != nil {
+		if profileResp, _, err := cli.AuthenticationAPI.GetCurrentUserProfile(ctx).Execute(); err != nil {
 			connected = "no (not logged in)"
 		} else {
-			username = profileResp.Data.Username
+			profile := profileResp.GetData()
+			username = profile.GetUsername()
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -84,25 +50,24 @@ var statusCmd = &cobra.Command{
 			}
 
 			// Tasks
-			var taskResp client.APIResponse[client.PaginatedData[taskItem]]
-			if err := c.Get(consts.APIPathTasks+"?page=1&size=100", &taskResp); err == nil {
+			if taskResp, _, err := cli.TasksAPI.ListTasks(ctx).Page(1).Size(100).Execute(); err == nil {
 				counts := map[string]int{}
-				for _, t := range taskResp.Data.Items {
-					counts[t.State]++
+				taskData := taskResp.GetData()
+				for _, t := range taskData.GetItems() {
+					counts[t.GetState()]++
 				}
 				result["tasks"] = counts
 			}
 
 			// Traces
-			var traceResp client.APIResponse[client.PaginatedData[traceItem]]
-			if err := c.Get(consts.APIPathTraces+"?page=1&size=10", &traceResp); err == nil {
-				result["recent_traces"] = traceResp.Data.Items
+			if traceResp, _, err := cli.TracesAPI.ListTraces(ctx).Page(1).Size(10).Execute(); err == nil {
+				traceData := traceResp.GetData()
+				result["recent_traces"] = traceData.GetItems()
 			}
 
 			// Health
-			var healthResp client.APIResponse[healthCheckResp]
-			if err := c.Get(consts.APIPathSystemHealth, &healthResp); err == nil {
-				result["health"] = healthResp.Data
+			if healthResp, _, err := cli.SystemAPI.GetSystemHealth(ctx).Execute(); err == nil {
+				result["health"] = healthResp.GetData()
 			} else {
 				result["health"] = map[string]any{"status": "unreachable", "error": err.Error()}
 			}
@@ -118,12 +83,12 @@ var statusCmd = &cobra.Command{
 		fmt.Println()
 
 		// --- Tasks ---
-		var taskResp client.APIResponse[client.PaginatedData[taskItem]]
-		if err := c.Get(consts.APIPathTasks+"?page=1&size=100", &taskResp); err == nil {
+		if taskResp, _, err := cli.TasksAPI.ListTasks(ctx).Page(1).Size(100).Execute(); err == nil {
 			counts := map[string]int{}
 			total := 0
-			for _, t := range taskResp.Data.Items {
-				counts[t.State]++
+			taskData := taskResp.GetData()
+			for _, t := range taskData.GetItems() {
+				counts[t.GetState()]++
 				total++
 			}
 			fmt.Printf("Active Tasks:     %d\n", total)
@@ -134,43 +99,51 @@ var statusCmd = &cobra.Command{
 		fmt.Println()
 
 		// --- Recent Traces ---
-		var traceResp client.APIResponse[client.PaginatedData[traceItem]]
-		if err := c.Get(consts.APIPathTraces+"?page=1&size=10", &traceResp); err == nil && len(traceResp.Data.Items) > 0 {
-			fmt.Println("Recent Traces:")
+		if traceResp, _, err := cli.TracesAPI.ListTraces(ctx).Page(1).Size(10).Execute(); err == nil {
+			traceData := traceResp.GetData()
+			items := traceData.GetItems()
+			if len(items) > 0 {
+				fmt.Println("Recent Traces:")
 
-			rows := make([][]string, 0, len(traceResp.Data.Items))
-			for _, t := range traceResp.Data.Items {
-				project := t.Project
-				if project == "" {
-					project = fmt.Sprintf("%d", t.ProjectID)
+				rows := make([][]string, 0, len(items))
+				for _, t := range items {
+					project := t.GetProjectName()
+					if project == "" {
+						project = fmt.Sprintf("%d", t.GetProjectId())
+					}
+					rows = append(rows, []string{t.GetId(), t.GetState(), t.GetType(), project})
 				}
-				rows = append(rows, []string{traceID(t), t.State, t.Type, project})
+				output.PrintTable([]string{"Trace-ID", "State", "Type", "Project"}, rows)
 			}
-			output.PrintTable([]string{"Trace-ID", "State", "Type", "Project"}, rows)
 		}
 		fmt.Println()
 
 		// --- Infrastructure Health ---
 		fmt.Println("Infrastructure Health:")
-		var healthResp client.APIResponse[healthCheckResp]
-		if err := c.Get(consts.APIPathSystemHealth, &healthResp); err != nil {
-			fmt.Printf("  %s Could not reach health endpoint: %v\n", output.ColorRed(os.Stdout, "\u2717"), err)
+		healthResp, _, err := cli.SystemAPI.GetSystemHealth(ctx).Execute()
+		if err != nil {
+			fmt.Printf("  %s Could not reach health endpoint: %v\n", output.ColorRed(os.Stdout, "✗"), err)
 		} else {
-			names := make([]string, 0, len(healthResp.Data.Services))
-			for name := range healthResp.Data.Services {
+			health := healthResp.GetData()
+			services := health.GetServices()
+			names := make([]string, 0, len(services))
+			for name := range services {
 				names = append(names, name)
 			}
 			sort.Strings(names)
 			for _, name := range names {
-				svc := healthResp.Data.Services[name]
+				var svc healthServiceInfo
+				if raw, _ := json.Marshal(services[name]); len(raw) > 0 {
+					_ = json.Unmarshal(raw, &svc)
+				}
 				if svc.Status == "healthy" {
-					fmt.Printf("  %s %-12s %s\n", output.ColorGreen(os.Stdout, "\u2713"), name, svc.ResponseTime)
+					fmt.Printf("  %s %-12s %s\n", output.ColorGreen(os.Stdout, "✓"), name, svc.ResponseTime)
 				} else {
 					errMsg := svc.Error
 					if errMsg == "" {
 						errMsg = "unhealthy"
 					}
-					fmt.Printf("  %s %-12s %s (%s)\n", output.ColorRed(os.Stdout, "\u2717"), name, svc.ResponseTime, errMsg)
+					fmt.Printf("  %s %-12s %s (%s)\n", output.ColorRed(os.Stdout, "✗"), name, svc.ResponseTime, errMsg)
 				}
 			}
 		}

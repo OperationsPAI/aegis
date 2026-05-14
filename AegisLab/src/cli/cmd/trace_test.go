@@ -73,6 +73,7 @@ func TestTraceListCmd_TSVFormat(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"code":    200,
 			"message": "success",
@@ -151,6 +152,7 @@ func TestTraceCancelCmd_PostsAndReports(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
 		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"code":    200,
 			"message": "success",
@@ -206,6 +208,7 @@ func TestTraceCancelCmd_EndpointMissing(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"code":    404,
 			"message": "not found",

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
 	"aegis/platform/consts"
@@ -164,6 +165,9 @@ type injectListItem struct {
 	} `json:"labels"`
 }
 
+// Generated ListProjectInjections only exposes page/size; the state /
+// fault_type / system / labels filters and the --all NDJSON streaming path
+// have no swag annotation, so this command stays on the manual client.
 var injectListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List fault injections in a project",
@@ -262,9 +266,9 @@ func runInjectGet(name string) error {
 			return err
 		}
 
-		c := newClient()
-		var resp client.APIResponse[any]
-		if err := c.Get(consts.APIPathInjection(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.InjectionsAPI.GetInjectionById(ctx, int32(id)).Execute()
+		if err != nil {
 			return err
 		}
 
@@ -277,9 +281,8 @@ func runInjectGet(name string) error {
 			return nil
 		}
 
-		data, ok := resp.Data.(map[string]any)
-		if !ok {
-			// Fallback: unknown shape, just JSON it.
+		data, err := resp.Data.ToMap()
+		if err != nil {
 			output.PrintJSON(resp.Data)
 			return nil
 		}
@@ -363,17 +366,41 @@ var injectSearchCmd = &cobra.Command{
 			return err
 		}
 
-		body := map[string]any{}
+		body := apiclient.InjectionSearchInjectionReq{}
 		if injectSearchNamePattern != "" {
-			body["name_pattern"] = injectSearchNamePattern
+			body.SetNamePattern(injectSearchNamePattern)
 		}
+		// The generated InjectionSearchInjectionReq.Labels is []DtoLabelItem,
+		// not the legacy comma-separated string. Server still accepts the old
+		// shape via the typed call's marshaller; parse "k=v,k2=v2" into
+		// structured labels so the typed body validates.
 		if injectSearchLabels != "" {
-			body["labels"] = injectSearchLabels
+			labels := []apiclient.DtoLabelItem{}
+			for _, kv := range strings.Split(injectSearchLabels, ",") {
+				kv = strings.TrimSpace(kv)
+				if kv == "" {
+					continue
+				}
+				eq := strings.IndexByte(kv, '=')
+				lbl := apiclient.DtoLabelItem{}
+				if eq < 0 {
+					lbl.SetKey(kv)
+				} else {
+					lbl.SetKey(kv[:eq])
+					lbl.SetValue(kv[eq+1:])
+				}
+				labels = append(labels, lbl)
+			}
+			if len(labels) > 0 {
+				body.SetLabels(labels)
+			}
 		}
 
-		c := newClient()
-		var resp client.APIResponse[any]
-		if err := c.Post(consts.APIPathProjectInjectionsSearch(pid), body, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ProjectsAPI.SearchProjectInjections(ctx, int32(pid)).
+			InjectionSearchInjectionReq(body).
+			Execute()
+		if err != nil {
 			return err
 		}
 
@@ -408,21 +435,9 @@ func runInjectFiles(name string) error {
 			return err
 		}
 
-		type fileItem struct {
-			Name string `json:"name,omitempty"`
-			Path string `json:"path"`
-			Size string `json:"size"`
-			Type string `json:"type,omitempty"`
-		}
-		type filesPayload struct {
-			Files     []fileItem `json:"files"`
-			FileCount int        `json:"file_count"`
-			DirCount  int        `json:"dir_count,omitempty"`
-		}
-
-		c := newClient()
-		var resp client.APIResponse[filesPayload]
-		if err := c.Get(consts.APIPathInjectionFiles(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.InjectionsAPI.ListDatapackFiles(ctx, int32(id)).Execute()
+		if err != nil {
 			return err
 		}
 
@@ -433,8 +448,12 @@ func runInjectFiles(name string) error {
 
 		headers := []string{"PATH", "SIZE", "TYPE"}
 		var rows [][]string
-		for _, f := range resp.Data.Files {
-			rows = append(rows, []string{f.Path, f.Size, f.Type})
+		if resp.Data != nil {
+			for _, f := range resp.Data.GetFiles() {
+				// The generated DatapackFileItem has no `type` field; emit
+				// blank to preserve the historical column.
+				rows = append(rows, []string{f.GetPath(), f.GetSize(), ""})
+			}
 		}
 		output.PrintTable(headers, rows)
 		return nil
@@ -490,38 +509,37 @@ func pathMatchesInclude(path, include string) bool {
 	}
 }
 
-type datapackFileEntry struct {
-	Path     string              `json:"path"`
-	Children []datapackFileEntry `json:"children,omitempty"`
-}
-
 // listInjectionFiles fetches the datapack file tree for the given injection
 // and returns the flattened list of leaf file paths (directories are skipped).
-func listInjectionFiles(c *client.Client, id int) ([]string, error) {
-	type fileTreeResp struct {
-		Files []datapackFileEntry `json:"files"`
-	}
-	var resp client.APIResponse[fileTreeResp]
-	if err := c.Get(consts.APIPathInjectionFiles(id), &resp); err != nil {
+func listInjectionFiles(id int) ([]string, error) {
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.InjectionsAPI.ListDatapackFiles(ctx, int32(id)).Execute()
+	if err != nil {
 		return nil, err
 	}
 	var out []string
-	var walk func(items []datapackFileEntry)
-	walk = func(items []datapackFileEntry) {
+	if resp.Data == nil {
+		return out, nil
+	}
+	var walk func(items []apiclient.InjectionDatapackFileItem)
+	walk = func(items []apiclient.InjectionDatapackFileItem) {
 		for _, it := range items {
-			if len(it.Children) > 0 {
-				walk(it.Children)
+			children := it.GetChildren()
+			if len(children) > 0 {
+				walk(children)
 			} else {
-				out = append(out, it.Path)
+				out = append(out, it.GetPath())
 			}
 		}
 	}
-	walk(resp.Data.Files)
+	walk(resp.Data.GetFiles())
 	return out, nil
 }
 
 // downloadInjectionFile streams a single datapack file to disk. Parent
 // directories under outDir are created on demand.
+// Generated DownloadDatapackFile buffers via *os.File and would defeat the
+// per-file streaming + parallel-fanout we rely on; keep the manual GET.
 func downloadInjectionFile(httpClient *http.Client, server, token string, id int, relPath, outPath string) error {
 	if err := os.MkdirAll(filepathDir(outPath), 0o755); err != nil {
 		return err
@@ -558,8 +576,7 @@ func downloadInjectionFile(httpClient *http.Client, server, token string, id int
 // honoring the include filter and per-file parallelism. A `.done` marker is
 // written under outDir on success so subsequent calls can short-circuit.
 func downloadPackToDir(httpClient *http.Client, server, token string, id int, name, outDir, include string, fileParallelism int) error {
-	c := newClient()
-	files, err := listInjectionFiles(c, id)
+	files, err := listInjectionFiles(id)
 	if err != nil {
 		return fmt.Errorf("list files: %w", err)
 	}
@@ -689,6 +706,9 @@ func runInjectDownload(name string) error {
 		}
 
 		// Legacy path: server-side zip stream into a single file.
+		// Generated DownloadDatapack returns *os.File from a buffered tmp
+		// file, which prevents on-the-fly sha256 + Content-Length truncation
+		// detection; keep the streaming HTTP path here.
 		url := flagServer + consts.APIPathInjectionDownload(id)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
@@ -905,7 +925,9 @@ func parseBatchTokens(tokens []string) ([]batchTarget, error) {
 }
 
 // collectBatchTargetsByState pages through the project's injection list,
-// filtered by the resolved DatapackState.
+// filtered by the resolved DatapackState. Same gap as injectListCmd: the
+// generated ListProjectInjections has no `state` filter, so the manual
+// client stays.
 func collectBatchTargetsByState(stateRaw string) ([]batchTarget, error) {
 	stateParam, err := resolveDatapackStateFlag(stateRaw)
 	if err != nil {

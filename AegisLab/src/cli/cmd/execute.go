@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
 	"aegis/platform/consts"
@@ -115,6 +117,10 @@ func runExecuteCreate(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// TODO: missing swag annotation — generated RunAlgorithm wants typed
+	// ExecutionSubmitExecutionReq with algorithm_id / dataset_id ints, but
+	// the CLI submits free-form name/version refs. Keep manual until the
+	// backend handler exposes the same name/version shape via SDK.
 	c := newClient()
 	var resp client.APIResponse[any]
 	if err := c.Post(path, spec, &resp); err != nil {
@@ -126,15 +132,6 @@ func runExecuteCreate(cmd *cobra.Command, args []string) error {
 }
 
 // ---------- execute list ----------
-
-type executeListItem struct {
-	ID        int     `json:"id"`
-	Algorithm string  `json:"algorithm"`
-	Datapack  string  `json:"datapack"`
-	State     string  `json:"state"`
-	Duration  float64 `json:"duration"`
-	CreatedAt string  `json:"created_at"`
-}
 
 var (
 	executeListPage int
@@ -149,11 +146,12 @@ var executeListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		c := newClient()
-		q := fmt.Sprintf("%s?page=%d&size=%d", consts.APIPathProjectExecutions(pid), executeListPage, executeListSize)
-
-		var resp client.APIResponse[client.PaginatedData[executeListItem]]
-		if err := c.Get(q, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ProjectsAPI.ListProjectExecutions(ctx, int32(pid)).
+			Page(int32(executeListPage)).
+			Size(int32(executeListSize)).
+			Execute()
+		if err != nil {
 			return err
 		}
 
@@ -162,22 +160,29 @@ var executeListCmd = &cobra.Command{
 			output.PrintJSON(resp.Data)
 			return nil
 		case output.FormatNDJSON:
-			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
-				return err
+			if resp.Data != nil {
+				if err := output.PrintMetaJSON(resp.Data.GetPagination()); err != nil {
+					return err
+				}
+				return output.PrintNDJSON(resp.Data.GetItems())
 			}
-			return output.PrintNDJSON(resp.Data.Items)
+			return nil
 		}
 
+		var items []apiclient.ExecutionExecutionResp
+		if resp.Data != nil {
+			items = resp.Data.GetItems()
+		}
 		headers := []string{"ID", "ALGORITHM", "DATAPACK", "STATE", "DURATION", "CREATED"}
 		var rows [][]string
-		for _, item := range resp.Data.Items {
+		for _, item := range items {
 			rows = append(rows, []string{
-				fmt.Sprintf("%d", item.ID),
-				item.Algorithm,
-				item.Datapack,
-				item.State,
-				fmt.Sprintf("%v", item.Duration),
-				item.CreatedAt,
+				strconv.FormatInt(int64(item.GetId()), 10),
+				item.GetAlgorithmName(),
+				item.GetDatapackName(),
+				item.GetState(),
+				fmt.Sprintf("%v", item.GetDuration()),
+				item.GetCreatedAt(),
 			})
 		}
 		output.PrintTable(headers, rows)
@@ -192,14 +197,15 @@ var executeGetCmd = &cobra.Command{
 	Short: "Get detailed info about an execution",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id := args[0] // numeric ID, pass as-is
-
-		c := newClient()
-		var resp client.APIResponse[any]
-		if err := c.Get(consts.APIPathExecution(id), &resp); err != nil {
+		idInt, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("execution id must be numeric: %w", err)
+		}
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ExecutionsAPI.GetExecutionById(ctx, int32(idInt)).Execute()
+		if err != nil {
 			return err
 		}
-
 		output.PrintJSON(resp.Data)
 		return nil
 	},

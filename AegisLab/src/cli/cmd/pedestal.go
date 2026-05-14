@@ -5,16 +5,15 @@ import (
 	"sort"
 	"strings"
 
-	"aegis/cli/client"
+	"aegis/cli/apiclient"
 	"aegis/cli/output"
 	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
 
-// Local types mirroring the backend response shapes in src/dto/container.go.
-// We duplicate these instead of importing aegis/dto to keep the aegisctl
-// binary free of the full server's gorm+entity graph.
+// Legacy DTOs still referenced by out-of-scope callers (system_publish_chart.go).
+// Kept until those call sites are migrated to the typed apiclient.
 
 type pedestalHelmConfig struct {
 	ID                 int    `json:"id"`
@@ -26,17 +25,6 @@ type pedestalHelmConfig struct {
 	ValueFile          string `json:"value_file"`
 	LocalPath          string `json:"local_path"`
 	Checksum           string `json:"checksum,omitempty"`
-}
-
-type pedestalHelmVerifyCheck struct {
-	Name   string `json:"name"`
-	OK     bool   `json:"ok"`
-	Detail string `json:"detail,omitempty"`
-}
-
-type pedestalHelmVerifyResp struct {
-	OK     bool                      `json:"ok"`
-	Checks []pedestalHelmVerifyCheck `json:"checks"`
 }
 
 type pedestalHelmSetReq struct {
@@ -82,9 +70,9 @@ var pedestalHelmGetCmd = &cobra.Command{
 		if pedestalHelmVersionID <= 0 {
 			return fmt.Errorf("--container-version-id is required and must be > 0")
 		}
-		c := newClient()
-		var resp client.APIResponse[pedestalHelmConfig]
-		if err := c.Get(consts.APIPathPedestalHelmByID(pedestalHelmVersionID), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.PedestalAPI.GetPedestalHelmConfig(ctx, int32(pedestalHelmVersionID)).Execute()
+		if err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -92,16 +80,19 @@ var pedestalHelmGetCmd = &cobra.Command{
 			return nil
 		}
 		d := resp.Data
-		fmt.Printf("ID:                   %d\n", d.ID)
-		fmt.Printf("ContainerVersionID:   %d\n", d.ContainerVersionID)
-		fmt.Printf("ChartName:            %s\n", d.ChartName)
-		fmt.Printf("Version:              %s\n", d.Version)
-		fmt.Printf("RepoURL:              %s\n", d.RepoURL)
-		fmt.Printf("RepoName:             %s\n", d.RepoName)
-		fmt.Printf("ValueFile:            %s\n", d.ValueFile)
-		fmt.Printf("LocalPath:            %s\n", d.LocalPath)
-		if d.Checksum != "" {
-			fmt.Printf("Checksum:             %s\n", d.Checksum)
+		if d == nil {
+			return nil
+		}
+		fmt.Printf("ID:                   %d\n", d.GetId())
+		fmt.Printf("ContainerVersionID:   %d\n", d.GetContainerVersionId())
+		fmt.Printf("ChartName:            %s\n", d.GetChartName())
+		fmt.Printf("Version:              %s\n", d.GetVersion())
+		fmt.Printf("RepoURL:              %s\n", d.GetRepoUrl())
+		fmt.Printf("RepoName:             %s\n", d.GetRepoName())
+		fmt.Printf("ValueFile:            %s\n", d.GetValueFile())
+		fmt.Printf("LocalPath:            %s\n", d.GetLocalPath())
+		if cs := d.GetChecksum(); cs != "" {
+			fmt.Printf("Checksum:             %s\n", cs)
 		}
 		return nil
 	},
@@ -128,25 +119,32 @@ var pedestalHelmSetCmd = &cobra.Command{
 			pedestalHelmSetRepoURL == "" || pedestalHelmSetRepoName == "" {
 			return fmt.Errorf("--chart-name, --version, --repo-url, --repo-name are all required")
 		}
-		body := pedestalHelmSetReq{
-			ChartName: pedestalHelmSetChart,
-			Version:   pedestalHelmSetVersion,
-			RepoURL:   pedestalHelmSetRepoURL,
-			RepoName:  pedestalHelmSetRepoName,
-			ValueFile: pedestalHelmSetValues,
-			LocalPath: pedestalHelmSetLocal,
+		body := *apiclient.NewPedestalUpsertPedestalHelmConfigReq(
+			pedestalHelmSetChart,
+			pedestalHelmSetRepoName,
+			pedestalHelmSetRepoURL,
+			pedestalHelmSetVersion,
+		)
+		if pedestalHelmSetValues != "" {
+			body.SetValueFile(pedestalHelmSetValues)
 		}
-		c := newClient()
-		var resp client.APIResponse[pedestalHelmConfig]
-		if err := c.Put(consts.APIPathPedestalHelmByID(pedestalHelmVersionID), body, &resp); err != nil {
+		if pedestalHelmSetLocal != "" {
+			body.SetLocalPath(pedestalHelmSetLocal)
+		}
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.PedestalAPI.UpsertPedestalHelmConfig(ctx, int32(pedestalHelmVersionID)).
+			PedestalUpsertPedestalHelmConfigReq(body).
+			Execute()
+		if err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
 			output.PrintJSON(resp.Data)
 			return nil
 		}
+		d := resp.Data
 		output.PrintInfo(fmt.Sprintf("helm_configs row for container_version_id=%d upserted (id=%d)",
-			resp.Data.ContainerVersionID, resp.Data.ID))
+			d.GetContainerVersionId(), d.GetId()))
 		return nil
 	},
 }
@@ -176,29 +174,32 @@ var pedestalHelmVerifyCmd = &cobra.Command{
 			return nil
 		}
 
-		c := newClient()
-		var resp client.APIResponse[pedestalHelmVerifyResp]
-		if err := c.Post(path, nil, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.PedestalAPI.VerifyPedestalHelmConfig(ctx, int32(pedestalHelmVersionID)).Execute()
+		if err != nil {
 			return err
 		}
+		d := resp.Data
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
-			if !resp.Data.OK {
+			output.PrintJSON(d)
+			if d == nil || !d.GetOk() {
 				return missingEnvErrorf("pedestal helm verify failed for container_version_id=%d", pedestalHelmVersionID)
 			}
 			return nil
 		}
-		for _, chk := range resp.Data.Checks {
-			mark := "OK"
-			if !chk.OK {
-				mark = "FAIL"
-			}
-			fmt.Printf("[%s] %s\n", mark, chk.Name)
-			if chk.Detail != "" {
-				fmt.Printf("       %s\n", chk.Detail)
+		if d != nil {
+			for _, chk := range d.GetChecks() {
+				mark := "OK"
+				if !chk.GetOk() {
+					mark = "FAIL"
+				}
+				fmt.Printf("[%s] %s\n", mark, chk.GetName())
+				if det := chk.GetDetail(); det != "" {
+					fmt.Printf("       %s\n", det)
+				}
 			}
 		}
-		if !resp.Data.OK {
+		if d == nil || !d.GetOk() {
 			return missingEnvErrorf("pedestal helm verify failed for container_version_id=%d", pedestalHelmVersionID)
 		}
 		return nil
@@ -223,30 +224,6 @@ var (
 	pedestalHelmReseedApply    bool
 	pedestalHelmReseedPrune    bool
 )
-
-type pedestalHelmReseedReq struct {
-	Env      string `json:"env,omitempty"`
-	DataPath string `json:"data_path,omitempty"`
-	Apply    bool   `json:"apply"`
-	Prune    bool   `json:"prune,omitempty"`
-}
-
-type pedestalHelmReseedAction struct {
-	Layer    string `json:"layer"`
-	System   string `json:"system"`
-	Key      string `json:"key"`
-	OldValue string `json:"old_value"`
-	NewValue string `json:"new_value"`
-	Note     string `json:"note"`
-	Applied  bool   `json:"applied"`
-}
-
-type pedestalHelmReseedResp struct {
-	DryRun       bool                       `json:"dry_run"`
-	SystemFilter string                     `json:"system_filter"`
-	SeedPath     string                     `json:"seed_path"`
-	Actions      []pedestalHelmReseedAction `json:"actions"`
-}
 
 var pedestalHelmReseedCmd = &cobra.Command{
 	Use:   "reseed",
@@ -276,11 +253,14 @@ Idempotent: a re-run with no upstream change yields zero applied actions.`,
 		if pedestalHelmVersionID <= 0 {
 			return fmt.Errorf("--container-version-id is required and must be > 0")
 		}
-		body := pedestalHelmReseedReq{
-			Env:      strings.TrimSpace(pedestalHelmReseedEnv),
-			DataPath: strings.TrimSpace(pedestalHelmReseedDataPath),
-			Apply:    pedestalHelmReseedApply,
-			Prune:    pedestalHelmReseedPrune,
+		body := apiclient.PedestalReseedHelmConfigReq{}
+		body.SetApply(pedestalHelmReseedApply)
+		body.SetPrune(pedestalHelmReseedPrune)
+		if env := strings.TrimSpace(pedestalHelmReseedEnv); env != "" {
+			body.SetEnv(env)
+		}
+		if dp := strings.TrimSpace(pedestalHelmReseedDataPath); dp != "" {
+			body.SetDataPath(dp)
 		}
 		path := consts.APIPathPedestalHelmReseed(pedestalHelmVersionID)
 		if flagDryRun {
@@ -295,75 +275,83 @@ Idempotent: a re-run with no upstream change yields zero applied actions.`,
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
 				output.PrintJSON(plan)
 			} else {
-				output.PrintInfo(fmt.Sprintf("Dry run: POST %s apply=%v prune=%v", path, body.Apply, body.Prune))
+				output.PrintInfo(fmt.Sprintf("Dry run: POST %s apply=%v prune=%v", path, body.GetApply(), body.GetPrune()))
 			}
 			return nil
 		}
-		c := newClient()
-		var resp client.APIResponse[pedestalHelmReseedResp]
-		if err := c.Post(path, body, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.PedestalAPI.ReseedPedestalHelmConfig(ctx, int32(pedestalHelmVersionID)).
+			PedestalReseedHelmConfigReq(body).
+			Execute()
+		if err != nil {
 			return fmt.Errorf("reseed: %w (hint: retry without --apply to diff without writing; check backend logs for which subsystem failed)", err)
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
 			output.PrintJSON(resp.Data)
 			return nil
 		}
-		printPedestalHelmReseedReport(&resp.Data)
+		printPedestalHelmReseedReport(resp.Data)
 		return nil
 	},
 }
 
-func printPedestalHelmReseedReport(r *pedestalHelmReseedResp) {
+func printPedestalHelmReseedReport(r *apiclient.PedestalReseedHelmConfigResp) {
+	if r == nil {
+		return
+	}
 	mode := "APPLY"
-	if r.DryRun {
+	if r.GetDryRun() {
 		mode = "DRY-RUN"
 	}
 	suffix := ""
-	if r.SystemFilter != "" {
-		suffix = " filter=" + r.SystemFilter
+	if sf := r.GetSystemFilter(); sf != "" {
+		suffix = " filter=" + sf
 	}
-	output.PrintInfo(fmt.Sprintf("pedestal helm reseed %s (seed=%s%s)", mode, r.SeedPath, suffix))
+	output.PrintInfo(fmt.Sprintf("pedestal helm reseed %s (seed=%s%s)", mode, r.GetSeedPath(), suffix))
 
-	if len(r.Actions) == 0 {
+	actions := r.GetActions()
+	if len(actions) == 0 {
 		output.PrintInfo("No drift — DB already in sync with data.yaml for this container_version.")
 		return
 	}
 
-	actions := append([]pedestalHelmReseedAction(nil), r.Actions...)
-	sort.SliceStable(actions, func(i, j int) bool {
-		if actions[i].Layer != actions[j].Layer {
-			return actions[i].Layer < actions[j].Layer
+	sorted := append([]apiclient.PedestalReseedActionResp(nil), actions...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].GetLayer() != sorted[j].GetLayer() {
+			return sorted[i].GetLayer() < sorted[j].GetLayer()
 		}
-		return actions[i].Key < actions[j].Key
+		return sorted[i].GetKey() < sorted[j].GetKey()
 	})
 
-	rows := make([][]string, 0, len(actions))
-	for _, a := range actions {
+	rows := make([][]string, 0, len(sorted))
+	for _, a := range sorted {
+		note := a.GetNote()
 		status := "plan"
-		if a.Applied {
+		if a.GetApplied() {
 			status = "applied"
-		} else if r.DryRun {
+		} else if r.GetDryRun() {
 			status = "would-apply"
-		} else if strings.Contains(a.Note, "preserved") || strings.Contains(a.Note, "drift on existing parameter_config") {
+		} else if strings.Contains(note, "preserved") || strings.Contains(note, "drift on existing parameter_config") {
 			status = "preserved"
 		}
 		rows = append(rows, []string{
-			a.Layer,
-			truncCell(a.Key, 48),
-			truncCell(a.OldValue, 28),
-			truncCell(a.NewValue, 28),
+			a.GetLayer(),
+			truncCell(a.GetKey(), 48),
+			truncCell(a.GetOldValue(), 28),
+			truncCell(a.GetNewValue(), 28),
 			status,
-			truncCell(a.Note, 48),
+			truncCell(note, 48),
 		})
 	}
 	output.PrintTable([]string{"Layer", "Key", "Old", "New", "Status", "Note"}, rows)
 
-	if r.DryRun {
+	if r.GetDryRun() {
 		output.PrintInfo("Re-run with --apply to write the planned changes.")
 	}
 	preserved := 0
-	for _, a := range actions {
-		if !a.Applied && (strings.Contains(a.Note, "preserved") || strings.Contains(a.Note, "drift on existing parameter_config")) {
+	for _, a := range sorted {
+		note := a.GetNote()
+		if !a.GetApplied() && (strings.Contains(note, "preserved") || strings.Contains(note, "drift on existing parameter_config")) {
 			preserved++
 		}
 	}

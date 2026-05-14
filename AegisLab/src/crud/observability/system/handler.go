@@ -29,7 +29,7 @@ func NewHandler(service HandlerService) *Handler {
 //	@Produce		json
 //	@Success		200	{object}	dto.GenericResponse[HealthCheckResp]	"Health check successful"
 //	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
-//	@Router			/system/health [get]
+//	@Router			/api/v2/system/health [get]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) GetHealth(c *gin.Context) {
 	resp, err := h.service.GetHealth(c.Request.Context())
@@ -55,7 +55,7 @@ func (h *Handler) GetHealth(c *gin.Context) {
 //	@Failure	401		{object}	dto.GenericResponse[any]					"Authentication required"
 //	@Failure	403		{object}	dto.GenericResponse[any]					"Permission denied"
 //	@Failure	500		{object}	dto.GenericResponse[any]					"Internal server error"
-//	@Router		/system/monitor/metrics [post]
+//	@Router		/api/v2/system/monitor/metrics [post]
 //	@x-api-type	{"admin":"true"}
 func (h *Handler) GetMetrics(c *gin.Context) {
 	var req MonitoringQueryReq
@@ -84,7 +84,7 @@ func (h *Handler) GetMetrics(c *gin.Context) {
 //	@Failure	401	{object}	dto.GenericResponse[any]		"Authentication required"
 //	@Failure	403	{object}	dto.GenericResponse[any]		"Permission denied"
 //	@Failure	500	{object}	dto.GenericResponse[any]		"Internal server error"
-//	@Router		/system/monitor/info [get]
+//	@Router		/api/v2/system/monitor/info [get]
 //	@x-api-type	{"admin":"true"}
 func (h *Handler) GetSystemInfo(c *gin.Context) {
 	c.Header("Deprecation", "true")
@@ -107,7 +107,7 @@ func (h *Handler) GetSystemInfo(c *gin.Context) {
 //	@Failure		401	{object}	dto.GenericResponse[any]					"Authentication required"
 //	@Failure		403	{object}	dto.GenericResponse[any]					"Permission denied"
 //	@Failure		500	{object}	dto.GenericResponse[any]					"Internal Server Error"
-//	@Router			/system/monitor/namespaces/locks [get]
+//	@Router			/api/v2/system/monitor/namespaces/locks [get]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) ListNamespaceLocks(c *gin.Context) {
 	resp, err := h.service.ListNamespaceLocks(c.Request.Context())
@@ -129,7 +129,7 @@ func (h *Handler) ListNamespaceLocks(c *gin.Context) {
 //	@Failure		403	{object}	dto.GenericResponse[any]				"Permission denied"
 //	@Failure		404	{object}	dto.GenericResponse[any]				"No queued tasks found"
 //	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
-//	@Router			/system/monitor/tasks/queue [post]
+//	@Router			/api/v2/system/monitor/tasks/queue [post]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) ListQueuedTasks(c *gin.Context) {
 	resp, err := h.service.ListQueuedTasks(c.Request.Context())
@@ -153,7 +153,7 @@ func (h *Handler) ListQueuedTasks(c *gin.Context) {
 //	@Failure		403	{object}	dto.GenericResponse[any]				"Permission denied"
 //	@Failure		404	{object}	dto.GenericResponse[any]				"Audit log not found"
 //	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
-//	@Router			/system/audit/{id} [get]
+//	@Router			/api/v2/system/audit/{id} [get]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) GetAuditLog(c *gin.Context) {
 	id, ok := parseID(c, "id", "Invalid audit log ID")
@@ -189,7 +189,7 @@ func (h *Handler) GetAuditLog(c *gin.Context) {
 //	@Failure		401			{object}	dto.GenericResponse[any]						"Authentication required"
 //	@Failure		403			{object}	dto.GenericResponse[any]						"Permission denied"
 //	@Failure		500			{object}	dto.GenericResponse[any]						"Internal server error"
-//	@Router			/system/audit [get]
+//	@Router			/api/v2/system/audit [get]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) ListAuditLogs(c *gin.Context) {
 	var req ListAuditLogReq
@@ -224,7 +224,7 @@ func (h *Handler) ListAuditLogs(c *gin.Context) {
 //	@Failure		403			{object}	dto.GenericResponse[any]		"Permission denied"
 //	@Failure		404			{object}	dto.GenericResponse[any]		"Config not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]		"Internal server error"
-//	@Router			/system/configs/{config_id} [get]
+//	@Router			/api/v2/system/configs/{config_id} [get]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) GetConfig(c *gin.Context) {
 	configID, ok := parseID(c, consts.URLPathConfigID, "Invalid config ID")
@@ -258,7 +258,7 @@ func (h *Handler) GetConfig(c *gin.Context) {
 //	@Failure		401			{object}	dto.GenericResponse[any]						"Authentication required"
 //	@Failure		403			{object}	dto.GenericResponse[any]						"Permission denied"
 //	@Failure		500			{object}	dto.GenericResponse[any]						"Internal server error"
-//	@Router			/system/configs [get]
+//	@Router			/api/v2/system/configs [get]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) ListConfigs(c *gin.Context) {
 	var req ListConfigReq
@@ -294,7 +294,7 @@ func (h *Handler) ListConfigs(c *gin.Context) {
 //	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
 //	@Failure		404			{object}	dto.GenericResponse[any]	"Configuration or history not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
-//	@Router			/system/configs/{config_id}/value/rollback [post]
+//	@Router			/api/v2/system/configs/{config_id}/value/rollback [post]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) RollbackConfigValue(c *gin.Context) {
 	userID, exists := middleware.GetCurrentUserID(c)
@@ -338,7 +338,7 @@ func (h *Handler) RollbackConfigValue(c *gin.Context) {
 //	@Failure		403			{object}	dto.GenericResponse[any]		"Permission denied - admin only"
 //	@Failure		404			{object}	dto.GenericResponse[any]		"Configuration or history not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]		"Internal server error"
-//	@Router			/system/configs/{config_id}/metadata/rollback [post]
+//	@Router			/api/v2/system/configs/{config_id}/metadata/rollback [post]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) RollbackConfigMetadata(c *gin.Context) {
 	userID, exists := middleware.GetCurrentUserID(c)
@@ -381,7 +381,7 @@ func (h *Handler) RollbackConfigMetadata(c *gin.Context) {
 //	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
 //	@Failure		404			{object}	dto.GenericResponse[any]	"Configuration not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
-//	@Router			/system/configs/{config_id} [patch]
+//	@Router			/api/v2/system/configs/{config_id} [patch]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) UpdateConfigValue(c *gin.Context) {
 	userID, exists := middleware.GetCurrentUserID(c)
@@ -425,7 +425,7 @@ func (h *Handler) UpdateConfigValue(c *gin.Context) {
 //	@Failure		403			{object}	dto.GenericResponse[any]		"Permission denied - admin only"
 //	@Failure		404			{object}	dto.GenericResponse[any]		"Configuration not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]		"Internal server error"
-//	@Router			/system/configs/{config_id}/metadata [put]
+//	@Router			/api/v2/system/configs/{config_id}/metadata [put]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) UpdateConfigMetadata(c *gin.Context) {
 	userID, exists := middleware.GetCurrentUserID(c)
@@ -472,7 +472,7 @@ func (h *Handler) UpdateConfigMetadata(c *gin.Context) {
 //	@Failure		401			{object}	dto.GenericResponse[any]								"Authentication required"
 //	@Failure		403			{object}	dto.GenericResponse[any]								"Permission denied"
 //	@Failure		500			{object}	dto.GenericResponse[any]								"Internal server error"
-//	@Router			/system/configs/{config_id}/histories [get]
+//	@Router			/api/v2/system/configs/{config_id}/histories [get]
 //	@x-api-type		{"admin":"true"}
 func (h *Handler) ListConfigHistories(c *gin.Context) {
 	configID, ok := parseID(c, consts.URLPathConfigID, "Invalid config ID")

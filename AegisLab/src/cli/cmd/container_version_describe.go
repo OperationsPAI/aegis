@@ -8,9 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"aegis/cli/client"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -32,13 +30,13 @@ type helmConfigDescribe struct {
 }
 
 type containerVersionDescribe struct {
-	ID         int                 `json:"id" yaml:"id"`
-	Name       string              `json:"name" yaml:"name"`
-	ImageRef   string              `json:"image_ref" yaml:"image_ref"`
-	Usage      int                 `json:"usage" yaml:"usage"`
-	UpdatedAt  string              `json:"updated_at" yaml:"updated_at"`
-	GithubLink string              `json:"github_link" yaml:"github_link"`
-	Command    string              `json:"command" yaml:"command"`
+	ID         int    `json:"id" yaml:"id"`
+	Name       string `json:"name" yaml:"name"`
+	ImageRef   string `json:"image_ref" yaml:"image_ref"`
+	Usage      int    `json:"usage" yaml:"usage"`
+	UpdatedAt  string `json:"updated_at" yaml:"updated_at"`
+	GithubLink string `json:"github_link" yaml:"github_link"`
+	Command    string `json:"command" yaml:"command"`
 	// EnvVars in the backend response is serialized as a JSON-encoded string
 	// (see ContainerVersionDetailResp.EnvVars). We accept either a string or a
 	// structured array and always render it as a structured array to callers.
@@ -70,33 +68,59 @@ a pedestal points at a particular chart/image.`,
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		c := newClient()
-		r := client.NewResolver(c)
-
+		r := newResolver()
 		cid, cname, err := r.ContainerIDOrName(args[0])
 		if err != nil {
 			return notFoundErrorf("container %q not found: %v", args[0], err)
 		}
 
+		cli, ctx := newAPIClient()
+
 		// Fetch container detail to resolve version name-or-id and pick up
 		// status (not returned by the version detail endpoint).
-		var ctrResp client.APIResponse[containerDetail]
-		if err := c.Get(consts.APIPathContainer(cid), &ctrResp); err != nil {
+		ctrResp, _, err := cli.ContainersAPI.GetContainerById(ctx, int32(cid)).Execute()
+		if err != nil {
 			return fmt.Errorf("failed to fetch container detail: %w", err)
 		}
-		vid, err := resolveContainerVersionID(ctrResp.Data.Versions, args[1])
+		ctrData := ctrResp.GetData()
+		versions := apiVersionsToLocal(ctrData.GetVersions())
+		vid, err := resolveContainerVersionID(versions, args[1])
 		if err != nil {
 			return notFoundErrorf("container version %q not found on container %q: %v", args[1], cname, err)
 		}
 
-		var vResp client.APIResponse[containerVersionDescribe]
-		if err := c.Get(consts.APIPathContainerVersion(cid, vid), &vResp); err != nil {
+		vResp, _, err := cli.ContainersAPI.GetContainerVersionById(ctx, int32(cid), int32(vid)).Execute()
+		if err != nil {
 			return fmt.Errorf("failed to fetch container version: %w", err)
 		}
+		v := vResp.GetData()
 
-		desc := vResp.Data
-		desc.ContainerName = cname
-		desc.Status = ctrResp.Data.Status
+		desc := containerVersionDescribe{
+			ID:            int(v.GetId()),
+			Name:          v.GetName(),
+			ImageRef:      v.GetImageRef(),
+			Usage:         int(v.GetUsage()),
+			UpdatedAt:     v.GetUpdatedAt(),
+			GithubLink:    v.GetGithubLink(),
+			Command:       v.GetCommand(),
+			ContainerName: cname,
+			Status:        ctrData.GetStatus(),
+		}
+		if ev := v.GetEnvVars(); ev != "" {
+			desc.EnvVars = json.RawMessage(strconv.Quote(ev))
+		}
+		if hc := v.HelmConfig; hc != nil {
+			desc.HelmConfig = &helmConfigDescribe{
+				ID:        int(hc.GetId()),
+				Version:   hc.GetVersion(),
+				ChartName: hc.GetChartName(),
+				RepoName:  hc.GetRepoName(),
+				RepoURL:   hc.GetRepoUrl(),
+				LocalPath: hc.GetLocalPath(),
+				ValueFile: hc.GetValueFile(),
+				Values:    hc.GetValues(),
+			}
+		}
 		desc.EnvVarsParsed = parseEnvVars(desc.EnvVars)
 
 		return renderContainerVersionDescribe(os.Stdout, &desc, containerVersionDescribeFormat)

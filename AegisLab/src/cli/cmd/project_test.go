@@ -46,14 +46,17 @@ func projectTestServer(t *testing.T, writes *[]string) *httptest.Server {
 		}
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/projects":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(listResp)
 		case r.Method == http.MethodGet:
 			if body, ok := byID[r.URL.Path]; ok {
+				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(body)
 				return
 			}
 			w.WriteHeader(http.StatusNotFound)
 		default:
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"code": 200, "message": "success", "data": map[string]any{}})
 		}
 	}))
@@ -141,6 +144,7 @@ func TestProjectUpdateDryRun(t *testing.T) {
 		}
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/projects":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code": 200, "message": "success",
 				"data": map[string]any{
@@ -151,6 +155,7 @@ func TestProjectUpdateDryRun(t *testing.T) {
 				},
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/projects/42":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code": 200, "message": "success",
 				"data": map[string]any{
@@ -158,6 +163,7 @@ func TestProjectUpdateDryRun(t *testing.T) {
 				},
 			})
 		default:
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"code": 200, "message": "success", "data": map[string]any{}})
 		}
 	}))

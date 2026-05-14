@@ -71,10 +71,13 @@ func containerVersionDescribeServer(t *testing.T, withHelm bool) *httptest.Serve
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/containers":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(listResp)
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/containers/42":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(detailResp)
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/containers/42/versions/99":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(versionResp)
 		default:
 			w.WriteHeader(http.StatusNotFound)

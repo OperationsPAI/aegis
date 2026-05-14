@@ -5,9 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"aegis/cli/client"
+	"aegis/cli/apiclient"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -30,52 +29,31 @@ COMMANDS:
   aegisctl rate-limiter gc`,
 }
 
-type rlHolder struct {
-	TaskID     string `json:"task_id"`
-	TaskState  string `json:"task_state"`
-	IsTerminal bool   `json:"is_terminal"`
-}
-
-type rlItem struct {
-	Bucket   string     `json:"bucket"`
-	Key      string     `json:"key"`
-	Capacity int        `json:"capacity"`
-	Held     int        `json:"held"`
-	Holders  []rlHolder `json:"holders"`
-}
-
-type rlListResp struct {
-	Items []rlItem `json:"items"`
-}
-
-type rlGCResp struct {
-	Released       int `json:"released"`
-	TouchedBuckets int `json:"touched_buckets"`
-}
-
 var rateLimiterStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "List token-bucket rate limiters, their holders, and DB state",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		var resp client.APIResponse[rlListResp]
-		if err := c.Get(consts.APIPathRateLimiters, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.RateLimitersAPI.ListRateLimiters(ctx).Execute()
+		if err != nil {
 			return err
 		}
+		data := resp.GetData()
+		items := data.GetItems()
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(data)
 			return nil
 		}
 		color := output.IsStdoutColor()
 		headers := []string{"BUCKET", "HELD/CAP", "HOLDERS"}
 		var rows [][]string
-		for _, item := range resp.Data.Items {
+		for _, item := range items {
 			var parts []string
-			for _, h := range item.Holders {
-				s := fmt.Sprintf("%s[%s]", h.TaskID, h.TaskState)
-				if h.IsTerminal && color {
+			for _, h := range item.GetHolders() {
+				s := fmt.Sprintf("%s[%s]", h.GetTaskId(), h.GetTaskState())
+				if h.GetIsTerminal() && color {
 					s = output.ColorRed(os.Stdout, s+" (LEAKED)")
-				} else if h.IsTerminal {
+				} else if h.GetIsTerminal() {
 					s = s + " (LEAKED)"
 				}
 				parts = append(parts, s)
@@ -85,7 +63,7 @@ var rateLimiterStatusCmd = &cobra.Command{
 				holders = "-"
 			}
 			rows = append(rows, []string{
-				item.Bucket, fmt.Sprintf("%d/%d", item.Held, item.Capacity), holders,
+				item.GetBucket(), fmt.Sprintf("%d/%d", item.GetHeld(), item.GetCapacity()), holders,
 			})
 		}
 		output.PrintTable(headers, rows)
@@ -109,9 +87,8 @@ var rateLimiterResetCmd = &cobra.Command{
 		if !rlResetForce {
 			return fmt.Errorf("refusing to reset bucket %q without --force", rlResetBucket)
 		}
-		c := newClient()
-		var resp client.APIResponse[any]
-		if err := c.Delete(consts.APIPathRateLimiters+"/"+rlResetBucket, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		if _, _, err := cli.RateLimitersAPI.ResetRateLimiter(ctx, rlResetBucket).Execute(); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("bucket %q reset", rlResetBucket))
@@ -123,17 +100,19 @@ var rateLimiterGCCmd = &cobra.Command{
 	Use:   "gc",
 	Short: "Release tokens held by terminal-state tasks across all buckets",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
+		cli, ctx := newAPIClient()
 		doMutation := rlGCForce && !flagDryRun
 
-		var listResp client.APIResponse[rlListResp]
-		if err := c.Get(consts.APIPathRateLimiters, &listResp); err != nil {
+		listResp, _, err := cli.RateLimitersAPI.ListRateLimiters(ctx).Execute()
+		if err != nil {
 			return err
 		}
-		leaked := leakedRateLimiterBuckets(listResp.Data.Items)
+		listData := listResp.GetData()
+		items := listData.GetItems()
+		leaked := leakedRateLimiterBuckets(items)
 		if len(leaked) == 0 && !doMutation {
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
-				output.PrintJSON(map[string]any{"dry_run": true, "items": []rlItem{}, "count": 0})
+				output.PrintJSON(map[string]any{"dry_run": true, "items": []apiclient.RatelimiterRateLimiterItem{}, "count": 0})
 				return nil
 			}
 			output.PrintInfo("No terminal-state buckets to clean")
@@ -154,27 +133,28 @@ var rateLimiterGCCmd = &cobra.Command{
 			return nil
 		}
 
-		var resp client.APIResponse[rlGCResp]
-		if err := c.Post(consts.APIPathRateLimitersGC, nil, &resp); err != nil {
+		gcResp, _, err := cli.RateLimitersAPI.GcRateLimiters(ctx).Execute()
+		if err != nil {
 			return err
 		}
+		gcData := gcResp.GetData()
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(gcData)
 			return nil
 		}
 		output.PrintInfo(fmt.Sprintf("released %d leaked tokens from %d buckets",
-			resp.Data.Released, resp.Data.TouchedBuckets))
+			gcData.GetReleased(), gcData.GetTouchedBuckets()))
 		return nil
 	},
 }
 
-func leakedRateLimiterBuckets(items []rlItem) []rlItem {
-	out := make([]rlItem, 0, len(items))
+func leakedRateLimiterBuckets(items []apiclient.RatelimiterRateLimiterItem) []apiclient.RatelimiterRateLimiterItem {
+	out := make([]apiclient.RatelimiterRateLimiterItem, 0, len(items))
 	for _, item := range items {
-		leakedHolders := make([]rlHolder, 0, len(item.Holders))
-		for _, holder := range item.Holders {
-			if holder.IsTerminal {
+		leakedHolders := make([]apiclient.RatelimiterRateLimiterHolder, 0, len(item.GetHolders()))
+		for _, holder := range item.GetHolders() {
+			if holder.GetIsTerminal() {
 				leakedHolders = append(leakedHolders, holder)
 			}
 		}
@@ -188,7 +168,7 @@ func leakedRateLimiterBuckets(items []rlItem) []rlItem {
 	return out
 }
 
-func printRateLimiterGCPlan(leaks []rlItem) {
+func printRateLimiterGCPlan(leaks []apiclient.RatelimiterRateLimiterItem) {
 	if len(leaks) == 0 {
 		fmt.Println("No terminal-state buckets to clean")
 		output.PrintInfo("Use --force to execute cleanup")
@@ -199,13 +179,13 @@ func printRateLimiterGCPlan(leaks []rlItem) {
 	headers := []string{"BUCKET", "HELD/CAP", "TERMINAL HOLDERS"}
 	rows := make([][]string, 0, len(leaks))
 	for _, item := range leaks {
-		holders := make([]string, 0, len(item.Holders))
-		for _, holder := range item.Holders {
-			holders = append(holders, fmt.Sprintf("%s[%s]", holder.TaskID, holder.TaskState))
+		holders := make([]string, 0, len(item.GetHolders()))
+		for _, holder := range item.GetHolders() {
+			holders = append(holders, fmt.Sprintf("%s[%s]", holder.GetTaskId(), holder.GetTaskState()))
 		}
 		rows = append(rows, []string{
-			item.Bucket,
-			fmt.Sprintf("%d/%d", item.Held, item.Capacity),
+			item.GetBucket(),
+			fmt.Sprintf("%d/%d", item.GetHeld(), item.GetCapacity()),
 			strings.Join(holders, ", "),
 		})
 	}

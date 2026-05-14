@@ -359,12 +359,14 @@ func TestIntegrationServerAndDecodeErrorsEmitJSONStructuredOutput(t *testing.T) 
 		switch r.URL.Path {
 		case "/api/v2/projects":
 			if r.URL.Query().Get("page") == "2" {
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 				// Payload is intentionally schema-incompatible for
 				// PaginatedData[projectListItem] (id must be int).
 				_, _ = w.Write([]byte(`{"code":0,"message":"ok","data":{"items":[{"id":"bad-id","name":"broken","description":"","status":"active","created_at":"2026-01-01"}],"pagination":{"page":2,"size":20,"total":1,"total_pages":1}}}`))
 				return
 			}
+			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("X-Request-Id", "req-server-fail")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(`{"code":500,"message":"An unexpected error occurred","request_id":"should-not-be-in-json"}`))

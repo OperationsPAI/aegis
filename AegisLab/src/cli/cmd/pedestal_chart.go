@@ -3,16 +3,13 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"aegis/cli/client"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -357,53 +354,63 @@ func resolveChartSource(systemCode, tgz, repo, chartName, chartVersion, apiQuery
 	if err := requireAPIContext(true); err != nil {
 		return chartSource{}, err
 	}
-	c := newClient()
-	var resp client.APIResponse[chartLookupResp]
+	cli, ctx := newAPIClient()
+	req := cli.SystemsAPI.GetChaosSystemChartByName(ctx, systemCode)
 	// Pass apiQueryVersion through as a query string so the backend can
 	// return the helm_config_values for that specific container_version
 	// (issue #190 / #372). Empty value preserves the old "latest semver"
 	// behaviour.
-	chartPath := consts.APIPathSystemByNameChart(systemCode)
 	if apiQueryVersion != "" {
-		chartPath = fmt.Sprintf("%s?version=%s", chartPath, url.QueryEscape(apiQueryVersion))
+		req = req.Version(apiQueryVersion)
 	}
-	if err := c.Get(chartPath, &resp); err != nil {
+	resp, _, err := req.Execute()
+	if err != nil {
 		return chartSource{}, fmt.Errorf("lookup chart for system %q: %w (hint: pass --tgz or --repo/--chart explicitly)", systemCode, err)
 	}
+	if resp.Data == nil {
+		return chartSource{}, notFoundErrorf("system %q has no installable chart source (empty backend response)", systemCode)
+	}
+	d := resp.Data
 	backendVersion := chartVersion
 	if backendVersion == "" {
-		backendVersion = resp.Data.Version
+		backendVersion = d.GetVersion()
 	}
+	localPath := d.GetLocalPath()
+	repoURL := d.GetRepoUrl()
+	chartNameLookup := d.GetChartName()
+	values := d.GetValues()
+	valueFile := d.GetValueFile()
+	pedestalTag := d.GetPedestalTag()
 	// Local path wins over repo lookup when the file is actually present —
 	// this is the air-gapped / pre-staged case.
-	if resp.Data.LocalPath != "" {
-		if _, err := os.Stat(resp.Data.LocalPath); err == nil {
+	if localPath != "" {
+		if _, err := os.Stat(localPath); err == nil {
 			return chartSource{
-				positional:  resp.Data.LocalPath,
+				positional:  localPath,
 				version:     backendVersion,
-				valuesFile:  resp.Data.ValueFile,
-				values:      resp.Data.Values,
-				pedestalTag: resp.Data.PedestalTag,
+				valuesFile:  valueFile,
+				values:      values,
+				pedestalTag: pedestalTag,
 			}, nil
 		}
 	}
-	if resp.Data.RepoURL != "" && resp.Data.ChartName != "" {
-		if strings.HasPrefix(resp.Data.RepoURL, "oci://") {
+	if repoURL != "" && chartNameLookup != "" {
+		if strings.HasPrefix(repoURL, "oci://") {
 			return chartSource{
-				positional:  buildOCIRef(resp.Data.RepoURL, resp.Data.ChartName),
+				positional:  buildOCIRef(repoURL, chartNameLookup),
 				version:     backendVersion,
-				valuesFile:  resp.Data.ValueFile,
-				values:      resp.Data.Values,
-				pedestalTag: resp.Data.PedestalTag,
+				valuesFile:  valueFile,
+				values:      values,
+				pedestalTag: pedestalTag,
 			}, nil
 		}
 		return chartSource{
-			positional:  resp.Data.ChartName,
-			repo:        resp.Data.RepoURL,
+			positional:  chartNameLookup,
+			repo:        repoURL,
 			version:     backendVersion,
-			valuesFile:  resp.Data.ValueFile,
-			values:      resp.Data.Values,
-			pedestalTag: resp.Data.PedestalTag,
+			valuesFile:  valueFile,
+			values:      values,
+			pedestalTag: pedestalTag,
 		}, nil
 	}
 	return chartSource{}, notFoundErrorf("system %q has no installable chart source (no local_path, no repo_url); pass --tgz or --repo/--chart", systemCode)
@@ -569,21 +576,21 @@ type chartLookupResp struct {
 // system's ns_pattern to a concrete namespace using the same regex->template
 // logic as the backend's convertPatternToTemplate.
 func deriveNamespaceFromSystem(systemCode string) (string, error) {
-	c := newClient()
-	type systemItem struct {
-		Name      string `json:"name"`
-		NsPattern string `json:"ns_pattern"`
-	}
-	var resp client.APIResponse[client.PaginatedData[systemItem]]
-	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(1).Size(100).Execute()
+	if err != nil {
 		return "", fmt.Errorf("list systems: %w", err)
 	}
-	for _, s := range resp.Data.Items {
-		if s.Name == systemCode {
-			ns := nsPatternToNamespace(s.NsPattern, 0)
+	if resp.Data == nil {
+		return "", notFoundErrorf("system %q not found via /api/v2/systems; pass --namespace explicitly", systemCode)
+	}
+	for _, s := range resp.Data.GetItems() {
+		if s.GetName() == systemCode {
+			pattern := s.GetNsPattern()
+			ns := nsPatternToNamespace(pattern, 0)
 			if ns == "" {
 				return "", fmt.Errorf("cannot derive namespace from ns_pattern %q for system %q; pass --namespace explicitly",
-					s.NsPattern, systemCode)
+					pattern, systemCode)
 			}
 			return ns, nil
 		}

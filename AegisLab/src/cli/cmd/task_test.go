@@ -56,6 +56,7 @@ func TestTaskListJSONEnvelope(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"code":    200,
 			"message": "success",

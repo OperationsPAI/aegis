@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
 	"aegis/platform/consts"
@@ -663,33 +664,68 @@ func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedCon
 		return nil, err
 	}
 
-	envelope := map[string]any{
-		"pedestal": map[string]any{
-			"name":    opts.PedestalName,
-			"version": opts.PedestalTag,
-		},
-		"benchmark": map[string]any{
-			"name":    opts.BenchmarkName,
-			"version": opts.BenchmarkTag,
-		},
-		"specs": [][]guidedcli.GuidedConfig{cfgs},
-	}
-	if guidedSkipRestartPedestal {
-		envelope["skip_restart_pedestal"] = true
-	}
-	if guidedAutoAllocate {
-		envelope["auto_allocate"] = true
-	}
-	if guidedAllowBootstrap {
-		envelope["allow_bootstrap"] = true
-	}
-
-	c := newClient()
-	var resp client.APIResponse[injectSubmitResponse]
-	if err := c.Post(consts.APIPathProjectInjectionsInject(pid), envelope, &resp); err != nil {
+	specs, err := guidedConfigsToSpecs(cfgs)
+	if err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	pedestal := apiclient.DtoContainerSpec{}
+	pedestal.SetName(opts.PedestalName)
+	pedestal.SetVersion(opts.PedestalTag)
+	benchmark := apiclient.DtoContainerSpec{}
+	benchmark.SetName(opts.BenchmarkName)
+	benchmark.SetVersion(opts.BenchmarkTag)
+	body := *apiclient.NewInjectionSubmitInjectionReq(benchmark, pedestal, [][]apiclient.InjectionGuidedSpec{specs})
+	if guidedSkipRestartPedestal {
+		body.SetSkipRestartPedestal(true)
+	}
+	if guidedAutoAllocate {
+		body.SetAutoAllocate(true)
+	}
+	if guidedAllowBootstrap {
+		body.SetAllowBootstrap(true)
+	}
+
+	cli, ctx := newAPIClient()
+	typedResp, _, err := cli.ProjectsAPI.SubmitProjectFaultInjection(ctx, int32(pid)).
+		InjectionSubmitInjectionReq(body).
+		Execute()
+	if err != nil {
+		return nil, err
+	}
+
+	// The local injectSubmitResponse is shared with regression.go (out of
+	// scope), so convert the typed response back to it via JSON round-trip
+	// rather than churning the shared type.
+	resp := &client.APIResponse[injectSubmitResponse]{}
+	if typedResp != nil && typedResp.Data != nil {
+		raw, mErr := json.Marshal(typedResp.Data)
+		if mErr != nil {
+			return nil, fmt.Errorf("marshal submit response: %w", mErr)
+		}
+		if uErr := json.Unmarshal(raw, &resp.Data); uErr != nil {
+			return nil, fmt.Errorf("decode submit response: %w", uErr)
+		}
+	}
+	return resp, nil
+}
+
+// guidedConfigsToSpecs converts pkg/guidedcli.GuidedConfig values into the
+// generated apiclient.InjectionGuidedSpec via JSON round-trip; the JSON tags
+// match field-for-field on both sides (verified by the backend round-trip).
+func guidedConfigsToSpecs(cfgs []guidedcli.GuidedConfig) ([]apiclient.InjectionGuidedSpec, error) {
+	out := make([]apiclient.InjectionGuidedSpec, 0, len(cfgs))
+	for i := range cfgs {
+		raw, err := json.Marshal(cfgs[i])
+		if err != nil {
+			return nil, fmt.Errorf("marshal guided config %d: %w", i, err)
+		}
+		var spec apiclient.InjectionGuidedSpec
+		if err := json.Unmarshal(raw, &spec); err != nil {
+			return nil, fmt.Errorf("decode guided config %d: %w", i, err)
+		}
+		out = append(out, spec)
+	}
+	return out, nil
 }
 
 func resolveProjectIDForApply(projectName string) (int, error) {

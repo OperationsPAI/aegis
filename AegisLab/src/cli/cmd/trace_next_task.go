@@ -7,9 +7,8 @@ import (
 	"os"
 	"sort"
 
-	"aegis/cli/client"
+	"aegis/cli/apiclient"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -23,15 +22,13 @@ var (
 )
 
 // traceTask is the minimum shape we need from a task entry in the
-// `GET /api/v2/traces/{id}` response to pick the next pending one. Decoded via
-// encoding/json from the generic map[string]any payload the aegisctl client
-// uses for trace-get.
+// `GET /api/v2/traces/{id}` response to pick the next pending one.
 type traceTask struct {
-	ID          string  `json:"id"`
-	Type        string  `json:"type"`
-	State       string  `json:"state"`
-	ExecuteTime float64 `json:"execute_time"`
-	CreatedAt   string  `json:"created_at"`
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	State       string `json:"state"`
+	ExecuteTime int32  `json:"execute_time"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // resolveNextPendingTask fetches a trace by ID and returns the next task with
@@ -40,32 +37,20 @@ type traceTask struct {
 // off the delayed/ready queues. Returns a notFoundErrorf-wrapped error (exit
 // code 7) when no pending task exists so scripts can branch on it.
 func resolveNextPendingTask(traceID string) (*traceTask, error) {
-	c := newClient()
-	path := consts.APIPathTrace(traceID)
-
-	var resp client.APIResponse[map[string]any]
-	if err := c.Get(path, &resp); err != nil {
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.TracesAPI.GetTraceById(ctx, traceID).Execute()
+	if err != nil {
 		return nil, err
 	}
-
-	tasksRaw, ok := resp.Data["tasks"]
-	if !ok || tasksRaw == nil {
+	d := resp.GetData()
+	tasks := d.GetTasks()
+	if len(tasks) == 0 {
 		return nil, notFoundErrorf("trace %s has no tasks", traceID)
 	}
 
-	// Re-marshal through JSON to get a typed slice.
-	data, err := json.Marshal(tasksRaw)
-	if err != nil {
-		return nil, fmt.Errorf("parse tasks field: %w", err)
-	}
-	var tasks []traceTask
-	if err := json.Unmarshal(data, &tasks); err != nil {
-		return nil, fmt.Errorf("decode tasks field: %w", err)
-	}
-
-	pending := make([]traceTask, 0, len(tasks))
+	pending := make([]apiclient.DtoTaskResp, 0, len(tasks))
 	for _, t := range tasks {
-		if t.State == "Pending" {
+		if t.GetState() == "Pending" {
 			pending = append(pending, t)
 		}
 	}
@@ -74,14 +59,20 @@ func resolveNextPendingTask(traceID string) (*traceTask, error) {
 	}
 
 	sort.SliceStable(pending, func(i, j int) bool {
-		if pending[i].ExecuteTime != pending[j].ExecuteTime {
-			return pending[i].ExecuteTime < pending[j].ExecuteTime
+		if pending[i].GetExecuteTime() != pending[j].GetExecuteTime() {
+			return pending[i].GetExecuteTime() < pending[j].GetExecuteTime()
 		}
-		return pending[i].CreatedAt < pending[j].CreatedAt
+		return pending[i].GetCreatedAt() < pending[j].GetCreatedAt()
 	})
 
 	t := pending[0]
-	return &t, nil
+	return &traceTask{
+		ID:          t.GetId(),
+		Type:        t.GetType(),
+		State:       t.GetState(),
+		ExecuteTime: t.GetExecuteTime(),
+		CreatedAt:   t.GetCreatedAt(),
+	}, nil
 }
 
 // --- trace next-task ---
@@ -109,14 +100,11 @@ Exits with ExitCodeNotFound (7) when the trace has no pending task.`,
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			// For --output json, emit the whole task struct on stdout so
-			// callers get id/type/state in one shot.
 			enc := json.NewEncoder(traceNextTaskStdout)
 			enc.SetIndent("", "  ")
 			return enc.Encode(task)
 		}
 
-		// Scriptable path: task id alone on stdout, info to stderr.
 		fmt.Fprintln(traceNextTaskStdout, task.ID)
 		fmt.Fprintf(traceNextTaskStderr, "next pending task: id=%s type=%s\n", task.ID, task.Type)
 		return nil
@@ -145,11 +133,9 @@ task.`,
 			return err
 		}
 
-		c := newClient()
-		path := consts.APIPathTaskExpedite(task.ID)
-
-		var resp client.APIResponse[map[string]any]
-		if err := c.Post(path, nil, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.TasksAPI.ExpediteTask(ctx, task.ID).Execute()
+		if err != nil {
 			return err
 		}
 
@@ -158,7 +144,7 @@ task.`,
 				"trace_id": args[0],
 				"task_id":  task.ID,
 				"type":     task.Type,
-				"response": resp.Data,
+				"response": resp.GetData(),
 			})
 			return nil
 		}

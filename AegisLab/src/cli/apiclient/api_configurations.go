@@ -173,7 +173,7 @@ func (a *ConfigurationsAPIService) GetConfigByIdExecute(r ApiGetConfigByIdReques
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/system/configs/{config_id}"
+	localVarPath := localBasePath + "/api/v2/system/configs/{config_id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"config_id"+"}", url.PathEscape(parameterValueToString(r.configId, "configId")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -359,7 +359,7 @@ func (a *ConfigurationsAPIService) ListConfigHistoriesExecute(r ApiListConfigHis
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/system/configs/{config_id}/histories"
+	localVarPath := localBasePath + "/api/v2/system/configs/{config_id}/histories"
 	localVarPath = strings.Replace(localVarPath, "{"+"config_id"+"}", url.PathEscape(parameterValueToString(r.configId, "configId")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -571,7 +571,7 @@ func (a *ConfigurationsAPIService) ListConfigsExecute(r ApiListConfigsRequest) (
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/system/configs"
+	localVarPath := localBasePath + "/api/v2/system/configs"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -762,7 +762,7 @@ func (a *ConfigurationsAPIService) RollbackConfigMetadataExecute(r ApiRollbackCo
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/system/configs/{config_id}/metadata/rollback"
+	localVarPath := localBasePath + "/api/v2/system/configs/{config_id}/metadata/rollback"
 	localVarPath = strings.Replace(localVarPath, "{"+"config_id"+"}", url.PathEscape(parameterValueToString(r.configId, "configId")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -946,7 +946,7 @@ func (a *ConfigurationsAPIService) RollbackConfigValueExecute(r ApiRollbackConfi
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/system/configs/{config_id}/value/rollback"
+	localVarPath := localBasePath + "/api/v2/system/configs/{config_id}/value/rollback"
 	localVarPath = strings.Replace(localVarPath, "{"+"config_id"+"}", url.PathEscape(parameterValueToString(r.configId, "configId")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1119,7 +1119,7 @@ func (a *ConfigurationsAPIService) UpdateConfigMetadataExecute(r ApiUpdateConfig
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/system/configs/{config_id}/metadata"
+	localVarPath := localBasePath + "/api/v2/system/configs/{config_id}/metadata"
 	localVarPath = strings.Replace(localVarPath, "{"+"config_id"+"}", url.PathEscape(parameterValueToString(r.configId, "configId")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1303,7 +1303,7 @@ func (a *ConfigurationsAPIService) UpdateConfigValueExecute(r ApiUpdateConfigVal
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/system/configs/{config_id}"
+	localVarPath := localBasePath + "/api/v2/system/configs/{config_id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"config_id"+"}", url.PathEscape(parameterValueToString(r.configId, "configId")), -1)
 
 	localVarHeaderParams := make(map[string]string)

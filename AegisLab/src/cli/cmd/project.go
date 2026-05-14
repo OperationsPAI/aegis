@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -43,6 +43,21 @@ func newResolver() *client.Resolver {
 	return client.NewResolver(newClient())
 }
 
+// stringFromAP fishes a string field out of a generated DTO's
+// AdditionalProperties map. Used because some backend response fields
+// (e.g. project.description) aren't surfaced in the swag-annotated
+// response DTO and only land in AdditionalProperties at decode time.
+func stringFromAP(m map[string]interface{}, key string) string {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
 var projectCmd = &cobra.Command{
 	Use:     "project",
 	Aliases: []string{"proj"},
@@ -58,27 +73,40 @@ var projectListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List projects",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		path := fmt.Sprintf("%s?page=%d&size=%d", consts.APIPathProjects, projectListPage, projectListSize)
-
-		var resp client.APIResponse[client.PaginatedData[projectListItem]]
-		if err := c.Get(path, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ProjectsAPI.ListProjects(ctx).
+			Page(int32(projectListPage)).
+			Size(int32(projectListSize)).
+			Execute()
+		if err != nil {
 			return err
+		}
+		data := resp.GetData()
+		raw := data.GetItems()
+		items := make([]projectListItem, 0, len(raw))
+		for _, p := range raw {
+			items = append(items, projectListItem{
+				ID:          int(p.GetId()),
+				Name:        p.GetName(),
+				Description: stringFromAP(p.AdditionalProperties, "description"),
+				Status:      p.GetStatus(),
+				CreatedAt:   p.GetCreatedAt(),
+			})
 		}
 
 		switch output.OutputFormat(flagOutput) {
 		case output.FormatJSON:
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(map[string]any{"items": items, "pagination": data.GetPagination()})
 			return nil
 		case output.FormatNDJSON:
-			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+			if err := output.PrintMetaJSON(data.GetPagination()); err != nil {
 				return err
 			}
-			return output.PrintNDJSON(resp.Data.Items)
+			return output.PrintNDJSON(items)
 		}
 
-		rows := make([][]string, 0, len(resp.Data.Items))
-		for _, p := range resp.Data.Items {
+		rows := make([][]string, 0, len(items))
+		for _, p := range items {
 			rows = append(rows, []string{p.Name, p.Description, p.Status, p.CreatedAt})
 		}
 		output.PrintTable([]string{"Name", "Description", "Status", "Created"}, rows)
@@ -93,30 +121,38 @@ var projectGetCmd = &cobra.Command{
 	Short: "Get project details by name",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		r := client.NewResolver(c)
-
+		r := newResolver()
 		id, err := r.ProjectID(args[0])
 		if err != nil {
 			return err
 		}
 
-		var resp client.APIResponse[projectDetail]
-		if err := c.Get(consts.APIPathProject(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ProjectsAPI.GetProjectById(ctx, int32(id)).Execute()
+		if err != nil {
 			return err
+		}
+		d := resp.GetData()
+		detail := projectDetail{
+			ID:          int(d.GetId()),
+			Name:        d.GetName(),
+			Description: stringFromAP(d.AdditionalProperties, "description"),
+			Status:      d.GetStatus(),
+			CreatedAt:   d.GetCreatedAt(),
+			UpdatedAt:   d.GetUpdatedAt(),
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(detail)
 			return nil
 		}
 
-		fmt.Printf("Name:        %s\n", resp.Data.Name)
-		fmt.Printf("ID:          %d\n", resp.Data.ID)
-		fmt.Printf("Description: %s\n", resp.Data.Description)
-		fmt.Printf("Status:      %s\n", resp.Data.Status)
-		fmt.Printf("Created:     %s\n", resp.Data.CreatedAt)
-		fmt.Printf("Updated:     %s\n", resp.Data.UpdatedAt)
+		fmt.Printf("Name:        %s\n", detail.Name)
+		fmt.Printf("ID:          %d\n", detail.ID)
+		fmt.Printf("Description: %s\n", detail.Description)
+		fmt.Printf("Status:      %s\n", detail.Status)
+		fmt.Printf("Created:     %s\n", detail.CreatedAt)
+		fmt.Printf("Updated:     %s\n", detail.UpdatedAt)
 		return nil
 	},
 }
@@ -134,24 +170,32 @@ var projectCreateCmd = &cobra.Command{
 			return fmt.Errorf("--name is required")
 		}
 
-		c := newClient()
-
-		body := map[string]string{
-			"name":        projectCreateName,
-			"description": projectCreateDesc,
+		req := apiclient.ProjectCreateProjectReq{Name: projectCreateName}
+		if projectCreateDesc != "" {
+			req.SetDescription(projectCreateDesc)
 		}
 
-		var resp client.APIResponse[projectDetail]
-		if err := c.Post(consts.APIPathProjects, body, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ProjectsAPI.CreateProject(ctx).ProjectCreateProjectReq(req).Execute()
+		if err != nil {
 			return err
+		}
+		d := resp.GetData()
+		detail := projectDetail{
+			ID:          int(d.GetId()),
+			Name:        d.GetName(),
+			Description: stringFromAP(d.AdditionalProperties, "description"),
+			Status:      d.GetStatus(),
+			CreatedAt:   d.GetCreatedAt(),
+			UpdatedAt:   d.GetUpdatedAt(),
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(detail)
 			return nil
 		}
 
-		output.PrintInfo(fmt.Sprintf("Project %q created (id: %d)", resp.Data.Name, resp.Data.ID))
+		output.PrintInfo(fmt.Sprintf("Project %q created (id: %d)", detail.Name, detail.ID))
 		return nil
 	},
 }
@@ -163,6 +207,20 @@ var (
 	projectUpdateStatus string
 	projectUpdatePublic string // tri-state: "", "true", "false"
 )
+
+// statusNameToConst maps the human-readable strings the CLI accepts
+// (active/archived for back-compat, and the backend's own enabled/disabled)
+// to the int enum value the typed UpdateProject request requires.
+func statusNameToConst(s string) (apiclient.ConstsStatusType, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "active", "enabled", "1":
+		return apiclient.CONSTSSTATUSTYPE_CommonEnabled, nil
+	case "archived", "disabled", "0":
+		return apiclient.CONSTSSTATUSTYPE_CommonDisabled, nil
+	default:
+		return 0, fmt.Errorf("invalid --status %q (use enabled|disabled or active|archived)", s)
+	}
+}
 
 var projectUpdateCmd = &cobra.Command{
 	Use:   "update <name-or-id>",
@@ -179,36 +237,52 @@ var projectUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		c := newClient()
-		r := client.NewResolver(c)
+		r := newResolver()
 		id, name, err := r.ProjectIDOrName(args[0])
 		if err != nil {
 			return notFoundErrorf("project %q not found: %v", args[0], err)
 		}
 
-		body := map[string]any{}
+		req := apiclient.ProjectUpdateProjectReq{}
 		if descSet {
-			body["description"] = projectUpdateDesc
+			req.SetDescription(projectUpdateDesc)
 		}
 		if statusSet {
-			body["status"] = projectUpdateStatus
+			st, err := statusNameToConst(projectUpdateStatus)
+			if err != nil {
+				return usageErrorf("%v", err)
+			}
+			req.SetStatus(st)
 		}
 		if publicSet {
 			switch strings.ToLower(projectUpdatePublic) {
 			case "true", "1", "yes":
-				body["is_public"] = true
+				req.SetIsPublic(true)
 			case "false", "0", "no":
-				body["is_public"] = false
+				req.SetIsPublic(false)
 			default:
 				return usageErrorf("--is-public must be true or false")
 			}
 		}
 
-		if flagDryRun {
-			var curResp client.APIResponse[projectDetail]
-			_ = c.Get(consts.APIPathProject(id), &curResp)
+		cli, ctx := newAPIClient()
 
-			planned, _ := json.MarshalIndent(body, "", "  ")
+		if flagDryRun {
+			var current projectDetail
+			if curResp, _, err := cli.ProjectsAPI.GetProjectById(ctx, int32(id)).Execute(); err == nil {
+				cd := curResp.GetData()
+				current = projectDetail{
+					ID:          int(cd.GetId()),
+					Name:        cd.GetName(),
+					Description: stringFromAP(cd.AdditionalProperties, "description"),
+					Status:      cd.GetStatus(),
+					CreatedAt:   cd.GetCreatedAt(),
+					UpdatedAt:   cd.GetUpdatedAt(),
+				}
+			}
+
+			plannedMap, _ := req.ToMap()
+			planned, _ := json.MarshalIndent(plannedMap, "", "  ")
 			fmt.Fprintf(os.Stderr, "Dry run — PATCH /api/v2/projects/%d\n%s\n", id, string(planned))
 
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
@@ -216,31 +290,39 @@ var projectUpdateCmd = &cobra.Command{
 					"dry_run":  true,
 					"id":       id,
 					"name":     name,
-					"current":  curResp.Data,
-					"proposed": body,
+					"current":  current,
+					"proposed": plannedMap,
 				})
 			} else {
 				fmt.Printf("Project: %s (id %d)\n", name, id)
 				if descSet {
-					fmt.Printf("  description: %q -> %q\n", curResp.Data.Description, projectUpdateDesc)
+					fmt.Printf("  description: %q -> %q\n", current.Description, projectUpdateDesc)
 				}
 				if statusSet {
-					fmt.Printf("  status:      %q -> %q\n", curResp.Data.Status, projectUpdateStatus)
+					fmt.Printf("  status:      %q -> %q\n", current.Status, projectUpdateStatus)
 				}
 				if publicSet {
-					fmt.Printf("  is_public:   -> %v\n", body["is_public"])
+					fmt.Printf("  is_public:   -> %v\n", plannedMap["is_public"])
 				}
 			}
 			return nil
 		}
 
-		var resp client.APIResponse[projectDetail]
-		if err := c.Patch(consts.APIPathProject(id), body, &resp); err != nil {
+		resp, _, err := cli.ProjectsAPI.UpdateProject(ctx, int32(id)).ProjectUpdateProjectReq(req).Execute()
+		if err != nil {
 			return err
 		}
+		d := resp.GetData()
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(projectDetail{
+				ID:          int(d.GetId()),
+				Name:        d.GetName(),
+				Description: stringFromAP(d.AdditionalProperties, "description"),
+				Status:      d.GetStatus(),
+				CreatedAt:   d.GetCreatedAt(),
+				UpdatedAt:   d.GetUpdatedAt(),
+			})
 			return nil
 		}
 		output.PrintInfo(fmt.Sprintf("Project %q (id %d) updated", name, id))
@@ -260,8 +342,7 @@ var projectDeleteCmd = &cobra.Command{
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		c := newClient()
-		r := client.NewResolver(c)
+		r := newResolver()
 		id, name, err := r.ProjectIDOrName(args[0])
 		if err != nil {
 			return notFoundErrorf("project %q not found: %v", args[0], err)
@@ -281,8 +362,8 @@ var projectDeleteCmd = &cobra.Command{
 			return err
 		}
 
-		var resp client.APIResponse[any]
-		if err := c.Delete(consts.APIPathProject(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		if _, _, err := cli.ProjectsAPI.DeleteProject(ctx, int32(id)).Execute(); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("Project %q (id %d) deleted", name, id))
@@ -300,8 +381,7 @@ var projectResolveCmd = &cobra.Command{
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		c := newClient()
-		r := client.NewResolver(c)
+		r := newResolver()
 		id, name, err := r.ProjectIDOrName(args[0])
 		if err != nil {
 			return notFoundErrorf("project %q not found", args[0])

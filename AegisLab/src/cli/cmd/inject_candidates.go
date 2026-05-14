@@ -2,41 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 
-	"aegis/cli/client"
+	"aegis/cli/apiclient"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
-
-// injectCandidate mirrors chaossystem.InjectCandidateResp. Kept local so the
-// CLI binary doesn't need to import the backend module — same pattern as
-// systemPrereqResp in system_prereqs.go.
-type injectCandidate struct {
-	System        string `json:"system"`
-	SystemType    string `json:"system_type,omitempty"`
-	Namespace     string `json:"namespace"`
-	App           string `json:"app"`
-	ChaosType     string `json:"chaos_type"`
-	Container     string `json:"container,omitempty"`
-	TargetService string `json:"target_service,omitempty"`
-	Domain        string `json:"domain,omitempty"`
-	Class         string `json:"class,omitempty"`
-	Method        string `json:"method,omitempty"`
-	MutatorConfig string `json:"mutator_config,omitempty"`
-	Route         string `json:"route,omitempty"`
-	HTTPMethod    string `json:"http_method,omitempty"`
-	Database      string `json:"database,omitempty"`
-	Table         string `json:"table,omitempty"`
-	Operation     string `json:"operation,omitempty"`
-}
-
-type injectCandidatesResp struct {
-	Count      int               `json:"count"`
-	Candidates []injectCandidate `json:"candidates"`
-}
 
 // --- flags ---
 var (
@@ -76,14 +47,18 @@ var injectCandidatesLsCmd = &cobra.Command{
 			return usageErrorf("--namespace is required")
 		}
 
-		c := newClient()
-		path := fmt.Sprintf("%s?namespace=%s",
-			consts.APIPathSystemByNameInjectCandidates(url.PathEscape(candidatesSystem)),
-			url.QueryEscape(candidatesNamespace),
-		)
-		var resp client.APIResponse[injectCandidatesResp]
-		if err := c.Get(path, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.SystemsAPI.ListSystemInjectCandidates(ctx, candidatesSystem).
+			Namespace(candidatesNamespace).
+			Execute()
+		if err != nil {
 			return err
+		}
+		var candidates []apiclient.ChaossystemInjectCandidateResp
+		var count int32
+		if resp.Data != nil {
+			candidates = resp.Data.GetCandidates()
+			count = resp.Data.GetCount()
 		}
 
 		// JSON output is the contract our tools/enumerate.sh replacement
@@ -91,17 +66,17 @@ var injectCandidatesLsCmd = &cobra.Command{
 		// envelope) so the shape stays flat: [{system, namespace, app,
 		// chaos_type, params}, ...].
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data.Candidates)
+			output.PrintJSON(candidates)
 			return nil
 		}
 
 		headers := []string{"APP", "CHAOS-TYPE", "TARGET"}
-		rows := make([][]string, 0, len(resp.Data.Candidates))
-		for _, c := range resp.Data.Candidates {
-			rows = append(rows, []string{c.App, c.ChaosType, formatCandidateTarget(c)})
+		rows := make([][]string, 0, len(candidates))
+		for _, c := range candidates {
+			rows = append(rows, []string{c.GetApp(), c.GetChaosType(), formatCandidateTarget(c)})
 		}
 		output.PrintTable(headers, rows)
-		output.PrintInfo(fmt.Sprintf("Total: %d candidates", resp.Data.Count))
+		output.PrintInfo(fmt.Sprintf("Total: %d candidates", count))
 		return nil
 	},
 }
@@ -111,22 +86,31 @@ var injectCandidatesLsCmd = &cobra.Command{
 // chaos family (container > http endpoint > network target > dns > jvm
 // method > db op > mutator config). At most one of these is non-empty for
 // any single candidate.
-func formatCandidateTarget(c injectCandidate) string {
+func formatCandidateTarget(c apiclient.ChaossystemInjectCandidateResp) string {
+	container := c.GetContainer()
+	route := c.GetRoute()
+	httpMethod := c.GetHttpMethod()
+	target := c.GetTargetService()
+	domain := c.GetDomain()
+	class := c.GetClass()
+	method := c.GetMethod()
+	mutator := c.GetMutatorConfig()
+	database := c.GetDatabase()
 	switch {
-	case c.Container != "":
-		return "container=" + c.Container
-	case c.Route != "" || c.HTTPMethod != "":
-		return c.HTTPMethod + " " + c.Route
-	case c.TargetService != "":
-		return "->" + c.TargetService
-	case c.Domain != "":
-		return "domain=" + c.Domain
-	case c.MutatorConfig != "":
-		return c.Class + "#" + c.Method + " [" + c.MutatorConfig + "]"
-	case c.Class != "" || c.Method != "":
-		return c.Class + "#" + c.Method
-	case c.Database != "":
-		return c.Database + "/" + c.Table + "/" + c.Operation
+	case container != "":
+		return "container=" + container
+	case route != "" || httpMethod != "":
+		return httpMethod + " " + route
+	case target != "":
+		return "->" + target
+	case domain != "":
+		return "domain=" + domain
+	case mutator != "":
+		return class + "#" + method + " [" + mutator + "]"
+	case class != "" || method != "":
+		return class + "#" + method
+	case database != "":
+		return database + "/" + c.GetTable() + "/" + c.GetOperation()
 	default:
 		return ""
 	}

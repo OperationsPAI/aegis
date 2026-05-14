@@ -15,6 +15,7 @@ func TestRateLimiterGCDryRunBehaviorWithoutForce(t *testing.T) {
 		requested = append(requested, r.Method+" "+r.URL.Path)
 		switch r.URL.Path {
 		case "/api/v2/rate-limiters":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "ok",

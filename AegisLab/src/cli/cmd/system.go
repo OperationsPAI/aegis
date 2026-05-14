@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
 	"aegis/platform/consts"
@@ -38,9 +40,6 @@ seven keys always land together.`,
 
 // --- Shared types ---
 
-// seedDynamicConfig mirrors the `dynamic_configs` list entry in
-// AegisLab/data/initial_data/{prod,staging}/data.yaml. Only the fields
-// aegisctl needs are decoded; unknown fields are silently dropped.
 type seedDynamicConfig struct {
 	Key          string `yaml:"key"`
 	DefaultValue string `yaml:"default_value"`
@@ -51,15 +50,10 @@ type seedDynamicConfig struct {
 	IsSecret     bool   `yaml:"is_secret"`
 }
 
-// seedDoc is the top-level shape of data.yaml. We ignore everything except
-// dynamic_configs.
 type seedDoc struct {
 	DynamicConfigs []seedDynamicConfig `yaml:"dynamic_configs"`
 }
 
-// systemSeed is the aggregated 7-key view of one benchmark system extracted
-// from a data.yaml document. Callers are expected to run validateSystemSeed
-// before using these values.
 type systemSeed struct {
 	Name           string
 	Count          int
@@ -70,14 +64,9 @@ type systemSeed struct {
 	IsBuiltin      bool
 	Status         int
 	Description    string
-	// Raw is keyed by the final "field" (count/ns_pattern/...) so error
-	// messages can reference the exact row that failed validation.
-	Raw map[string]seedDynamicConfig
+	Raw            map[string]seedDynamicConfig
 }
 
-// expectedSystemFields enumerates the 7 required keys (suffix after
-// "injection.system.<name>."). The value is the expected `value_type` enum
-// (0=string, 1=bool, 2=int, 3=float).
 var expectedSystemFields = map[string]int{
 	"count":           2,
 	"ns_pattern":      0,
@@ -88,15 +77,11 @@ var expectedSystemFields = map[string]int{
 	"status":          2,
 }
 
-// systemScopeGlobal is the required scope for injection.system.* rows
-// (matches consts.ConfigScopeGlobal on the server).
 const systemScopeGlobal = 2
 
-// --- Backend API response shapes ---
-//
-// Mirrors the chaossystem module's ChaosSystemResp without importing the
-// server package to keep aegisctl build-independent of backend internals.
-
+// chaosSystemResp keeps the field set the system_test.go fake server emits.
+// Functionally equivalent to apiclient.ChaossystemChaosSystemResp but flat
+// (non-pointer) so tests can construct literals.
 type chaosSystemResp struct {
 	ID             int       `json:"id"`
 	Name           string    `json:"name"`
@@ -109,16 +94,6 @@ type chaosSystemResp struct {
 	IsBuiltin      bool      `json:"is_builtin"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
-}
-
-type createSystemReq struct {
-	Name           string `json:"name"`
-	DisplayName    string `json:"display_name"`
-	NsPattern      string `json:"ns_pattern"`
-	ExtractPattern string `json:"extract_pattern"`
-	AppLabelKey    string `json:"app_label_key,omitempty"`
-	Count          int    `json:"count"`
-	Description    string `json:"description,omitempty"`
 }
 
 // --- system register ---
@@ -174,7 +149,6 @@ set, in which case the prior entry is deleted first and then re-created.`,
 
 		c := newClient()
 
-		// If --force, delete any pre-existing registration first.
 		if systemRegisterForce {
 			if existing, lookupErr := findSystemByName(c, seed.Name); lookupErr == nil && existing != nil {
 				if err := deleteSystemByID(c, existing.ID); err != nil {
@@ -188,30 +162,33 @@ set, in which case the prior entry is deleted first and then re-created.`,
 			}
 		}
 
-		req := createSystemReq{
+		cli, ctx := newAPIClient()
+		req := apiclient.ChaossystemCreateChaosSystemReq{
 			Name:           seed.Name,
 			DisplayName:    seed.DisplayName,
 			NsPattern:      seed.NsPattern,
 			ExtractPattern: seed.ExtractPattern,
-			AppLabelKey:    seed.AppLabelKey,
-			Count:          seed.Count,
-			Description:    seed.Description,
+			Count:          int32(seed.Count),
 		}
-		var resp client.APIResponse[chaosSystemResp]
-		if err := c.Post(consts.APIPathSystems, req, &resp); err != nil {
-			// Any error here leaves nothing behind because the backend's
-			// CreateSystem bails on the first failed row/put; no client-side
-			// rollback is needed for partial writes inside one request.
+		if seed.AppLabelKey != "" {
+			req.SetAppLabelKey(seed.AppLabelKey)
+		}
+		if seed.Description != "" {
+			req.SetDescription(seed.Description)
+		}
+		resp, _, err := cli.SystemsAPI.CreateChaosSystem(ctx).ChaossystemCreateChaosSystemReq(req).Execute()
+		if err != nil {
 			return fmt.Errorf("register system %q: %w", seed.Name, err)
 		}
+		data := resp.GetData()
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(data)
 			return nil
 		}
 		output.PrintInfo(fmt.Sprintf("Registered system %q (id %d) with 7 etcd + dynamic_config entries.",
-			resp.Data.Name, resp.Data.ID))
-		if !seed.IsBuiltin && resp.Data.IsBuiltin {
+			data.GetName(), data.GetId()))
+		if !seed.IsBuiltin && data.GetIsBuiltin() {
 			output.PrintInfo("Note: backend stored is_builtin=true; seed requested false. Update via API if needed.")
 		}
 		return nil
@@ -228,28 +205,29 @@ var systemListCmd = &cobra.Command{
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		c := newClient()
+		cli, ctx := newAPIClient()
 
-		var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
-		if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
+		resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(1).Size(100).Execute()
+		if err != nil {
 			return err
 		}
+		data := resp.GetData()
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(data)
 			return nil
 		}
 
-		items := append([]chaosSystemResp(nil), resp.Data.Items...)
-		sort.Slice(items, func(i, j int) bool { return items[i].Name < items[j].Name })
+		items := append([]apiclient.ChaossystemChaosSystemResp(nil), data.GetItems()...)
+		sort.Slice(items, func(i, j int) bool { return items[i].GetName() < items[j].GetName() })
 		rows := make([][]string, 0, len(items))
 		for _, s := range items {
 			rows = append(rows, []string{
-				s.Name,
-				s.DisplayName,
-				s.NsPattern,
-				strconv.Itoa(s.Count),
-				strconv.FormatBool(s.IsBuiltin),
+				s.GetName(),
+				s.GetDisplayName(),
+				s.GetNsPattern(),
+				strconv.Itoa(int(s.GetCount())),
+				strconv.FormatBool(s.GetIsBuiltin()),
 			})
 		}
 		output.PrintTable([]string{"Name", "Display", "NsPattern", "Count", "Builtin"}, rows)
@@ -296,23 +274,15 @@ var systemUnregisterCmd = &cobra.Command{
 }
 
 // --- system enable / disable ---
-//
-// Both are thin wrappers around PUT /api/v2/systems/{id} with a single
-// `status` field. We intentionally do NOT add a dedicated enable/disable
-// sub-route on the backend — the generic update endpoint already handles the
-// mutation, and keeping the API surface narrow reduces drift.
 
 var systemDisableYes bool
 
-// setSystemStatusReq is the minimal PUT body the CLI sends. Using a tight
-// struct (instead of a map) makes the JSON shape explicit and lets the cobra
-// test pin the wire format.
 type setSystemStatusReq struct {
 	Status int `json:"status"`
 }
 
-// setSystemStatus resolves name -> id and issues PUT /api/v2/systems/{id}
-// with the given status. Shared by `enable` and `disable`.
+// setSystemStatus resolves name -> id and issues PUT /api/v2/systems/{id}.
+// Kept on the legacy *client.Client for system_test.go's fake-server tests.
 func setSystemStatus(c *client.Client, name string, status int) (*chaosSystemResp, error) {
 	existing, err := findSystemByName(c, name)
 	if err != nil {
@@ -333,8 +303,6 @@ func setSystemStatus(c *client.Client, name string, status int) (*chaosSystemRes
 	return &resp.Data, nil
 }
 
-// listSystemNames returns a sorted list of registered system names for use
-// in error messages. Never fatal: callers fall back to a generic message.
 func listSystemNames(c *client.Client) ([]string, error) {
 	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
 	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
@@ -427,27 +395,22 @@ Use --yes to skip the confirmation prompt.`,
 			return notFoundErrorf("system %q is not registered; known systems: %s",
 				name, strings.Join(known, ", "))
 		}
-		// Disable is reversible (unlike unregister) but still user-visible, so
-		// gate it behind the same TTY/--yes contract the delete commands use.
 		if err := confirmDisable(existing.Name, existing.ID, systemDisableYes); err != nil {
 			return err
 		}
-		var resp client.APIResponse[chaosSystemResp]
-		if err := c.Put(consts.APIPathSystem(existing.ID), setSystemStatusReq{Status: 0}, &resp); err != nil {
+		updated, err := setSystemStatus(c, name, 0)
+		if err != nil {
 			return err
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(updated)
 			return nil
 		}
-		output.PrintInfo(fmt.Sprintf("Disabled system %q (id %d)", resp.Data.Name, resp.Data.ID))
+		output.PrintInfo(fmt.Sprintf("Disabled system %q (id %d)", updated.Name, updated.ID))
 		return nil
 	},
 }
 
-// confirmDisable mirrors confirmDeletion but phrased for a reversible flip.
-// Kept local to system.go so project.go's confirmDeletion stays narrowly
-// focused on delete flows.
 func confirmDisable(name string, id int, yes bool) error {
 	if yes {
 		return nil
@@ -470,8 +433,6 @@ func confirmDisable(name string, id int, yes bool) error {
 
 // --- Helpers ---
 
-// resolveSeedPath lets callers pass either an exact file path, a directory,
-// or the initial_data root with --env to choose prod|staging.
 func resolveSeedPath(raw, env string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	info, err := os.Stat(raw)
@@ -493,7 +454,6 @@ func resolveSeedPath(raw, env string) (string, error) {
 	if _, err := os.Stat(candidate); err == nil {
 		return candidate, nil
 	}
-	// Also support raw == <env-dir> directly.
 	direct := strings.TrimRight(raw, string(os.PathSeparator)) + string(os.PathSeparator) + "data.yaml"
 	if _, err := os.Stat(direct); err == nil {
 		return direct, nil
@@ -513,9 +473,6 @@ func loadSeedDoc(path string) (*seedDoc, error) {
 	return &doc, nil
 }
 
-// extractSystemSeed pulls every row whose key begins with
-// "injection.system.<name>." out of the document and bundles them into a
-// systemSeed. Missing rows surface in validateSystemSeed.
 func extractSystemSeed(doc *seedDoc, name string) (*systemSeed, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -529,8 +486,6 @@ func extractSystemSeed(doc *seedDoc, name string) (*systemSeed, error) {
 		}
 		field := strings.TrimPrefix(row.Key, prefix)
 		if _, ok := expectedSystemFields[field]; !ok {
-			// Unknown extra field; not currently fatal but we skip it so
-			// validation focuses on the seven canonical ones.
 			continue
 		}
 		seed.Raw[field] = row
@@ -541,8 +496,6 @@ func extractSystemSeed(doc *seedDoc, name string) (*systemSeed, error) {
 	return seed, nil
 }
 
-// validateSystemSeed checks the 7-key contract (presence + value_type +
-// scope) and populates typed fields on the seed.
 func validateSystemSeed(seed *systemSeed) error {
 	var missing []string
 	for field := range expectedSystemFields {
@@ -576,8 +529,6 @@ func validateSystemSeed(seed *systemSeed) error {
 			seed.Name, strings.Join(problems, "\n  - "))
 	}
 
-	// Parse typed values. value_type already validated, so conversion errors
-	// here mean the default_value itself is malformed.
 	count, err := strconv.Atoi(strings.TrimSpace(seed.Raw["count"].DefaultValue))
 	if err != nil {
 		return fmt.Errorf("injection.system.%s.count default_value %q is not an int: %w",
@@ -601,7 +552,6 @@ func validateSystemSeed(seed *systemSeed) error {
 	seed.ExtractPattern = seed.Raw["extract_pattern"].DefaultValue
 	seed.DisplayName = seed.Raw["display_name"].DefaultValue
 	seed.AppLabelKey = seed.Raw["app_label_key"].DefaultValue
-	// Prefer the anchor (count) row's description, falling back to display_name's.
 	if d := seed.Raw["count"].Description; d != "" {
 		seed.Description = d
 	} else {
@@ -610,8 +560,8 @@ func validateSystemSeed(seed *systemSeed) error {
 	return nil
 }
 
-// findSystemByName returns nil, nil when no system with that name is
-// registered (distinguished from lookup errors).
+// findSystemByName / deleteSystemByID stay on the handwritten *client.Client
+// so system_test.go's fake server can intercept the URL.
 func findSystemByName(c *client.Client, name string) (*chaosSystemResp, error) {
 	var resp client.APIResponse[client.PaginatedData[chaosSystemResp]]
 	if err := c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
@@ -673,9 +623,9 @@ var (
 	systemReseedResetOverrides bool
 )
 
-// reseedActionResp mirrors initialization.ReseedAction without importing the
-// backend package — keeps the CLI binary buildable without cgo / the backend
-// build tags.
+// reseedActionResp / reseedReportResp mirror initialization.ReseedAction /
+// ReseedReport. The generated client returns the response payload as `Any`
+// (`map[string]interface{}`), so we still decode it manually here.
 type reseedActionResp struct {
 	Layer    string `json:"layer"`
 	System   string `json:"system"`
@@ -699,14 +649,6 @@ type reseedReportResp struct {
 	EtcdPublished   int                `json:"etcd_published"`
 }
 
-type reseedSystemReqBody struct {
-	Name           string `json:"name,omitempty"`
-	Env            string `json:"env,omitempty"`
-	DataPath       string `json:"data_path,omitempty"`
-	Apply          bool   `json:"apply"`
-	ResetOverrides bool   `json:"reset_overrides"`
-}
-
 var systemReseedCmd = &cobra.Command{
 	Use:   "reseed",
 	Short: "Propagate data.yaml bumps (chart / version / defaults) to DB + etcd",
@@ -728,30 +670,44 @@ What is written:
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		c := newClient()
-		body := reseedSystemReqBody{
-			Name:           strings.TrimSpace(systemReseedName),
-			Env:            strings.TrimSpace(systemReseedEnv),
-			DataPath:       strings.TrimSpace(systemReseedDataPath),
-			Apply:          systemReseedApply,
-			ResetOverrides: systemReseedResetOverrides,
+		cli, ctx := newAPIClient()
+		body := apiclient.ChaossystemReseedSystemReq{}
+		if v := strings.TrimSpace(systemReseedName); v != "" {
+			body.SetName(v)
 		}
-		var resp client.APIResponse[reseedReportResp]
-		if err := c.Post(consts.APIPathSystemsReseed, body, &resp); err != nil {
+		if v := strings.TrimSpace(systemReseedEnv); v != "" {
+			body.SetEnv(v)
+		}
+		if v := strings.TrimSpace(systemReseedDataPath); v != "" {
+			body.SetDataPath(v)
+		}
+		body.SetApply(systemReseedApply)
+		body.SetResetOverrides(systemReseedResetOverrides)
+
+		resp, _, err := cli.SystemsAPI.ReseedChaosSystems(ctx).ChaossystemReseedSystemReq(body).Execute()
+		if err != nil {
 			return fmt.Errorf("reseed: %w (hint: retry with --apply=false to diff without writing; check backend logs for which subsystem failed)", err)
 		}
+		// Generated wrapper exposes data as `interface{}`; round-trip through
+		// JSON to recover the typed report shape.
+		raw, err := json.Marshal(resp.GetData())
+		if err != nil {
+			return fmt.Errorf("encode reseed response: %w", err)
+		}
+		var report reseedReportResp
+		if err := json.Unmarshal(raw, &report); err != nil {
+			return fmt.Errorf("decode reseed response: %w", err)
+		}
+
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(report)
 			return nil
 		}
-		printReseedReport(&resp.Data)
+		printReseedReport(&report)
 		return nil
 	},
 }
 
-// printReseedReport renders the engine report as a human-readable table
-// grouped by layer. Empty action list is an explicit "in sync" message so
-// ops can distinguish it from an error.
 func printReseedReport(r *reseedReportResp) {
 	mode := "APPLY"
 	if r.DryRun {
@@ -769,7 +725,6 @@ func printReseedReport(r *reseedReportResp) {
 		return
 	}
 
-	// Sort: layer, then system, then key.
 	actions := append([]reseedActionResp(nil), r.Actions...)
 	sort.SliceStable(actions, func(i, j int) bool {
 		if actions[i].Layer != actions[j].Layer {
@@ -814,11 +769,10 @@ func printReseedReport(r *reseedReportResp) {
 	}
 }
 
-// truncCell keeps a cell readable when the value embeds a long chart URL or
-// regex without hiding it entirely.
 func truncCell(s string, max int) string {
 	if len(s) <= max {
 		return s
 	}
 	return s[:max-1] + "…"
 }
+

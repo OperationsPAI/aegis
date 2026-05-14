@@ -548,6 +548,7 @@ func TestRegressionRunDedupedResponseReturnsFriendlyError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/api/v2/projects":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -558,6 +559,7 @@ func TestRegressionRunDedupedResponseReturnsFriendlyError(t *testing.T) {
 			})
 		case r.URL.Path == "/api/v2/projects/11/injections/inject":
 			// Deduped: items empty, batches_exist_in_database populated.
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -638,6 +640,7 @@ func TestRegressionRunCommandLoadsAndExecutesNamedCase(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/api/v2/projects" && r.URL.RawQuery == "page=1&size=100":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -647,6 +650,7 @@ func TestRegressionRunCommandLoadsAndExecutesNamedCase(t *testing.T) {
 				},
 			})
 		case r.URL.Path == "/api/v2/projects/7/injections/inject":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -675,6 +679,7 @@ func TestRegressionRunCommandLoadsAndExecutesNamedCase(t *testing.T) {
 			_, _ = fmt.Fprint(w, "event: end\ndata: done\n\n")
 			flusher.Flush()
 		case r.URL.Path == "/api/v2/traces/"+traceID:
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",

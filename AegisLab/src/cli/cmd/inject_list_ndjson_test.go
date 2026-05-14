@@ -15,6 +15,7 @@ func TestInjectList_NDJSONOutput(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/api/v2/projects":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -26,6 +27,7 @@ func TestInjectList_NDJSONOutput(t *testing.T) {
 				},
 			})
 		case "/api/v2/projects/7/injections":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",

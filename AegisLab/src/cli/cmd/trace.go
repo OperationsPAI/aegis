@@ -8,9 +8,11 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
 	"aegis/platform/consts"
@@ -62,27 +64,21 @@ var (
 )
 
 // traceColumnExtractors maps short column names to a function that pulls the
-// value out of a trace map. Keep this list in sync with the --columns help.
-var traceColumnExtractors = map[string]func(map[string]any) string{
-	"id": func(m map[string]any) string {
-		// Server returns `id`; fall back to `trace_id` for older payloads.
-		if v := stringField(m, "id"); v != "" {
-			return v
-		}
-		return stringField(m, "trace_id")
-	},
-	"type":        func(m map[string]any) string { return stringField(m, "type") },
-	"state":       func(m map[string]any) string { return stringField(m, "state") },
-	"status":      func(m map[string]any) string { return stringField(m, "status") },
-	"project":     func(m map[string]any) string { return stringField(m, "project_name") },
-	"project_id":  func(m map[string]any) string { return stringField(m, "project_id") },
-	"group_id":    func(m map[string]any) string { return stringField(m, "group_id") },
-	"last_event":  func(m map[string]any) string { return stringField(m, "last_event") },
-	"final_event": func(m map[string]any) string { return stringField(m, "last_event") }, // alias for terminal event
-	"created_at":  func(m map[string]any) string { return stringField(m, "created_at") },
-	"start_time":  func(m map[string]any) string { return stringField(m, "start_time") },
-	"end_time":    func(m map[string]any) string { return stringField(m, "end_time") },
-	"leaf_num":    func(m map[string]any) string { return stringField(m, "leaf_num") },
+// value out of a typed TraceTraceResp. Keep this list in sync with --columns.
+var traceColumnExtractors = map[string]func(apiclient.TraceTraceResp) string{
+	"id":          func(t apiclient.TraceTraceResp) string { return t.GetId() },
+	"type":        func(t apiclient.TraceTraceResp) string { return t.GetType() },
+	"state":       func(t apiclient.TraceTraceResp) string { return t.GetState() },
+	"status":      func(t apiclient.TraceTraceResp) string { return t.GetStatus() },
+	"project":     func(t apiclient.TraceTraceResp) string { return t.GetProjectName() },
+	"project_id":  func(t apiclient.TraceTraceResp) string { return strconv.Itoa(int(t.GetProjectId())) },
+	"group_id":    func(t apiclient.TraceTraceResp) string { return t.GetGroupId() },
+	"last_event":  func(t apiclient.TraceTraceResp) string { return t.GetLastEvent() },
+	"final_event": func(t apiclient.TraceTraceResp) string { return t.GetLastEvent() },
+	"created_at":  func(t apiclient.TraceTraceResp) string { return t.GetCreatedAt() },
+	"start_time":  func(t apiclient.TraceTraceResp) string { return t.GetStartTime() },
+	"end_time":    func(t apiclient.TraceTraceResp) string { return t.GetEndTime() },
+	"leaf_num":    func(t apiclient.TraceTraceResp) string { return strconv.Itoa(int(t.GetLeafNum())) },
 }
 
 func validTraceColumns() []string {
@@ -115,6 +111,27 @@ func parseTraceColumns(spec string) ([]string, error) {
 		return nil, fmt.Errorf("--columns must list at least one column")
 	}
 	return out, nil
+}
+
+// resolveTraceStateFilter converts a name like "Running" or numeric form to
+// the int32 the typed client wants. Trace state enum lives alongside task
+// state in consts (RunStatus / TaskState are interchangeable for trace
+// reporting); fall back to numeric parse if the name is unknown.
+func resolveTraceStateFilter(raw string) (*int32, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return nil, nil
+	}
+	if state := consts.GetTaskStateByName(s); state != nil {
+		v := int32(*state)
+		return &v, nil
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return nil, fmt.Errorf("invalid --state %q: want a name (e.g. Running) or int", s)
+	}
+	v := int32(n)
+	return &v, nil
 }
 
 var traceListCmd = &cobra.Command{
@@ -151,7 +168,6 @@ Columns available for --columns (TSV only):
 			return fmt.Errorf("invalid --format %q; expected table|json|ndjson|tsv", format)
 		}
 
-		// Resolve columns up-front so invalid values fail before the HTTP call.
 		columnsSpec := traceListColumns
 		if columnsSpec == "" && format == "tsv" {
 			columnsSpec = "id,state,last_event"
@@ -164,10 +180,10 @@ Columns available for --columns (TSV only):
 			output.PrintInfo("--columns is only applied to --format tsv; ignored for " + format)
 		}
 
-		c := newClient()
-
 		// Resolve project name to ID if given.
 		projectIDStr := ""
+		var projectIDInt int32
+		hasProjectID := false
 		projectName := traceListProject
 		if projectName == "" {
 			projectName = flagProject
@@ -179,77 +195,93 @@ Columns available for --columns (TSV only):
 				projectIDStr = projectName
 			} else {
 				projectIDStr = fmt.Sprintf("%d", id)
+				projectIDInt = int32(id)
+				hasProjectID = true
 			}
-		}
-
-		basePath := consts.APIPathTraces
-		baseParams := map[string]string{
-			"project_id": projectIDStr,
-			"state":      traceListState,
-			"group_id":   traceListGroupID,
 		}
 
 		if traceListAll {
 			if format != "ndjson" {
 				return fmt.Errorf("--all requires --format/--output ndjson (table/json/tsv buffer the full result set; use ndjson for streaming)")
 			}
+			c := newClient()
+			basePath := consts.APIPathTraces
+			baseParams := map[string]string{
+				"project_id": projectIDStr,
+				"state":      traceListState,
+				"group_id":   traceListGroupID,
+			}
 			return streamListAllNDJSON[map[string]any](c, basePath, baseParams)
 		}
 
-		params := buildQueryParams(map[string]string{
-			"project_id": projectIDStr,
-			"state":      traceListState,
-			"group_id":   traceListGroupID,
-			"page":       intToString(traceListPage),
-			"size":       intToString(traceListSize),
-		})
-		path := basePath
-		if params != "" {
-			path += "?" + params
-		}
-
-		var resp client.APIResponse[client.PaginatedData[map[string]any]]
-		if err := c.Get(path, &resp); err != nil {
+		stateFilter, err := resolveTraceStateFilter(traceListState)
+		if err != nil {
 			return err
 		}
 
+		cli, ctx := newAPIClient()
+		req := cli.TracesAPI.ListTraces(ctx)
+		if traceListPage > 0 {
+			req = req.Page(int32(traceListPage))
+		}
+		if traceListSize > 0 {
+			req = req.Size(int32(traceListSize))
+		}
+		if hasProjectID {
+			req = req.ProjectId(projectIDInt)
+		}
+		if stateFilter != nil {
+			req = req.State(*stateFilter)
+		}
+		if traceListGroupID != "" {
+			req = req.GroupId(traceListGroupID)
+		}
+		resp, _, err := req.Execute()
+		if err != nil {
+			return err
+		}
+		data := resp.GetData()
+		items := data.GetItems()
+
 		switch format {
 		case "json":
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(data)
 			return nil
 		case "tsv":
-			return printTracesTSV(columns, resp.Data.Items)
+			return printTracesTSV(columns, items)
 		case "ndjson":
-			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
-				return err
+			if pg := data.GetPagination(); pg.HasPage() {
+				if err := output.PrintMetaJSON(pg); err != nil {
+					return err
+				}
 			}
-			return output.PrintNDJSON(resp.Data.Items)
+			return output.PrintNDJSON(items)
 		}
 
 		// Default: table.
 		headers := []string{"TRACE-ID", "TYPE", "STATE", "PROJECT", "START-TIME", "LEAF-NUM"}
 		var rows [][]string
-		for _, item := range resp.Data.Items {
+		for _, item := range items {
 			rows = append(rows, []string{
-				traceColumnExtractors["id"](item),
-				stringField(item, "type"),
-				stringField(item, "state"),
-				stringField(item, "project_id"),
-				stringField(item, "start_time"),
-				stringField(item, "leaf_num"),
+				item.GetId(),
+				item.GetType(),
+				item.GetState(),
+				strconv.Itoa(int(item.GetProjectId())),
+				item.GetStartTime(),
+				strconv.Itoa(int(item.GetLeafNum())),
 			})
 		}
 
 		output.PrintTable(headers, rows)
-		p := resp.Data.Pagination
-		output.PrintInfo(fmt.Sprintf("Page %d/%d (total: %d)", p.Page, p.TotalPages, p.Total))
+		p := data.GetPagination()
+		output.PrintInfo(fmt.Sprintf("Page %d/%d (total: %d)", p.GetPage(), p.GetTotalPages(), p.GetTotal()))
 		return nil
 	},
 }
 
 // printTracesTSV emits a plain header row followed by tab-separated data rows,
 // Kubernetes-style (no leading `#`), so operators can pipe through awk/cut.
-func printTracesTSV(columns []string, items []map[string]any) error {
+func printTracesTSV(columns []string, items []apiclient.TraceTraceResp) error {
 	header := make([]string, len(columns))
 	for i, c := range columns {
 		header[i] = strings.ToUpper(c)
@@ -290,55 +322,58 @@ var (
 )
 
 func runTraceGet(traceID string) error {
-		if err := requireAPIContext(true); err != nil {
-			return err
-		}
-		c := newClient()
+	if err := requireAPIContext(true); err != nil {
+		return err
+	}
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.TracesAPI.GetTraceById(ctx, traceID).Execute()
+	if err != nil {
+		return err
+	}
+	d := resp.GetData()
 
-		path := consts.APIPathTrace(traceID)
-		var resp client.APIResponse[map[string]any]
-		if err := c.Get(path, &resp); err != nil {
-			return err
-		}
-
-		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
-			return nil
-		}
-
-		// Print trace header fields.
-		for k, v := range resp.Data {
-			if k == "tasks" {
-				continue
-			}
-			fmt.Printf("%-20s %v\n", k+":", v)
-		}
-
-		// Print child tasks as a table if present.
-		if tasksRaw, ok := resp.Data["tasks"]; ok && tasksRaw != nil {
-			fmt.Println()
-			fmt.Println("Tasks:")
-
-			// Re-marshal and unmarshal to get typed slice.
-			data, err := json.Marshal(tasksRaw)
-			if err == nil {
-				var tasks []map[string]any
-				if json.Unmarshal(data, &tasks) == nil && len(tasks) > 0 {
-					headers := []string{"TASK-ID", "TYPE", "STATE", "CREATED"}
-					var rows [][]string
-					for _, t := range tasks {
-						rows = append(rows, []string{
-							stringField(t, "task_id"),
-							stringField(t, "type"),
-							stringField(t, "state"),
-							stringField(t, "created_at"),
-						})
-					}
-					output.PrintTable(headers, rows)
-				}
-			}
-		}
+	if output.OutputFormat(flagOutput) == output.FormatJSON {
+		output.PrintJSON(d)
 		return nil
+	}
+
+	row := func(k, v string) {
+		if v != "" {
+			fmt.Printf("%-20s %s\n", k+":", v)
+		}
+	}
+	row("id", d.GetId())
+	row("type", d.GetType())
+	row("state", d.GetState())
+	row("status", d.GetStatus())
+	row("project_id", strconv.Itoa(int(d.GetProjectId())))
+	row("project_name", d.GetProjectName())
+	row("group_id", d.GetGroupId())
+	row("last_event", d.GetLastEvent())
+	row("start_time", d.GetStartTime())
+	row("end_time", d.GetEndTime())
+	row("created_at", d.GetCreatedAt())
+	row("updated_at", d.GetUpdatedAt())
+	if d.HasLeafNum() {
+		row("leaf_num", strconv.Itoa(int(d.GetLeafNum())))
+	}
+
+	if tasks := d.GetTasks(); len(tasks) > 0 {
+		fmt.Println()
+		fmt.Println("Tasks:")
+		headers := []string{"TASK-ID", "TYPE", "STATE", "CREATED"}
+		var rows [][]string
+		for _, t := range tasks {
+			rows = append(rows, []string{
+				t.GetId(),
+				t.GetType(),
+				t.GetState(),
+				t.GetCreatedAt(),
+			})
+		}
+		output.PrintTable(headers, rows)
+	}
+	return nil
 }
 
 // --- trace watch ---
@@ -362,46 +397,48 @@ var (
 )
 
 func runTraceWatch(traceID string) error {
-		ssePath := consts.APIPathTraceStream(traceID)
-		reader := client.NewSSEReader(flagServer, ssePath, flagToken)
+	// Trace watch is an SSE stream; the generated GetTraceEvents method
+	// returns the body as a single string and cannot deliver an event channel,
+	// so keep the manual SSE reader path here.
+	ssePath := consts.APIPathTraceStream(traceID)
+	reader := client.NewSSEReader(flagServer, ssePath, flagToken)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		// Handle Ctrl+C.
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, os.Interrupt)
-		go func() {
-			<-sigCh
-			cancel()
-		}()
+	// Handle Ctrl+C.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+	go func() {
+		<-sigCh
+		cancel()
+	}()
 
-		output.PrintInfo(fmt.Sprintf("Watching trace %s (Ctrl+C to stop)...", traceID))
+	output.PrintInfo(fmt.Sprintf("Watching trace %s (Ctrl+C to stop)...", traceID))
 
-		events, errs := reader.Stream(ctx)
+	events, errs := reader.Stream(ctx)
 
-		for {
-			select {
-			case evt, ok := <-events:
-				if !ok {
-					return nil
-				}
-				printSSEEvent(evt)
-
-				// Check for terminal state in event data.
-				if isTerminalEvent(evt) {
-					output.PrintInfo("Trace reached terminal state.")
-					return nil
-				}
-			case err, ok := <-errs:
-				if !ok {
-					return nil
-				}
-				return err
-			case <-ctx.Done():
+	for {
+		select {
+		case evt, ok := <-events:
+			if !ok {
 				return nil
 			}
+			printSSEEvent(evt)
+
+			if isTerminalEvent(evt) {
+				output.PrintInfo("Trace reached terminal state.")
+				return nil
+			}
+		case err, ok := <-errs:
+			if !ok {
+				return nil
+			}
+			return err
+		case <-ctx.Done():
+			return nil
 		}
+	}
 }
 
 // --- trace cancel ---
@@ -411,17 +448,6 @@ var (
 	traceCancelStdin  io.Reader = os.Stdin // hook point for tests
 	traceCancelStdout io.Writer = os.Stdout
 )
-
-// traceCancelResponseData is the best-effort shape expected from a future
-// cancel endpoint. Fields are all optional — we print whichever ones come back.
-type traceCancelResponseData struct {
-	TraceID           string   `json:"trace_id,omitempty"`
-	State             string   `json:"state,omitempty"`
-	CancelledTasks    []string `json:"cancelled_tasks,omitempty"`
-	DeletedPodChaos   []string `json:"deleted_podchaos,omitempty"`
-	RemovedRedisTasks []string `json:"removed_redis_tasks,omitempty"`
-	Message           string   `json:"message,omitempty"`
-}
 
 var traceCancelCmd = &cobra.Command{
 	Use:   "cancel <trace-id>",
@@ -443,7 +469,6 @@ restarting the producer.`,
 		if !traceCancelForce {
 			fmt.Fprintf(traceCancelStdout, "Cancel trace %s? [y/N]: ", traceID)
 			var answer string
-			// Read a single line; ignore errors (treated as no).
 			_, _ = fmt.Fscanln(traceCancelStdin, &answer)
 			answer = strings.ToLower(strings.TrimSpace(answer))
 			if answer != "y" && answer != "yes" {
@@ -452,47 +477,41 @@ restarting the producer.`,
 			}
 		}
 
-		c := newClient()
-		path := consts.APIPathTraceCancel(traceID)
-
-		var resp client.APIResponse[traceCancelResponseData]
-		err := c.Post(path, map[string]any{}, &resp)
+		cli, ctx := newAPIClient()
+		resp, httpResp, err := cli.TracesAPI.CancelTrace(ctx, traceID).Execute()
 		if err != nil {
-			// Surface a friendly hint for the "endpoint not there yet" case.
-			if apiErr, ok := err.(*client.APIError); ok {
-				if apiErr.StatusCode == 404 || apiErr.StatusCode == 405 {
-					return fmt.Errorf(
-						"server returned %d for %s: cancel endpoint not implemented yet (see issue #91); "+
-							"work around by restarting the producer pod",
-						apiErr.StatusCode, path,
-					)
-				}
+			if httpResp != nil && (httpResp.StatusCode == 404 || httpResp.StatusCode == 405) {
+				return fmt.Errorf(
+					"server returned %d for cancel %s: cancel endpoint not implemented yet (see issue #91); "+
+						"work around by restarting the producer pod",
+					httpResp.StatusCode, traceID,
+				)
 			}
 			return err
 		}
 
+		data := resp.GetData()
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(data)
 			return nil
 		}
 
-		data := resp.Data
-		stateMsg := data.State
+		stateMsg := data.GetState()
 		if stateMsg == "" {
 			stateMsg = "cancelled"
 		}
 		fmt.Fprintf(traceCancelStdout, "Trace %s: %s\n", traceID, stateMsg)
-		if len(data.CancelledTasks) > 0 {
-			fmt.Fprintf(traceCancelStdout, "  cancelled tasks: %s\n", strings.Join(data.CancelledTasks, ", "))
+		if ct := data.GetCancelledTasks(); len(ct) > 0 {
+			fmt.Fprintf(traceCancelStdout, "  cancelled tasks: %s\n", strings.Join(ct, ", "))
 		}
-		if len(data.RemovedRedisTasks) > 0 {
-			fmt.Fprintf(traceCancelStdout, "  removed redis tasks: %s\n", strings.Join(data.RemovedRedisTasks, ", "))
+		if rt := data.GetRemovedRedisTasks(); len(rt) > 0 {
+			fmt.Fprintf(traceCancelStdout, "  removed redis tasks: %s\n", strings.Join(rt, ", "))
 		}
-		if len(data.DeletedPodChaos) > 0 {
-			fmt.Fprintf(traceCancelStdout, "  deleted PodChaos: %s\n", strings.Join(data.DeletedPodChaos, ", "))
+		if dp := data.GetDeletedPodchaos(); len(dp) > 0 {
+			fmt.Fprintf(traceCancelStdout, "  deleted PodChaos: %s\n", strings.Join(dp, ", "))
 		}
-		if data.Message != "" {
-			fmt.Fprintf(traceCancelStdout, "  %s\n", data.Message)
+		if msg := data.GetMessage(); msg != "" {
+			fmt.Fprintf(traceCancelStdout, "  %s\n", msg)
 		}
 		return nil
 	},
@@ -502,7 +521,6 @@ restarting the producer.`,
 func printSSEEvent(evt client.SSEEvent) {
 	ts := time.Now().Format("15:04:05")
 
-	// Try to parse structured data from the event.
 	var data map[string]any
 	if json.Unmarshal([]byte(evt.Data), &data) == nil {
 		taskType := stringField(data, "task_type")
@@ -519,7 +537,6 @@ func printSSEEvent(evt client.SSEEvent) {
 		}
 	}
 
-	// Fallback: print raw event.
 	if evt.Event != "" {
 		fmt.Printf("[%s] event=%s %s\n", ts, evt.Event, evt.Data)
 	} else {

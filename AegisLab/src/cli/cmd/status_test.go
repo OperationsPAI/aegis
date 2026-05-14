@@ -58,9 +58,11 @@ func TestStatusHealthy(t *testing.T) {
 	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v2/system/health":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(healthyResponse())
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{"code": 401, "message": "unauthorized"})
 		}
 	})
@@ -96,9 +98,11 @@ func TestStatusUnhealthy(t *testing.T) {
 	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v2/system/health":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(unhealthyResponse())
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{"code": 401, "message": "unauthorized"})
 		}
 	})
@@ -161,18 +165,22 @@ func TestStatusJSON(t *testing.T) {
 	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v2/system/health":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(healthyResponse())
 		case "/api/v2/auth/profile":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{
 				"code": 200, "message": "success",
 				"data": map[string]any{"id": 1, "username": "admin"},
 			})
 		case "/api/v2/tasks":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{
 				"code": 200, "message": "success",
 				"data": map[string]any{"items": []any{}, "pagination": map[string]any{"page": 1, "size": 100, "total": 0, "total_pages": 0}},
 			})
 		case "/api/v2/traces":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{
 				"code": 200, "message": "success",
 				"data": map[string]any{"items": []any{}, "pagination": map[string]any{"page": 1, "size": 10, "total": 0, "total_pages": 0}},
@@ -236,14 +244,17 @@ func TestStatusIntegrationNonTTYNoANSIAndTraceID(t *testing.T) {
 	ts := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v2/system/health":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(healthyResponse())
 		case "/api/v2/auth/profile":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
 				"data":    map[string]any{"id": 1, "username": "admin"},
 			})
 		case "/api/v2/tasks":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -253,6 +264,7 @@ func TestStatusIntegrationNonTTYNoANSIAndTraceID(t *testing.T) {
 				},
 			})
 		case "/api/v2/traces":
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -271,6 +283,7 @@ func TestStatusIntegrationNonTTYNoANSIAndTraceID(t *testing.T) {
 			})
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{"code": 401, "message": "unauthorized"})
 		}
 	})

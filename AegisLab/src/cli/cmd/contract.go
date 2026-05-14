@@ -126,6 +126,13 @@ func executeError(err error) int {
 		output.PrintCLIError(cliErr, output.OutputFormat(flagOutput))
 		return exitCodeFor(err)
 	}
+	// Generated apiclient errors carry the response body + status; lift
+	// them into the structured CLIError envelope so --output=json
+	// consumers keep getting type/request_id/exit_code fields.
+	if synth := apiClientCLIError(err); synth != nil {
+		output.PrintCLIError(synth, output.OutputFormat(flagOutput))
+		return synth.ExitCode
+	}
 	if msg := errorMessage(err); msg != "" {
 		output.PrintError(msg)
 	}

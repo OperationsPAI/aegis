@@ -47,6 +47,7 @@ func TestResolveNextPendingTask_PicksEarliestPending(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(traceDetailFixture([]map[string]any{
 			{"id": "task-done", "type": "FaultInjection", "state": "Completed", "execute_time": 100},
 			{"id": "task-late", "type": "BuildDatapack", "state": "Pending", "execute_time": 300},
@@ -66,6 +67,7 @@ func TestResolveNextPendingTask_PicksEarliestPending(t *testing.T) {
 
 func TestResolveNextPendingTask_NoPendingReturnsNotFoundExit(t *testing.T) {
 	restore := withServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(traceDetailFixture([]map[string]any{
 			{"id": "task-a", "state": "Completed"},
 			{"id": "task-b", "state": "Running"},
@@ -85,6 +87,7 @@ func TestResolveNextPendingTask_NoPendingReturnsNotFoundExit(t *testing.T) {
 
 func TestTraceNextTaskCmd_StdoutScriptable(t *testing.T) {
 	restore := withServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(traceDetailFixture([]map[string]any{
 			{"id": "task-run", "type": "BuildDatapack", "state": "Running"},
 			{"id": "task-next", "type": "RunAlgorithm", "state": "Pending", "execute_time": 500},
@@ -114,6 +117,7 @@ func TestTraceNextTaskCmd_StdoutScriptable(t *testing.T) {
 
 func TestTraceNextTaskCmd_NoPendingExitCode(t *testing.T) {
 	restore := withServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(traceDetailFixture([]map[string]any{
 			{"id": "task-a", "state": "Completed"},
 		}))
@@ -135,12 +139,14 @@ func TestTraceExpediteCmd_ResolvesThenPostsExpedite(t *testing.T) {
 	restore := withServer(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/traces/trace-xyz":
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(traceDetailFixture([]map[string]any{
 				{"id": "task-pend", "type": "RunAlgorithm", "state": "Pending", "execute_time": 123},
 			}))
 		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/api/v2/tasks/"):
 			gotMethod = r.Method
 			gotPath = r.URL.Path
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    200,
 				"message": "success",
@@ -170,6 +176,7 @@ func TestTraceExpediteCmd_NoPendingDoesNotPost(t *testing.T) {
 			posted = true
 		}
 		if r.URL.Path == "/api/v2/traces/trace-xyz" {
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(traceDetailFixture([]map[string]any{
 				{"id": "task-a", "state": "Completed"},
 			}))

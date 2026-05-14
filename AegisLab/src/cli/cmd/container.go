@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
 	"aegis/platform/consts"
@@ -12,7 +13,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Local structs for container API responses.
+// Local structs for container API responses. Kept (rather than pulled from
+// apiclient directly) because container_test.go and system_publish_chart.go
+// consume these shapes, and because containerGetOutput embeds containerDetail
+// to add CLI-only fields (default_version, version_count) that aren't in the
+// API DTO.
 
 type containerDetail struct {
 	ID        int                    `json:"id"`
@@ -57,44 +62,55 @@ var containerCmd = &cobra.Command{
 var containerListType string
 
 // containerTypeNameToInt converts a human-readable container type to its API integer.
-var containerTypeNameToInt = map[string]string{
-	"algorithm": "0",
-	"benchmark": "1",
-	"pedestal":  "2",
+var containerTypeNameToInt = map[string]int32{
+	"algorithm": 0,
+	"benchmark": 1,
+	"pedestal":  2,
 }
 
 var containerListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List containers",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		path := consts.APIPathContainers + "?page=1&size=100"
+		cli, ctx := newAPIClient()
+		req := cli.ContainersAPI.ListContainers(ctx).Page(1).Size(100)
 		if containerListType != "" {
 			typeInt, ok := containerTypeNameToInt[containerListType]
 			if !ok {
 				return fmt.Errorf("invalid container type %q (valid: algorithm, benchmark, pedestal)", containerListType)
 			}
-			path += "&type=" + typeInt
+			req = req.Type_(typeInt)
 		}
-
-		var resp client.APIResponse[client.PaginatedData[containerListItem]]
-		if err := c.Get(path, &resp); err != nil {
+		resp, _, err := req.Execute()
+		if err != nil {
 			return err
+		}
+		data := resp.GetData()
+		raw := data.GetItems()
+		items := make([]containerListItem, 0, len(raw))
+		for _, c := range raw {
+			items = append(items, containerListItem{
+				ID:        int(c.GetId()),
+				Name:      c.GetName(),
+				Type:      c.GetType(),
+				Status:    c.GetStatus(),
+				CreatedAt: c.GetCreatedAt(),
+			})
 		}
 
 		switch output.OutputFormat(flagOutput) {
 		case output.FormatJSON:
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(map[string]any{"items": items, "pagination": data.GetPagination()})
 			return nil
 		case output.FormatNDJSON:
-			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
+			if err := output.PrintMetaJSON(data.GetPagination()); err != nil {
 				return err
 			}
-			return output.PrintNDJSON(resp.Data.Items)
+			return output.PrintNDJSON(items)
 		}
 
-		rows := make([][]string, 0, len(resp.Data.Items))
-		for _, item := range resp.Data.Items {
+		rows := make([][]string, 0, len(items))
+		for _, item := range items {
 			rows = append(rows, []string{item.Name, item.Type, item.Status, item.CreatedAt})
 		}
 		output.PrintTable([]string{"Name", "Type", "Status", "Created"}, rows)
@@ -109,28 +125,37 @@ var containerGetCmd = &cobra.Command{
 	Short: "Get container details by name",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		r := client.NewResolver(c)
-
+		r := newResolver()
 		id, err := r.ContainerID(args[0])
 		if err != nil {
 			return err
 		}
 
-		var resp client.APIResponse[containerDetail]
-		if err := c.Get(consts.APIPathContainer(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ContainersAPI.GetContainerById(ctx, int32(id)).Execute()
+		if err != nil {
 			return err
 		}
+		d := resp.GetData()
+		detail := containerDetail{
+			ID:        int(d.GetId()),
+			Name:      d.GetName(),
+			Type:      d.GetType(),
+			Status:    d.GetStatus(),
+			Versions:  apiVersionsToLocal(d.GetVersions()),
+			CreatedAt: d.GetCreatedAt(),
+			UpdatedAt: d.GetUpdatedAt(),
+		}
 
-		versionCount := len(resp.Data.Versions)
+		versionCount := len(detail.Versions)
 		defaultVersion := "(none)"
 		if versionCount > 0 {
-			defaultVersion = resp.Data.Versions[0].Name
+			defaultVersion = detail.Versions[0].Name
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
 			out := containerGetOutput{
-				containerDetail: resp.Data,
+				containerDetail: detail,
 				DefaultVersion:  defaultVersion,
 				VersionCount:    versionCount,
 			}
@@ -138,16 +163,36 @@ var containerGetCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Printf("Name:     %s\n", resp.Data.Name)
-		fmt.Printf("ID:       %d\n", resp.Data.ID)
-		fmt.Printf("Type:     %s\n", resp.Data.Type)
-		fmt.Printf("Status:   %s\n", resp.Data.Status)
+		fmt.Printf("Name:     %s\n", detail.Name)
+		fmt.Printf("ID:       %d\n", detail.ID)
+		fmt.Printf("Type:     %s\n", detail.Type)
+		fmt.Printf("Status:   %s\n", detail.Status)
 		fmt.Printf("Versions: %d\n", versionCount)
 		fmt.Printf("Default:  %s\n", defaultVersion)
-		fmt.Printf("Created:  %s\n", resp.Data.CreatedAt)
-		fmt.Printf("Updated:  %s\n", resp.Data.UpdatedAt)
+		fmt.Printf("Created:  %s\n", detail.CreatedAt)
+		fmt.Printf("Updated:  %s\n", detail.UpdatedAt)
 		return nil
 	},
+}
+
+// apiVersionsToLocal copies a generated []ContainerContainerVersionResp into
+// the local []containerVersionItem shape consumed by tests and the JSON/table
+// renderers.
+func apiVersionsToLocal(versions []apiclient.ContainerContainerVersionResp) []containerVersionItem {
+	if versions == nil {
+		return nil
+	}
+	out := make([]containerVersionItem, 0, len(versions))
+	for _, v := range versions {
+		out = append(out, containerVersionItem{
+			ID:        int(v.GetId()),
+			Name:      v.GetName(),
+			ImageRef:  v.GetImageRef(),
+			Usage:     int(v.GetUsage()),
+			UpdatedAt: v.GetUpdatedAt(),
+		})
+	}
+	return out
 }
 
 // --- container versions ---
@@ -157,26 +202,27 @@ var containerVersionsCmd = &cobra.Command{
 	Short: "List versions for a container",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		r := client.NewResolver(c)
-
+		r := newResolver()
 		id, err := r.ContainerID(args[0])
 		if err != nil {
 			return err
 		}
 
-		var resp client.APIResponse[client.PaginatedData[containerVersionItem]]
-		if err := c.Get(consts.APIPathContainerVersionsFor(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.ContainersAPI.ListContainerVersions(ctx, int32(id)).Execute()
+		if err != nil {
 			return err
 		}
+		data := resp.GetData()
+		items := apiVersionsToLocal(data.GetItems())
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(map[string]any{"items": items, "pagination": data.GetPagination()})
 			return nil
 		}
 
-		rows := make([][]string, 0, len(resp.Data.Items))
-		for _, v := range resp.Data.Items {
+		rows := make([][]string, 0, len(items))
+		for _, v := range items {
 			rows = append(rows, []string{v.Name, v.ImageRef, v.ImageRef, fmt.Sprintf("%d", v.Usage), v.UpdatedAt})
 		}
 		// The new IMAGE column mirrors the server-composed image_ref
@@ -202,23 +248,6 @@ var (
 	setImageDryRun bool
 )
 
-type setImageRequest struct {
-	Registry   string `json:"registry"`
-	Namespace  string `json:"namespace"`
-	Repository string `json:"repository"`
-	Tag        string `json:"tag"`
-}
-
-type setImageResponse struct {
-	ID         int    `json:"id"`
-	Name       string `json:"name"`
-	Registry   string `json:"registry"`
-	Namespace  string `json:"namespace"`
-	Repository string `json:"repository"`
-	Tag        string `json:"tag"`
-	ImageRef   string `json:"image_ref"`
-}
-
 var containerVersionSetImageCmd = &cobra.Command{
 	Use:   "set-image",
 	Short: "Rewrite the image reference of a container version in the database",
@@ -241,10 +270,9 @@ Nested namespaces are preserved (e.g. docker.io/foo/bar/baz:tag -> namespace
 			return err
 		}
 
-		c := newClient()
+		cli, ctx := newAPIClient()
 
-		// Fetch current row by scanning the container (versions list has id/image_ref).
-		current, err := fetchContainerVersionByID(c, setImageID)
+		current, err := fetchContainerVersionByID(setImageID)
 		if err != nil {
 			return fmt.Errorf("failed to fetch current container version: %w", err)
 		}
@@ -262,19 +290,26 @@ Nested namespaces are preserved (e.g. docker.io/foo/bar/baz:tag -> namespace
 			return nil
 		}
 
-		req := setImageRequest{
-			Registry:   parsed.Registry,
-			Namespace:  parsed.Namespace,
+		req := apiclient.ContainerSetContainerVersionImageReq{
 			Repository: parsed.Repository,
 			Tag:        parsed.Tag,
 		}
-		var resp client.APIResponse[setImageResponse]
-		if err := c.Patch(consts.APIPathContainerVersionImage(setImageID), req, &resp); err != nil {
+		if parsed.Registry != "" {
+			req.SetRegistry(parsed.Registry)
+		}
+		if parsed.Namespace != "" {
+			req.SetNamespace(parsed.Namespace)
+		}
+		resp, _, err := cli.ContainersAPI.SetContainerVersionImage(ctx, int32(setImageID)).
+			ContainerSetContainerVersionImageReq(req).
+			Execute()
+		if err != nil {
 			return err
 		}
+		d := resp.GetData()
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(d)
 			return nil
 		}
 		output.PrintInfo(fmt.Sprintf("Container version %d image updated to %s", setImageID, parsed.String()))
@@ -304,22 +339,25 @@ var containerVersionListVersionsCmd = &cobra.Command{
 
 // fetchContainerVersionByID searches known containers for the given version id.
 // Returns the version item and its parent container name.
-func fetchContainerVersionByID(c *client.Client, versionID int) (*containerVersionItem, error) {
-	var list client.APIResponse[client.PaginatedData[containerListItem]]
-	if err := c.Get(consts.APIPathContainers+"?page=1&size=1000", &list); err != nil {
+func fetchContainerVersionByID(versionID int) (*containerVersionItem, error) {
+	c, ctx := newAPIClient()
+	listResp, _, err := c.ContainersAPI.ListContainers(ctx).Page(1).Size(1000).Execute()
+	if err != nil {
 		return nil, err
 	}
-	r := client.NewResolver(c)
-	for _, ctr := range list.Data.Items {
-		id, err := r.ContainerID(ctr.Name)
+	r := newResolver()
+	listData := listResp.GetData()
+	for _, ctr := range listData.GetItems() {
+		id, err := r.ContainerID(ctr.GetName())
 		if err != nil {
 			continue
 		}
-		var vResp client.APIResponse[client.PaginatedData[containerVersionItem]]
-		if err := c.Get(consts.APIPathContainerVersionsFor(id)+"?page=1&size=1000", &vResp); err != nil {
+		vResp, _, err := c.ContainersAPI.ListContainerVersions(ctx, int32(id)).Page(1).Size(1000).Execute()
+		if err != nil {
 			continue
 		}
-		for _, v := range vResp.Data.Items {
+		vData := vResp.GetData()
+		for _, v := range apiVersionsToLocal(vData.GetItems()) {
 			if v.ID == versionID {
 				return &v, nil
 			}
@@ -342,26 +380,27 @@ func printSetImageDiff(current *containerVersionItem, proposed imageRefParts) {
 }
 
 func runListVersions(containerName string) error {
-	c := newClient()
-	r := client.NewResolver(c)
-
+	r := newResolver()
 	id, err := r.ContainerID(containerName)
 	if err != nil {
 		return err
 	}
 
-	var resp client.APIResponse[client.PaginatedData[containerVersionItem]]
-	if err := c.Get(consts.APIPathContainerVersionsFor(id), &resp); err != nil {
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.ContainersAPI.ListContainerVersions(ctx, int32(id)).Execute()
+	if err != nil {
 		return err
 	}
+	data := resp.GetData()
+	items := apiVersionsToLocal(data.GetItems())
 
 	if output.OutputFormat(flagOutput) == output.FormatJSON {
-		output.PrintJSON(resp.Data)
+		output.PrintJSON(map[string]any{"items": items, "pagination": data.GetPagination()})
 		return nil
 	}
 
-	rows := make([][]string, 0, len(resp.Data.Items))
-	for _, v := range resp.Data.Items {
+	rows := make([][]string, 0, len(items))
+	for _, v := range items {
 		rows = append(rows, []string{
 			fmt.Sprintf("%d", v.ID),
 			v.Name,
@@ -388,8 +427,7 @@ var containerDeleteCmd = &cobra.Command{
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		c := newClient()
-		r := client.NewResolver(c)
+		r := newResolver()
 		id, name, err := r.ContainerIDOrName(args[0])
 		if err != nil {
 			return notFoundErrorf("container %q not found: %v", args[0], err)
@@ -407,8 +445,8 @@ var containerDeleteCmd = &cobra.Command{
 		if err := confirmDeletion("container", name, id, containerDeleteYes); err != nil {
 			return err
 		}
-		var resp client.APIResponse[any]
-		if err := c.Delete(consts.APIPathContainer(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		if _, _, err := cli.ContainersAPI.DeleteContainer(ctx, int32(id)).Execute(); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("Container %q (id %d) deleted", name, id))
@@ -426,8 +464,7 @@ var containerResolveCmd = &cobra.Command{
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		c := newClient()
-		r := client.NewResolver(c)
+		r := newResolver()
 		id, name, err := r.ContainerIDOrName(args[0])
 		if err != nil {
 			return notFoundErrorf("container %q not found", args[0])
@@ -455,6 +492,12 @@ var containerBuildCmd = &cobra.Command{
 			return nil
 		}
 
+		// The generated ContainersAPI.BuildContainerImage requires
+		// (image_name, github_repository, ...) — the existing CLI's
+		// {name, version} body shape does not map onto that contract,
+		// so the manual POST is preserved until the flag surface is
+		// reworked. See onboarding follow-up for the swag annotation
+		// gap on this endpoint.
 		c := newClient()
 
 		body := map[string]string{

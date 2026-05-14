@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -310,6 +309,11 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 		}
 		rc.Submit["skip_restart_pedestal"] = true
 	}
+	// TODO: missing swag annotation — generated SubmitProjectFaultInjection
+	// requires a typed InjectionSubmitInjectionReq, but rc.Submit is a
+	// freeform YAML map (the regression spec is hand-authored). Keep the
+	// hand-coded POST until the inject endpoint accepts a SDK-friendly
+	// shape that matches the regression YAML.
 	var submitResp client.APIResponse[injectSubmitResponse]
 	if err := c.Post(path, rc.Submit, &submitResp); err != nil {
 		return regressionSummary{}, fmt.Errorf("submit regression case %q: %w", rc.Name, err)
@@ -329,11 +333,10 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 		return regressionSummary{}, fmt.Errorf("run regression case %q: %w", rc.Name, err)
 	}
 
-	traceData, err := fetchTraceData(c, traceID)
+	observedTaskChain, err := fetchTraceTaskChain(parentCtx, traceID)
 	if err != nil {
 		return regressionSummary{}, fmt.Errorf("fetch trace %s for regression case %q: %w", traceID, rc.Name, err)
 	}
-	observedTaskChain := extractTaskChain(traceData)
 	finalEvent := ""
 	if len(observedEvents) > 0 {
 		finalEvent = observedEvents[len(observedEvents)-1]
@@ -399,36 +402,26 @@ func collectRegressionEvents(parentCtx context.Context, traceID string, timeoutS
 	}
 }
 
-func fetchTraceData(c *client.Client, traceID string) (map[string]any, error) {
-	var resp client.APIResponse[map[string]any]
-	if err := c.Get(consts.APIPathTrace(traceID), &resp); err != nil {
+func fetchTraceTaskChain(ctx context.Context, traceID string) ([]string, error) {
+	cli, apiCtx := newAPIClient()
+	_ = ctx // parent ctx is informational here; auth ctx is what apiclient needs
+	resp, _, err := cli.TracesAPI.GetTraceById(apiCtx, traceID).Execute()
+	if err != nil {
 		return nil, err
 	}
-	return resp.Data, nil
-}
-
-func extractTaskChain(traceData map[string]any) []string {
-	tasksRaw, ok := traceData["tasks"]
-	if !ok || tasksRaw == nil {
-		return nil
+	if resp.Data == nil {
+		return nil, nil
 	}
-	payload, err := json.Marshal(tasksRaw)
-	if err != nil {
-		return nil
-	}
-	var tasks []map[string]any
-	if err := json.Unmarshal(payload, &tasks); err != nil {
-		return nil
-	}
+	tasks := resp.Data.GetTasks()
 	chain := make([]string, 0, len(tasks))
 	for _, task := range tasks {
-		typ := strings.TrimSpace(stringField(task, "type"))
+		typ := strings.TrimSpace(task.GetType())
 		if typ == "" {
 			continue
 		}
 		chain = append(chain, typ)
 	}
-	return chain
+	return chain, nil
 }
 
 func validateRegressionOutcome(v regressionValidation, observedEvents, observedTaskChain []string) error {
@@ -598,25 +591,24 @@ func resolveRegressionNamespaces(ctx context.Context, rc *regressionCase, fetche
 // liveSystemsFetcher is the real /api/v2/systems-backed SystemsFetcher. It
 // mirrors deriveNamespaceFromSystem's API call but returns the raw pattern +
 // count so callers can cache and run their own pattern logic.
-type liveSystemsFetcher struct{ c *client.Client }
+type liveSystemsFetcher struct{}
 
 func newLiveSystemsFetcher() (*liveSystemsFetcher, error) {
-	return &liveSystemsFetcher{c: newClient()}, nil
+	return &liveSystemsFetcher{}, nil
 }
 
 func (l *liveSystemsFetcher) FetchSystem(_ context.Context, name string) (string, int, error) {
-	type systemItem struct {
-		Name      string `json:"name"`
-		NsPattern string `json:"ns_pattern"`
-		Count     int    `json:"count"`
-	}
-	var resp client.APIResponse[client.PaginatedData[systemItem]]
-	if err := l.c.Get(consts.APIPathSystems+"?page=1&size=100", &resp); err != nil {
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(1).Size(100).Execute()
+	if err != nil {
 		return "", 0, err
 	}
-	for _, s := range resp.Data.Items {
-		if s.Name == name {
-			return s.NsPattern, s.Count, nil
+	if resp.Data == nil {
+		return "", 0, fmt.Errorf("system %q not found via /api/v2/systems", name)
+	}
+	for _, s := range resp.Data.GetItems() {
+		if s.GetName() == name {
+			return s.GetNsPattern(), int(s.GetCount()), nil
 		}
 	}
 	return "", 0, fmt.Errorf("system %q not found via /api/v2/systems", name)

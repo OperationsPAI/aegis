@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"time"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
 	"aegis/platform/consts"
@@ -48,21 +51,58 @@ var taskListSize int
 var taskListOverdue bool
 var taskListAll bool
 
+// resolveTaskStateFilter accepts either a TaskState name ("Running") or its
+// numeric form ("2") and returns the int32 the typed client expects. Empty
+// input means "no filter".
+func resolveTaskStateFilter(raw string) (*int32, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return nil, nil
+	}
+	if state := consts.GetTaskStateByName(s); state != nil {
+		v := int32(*state)
+		return &v, nil
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return nil, fmt.Errorf("invalid --state %q: want a name (e.g. Running) or int", s)
+	}
+	v := int32(n)
+	return &v, nil
+}
+
+// resolveTaskTypeFilter accepts either a TaskType name or numeric form and
+// returns the int32 query value.
+func resolveTaskTypeFilter(raw string) (*int32, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return nil, nil
+	}
+	if t := consts.GetTaskTypeByName(s); t != nil {
+		v := int32(*t)
+		return &v, nil
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return nil, fmt.Errorf("invalid --type %q: want a name (e.g. FaultInjection) or int", s)
+	}
+	v := int32(n)
+	return &v, nil
+}
+
 var taskListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List tasks with optional filters",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-
-		basePath := consts.APIPathTasks
-		baseParams := map[string]string{
-			"state": taskListState,
-			"type":  taskListType,
-		}
-
 		if taskListAll {
 			if output.OutputFormat(flagOutput) != output.FormatNDJSON {
 				return fmt.Errorf("--all requires --output ndjson (table/json buffer the full result set; use ndjson for streaming)")
+			}
+			c := newClient()
+			basePath := consts.APIPathTasks
+			baseParams := map[string]string{
+				"state": taskListState,
+				"type":  taskListType,
 			}
 			var keep func(map[string]any) bool
 			if taskListOverdue {
@@ -74,34 +114,46 @@ var taskListCmd = &cobra.Command{
 			return streamListAllNDJSONFiltered[map[string]any](c, basePath, baseParams, keep)
 		}
 
-		params := buildQueryParams(map[string]string{
-			"state": taskListState,
-			"type":  taskListType,
-			"page":  intToString(taskListPage),
-			"size":  intToString(taskListSize),
-		})
-		path := basePath
-		if params != "" {
-			path += "?" + params
+		stateFilter, err := resolveTaskStateFilter(taskListState)
+		if err != nil {
+			return err
 		}
-
-		var resp client.APIResponse[client.PaginatedData[map[string]any]]
-		if err := c.Get(path, &resp); err != nil {
+		typeFilter, err := resolveTaskTypeFilter(taskListType)
+		if err != nil {
 			return err
 		}
 
+		cli, ctx := newAPIClient()
+		req := cli.TasksAPI.ListTasks(ctx)
+		if taskListPage > 0 {
+			req = req.Page(int32(taskListPage))
+		}
+		if taskListSize > 0 {
+			req = req.Size(int32(taskListSize))
+		}
+		if stateFilter != nil {
+			req = req.State(*stateFilter)
+		}
+		if typeFilter != nil {
+			req = req.TaskType(*typeFilter)
+		}
+		resp, _, err := req.Execute()
+		if err != nil {
+			return err
+		}
+		data := resp.GetData()
+		items := data.GetItems()
+
 		// Apply --overdue filter client-side: only keep Pending tasks whose
-		// execute_time is in the past. This avoids a new backend filter and
-		// works even when the server doesn't know about WAIT semantics.
-		items := resp.Data.Items
+		// execute_time is in the past.
 		if taskListOverdue {
-			nowEpoch := time.Now().Unix()
+			nowEpoch := int32(time.Now().Unix())
 			filtered := items[:0]
 			for _, item := range items {
-				if stringField(item, "state") != "Pending" {
+				if item.GetState() != "Pending" {
 					continue
 				}
-				if execTimeField(item) <= nowEpoch {
+				if item.GetExecuteTime() <= nowEpoch {
 					filtered = append(filtered, item)
 				}
 			}
@@ -110,12 +162,14 @@ var taskListCmd = &cobra.Command{
 
 		switch output.OutputFormat(flagOutput) {
 		case output.FormatJSON:
-			resp.Data.Items = items
-			output.PrintJSON(resp.Data)
+			data.Items = items
+			output.PrintJSON(data)
 			return nil
 		case output.FormatNDJSON:
-			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
-				return err
+			if pg := data.GetPagination(); pg.HasPage() {
+				if err := output.PrintMetaJSON(pg); err != nil {
+					return err
+				}
 			}
 			return output.PrintNDJSON(items)
 		}
@@ -124,25 +178,25 @@ var taskListCmd = &cobra.Command{
 		var rows [][]string
 		nowEpoch := time.Now().Unix()
 		for _, item := range items {
-			state := stringField(item, "state")
+			state := item.GetState()
 			wait := "-"
 			if state == "Pending" {
-				wait = formatWait(execTimeField(item) - nowEpoch)
+				wait = formatWait(int64(item.GetExecuteTime()) - nowEpoch)
 			}
 			rows = append(rows, []string{
-				stringField(item, "id"),
-				stringField(item, "type"),
+				item.GetId(),
+				item.GetType(),
 				state,
 				wait,
-				stringField(item, "trace_id"),
-				stringField(item, "project_id"),
-				stringField(item, "created_at"),
+				item.GetTraceId(),
+				strconv.Itoa(int(item.GetProjectId())),
+				item.GetCreatedAt(),
 			})
 		}
 
 		output.PrintTable(headers, rows)
-		p := resp.Data.Pagination
-		output.PrintInfo(fmt.Sprintf("Page %d/%d (total: %d)", p.Page, p.TotalPages, p.Total))
+		p := data.GetPagination()
+		output.PrintInfo(fmt.Sprintf("Page %d/%d (total: %d)", p.GetPage(), p.GetTotalPages(), p.GetTotal()))
 		return nil
 	},
 }
@@ -160,16 +214,14 @@ in any state other than Pending. Idempotent: expediting an already-due task
 succeeds silently.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-		path := consts.APIPathTaskExpedite(args[0])
-
-		var resp client.APIResponse[map[string]any]
-		if err := c.Post(path, nil, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.TasksAPI.ExpediteTask(ctx, args[0]).Execute()
+		if err != nil {
 			return err
 		}
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(resp.GetData())
 			return nil
 		}
 
@@ -190,9 +242,8 @@ func formatWait(deltaSec int64) string {
 	return fmt.Sprintf("%s%02d:%02d", sign, abs/60, abs%60)
 }
 
-// execTimeField extracts execute_time from a task response map. JSON numbers
-// decode as float64 through encoding/json, so handle that plus a couple of
-// fallback numeric types defensively.
+// execTimeField extracts execute_time from a task response map. Used by the
+// --all NDJSON streaming path which still works on map[string]any items.
 func execTimeField(m map[string]any) int64 {
 	v, ok := m["execute_time"]
 	if !ok || v == nil {
@@ -230,24 +281,51 @@ var (
 )
 
 func runTaskGet(taskID string) error {
-		c := newClient()
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.TasksAPI.GetTaskById(ctx, taskID).Execute()
+	if err != nil {
+		return err
+	}
+	d := resp.GetData()
 
-		path := consts.APIPathTask(taskID)
-		var resp client.APIResponse[map[string]any]
-		if err := c.Get(path, &resp); err != nil {
-			return err
-		}
-
-		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
-			return nil
-		}
-
-		// Print all fields as key-value pairs.
-		for k, v := range resp.Data {
-			fmt.Printf("%-20s %v\n", k+":", v)
-		}
+	if output.OutputFormat(flagOutput) == output.FormatJSON {
+		output.PrintJSON(d)
 		return nil
+	}
+
+	printTaskDetail(d)
+	return nil
+}
+
+func printTaskDetail(d apiclient.DtoTaskDetailResp) {
+	row := func(k, v string) {
+		if v != "" {
+			fmt.Printf("%-20s %s\n", k+":", v)
+		}
+	}
+	row("id", d.GetId())
+	row("type", d.GetType())
+	row("state", d.GetState())
+	row("status", d.GetStatus())
+	row("trace_id", d.GetTraceId())
+	row("group_id", d.GetGroupId())
+	row("project_id", strconv.Itoa(int(d.GetProjectId())))
+	row("project_name", d.GetProjectName())
+	if d.GetExecuteTime() != 0 {
+		row("execute_time", strconv.Itoa(int(d.GetExecuteTime())))
+	}
+	row("cron_expr", d.GetCronExpr())
+	if d.HasImmediate() {
+		row("immediate", strconv.FormatBool(d.GetImmediate()))
+	}
+	row("created_at", d.GetCreatedAt())
+	row("updated_at", d.GetUpdatedAt())
+	if payload := d.GetPayload(); len(payload) > 0 {
+		fmt.Printf("%-20s %v\n", "payload:", payload)
+	}
+	if logs := d.GetLogs(); len(logs) > 0 {
+		fmt.Printf("%-20s %d entries\n", "logs:", len(logs))
+	}
 }
 
 // --- task logs ---
@@ -273,62 +351,64 @@ var (
 )
 
 func runTaskLogs(taskID string) error {
-		wsPath := consts.APIPathTaskLogsWS(taskID)
-		reader := client.NewWSReader(flagServer, wsPath, flagToken)
+	// Task logs are a WebSocket stream; the generated client cannot deliver
+	// the message channel, so keep the manual WS reader path here.
+	wsPath := consts.APIPathTaskLogsWS(taskID)
+	reader := client.NewWSReader(flagServer, wsPath, flagToken)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		// Handle Ctrl+C.
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, os.Interrupt)
-		go func() {
-			<-sigCh
-			cancel()
-		}()
+	// Handle Ctrl+C.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+	go func() {
+		<-sigCh
+		cancel()
+	}()
 
-		messages, errs := reader.Stream(ctx)
+	messages, errs := reader.Stream(ctx)
 
-		if taskLogsFollow {
-			// Follow mode: keep reading until cancelled.
-			for {
-				select {
-				case msg, ok := <-messages:
-					if !ok {
-						return nil
-					}
-					fmt.Println(msg)
-				case err, ok := <-errs:
-					if !ok {
-						return nil
-					}
-					return err
-				case <-ctx.Done():
+	if taskLogsFollow {
+		// Follow mode: keep reading until cancelled.
+		for {
+			select {
+			case msg, ok := <-messages:
+				if !ok {
 					return nil
 				}
-			}
-		} else {
-			// Non-follow mode: read available messages with a timeout.
-			timeout := time.After(5 * time.Second)
-			for {
-				select {
-				case msg, ok := <-messages:
-					if !ok {
-						return nil
-					}
-					fmt.Println(msg)
-				case err, ok := <-errs:
-					if !ok {
-						return nil
-					}
-					return err
-				case <-timeout:
-					return nil
-				case <-ctx.Done():
+				fmt.Println(msg)
+			case err, ok := <-errs:
+				if !ok {
 					return nil
 				}
+				return err
+			case <-ctx.Done():
+				return nil
 			}
 		}
+	} else {
+		// Non-follow mode: read available messages with a timeout.
+		timeout := time.After(5 * time.Second)
+		for {
+			select {
+			case msg, ok := <-messages:
+				if !ok {
+					return nil
+				}
+				fmt.Println(msg)
+			case err, ok := <-errs:
+				if !ok {
+					return nil
+				}
+				return err
+			case <-timeout:
+				return nil
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	}
 }
 
 // Helper functions shared by task and trace commands.

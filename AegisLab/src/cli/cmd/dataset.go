@@ -4,38 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/output"
-	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
-
-// Local structs for dataset API responses.
-
-type datasetDetail struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
-}
-
-type datasetListItem struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	CreatedAt   string `json:"created_at"`
-}
-
-type datasetVersionItem struct {
-	ID        int    `json:"id"`
-	Version   string `json:"version"`
-	Status    string `json:"status"`
-	CreatedAt string `json:"created_at"`
-}
 
 var datasetCmd = &cobra.Command{
 	Use:     "dataset",
@@ -49,10 +23,9 @@ var datasetListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List datasets",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newClient()
-
-		var resp client.APIResponse[client.PaginatedData[datasetListItem]]
-		if err := c.Get(consts.APIPathDatasets+"?page=1&size=100", &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.DatasetsAPI.ListDatasets(ctx).Page(1).Size(100).Execute()
+		if err != nil {
 			return err
 		}
 
@@ -61,15 +34,23 @@ var datasetListCmd = &cobra.Command{
 			output.PrintJSON(resp.Data)
 			return nil
 		case output.FormatNDJSON:
-			if err := output.PrintMetaJSON(resp.Data.Pagination); err != nil {
-				return err
+			if resp.Data != nil {
+				if err := output.PrintMetaJSON(resp.Data.GetPagination()); err != nil {
+					return err
+				}
+				return output.PrintNDJSON(resp.Data.GetItems())
 			}
-			return output.PrintNDJSON(resp.Data.Items)
+			return nil
 		}
 
-		rows := make([][]string, 0, len(resp.Data.Items))
-		for _, d := range resp.Data.Items {
-			rows = append(rows, []string{d.Name, d.Description, d.Status, d.CreatedAt})
+		var items []apiclient.DatasetDatasetResp
+		if resp.Data != nil {
+			items = resp.Data.GetItems()
+		}
+		rows := make([][]string, 0, len(items))
+		for _, d := range items {
+			// DatasetDatasetResp has no Description field on the list payload.
+			rows = append(rows, []string{d.GetName(), "", d.GetStatus(), d.GetCreatedAt()})
 		}
 		output.PrintTable([]string{"Name", "Description", "Status", "Created"}, rows)
 		return nil
@@ -91,22 +72,27 @@ var datasetGetCmd = &cobra.Command{
 			return err
 		}
 
-		var resp client.APIResponse[datasetDetail]
-		if err := c.Get(consts.APIPathDataset(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.DatasetsAPI.GetDatasetById(ctx, int32(id)).Execute()
+		if err != nil {
 			return err
 		}
+		d := resp.Data
 
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(resp.Data)
+			output.PrintJSON(d)
 			return nil
 		}
+		if d == nil {
+			return fmt.Errorf("empty dataset response")
+		}
 
-		fmt.Printf("Name:        %s\n", resp.Data.Name)
-		fmt.Printf("ID:          %d\n", resp.Data.ID)
-		fmt.Printf("Description: %s\n", resp.Data.Description)
-		fmt.Printf("Status:      %s\n", resp.Data.Status)
-		fmt.Printf("Created:     %s\n", resp.Data.CreatedAt)
-		fmt.Printf("Updated:     %s\n", resp.Data.UpdatedAt)
+		fmt.Printf("Name:        %s\n", d.GetName())
+		fmt.Printf("ID:          %d\n", d.GetId())
+		fmt.Printf("Description: %s\n", d.GetDescription())
+		fmt.Printf("Status:      %s\n", d.GetStatus())
+		fmt.Printf("Created:     %s\n", d.GetCreatedAt())
+		fmt.Printf("Updated:     %s\n", d.GetUpdatedAt())
 		return nil
 	},
 }
@@ -126,8 +112,9 @@ var datasetVersionsCmd = &cobra.Command{
 			return err
 		}
 
-		var resp client.APIResponse[client.PaginatedData[datasetVersionItem]]
-		if err := c.Get(consts.APIPathDatasetVersions(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.DatasetsAPI.ListDatasetVersions(ctx, int32(id)).Execute()
+		if err != nil {
 			return err
 		}
 
@@ -136,9 +123,15 @@ var datasetVersionsCmd = &cobra.Command{
 			return nil
 		}
 
-		rows := make([][]string, 0, len(resp.Data.Items))
-		for _, v := range resp.Data.Items {
-			rows = append(rows, []string{v.Version, v.Status, v.CreatedAt})
+		var items []apiclient.DatasetDatasetVersionResp
+		if resp.Data != nil {
+			items = resp.Data.GetItems()
+		}
+		rows := make([][]string, 0, len(items))
+		for _, v := range items {
+			// DatasetDatasetVersionResp exposes Name (version string) and UpdatedAt
+			// only; no Status/CreatedAt in the generated DTO.
+			rows = append(rows, []string{v.GetName(), "", v.GetUpdatedAt()})
 		}
 		output.PrintTable([]string{"Version", "Status", "Created"}, rows)
 		return nil
@@ -176,8 +169,8 @@ var datasetDeleteCmd = &cobra.Command{
 		if err := confirmDeletion("dataset", name, id, datasetDeleteYes); err != nil {
 			return err
 		}
-		var resp client.APIResponse[any]
-		if err := c.Delete(consts.APIPathDataset(id), &resp); err != nil {
+		cli, ctx := newAPIClient()
+		if _, _, err := cli.DatasetsAPI.DeleteDataset(ctx, int32(id)).Execute(); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("Dataset %q (id %d) deleted", name, id))

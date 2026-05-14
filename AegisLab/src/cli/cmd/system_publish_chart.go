@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -9,8 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"aegis/cli/client"
-	"aegis/platform/consts"
+	"aegis/cli/apiclient"
 
 	"github.com/spf13/cobra"
 )
@@ -106,19 +106,20 @@ func runSystemPublishChart(systemName, chartDir string, bumpVersion, keepTmp boo
 	if err := requireAPIContext(true); err != nil {
 		return err
 	}
-	c := newClient()
+	cli, ctx := newAPIClient()
 
 	// 1. Resolve chart coordinates via the backend.
-	lookup, err := fetchSystemChart(c, systemName)
+	lookup, err := fetchSystemChartTyped(cli, ctx, systemName)
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(lookup.RepoURL) == "" {
+	repoURL := lookup.GetRepoUrl()
+	if strings.TrimSpace(repoURL) == "" {
 		return notFoundErrorf("system %q has no repo_url in helm_configs; set it via aegisctl pedestal helm set first", systemName)
 	}
-	if !strings.HasPrefix(strings.ToLower(lookup.RepoURL), "oci://") {
+	if !strings.HasPrefix(strings.ToLower(repoURL), "oci://") {
 		return usageErrorf("system %q repo_url %q is not an OCI URL (must start with oci://) — publish-chart only supports OCI registries",
-			systemName, lookup.RepoURL)
+			systemName, repoURL)
 	}
 
 	// 2. helm package.
@@ -148,22 +149,22 @@ func runSystemPublishChart(systemName, chartDir string, bumpVersion, keepTmp boo
 	if err != nil {
 		return err
 	}
-	if chartName != lookup.ChartName {
+	if chartName != lookup.GetChartName() {
 		// Non-fatal — helm push drives name/version from the tgz, and the
 		// backend's chart_name may intentionally differ in alias/fork scenarios.
 		// But warn so operators notice unintentional drift.
 		fmt.Fprintf(os.Stderr, "warning: packaged chart name %q differs from backend chart_name %q (system %q)\n",
-			chartName, lookup.ChartName, systemName)
+			chartName, lookup.GetChartName(), systemName)
 	}
 
 	// 3. Optional registry login (only if creds provided via env).
-	if err := maybeRegistryLogin(lookup.RepoURL); err != nil {
+	if err := maybeRegistryLogin(repoURL); err != nil {
 		return err
 	}
 
 	// 4. helm push.
-	fmt.Fprintf(os.Stderr, "+ helm push %s %s\n", tgzPath, lookup.RepoURL)
-	pushOut, pushErr, err := systemPublishRunner.Run("helm", []string{"push", tgzPath, lookup.RepoURL}, nil)
+	fmt.Fprintf(os.Stderr, "+ helm push %s %s\n", tgzPath, repoURL)
+	pushOut, pushErr, err := systemPublishRunner.Run("helm", []string{"push", tgzPath, repoURL}, nil)
 	if pushOut != "" {
 		fmt.Fprint(os.Stderr, pushOut)
 	}
@@ -175,7 +176,7 @@ func runSystemPublishChart(systemName, chartDir string, bumpVersion, keepTmp boo
 	}
 
 	// 5. Remote verification via helm show chart.
-	ociRef := buildOCIRef(lookup.RepoURL, chartName)
+	ociRef := buildOCIRef(repoURL, chartName)
 	fmt.Fprintf(os.Stderr, "+ helm show chart %s --version %s\n", ociRef, chartVersion)
 	showOut, showErr, err := systemPublishRunner.Run("helm", []string{"show", "chart", ociRef, "--version", chartVersion}, nil)
 	if showOut != "" {
@@ -191,7 +192,7 @@ func runSystemPublishChart(systemName, chartDir string, bumpVersion, keepTmp boo
 
 	// 6. Optional DB bump.
 	if bumpVersion {
-		if err := bumpHelmConfigVersion(c, systemName, lookup, chartName, chartVersion); err != nil {
+		if err := bumpHelmConfigVersion(cli, ctx, systemName, lookup, chartName, chartVersion); err != nil {
 			return fmt.Errorf("bump helm_configs.version: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "bumped helm_configs.version for system %q to %q\n", systemName, chartVersion)
@@ -202,15 +203,14 @@ func runSystemPublishChart(systemName, chartDir string, bumpVersion, keepTmp boo
 	return nil
 }
 
-// fetchSystemChart calls the by-name chart endpoint (reuses the same response
-// shape as pedestal_chart.go to keep the CLI binary independent of server
-// types).
-func fetchSystemChart(c *client.Client, systemName string) (*chartLookupResp, error) {
-	var resp client.APIResponse[chartLookupResp]
-	if err := c.Get(consts.APIPathSystemByNameChart(url.PathEscape(systemName)), &resp); err != nil {
+// fetchSystemChartTyped calls SystemsAPI.GetChaosSystemChartByName.
+func fetchSystemChartTyped(cli *apiclient.APIClient, ctx context.Context, systemName string) (*apiclient.ChaossystemSystemChartResp, error) {
+	resp, _, err := cli.SystemsAPI.GetChaosSystemChartByName(ctx, systemName).Execute()
+	if err != nil {
 		return nil, fmt.Errorf("lookup chart for system %q: %w", systemName, err)
 	}
-	return &resp.Data, nil
+	d := resp.GetData()
+	return &d, nil
 }
 
 // packagedChartLine matches "Successfully packaged chart and saved it to: <path>"
@@ -307,43 +307,49 @@ func buildOCIRef(repoURL, chartName string) string {
 // upserts the helm_configs row with the new version. Other fields are carried
 // over from the current chart lookup so the PUT does not accidentally clear
 // repo_name / value_file / local_path.
-func bumpHelmConfigVersion(c *client.Client, systemName string, lookup *chartLookupResp, chartName, chartVersion string) error {
-	cvID, err := resolveSystemContainerVersionID(c, systemName, lookup.PedestalTag)
+func bumpHelmConfigVersion(cli *apiclient.APIClient, ctx context.Context, systemName string, lookup *apiclient.ChaossystemSystemChartResp, chartName, chartVersion string) error {
+	cvID, err := resolveSystemContainerVersionID(cli, ctx, systemName, lookup.GetPedestalTag())
 	if err != nil {
 		return err
 	}
-	body := pedestalHelmSetReq{
+	body := apiclient.PedestalUpsertPedestalHelmConfigReq{
 		ChartName: chartName,
 		Version:   chartVersion,
-		RepoURL:   lookup.RepoURL,
-		RepoName:  lookup.RepoName,
-		ValueFile: lookup.ValueFile,
-		LocalPath: lookup.LocalPath,
+		RepoUrl:   lookup.GetRepoUrl(),
+		RepoName:  lookup.GetRepoName(),
 	}
-	var resp client.APIResponse[pedestalHelmConfig]
-	if err := c.Put(consts.APIPathPedestalHelmByID(cvID), body, &resp); err != nil {
+	if vf := lookup.GetValueFile(); vf != "" {
+		body.SetValueFile(vf)
+	}
+	if lp := lookup.GetLocalPath(); lp != "" {
+		body.SetLocalPath(lp)
+	}
+	if _, _, err := cli.PedestalAPI.UpsertPedestalHelmConfig(ctx, int32(cvID)).PedestalUpsertPedestalHelmConfigReq(body).Execute(); err != nil {
 		return fmt.Errorf("PUT /api/v2/pedestal/helm/%d: %w", cvID, err)
 	}
 	return nil
 }
 
-// resolveSystemContainerVersionID walks /api/v2/containers + /versions to find
-// the container_version row that backs the system's active pedestal. The
+// resolveSystemContainerVersionID walks ContainersAPI.ListContainerVersions to
+// find the container_version row that backs the system's active pedestal. The
 // container name convention is that container.name == system.name (verified by
 // chaossystem.GetPedestalHelmConfigByName in the backend).
-func resolveSystemContainerVersionID(c *client.Client, systemName, pedestalTag string) (int, error) {
-	r := client.NewResolver(c)
+func resolveSystemContainerVersionID(cli *apiclient.APIClient, ctx context.Context, systemName, pedestalTag string) (int, error) {
+	// Container ID lookup still goes through the legacy resolver because there
+	// is no dedicated by-name container endpoint exposed in the typed client.
+	r := newResolver()
 	containerID, err := r.ContainerID(systemName)
 	if err != nil {
 		return 0, fmt.Errorf("resolve container id for system %q: %w", systemName, err)
 	}
-	var vResp client.APIResponse[client.PaginatedData[containerVersionItem]]
-	if err := c.Get(consts.APIPathContainerVersionsFor(containerID)+"?page=1&size=1000", &vResp); err != nil {
+	vResp, _, err := cli.ContainersAPI.ListContainerVersions(ctx, int32(containerID)).Page(1).Size(1000).Execute()
+	if err != nil {
 		return 0, fmt.Errorf("list versions for container %q: %w", systemName, err)
 	}
-	for _, v := range vResp.Data.Items {
-		if v.Name == pedestalTag {
-			return v.ID, nil
+	vData := vResp.GetData()
+	for _, v := range vData.GetItems() {
+		if v.GetName() == pedestalTag {
+			return int(v.GetId()), nil
 		}
 	}
 	return 0, notFoundErrorf("container version with name %q not found under container %q; cannot bump helm_configs.version",

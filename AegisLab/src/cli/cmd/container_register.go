@@ -55,8 +55,8 @@ type containerRegisterRequest struct {
 	Tag      string `json:"tag,omitempty"`
 	Version  string `json:"version,omitempty"`
 
-	Command string                  `json:"command,omitempty"`
-	EnvVars []containerRegisterEnv  `json:"env,omitempty"`
+	Command string                 `json:"command,omitempty"`
+	EnvVars []containerRegisterEnv `json:"env,omitempty"`
 
 	ChartName    string `json:"chart_name,omitempty"`
 	ChartVersion string `json:"chart_version,omitempty"`
@@ -160,6 +160,11 @@ func runContainerRegister(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Kept on the manual client: the typed apiclient's GenericOpenAPIError
+	// formatter only inspects "Title"/"Detail" fields and discards the
+	// backend's response `message`, which is where the register_id and
+	// stage tag live. Tests (and operators reading stderr) depend on
+	// those bytes surviving in the error string.
 	c := newClient()
 	var resp client.APIResponse[containerRegisterResponse]
 	if err := c.Post(consts.APIPathContainersRegister, req, &resp); err != nil {

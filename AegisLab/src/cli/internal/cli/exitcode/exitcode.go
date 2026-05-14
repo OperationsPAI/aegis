@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
+	"aegis/cli/apiclient"
 	"aegis/cli/client"
 	"aegis/cli/internal/cli/clierr"
 )
@@ -102,17 +104,20 @@ func ForError(err error) int {
 
 	var apiErr *client.APIError
 	if errors.As(err, &apiErr) {
-		switch {
-		case apiErr.StatusCode == 401 || apiErr.StatusCode == 403:
-			return CodeAuthFailure
-		case apiErr.StatusCode == 404:
-			return CodeNotFound
-		case apiErr.StatusCode == 409:
-			return CodeConflict
-		case apiErr.StatusCode >= 400 && apiErr.StatusCode <= 499:
-			return CodeUsage
-		case apiErr.StatusCode >= 500 && apiErr.StatusCode <= 599:
-			return CodeServerError
+		if c := codeForHTTPStatus(apiErr.StatusCode); c != 0 {
+			return c
+		}
+	}
+
+	// The generated apiclient surfaces HTTP errors as *GenericOpenAPIError
+	// whose Error() string starts with the status line (e.g. "404 Not Found").
+	// Parse the leading status code so the same exit-code contract holds.
+	var apiErr2 *apiclient.GenericOpenAPIError
+	if errors.As(err, &apiErr2) {
+		if status := leadingHTTPStatus(apiErr2.Error()); status != 0 {
+			if c := codeForHTTPStatus(status); c != 0 {
+				return c
+			}
 		}
 	}
 
@@ -143,6 +148,13 @@ func ForError(err error) int {
 		return CodeDecodeFailure
 	}
 
+	// JSON decode errors from the generated apiclient surface as bare
+	// "invalid character ..." / "json: cannot unmarshal ..." strings.
+	msg := err.Error()
+	if strings.HasPrefix(msg, "invalid character ") || strings.HasPrefix(msg, "json: cannot unmarshal") {
+		return CodeDecodeFailure
+	}
+
 	if strings.Contains(err.Error(), "unknown flag") ||
 		strings.Contains(err.Error(), "unknown command") ||
 		strings.Contains(err.Error(), "requires a subcommand") ||
@@ -155,4 +167,37 @@ func ForError(err error) int {
 	}
 
 	return CodeUnexpected
+}
+
+// codeForHTTPStatus maps an HTTP status code to the CLI's exit-code contract.
+// Returns 0 if the status doesn't fall in the 4xx/5xx error band.
+func codeForHTTPStatus(status int) int {
+	switch {
+	case status == 401 || status == 403:
+		return CodeAuthFailure
+	case status == 404:
+		return CodeNotFound
+	case status == 409:
+		return CodeConflict
+	case status >= 400 && status <= 499:
+		return CodeUsage
+	case status >= 500 && status <= 599:
+		return CodeServerError
+	}
+	return 0
+}
+
+// leadingHTTPStatus parses the leading status code from an apiclient
+// error string like "404 Not Found" or "500 Internal Server Error".
+// Returns 0 if the prefix isn't a recognizable status.
+func leadingHTTPStatus(s string) int {
+	first := s
+	if idx := strings.IndexByte(s, ' '); idx > 0 {
+		first = s[:idx]
+	}
+	n, err := strconv.Atoi(first)
+	if err != nil || n < 100 || n > 599 {
+		return 0
+	}
+	return n
 }
