@@ -182,7 +182,10 @@ data:
     auth     = "jwt"
 
     [[gateway.routes]]
-    prefix    = "/api/v2/share/"
+    # Drop trailing slash so the bare list endpoint (`GET /api/v2/share`) also
+    # routes here — `strings.HasPrefix` still matches `/api/v2/share/upload`,
+    # `/api/v2/share/{code}` via the same prefix.
+    prefix    = "/api/v2/share"
     upstream  = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth      = "jwt"
     audiences = ["portal"]

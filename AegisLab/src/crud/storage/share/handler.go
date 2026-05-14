@@ -128,7 +128,7 @@ func (h *Handler) Upload(c *gin.Context) {
 	if res.ExpiresAt != nil {
 		resp.ExpiresAt = res.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z")
 	}
-	c.JSON(http.StatusOK, resp)
+	dto.JSONResponse(c, http.StatusOK, "share link created", resp)
 }
 
 // List returns share links owned by the current user.
@@ -165,7 +165,7 @@ func (h *Handler) List(c *gin.Context) {
 	for i := range rows {
 		items = append(items, h.viewOf(&rows[i]))
 	}
-	c.JSON(http.StatusOK, listResp{Items: items, Total: total, Page: page, Size: size})
+	dto.JSONResponse(c, http.StatusOK, "share links listed", listResp{Items: items, Total: total, Page: page, Size: size})
 }
 
 // GetOne returns metadata for a single share link.
@@ -192,7 +192,7 @@ func (h *Handler) GetOne(c *gin.Context) {
 		h.writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, h.viewOf(link))
+	dto.JSONResponse(c, http.StatusOK, "share link detail", h.viewOf(link))
 }
 
 // Revoke marks a share link as revoked.
