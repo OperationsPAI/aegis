@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"aegis/platform/consts"
+	"aegis/platform/crypto"
 	"aegis/platform/jwtkeys"
 	"aegis/platform/model"
 	user "aegis/crud/iam/user"
@@ -109,7 +110,7 @@ func (s *Service) Login(ctx context.Context, req *LoginReq) (*LoginResp, error) 
 			return fmt.Errorf("%w: invalid username or password", consts.ErrAuthenticationFailed)
 		}
 
-		if !utils.VerifyPassword(req.Password, user.Password) {
+		if !crypto.VerifyPassword(req.Password, user.Password) {
 			return fmt.Errorf("%w: invalid username or password", consts.ErrAuthenticationFailed)
 		}
 
@@ -117,8 +118,8 @@ func (s *Service) Login(ctx context.Context, req *LoginReq) (*LoginResp, error) 
 		// successful login. Failure here is non-fatal — we don't want to
 		// prevent the user from logging in if the rehash write fails; the
 		// next successful login will try again.
-		if utils.NeedsRehash(user.Password) {
-			if newHash, rehashErr := utils.HashPassword(req.Password); rehashErr == nil {
+		if crypto.NeedsRehash(user.Password) {
+			if newHash, rehashErr := crypto.HashPassword(req.Password); rehashErr == nil {
 				user.Password = newHash
 				if err := userRepo.Update(user); err != nil {
 					logrus.Warnf("failed to rehash legacy password for user %d: %v", user.ID, err)
@@ -258,11 +259,11 @@ func (s *Service) ChangePassword(ctx context.Context, req *ChangePasswordReq, us
 			return fmt.Errorf("failed to get user: %w", err)
 		}
 
-		if !utils.VerifyPassword(req.OldPassword, user.Password) {
+		if !crypto.VerifyPassword(req.OldPassword, user.Password) {
 			return fmt.Errorf("invalid old password")
 		}
 
-		hashedPassword, err := utils.HashPassword(req.NewPassword)
+		hashedPassword, err := crypto.HashPassword(req.NewPassword)
 		if err != nil {
 			return fmt.Errorf("password hashing failed: %w", err)
 		}
@@ -315,11 +316,11 @@ func (s *Service) CreateAPIKey(ctx context.Context, userID int, req *CreateAPIKe
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key secret: %w", err)
 	}
-	secretHash, err := utils.HashPassword(secretKeyValue)
+	secretHash, err := crypto.HashPassword(secretKeyValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash key secret: %w", err)
 	}
-	secretCiphertext, err := utils.EncryptAPIKeySecret(secretKeyValue)
+	secretCiphertext, err := crypto.EncryptAPIKeySecret(secretKeyValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt key secret: %w", err)
 	}
@@ -434,11 +435,11 @@ func (s *Service) RotateAPIKey(ctx context.Context, userID, accessKeyID int) (*A
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key secret: %w", err)
 	}
-	secretHash, err := utils.HashPassword(secretKeyValue)
+	secretHash, err := crypto.HashPassword(secretKeyValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash key secret: %w", err)
 	}
-	secretCiphertext, err := utils.EncryptAPIKeySecret(secretKeyValue)
+	secretCiphertext, err := crypto.EncryptAPIKeySecret(secretKeyValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt key secret: %w", err)
 	}
@@ -490,11 +491,11 @@ func (s *Service) ExchangeAPIKeyToken(ctx context.Context, req *APIKeyTokenReq, 
 		return nil, fmt.Errorf("%w: request timestamp is outside the allowed window", consts.ErrAuthenticationFailed)
 	}
 
-	secretKey, err := utils.DecryptAPIKeySecret(key.KeySecretCiphertext)
+	secretKey, err := crypto.DecryptAPIKeySecret(key.KeySecretCiphertext)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt api key secret: %w", err)
 	}
-	if !utils.VerifyAPIKeyRequestSignature(secretKey, req.CanonicalString(method, path), req.Signature) {
+	if !crypto.VerifyAPIKeyRequestSignature(secretKey, req.CanonicalString(method, path), req.Signature) {
 		return nil, fmt.Errorf("%w: invalid api key signature", consts.ErrAuthenticationFailed)
 	}
 	if err := s.tokenStore.ReserveAPIKeyNonce(ctx, key.KeyID, req.Nonce, accessKeySignatureTTL); err != nil {

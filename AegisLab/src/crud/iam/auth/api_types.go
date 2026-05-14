@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"aegis/platform/consts"
+	"aegis/platform/crypto"
 	"aegis/platform/dto"
 	"aegis/platform/model"
 	user "aegis/crud/iam/user"
-	"aegis/platform/utils"
 )
 
 const usernamePattern = `^[a-zA-Z0-9_]{3,20}$`
@@ -160,7 +160,7 @@ func (req *APIKeyTokenReq) CanonicalString(method, path string) string {
 		path,
 		req.Timestamp,
 		req.Nonce,
-		utils.SHA256Hex(nil),
+		crypto.SHA256Hex(nil),
 	}, "\n")
 }
 

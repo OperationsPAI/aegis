@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"aegis/platform/consts"
+	"aegis/platform/crypto"
 	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -428,7 +429,7 @@ type User struct {
 
 // BeforeCreate GORM hook - hash the password before creating a new user
 func (u *User) BeforeCreate(tx *gorm.DB) error {
-	hashedPassword, err := utils.HashPassword(u.Password)
+	hashedPassword, err := crypto.HashPassword(u.Password)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}

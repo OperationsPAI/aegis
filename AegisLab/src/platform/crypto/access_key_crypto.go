@@ -1,4 +1,4 @@
-package utils
+package crypto
 
 import (
 	"crypto/aes"
@@ -12,6 +12,8 @@ import (
 	"io"
 
 	"golang.org/x/crypto/hkdf"
+
+	"aegis/platform/utils"
 )
 
 // API-key ciphertext envelope
@@ -166,13 +168,13 @@ func SHA256Hex(payload []byte) string {
 // does not directly yield the KEK; an attacker would additionally need
 // access to the HKDF inputs and code to recompute it.
 func apiKeyCryptoKeyV1() ([]byte, error) {
-	if JWTSecret == "" {
+	if utils.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT secret is not initialized; cannot derive api-key KEK")
 	}
 	// No explicit salt: JWTSecret is already high-entropy by deployment policy
 	// (see utils.InitJWTSecret fail-fast checks). If that assumption ever
 	// weakens, introduce a deployment-specific salt here.
-	h := hkdf.New(sha256.New, []byte(JWTSecret), nil, []byte(apiKeyHKDFInfo))
+	h := hkdf.New(sha256.New, []byte(utils.JWTSecret), nil, []byte(apiKeyHKDFInfo))
 	key := make([]byte, 32)
 	if _, err := io.ReadFull(h, key); err != nil {
 		return nil, fmt.Errorf("failed to derive api-key KEK: %w", err)
@@ -184,6 +186,6 @@ func apiKeyCryptoKeyV1() ([]byte, error) {
 // HKDF envelope was introduced. Kept so that records written with the old
 // scheme can still be decrypted during migration; do not use for encryption.
 func apiKeyCryptoKeyV0() []byte {
-	sum := sha256.Sum256([]byte(JWTSecret))
+	sum := sha256.Sum256([]byte(utils.JWTSecret))
 	return sum[:]
 }

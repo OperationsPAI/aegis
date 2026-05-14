@@ -18,6 +18,7 @@ import (
 
 	"aegis/platform/config"
 	"aegis/platform/consts"
+	"aegis/platform/crypto"
 	"aegis/platform/jwtkeys"
 	"aegis/platform/redis"
 	"aegis/platform/model"
@@ -262,7 +263,7 @@ func (s *OIDCService) loginPost(c *gin.Context) {
 	if err != nil && strings.Contains(username, "@") {
 		u, err = s.users.GetByEmail(c.Request.Context(), username)
 	}
-	if err != nil || !utils.VerifyPassword(password, u.Password) || !u.IsActive {
+	if err != nil || !crypto.VerifyPassword(password, u.Password) || !u.IsActive {
 		c.String(http.StatusUnauthorized, "invalid credentials")
 		return
 	}
@@ -504,7 +505,7 @@ func (s *OIDCService) grantPassword(c *gin.Context, cli *model.OIDCClient) {
 	if err != nil && strings.Contains(username, "@") {
 		u, err = s.users.GetByEmail(c.Request.Context(), username)
 	}
-	if err != nil || !utils.VerifyPassword(password, u.Password) || !u.IsActive {
+	if err != nil || !crypto.VerifyPassword(password, u.Password) || !u.IsActive {
 		tokenError(c, http.StatusUnauthorized, consts.OIDCErrorInvalidGrant, "invalid credentials")
 		return
 	}
