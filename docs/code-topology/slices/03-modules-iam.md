@@ -2,7 +2,7 @@
 
 > Archival note: this file was not fully revalidated after the phase-2 gRPC collapse and phase-6 module-wiring cleanup. Treat `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` as the current topology source of truth.
 
-Code paths relative to `/home/ddq/AoyangSpace/aegis/AegisLab/src/`.
+Code paths relative to `/home/ddq/AoyangSpace/aegis/aegislab/src/`.
 All citations are `file:line`.
 
 ---

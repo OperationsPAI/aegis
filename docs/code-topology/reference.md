@@ -1,4 +1,4 @@
-# AegisLab Data-Shape Reference (v2)
+# aegislab Data-Shape Reference (v2)
 
 > Archival note: this file was not fully revalidated after the phase-2 gRPC collapse and phase-6 module-wiring cleanup. Treat `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` as the current topology source of truth.
 
@@ -292,7 +292,7 @@ duplicate snapshot.
 
 ## 12. rcabench-platform data contract
 
-AegisLab writes into `jfs.dataset_path`:
+aegislab writes into `jfs.dataset_path`:
 
 ```
 <datapack>/
@@ -309,12 +309,12 @@ Read by rcabench-platform CLIs:
 - `cli/dataset_analysis/scan_datasets.py:40-50`
 - `notebooks/sdg.py:135`
 
-Platform-side output files (NOT written by AegisLab): `index.parquet`, `labels.parquet`,
+Platform-side output files (NOT written by aegislab): `index.parquet`, `labels.parquet`,
 `conclusion.parquet`, `perf.parquet`, `ranks.parquet`.
 
 ## 13. chaos-experiment import surface (unchanged since v1)
 
-AegisLab imports **only** from 3 top-level subpackages of chaos-experiment:
+aegislab imports **only** from 3 top-level subpackages of chaos-experiment:
 
 | Subpackage | Alias | Used by |
 |---|---|---|

@@ -380,10 +380,10 @@ Evidence from actual Python code:
 - `cli/dataset_analysis/scan_datasets.py:40-50` — reads `traces.parquet`, `simple_metrics.parquet`, `normal_traces.parquet`, `abnormal_traces.parquet`, `normal_metrics.parquet`, `abnormal_metrics.parquet`, `normal_logs.parquet`, `abnormal_logs.parquet`
 - `notebooks/sdg.py:135` — `_datapack_folder / "injection.json"`
 
-Also platform meta files (written by platform itself, not AegisLab):
+Also platform meta files (written by platform itself, not aegislab):
 - `index.parquet` (dataset-level datapack listing), `labels.parquet`, `conclusion.parquet` (detector output), `perf.parquet`, `ranks.parquet` (algorithm output).
 
-**AegisLab seam**: AegisLab writes into JuiceFS `dataset_path` the datapack folder with `trace.parquet`/`log.parquet`/`metrics.parquet`/`metrics_sli.parquet`/`injection.json`. Backend code references: `consts/consts.go:531-532` constants `DetectorConclusionFile="conclusion.csv"`, `ExecutionResultFile="result.csv"` — those are AegisLab → platform **output** files, not the datapack contract itself. Confirmed: datapack input contract is the 5 files above; no newer/deprecated filenames found.
+**aegislab seam**: aegislab writes into JuiceFS `dataset_path` the datapack folder with `trace.parquet`/`log.parquet`/`metrics.parquet`/`metrics_sli.parquet`/`injection.json`. Backend code references: `consts/consts.go:531-532` constants `DetectorConclusionFile="conclusion.csv"`, `ExecutionResultFile="result.csv"` — those are aegislab → platform **output** files, not the datapack contract itself. Confirmed: datapack input contract is the 5 files above; no newer/deprecated filenames found.
 
 ---
 
@@ -391,7 +391,7 @@ Also platform meta files (written by platform itself, not AegisLab):
 
 Top-level dirs in `/home/ddq/AoyangSpace/aegis/chaos-experiment/`: `chaos`, `client`, `cmd`, `controllers`, `docs`, `handler`, `internal`, `pkg`, `tools`, `utils`.
 
-AegisLab imports (deduped by subpackage → file):
+aegislab imports (deduped by subpackage → file):
 
 | Subpackage | Files importing it (relative to src/) |
 |---|---|

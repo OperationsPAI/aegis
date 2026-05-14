@@ -1,0 +1,199 @@
+name = "aegislab"
+version = "1.0.0"
+
+port = 8082
+workspace = "/workspace"
+
+[system]
+timezone = "Asia/Shanghai"
+
+[initialization]
+data_path = "/workspace/data/initial_data/staging"
+
+[database.mysql]
+host = "localhost"
+port = "3306"
+user = "root"
+password = "yourpassword"
+db = "rcabench"
+
+[tracing]
+endpoint = "localhost:4318"
+
+[redis]
+host = "localhost:6379"
+
+[etcd]
+endpoints = ["localhost:2379"]
+username = ""
+password = ""
+
+[k8s]
+namespace = "exp"
+
+[k8s.service]
+internal_url = "http://10.10.10.161:8082"
+
+[k8s.init_container]
+busybox_image = "10.10.10.240/library/busybox:1.35"
+
+[k8s.job.service_account]
+name = "rcabench-sa"
+
+[k8s.job.volume_mount.dataset]
+name = "dataset"
+mount_path = "/data"
+source_type = "pvc"
+claim_name = "rcabench-juicefs-dataset"
+
+[k8s.job.volume_mount.experiment_storage]
+name = "experiment-storage"
+mount_path = "/experiment_storage"
+source_type = "pvc"
+claim_name = "rcabench-juicefs-experiment-storage"
+
+[jfs]
+# backend selects how datapack / helm-chart / dataset artefacts are
+# persisted. "filesystem" (default) writes under dataset_path on a local /
+# network FS; "s3" stores them as objects in the buckets below (typically
+# served by in-cluster rustfs).
+backend = "filesystem"
+container_path = "/workspace/containers"
+dataset_path = "/mnt/jfs/rcabench_dataset"
+experiment_storage_path = "/mnt/jfs/experiment_storage"
+
+[jfs.s3]
+# Buckets are only consulted when [jfs] backend = "s3". Region /
+# endpoint / credentials come from process env (AWS_* or BLOB_S3_*),
+# which the blob client already reads.
+datapack_bucket = "aegis-datapack"
+helm_chart_bucket = "aegis-helm-chart"
+dataset_bucket = "aegis-dataset"
+
+[buildkit]
+address = "localhost:1234"
+
+[clients.runtime]
+# api-gateway -> runtime-worker, query-only (queue/lock status).
+target = "localhost:9094"
+
+[clients.runtime_intake]
+# runtime-worker -> api-gateway, execution/injection state writes.
+target = "localhost:9096"
+
+[runtime_worker.grpc]
+addr = ":9094"
+
+[api_gateway.intake.grpc]
+addr = ":9096"
+
+[loki]
+address = "http://10.10.10.161:3101"
+timeout = "10s"
+max_entries = 5000
+
+[otlp_receiver]
+port = 4319
+max_request_size = 5242880
+
+[sso]
+private_key_path = "/etc/aegis/sso-private.pem"
+kid = "sso-v1"
+jwks_url = "http://localhost:8083/.well-known/jwks.json"
+issuer = "http://localhost:8083"
+base_url = "http://localhost:8083"
+client_id = "aegis-backend"
+client_secret = ""
+backend_redirect_uri = "http://aegis-backend:8082/auth/oidc/callback"
+seed_secret_dump_path = "/var/lib/sso/.first-boot-secret"
+# Public OIDC client for the aegis-ui console (no client_secret, PKCE).
+# Comma-separated redirect URIs registered for the auth-code flow.
+# Override per deploy with env SSO_CONSOLE_REDIRECT_URIS.
+# Reconciled into the DB on every boot — change here and restart, no
+# manual DELETE on oidc_clients needed.
+console_redirect_uris = "http://localhost:3323/auth/callback,http://127.0.0.1:3323/auth/callback"
+# Optional: when non-empty, /authorize 302s here so the console renders
+# the login form instead of SSO's inline <form>. Console must POST the
+# OIDC params (incl. PKCE) back to /login unchanged.
+# Override per deploy with env SSO_LOGIN_REDIRECT.
+login_redirect = "http://localhost:3323/auth/login"
+
+# ---------------------------------------------------------------------
+# Blob storage — handler/router at src/crud/storage/blob, binary at cmd/aegis-blob.
+# In dev we only declare the localfs `scratch` bucket; real buckets
+# (dataset-artifacts, user-avatars) come online in Phase B.
+# ---------------------------------------------------------------------
+[blob]
+# HMAC key used by the localfs driver to sign /raw/:token URLs.
+# Override per deploy via env (set blob.signing_key_env = "BLOB_SIGNING_KEY").
+signing_key = "dev-only-blob-signing-key-change-me"
+
+[blob.client]
+mode = "local"
+# endpoint = "http://aegis-blob:8085"   # only used when mode = "remote"
+max_retries = 2
+
+[blob.buckets.scratch]
+driver = "localfs"
+root = "/tmp/aegis-blob/scratch"
+max_object_bytes = 5_368_709_120
+retention_days = 7
+inline_max_bytes = 65_536
+
+# ---------------------------------------------------------------------
+# [gateway] — aegis-gateway (cmd/aegis-gateway, default :8086).
+# Router at src/clients/gateway. Routes are matched first-by-prefix
+# (longer prefixes win, ties broken by config order).
+# ---------------------------------------------------------------------
+[gateway]
+# HMAC key used to sign trusted headers (X-Aegis-User-Id, …) so
+# Phase-C upstreams can detect forgery. Override per deploy with env
+# GATEWAY_TRUSTED_HEADER_KEY. Empty → dev fallback (logged at warn).
+trusted_header_key = ""
+
+[gateway.rate_limit]
+rps   = 200
+burst = 400
+
+[gateway.cors]
+allowed_origins   = ["http://localhost:3101", "http://127.0.0.1:3101"]
+allowed_methods   = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+allowed_headers   = ["Authorization", "Content-Type", "X-Aegis-Request-Id"]
+allow_credentials = true
+max_age_seconds   = 86400
+
+[[gateway.routes]]
+prefix   = "/v1/"
+upstream = "sso:8083"
+auth     = "none"
+
+[[gateway.routes]]
+prefix   = "/.well-known/"
+upstream = "sso:8083"
+auth     = "none"
+
+[[gateway.routes]]
+prefix    = "/api/v2/inbox/"
+upstream  = "aegis-notify:8084"
+auth      = "jwt"
+audiences = ["portal"]
+
+[[gateway.routes]]
+prefix   = "/api/v2/notifications/"
+upstream = "aegis-notify:8084"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/blob/"
+upstream = "aegis-blob:8085"
+auth     = "jwt"
+
+[[gateway.routes]]
+prefix   = "/api/v2/auth/"
+upstream = "aegis-api:8080"
+auth     = "none"
+
+[[gateway.routes]]
+prefix   = "/"
+upstream = "aegis-api:8080"
+auth     = "jwt"

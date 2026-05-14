@@ -11,11 +11,11 @@ correct value_types:
 
 ```bash
 # from a full data.yaml file
-aegisctl system register --from-seed AegisLab/data/initial_data/prod/data.yaml \
+aegisctl system register --from-seed aegislab/data/initial_data/prod/data.yaml \
                          --name <code>
 
 # or point at the initial_data root and resolve via --env
-aegisctl system register --from-seed AegisLab/data/initial_data \
+aegisctl system register --from-seed aegislab/data/initial_data \
                          --env prod --name <code>
 
 # replace an existing registration
@@ -106,7 +106,7 @@ For the seven injection.system.* keys:
   --env staging` against a cluster seeded from `prod/` silently
   registers different default values.
 - **Not in seed:** if a system isn't in data.yaml at all, `register`
-  has nothing to read. Add the entry to `AegisLab/data/initial_data/
+  has nothing to read. Add the entry to `aegislab/data/initial_data/
   {prod,staging}/data.yaml` first.
 - **Layer 3 still required:** enabling via etcd only surfaces the
   system in the guided flow. Without `containers` + `container_versions`

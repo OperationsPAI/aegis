@@ -1,6 +1,6 @@
 name: Release Helm charts
 
-# Publishes the AegisLab helm chart to this repo's gh-pages branch,
+# Publishes the aegislab helm chart to this repo's gh-pages branch,
 # preserving existing chart versions in the merged index.yaml (no
 # force-orphan — that would clobber any sibling chart tarballs published
 # under the same URL). The frontend chart is now published from the
@@ -10,7 +10,7 @@ name: Release Helm charts
 # (Make sure GitHub Pages is enabled on this repo's gh-pages branch.)
 #
 # Triggers:
-#   - Tag `release-helm-backend/v<ver>`  → package AegisLab/helm
+#   - Tag `release-helm-backend/v<ver>`  → package aegislab/helm
 #   - push to main touching the chart    → repackage
 #   - workflow_dispatch                  → repackage
 #
@@ -22,7 +22,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "AegisLab/helm/**"
+      - "aegislab/helm/**"
       - ".github/workflows/release-helm.yml"
     tags:
       - "release-helm-backend/v[0-9]+.[0-9]+.[0-9]+*"
@@ -62,26 +62,26 @@ jobs:
 
           case "$EVENT" in
             workflow_dispatch)
-              selections+=("AegisLab/helm|")
+              selections+=("aegislab/helm|")
               ;;
             push)
               if [[ "$REF" == refs/tags/release-helm-backend/v* ]]; then
                 ver="${REF#refs/tags/release-helm-backend/v}"
-                selections+=("AegisLab/helm|$ver")
+                selections+=("aegislab/helm|$ver")
               else
                 # branch push to main: pick chart only if its files changed
                 if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-                  mapfile -t files < <(git ls-files AegisLab/helm)
+                  mapfile -t files < <(git ls-files aegislab/helm)
                 else
                   mapfile -t files < <(git diff --name-only "$BEFORE" "$HEAD")
                 fi
                 touched_backend=0
                 for f in "${files[@]:-}"; do
                   case "$f" in
-                    AegisLab/helm/*) touched_backend=1 ;;
+                    aegislab/helm/*) touched_backend=1 ;;
                   esac
                 done
-                [ "$touched_backend" = 1 ] && selections+=("AegisLab/helm|")
+                [ "$touched_backend" = 1 ] && selections+=("aegislab/helm|")
               fi
               ;;
           esac

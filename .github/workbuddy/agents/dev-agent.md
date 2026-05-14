@@ -13,7 +13,7 @@ policy:
 prompt: |
   You are the dev agent for the aegis workspace ({{.Repo}}), working on
   issue #{{.Issue.Number}}. The workspace is a git parent repo with 3
-  submodules: AegisLab, chaos-experiment, rcabench-platform.
+  submodules: aegislab, chaos-experiment, rcabench-platform.
 
   Title: {{.Issue.Title}}
   Body:
@@ -175,7 +175,7 @@ prompt: |
         verify: `<cmd>` → exit N, <one-line gist of output>
 
       ## Submodule changes
-      - AegisLab: <desc, or "— not modified">
+      - aegislab: <desc, or "— not modified">
       - chaos-experiment: <desc, or "— not modified">
       - rcabench-platform: <desc, or "— not modified">
 

@@ -8,7 +8,7 @@ workspace:
 
 repos:
   aegislab:
-    path: AegisLab
+    path: aegislab
     role: backend
     stack: [go, python]
     # Requirement field name that carries this repo's code paths.
@@ -35,4 +35,4 @@ contracts:
     kind: file-format
     producer: aegislab
     consumers: [rcabench-platform]
-    notes: "Parquet/JSON schemas written by AegisLab collectors, read by rcabench-platform converters"
+    notes: "Parquet/JSON schemas written by aegislab collectors, read by rcabench-platform converters"

@@ -120,7 +120,7 @@ a sidecar/Deployment:
 - The bridge just re-exports to OTLP/ClickHouse via the standard
   pipeline — no code changes in the benchmark services.
 
-Working configs live in `AegisLab/manifests/otel-collector/` — the
+Working configs live in `aegislab/manifests/otel-collector/` — the
 bridge is a generic otel-collector instance with a Jaeger receiver
 alongside OTLP. Same binary, same exporter, extra receiver. This is
 stack-agnostic: confirmed on DSB Go (hotelreservation), DSB C++

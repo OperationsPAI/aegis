@@ -1,9 +1,9 @@
 name: Publish NPM packages
 
 # Unified NPM release flow for the two TypeScript SDKs generated from the
-# AegisLab backend OpenAPI spec:
-#   - @OperationsPAI/portal  (source: generated into AegisLab/sdk/typescript/portal/)
-#   - @OperationsPAI/admin   (source: generated into AegisLab/sdk/typescript/admin/)
+# aegislab backend OpenAPI spec:
+#   - @OperationsPAI/portal  (source: generated into aegislab/sdk/typescript/portal/)
+#   - @OperationsPAI/admin   (source: generated into aegislab/sdk/typescript/admin/)
 #
 # Publishes to GitHub Packages (npm.pkg.github.com) using the default
 # GITHUB_TOKEN. Versions are INDEPENDENT per package; the tag carries the

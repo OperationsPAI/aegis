@@ -1,6 +1,6 @@
-# AegisLab Code Topology - Phase 6
+# aegislab Code Topology - Phase 6
 
-Source of truth: code under `/home/ddq/AoyangSpace/aegis/AegisLab/src/` as of 2026-04-20.
+Source of truth: code under `/home/ddq/AoyangSpace/aegis/aegislab/src/` as of 2026-04-20.
 
 This topology reflects the phase-2 gRPC collapse and the phase-3/4/6 self-registration work from issue `#28`.
 The old 6-service split is no longer the primary architecture. Use this file plus
@@ -28,7 +28,7 @@ Archival deep dives kept for provenance, not as the current topology source of t
 
 ## 1. Runtime shapes
 
-AegisLab now has two dedicated binaries and three legacy collocated modes.
+aegislab now has two dedicated binaries and three legacy collocated modes.
 
 | Shape | Entrypoint | `fx` graph | Purpose |
 | --- | --- | --- | --- |
@@ -115,7 +115,7 @@ Current proof points added during phase 6:
 
 - `module/widget/` is a fake self-registering module used to prove zero-touch module addition.
 - `app/http_modules_gen.go` is generated from the module directory tree by
-  `AegisLab/scripts/generate_http_modules.py`.
+  `aegislab/scripts/generate_http_modules.py`.
 - `app/http_modules_generated_test.go` fails if the generated registry drifts from the
   directories under `module/`.
 - `module/boundary_test.go` fails if one module reaches into another module via
@@ -187,12 +187,12 @@ high-level process model described above.
 
 The phase-6 changes are now covered by a mix of focused and smoke tests:
 
-- `AegisLab/src/app/http_modules_generated_test.go` - generated HTTP registry stays in sync.
-- `AegisLab/src/module/widget/registration_test.go` - fake module contributes routes,
+- `aegislab/src/app/http_modules_generated_test.go` - generated HTTP registry stays in sync.
+- `aegislab/src/module/widget/registration_test.go` - fake module contributes routes,
   permissions, and migrations.
-- `AegisLab/src/module/boundary_test.go` - module packages cannot construct foreign repositories.
-- `AegisLab/src/app/startup_validate_test.go` - legacy app graphs validate.
-- `AegisLab/src/app/service_entrypoints_test.go` - dedicated `api-gateway` and
+- `aegislab/src/module/boundary_test.go` - module packages cannot construct foreign repositories.
+- `aegislab/src/app/startup_validate_test.go` - legacy app graphs validate.
+- `aegislab/src/app/service_entrypoints_test.go` - dedicated `api-gateway` and
   `runtime-worker-service` graphs validate and start.
-- `AegisLab/src/app/startup_smoke_test.go` - collocated modes still boot and expose the
+- `aegislab/src/app/startup_smoke_test.go` - collocated modes still boot and expose the
   expected HTTP/runtime surfaces.

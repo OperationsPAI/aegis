@@ -5,7 +5,7 @@ metadata:
 # Monorepo-wide build + deploy entrypoint.
 #
 # Replaces:
-#   - AegisLab/skaffold.yaml                (kept as a thin pointer)
+#   - aegislab/skaffold.yaml                (kept as a thin pointer)
 #   - rcabench-platform/scripts/docker.py   (still usable for harbor releases
 #     but no longer the only path; skaffold consumes the same Dockerfiles)
 #
@@ -15,7 +15,7 @@ metadata:
 #   opspai/reason             offline reasoning batch
 #   opspai/detector           slim self-contained detector (python:3.13-slim;
 #                             not based on rcabench-platform — independent)
-#   opspai/rcabench           AegisLab backend (Go + duckdb_arrow)
+#   opspai/rcabench           aegislab backend (Go + duckdb_arrow)
 #
 # Build dependencies: clickhouse_dataset + reason `require` rcabench-platform
 # and receive its built tag as the BASE_IMAGE build-arg. detector + rcabench
@@ -59,7 +59,7 @@ profiles:
         - image: opspai/rcabench
           context: .
           docker:
-            dockerfile: AegisLab/src/Dockerfile
+            dockerfile: aegislab/src/Dockerfile
             buildArgs:
               GO_BUILD_TAGS: duckdb_arrow
             network: host
@@ -74,11 +74,11 @@ profiles:
           upgrade: ["--timeout=15m"]
         releases:
           - name: rcabench
-            chartPath: AegisLab/helm
+            chartPath: aegislab/helm
             namespace: exp
             createNamespace: true
             valuesFiles:
-              - AegisLab/manifests/local/rcabench.yaml
+              - aegislab/manifests/local/rcabench.yaml
             setValueTemplates:
               images.rcabench.tag: "{{.IMAGE_TAG}}"
               sso.image.tag: "{{.IMAGE_TAG}}"
@@ -93,9 +93,9 @@ profiles:
               sso.config.k8s.serviceAccount.name: "rcabench-sa"
               sso.config.sso.backendRedirectURI: "http://rcabench-api-gateway:8082/auth/oidc/callback"
             setFiles:
-              initialDataFiles.data_yaml: AegisLab/data/initial_data/prod/data.yaml
-              initialDataFiles.otel_demo_yaml: AegisLab/data/initial_data/prod/otel-demo.yaml
-              initialDataFiles.ts_yaml: AegisLab/data/initial_data/prod/ts.yaml
+              initialDataFiles.data_yaml: aegislab/data/initial_data/prod/data.yaml
+              initialDataFiles.otel_demo_yaml: aegislab/data/initial_data/prod/otel-demo.yaml
+              initialDataFiles.ts_yaml: aegislab/data/initial_data/prod/ts.yaml
               sso.privateKey.pem: /tmp/sso-keys/sso-private.pem
 
   - name: staging
@@ -130,7 +130,7 @@ profiles:
             dockerfile: docker/detector/Dockerfile
             network: host
         - image: 10.10.10.240/library/rcabench
-          context: AegisLab
+          context: aegislab
           docker:
             dockerfile: src/Dockerfile
             buildArgs:
@@ -148,17 +148,17 @@ profiles:
           upgrade: ["--atomic", "--timeout=10m"]
         releases:
           - name: rcabench
-            chartPath: AegisLab/helm
+            chartPath: aegislab/helm
             namespace: exp
             createNamespace: true
             valuesFiles:
-              - AegisLab/manifests/staging/rcabench.yaml
+              - aegislab/manifests/staging/rcabench.yaml
             setValueTemplates:
               images.rcabench.tag: "{{.IMAGE_TAG}}"
             setFiles:
-              initialDataFiles.data_yaml: AegisLab/data/initial_data/staging/data.yaml
-              initialDataFiles.otel_demo_yaml: AegisLab/data/initial_data/staging/otel-demo.yaml
-              initialDataFiles.ts_yaml: AegisLab/data/initial_data/staging/ts.yaml
+              initialDataFiles.data_yaml: aegislab/data/initial_data/staging/data.yaml
+              initialDataFiles.otel_demo_yaml: aegislab/data/initial_data/staging/otel-demo.yaml
+              initialDataFiles.ts_yaml: aegislab/data/initial_data/staging/ts.yaml
 
   - name: test
     activation:
@@ -166,7 +166,7 @@ profiles:
     build:
       artifacts:
         - image: pair-diag-cn-guangzhou.cr.volces.com/pair/rcabench
-          context: AegisLab
+          context: aegislab
           docker:
             dockerfile: src/Dockerfile
             buildArgs:
@@ -185,17 +185,17 @@ profiles:
           upgrade: ["--atomic", "--timeout=10m"]
         releases:
           - name: rcabench
-            chartPath: AegisLab/helm
+            chartPath: aegislab/helm
             namespace: exp
             createNamespace: true
             valuesFiles:
-              - AegisLab/manifests/test/rcabench.yaml
+              - aegislab/manifests/test/rcabench.yaml
             setValueTemplates:
               images.rcabench.tag: "{{.IMAGE_DIGEST}}"
             setFiles:
-              initialDataFiles.data_yaml: AegisLab/data/initial_data/prod/data.yaml
-              initialDataFiles.otel_demo_yaml: AegisLab/data/initial_data/prod/otel-demo.yaml
-              initialDataFiles.ts_yaml: AegisLab/data/initial_data/prod/ts.yaml
+              initialDataFiles.data_yaml: aegislab/data/initial_data/prod/data.yaml
+              initialDataFiles.otel_demo_yaml: aegislab/data/initial_data/prod/otel-demo.yaml
+              initialDataFiles.ts_yaml: aegislab/data/initial_data/prod/ts.yaml
         hooks:
           after:
             - host:
@@ -236,7 +236,7 @@ profiles:
         - image: docker.io/opspai/rcabench
           context: .
           docker:
-            dockerfile: AegisLab/src/Dockerfile
+            dockerfile: aegislab/src/Dockerfile
             buildArgs:
               GO_BUILD_TAGS: duckdb_arrow
               GOPROXY: https://goproxy.cn,direct
@@ -256,14 +256,14 @@ profiles:
           upgrade: ["--timeout=15m"]
         releases:
           - name: rcabench
-            chartPath: AegisLab/helm
+            chartPath: aegislab/helm
             namespace: exp
             createNamespace: true
             valuesFiles:
-              - AegisLab/manifests/byte-cluster/rcabench.values.yaml
+              - aegislab/manifests/byte-cluster/rcabench.values.yaml
             setValueTemplates:
               images.rcabench.tag: "{{.IMAGE_TAG}}"
             setFiles:
-              initialDataFiles.data_yaml: AegisLab/manifests/byte-cluster/initial-data/data.yaml
-              initialDataFiles.otel_demo_yaml: AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml
-              initialDataFiles.ts_yaml: AegisLab/manifests/byte-cluster/initial-data/ts.yaml
+              initialDataFiles.data_yaml: aegislab/manifests/byte-cluster/initial-data/data.yaml
+              initialDataFiles.otel_demo_yaml: aegislab/manifests/byte-cluster/initial-data/otel-demo.yaml
+              initialDataFiles.ts_yaml: aegislab/manifests/byte-cluster/initial-data/ts.yaml

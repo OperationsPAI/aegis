@@ -69,7 +69,7 @@ def _collect_batch_tasks(
             logger.debug(f"[{case_folder.name}] Skipping: injection.json not found")
             continue
 
-        # Validity marker: `.valid` (legacy) or any of the AegisLab markers.
+        # Validity marker: `.valid` (legacy) or any of the aegislab markers.
         # Empty marker files; their presence is the only signal.
         if not any((case_folder / m).exists() or (data_dir / m).exists() for m in (".valid", ".done", ".finished")):
             logger.debug(f"[{case_folder.name}] Skipping: no .valid/.done/.finished marker")

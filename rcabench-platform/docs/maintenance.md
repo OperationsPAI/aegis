@@ -57,4 +57,4 @@ ENV_MODE=byte-cluster skaffold run
 `clickhouse_dataset` and `reason` declare `requires: opspai/rcabench-platform`
 so skaffold builds them after the base image and passes the fresh tag as the
 `BASE_IMAGE` build-arg. `detector` is `python:3.13-slim`-based and stands
-alone. `rcabench` is the AegisLab backend (Go + duckdb_arrow).
+alone. `rcabench` is the aegislab backend (Go + duckdb_arrow).

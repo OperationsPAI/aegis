@@ -1,0 +1,1335 @@
+containers:
+  - type: 0
+    name: detector
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 1.0.0 → 1.0.1 to pin a specific image tag (was floating on
+      # `:latest`). Tag `byte-20260501-system` ships #339: backend now sets
+      # BENCHMARK_SYSTEM env when dispatching the detector job, the
+      # entrypoint requires it and passes `--system $BENCHMARK_SYSTEM`,
+      # and the Python entrypoint refuses to default to `ts`. Without this
+      # combo, every non-ts datapack silently failed at "No entrance traffic"
+      # because the detector looked for ts-ui-dashboard everywhere.
+      - name: 1.0.1
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/detector:byte-20260501-system
+        command: bash /entrypoint.sh
+  - type: 0
+    name: random
+    is_public: true
+    status: 1
+    versions:
+      - name: 1.0.0
+        image_ref: pair-diag-cn-guangzhou.cr.volces.com/pair/rca-algo-random:latest
+        command: bash /entrypoint.sh
+  - type: 0
+    name: traceback
+    is_public: true
+    status: 1
+    versions:
+      - name: 1.0.0
+        image_ref: pair-diag-cn-guangzhou.cr.volces.com/pair/rca-algo-traceback:latest
+        command: bash /entrypoint.sh
+  - type: 1
+    name: clickhouse
+    is_public: true
+    status: 1
+    versions:
+      - name: 1.0.0
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:latest
+        command: bash /entrypoint.sh
+        env_vars:
+          - key: NAMESPACE
+            type: 0
+            category: 0
+            value_type: 0
+            default_value: ts0
+            required: true
+            overridable: true
+  - type: 2
+    name: ts
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 1.0.2 → 1.0.4 to consolidate three out-of-band defaults that
+      # ts ns previously got via per-namespace `helm upgrade --set` but which
+      # weren't in the DB seed (so any RestartPedestal flow that re-installed
+      # the chart from the seed alone would miss them):
+      #   1. global.security.allowInsecureImages=true — the upstream Bitnami
+      #      rabbitmq subchart bundled by trainticket@0.2.0 hardcodes an
+      #      "image recognition" check (NOTES.txt:165) that fails helm
+      #      install with `Original containers have been substituted for
+      #      unrecognized ones` whenever the rabbitmq image is anything
+      #      other than the bitnami official set. Our cluster pulls the
+      #      mirrored image from pair-diag-cn-guangzhou.cr.volces.com/pair/
+      #      so the check ALWAYS fires unless explicitly bypassed. The
+      #      bypass is safe — image is known-good (rabbitmq pods ran fine
+      #      under the previous out-of-band overrides for weeks).
+      #   2. loadgenerator.image.tag=024 — built from
+      #      OperationsPAI/loadgenerator main HEAD (sync notes in earlier
+      #      ts seed bumps).
+      #   3. loadgenerator.image.repository=pair-cn-shanghai.cr.volces.com/
+      #      opspai/loadgenerator — volces shanghai mirror so byte-cluster
+      #      pulls don't egress to docker.io.
+      # Plus carries forward the per-system collector retargeting from #303.
+      #
+      # Bumped 1.0.4 → 1.0.5 to redirect every chart-default docker.io image
+      # through the volces shanghai mirror (`pair-cn-shanghai.cr.volces.com/
+      # opspai/*`). byte-cluster nodes can NOT egress to docker.io, so the
+      # chart's defaults — `global.image.repository=docker.io/opspai`,
+      # `mysql.image.repository=docker.io/library/mysql`, `rabbitmq.image.
+      # repository=bitnamilegacy/rabbitmq`, and the loadgen `wait-for-
+      # services` init container `docker.io/nicolaka/netshoot:v0.14` — all
+      # ImagePullBackOff'd on every newly allocated ts namespace after
+      # backend RP triggered helm install. Manually mirrored to opspai
+      # dockerhub (volces auto-mirrors docker.io/opspai/* to the pair-cn-
+      # shanghai path), then pinned the new mirror paths via the four extra
+      # helm values below.
+      #
+      # Bumped 1.0.5 → 1.0.6 to pick up trainticket chart 0.2.1
+      # (OperationsPAI/train-ticket#23) which honors `services.<svc>.type=
+      # ClusterIP` overrides by skipping the `nodePort:` field. Without it,
+      # our `services.tsUiDashboard.type=ClusterIP` seed override (#332) was
+      # silently broken — chart 0.2.0 still emitted nodePort:30080, k8s
+      # rejected the Service, ts-ui-dashboard never came up. Reseed honors
+      # the immutability contract on existing 1.0.5; new container_versions
+      # row picks up chart 0.2.1.
+      - name: 1.0.6
+        github_link: OperationsPAI/train-ticket
+        status: 1
+        helm_config:
+          version: 0.2.1
+          chart_name: trainticket
+          repo_name: train-ticket
+          repo_url: https://operationspai.github.io/train-ticket
+          values:
+            # Pin ts-ui-dashboard to ClusterIP. Chart default is
+            # `NodePort` with `nodePort: 30080`; we previously templated a
+            # per-namespace `31%03d` to spread allocations across ts0..ts99,
+            # but with mysql also defaulted to NodePort (now pinned to
+            # ClusterIP above), the deterministic 31xxx range collided with
+            # mysql's randomly-assigned NodePort whenever k8s happened to land
+            # mysql in 31000-31099 (e.g. ts7 mysql at 31003 blocked ts3
+            # ts-ui-dashboard install). Easiest: drop the NodePort entirely —
+            # ts-ui-dashboard has no out-of-cluster consumers in the
+            # benchmark loop (RP queries it via in-cluster DNS), and external
+            # access can be done with `kubectl port-forward` if ever needed.
+            - key: services.tsUiDashboard.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            # Skip the Bitnami rabbitmq subchart's image-recognition check
+            # so helm install proceeds with the mirrored rabbitmq image.
+            - key: global.security.allowInsecureImages
+              type: 0
+              category: 1
+              value_type: 2
+              default_value: "true"
+              overridable: true
+            # Repository for ts-* service images and the chart's
+            # `init-otel-agent` (autoinstrumentation-java) initContainer.
+            # Chart default `docker.io/opspai` is unreachable from byte-
+            # cluster nodes; the volces shanghai mirror is.
+            - key: global.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            # mysql + rabbitmq subcharts: chart defaults reach docker.io
+            # directly. Mirror both to opspai (manually pulled + pushed
+            # 2026-05-01: docker.io/library/mysql:5.7 and docker.io/
+            # bitnamilegacy/rabbitmq:4.0.7-debian-12-r0).
+            - key: mysql.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/mysql
+              overridable: true
+            # Keep this as a repository suffix because the chart also carries
+            # `rabbitmq.image.registry`. The final rendered image should be
+            # `pair-cn-shanghai.cr.volces.com/opspai/rabbitmq:<tag>`.
+            - key: rabbitmq.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opspai/rabbitmq
+              overridable: true
+            # loadgen `wait-for-services` init container — chart hardcodes
+            # docker.io/nicolaka/netshoot:v0.14 in values.yaml:394. Mirror
+            # pushed to opspai/netshoot:v0.14 on 2026-05-01.
+            - key: loadgenerator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/netshoot:v0.14
+              overridable: true
+            # Per-system collector (#303): all ts workloads (Java services
+            # + Go loadgen + caddy ui-dashboard) export to the dedicated
+            # `opentelemetry-kube-stack-deployment-ts-collector` Service
+            # instead of the shared `deployment-collector`. Single-pod
+            # deployment with 64Gi mem, no HPA — no cross-pod LB → no
+            # gRPC HTTP/2 churn deadlock that motivated #300.
+            - key: global.otelcollector
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-ts-collector.monitoring.svc.cluster.local:4317
+              overridable: true
+            - key: loadgenerator.opentelemetry.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-ts-collector.monitoring:4317
+              overridable: true
+            - key: loadgenerator.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
+              overridable: true
+            - key: loadgenerator.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "024"
+              overridable: true
+            # Pin mysql Service to ClusterIP. trainticket@0.2.0 chart default
+            # is `NodePort` with no `nodePort` value, so kubernetes auto-assigns
+            # a random port from 30000-32767 per release. With ~12 ts ns running
+            # in parallel, that range frequently collides with the deterministic
+            # `services.tsUiDashboard.nodePort=31%03d` allocation (range 31000-
+            # 31099): observed `ts7` mysql at 31003 blocking `ts3` ts-ui-dashboard
+            # install. mysql has no out-of-cluster consumers anyway, so ClusterIP
+            # is the right type.
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+          status: 1
+      # Bumped 1.0.6 → 1.0.7 to pick up trainticket chart 0.3.0
+      # (OperationsPAI/train-ticket#24) which adds a per-namespace OTel
+      # collector sidecar — each ts release ships its own otel-collector
+      # Deployment+Service+CM+SA, services point at same-ns short DNS
+      # `http://otel-collector:4317` instead of cross-ns shared collector.
+      # Fixes aegis #367 (shared ts collector ClickHouse-exporter
+      # sending_queue saturation, ~1830 spans/sec dropped → empty
+      # abnormal_traces.parquet). Inherits 1.0.6's full values block (rabbitmq,
+      # mysql, loadgenerator, ts-ui-dashboard ClusterIP pins) via reseed
+      # auto-backfill on the new container_versions row.
+      - name: 1.0.7
+        github_link: OperationsPAI/train-ticket
+        status: 1
+        helm_config:
+          # Bumped 0.3.0 → 0.3.1 (OperationsPAI/train-ticket#25): the per-ns
+          # collector sidecar's CM had `sending_queue.blocking: true` which
+          # collector v0.142.0 rejects (CrashLoopBackOff: invalid keys: blocking).
+          # Same pedestal_tag 1.0.7 — chart-only fix.
+          version: 0.3.1
+          chart_name: trainticket
+          repo_name: train-ticket
+          repo_url: https://operationspai.github.io/train-ticket
+          values:
+            - key: services.tsUiDashboard.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            # Override sidecar otel-collector image to the volces mirror.
+            # trainticket@0.3.0 default is `otel/opentelemetry-collector-contrib`
+            # which forces a docker.io pull — byte-cluster nodes can't egress
+            # docker.io directly. Same volces auto-mirror as other opspai images.
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+  - type: 2
+    name: otel-demo
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 0.1.8 -> 0.1.9 to pick up otel-demo-aegis chart 0.1.8 and to
+      # seed the byte-cluster image-rewrite overrides in DB, not just in the
+      # sidecar values file. Before this fix the live DB only carried
+      # `global.clusterCollector.service`, so RestartPedestal re-installs
+      # merged a stale value_file with almost no helm_config_values and fell
+      # back to bad defaults / dead image refs:
+      #   - app images resolved to pair-diag `pair/open-telemetry-demo:*`,
+      #     but the 2.2.0-* tags are not published there;
+      #   - kafka resolved to docker.io/opspai/otel-demo-kafka:2.2.0, which
+      #     byte-cluster nodes cannot reach directly.
+      # Keep the collector retargeting override, and pin the verified byte-
+      # cluster mirrors for app images, kafka, and the in-namespace collector.
+      - name: 0.1.9
+        github_link: open-telemetry/opentelemetry-demo
+        status: 1
+        helm_config:
+          version: 0.1.8
+          chart_name: otel-demo-aegis
+          repo_name: opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          values:
+            - key: global.clusterCollector.service
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-otel-demo-collector.monitoring.svc.cluster.local
+              overridable: true
+            - key: opentelemetry-demo.default.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/open-telemetry-demo
+              overridable: true
+            # NOTE: per-component `initContainers[0].image` overrides removed.
+            # Helm `--set` against an indexed array slot REPLACES the whole
+            # array (not field-merge), so setting only `[0].image` clears the
+            # `[0].name` and `[0].command` from the chart default, and k8s
+            # rejects every Deployment with
+            #   spec.template.spec.initContainers[0].name: Required value
+            # The sidecar overlay (`aegislab/manifests/byte-cluster/initial-
+            # data/otel-demo.yaml`) carries the full init-container objects
+            # (name + image + command), so dropping these seed keys lets the
+            # overlay -f win, and the mirror image lands cleanly.
+            - key: opentelemetry-demo.components.kafka.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/otel-demo-kafka
+              overridable: true
+            - key: opentelemetry-demo.components.kafka.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "2.2.0"
+              overridable: true
+            - key: opentelemetry-demo.components.flagd.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/flagd
+              overridable: true
+            - key: opentelemetry-demo.components.flagd.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: v0.12.9
+              overridable: true
+            # flagd init container override also removed — same reason as the
+            # accounting/cart/checkout/fraud-detection block above.
+            - key: opentelemetry-demo.components.postgresql.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/postgres
+              overridable: true
+            # NOTE: tag must NOT be a YAML float (e.g. "17.6") because the
+            # backend's seed→helm-values renderer Go-yaml-marshals string
+            # values back, and `17.6` round-trips as float, then Helm's
+            # opentelemetry-demo schema rejects it with
+            # `'/components/postgresql/imageOverride/tag': got number, want string`.
+            # Use a non-numeric tag suffix (`-bookworm`) so the value stays a
+            # string through the render path.
+            - key: opentelemetry-demo.components.postgresql.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 17.6-bookworm
+              overridable: true
+            - key: opentelemetry-demo.components.valkey-cart.imageOverride.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/valkey
+              overridable: true
+            - key: opentelemetry-demo.components.valkey-cart.imageOverride.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 9.0.1-alpine3.23
+              overridable: true
+            - key: opentelemetry-demo.opentelemetry-collector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/otel-demo-opentelemetry-collector-contrib
+              overridable: true
+            - key: opentelemetry-demo.opentelemetry-collector.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "0.135.0"
+              overridable: true
+          status: 1
+      # Bumped 0.1.9 → 0.1.10 to pick up otel-demo-aegis chart 0.1.9
+      # (OperationsPAI/benchmark-charts#11) which adds a per-namespace
+      # `aegis-otel-collector` sidecar chained behind the upstream demo's
+      # in-ns `otel-collector` (preserves spanmetrics enrichment). New chart
+      # repoints the demo's `clusterCollector.service` to the same-ns
+      # `aegis-otel-collector:4317`. Inherits 0.1.9's full image-rewrite
+      # values block via reseed auto-backfill.
+      - name: 0.1.10
+        github_link: open-telemetry/opentelemetry-demo
+        status: 1
+        helm_config:
+          # Bumped 0.1.9 → 0.1.10 (OperationsPAI/benchmark-charts#12): drops
+          # `sending_queue.blocking: true` from the per-ns collector CM that
+          # collector v0.142.0 rejects (CrashLoopBackOff). Chart-only fix.
+          version: 0.1.10
+          chart_name: otel-demo-aegis
+          repo_name: opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          values:
+            # Pin sidecar collector image to volces mirror (chart default
+            # is docker.io/opspai/... which still forces a docker.io HEAD
+            # request from byte-cluster kubelet).
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+  - type: 2
+    name: ob
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.1
+        github_link: GoogleCloudPlatform/microservices-demo
+        status: 1
+        helm_config:
+          version: 0.1.1
+          chart_name: onlineboutique-aegis
+          repo_name: opspai
+          repo_url: oci://pair-cn-shanghai.cr.volces.com/opspai
+          status: 1
+  - type: 1
+    name: ob-bench
+    is_public: true
+    status: 1
+    versions:
+      - name: 0.1.0-e2e-kind-20260421
+        image_ref: pair-cn-shanghai.cr.volces.com/opspai/clickhouse_dataset:latest
+        command: bash /entrypoint.sh
+        env_vars:
+          - key: NAMESPACE
+            type: 0
+            category: 0
+            value_type: 0
+            default_value: ob0
+            required: true
+            overridable: true
+  - type: 2
+    name: sockshop
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 1.1.2 → 1.1.3 to retarget OTel exporter and Instrumentation
+      # CR at the per-system sockshop collector (#303 step 2b). Reseed honors
+      # the immutability contract on already-seeded versions.
+      - name: 1.1.3
+        github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
+        status: 1
+        # Chart is now self-hosted in the fork's gh-pages site. For the Byte
+        # cluster we pin all app images to the Shanghai mirror because direct
+        # Docker Hub pulls time out in-cluster.
+        helm_config:
+          version: 1.1.1
+          chart_name: sockshop
+          repo_name: sockshop-lgu
+          repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260425-df5a26f
+              overridable: true
+            - key: frontend.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260425-df5a26f
+              overridable: true
+            - key: loadgen.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260425-df5a26f
+              overridable: true
+            - key: otel.instrumentation
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring/otel-instr-sockshop
+              overridable: true
+            - key: otel.collectorEndpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring.svc.cluster.local:4317
+              overridable: true
+          status: 1
+    # issue #115: sockshop's coherence-helidon variant requires the
+    # Coherence operator installed cluster-wide before the chart can be
+    # rendered. `aegisctl system reconcile-prereqs --name sockshop` installs
+    # it; `aegisctl system enable sockshop` refuses until it's reconciled.
+    prerequisites:
+      - name: coherence-operator
+        kind: helm
+        chart: coherence/coherence-operator
+        namespace: coherence-test
+        version: '>=3.4'
+        values:
+          - key: image.registry
+            value: pair-cn-shanghai.cr.volces.com/opspai
+          - key: image.name
+            value: coherence-operator
+          - key: image.tag
+            value: 3.5.11
+          - key: defaultCoherenceImage.registry
+            value: pair-cn-shanghai.cr.volces.com/opspai
+          - key: defaultCoherenceImage.name
+            value: coherence-ce
+          - key: defaultCoherenceImage.tag
+            value: 14.1.2-0-3
+  - type: 2
+    name: hs
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 0.1.3 → 0.1.4 to retarget `global.otel.endpoint` at the
+      # per-system hs collector (#303 step 2b).
+      #
+      # Bumped 0.1.4 → 0.1.5 to pick up hotel-reservation chart 0.1.5
+      # (LGU-SE-Internal/DeathStarBench#56 + #57): adds wait-for-consul
+      # init container to all 9 Go service Deployments using
+      # `global.infraDockerRegistry` (already set to pair-cn-shanghai
+      # opspai mirror below). Resolves the cold-start CrashLoopBackOff
+      # surfaced by aegis#353 — services no longer crash on consul DNS
+      # lookup before kube-dns picks up the consul Service.
+      - name: 0.1.5
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.1.5
+          chart_name: hotel-reservation
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.infraDockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-hs-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+          status: 1
+      # Bumped 0.1.5 → 0.1.6 to pick up hotel-reservation chart 0.2.0
+      # (LGU-SE-Internal/DeathStarBench#58) which adds a per-namespace OTel
+      # collector sidecar — services point at same-ns short DNS
+      # `otel-collector:4318` (HTTP, hs Go services use otlptracehttp).
+      # Repoints `global.otel.endpoint` from cross-ns shared collector to
+      # same-ns sidecar. Same architectural rationale as ts (#367).
+      - name: 0.1.6
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          # Bumped 0.2.0 → 0.2.1 (LGU-SE-Internal/DeathStarBench#60): drops
+          # `sending_queue.blocking: true` from the per-ns collector CM that
+          # collector v0.142.0 rejects (CrashLoopBackOff). Chart-only fix.
+          version: 0.2.1
+          chart_name: hotel-reservation
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-61074ea
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            # Pin sidecar collector image to volces mirror (chart default
+            # is docker.io/opspai/... which still forces a docker.io HEAD
+            # request from byte-cluster kubelet).
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
+  - type: 2
+    name: sn
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 0.1.4 → 0.1.5 to retarget `global.otel.endpoint` at the
+      # per-system sn collector (#303 step 2b).
+      - name: 0.1.5
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.1.4
+          chart_name: social-network
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.infraDockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260427-9397c2e
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-sn-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+          status: 1
+  - type: 2
+    name: media
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 0.1.4 → 0.1.5 to retarget `global.otel.endpoint` at the
+      # per-system media collector (#303 step 2b).
+      - name: 0.1.5
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.1.4
+          chart_name: media-microservices
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.infraDockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260427-9397c2e
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: opentelemetry-kube-stack-deployment-media-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+          status: 1
+  - type: 2
+    name: teastore
+    is_public: true
+    status: 1
+    versions:
+      # Bumped 0.1.5 → 0.1.6 to retarget OTel exporter and Instrumentation
+      # CR at the per-system teastore collector (#303 step 2b). Reseed honors
+      # the immutability contract on already-seeded versions.
+      - name: 0.1.6
+        github_link: LGU-SE-Internal/TeaStore
+        status: 1
+        helm_config:
+          version: 0.1.4
+          chart_name: teastore
+          repo_name: lgu-tea
+          repo_url: https://lgu-se-internal.github.io/TeaStore
+          values:
+            - key: global.image.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-2b3fd43
+              overridable: true
+            - key: opentelemetry.otlpEndpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-teastore-collector.monitoring.svc.cluster.local:4317
+              overridable: true
+            # 0.1.1 parameterizes the inject-<language> annotation from these
+            # two values (previously hardcoded to "monitoring/opentelemetry-kube-stack").
+            # Point at the Byte cluster's monitoring-stack naming.
+            - key: opentelemetry.monitoringNamespace
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring
+              overridable: true
+            - key: opentelemetry.instrumentationName
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-instr-teastore
+              overridable: true
+            # 0.1.2 makes the busybox image used by jmeter's wait-for-registry
+            # init container configurable (LGU-SE-Internal/TeaStore#8). The Byte
+            # cluster cannot reach docker.io, so default to the volces mirror.
+            - key: jmeter.waitForRegistryImage.registry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: jmeter.waitForRegistryImage.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: busybox
+              overridable: true
+            - key: jmeter.waitForRegistryImage.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: "1.36"
+              overridable: true
+            - key: jmeter.waitForRegistryImage.pullPolicy
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: IfNotPresent
+              overridable: true
+          status: 1
+datasets:
+  - name: rca_pair_diagnosis_dataset
+    description: RCA Pair Diagnosis Dataset
+    type: network
+    is_public: true
+    status: 1
+    versions:
+      - name: 1.0.0
+        status: 1
+projects:
+  - name: pair_diagnosis
+    description: pair_diagnosis
+    status: 1
+teams:
+  - name: cuhkse
+    description: Default Team
+    is_public: true
+    status: 1
+admin_user:
+  username: admin
+  email: admin@aegis.local
+  full_name: System Admin
+  status: 1
+  is_active: true
+users:
+  - username: rainysteven1
+    email: rainysteven1@rcabench.local
+    full_name: Rainy Steven1
+    status: 1
+    is_active: true
+    teams:
+      - name: cuhkse
+        role: team_admin
+        projects:
+          - name: pair_diagnosis
+            role: project_admin
+  - username: rainysteven2
+    email: rainysteven2@rcabench.local
+    full_name: Rainy Steven2
+    status: 1
+    is_active: true
+    teams:
+      - name: cuhkse
+        role: team_member
+        projects:
+          - name: pair_diagnosis
+            role: project_algo_developer
+  - username: rainysteven3
+    email: rainysteven3@rcabench.local
+    full_name: Rainy Steven3
+    status: 1
+    is_active: true
+    teams:
+      - name: cuhkse
+        role: team_member
+        projects:
+          - name: pair_diagnosis
+            role: project_data_developer
+dynamic_configs:
+  - key: debugging.enabled
+    default_value: 'false'
+    value_type: 1
+    scope: 1
+    category: debugging
+    description: Enable or disable debugging features
+    is_secret: false
+  - key: database.clickhouse.host
+    # Operator-managed ClickStack headless Service (chart 2.x). With release
+    # name `clickstack` the helper `clickstack.clickhouse.svc` renders
+    # `clickstack-clickhouse-clickhouse-headless`. The ClickHouse client
+    # load-balances over the pods returned by the headless DNS lookup.
+    default_value: clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local
+    value_type: 0
+    scope: 1
+    category: database.clickhouse
+    description: ClickHouse database host
+    is_secret: false
+  - key: database.clickhouse.port
+    default_value: '8123'
+    value_type: 0
+    scope: 1
+    category: database.clickhouse
+    description: ClickHouse database port
+    is_secret: false
+  - key: database.clickhouse.user
+    default_value: default
+    value_type: 0
+    scope: 1
+    category: database.clickhouse
+    description: ClickHouse database user
+    is_secret: false
+  - key: database.clickhouse.password
+    default_value: ''
+    value_type: 0
+    scope: 1
+    category: database.clickhouse
+    description: ClickHouse database password
+    is_secret: true
+  - key: database.clickhouse.db
+    default_value: otel
+    value_type: 0
+    scope: 1
+    category: database.clickhouse
+    description: ClickHouse database name
+    is_secret: false
+  - key: database.clickhouse.timezone
+    default_value: UTC
+    value_type: 0
+    scope: 1
+    category: database.clickhouse
+    description: ClickHouse timezone
+    is_secret: false
+  - key: injection.system.ts.count
+    default_value: '5'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system Train Ticket to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.ts.ns_pattern
+    default_value: ^ts\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system Train Ticket instances
+    is_secret: false
+  - key: injection.system.ts.extract_pattern
+    default_value: ^(ts)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from Train Ticket
+      instances
+    is_secret: false
+  - key: injection.system.ts.display_name
+    default_value: Train Ticket
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system Train Ticket
+    is_secret: false
+  - key: injection.system.ts.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select Train Ticket workloads
+    is_secret: false
+  - key: injection.system.ts.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether Train Ticket is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.ts.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system Train Ticket (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.otel-demo.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system OpenTelemetry Demo to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.otel-demo.ns_pattern
+    default_value: ^otel-demo\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system OpenTelemetry Demo instances
+    is_secret: false
+  - key: injection.system.otel-demo.extract_pattern
+    default_value: ^(otel-demo)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from OpenTelemetry
+      Demo instances
+    is_secret: false
+  - key: injection.system.otel-demo.display_name
+    default_value: OpenTelemetry Demo
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system OpenTelemetry Demo
+    is_secret: false
+  - key: injection.system.otel-demo.app_label_key
+    default_value: app.kubernetes.io/name
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select OpenTelemetry Demo workloads
+    is_secret: false
+  - key: injection.system.otel-demo.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether OpenTelemetry Demo is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.otel-demo.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system OpenTelemetry Demo (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.sockshop.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system SockShop to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.sockshop.ns_pattern
+    default_value: ^sockshop\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system SockShop instances
+    is_secret: false
+  - key: injection.system.sockshop.extract_pattern
+    default_value: ^(sockshop)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from SockShop instances
+    is_secret: false
+  - key: injection.system.sockshop.display_name
+    default_value: SockShop
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system SockShop
+    is_secret: false
+  - key: injection.system.sockshop.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select SockShop workloads
+    is_secret: false
+  - key: injection.system.sockshop.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether SockShop is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.sockshop.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system SockShop (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.hs.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system HotelReservation to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.hs.ns_pattern
+    default_value: ^hs\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system HotelReservation instances
+    is_secret: false
+  - key: injection.system.hs.extract_pattern
+    default_value: ^(hs)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from HotelReservation instances
+    is_secret: false
+  - key: injection.system.hs.display_name
+    default_value: HotelReservation
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system HotelReservation
+    is_secret: false
+  - key: injection.system.hs.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select HotelReservation workloads
+    is_secret: false
+  - key: injection.system.hs.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether HotelReservation is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.hs.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system HotelReservation (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.sn.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system SocialNetwork to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.sn.ns_pattern
+    default_value: ^sn\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system SocialNetwork instances
+    is_secret: false
+  - key: injection.system.sn.extract_pattern
+    default_value: ^(sn)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from SocialNetwork instances
+    is_secret: false
+  - key: injection.system.sn.display_name
+    default_value: SocialNetwork
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system SocialNetwork
+    is_secret: false
+  - key: injection.system.sn.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select SocialNetwork workloads
+    is_secret: false
+  - key: injection.system.sn.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether SocialNetwork is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.sn.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system SocialNetwork (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.media.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system MediaMicroservices to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.media.ns_pattern
+    default_value: ^mm\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system MediaMicroservices instances
+    is_secret: false
+  - key: injection.system.media.extract_pattern
+    default_value: ^(mm)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from MediaMicroservices instances
+    is_secret: false
+  - key: injection.system.media.display_name
+    default_value: MediaMicroservices
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system MediaMicroservices
+    is_secret: false
+  - key: injection.system.media.app_label_key
+    default_value: app
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select MediaMicroservices workloads
+    is_secret: false
+  - key: injection.system.media.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether MediaMicroservices is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.media.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system MediaMicroservices (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: injection.system.teastore.count
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.count
+    description: Number of system TeaStore to create
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: injection.system.teastore.ns_pattern
+    default_value: ^tea\d+$
+    value_type: 0
+    scope: 2
+    category: injection.system.ns_pattern
+    description: Namespace pattern for system TeaStore instances
+    is_secret: false
+  - key: injection.system.teastore.extract_pattern
+    default_value: ^(tea)(\d+)$
+    value_type: 0
+    scope: 2
+    category: injection.system.extract_pattern
+    description: Extraction pattern for namespace prefix and number from TeaStore instances
+    is_secret: false
+  - key: injection.system.teastore.display_name
+    default_value: TeaStore
+    value_type: 0
+    scope: 2
+    category: injection.system.display_name
+    description: Human-readable display name for system TeaStore
+    is_secret: false
+  - key: injection.system.teastore.app_label_key
+    default_value: app.kubernetes.io/name
+    value_type: 0
+    scope: 2
+    category: injection.system.app_label_key
+    description: Kubernetes pod label key used to select TeaStore workloads (per-microservice)
+    is_secret: false
+  - key: injection.system.teastore.is_builtin
+    default_value: 'true'
+    value_type: 1
+    scope: 2
+    category: injection.system.is_builtin
+    description: Whether TeaStore is a builtin benchmark system
+    is_secret: false
+  - key: injection.system.teastore.status
+    default_value: '1'
+    value_type: 2
+    scope: 2
+    category: injection.system.status
+    description: Status of system TeaStore (1=enabled, 0=disabled, -1=deleted)
+    is_secret: false
+    min_value: -1
+    max_value: 1
+  - key: algo.detector
+    default_value: detector
+    value_type: 0
+    scope: 2
+    category: algo
+    description: Default detector algorithm name
+    is_secret: false
+  - key: logging.job.log_retention_days
+    default_value: '7'
+    value_type: 2
+    scope: 1
+    category: logging
+    description: Number of days to retain job logs
+    is_secret: false
+    min_value: 1
+    max_value: 365
+  - key: rate_limiting.max_concurrent_builds
+    default_value: '3'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Maximum number of concurrent container builds
+    is_secret: false
+    min_value: 1
+    max_value: 20
+  - key: rate_limiting.max_concurrent_build_datapack
+    default_value: '8'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Maximum number of concurrent BuildDatapack jobs (caps ClickHouse query fan-out)
+    is_secret: false
+    min_value: 1
+    max_value: 50
+  - key: rate_limiting.build_datapack_freshness_watermark_seconds
+    default_value: '30'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: BuildDatapack waits until otel.otel_traces has rows with Timestamp >= (abnormal_end - watermark) before launching the K8s Job; closes the OTel ingestion-lag race in issue #210
+    is_secret: false
+    min_value: 0
+    max_value: 600
+  - key: rate_limiting.build_datapack_freshness_max_wait_seconds
+    default_value: '300'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Hard upper bound on how long the BuildDatapack pre-flight will wait for ClickHouse freshness before rescheduling the task (issue #210)
+    is_secret: false
+    min_value: 30
+    max_value: 1800
+  - key: rate_limiting.max_concurrent_restarts
+    default_value: '5'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Maximum number of concurrent service restarts
+    is_secret: false
+    min_value: 1
+    max_value: 10
+  - key: rate_limiting.max_concurrent_algo_execution
+    default_value: '5'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Maximum number of concurrent algorithm executions
+    is_secret: false
+    min_value: 1
+    max_value: 50
+  - key: rate_limiting.token_wait_timeout
+    default_value: '10'
+    value_type: 2
+    scope: 1
+    category: rate_limiting
+    description: Token wait timeout in seconds
+    is_secret: false
+    min_value: 1
+    max_value: 300

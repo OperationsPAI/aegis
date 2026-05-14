@@ -42,15 +42,15 @@ under `benchmark-charts/charts/<code>-aegis/` with `app_label_key`
 propagation, telemetry (Jaeger bridge or OTel SDK →
 `otel-collector.otel.svc.cluster.local:4317`), and a loadgen; add
 pedestal + 7 `injection.system.<code>.*` entries to
-`AegisLab/data/initial_data/{prod,staging}/data.yaml`;
+`aegislab/data/initial_data/{prod,staging}/data.yaml`;
 `helm package` → `<code>-aegis-<ver>.tgz`; add regression case
-`AegisLab/regression/<code>-guided.yaml`.
+`aegislab/regression/<code>-guided.yaml`.
 
 **Runtime wiring (3 commands):**
 
 ```bash
 # 1. Seed etcd + dynamic_configs atomically from data.yaml.
-aegisctl system register --from-seed AegisLab/data/initial_data/prod/data.yaml --name <code>
+aegisctl system register --from-seed aegislab/data/initial_data/prod/data.yaml --name <code>
 
 # 2. Publish the chart (skip if published remotely; step 3 will fetch).
 aegisctl pedestal chart push --name <code> --tgz ./<code>-aegis-<ver>.tgz
@@ -182,7 +182,7 @@ future RPC-only-instrumented stack.
 - **First-submit empty-namespace 500** — `regression run
   --auto-install` preflights pods and calls `chart install` if needed
   (#91 mitigation).
-- **`cd AegisLab/` requirement** (fix 12) — `aegisctl regression run`
+- **`cd aegislab/` requirement** (fix 12) — `aegisctl regression run`
   resolves repo-relative paths itself.
 - **Chart upload ritual** — `pedestal chart push` replaces the manual
   `kubectl cp … aegislab-backend-producer-0:/var/lib/rcabench/dataset/charts/`.

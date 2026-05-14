@@ -15,7 +15,7 @@ order; any failure blocks the rest.
   makes every image pull fail. Clear in the shell:
   `unset HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy`.
 - Default `standard` StorageClass from `local-path-provisioner` is
-  **RWO only**. The AegisLab chart's `containers-data` and
+  **RWO only**. The aegislab chart's `containers-data` and
   `juicefs-dataset` PVCs demand RWX. Install an in-cluster NFS
   provisioner before `helm install rcabench`:
   ```bash
@@ -25,7 +25,7 @@ order; any failure blocks the rest.
     --set storageClass.name=nfs --set persistence.enabled=true \
     --set persistence.storageClass=standard --set persistence.size=20Gi
   ```
-  The kind profile `AegisLab/manifests/kind/rcabench.yaml` already
+  The kind profile `aegislab/manifests/kind/rcabench.yaml` already
   points `storageClassNames.external=nfs`.
 
 ## Chaos Mesh
@@ -94,7 +94,7 @@ one of these four lines.
 
 ## Aegis-specific tools (optional, only if you'll use path 1 of phase 4)
 
-- `aegisctl` built from current `AegisLab/src` (`just build-aegisctl`).
+- `aegisctl` built from current `aegislab/src` (`just build-aegisctl`).
 - Backend API reachable (`aegislab-backend-exp` service on port 8080).
 - `aegisctl auth login` successful against a `pair_diagnosis` project or
   similar.

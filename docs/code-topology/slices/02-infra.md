@@ -2,7 +2,7 @@
 
 > Archival note: this file was not fully revalidated after the phase-2 gRPC collapse and phase-6 module-wiring cleanup. Treat `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` as the current topology source of truth.
 
-Paths (all absolute under `/home/ddq/AoyangSpace/aegis/AegisLab/src/`):
+Paths (all absolute under `/home/ddq/AoyangSpace/aegis/aegislab/src/`):
 - `infra/{buildkit,chaos,config,db,etcd,harbor,helm,k8s,logger,loki,redis,runtime,tracing}/`
 
 ## 1. Per-package summary

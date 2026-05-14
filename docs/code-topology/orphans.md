@@ -1,8 +1,8 @@
-# AegisLab Code-Topology — Orphans, Bugs, Risks (v2)
+# aegislab Code-Topology — Orphans, Bugs, Risks (v2)
 
 > Archival note: this file was not fully revalidated after the phase-2 gRPC collapse and phase-6 module-wiring cleanup. Treat `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` as the current topology source of truth.
 
-Findings from the 7-agent recovery pass on the refactored codebase (AegisLab submodule
+Findings from the 7-agent recovery pass on the refactored codebase (aegislab submodule
 `42282d0c`). Each item cites `file.go:line` so it can be re-checked against live code.
 Divided by severity / kind so the list is actionable.
 
@@ -87,7 +87,7 @@ Divided by severity / kind so the list is actionable.
 | E15 | `infra/db/module.go` | `NewGormDB` runs `AutoMigrate` + `createDetectorViews` inside the constructor (not a Lifecycle OnStart hook) — schema work happens at fx graph BUILD time, before `app.Start()`. A panic mid-migration means the OnStop close hook is never registered. |
 | E16 | `infra/chaos/module.go` | `chaos.Initialize(*rest.Config)` → `chaosCli.InitWithConfig`. Package implicitly depends on `k8s.Module` providing `*rest.Config`. Nothing prevents wiring chaos without k8s; fx would fail at resolution. |
 | E17 | `cmd/aegisctl/cmd/inject_guided.go` | `aegisctl inject guided` runs **purely local YAML I/O** unless `--apply` is passed. With `--apply`, it hits the same endpoint as `inject submit`; backend dispatches on spec shape. |
-| E18 | `cmd/aegisctl/cmd/cluster.go` | `cluster preflight` connects directly to k8s/MySQL/Redis/etcd/ClickHouse — out-of-band, NOT via the AegisLab HTTP API. |
+| E18 | `cmd/aegisctl/cmd/cluster.go` | `cluster preflight` connects directly to k8s/MySQL/Redis/etcd/ClickHouse — out-of-band, NOT via the aegislab HTTP API. |
 | E19 | `middleware/middleware.go:23` SSEPath regex | Regex is `^/stream(/.*)?$` — **never matches** the actual SSE routes `/traces/:id/stream`, `/groups/:id/stream`, `/notifications/stream` because those don't start with `/stream`. Response headers therefore must be set by each handler individually, or the middleware is a silent no-op for SSE. |
 | E20 | `interface/http/ServerConfig` | Only has `Addr` — no TLS, no read/write timeouts, no graceful-shutdown timeout. |
 | E21 | `router/router.go:22` | CORS `ExposeHeaders` exposes `X-Request-Id` but not `X-Group-ID` — browser JS reading `res.headers.get('X-Group-Id')` will see null. |
@@ -100,7 +100,7 @@ Divided by severity / kind so the list is actionable.
   migration is complete at the wire level.
 - `LGU-SE-Internal/chaos-experiment` is NOT imported anywhere. Only the OperationsPAI fork
   is used (`go.mod:63` replace → local `../../chaos-experiment`). Unchanged from v1.
-- The three chaos-experiment subpackages used by AegisLab are still `handler`, `client`,
+- The three chaos-experiment subpackages used by aegislab are still `handler`, `client`,
   `pkg/guidedcli` — nothing else.
 
 ## G. Things the recovery couldn't fully verify

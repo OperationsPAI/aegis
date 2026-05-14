@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "AegisLab/**"
+      - "aegislab/**"
       - ".github/workflows/aegisctl-schema-diff.yml"
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: "AegisLab/src/go.mod"
+          go-version-file: "aegislab/src/go.mod"
 
       - name: Generate schema and enforce acknowledged diff policy
         env:
@@ -48,18 +48,18 @@ jobs:
             local repo_root=$1
             local out_file=$2
 
-            # `go build` must run from the module root (AegisLab/src, where
-            # go.mod lives). Running it from AegisLab/ walks up to the repo
+            # `go build` must run from the module root (aegislab/src, where
+            # go.mod lives). Running it from aegislab/ walks up to the repo
             # root and fails with "cannot find main module".
             # The aegisctl entrypoint moved from ./cmd/aegisctl to ./cli in
             # the chore/repo-relayout PR; tolerate both so the gate works for
             # base and head sides of the diff.
             local pkg="./cli"
-            if [ ! -d "$repo_root/AegisLab/src/cli" ]; then
+            if [ ! -d "$repo_root/aegislab/src/cli" ]; then
               pkg="./cmd/aegisctl"
             fi
-            (cd "$repo_root/AegisLab/src" && go build -o "$build_bin" "$pkg")
-            (cd "$repo_root/AegisLab/src" && "$build_bin" schema dump > "$out_file")
+            (cd "$repo_root/aegislab/src" && go build -o "$build_bin" "$pkg")
+            (cd "$repo_root/aegislab/src" && "$build_bin" schema dump > "$out_file")
           }
 
           cleanup() {

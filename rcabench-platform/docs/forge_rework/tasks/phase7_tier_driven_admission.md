@@ -94,7 +94,7 @@ physics perspective**, not by ad-hoc band tweaking:
 These are **agent-explorable hypotheses** — one agent per tier,
 each in its own worktree off `forge-rework-integration`, with the
 same exit criterion: improved attribution on both the legacy
-`rca/` 500-case dataset and the AegisLab `detector_success_last13h`
+`rca/` 500-case dataset and the aegislab `detector_success_last13h`
 522-case dataset, **without** introducing per-system or per-fault
 hacks. Validation re-runs both datasets and reports the per-fault
 delta.

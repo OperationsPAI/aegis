@@ -1,8 +1,8 @@
-# AegisLab Critical Call Paths (v2)
+# aegislab Critical Call Paths (v2)
 
 > Archival note: this file was not fully revalidated after the phase-2 gRPC collapse and phase-6 module-wiring cleanup. Treat `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` as the current topology source of truth.
 
-All citations relative to `/home/ddq/AoyangSpace/aegis/AegisLab/src/`. Cross-reference the
+All citations relative to `/home/ddq/AoyangSpace/aegis/aegislab/src/`. Cross-reference the
 7 raw agent reports under `slices/` for exhaustive edges behind each flow.
 
 ---

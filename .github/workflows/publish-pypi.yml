@@ -2,7 +2,7 @@ name: Publish PyPI packages
 
 # Unified PyPI release flow for the two Python packages in this monorepo:
 #   - rcabench-platform   (source: rcabench-platform/)            tag prefix: release-platform/
-#   - rcabench            (source: AegisLab/sdk/python/)          tag prefix: release-sdk/
+#   - rcabench            (source: aegislab/sdk/python/)          tag prefix: release-sdk/
 #
 # Versions are INDEPENDENT: the tag carries the version, and each job asserts
 # the tag version matches the in-tree pyproject.toml before publishing.
@@ -115,7 +115,7 @@ jobs:
         run: uv publish --trusted-publishing always
 
   # ------------------------------------------------------------------
-  # rcabench (AegisLab SDK)
+  # rcabench (aegislab SDK)
   # ------------------------------------------------------------------
   resolve-sdk:
     name: Resolve rcabench SDK version
@@ -156,7 +156,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: "AegisLab/src/go.mod"
+          go-version-file: "aegislab/src/go.mod"
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
@@ -164,22 +164,22 @@ jobs:
       - name: Install Go build deps
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest
-          (cd AegisLab/src && go mod tidy)
+          (cd aegislab/src && go mod tidy)
       - name: Generate Python SDK (bakes version into sources)
-        working-directory: AegisLab
+        working-directory: aegislab
         run: just generate-python-sdk "${SDK_VERSION}"
       - name: Sanity-check generated version
         shell: bash
         run: |
           set -euo pipefail
-          pyver=$(sed -n 's/^version = "\([^"]*\)"/\1/p' AegisLab/sdk/python/pyproject.toml | head -n1)
+          pyver=$(sed -n 's/^version = "\([^"]*\)"/\1/p' aegislab/sdk/python/pyproject.toml | head -n1)
           if [[ "$pyver" != "${SDK_VERSION}" ]]; then
             echo "::error::generated pyproject.toml version '$pyver' != tag version '${SDK_VERSION}'"
             exit 1
           fi
       - name: Build
-        working-directory: AegisLab/sdk/python
+        working-directory: aegislab/sdk/python
         run: uv build
       - name: Publish
-        working-directory: AegisLab/sdk/python
+        working-directory: aegislab/sdk/python
         run: uv publish --trusted-publishing always

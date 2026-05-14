@@ -9,7 +9,7 @@ ROUND=$2
 DIR="/home/ddq/AoyangSpace/aegis/experiments/${SYS}-loop"
 RUNS="${DIR}/runs_round${ROUND}.jsonl"
 OUT="${DIR}/terminals_round${ROUND}.tsv"
-export PATH=/home/ddq/AoyangSpace/aegis/AegisLab/bin:$PATH
+export PATH=/home/ddq/AoyangSpace/aegis/aegislab/bin:$PATH
 : > "$OUT"
 # extract unique trace_ids
 jq -r '.trace_id // empty' "$RUNS" | sort -u | while read -r tid; do

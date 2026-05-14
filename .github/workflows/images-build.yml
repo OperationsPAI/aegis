@@ -1,13 +1,13 @@
 name: Build auxiliary images
 
-# Builds and publishes helper/init images that live under AegisLab/images/<name>/.
+# Builds and publishes helper/init images that live under aegislab/images/<name>/.
 # Each subdir is a self-contained Dockerfile context. New images = add a matrix
 # entry below (dir + image repo name) — no other wiring needed.
 #
 # Trigger model:
-#   - push to main touching AegisLab/images/** → build and push
+#   - push to main touching aegislab/images/** → build and push
 #       tags: :latest  +  :<git-sha-7>
-#   - PR to main touching AegisLab/images/**   → build only (no push)
+#   - PR to main touching aegislab/images/**   → build only (no push)
 #   - manual workflow_dispatch                 → build and push :<git-sha-7>
 #
 # Auth: reuses the same org-level Docker Hub config as release-docker.yml
@@ -19,12 +19,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "AegisLab/images/**"
+      - "aegislab/images/**"
       - ".github/workflows/images-build.yml"
   pull_request:
     branches: [main]
     paths:
-      - "AegisLab/images/**"
+      - "aegislab/images/**"
       - ".github/workflows/images-build.yml"
   workflow_dispatch:
 
@@ -99,7 +99,7 @@ jobs:
             fi
             for f in "${files[@]:-}"; do
               case "$f" in
-                AegisLab/images/$dir/*)
+                aegislab/images/$dir/*)
                   included+=("$dir|$repo")
                   break
                   ;;
@@ -186,8 +186,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: AegisLab/images/${{ matrix.dir }}
-          file: AegisLab/images/${{ matrix.dir }}/Dockerfile
+          context: aegislab/images/${{ matrix.dir }}
+          file: aegislab/images/${{ matrix.dir }}/Dockerfile
           # amd64-only: Dockerfile pins helm-linux-amd64 and the published
           # :latest on Docker Hub is also amd64-only. Add arm64 here + a
           # dynamic HELM arch only if a real arm64 target shows up.

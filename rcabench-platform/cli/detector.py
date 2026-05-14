@@ -409,7 +409,7 @@ def _stage_s3_input_locally(s3_url: str) -> Path:
     """Mirror an s3://... datapack into a tempdir for path-based consumers.
 
     The orchestrator hands us INPUT_PATH=s3://aegis-datapack/<name> when the
-    datapack output backend is s3 (see AegisLab/orchestrator/datapack_backend.go).
+    datapack output backend is s3 (see aegislab/orchestrator/datapack_backend.go).
     sdk.valid() + downstream loaders still expect a local directory of files,
     so we mirror the bucket prefix into a tempdir and hand back that Path.
 

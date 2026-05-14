@@ -1,0 +1,16 @@
+# Example overlay for multi-environment aegislab deployments.
+#
+# Usage:
+#   helm install aegis ./helm -f ./helm/values-multi-env.example.yaml
+#
+# Re-use the SAME file across prod/stage/dev installs so every UI sees an
+# identical environment switcher. The aegis-api handler exposes this manifest
+# at GET /.well-known/aegis-environments.json.
+aegisEnvironments:
+  enabled: true
+  manifest:
+    default: prod
+    environments:
+      - { id: prod,  label: "生产", baseUrl: "https://api.aegis.example.com",       badge: default }
+      - { id: stage, label: "预发", baseUrl: "https://api-stage.aegis.example.com", badge: warning }
+      - { id: dev,   label: "开发", baseUrl: "https://api-dev.aegis.example.com",   badge: info    }

@@ -1,6 +1,6 @@
 # 01 · App wiring (Phase 6)
 
-Source: `/home/ddq/AoyangSpace/aegis/AegisLab/src`
+Source: `/home/ddq/AoyangSpace/aegis/aegislab/src`
 
 This slice replaces the old 6-service app-wiring inventory. The current architecture has two
 primary dedicated processes (`api-gateway` and `runtime-worker-service`) plus three legacy
@@ -142,7 +142,7 @@ This registry is generated, not hand-maintained.
 
 - Source wrapper: `app/http_modules.go`
 - Generated file: `app/http_modules_gen.go`
-- Generator: `AegisLab/scripts/generate_http_modules.py`
+- Generator: `aegislab/scripts/generate_http_modules.py`
 - Sync test: `app/http_modules_generated_test.go`
 
 Generated module set:

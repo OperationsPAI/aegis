@@ -1,7 +1,7 @@
 # MemoryStress — cgroup memory pressure on a container.
 #
 # Real cases corroborated against the 21 hotel-reserv MemoryStress cases
-# in the AegisLab dataset and the 65 JVMMemoryStress legacy cases. The
+# in the aegislab dataset and the 65 JVMMemoryStress legacy cases. The
 # cascade outward depends on stress severity:
 #
 # * Severe: working_set saturates → OOM-killer terminates container OR

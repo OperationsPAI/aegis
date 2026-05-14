@@ -3,12 +3,12 @@ workspace:
   manifest: workspace.yaml
   schema_version: 3
 project:
-  name: AegisLab
+  name: aegislab
   languages:
   - go
   - python
   - typescript
-  description: RCA benchmarking workspace spanning AegisLab backend, chaos-experiment fault injection libraries, and rcabench-platform evaluation/data consumers.
+  description: RCA benchmarking workspace spanning aegislab backend, chaos-experiment fault injection libraries, and rcabench-platform evaluation/data consumers.
 requirements:
 - id: REQ-001
   title: User Authentication (JWT)
@@ -20,18 +20,18 @@ requirements:
   confidence: confirmed
   source: src/middleware/auth.go, src/handlers/v2/auth.go
   code:
-  - path: AegisLab/src/middleware/auth.go
+  - path: aegislab/src/middleware/auth.go
     description: JWTAuth, OptionalJWTAuth middlewares; helper functions for extracting user/service context from JWT claims
-  - path: AegisLab/src/handlers/v2/auth.go
+  - path: aegislab/src/handlers/v2/auth.go
     description: Register, Login endpoints with Swagger annotations and SDK marking
-  - path: AegisLab/src/service/producer/auth.go
+  - path: aegislab/src/service/producer/auth.go
     description: Business logic for registration and login
   has_mock: false
   tests:
   - path: src/utils/password_test.go
     description: Tests password hashing utility used by auth
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -57,16 +57,16 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/users.go, src/repository/user.go
   code:
-  - path: AegisLab/src/handlers/v2/users.go
+  - path: aegislab/src/handlers/v2/users.go
     description: CreateUser, ListUsers, GetUser, UpdateUser, DeleteUser handlers
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: User entity with username, email, password, full_name, avatar, phone, status, soft delete
-  - path: AegisLab/src/repository/user.go
+  - path: aegislab/src/repository/user.go
     description: Data access layer for user operations
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -91,22 +91,22 @@ requirements:
   confidence: inferred
   source: src/middleware/permission.go, src/handlers/v2/roles.go
   code:
-  - path: AegisLab/src/middleware/permission.go
+  - path: aegislab/src/middleware/permission.go
     description: 'Decorator-pattern permission middleware: singlePermission, anyPermission, allPermissions, ownershipCheck, adminOrOwnership, teamAccessCheck, projectAccessCheck. Pre-built permission variables for every domain.
 
       '
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: Role, Permission, Resource entities with hierarchical resource categories
-  - path: AegisLab/src/handlers/v2/roles.go
+  - path: aegislab/src/handlers/v2/roles.go
     description: CRUD for roles with permission assignment
-  - path: AegisLab/src/handlers/v2/permissions.go
+  - path: aegislab/src/handlers/v2/permissions.go
     description: Permission listing and detail endpoints
-  - path: AegisLab/src/handlers/v2/resources.go
+  - path: aegislab/src/handlers/v2/resources.go
     description: Resource listing and detail endpoints
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -136,11 +136,11 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/teams.go
   code:
-  - path: AegisLab/src/handlers/v2/teams.go
+  - path: aegislab/src/handlers/v2/teams.go
     description: CreateTeam, DeleteTeam, ListTeams, GetTeam, UpdateTeam handlers
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: Team entity with name, description, is_public, status, projects relationship
-  - path: AegisLab/src/middleware/permission.go
+  - path: aegislab/src/middleware/permission.go
     description: RequireTeamAccess, RequireTeamAdminAccess, RequireTeamMemberAccess middlewares
   has_mock: false
   tests: []
@@ -173,11 +173,11 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/projects.go
   code:
-  - path: AegisLab/src/handlers/v2/projects.go
+  - path: aegislab/src/handlers/v2/projects.go
     description: CreateProject, DeleteProject, ListProjects, GetProject, UpdateProject handlers
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: Project entity with team FK, containers and datasets M2M, labels M2M
-  - path: AegisLab/src/middleware/permission.go
+  - path: aegislab/src/middleware/permission.go
     description: RequireProjectAccess, RequireProjectAdminAccess, RequireProjectMemberAccess middlewares
   has_mock: false
   tests: []
@@ -209,9 +209,9 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/labels.go
   code:
-  - path: AegisLab/src/handlers/v2/labels.go
+  - path: aegislab/src/handlers/v2/labels.go
     description: BatchDeleteLabels, CRUD for labels
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: Label entity with key, value, category, color, usage count; M2M join tables
   has_mock: false
   tests: []
@@ -242,11 +242,11 @@ requirements:
   confidence: confirmed
   source: src/middleware/audit.go, src/database/entity.go, src/repository/audit.go
   code:
-  - path: AegisLab/src/middleware/audit.go
+  - path: aegislab/src/middleware/audit.go
     description: AuditMiddleware captures request/response details, determines action and resource, logs asynchronously
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: AuditLog entity with IP, user agent, action, details, error_msg, resource associations
-  - path: AegisLab/src/service/producer/audit.go
+  - path: aegislab/src/service/producer/audit.go
     description: LogUserAction, LogFailedAction service methods
   frontend: []
   has_mock: false
@@ -278,7 +278,7 @@ requirements:
   confidence: confirmed
   source: src/middleware/ratelimit.go
   code:
-  - path: AegisLab/src/middleware/ratelimit.go
+  - path: aegislab/src/middleware/ratelimit.go
     description: RateLimiter struct with sliding window, IP/user/API-key based middleware variants
   frontend: []
   has_mock: false
@@ -308,9 +308,9 @@ requirements:
   confidence: inferred
   source: src/database/entity.go, src/service/producer/dynamic_config.go
   code:
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: DynamicConfig and ConfigHistory entities with validation fields
-  - path: AegisLab/src/service/producer/dynamic_config.go
+  - path: aegislab/src/service/producer/dynamic_config.go
     description: Config update logic with history tracking and context
   has_mock: false
   tests: []
@@ -340,19 +340,19 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/injections.go
   code:
-  - path: AegisLab/src/handlers/v2/injections.go
+  - path: aegislab/src/handlers/v2/injections.go
     description: CRUD handlers for injections including batch delete, get, list, create
-  - path: AegisLab/src/service/consumer/fault_injection.go
+  - path: aegislab/src/service/consumer/fault_injection.go
     description: executeFaultInjection branches guided vs. legacy via InjectGuidedConfigs payload key
-  - path: AegisLab/src/service/producer/injection.go
+  - path: aegislab/src/service/producer/injection.go
     description: Producer routes GuidedConfig batches through ResolveSpecs three-way dispatch
-  - path: AegisLab/src/dto/injection.go
+  - path: aegislab/src/dto/injection.go
     description: SubmitInjectionReq.ResolveSpecs probes chaos_type field → GuidedConfig | Node DSL | FriendlyFaultSpec
-  - path: AegisLab/src/cmd/aegisctl/cmd/inject_guided.go
+  - path: aegislab/src/cmd/aegisctl/cmd/inject_guided.go
     description: aegisctl inject guided subcommand — interactive stepper over GuidedConfig
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: FaultInjection entity with chaos type, category, groundtruths, engine config, benchmark/pedestal FKs
-  - path: AegisLab/src/repository/container.go
+  - path: aegislab/src/repository/container.go
     description: CheckContainerExistsWithDifferentType — container lookup used by pedestal/benchmark mapping
   frontend: &id001
   - path:
@@ -372,8 +372,8 @@ requirements:
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
-  - path: AegisLab/docs/inject-pipeline-design.md
+  - path: aegislab/CLAUDE.md
+  - path: aegislab/docs/inject-pipeline-design.md
     description: Current guided-first wire format (GuidedConfig primary, Node DSL + FriendlyFaultSpec back-compat)
   - path: aegis/docs/troubleshooting/e2e-cluster-bootstrap.md
     description: Fresh-cluster replay runbook with every known pitfall (SQL fix, TOML keys, OTEL collector, dedup, etc.)
@@ -427,15 +427,15 @@ requirements:
   confidence: confirmed
   source: src/service/consumer/fault_injection.go, src/service/consumer/k8s_handler.go
   code:
-  - path: AegisLab/src/service/consumer/fault_injection.go
+  - path: aegislab/src/service/consumer/fault_injection.go
     description: batchManager singleton with mutex-protected batch tracking
-  - path: AegisLab/src/service/consumer/k8s_handler.go
+  - path: aegislab/src/service/consumer/k8s_handler.go
     description: HandleCRDSucceeded checks batch completion before submitting next task
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -464,11 +464,11 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/systems.go, src/database/entity.go, src/service/producer/chaos_system.go
   code:
-  - path: AegisLab/src/handlers/v2/systems.go
+  - path: aegislab/src/handlers/v2/systems.go
     description: ListChaosSystemsHandler, GetChaosSystemHandler and CRUD for chaos systems
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: System and SystemMetadata entities
-  - path: AegisLab/src/service/initialization/systems.go
+  - path: aegislab/src/service/initialization/systems.go
     description: System initialization/seeding on startup
   frontend: []
   has_mock: false
@@ -485,7 +485,7 @@ requirements:
   repo: aegislab
   chaos_code:
   - path: chaos-experiment/handler/registration.go
-    description: Dynamic system registration hooks consumed by AegisLab
+    description: Dynamic system registration hooks consumed by aegislab
   - path: chaos-experiment/handler/model.go
     description: System metadata models used by registration
   rcabench_code: []
@@ -502,9 +502,9 @@ requirements:
   confidence: inferred
   source: src/service/consumer/restart_pedestal.go, src/service/consumer/rate_limiter.go
   code:
-  - path: AegisLab/src/service/consumer/restart_pedestal.go
+  - path: aegislab/src/service/consumer/restart_pedestal.go
     description: executeRestartPedestal task handler with rate limiter integration
-  - path: AegisLab/src/service/consumer/rate_limiter.go
+  - path: aegislab/src/service/consumer/rate_limiter.go
     description: TokenBucketRateLimiter for pedestal restart operations
   frontend: []
   has_mock: false
@@ -539,9 +539,9 @@ requirements:
   confidence: inferred
   source: src/service/producer/upload.go, src/handlers/v2/injections.go
   code:
-  - path: AegisLab/src/service/producer/upload.go
+  - path: aegislab/src/service/producer/upload.go
     description: UploadDatapack validates ZIP structure (6 recognized parquet files), parses labels/groundtruths
-  - path: AegisLab/src/handlers/v2/injections.go
+  - path: aegislab/src/handlers/v2/injections.go
     description: Upload handler endpoint
   frontend: []
   has_mock: false
@@ -575,7 +575,7 @@ requirements:
   confidence: uncertain
   source: src/service/consumer/jvm_runtime_mutator.go
   code:
-  - path: AegisLab/src/service/consumer/jvm_runtime_mutator.go
+  - path: aegislab/src/service/consumer/jvm_runtime_mutator.go
     description: Commented-out JVM runtime mutator implementation
   frontend: []
   has_mock: false
@@ -611,11 +611,11 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/executions.go
   code:
-  - path: AegisLab/src/handlers/v2/executions.go
+  - path: aegislab/src/handlers/v2/executions.go
     description: 'CRUD handlers for executions: batch delete, get, list, create'
-  - path: AegisLab/src/service/consumer/algo_execution.go
+  - path: aegislab/src/service/consumer/algo_execution.go
     description: executeAlgorithm task handler creating K8s jobs with algorithm container
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: Execution entity with algorithm_version, datapack, dataset_version FKs
     path:
     description: Project execution list and launch entry point
@@ -663,9 +663,9 @@ requirements:
   confidence: inferred
   source: src/service/consumer/collect_result.go, src/database/entity.go
   code:
-  - path: AegisLab/src/service/consumer/collect_result.go
+  - path: aegislab/src/service/consumer/collect_result.go
     description: executeCollectResult parses algorithm output, distinguishes detector vs general algorithms
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: DetectorResult (span metrics) and GranularityResult (localization at service/pod/span/metric levels)
   frontend: []
   has_mock: false
@@ -697,9 +697,9 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/evaluations.go
   code:
-  - path: AegisLab/src/handlers/v2/evaluations.go
+  - path: aegislab/src/handlers/v2/evaluations.go
     description: ListDatapackEvaluationResults endpoint (SDK-enabled)
-  - path: AegisLab/src/service/analyzer/evaluation.go
+  - path: aegislab/src/service/analyzer/evaluation.go
     description: Batch evaluation logic mapping container refs to versions and computing results
   frontend: &id006
   - path:
@@ -742,7 +742,7 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/evaluations.go, src/service/analyzer/evaluation.go
   code:
-  - path: AegisLab/src/handlers/v2/evaluations.go
+  - path: aegislab/src/handlers/v2/evaluations.go
     description: ListDatasetEvaluationResults endpoint (SDK-enabled)
   frontend: []
   has_mock: false
@@ -779,14 +779,14 @@ requirements:
   confidence: confirmed
   source: src/service/producer/query_datapack_arrow.go
   code:
-  - path: AegisLab/src/service/producer/query_datapack_arrow.go
+  - path: aegislab/src/service/producer/query_datapack_arrow.go
     description: 'QueryDatapackFileContent using DuckDB Arrow connector (build tag: duckdb_arrow)'
-  - path: AegisLab/src/service/producer/query_datapack_noarrow.go
+  - path: aegislab/src/service/producer/query_datapack_noarrow.go
     description: Stub returning error when duckdb_arrow tag is not set
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -812,7 +812,7 @@ requirements:
   - dataset-schema
 - id: REQ-205
   title: SDK Evaluations
-  description: 'Read-only access to evaluation data created by the Python SDK. Lists and retrieves SDKEvaluationSample records from a table managed by the SDK (not auto-migrated by AegisLab). Supports filtering by exp_id and stage. No dedicated frontend UI.
+  description: 'Read-only access to evaluation data created by the Python SDK. Lists and retrieves SDKEvaluationSample records from a table managed by the SDK (not auto-migrated by aegislab). Supports filtering by exp_id and stage. No dedicated frontend UI.
 
     '
   priority: P1
@@ -820,9 +820,9 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/sdk_evaluations.go, src/database/sdk_entities.go
   code:
-  - path: AegisLab/src/handlers/v2/sdk_evaluations.go
+  - path: aegislab/src/handlers/v2/sdk_evaluations.go
     description: ListSDKEvaluations, GetSDKEvaluation handlers
-  - path: AegisLab/src/database/sdk_entities.go
+  - path: aegislab/src/database/sdk_entities.go
     description: SDKEvaluationSample and SDKDatasetSample entities (read-only, SDK-managed tables)
   frontend: []
   has_mock: false
@@ -835,7 +835,7 @@ requirements:
   depends_on:
   - REQ-600
   conflicts: []
-  notes: 'Tables created/managed by Python SDK, AegisLab only reads them
+  notes: 'Tables created/managed by Python SDK, aegislab only reads them
 
     Frontend implementation was removed or consolidated in the current React refactor; backend or contract behavior remains tracked elsewhere where applicable.'
   type: pipeline
@@ -856,7 +856,7 @@ requirements:
   confidence: inferred
   source: src/database/view.go
   code:
-  - path: AegisLab/src/database/view.go
+  - path: aegislab/src/database/view.go
     description: View model structs for fault_injection_no_issues and fault_injection_with_issues
   frontend: []
   has_mock: false
@@ -889,9 +889,9 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/containers.go
   code:
-  - path: AegisLab/src/handlers/v2/containers.go
+  - path: aegislab/src/handlers/v2/containers.go
     description: CreateContainer, CRUD for containers and container versions
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: 'Container (type, public, labels), ContainerVersion (semantic versioning, image ref parsing, Helm config, env vars), HelmConfig (chart, repo, values), ParameterConfig (fixed/dynamic params with validation)
 
       '
@@ -922,9 +922,9 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/datasets.go
   code:
-  - path: AegisLab/src/handlers/v2/datasets.go
+  - path: aegislab/src/handlers/v2/datasets.go
     description: CreateDataset, CRUD for datasets and dataset versions
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: Dataset and DatasetVersion entities with datapacks M2M relationship
   has_mock: false
   tests: []
@@ -958,7 +958,7 @@ requirements:
   confidence: inferred
   source: src/service/consumer/build_container.go
   code:
-  - path: AegisLab/src/service/consumer/build_container.go
+  - path: aegislab/src/service/consumer/build_container.go
     description: executeBuildContainer task handler using BuildKit client with Docker registry auth
   frontend: []
   has_mock: false
@@ -990,15 +990,15 @@ requirements:
   confidence: confirmed
   source: src/service/consumer/build_datapack.go, src/service/consumer/k8s_handler.go
   code:
-  - path: AegisLab/src/service/consumer/build_datapack.go
+  - path: aegislab/src/service/consumer/build_datapack.go
     description: executeBuildDatapack creates K8s job to collect and package observability data
-  - path: AegisLab/src/service/consumer/k8s_handler.go
+  - path: aegislab/src/service/consumer/k8s_handler.go
     description: HandleCRDSucceeded triggers BuildDatapack after CRD completion
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1027,7 +1027,7 @@ requirements:
   confidence: inferred
   source: src/client/harbor_client.go
   code:
-  - path: AegisLab/src/client/harbor_client.go
+  - path: aegislab/src/client/harbor_client.go
     description: Singleton HarborClient wrapping go-harbor SDK for artifact operations
   frontend: []
   has_mock: false
@@ -1056,14 +1056,14 @@ requirements:
   confidence: confirmed
   source: src/service/consumer/task.go
   code:
-  - path: AegisLab/src/service/consumer/task.go
+  - path: aegislab/src/service/consumer/task.go
     description: 'Redis queue constants, concurrency control, Prometheus metrics, task cancellation registry, event publishing
 
       '
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1090,7 +1090,7 @@ requirements:
   confidence: confirmed
   source: src/service/consumer/distribute_tasks.go
   code:
-  - path: AegisLab/src/service/consumer/distribute_tasks.go
+  - path: aegislab/src/service/consumer/distribute_tasks.go
     description: dispatchTask switch on task type to route to correct executor
   frontend: []
   has_mock: false
@@ -1121,15 +1121,15 @@ requirements:
   confidence: confirmed
   source: src/service/consumer/k8s_handler.go, src/client/k8s/controller.go
   code:
-  - path: AegisLab/src/service/consumer/k8s_handler.go
+  - path: aegislab/src/service/consumer/k8s_handler.go
     description: HandleCRDSucceeded, HandleJobSucceeded implement callback-driven workflow chain
-  - path: AegisLab/src/client/k8s/controller.go
+  - path: aegislab/src/client/k8s/controller.go
     description: 'Callback interface: HandleCRD{Add,Delete,Failed,Succeeded}, HandleJob{Add,Failed,Succeeded}'
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1157,7 +1157,7 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/tasks.go
   code:
-  - path: AegisLab/src/handlers/v2/tasks.go
+  - path: aegislab/src/handlers/v2/tasks.go
     description: BatchDeleteTasks and other task management handlers; WebSocket upgrader for real-time updates
   has_mock: false
   tests: []
@@ -1186,16 +1186,16 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/traces.go
   code:
-  - path: AegisLab/src/handlers/v2/traces.go
+  - path: aegislab/src/handlers/v2/traces.go
     description: GetTrace handler with SSE streaming support via Redis
-  - path: AegisLab/src/handlers/v2/groups.go
+  - path: aegislab/src/handlers/v2/groups.go
     description: GetGroupStats with SSE streaming for group-level monitoring
-  - path: AegisLab/src/database/entity.go
+  - path: aegislab/src/database/entity.go
     description: Trace (type, state, group_id, leaf_num) and Task (parent-child, level, sequence) entities
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1222,7 +1222,7 @@ requirements:
   confidence: inferred
   source: src/service/consumer/monitor.go
   code:
-  - path: AegisLab/src/service/consumer/monitor.go
+  - path: aegislab/src/service/consumer/monitor.go
     description: MonitorItem, LockMessage, NamespaceRefreshResult for namespace state management
   frontend: []
   has_mock: false
@@ -1252,7 +1252,7 @@ requirements:
   confidence: inferred
   source: src/service/consumer/rate_limiter.go
   code:
-  - path: AegisLab/src/service/consumer/rate_limiter.go
+  - path: aegislab/src/service/consumer/rate_limiter.go
     description: TokenBucketRateLimiter with Redis backing and configurable limits
   frontend: []
   has_mock: false
@@ -1281,15 +1281,15 @@ requirements:
   confidence: confirmed
   source: src/middleware/middleware.go, src/client/jaeger.go
   code:
-  - path: AegisLab/src/middleware/middleware.go
+  - path: aegislab/src/middleware/middleware.go
     description: TracerMiddleware creates OTel spans; GroupID middleware assigns UUIDs to POST requests
-  - path: AegisLab/src/client/jaeger.go
+  - path: aegislab/src/client/jaeger.go
     description: InitTraceProvider configures OTLP HTTP exporter for Jaeger
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1312,9 +1312,9 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/system.go
   code:
-  - path: AegisLab/src/handlers/v2/system.go
+  - path: aegislab/src/handlers/v2/system.go
     description: GetSystemMetrics (current) and GetSystemMetricsHistory (24h) endpoints
-  - path: AegisLab/src/service/consumer/task.go
+  - path: aegislab/src/service/consumer/task.go
     description: Prometheus task_processed_total counter and task_duration_seconds histogram
   has_mock: false
   tests: []
@@ -1344,7 +1344,7 @@ requirements:
   confidence: inferred
   source: src/handlers/v2/metrics.go
   code:
-  - path: AegisLab/src/handlers/v2/metrics.go
+  - path: aegislab/src/handlers/v2/metrics.go
     description: GetInjectionMetrics and GetExecutionMetrics endpoints (SDK-enabled)
   has_mock: false
   tests: []
@@ -1374,9 +1374,9 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/notifications.go
   code:
-  - path: AegisLab/src/handlers/v2/notifications.go
+  - path: aegislab/src/handlers/v2/notifications.go
     description: GetNotificationStream SSE endpoint with Redis stream consumption (backend retained)
-  - path: AegisLab/src/middleware/middleware.go
+  - path: aegislab/src/middleware/middleware.go
     description: SSEPath middleware sets event-stream headers
   frontend: []
   has_mock: false
@@ -1408,7 +1408,7 @@ requirements:
   confidence: inferred
   source: src/client/loki.go
   code:
-  - path: AegisLab/src/client/loki.go
+  - path: aegislab/src/client/loki.go
     description: LokiClient wrapping Loki HTTP API for log queries
   frontend: []
   has_mock: false
@@ -1436,9 +1436,9 @@ requirements:
   confidence: inferred
   source: src/service/logreceiver/receiver.go, src/service/logreceiver/parser.go
   code:
-  - path: AegisLab/src/service/logreceiver/receiver.go
+  - path: aegislab/src/service/logreceiver/receiver.go
     description: HTTP server receiving OTLP log export requests with protobuf/gzip support
-  - path: AegisLab/src/service/logreceiver/parser.go
+  - path: aegislab/src/service/logreceiver/parser.go
     description: Parser for OTLP log records
   frontend: []
   has_mock: false
@@ -1460,7 +1460,7 @@ requirements:
   contracts: []
 - id: REQ-600
   title: Python SDK (Auto-generated)
-  description: 'Python SDK auto-generated from Swagger/OpenAPI specs. Provides REST client and model classes for programmatic access to AegisLab APIs. Backend-only tooling.
+  description: 'Python SDK auto-generated from Swagger/OpenAPI specs. Provides REST client and model classes for programmatic access to aegislab APIs. Backend-only tooling.
 
     '
   priority: P1
@@ -1468,13 +1468,13 @@ requirements:
   confidence: inferred
   source: sdk/python/, scripts/command/src/swagger.py
   code:
-  - path: AegisLab/sdk/python/src/rcabench/client
+  - path: aegislab/sdk/python/src/rcabench/client
     description: Auto-generated Python REST client
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1503,7 +1503,7 @@ requirements:
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1528,13 +1528,13 @@ requirements:
   confidence: confirmed
   source: src/handlers/v2/*.go
   code:
-  - path: AegisLab/src/handlers/v2/auth.go
+  - path: aegislab/src/handlers/v2/auth.go
     description: Example of Swagger annotations with @x-api-type SDK marking
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1552,7 +1552,7 @@ requirements:
   - openapi-backend-sdk
 - id: REQ-700
   title: Kubernetes Deployment (Helm)
-  description: 'Helm chart for deploying AegisLab to Kubernetes clusters with TLS certs, configurable values, and environment-specific manifests. Backend-only infrastructure.
+  description: 'Helm chart for deploying aegislab to Kubernetes clusters with TLS certs, configurable values, and environment-specific manifests. Backend-only infrastructure.
 
     '
   priority: P0
@@ -1560,17 +1560,17 @@ requirements:
   confidence: inferred
   source: helm/
   code:
-  - path: AegisLab/helm/Chart.yaml
+  - path: aegislab/helm/Chart.yaml
     description: Helm chart metadata
-  - path: AegisLab/helm/values.yaml
+  - path: aegislab/helm/values.yaml
     description: Default deployment configuration
-  - path: AegisLab/helm/templates/
+  - path: aegislab/helm/templates/
     description: K8s resource templates
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1595,13 +1595,13 @@ requirements:
   confidence: inferred
   source: skaffold.yaml
   code:
-  - path: AegisLab/skaffold.yaml
+  - path: aegislab/skaffold.yaml
     description: Skaffold development and deployment configuration
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1627,13 +1627,13 @@ requirements:
   confidence: confirmed
   source: src/main.go, CLAUDE.md
   code:
-  - path: AegisLab/src/main.go
+  - path: aegislab/src/main.go
     description: Cobra CLI with producer, consumer, and both commands
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1656,13 +1656,13 @@ requirements:
   confidence: confirmed
   source: src/client/k8s/controller.go, src/client/k8s/crd.go, src/client/k8s/job.go
   code:
-  - path: AegisLab/src/client/k8s/controller.go
+  - path: aegislab/src/client/k8s/controller.go
     description: 'Controller struct with CRD/job informers, namespace management, work queue with CheckRecovery/DeleteCRD/DeleteJob actions
 
       '
-  - path: AegisLab/src/client/k8s/crd.go
+  - path: aegislab/src/client/k8s/crd.go
     description: CRD-specific informer setup and event handlers
-  - path: AegisLab/src/client/k8s/job.go
+  - path: aegislab/src/client/k8s/job.go
     description: Job informer setup and event handlers
   frontend: []
   has_mock: false
@@ -1670,7 +1670,7 @@ requirements:
   - path: src/client/k8s/k8s_test.go
     description: K8s client tests
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1695,13 +1695,13 @@ requirements:
   confidence: confirmed
   source: docker-compose.yaml
   code:
-  - path: AegisLab/docker-compose.yaml
+  - path: aegislab/docker-compose.yaml
     description: Redis, MySQL, Jaeger, BuildKit service definitions
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1724,11 +1724,11 @@ requirements:
   confidence: inferred
   source: src/service/initialization/, data/initial_data/
   code:
-  - path: AegisLab/src/service/initialization/producer.go
+  - path: aegislab/src/service/initialization/producer.go
     description: Producer-mode initialization (DB migration, seed data)
-  - path: AegisLab/src/service/initialization/consumer.go
+  - path: aegislab/src/service/initialization/consumer.go
     description: Consumer-mode initialization (K8s controllers, task queue)
-  - path: AegisLab/src/service/initialization/systems.go
+  - path: aegislab/src/service/initialization/systems.go
     description: Chaos system seeding
   frontend: []
   has_mock: false
@@ -1758,17 +1758,17 @@ requirements:
   confidence: confirmed
   source: devbox.json, lefthook.yml, justfile
   code:
-  - path: AegisLab/devbox.json
+  - path: aegislab/devbox.json
     description: Nix package definitions for development tools
-  - path: AegisLab/lefthook.yml
+  - path: aegislab/lefthook.yml
     description: Pre-commit hook configuration
-  - path: AegisLab/justfile
+  - path: aegislab/justfile
     description: Task runner recipes
   frontend: []
   has_mock: false
   tests: []
   docs:
-  - path: AegisLab/CLAUDE.md
+  - path: aegislab/CLAUDE.md
   acceptance:
     status: pending
     date: ''
@@ -1791,9 +1791,9 @@ requirements:
   confidence: inferred
   source: src/client/redis_client.go, src/client/etcd_client.go
   code:
-  - path: AegisLab/src/client/redis_client.go
+  - path: aegislab/src/client/redis_client.go
     description: Redis client initialization and connection management
-  - path: AegisLab/src/client/etcd_client.go
+  - path: aegislab/src/client/etcd_client.go
     description: etcd client for distributed coordination
   frontend: []
   has_mock: false
@@ -2320,7 +2320,7 @@ requirements:
   - openapi-backend-sdk
 - id: REQ-110
   title: Chaos Experiment Builders and Controllers
-  description: chaos-experiment provides the low-level Chaos Mesh CRD builders and controller helpers used by AegisLab fault injection tasks to create network, pod, HTTP, JVM, stress, DNS, time, and workflow chaos resources.
+  description: chaos-experiment provides the low-level Chaos Mesh CRD builders and controller helpers used by aegislab fault injection tasks to create network, pod, HTTP, JVM, stress, DNS, time, and workflow chaos resources.
   priority: P0
   status: implemented
   confidence: confirmed
@@ -2353,10 +2353,10 @@ requirements:
   contracts:
   - chaos-mesh-crd
   parent: REQ-900
-  notes: Owns the reusable fault-construction layer that the AegisLab backend imports rather than reimplementing locally.
+  notes: Owns the reusable fault-construction layer that the aegislab backend imports rather than reimplementing locally.
 - id: REQ-111
   title: System-Aware Chaos Targeting and Registration
-  description: chaos-experiment exposes handler-layer registration, metadata lookup, and system-aware target discovery so AegisLab can translate platform metadata into concrete chaos candidates for a selected benchmark system.
+  description: chaos-experiment exposes handler-layer registration, metadata lookup, and system-aware target discovery so aegislab can translate platform metadata into concrete chaos candidates for a selected benchmark system.
   priority: P0
   status: implemented
   confidence: confirmed
@@ -2456,7 +2456,7 @@ requirements:
   contracts:
   - dataset-schema
   parent: REQ-902
-  notes: Algorithm registration is the downstream consumer of the datapacks built by AegisLab.
+  notes: Algorithm registration is the downstream consumer of the datapacks built by aegislab.
 - id: REQ-211
   title: Dataset Conversion and Schema Validation
   description: rcabench-platform converts external sources into normalized dataset/datapack folders, validates parquet and JSON artifact schemas, and writes dataset indexes and label metadata for later evaluation.
@@ -2522,7 +2522,7 @@ requirements:
   contracts:
   - dataset-schema
   parent: REQ-902
-  notes: AegisLab currently orchestrates and stores evaluations, while rcabench-platform defines the benchmark math and report shapes.
+  notes: aegislab currently orchestrates and stores evaluations, while rcabench-platform defines the benchmark math and report shapes.
 - id: REQ-213
   title: Trace Sampling and Metrics SLI Preparation
   description: rcabench-platform provides trace sampler registries, event/path encoders, and metrics-sli generation to prepare datapacks for alternate RCA execution modes and sampled benchmark reports.
@@ -2670,11 +2670,11 @@ requirements:
   notes: Project-level evaluation browsing exists today even though the dedicated evaluation route tree remains incomplete.
 - id: REQ-900
   title: Cross-Repo Fault Injection Lifecycle
-  description: Fault injection is an end-to-end workspace feature spanning chaos-experiment library builders, AegisLab API/orchestration, and frontend authoring and datapack inspection flows.
+  description: Fault injection is an end-to-end workspace feature spanning chaos-experiment library builders, aegislab API/orchestration, and frontend authoring and datapack inspection flows.
   priority: P0
   status: implemented
   confidence: confirmed
-  source: Reverse-engineered from chaos-experiment handler/controller packages and AegisLab injection services.
+  source: Reverse-engineered from chaos-experiment handler/controller packages and aegislab injection services.
   type: feature
   repo: null
   code: []
@@ -2702,11 +2702,11 @@ requirements:
   notes: This parent requirement connects the previously disconnected library, API, and UI slices of the fault injection workflow.
 - id: REQ-901
   title: Cross-Repo Dataset Collection and Schema Flow
-  description: Dataset collection is a cross-repo feature spanning AegisLab datapack build/upload management, frontend datapack browsing, and rcabench-platform schema-aware dataset conversion and validation.
+  description: Dataset collection is a cross-repo feature spanning aegislab datapack build/upload management, frontend datapack browsing, and rcabench-platform schema-aware dataset conversion and validation.
   priority: P0
   status: implemented
   confidence: confirmed
-  source: Reverse-engineered from AegisLab datapack build/upload services, frontend datapack pages, and rcabench-platform dataset conversion code.
+  source: Reverse-engineered from aegislab datapack build/upload services, frontend datapack pages, and rcabench-platform dataset conversion code.
   type: feature
   repo: null
   code: []
@@ -2735,11 +2735,11 @@ requirements:
   notes: This feature parent is anchored on the shared datapack artifact contract rather than a single repository.
 - id: REQ-902
   title: Cross-Repo RCA Evaluation and Benchmarking Flow
-  description: RCA evaluation is a workspace-level feature spanning AegisLab execution/evaluation orchestration, frontend execution and evaluation UX, and rcabench-platform algorithm, metrics, and reporting libraries.
+  description: RCA evaluation is a workspace-level feature spanning aegislab execution/evaluation orchestration, frontend execution and evaluation UX, and rcabench-platform algorithm, metrics, and reporting libraries.
   priority: P0
   status: implemented
   confidence: confirmed
-  source: Reverse-engineered from AegisLab execution/evaluation handlers, frontend execution/evaluation pages, and rcabench-platform algorithms/evaluation packages.
+  source: Reverse-engineered from aegislab execution/evaluation handlers, frontend execution/evaluation pages, and rcabench-platform algorithms/evaluation packages.
   type: feature
   repo: null
   code: []

@@ -62,7 +62,7 @@ is the single most common first-time failure.
 **What to run:**
 
 ```bash
-aegisctl system register --from-seed AegisLab/data/initial_data \
+aegisctl system register --from-seed aegislab/data/initial_data \
                          --env prod --name <code>
 aegisctl system list          # confirm enabled + is_builtin
 ```
@@ -288,7 +288,7 @@ the chart, don't use hook Jobs. See `references/chart.md`.
 **"Pipeline runs green but `abnormal_logs.parquet` empty"**
 → System emits only traces over OTLP, AND cluster `otel-collector` has
 no `filelog`/`prometheus` receivers. Deploy the kube-stack; config at
-`AegisLab/manifests/otel-collector/otel-kube-stack.kind.yaml`.
+`aegislab/manifests/otel-collector/otel-kube-stack.kind.yaml`.
 
 **"abnormal_logs OK but abnormal_traces empty"**
 → Apps point OTLP at the legacy `otel-collector` Service, but the

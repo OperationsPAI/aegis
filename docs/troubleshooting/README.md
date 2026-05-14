@@ -1,10 +1,10 @@
 # Aegis Troubleshooting Docs
 
-Cross-repo runbooks for problems that span AegisLab + chaos-experiment +
+Cross-repo runbooks for problems that span aegislab + chaos-experiment +
 rcabench-platform. Kept at the repo-root `aegis/docs/` level because the
 fixes touch multiple submodules.
 
-Start with [`../../AegisLab/docs/aegisctl-cli-spec.md`](../../AegisLab/docs/aegisctl-cli-spec.md) for the supported CLI-first validation path. Use the troubleshooting pages below when that contract fails in a real cluster or dev environment.
+Start with [`../../aegislab/docs/aegisctl-cli-spec.md`](../../aegislab/docs/aegisctl-cli-spec.md) for the supported CLI-first validation path. Use the troubleshooting pages below when that contract fails in a real cluster or dev environment.
 
 | File | Purpose |
 |------|---------|

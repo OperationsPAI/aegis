@@ -3,7 +3,7 @@
 > Archival note: this file was not fully revalidated after the phase-2 gRPC collapse and phase-6 module-wiring cleanup. Treat `docs/code-topology/README.md`, `docs/code-topology/slices/01-app-wiring.md`, and `docs/code-topology/slices/06-grpc-interfaces.md` as the current topology source of truth.
 
 Scope: 8 modules under `src/module/` — container, dataset, evaluation, chaossystem, label, metric, pedestal, sdk.
-Root: `/home/ddq/AoyangSpace/aegis/AegisLab/src`.
+Root: `/home/ddq/AoyangSpace/aegis/aegislab/src`.
 
 ---
 
@@ -189,7 +189,7 @@ Root: `/home/ddq/AoyangSpace/aegis/AegisLab/src`.
 - Models (`models.go`):
   - `SDKDatasetSample` — 12 columns including `Dataset`, `Index`, `Source`, `Question`, `Answer`, `Meta` (JSON), `Tags` (JSON).
   - `SDKEvaluationSample` — 25 columns including `ExpID`, `Stage`, `TraceID`, `TraceURL`, `Response`, `ExtractedFinalAnswer`, `Correct`, `Confidence`, `AgentType`, `ModelName`.
-- Cross-module imports: only `aegis/dto`. Does not touch AegisLab's own `datasets` / `evaluations` tables at all.
+- Cross-module imports: only `aegis/dto`. Does not touch aegislab's own `datasets` / `evaluations` tables at all.
 
 ---
 
@@ -226,7 +226,7 @@ Out of scope per task instructions (skipped).
 
 ## 5. SDK module
 
-- `module/sdk/` exposes 4 read-only `GET` endpoints under `/api/v2/sdk/…` (enumerated above) that bridge from AegisLab's Gin layer to two external tables owned by the Python SDK: `data` (`SDKDatasetSample`) and `evaluation_data` (`SDKEvaluationSample`).
+- `module/sdk/` exposes 4 read-only `GET` endpoints under `/api/v2/sdk/…` (enumerated above) that bridge from aegislab's Gin layer to two external tables owned by the Python SDK: `data` (`SDKDatasetSample`) and `evaluation_data` (`SDKEvaluationSample`).
 - Models carry `func (X) TableName() string { return "data" | "evaluation_data" }` — explicit table overrides, and comments state "Do NOT add this to AutoMigrate - the SDK creates and manages this table." (`models.go:6-7, 25-26`).
 - Repository is resilient to missing tables: `isTableNotExistError` (`repository.go:100-108`) matches any of "doesn't exist", "does not exist", "no such table" and returns empty results rather than an error. Same behavior across MySQL and SQLite.
 - No writes, no AutoMigrate registration, no cross-module dependencies other than `dto`/`gorm`.

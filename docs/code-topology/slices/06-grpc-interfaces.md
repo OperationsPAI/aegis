@@ -1,6 +1,6 @@
 # 06 · Remaining gRPC interfaces (Phase 6)
 
-Source: `/home/ddq/AoyangSpace/aegis/AegisLab/src`
+Source: `/home/ddq/AoyangSpace/aegis/aegislab/src`
 
 This slice replaces the old inventory of IAM/resource/orchestrator/system gRPC services.
 After the phase-2 collapse there is only one internal proto package left: `proto/runtime/v1`.

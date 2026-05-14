@@ -1,6 +1,6 @@
 # CPUStress — cgroup CPU throttle on a container.
 #
-# Real cases corroborated against the 522-case AegisLab dataset and the
+# Real cases corroborated against the 522-case aegislab dataset and the
 # 2 JVMCPUStress legacy cases. cpu_throttle saturates well past 3.0
 # (262× observed on hotel-reserv search). The cascade outward depends
 # on stress severity:

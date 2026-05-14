@@ -28,7 +28,7 @@ and the `register-aegis-system` skill.
 
 Tools: `docker`, `kind` (≥ 0.30), `kubectl` (≥ 1.33), `helm` (≥ 3.18),
 `just`, `uv`, `jq`, and an `aegisctl` binary (build from
-`AegisLab/src/cmd/aegisctl` with `go build -o /tmp/aegisctl`).
+`aegislab/src/cmd/aegisctl` with `go build -o /tmp/aegisctl`).
 
 Bump inotify limits before creating the cluster (kind v1.34 control plane
 deadlocks with the default 128 instances):
@@ -51,7 +51,7 @@ profile itself is legacy, but the `kind-config.yaml` inside it is the one
 used for aegis-local):
 
 ```bash
-cd AegisLab
+cd aegislab
 kind create cluster --name aegis-local --config manifests/test/kind-config.yaml
 ```
 
@@ -111,7 +111,7 @@ into ClickHouse, `k8sattributes` + `transform/service_namespace` for
 datapack compatibility):
 
 ```bash
-cd AegisLab/manifests/otel-collector
+cd aegislab/manifests/otel-collector
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 helm repo update
 helm -n otel upgrade --install otel-kube-stack \
@@ -134,7 +134,7 @@ the OTLP endpoint. After kube-stack, the real service is
 `otel-collector` externalname in each benchmark namespace resolves:
 
 ```bash
-kubectl apply -f AegisLab/manifests/otel-collector/otel-collector-compat-svc.yaml
+kubectl apply -f aegislab/manifests/otel-collector/otel-collector-compat-svc.yaml
 ```
 
 Verify: `kubectl -n otel get endpoints otel-collector` should be non-empty.
@@ -148,7 +148,7 @@ aggressive for first-pull — use a longer timeout and drop atomic so the
 release survives long pulls:
 
 ```bash
-cd AegisLab
+cd aegislab
 helm upgrade -i rcabench ./helm \
   --namespace exp --create-namespace \
   --values ./manifests/kind/rcabench.yaml \
@@ -220,7 +220,7 @@ If you want a hand-rolled submit anyway, copy a regression YAML, edit the
 
 ### 7b. Regression tests per benchmark
 
-The tracked regression cases in `AegisLab/regression/*.yaml` are the
+The tracked regression cases in `aegislab/regression/*.yaml` are the
 canonical E2E smoke. `--auto-install` makes aegisctl install the chart
 into the pedestal namespace if it isn't there yet.
 
@@ -240,7 +240,7 @@ Two flags you'll almost always need on kind:
 ```bash
 # Run one case end-to-end (validated 2026-05-12 on kind-aegis-local):
 /tmp/aegisctl regression run otel-demo-guided \
-  --cases-dir AegisLab/regression \
+  --cases-dir aegislab/regression \
   --auto-install \
   --app-label-key app.kubernetes.io/name \
   --output json
@@ -252,7 +252,7 @@ for case in otel-demo-guided hotelreservation-guided socialnetwork-guided \
             mediamicroservices-guided teastore-guided ob-guided \
             sockshop-guided; do
   /tmp/aegisctl regression run "$case" \
-    --cases-dir AegisLab/regression --auto-install \
+    --cases-dir aegislab/regression --auto-install \
     --app-label-key app.kubernetes.io/name --output json || break
 done
 ```
@@ -270,7 +270,7 @@ aegis seed because the upstream chart hardcodes
 `monitoring/opentelemetry-kube-stack` for the OTel injector — the kind
 profile puts both the Instrumentation CR and the collector in the
 `otel` namespace instead. These are now shipped in
-`AegisLab/data/initial_data/prod/data.yaml` under sockshop's
+`aegislab/data/initial_data/prod/data.yaml` under sockshop's
 `helm_config.values`:
 
 - `otel.instrumentation=otel/otel-kube-stack`
@@ -288,7 +288,7 @@ and let `--auto-install` retry:
 ```bash
 helm uninstall sockshop0 -n sockshop0
 /tmp/aegisctl regression run sockshop-guided \
-  --cases-dir AegisLab/regression --auto-install
+  --cases-dir aegislab/regression --auto-install
 ```
 
 `RunAlgorithm` uses `docker.io/opspai/detector` (public) by default;

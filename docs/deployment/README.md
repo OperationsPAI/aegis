@@ -1,6 +1,6 @@
 # Deployment And Smoke-Test Runbooks
 
-Source of truth is the repo state under `AegisLab/`. The **validated** end-to-end
+Source of truth is the repo state under `aegislab/`. The **validated** end-to-end
 cold-start path is [`cold-start-kind.md`](./cold-start-kind.md) — re-walked
 2026-04-23 through to `Completed` inject→datapack→algorithm with non-empty
 parquets (otel-demo `PodFailure` on `cart`).
@@ -9,24 +9,24 @@ parquets (otel-demo `PodFailure` on `cart`).
 
 Kubernetes-native install steps and Aegis-specific validation steps are separate:
 bring the environment up with Docker / kind / Helm / `kubectl`, then validate
-AegisLab behavior with `aegisctl` once the environment exists.
+aegislab behavior with `aegisctl` once the environment exists.
 
 - Local infra only:
-  `cd AegisLab && docker compose up -d redis mysql etcd jaeger buildkitd loki prometheus grafana`
+  `cd aegislab && docker compose up -d redis mysql etcd jaeger buildkitd loki prometheus grafana`
 - Local backend, collocated mode:
-  `cd AegisLab/src && go run . both -conf ./config.dev.toml -port 8082`
+  `cd aegislab/src && go run . both -conf ./config.dev.toml -port 8082`
 - Current split-process backend:
-  `cd AegisLab/src && go run ./cmd/api-gateway -conf ./config.dev.toml -port 8082`
+  `cd aegislab/src && go run ./cmd/api-gateway -conf ./config.dev.toml -port 8082`
   plus
-  `cd AegisLab/src && go run ./cmd/runtime-worker-service -conf ./config.dev.toml`
+  `cd aegislab/src && go run ./cmd/runtime-worker-service -conf ./config.dev.toml`
 - Containerized split-process variant:
-  `cd AegisLab && docker compose -f docker-compose.yaml -f docker-compose.microservices.yaml up api-gateway runtime-worker-service`
+  `cd aegislab && docker compose -f docker-compose.yaml -f docker-compose.microservices.yaml up api-gateway runtime-worker-service`
 - Staging-profile cluster deploy:
-  `cd AegisLab && just run`
+  `cd aegislab && just run`
 - CLI-first validation contract (auth -> readiness -> prepare -> submit/wait):
-  `cd AegisLab && less docs/aegisctl-cli-spec.md`
+  `cd aegislab && less docs/aegisctl-cli-spec.md`
 - Repo-native regression smoke:
-  `cd AegisLab && just test-regression`
+  `cd aegislab && just test-regression`
 
 ## Document map
 
@@ -40,6 +40,6 @@ Older numbered docs (`01-kind-cluster.md`, `02-chaos-mesh.md`, `03-microservices
 ## Important distinctions
 
 - Cluster install / repair runbooks explain how to make the environment exist.
-- `AegisLab/docs/aegisctl-cli-spec.md` explains the supported CLI-first validation path once that environment exists.
+- `aegislab/docs/aegisctl-cli-spec.md` explains the supported CLI-first validation path once that environment exists.
 - The backend no longer exposes the older six-service split. The dedicated split-process topology is only `api-gateway` + `runtime-worker-service`.
 - `just run` and `scripts/start.sh test` are not the same thing. `just run` deploys the repo's staging profile with `skaffold`; `scripts/start.sh test` bootstraps cluster dependencies and demo components.

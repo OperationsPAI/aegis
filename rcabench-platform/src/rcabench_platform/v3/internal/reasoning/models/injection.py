@@ -217,14 +217,14 @@ def get_fault_category(fault_type: int, category: str) -> str:
 def _coalesce_engine_config(ec: dict) -> dict:
     """Lift a single ``engine_config[i]`` entry into ``display_config`` shape.
 
-    AegisLab AutoHarness puts the chaos parameters flat on each
+    aegislab AutoHarness puts the chaos parameters flat on each
     ``engine_config`` entry. Legacy parsing expects a nested
     ``display_config.injection_point`` structure plus a few top-level
     fields (``namespace``, ``direction``, fault-specific durations).
     This helper builds an equivalent ``display_config`` dict so the
     downstream extraction code can stay schema-agnostic.
 
-    Field mapping (AegisLab → display_config):
+    Field mapping (aegislab → display_config):
       - app                     → injection_point.app_name + injection_point.app_label
       - target_service          → injection_point.target_service
       - source_service          → injection_point.source_service (defaults to ``app``)
@@ -330,7 +330,7 @@ class InjectionMetadata(BaseModel):
         - **Legacy rca_label**: top-level ``fault_type`` is an int index into
           ``FAULT_TYPES``; injection details live under
           ``display_config`` (JSON string) with a nested ``injection_point``.
-        - **AegisLab AutoHarness**: top-level ``fault_type`` is a string —
+        - **aegislab AutoHarness**: top-level ``fault_type`` is a string —
           either a ``FAULT_TYPES`` member like ``"PodKill"`` or the literal
           ``"hybrid"`` for batches with multiple faults; injection details
           live under ``engine_config`` (list[dict]; first entry is the
@@ -355,7 +355,7 @@ class InjectionMetadata(BaseModel):
                 fault_type = -1
 
         # Step 2: locate the canonical fault descriptor — display_config
-        # (legacy) preferred, else engine_config[0] (AegisLab).
+        # (legacy) preferred, else engine_config[0] (aegislab).
         display_config: dict = {}
         display_config_str = data.get("display_config", "")
         if isinstance(display_config_str, str) and display_config_str.strip():
@@ -408,7 +408,7 @@ class InjectionMetadata(BaseModel):
             domain=injection_point_data.get("domain"),
         )
 
-        # Extract ground_truth for fallback. AegisLab emits a list[dict] (one entry per
+        # Extract ground_truth for fallback. aegislab emits a list[dict] (one entry per
         # fault in a batch); rca_label legacy datapacks emit a single dict.
         ground_truth = data.get("ground_truth", {})
         gt_services: list[str] = []
@@ -504,7 +504,7 @@ class InjectionNodeResolver:
     def _resolve_hybrid(self, injection_data: dict) -> ResolvedInjection | None:
         """Resolve list-shaped hybrid injections one leg at a time.
 
-        AegisLab hybrid datapacks align ``engine_config[i]`` with
+        aegislab hybrid datapacks align ``engine_config[i]`` with
         ``ground_truth[i]``. Treating only ``engine_config[0]`` drops the
         remaining roots, so each leg is fed through the existing single-fault
         resolver and exported as an explicit root candidate.
@@ -881,14 +881,14 @@ class InjectionNodeResolver:
 
         1. ``point.container_name`` — explicit canonical name from
            legacy ``display_config.injection_point``.
-        2. ``metadata.ground_truth_containers`` — the AegisLab schema
+        2. ``metadata.ground_truth_containers`` — the aegislab schema
            encodes the precise container in ``ground_truth[i].container``;
            it is authoritative for the kill target.
         3. ``point.app_label`` / ``point.app_name`` — substring heuristic
            from ``engine_config[i].app``; used only when neither of the
            above is available.
 
-        Why this order matters: AegisLab pods (hotel-reserv, otel-demo,
+        Why this order matters: aegislab pods (hotel-reserv, otel-demo,
         ...) commonly host multiple containers per pod (the app plus a
         memcached sidecar, an envoy sidecar, etc). When the engine
         config only carries ``app: "profile"``, the substring heuristic

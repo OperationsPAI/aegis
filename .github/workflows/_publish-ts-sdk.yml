@@ -1,6 +1,6 @@
 name: Publish a single TypeScript SDK (reusable)
 
-# Called by publish-npm.yml. Generates one AegisLab TypeScript SDK (portal or
+# Called by publish-npm.yml. Generates one aegislab TypeScript SDK (portal or
 # admin), then pnpm-publishes it to GitHub Packages.
 #
 # The caller passes `version` as empty-string when the trigger was a git tag;
@@ -51,7 +51,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: "AegisLab/src/go.mod"
+          go-version-file: "aegislab/src/go.mod"
 
       - uses: astral-sh/setup-uv@v7
         with:
@@ -62,10 +62,10 @@ jobs:
       - name: Install Go build deps
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest
-          (cd AegisLab/src && go mod tidy)
+          (cd aegislab/src && go mod tidy)
 
       - name: Generate ${{ inputs.target }} SDK
-        working-directory: AegisLab
+        working-directory: aegislab
         env:
           SDK_VERSION: ${{ steps.v.outputs.version }}
         run: just "release-${TARGET}" "${SDK_VERSION}"
@@ -76,7 +76,7 @@ jobs:
           SDK_VERSION: ${{ steps.v.outputs.version }}
         run: |
           set -euo pipefail
-          pkg="AegisLab/sdk/typescript/${TARGET}/package.json"
+          pkg="aegislab/sdk/typescript/${TARGET}/package.json"
           [[ -f "$pkg" ]] || { echo "::error::$pkg not found after generation"; exit 1; }
           pkgver=$(node -p "require('./$pkg').version")
           if [[ "$pkgver" != "${SDK_VERSION}" ]]; then
@@ -95,11 +95,11 @@ jobs:
           scope: "@OperationsPAI"
 
       - name: Install
-        working-directory: AegisLab/sdk/typescript/${{ inputs.target }}
+        working-directory: aegislab/sdk/typescript/${{ inputs.target }}
         run: pnpm install --frozen-lockfile || pnpm install
 
       - name: Build (if build script present)
-        working-directory: AegisLab/sdk/typescript/${{ inputs.target }}
+        working-directory: aegislab/sdk/typescript/${{ inputs.target }}
         shell: bash
         run: |
           if node -e "process.exit(require('./package.json').scripts?.build ? 0 : 1)"; then
@@ -109,7 +109,7 @@ jobs:
           fi
 
       - name: Publish
-        working-directory: AegisLab/sdk/typescript/${{ inputs.target }}
+        working-directory: aegislab/sdk/typescript/${{ inputs.target }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm publish --no-git-checks --access restricted

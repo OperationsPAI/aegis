@@ -23,7 +23,7 @@ A merged PR on aegis main does NOT automatically reach the live cluster. The byt
 1. **Pull main**: `git checkout main && git pull --ff-only`. Verify the diff landed.
 2. **Apply CM** (whenever `data.yaml` / `otel-demo.yaml` / `ts.yaml` changed):
    ```bash
-   cd AegisLab && kubectl -n exp create cm rcabench-initial-data \
+   cd aegislab && kubectl -n exp create cm rcabench-initial-data \
      --from-file=data.yaml=manifests/byte-cluster/initial-data/data.yaml \
      --from-file=otel-demo.yaml=manifests/byte-cluster/initial-data/otel-demo.yaml \
      --from-file=ts.yaml=manifests/byte-cluster/initial-data/ts.yaml \
@@ -114,7 +114,7 @@ DELETE FROM parameter_configs WHERE config_key='<key>';"
    Quick fix: overwrite the file in-place via api-gateway pod:
    ```bash
    POD=$(kubectl -n exp get pods -l app=rcabench-api-gateway -o jsonpath='{.items[0].metadata.name}')
-   cat AegisLab/manifests/byte-cluster/initial-data/<sys>.yaml | \
+   cat aegislab/manifests/byte-cluster/initial-data/<sys>.yaml | \
      kubectl -n exp exec -i $POD -c api-gateway -- tee <value_file_path> > /dev/null
    ```
    Then nuke + re-install affected ns. Long-term: re-snapshot on reseed when overlay bytes change (#360 fix A, ~40 LOC).

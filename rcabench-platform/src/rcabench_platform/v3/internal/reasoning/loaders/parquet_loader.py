@@ -1420,7 +1420,7 @@ class ParquetDataLoader:
         # Index metrics by deployment.name → pod.name once. Used both
         # as a secondary source for service→pod (routes_to) edges and
         # as a source for service nodes that have no traces at all.
-        # The AegisLab AutoHarness schema does not populate
+        # The aegislab AutoHarness schema does not populate
         # ``attr.k8s.pod.name`` on traces; a chaos that silences the
         # target's only replica produces zero traces with that
         # ``service_name`` — yet metrics still record the deployment
@@ -1466,7 +1466,7 @@ class ParquetDataLoader:
                 )
 
             # Metrics-based fallback: deployment.name on a metric row
-            # matches the trace service_name in the AegisLab AutoHarness
+            # matches the trace service_name in the aegislab AutoHarness
             # schema; the pod.name on the same row identifies a routed
             # pod. This recovers service→pod when traces don't carry
             # pod.name (see comment above).

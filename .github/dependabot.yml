@@ -13,7 +13,7 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: "uv"
-    directory: "/AegisLab/sdk/python"
+    directory: "/aegislab/sdk/python"
     schedule:
       interval: "monthly"
     groups:
@@ -21,7 +21,7 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: "uv"
-    directory: "/AegisLab/scripts/command"
+    directory: "/aegislab/scripts/command"
     schedule:
       interval: "monthly"
     groups:
@@ -29,7 +29,7 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: "gomod"
-    directory: "/AegisLab/src"
+    directory: "/aegislab/src"
     schedule:
       interval: "monthly"
     groups:
