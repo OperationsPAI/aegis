@@ -37,7 +37,13 @@ func NewFilesystemDatapackFileStore() *FilesystemDatapackFileStore {
 func NewDatapackFileStore(client blobclient.Client) DatasetFileStorage {
 	switch config.GetString("jfs.backend") {
 	case "s3":
-		return NewS3DatapackFileStore(client, config.GetString("jfs.s3.dataset_bucket"))
+		// Logical bucket name resolved by blob.Registry (see
+		// NewDatapackStore in the injection package for the rationale).
+		logical := config.GetString("jfs.s3.dataset_blob_bucket")
+		if logical == "" {
+			logical = "dataset"
+		}
+		return NewS3DatapackFileStore(client, logical)
 	default:
 		return NewFilesystemDatapackFileStore()
 	}

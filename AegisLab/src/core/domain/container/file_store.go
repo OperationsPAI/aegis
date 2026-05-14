@@ -37,7 +37,13 @@ func NewFilesystemHelmFileStore() *FilesystemHelmFileStore {
 func NewHelmFileStore(client blobclient.Client) ContainerFileStorage {
 	switch config.GetString("jfs.backend") {
 	case "s3":
-		return NewS3HelmFileStore(client, config.GetString("jfs.s3.helm_chart_bucket"))
+		// Logical bucket name resolved by blob.Registry (see
+		// NewDatapackStore for the rationale).
+		logical := config.GetString("jfs.s3.helm_chart_blob_bucket")
+		if logical == "" {
+			logical = "helm_chart"
+		}
+		return NewS3HelmFileStore(client, logical)
 	default:
 		return NewFilesystemHelmFileStore()
 	}

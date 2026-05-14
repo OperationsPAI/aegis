@@ -37,9 +37,9 @@ const (
 // 30-90 s — the timeout is a ceiling, not a target.
 const (
 	FixedPedestalRestartTimeoutSeconds = 25 * 60 // 25 min
-	FixedPedestalWarmupSeconds         = 2 * 60  // 2 min
-	FixedNormalWindowSeconds           = 5 * 60  // 5 min (was pre_duration)
-	FixedAbnormalWindowSeconds         = 5 * 60  // 5 min (was per-spec duration)
+	FixedPedestalWarmupSeconds         = 1 * 60  // 1 min (was 2 min — trimmed for byte-cluster e2e iteration)
+	FixedNormalWindowSeconds           = 1 * 60  // 1 min (was 5 min — was pre_duration)
+	FixedAbnormalWindowSeconds         = 1 * 60  // 1 min (was 5 min — was per-spec duration)
 	FixedIntervalSeconds               = FixedNormalWindowSeconds + FixedAbnormalWindowSeconds
 )
 

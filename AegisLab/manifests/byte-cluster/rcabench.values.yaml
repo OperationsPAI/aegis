@@ -223,6 +223,28 @@ blob:
       path_style: true
       access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
       secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
+    # Logical buckets for the helm-chart and dataset stores. These are
+    # resolved by blob.Registry when HelmFileStore / DatasetFileStore call
+    # the blob.Client (logical name → physical bucket). Same rustfs
+    # credentials as datapack since we run a single rustfs instance.
+    helm_chart:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-helm-chart"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+    dataset:
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-dataset"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
   share:
     bucket: "shared"
     # Externally-reachable URL prefix for `/s/:code` redirect URLs.

@@ -41,10 +41,20 @@ func NewFilesystemDatapackStore() *FilesystemDatapackStore {
 // NewDatapackStore returns the DatapackStorage implementation selected
 // by `jfs.backend` ("filesystem" — default — or "s3"). The blob client
 // is injected by fx and is unused on the filesystem path.
+//
+// `jfs.s3.datapack_blob_bucket` (default "datapack") names the LOGICAL
+// bucket the blob Registry resolves to a physical S3 bucket via
+// `blob.buckets.<name>.bucket`. Don't pass the physical bucket name
+// here — blob.Service.ListObjects() does a registry Lookup() on the
+// argument and would surface ErrBucketNotFound on the physical name.
 func NewDatapackStore(client blobclient.Client) DatapackStorage {
 	switch config.GetString("jfs.backend") {
 	case "s3":
-		return NewS3DatapackStore(client, config.GetString("jfs.s3.datapack_bucket"))
+		logical := config.GetString("jfs.s3.datapack_blob_bucket")
+		if logical == "" {
+			logical = "datapack"
+		}
+		return NewS3DatapackStore(client, logical)
 	default:
 		return NewFilesystemDatapackStore()
 	}
