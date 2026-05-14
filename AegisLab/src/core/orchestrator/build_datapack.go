@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -216,28 +215,16 @@ func createDatapackJob(ctx context.Context, gateway *k8s.Gateway, params *datapa
 		// mount would just write parquet files that the API never reads.
 		// AWS_* env vars give rcabench-platform's fsspec/s3fs the same
 		// endpoint/credentials the API-side blob.Client already uses.
-		var (
-			volumeMountConfigs []k8s.VolumeMountConfig
-			datapackPathPrefix string
-			extraEnvVars       []corev1.EnvVar
-		)
-		if config.GetString("jfs.backend") == "s3" {
-			bucket := config.GetString("jfs.s3.datapack_bucket")
-			if bucket == "" {
-				return handleExecutionError(span, logEntry, "jfs.s3.datapack_bucket not configured", fmt.Errorf("missing jfs.s3.datapack_bucket"))
-			}
-			datapackPathPrefix = "s3://" + bucket
-			extraEnvVars = s3DatapackEnvVars()
-		} else {
-			var err error
-			volumeMountConfigs, err = getRequiredVolumeMountConfigs(gateway, []consts.VolumeMountName{
-				consts.VolumeMountDataset,
-			})
-			if err != nil {
-				return handleExecutionError(span, logEntry, "failed to get volume mount configurations", err)
-			}
-			datapackPathPrefix = volumeMountConfigs[0].MountPath
+		backend, err := selectDatapackBackend()
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to select datapack output backend", err)
 		}
+		volumeMountConfigs, err := backend.VolumeMountConfigs(gateway)
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to get volume mount configurations", err)
+		}
+		datapackPathPrefix := backend.PathPrefix()
+		extraEnvVars := backend.EnvVars()
 
 		jobEnvVars, err := getDatapackJobEnvVars(params.jobName, datapackPathPrefix, params.payload, params.dbConfig)
 		if err != nil {
@@ -304,17 +291,6 @@ func s3DatapackEnvVars() []corev1.EnvVar {
 }
 
 func ptrBool(b bool) *bool { return &b }
-
-// joinDatapackPath joins a datapack-store path prefix with a datapack name.
-// For local filesystem prefixes filepath.Join is correct; for s3:// URLs
-// filepath.Join collapses "//" to "/" (yielding "s3:/bucket/..."), so route
-// s3:// prefixes through a URL-safe concatenation.
-func joinDatapackPath(prefix, name string) string {
-	if strings.HasPrefix(prefix, "s3://") {
-		return strings.TrimRight(prefix, "/") + "/" + name
-	}
-	return filepath.Join(prefix, name)
-}
 
 func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *datapackPayload, dbConfig *db.DatabaseConfig) ([]corev1.EnvVar, error) {
 	tz := config.GetString("system.timezone")
