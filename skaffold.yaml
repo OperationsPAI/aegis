@@ -1,0 +1,269 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: aegis
+# Monorepo-wide build + deploy entrypoint.
+#
+# Replaces:
+#   - AegisLab/skaffold.yaml                (kept as a thin pointer)
+#   - rcabench-platform/scripts/docker.py   (still usable for harbor releases
+#     but no longer the only path; skaffold consumes the same Dockerfiles)
+#
+# Images:
+#   opspai/rcabench-platform  base venv for clickhouse_dataset + reason
+#   opspai/clickhouse_dataset offline dataset transform job
+#   opspai/reason             offline reasoning batch
+#   opspai/detector           slim self-contained detector (python:3.13-slim;
+#                             not based on rcabench-platform — independent)
+#   opspai/rcabench           AegisLab backend (Go + duckdb_arrow)
+#
+# Build dependencies: clickhouse_dataset + reason `require` rcabench-platform
+# and receive its built tag as the BASE_IMAGE build-arg. detector + rcabench
+# stand alone.
+#
+# Usage:
+#   skaffold build -p local           # local kind dev
+#   ENV_MODE=byte-cluster skaffold build   # docker.io/opspai push for prod
+#   ENV_MODE=byte-cluster skaffold run      # build + helm upgrade in one go
+
+profiles:
+  - name: local
+    build:
+      artifacts:
+        - image: opspai/rcabench-platform
+          context: rcabench-platform
+          docker:
+            dockerfile: Dockerfile
+            network: host
+        - image: opspai/clickhouse_dataset
+          context: rcabench-platform/docker/clickhouse_dataset
+          docker:
+            dockerfile: Dockerfile
+            network: host
+          requires:
+            - image: opspai/rcabench-platform
+              alias: BASE_IMAGE
+        - image: opspai/reason
+          context: rcabench-platform/docker/reason
+          docker:
+            dockerfile: Dockerfile
+            network: host
+          requires:
+            - image: opspai/rcabench-platform
+              alias: BASE_IMAGE
+        - image: opspai/detector
+          context: rcabench-platform
+          docker:
+            dockerfile: docker/detector/Dockerfile
+            network: host
+        - image: opspai/rcabench
+          context: .
+          docker:
+            dockerfile: AegisLab/src/Dockerfile
+            buildArgs:
+              GO_BUILD_TAGS: duckdb_arrow
+            network: host
+      local:
+        push: false
+      tagPolicy:
+        sha256: {}
+    deploy:
+      helm:
+        flags:
+          install: ["--timeout=15m"]
+          upgrade: ["--timeout=15m"]
+        releases:
+          - name: rcabench
+            chartPath: AegisLab/helm
+            namespace: exp
+            createNamespace: true
+            valuesFiles:
+              - AegisLab/manifests/local/rcabench.yaml
+            setValueTemplates:
+              images.rcabench.tag: "{{.IMAGE_TAG}}"
+              sso.image.tag: "{{.IMAGE_TAG}}"
+            setValues:
+              sso.fullnameOverride: rcabench-sso
+              sso.image.pullPolicy: IfNotPresent
+              sso.auth.secretName: "rcabench-auth"
+              sso.config.database.mysql.host: "rcabench-mysql"
+              sso.config.redis.host: "rcabench-redis:6379"
+              sso.config.tracing.endpoint: "opentelemetry-kube-stack-daemon-collector.monitoring.svc.cluster.local:4318"
+              sso.config.k8s.namespace: "exp"
+              sso.config.k8s.serviceAccount.name: "rcabench-sa"
+              sso.config.sso.backendRedirectURI: "http://rcabench-api-gateway:8082/auth/oidc/callback"
+            setFiles:
+              initialDataFiles.data_yaml: AegisLab/data/initial_data/prod/data.yaml
+              initialDataFiles.otel_demo_yaml: AegisLab/data/initial_data/prod/otel-demo.yaml
+              initialDataFiles.ts_yaml: AegisLab/data/initial_data/prod/ts.yaml
+              sso.privateKey.pem: /tmp/sso-keys/sso-private.pem
+
+  - name: staging
+    activation:
+      - env: ENV_MODE=staging
+    build:
+      artifacts:
+        - image: 10.10.10.240/library/rcabench-platform
+          context: rcabench-platform
+          docker:
+            dockerfile: Dockerfile
+            network: host
+        - image: 10.10.10.240/library/clickhouse_dataset
+          context: rcabench-platform/docker/clickhouse_dataset
+          docker:
+            dockerfile: Dockerfile
+            network: host
+          requires:
+            - image: 10.10.10.240/library/rcabench-platform
+              alias: BASE_IMAGE
+        - image: 10.10.10.240/library/reason
+          context: rcabench-platform/docker/reason
+          docker:
+            dockerfile: Dockerfile
+            network: host
+          requires:
+            - image: 10.10.10.240/library/rcabench-platform
+              alias: BASE_IMAGE
+        - image: 10.10.10.240/library/detector
+          context: rcabench-platform
+          docker:
+            dockerfile: docker/detector/Dockerfile
+            network: host
+        - image: 10.10.10.240/library/rcabench
+          context: AegisLab
+          docker:
+            dockerfile: src/Dockerfile
+            buildArgs:
+              GO_BUILD_TAGS: duckdb_arrow
+              GOPROXY: https://goproxy.cn,direct
+              INSTALL_CERTS: "true"
+            network: host
+      tagPolicy:
+        gitCommit:
+          variant: AbbrevCommitSha
+    deploy:
+      helm:
+        flags:
+          install: ["--atomic", "--timeout=10m"]
+          upgrade: ["--atomic", "--timeout=10m"]
+        releases:
+          - name: rcabench
+            chartPath: AegisLab/helm
+            namespace: exp
+            createNamespace: true
+            valuesFiles:
+              - AegisLab/manifests/staging/rcabench.yaml
+            setValueTemplates:
+              images.rcabench.tag: "{{.IMAGE_TAG}}"
+            setFiles:
+              initialDataFiles.data_yaml: AegisLab/data/initial_data/staging/data.yaml
+              initialDataFiles.otel_demo_yaml: AegisLab/data/initial_data/staging/otel-demo.yaml
+              initialDataFiles.ts_yaml: AegisLab/data/initial_data/staging/ts.yaml
+
+  - name: test
+    activation:
+      - env: ENV_MODE=test
+    build:
+      artifacts:
+        - image: pair-diag-cn-guangzhou.cr.volces.com/pair/rcabench
+          context: AegisLab
+          docker:
+            dockerfile: src/Dockerfile
+            buildArgs:
+              GO_BUILD_TAGS: duckdb_arrow
+              INSTALL_CERTS: "true"
+            network: host
+      local:
+        push: false
+      tagPolicy:
+        gitCommit:
+          variant: AbbrevCommitSha
+    deploy:
+      helm:
+        flags:
+          install: ["--atomic", "--timeout=10m"]
+          upgrade: ["--atomic", "--timeout=10m"]
+        releases:
+          - name: rcabench
+            chartPath: AegisLab/helm
+            namespace: exp
+            createNamespace: true
+            valuesFiles:
+              - AegisLab/manifests/test/rcabench.yaml
+            setValueTemplates:
+              images.rcabench.tag: "{{.IMAGE_DIGEST}}"
+            setFiles:
+              initialDataFiles.data_yaml: AegisLab/data/initial_data/prod/data.yaml
+              initialDataFiles.otel_demo_yaml: AegisLab/data/initial_data/prod/otel-demo.yaml
+              initialDataFiles.ts_yaml: AegisLab/data/initial_data/prod/ts.yaml
+        hooks:
+          after:
+            - host:
+                command: ["just", "test-regression"]
+                os: [darwin, linux]
+
+  - name: byte-cluster
+    activation:
+      - env: ENV_MODE=byte-cluster
+    build:
+      artifacts:
+        - image: docker.io/opspai/rcabench-platform
+          context: rcabench-platform
+          docker:
+            dockerfile: Dockerfile
+            network: host
+        - image: docker.io/opspai/clickhouse_dataset
+          context: rcabench-platform/docker/clickhouse_dataset
+          docker:
+            dockerfile: Dockerfile
+            network: host
+          requires:
+            - image: docker.io/opspai/rcabench-platform
+              alias: BASE_IMAGE
+        - image: docker.io/opspai/reason
+          context: rcabench-platform/docker/reason
+          docker:
+            dockerfile: Dockerfile
+            network: host
+          requires:
+            - image: docker.io/opspai/rcabench-platform
+              alias: BASE_IMAGE
+        - image: docker.io/opspai/detector
+          context: rcabench-platform
+          docker:
+            dockerfile: docker/detector/Dockerfile
+            network: host
+        - image: docker.io/opspai/rcabench
+          context: .
+          docker:
+            dockerfile: AegisLab/src/Dockerfile
+            buildArgs:
+              GO_BUILD_TAGS: duckdb_arrow
+              GOPROXY: https://goproxy.cn,direct
+            network: host
+      local:
+        # docker.io push; volces pair-cn-shanghai mirror picks up the digest
+        # within minutes so the in-cluster `pair-cn-shanghai.cr.volces.com`
+        # references resolve to the same image.
+        push: true
+      tagPolicy:
+        gitCommit:
+          variant: AbbrevCommitSha
+    deploy:
+      helm:
+        flags:
+          install: ["--timeout=15m"]
+          upgrade: ["--timeout=15m"]
+        releases:
+          - name: rcabench
+            chartPath: AegisLab/helm
+            namespace: exp
+            createNamespace: true
+            valuesFiles:
+              - AegisLab/manifests/byte-cluster/rcabench.values.yaml
+            setValueTemplates:
+              images.rcabench.tag: "{{.IMAGE_TAG}}"
+            setFiles:
+              initialDataFiles.data_yaml: AegisLab/manifests/byte-cluster/initial-data/data.yaml
+              initialDataFiles.otel_demo_yaml: AegisLab/manifests/byte-cluster/initial-data/otel-demo.yaml
+              initialDataFiles.ts_yaml: AegisLab/manifests/byte-cluster/initial-data/ts.yaml

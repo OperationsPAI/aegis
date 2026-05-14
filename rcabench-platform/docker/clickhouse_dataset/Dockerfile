@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=10.10.10.240/library/rcabench-platform:latest
+ARG BASE_IMAGE=docker.io/opspai/rcabench-platform:latest
 FROM ${BASE_IMAGE}
 
 ENV TZ=Asia/Shanghai

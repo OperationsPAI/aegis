@@ -230,8 +230,10 @@ just ci
 # Automated patch release (bumps version, commits, tags, pushes)
 ./scripts/release-patch.sh
 
-# Docker images (build order matters: rcabench-platform → clickhouse_dataset → detector)
-./scripts/docker.py update-all
+# Docker images — driven by the monorepo-root skaffold.yaml. Build order
+# (rcabench-platform → clickhouse_dataset/reason) is expressed via skaffold
+# `requires`; detector and rcabench backend stand alone.
+ENV_MODE=byte-cluster skaffold build
 ```
 
 See `docs/maintenance.md` for full release procedures.

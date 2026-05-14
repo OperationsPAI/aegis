@@ -292,6 +292,10 @@ version — it does not regenerate the lockfile, so this step is on you.
 ### Docker images
 
 ```bash
-# Build order matters: rcabench-platform → clickhouse_dataset → detector
-./scripts/docker.py update-all
+# Monorepo-root skaffold.yaml builds all 5 images (rcabench-platform base,
+# clickhouse_dataset, reason, detector, rcabench backend). The `requires`
+# field expresses the rcabench-platform → clickhouse_dataset/reason
+# dependency, so skaffold orders the builds and passes the fresh base
+# tag as BASE_IMAGE.
+ENV_MODE=byte-cluster skaffold build
 ```

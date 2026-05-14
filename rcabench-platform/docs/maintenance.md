@@ -34,49 +34,27 @@ What the script does:
 
 ## Docker Images
 
-This project manages several Docker images to support its functionality.
+All five aegis images (`opspai/rcabench-platform`, `opspai/clickhouse_dataset`,
+`opspai/reason`, `opspai/detector`, `opspai/rcabench`) are built and deployed
+through the monorepo-root `skaffold.yaml`. The previous one-off
+`scripts/docker.py` was retired once the `.docker-build/` cache-busting hack
+was inlined into `Dockerfile` directly (one entry point, same Dockerfiles).
 
-### Update All Images
-
-```bash
-./scripts/docker.py update-all
-```
-
-### rcabench-platform
-
-The **fundamental** image containing the project code and dependencies.
-
-Build and push:
+### Build all images for a target
 
 ```bash
-./scripts/docker.py build rcabench-platform
-./scripts/docker.py push  rcabench-platform
+# local kind dev (push: false, sha256 tagPolicy)
+skaffold build -p local
+
+# byte-cluster prod build, pushed to docker.io/opspai (volces mirror picks
+# up within minutes for in-cluster pulls)
+ENV_MODE=byte-cluster skaffold build
+
+# build + helm upgrade in one go
+ENV_MODE=byte-cluster skaffold run
 ```
 
-This image serves as the base for other images and **should be built first**.
-
-### clickhouse_dataset
-
-The image for collecting telemetry data from ClickHouse.
-
-It is used by [rcabench](https://github.com/LGU-SE-Internal/rcabench) services.
-
-Build and push:
-
-```bash
-./scripts/docker.py build clickhouse_dataset
-./scripts/docker.py push  clickhouse_dataset
-```
-
-### detector
-
-The image for detecting SLI anomalies in rcabench data.
-
-It is used by [rcabench](https://github.com/LGU-SE-Internal/rcabench) services.
-
-Build and push:
-
-```bash
-./scripts/docker.py build detector
-./scripts/docker.py push  detector
-```
+`clickhouse_dataset` and `reason` declare `requires: opspai/rcabench-platform`
+so skaffold builds them after the base image and passes the fresh tag as the
+`BASE_IMAGE` build-arg. `detector` is `python:3.13-slim`-based and stands
+alone. `rcabench` is the AegisLab backend (Go + duckdb_arrow).

@@ -111,11 +111,12 @@ go run -tags duckdb_arrow . both -conf ./config.dev.toml -port 8082
 # Health:  http://localhost:8082/system/health
 ```
 
-For a real K8s deployment:
+For a real K8s deployment (run from the monorepo root, not AegisLab/):
 
 ```bash
 just sso-keys                  # one-time RSA keypair under data/sso/
-skaffold run -p local          # build + helm install into current kubectx
+cd ..                          # monorepo root holds the unified skaffold.yaml
+skaffold run -p local          # build all 5 images + helm install into current kubectx
 ```
 
 Common workflows: `just build-aegisctl`, `just run`, `just test-regression`,
@@ -260,8 +261,8 @@ go test ./platform/... -count=1
 go test ./boot -count=1
 go test ./core/domain -run TestDomainAvoidsBootImports -count=1
 
-# Full deploy smoke
-skaffold run -p local
+# Full deploy smoke (from monorepo root)
+( cd .. && skaffold run -p local )
 ```
 
 The `aegisctl schema diff gate` CI workflow rebuilds aegisctl on both
@@ -302,7 +303,7 @@ where relevant.
 | `Caddyfile.dev` | **legacy** | Reverse-proxy config for an older local-dev stack with a separate frontend. The kind flow does not run Caddy. |
 | `docker-compose.yaml` | **legacy** | Brings up redis/mysql/jaeger/buildkitd for the bare-metal `make local-debug` loop. The validated cold-start flow runs everything in-cluster (helm chart provides redis/mysql/etcd; otel-kube-stack provides jaeger). |
 | `docker-compose.microservices.yaml` | **legacy** | Compose-based benchmark deployments superseded by helm charts. |
-| `skaffold.yaml` | **legacy (intentionally)** | The validated cold-start flow explicitly avoids `skaffold run`; helm install is the supported path. Keep for in-cluster iterative-rebuild dev only, but treat as not-validated. |
+| `skaffold.yaml` | **removed** | Unified into the monorepo-root `../skaffold.yaml` which now builds all 5 images (rcabench-platform, clickhouse_dataset, reason, detector, rcabench) and drives helm install. Run from the monorepo root. |
 
 "Legacy" here means **not exercised by the validated cold-start flow** — the
 file may still work, but no run since 2026-04-18 (repo relayout `e6cb801`)

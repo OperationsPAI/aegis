@@ -21,8 +21,15 @@ RUN uv python install 3.13
 
 WORKDIR /app
 
-# FIXME: https://github.com/astral-sh/uv-docker-example/issues/61
-COPY .docker-build/pyproject.toml .docker-build/uv.lock /app/
+# Layer 1: resolve + install dependencies only — caches as long as
+# pyproject.toml + uv.lock are unchanged. Previously this layer went through
+# a `.docker-build/` tmp dir populated by scripts/docker.py with a
+# version-zeroed pyproject so version bumps wouldn't bust the cache; that
+# hack made `docker build` un-runnable by anything other than docker.py
+# (incl. skaffold). The simpler form below loses cache only when the
+# rcabench-platform version actually changes — a fair trade for one
+# build entry point.
+COPY pyproject.toml uv.lock /app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --all-extras --locked --no-install-project
 
