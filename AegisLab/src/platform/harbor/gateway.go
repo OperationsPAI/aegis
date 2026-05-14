@@ -27,12 +27,22 @@ func NewGateway() *Gateway {
 	}
 }
 
+// harborTimeout reads config key `harbor.timeout_seconds`; falls back to
+// consts.DefaultHarborTimeoutSeconds when unset / non-positive.
+func harborTimeout() time.Duration {
+	secs := config.GetInt("harbor.timeout_seconds")
+	if secs <= 0 {
+		secs = consts.DefaultHarborTimeoutSeconds
+	}
+	return time.Duration(secs) * consts.HarborTimeUnit
+}
+
 func (g *Gateway) GetLatestTag(image string) (string, error) {
 	if g.clientSet == nil {
 		return "", fmt.Errorf("harbor client is not initialized")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), consts.HarborTimeout*consts.HarborTimeUnit)
+	ctx, cancel := context.WithTimeout(context.Background(), harborTimeout())
 	defer cancel()
 
 	response, err := g.clientSet.V2().Artifact.ListArtifacts(ctx, &artifact.ListArtifactsParams{
@@ -69,7 +79,7 @@ func (g *Gateway) CheckImageExists(repository, tag string) (bool, error) {
 		return false, fmt.Errorf("harbor client is not initialized")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), consts.HarborTimeout*consts.HarborTimeUnit)
+	ctx, cancel := context.WithTimeout(context.Background(), harborTimeout())
 	defer cancel()
 
 	response, err := g.clientSet.V2().Artifact.ListArtifacts(ctx, &artifact.ListArtifactsParams{

@@ -35,23 +35,29 @@ const (
 // data, so 25 min keeps a margin while still failing fast on
 // genuine readiness regressions. Pre-warmed pedestals settle in
 // 30-90 s — the timeout is a ceiling, not a target.
+// DefaultFixedPedestalRestartTimeoutSeconds / DefaultFixedPedestalWarmupSeconds
+// are operational defaults; runtime callers should read the corresponding
+// config key (orchestrator.pedestal.restart_timeout_seconds /
+// orchestrator.pedestal.warmup_seconds) and fall back to these.
+//
+// FixedNormalWindowSeconds / FixedAbnormalWindowSeconds are protocol
+// invariants (per-spec inject window) and intentionally not config-backed —
+// they are referenced by payload-construction tests and timeline math.
 const (
-	FixedPedestalRestartTimeoutSeconds = 25 * 60 // 25 min
-	FixedPedestalWarmupSeconds         = 1 * 60  // 1 min (was 2 min — trimmed for byte-cluster e2e iteration)
-	FixedNormalWindowSeconds           = 1 * 60  // 1 min (was 5 min — was pre_duration)
-	FixedAbnormalWindowSeconds         = 1 * 60  // 1 min (was 5 min — was per-spec duration)
-	FixedIntervalSeconds               = FixedNormalWindowSeconds + FixedAbnormalWindowSeconds
+	DefaultFixedPedestalRestartTimeoutSeconds = 25 * 60 // 25 min
+	DefaultFixedPedestalWarmupSeconds         = 1 * 60  // 1 min (was 2 min — trimmed for byte-cluster e2e iteration)
+	FixedNormalWindowSeconds                  = 1 * 60  // 1 min (was 5 min — was pre_duration)
+	FixedAbnormalWindowSeconds                = 1 * 60  // 1 min (was 5 min — was per-spec duration)
+	FixedIntervalSeconds                      = FixedNormalWindowSeconds + FixedAbnormalWindowSeconds
 )
 
 // Minute-denominated views of the fixed windows, for the legacy payload
 // fields (consts.InjectPreDuration, consts.RestartIntarval, consts.RestartFaultDuration)
 // that downstream code expects in minute units.
 const (
-	FixedPedestalRestartTimeoutMinutes = FixedPedestalRestartTimeoutSeconds / 60
-	FixedPedestalWarmupMinutes         = FixedPedestalWarmupSeconds / 60
-	FixedNormalWindowMinutes           = FixedNormalWindowSeconds / 60
-	FixedAbnormalWindowMinutes         = FixedAbnormalWindowSeconds / 60
-	FixedIntervalMinutes               = FixedIntervalSeconds / 60
+	FixedNormalWindowMinutes   = FixedNormalWindowSeconds / 60
+	FixedAbnormalWindowMinutes = FixedAbnormalWindowSeconds / 60
+	FixedIntervalMinutes       = FixedIntervalSeconds / 60
 )
 
 // monitoring related constants
@@ -387,9 +393,12 @@ const (
 	EvaluateLevel = "level"
 )
 
+// DefaultHarborTimeoutSeconds is the operational default for Harbor API
+// calls; callers should read config key `harbor.timeout_seconds` and fall
+// back to this.
 const (
-	HarborTimeout  = 30
-	HarborTimeUnit = time.Second
+	DefaultHarborTimeoutSeconds = 30
+	HarborTimeUnit              = time.Second
 )
 
 const (

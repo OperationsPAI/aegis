@@ -72,11 +72,28 @@ func restartWorkloadReadyTimeout() time.Duration {
 	return timeout
 }
 
-// restartPostReadySoakDuration is the warmup window between workload-Ready and
-// the start of the normal-data window. Pinned in code so loop agents and
-// ops can't tune it (see consts.FixedPedestalWarmupSeconds).
+// restartPostReadySoakDuration is the warmup window between workload-Ready
+// and the start of the normal-data window. Config key
+// `orchestrator.pedestal.warmup_seconds` (falls back to
+// consts.DefaultFixedPedestalWarmupSeconds).
 func restartPostReadySoakDuration() time.Duration {
-	return time.Duration(consts.FixedPedestalWarmupSeconds) * time.Second
+	secs := config.GetInt("orchestrator.pedestal.warmup_seconds")
+	if secs <= 0 {
+		secs = consts.DefaultFixedPedestalWarmupSeconds
+	}
+	return time.Duration(secs) * time.Second
+}
+
+// pedestalRestartTimeout returns the workload-readiness timeout for a
+// pedestal restart. Config key
+// `orchestrator.pedestal.restart_timeout_seconds` (falls back to
+// consts.DefaultFixedPedestalRestartTimeoutSeconds).
+func pedestalRestartTimeout() time.Duration {
+	secs := config.GetInt("orchestrator.pedestal.restart_timeout_seconds")
+	if secs <= 0 {
+		secs = consts.DefaultFixedPedestalRestartTimeoutSeconds
+	}
+	return time.Duration(secs) * time.Second
 }
 
 func extractPreDuration(injectPayload map[string]any) time.Duration {
@@ -134,7 +151,7 @@ func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, nam
 	}
 
 	if readinessTimeout <= 0 {
-		readinessTimeout = time.Duration(consts.FixedPedestalRestartTimeoutSeconds) * time.Second
+		readinessTimeout = pedestalRestartTimeout()
 	}
 	if err := gateway.WaitNamespaceReady(ctx, namespace, readinessTimeout); err != nil {
 		return time.Time{}, err
@@ -489,7 +506,7 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		tokens.warming = true
 		logEntry.Infof("acquired warming token for ns %s", namespace)
 
-		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace, time.Duration(consts.FixedPedestalRestartTimeoutSeconds)*time.Second)
+		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace, pedestalRestartTimeout())
 		if err != nil {
 			toReleased = true
 			// Surface the failure as a restart.pedestal.failed trace event so
