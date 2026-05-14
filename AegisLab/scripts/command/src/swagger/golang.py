@@ -111,13 +111,28 @@ class GoSDK:
             shutil.rmtree(self.SDK_DIR)
         shutil.copytree(self.SDK_GEN_DIR, self.SDK_DIR)
 
-        # 4. Drop generator-bundled files that conflict with the surrounding
-        # Go module: standalone go.mod / go.sum / .openapi-generator-ignore /
-        # .gitignore would shadow the parent module.
-        for noisy in ("go.mod", "go.sum", ".openapi-generator-ignore", ".gitignore"):
-            target = self.SDK_DIR / noisy
+        # 4. Strip generator-bundled artifacts that don't belong inside the
+        # parent Go module: standalone go.mod/go.sum would shadow it; the
+        # markdown docs / yaml respec / publishing scripts / per-op test
+        # stubs are pure noise (the spec itself is the source of truth).
+        for noisy_file in (
+            "go.mod",
+            "go.sum",
+            "go.mod.dist",
+            "go.sum.dist",
+            ".openapi-generator-ignore",
+            ".gitignore",
+            ".travis.yml",
+            "git_push.sh",
+            "README.md",
+        ):
+            target = self.SDK_DIR / noisy_file
             if target.exists():
                 target.unlink(missing_ok=True)
+        for noisy_dir in ("docs", "test", "api", ".openapi-generator"):
+            target = self.SDK_DIR / noisy_dir
+            if target.exists() and target.is_dir():
+                shutil.rmtree(target)
 
         if self.SDK_GEN_DIR.exists():
             shutil.rmtree(self.SDK_GEN_DIR)
