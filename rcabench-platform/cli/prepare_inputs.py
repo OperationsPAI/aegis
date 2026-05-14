@@ -455,6 +455,15 @@ def _upload_dir_to_s3(src: Path, dst_url: str) -> None:
     storage_options: dict[str, Any] = {"client_kwargs": {"endpoint_url": endpoint}} if endpoint else {}
 
     def _upload_one(file: Path) -> None:
+        # rustfs / older MinIO builds persist 0-byte PUTs as an xl.meta stub
+        # with no part files, then return 404 on GetObject for the same key.
+        # We use a single NUL byte as a stand-in so the sentinel survives a
+        # round trip; consumers of these markers (e.g. `.valid`) check for
+        # existence, not content.
+        if file.stat().st_size == 0:
+            with fsspec.open(f"{base}/{file.name}", "wb", **storage_options) as f_dst:
+                f_dst.write(b"\x00")  # type: ignore[union-attr]
+            return
         with open(file, "rb") as f_src, fsspec.open(f"{base}/{file.name}", "wb", **storage_options) as f_dst:
             shutil.copyfileobj(f_src, f_dst)  # type: ignore[arg-type]
 
