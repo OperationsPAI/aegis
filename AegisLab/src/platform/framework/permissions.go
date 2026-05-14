@@ -12,10 +12,7 @@ import "aegis/platform/consts"
 //	)
 //
 // The aggregator collects `[]PermissionRegistrar` at startup and flattens
-// `.Rules` to the effective permission catalog. During Phase 3 this
-// catalog coexists with `consts.SystemRolePermissions`; modules migrated
-// in Phase 4 MOVE their rule lists out of consts/system.go into their
-// own module/<name>/permissions.go file.
+// `.Rules` to the effective permission catalog.
 type PermissionRegistrar struct {
 	Module string
 	Rules  []consts.PermissionRule

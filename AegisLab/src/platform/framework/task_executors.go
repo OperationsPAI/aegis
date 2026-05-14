@@ -23,17 +23,10 @@ import (
 type TaskExecutor func(ctx context.Context, task *dto.UnifiedTask, deps any) error
 
 // TaskExecutorRegistrar is what a module contributes for task-type
-// self-registration.
-//
-// A module provides it with:
-//
-//	fx.Provide(
-//	    fx.Annotate(module.TaskExecutors, fx.ResultTags(`group:"task_executors"`)),
-//	)
-//
-// `Executors` is a map fragment keyed by TaskType; the aggregator merges
-// every fragment into a single registry at startup. Duplicate TaskType
-// registrations panic — there can only be one dispatcher per type.
+// self-registration. `Executors` is a map fragment keyed by TaskType;
+// the aggregator merges every fragment into a single registry at startup.
+// Duplicate TaskType registrations panic — there can only be one
+// dispatcher per type.
 type TaskExecutorRegistrar struct {
 	Module    string
 	Executors map[consts.TaskType]TaskExecutor

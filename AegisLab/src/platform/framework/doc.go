@@ -16,9 +16,4 @@
 //  5. Task executors  — group:"task_executors"
 //
 // Middleware is deliberately NOT a plugin point: it is global policy.
-//
-// During Phase 3 the framework runs in coexistence with the existing
-// centralized lists (router/*.go, consts/system.go, infra/db/migration.go).
-// Phase 4 PRs will migrate each module's entries out of the central files
-// and into its own module/<name>/*.go.
 package framework

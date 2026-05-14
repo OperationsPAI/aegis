@@ -297,12 +297,6 @@ func (s *Service) RegisterContainer(ctx context.Context, req *RegisterContainerR
 		return nil, txErr
 	}
 
-	// TODO(#102): once an audit middleware/service is available (see
-	// AegisLab/src/middleware/), emit an audit row here:
-	//   event=container.register, register_id=regID, actor=userID,
-	//   name=req.Name, form=req.Form, container_id=resp.ContainerID,
-	//   version_id=resp.VersionID, helm_config_id=resp.HelmConfigID.
-
 	log("commit").WithFields(logrus.Fields{
 		"container_id": resp.ContainerID,
 		"version_id":   resp.VersionID,

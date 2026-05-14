@@ -184,13 +184,10 @@ func (h *Handler) Watch(c *gin.Context) {
 	}
 }
 
-// History is a placeholder: etcd's compaction window is unreliable
-// for audit, so reads come from config_audit. v1 returns the recent
-// audit rows for a key.
+// History returns 501 until the config_audit-backed query lands. The
+// route is registered so callers see a well-typed error rather than 404.
 func (h *Handler) History(c *gin.Context) {
-	// TODO: query config_audit ordered by created_at desc with a cap.
-	// Out of scope for the skeleton; the model + index are in place.
-	c.JSON(http.StatusOK, gin.H{"items": []any{}})
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "config history not implemented"})
 }
 
 func tagActor(c *gin.Context, row *ConfigAudit) {

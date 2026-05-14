@@ -12,9 +12,7 @@ import "gorm.io/gorm"
 //	)
 //
 // `Entities` is the list the module owns — exactly the kind of pointer
-// that gorm.AutoMigrate() accepts today in infra/db/migration.go.
-// During Phase 3 a module can either continue to appear in that central
-// list OR move its entities here; Phase 4 moves them all.
+// that gorm.AutoMigrate() accepts.
 type MigrationRegistrar struct {
 	Module   string
 	Entities []interface{}
