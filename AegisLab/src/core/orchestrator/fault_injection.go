@@ -14,6 +14,7 @@ import (
 	"aegis/platform/tracing"
 	"aegis/platform/model"
 	injection "aegis/core/domain/injection"
+	runtimeinfra "aegis/platform/runtime"
 	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -222,7 +223,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		crdLabels := utils.MergeSimpleMaps(
 			task.GetLabels(),
 			map[string]string{
-				consts.K8sLabelAppID:    consts.AppID,
+				consts.K8sLabelAppID:    runtimeinfra.AppID(),
 				consts.CRDLabelBatchID:  batchID,
 				consts.CRDLabelIsHybrid: strconv.FormatBool(isHybrid),
 			},

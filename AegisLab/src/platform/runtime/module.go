@@ -3,7 +3,6 @@ package runtimeinfra
 import (
 	"time"
 
-	"aegis/platform/consts"
 	"aegis/platform/utils"
 
 	"go.uber.org/fx"
@@ -14,10 +13,12 @@ var Module = fx.Module("runtime",
 )
 
 func InitializeRuntime() {
-	if consts.InitialTime == nil {
-		consts.InitialTime = utils.TimePtr(time.Now())
+	t := InitialTime()
+	if t.IsZero() {
+		t = time.Now()
+		SetInitialTime(t)
 	}
-	if consts.AppID == "" {
-		consts.AppID = utils.GenerateULID(consts.InitialTime)
+	if AppID() == "" {
+		SetAppID(utils.GenerateULID(&t))
 	}
 }

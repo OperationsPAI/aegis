@@ -5,20 +5,20 @@ import (
 	"testing"
 	"time"
 
-	"aegis/platform/consts"
 	runtimev1 "aegis/platform/proto/runtime/v1"
 	"aegis/core/orchestrator"
+	runtimeinfra "aegis/platform/runtime"
 )
 
 func TestRuntimeServerStatusEndpoints(t *testing.T) {
-	originalStart := consts.InitialTime
-	originalAppID := consts.AppID
+	originalStart := runtimeinfra.InitialTime()
+	originalAppID := runtimeinfra.AppID()
 	startedAt := time.Unix(1_700_000_000, 0)
-	consts.InitialTime = &startedAt
-	consts.AppID = "app-test"
+	runtimeinfra.SetInitialTime(startedAt)
+	runtimeinfra.SetAppID("app-test")
 	t.Cleanup(func() {
-		consts.InitialTime = originalStart
-		consts.AppID = originalAppID
+		runtimeinfra.SetInitialTime(originalStart)
+		runtimeinfra.SetAppID(originalAppID)
 	})
 
 	server := &runtimeServer{

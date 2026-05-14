@@ -18,6 +18,7 @@ import (
 	"aegis/platform/tracing"
 	execution "aegis/core/domain/execution"
 	"aegis/core/orchestrator/common"
+	runtimeinfra "aegis/platform/runtime"
 	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
@@ -131,7 +132,7 @@ func executeAlgorithm(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDe
 		jobLabels := utils.MergeSimpleMaps(
 			task.GetLabels(),
 			map[string]string{
-				consts.K8sLabelAppID:       consts.AppID,
+				consts.K8sLabelAppID:       runtimeinfra.AppID(),
 				consts.JobLabelDatapack:    payload.datapack.Name,
 				consts.JobLabelExecutionID: strconv.Itoa(executionID),
 			},

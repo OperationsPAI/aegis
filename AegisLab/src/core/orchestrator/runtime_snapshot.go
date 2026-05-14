@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"aegis/platform/consts"
 	buildkit "aegis/platform/buildkit"
 	helm "aegis/platform/helm"
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
+	runtimeinfra "aegis/platform/runtime"
 
 	"gorm.io/gorm"
 )
@@ -74,14 +74,14 @@ func NewRuntimeSnapshotService(
 
 func (s *RuntimeSnapshotService) RuntimeStatus(ctx context.Context) RuntimeStatusSnapshot {
 	startedAt := time.Now()
-	if consts.InitialTime != nil {
-		startedAt = *consts.InitialTime
+	if t := runtimeinfra.InitialTime(); !t.IsZero() {
+		startedAt = t
 	}
 
 	return RuntimeStatusSnapshot{
 		ServiceName:   RuntimeServiceName,
 		Mode:          runtimeModeWorker,
-		AppID:         consts.AppID,
+		AppID:         runtimeinfra.AppID(),
 		StartedAt:     startedAt,
 		UptimeSeconds: int64(time.Since(startedAt).Seconds()),
 		DB:            s.dbStatus(ctx),

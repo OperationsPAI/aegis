@@ -666,6 +666,3 @@ const (
 	URLPathResourceID   = "resource_id"
 	URLPathName         = "name"
 )
-
-var AppID string
-var InitialTime *time.Time

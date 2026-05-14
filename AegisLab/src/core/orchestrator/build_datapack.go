@@ -23,6 +23,7 @@ import (
 	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
 	"aegis/core/orchestrator/common"
+	runtimeinfra "aegis/platform/runtime"
 	"aegis/platform/utils"
 )
 
@@ -148,7 +149,7 @@ func executeBuildDatapackWithDeps(ctx context.Context, task *dto.UnifiedTask, de
 		jobLabels := utils.MergeSimpleMaps(
 			task.GetLabels(),
 			map[string]string{
-				consts.K8sLabelAppID:     consts.AppID,
+				consts.K8sLabelAppID:     runtimeinfra.AppID(),
 				consts.JobLabelDatapack:  payload.datapack.Name,
 				consts.JobLabelDatasetID: strconv.Itoa(utils.GetIntValue(payload.datasetVersionID, 0)),
 			},

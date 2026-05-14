@@ -18,6 +18,7 @@ import (
 
 	"aegis/platform/config"
 	"aegis/platform/consts"
+	runtimeinfra "aegis/platform/runtime"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -83,7 +84,7 @@ func newController() (*Controller, error) {
 	activeNamespaces := make(map[string]bool)
 
 	tweakListOptions := func(options *metav1.ListOptions) {
-		options.LabelSelector = fmt.Sprintf("%s=%s", consts.K8sLabelAppID, consts.AppID)
+		options.LabelSelector = fmt.Sprintf("%s=%s", consts.K8sLabelAppID, runtimeinfra.AppID())
 	}
 
 	client, err := getK8sClient()
@@ -156,7 +157,7 @@ func (c *Controller) AddNamespaceInformers(namespaces []string) error {
 	logrus.Debugf("Adding informers for %d namespace(s): %v", len(namespaces), namespaces)
 
 	tweakListOptions := func(options *metav1.ListOptions) {
-		options.LabelSelector = fmt.Sprintf("%s=%s", consts.K8sLabelAppID, consts.AppID)
+		options.LabelSelector = fmt.Sprintf("%s=%s", consts.K8sLabelAppID, runtimeinfra.AppID())
 	}
 
 	addedCount := 0
@@ -388,9 +389,9 @@ func (c *Controller) genCRDEventHandlerFuncs(gvr schema.GroupVersionResource) ca
 				return
 			}
 
-			if consts.InitialTime != nil {
+			if initialTime := runtimeinfra.InitialTime(); !initialTime.IsZero() {
 				creationTime := u.GetCreationTimestamp().Time
-				if creationTime.Before(*consts.InitialTime) {
+				if creationTime.Before(initialTime) {
 					logrus.Debugf("Ignoring CRD add event for object created before initial time: %s/%s in %s",
 						gvr.Resource, u.GetName(), u.GetNamespace())
 					return
@@ -502,9 +503,9 @@ func (c *Controller) genCRDEventHandlerFuncs(gvr schema.GroupVersionResource) ca
 func (c *Controller) genJobEventHandlerFuncs() cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
-			if consts.InitialTime != nil {
+			if initialTime := runtimeinfra.InitialTime(); !initialTime.IsZero() {
 				creationTime := obj.(*batchv1.Job).CreationTimestamp.Time
-				if creationTime.Before(*consts.InitialTime) {
+				if creationTime.Before(initialTime) {
 					return
 				}
 			}
