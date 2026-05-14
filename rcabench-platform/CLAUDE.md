@@ -254,40 +254,9 @@ Three modes in `config.py` (selected via `ENV_MODE` environment variable):
 
 ## Release Process
 
-Use the repo-root release script — it produces correctly-prefixed monorepo
-tags (`release-platform/v<ver>`):
-
-```bash
-# From repo root
-./scripts/release.sh platform=<ver>
-```
-
-Do **not** use `rcabench-platform/scripts/release-patch.sh` — it predates the
-monorepo tag scheme and omits the `release-platform/` prefix, so neither
-`Publish PyPI packages` nor the schema-diff gate fires.
-
-### Bumping the version: `uv.lock` must be regenerated
-
-When you change `version = "..."` in `rcabench-platform/pyproject.toml`,
-**always run `uv lock` in the same commit.** Both workflows that touch this
-package run `uv sync --all-extras --locked`, and a stale `uv.lock` (still
-showing the previous `rcabench-platform` version) makes them fail in the
-test stage *before* upload:
-
-- **CI rcabench-platform** (push on main) — first sign of trouble
-- **Publish PyPI packages** (push on tag `release-platform/v<ver>`) — same
-  failure, no artifact reaches PyPI
-
-```bash
-# Edit pyproject.toml version, then:
-cd rcabench-platform && uv lock
-# Verify locally:
-uv sync --all-extras --locked
-# Commit pyproject.toml + uv.lock together, then run scripts/release.sh
-```
-
-`scripts/release.sh` only checks that `pyproject.toml` matches the requested
-version — it does not regenerate the lockfile, so this step is on you.
+Releases are validated by building images on bytecluster directly, not via
+tag-driven CI. Bump `version = "..."` in `rcabench-platform/pyproject.toml`,
+run `uv lock` in the same commit, then build through skaffold (below).
 
 ### Docker images
 
