@@ -4,8 +4,8 @@
 #   - kind cluster (default storageclass "standard" / local-path)
 #   - in-cluster observability already provided by docs/deployment/otel-pipeline.yaml
 #     (ClickHouse + otel-collector in namespace "otel")
-#   - backend image pulled from Docker Hub (`opspai/rcabench:latest`). Fresh
-#     clones therefore don't need a local `docker build` + `kind load`.
+#   - backend image pulled from Docker Hub. Pin to the same immutable tag
+#     bytecluster uses so cold-start regression validates the same artifact.
 #     For local-dev iteration, override with:
 #       --set images.rcabench.name=aegislab-backend --set images.rcabench.tag=local
 #     after `kind load docker-image aegislab-backend:local --name <cluster>`.
@@ -16,7 +16,7 @@ global:
   images:
     rcabench:
       name: opspai/rcabench
-      tag: latest
+      tag: byte-20260514-stable-ba7e3aa
       pullPolicy: IfNotPresent
 
 # Not needed for regression smoke.

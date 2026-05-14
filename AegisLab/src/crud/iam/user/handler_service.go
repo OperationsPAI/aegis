@@ -13,6 +13,7 @@ type HandlerService interface {
 	GetUserDetail(context.Context, int) (*UserDetailResp, error)
 	ListUsers(context.Context, *ListUserReq) (*dto.ListResp[UserResp], error)
 	UpdateUser(context.Context, *UpdateUserReq, int) (*UserResp, error)
+	ResetPassword(context.Context, int, string) (*ResetPasswordResp, error)
 	AssignRole(context.Context, int, int) error
 	RemoveRole(context.Context, int, int) error
 	AssignPermissions(context.Context, *AssignUserPermissionReq, int) error

@@ -229,6 +229,19 @@ func (s *Service) VerifyToken(ctx context.Context, token string) (*crypto.Claims
 		if blacklisted {
 			return nil, fmt.Errorf("%w: token has been revoked", consts.ErrAuthenticationFailed)
 		}
+
+		// Per-user revocation: an admin password-reset bumps revoke:user:<id>
+		// to mark every pre-existing token invalid. A token survives only if
+		// it was issued AFTER the marker timestamp.
+		revokedAt, ok, err := s.tokenStore.UserRevokedSince(ctx, claims.UserID)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			if claims.IssuedAt == nil || !claims.IssuedAt.After(revokedAt) {
+				return nil, fmt.Errorf("%w: token has been revoked", consts.ErrAuthenticationFailed)
+			}
+		}
 	}
 
 	return claims, nil

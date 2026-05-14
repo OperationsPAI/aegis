@@ -52,6 +52,30 @@ func (req *ListUserReq) Validate() error {
 	return validateStatus(req.Status, false)
 }
 
+// ResetPasswordReq is the body of POST /api/v2/users/{user_id}/reset-password.
+// Issued by an administrator on behalf of another user — therefore it carries
+// no old-password field. The endpoint enforces the same min-length policy as
+// CreateUser and additionally rejects passwords flagged by the platform's
+// weak-password blacklist.
+type ResetPasswordReq struct {
+	NewPassword string `json:"new_password" binding:"required,min=8" example:"new-secret-1234"`
+}
+
+func (req *ResetPasswordReq) Validate() error {
+	if len(req.NewPassword) < 8 {
+		return fmt.Errorf("new_password must be at least 8 characters")
+	}
+	return nil
+}
+
+// ResetPasswordResp is the success body for an admin password reset.
+type ResetPasswordResp struct {
+	UserID            int    `json:"user_id"`
+	Username          string `json:"username"`
+	SessionsRevoked   bool   `json:"sessions_revoked"`
+	PasswordUpdatedAt string `json:"password_updated_at"`
+}
+
 // UpdateUserReq represents user update request.
 type UpdateUserReq struct {
 	Email    *string            `json:"email,omitempty" binding:"omitempty,email"`
