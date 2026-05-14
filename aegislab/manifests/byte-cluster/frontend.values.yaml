@@ -1,0 +1,15 @@
+image:
+  repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench-frontend
+  pullPolicy: IfNotPresent
+
+# Frontend's own nginx /api proxy is unused on byte-cluster (edge-proxy
+# handles path routing). Point it at the gateway anyway so the env-subst
+# in nginx.conf produces a valid value.
+apiTarget: http://rcabench-gateway.exp.svc.cluster.local:8086
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false

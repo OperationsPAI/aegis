@@ -242,6 +242,14 @@ profiles:
               GO_BUILD_TAGS: duckdb_arrow
               GOPROXY: https://goproxy.cn,direct
             network: host
+        - image: docker.io/opspai/rcabench-frontend
+          # aegis-ui lives in a sibling repo. Skaffold supports relative
+          # contexts; the Dockerfile inside that repo handles pnpm workspace
+          # builds (`@lincyaw/aegis-ui` → `@lincyaw/console` → nginx).
+          context: ../aegis-ui
+          docker:
+            dockerfile: Dockerfile
+            network: host
       local:
         # docker.io push; volces pair-cn-shanghai mirror picks up the digest
         # within minutes so the in-cluster `pair-cn-shanghai.cr.volces.com`
@@ -270,3 +278,10 @@ profiles:
               initialDataFiles.data_yaml: aegislab/manifests/byte-cluster/initial-data/data.yaml
               initialDataFiles.otel_demo_yaml: aegislab/manifests/byte-cluster/initial-data/otel-demo.yaml
               initialDataFiles.ts_yaml: aegislab/manifests/byte-cluster/initial-data/ts.yaml
+          - name: rcabench-frontend
+            chartPath: ../aegis-ui/apps/console/helm
+            namespace: exp
+            valuesFiles:
+              - aegislab/manifests/byte-cluster/frontend.values.yaml
+            setValueTemplates:
+              image.tag: "{{.IMAGE_TAG}}"
