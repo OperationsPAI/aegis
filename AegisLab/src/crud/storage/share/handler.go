@@ -71,6 +71,24 @@ func (h *Handler) viewOf(l *ShareLink) linkView {
 }
 
 // Upload handles multipart/form-data upload.
+//
+//	@Summary		Upload a file to share
+//	@Description	Upload a file via multipart/form-data and obtain a short share code
+//	@Tags			Share
+//	@ID				share_upload
+//	@Accept			mpfd
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			file			formData	file							true	"File to upload"
+//	@Param			ttl_seconds		formData	int								false	"Lifetime in seconds"
+//	@Param			max_views		formData	int								false	"Maximum number of views before expiry"
+//	@Success		200				{object}	dto.GenericResponse[uploadResp]	"Upload successful"
+//	@Failure		400				{object}	dto.GenericResponse[any]		"Invalid request"
+//	@Failure		401				{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		413				{object}	dto.GenericResponse[any]		"File exceeds upload limit"
+//	@Failure		500				{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/api/v2/share/upload [post]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) Upload(c *gin.Context) {
 	uid, ok := middleware.GetCurrentUserID(c)
 	if !ok || uid <= 0 {
@@ -113,6 +131,22 @@ func (h *Handler) Upload(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// List returns share links owned by the current user.
+//
+//	@Summary		List own share links
+//	@Description	List share links owned by the current authenticated user
+//	@Tags			Share
+//	@ID				share_list
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			page			query		int								false	"Page number"
+//	@Param			size			query		int								false	"Page size"
+//	@Param			include_expired	query		bool							false	"Include expired links"
+//	@Success		200				{object}	dto.GenericResponse[listResp]	"Share links listed successfully"
+//	@Failure		401				{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		500				{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/api/v2/share [get]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) List(c *gin.Context) {
 	uid, ok := middleware.GetCurrentUserID(c)
 	if !ok || uid <= 0 {
@@ -134,6 +168,22 @@ func (h *Handler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, listResp{Items: items, Total: total, Page: page, Size: size})
 }
 
+// GetOne returns metadata for a single share link.
+//
+//	@Summary		Get share link detail
+//	@Description	Get metadata for a single share link by short code
+//	@Tags			Share
+//	@ID				share_get_one
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			code	path		string							true	"Share short code"
+//	@Success		200		{object}	dto.GenericResponse[linkView]	"Share link detail"
+//	@Failure		401		{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		404		{object}	dto.GenericResponse[any]		"Share link not found"
+//	@Failure		410		{object}	dto.GenericResponse[any]		"Share link no longer available"
+//	@Failure		500		{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/api/v2/share/{code} [get]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) GetOne(c *gin.Context) {
 	uid, _ := middleware.GetCurrentUserID(c)
 	code := c.Param("code")
@@ -145,6 +195,22 @@ func (h *Handler) GetOne(c *gin.Context) {
 	c.JSON(http.StatusOK, h.viewOf(link))
 }
 
+// Revoke marks a share link as revoked.
+//
+//	@Summary		Revoke share link
+//	@Description	Revoke a share link owned by the current authenticated user
+//	@Tags			Share
+//	@ID				share_revoke
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			code	path		string						true	"Share short code"
+//	@Success		204		{object}	dto.GenericResponse[any]	"Share link revoked"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]	"Share link not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/share/{code} [delete]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) Revoke(c *gin.Context) {
 	uid, _ := middleware.GetCurrentUserID(c)
 	code := c.Param("code")
@@ -161,6 +227,19 @@ func (h *Handler) Revoke(c *gin.Context) {
 // setup where presign URLs target an internal Service DNS not reachable
 // from outside — it streams the bytes through this handler so
 // edge-proxy can deliver them.
+//
+//	@Summary		Resolve a public share link
+//	@Description	Public unauthenticated entry point. Either redirects (302) to a presigned URL or streams the file bytes directly.
+//	@Tags			Share
+//	@ID				share_redirect
+//	@Produce		octet-stream
+//	@Param			code	path		string						true	"Share short code"
+//	@Success		200		{file}		binary						"Streamed file content"
+//	@Success		302		{string}	string						"Redirect to presigned URL"
+//	@Failure		404		{string}	string						"Not found"
+//	@Failure		410		{string}	string						"Share link no longer available"
+//	@Failure		500		{string}	string						"Internal server error"
+//	@Router			/s/{code} [get]
 func (h *Handler) Redirect(c *gin.Context) {
 	code := c.Param("code")
 	if h.svc.Config().PublicBaseURL != "" {

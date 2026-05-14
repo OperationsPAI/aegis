@@ -20,6 +20,15 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// discovery serves the OIDC discovery document.
+//
+//	@Summary		OIDC discovery document
+//	@Description	OIDC 1.0 discovery metadata for the SSO issuer (endpoints, supported grants, scopes, signing algs).
+//	@Tags			OIDC
+//	@ID				oidc_discovery
+//	@Produce		json
+//	@Success		200	{object}	map[string]any	"Discovery document"
+//	@Router			/.well-known/openid-configuration [get]
 func (s *OIDCService) discovery(c *gin.Context) {
 	iss := s.issuer
 	c.JSON(http.StatusOK, gin.H{
@@ -38,6 +47,15 @@ func (s *OIDCService) discovery(c *gin.Context) {
 	})
 }
 
+// jwks serves the JSON Web Key Set used to verify SSO-issued tokens.
+//
+//	@Summary		JWKS
+//	@Description	Public key set (JWKS) for verifying SSO-issued JWTs.
+//	@Tags			OIDC
+//	@ID				oidc_jwks
+//	@Produce		json
+//	@Success		200	{object}	map[string]any	"JWKS document"
+//	@Router			/.well-known/jwks.json [get]
 func (s *OIDCService) jwks(c *gin.Context) {
 	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/jwks")
 	defer span.End()
@@ -47,6 +65,24 @@ func (s *OIDCService) jwks(c *gin.Context) {
 // authorizeGet renders a minimal login form. Real deployments swap this
 // for a frontend SPA; PR-1b ships an inline form so e2e tests can drive
 // the auth_code flow without depending on AegisLab-frontend.
+// authorizeGet renders the OIDC authorization endpoint.
+//
+//	@Summary		OIDC authorize endpoint
+//	@Description	Standard OIDC authorize endpoint. Validates `client_id`, `redirect_uri`, `response_type=code`, and (for public clients) PKCE; either renders the inline login form or 302-redirects to the configured `sso.login_redirect` console URL with the OIDC params preserved.
+//	@Tags			OIDC
+//	@ID				oidc_authorize
+//	@Produce		html
+//	@Param			client_id				query		string	true	"OIDC client_id"
+//	@Param			redirect_uri			query		string	true	"Registered redirect URI"
+//	@Param			response_type			query		string	true	"Must be `code`"
+//	@Param			state					query		string	false	"Opaque state echoed back to redirect_uri"
+//	@Param			scope					query		string	false	"Requested scope"
+//	@Param			code_challenge			query		string	false	"PKCE code challenge (required for public clients)"
+//	@Param			code_challenge_method	query		string	false	"PKCE method (`S256` or `plain`)"
+//	@Success		200	{string}	string	"Inline login HTML"
+//	@Success		302	{string}	string	"Redirect to configured login UI"
+//	@Failure		400	{string}	string	"Invalid request"
+//	@Router			/authorize [get]
 func (s *OIDCService) authorizeGet(c *gin.Context) {
 	ctx, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/authorize")
 	defer span.End()
@@ -136,6 +172,26 @@ func htmlEscape(s string) string {
 	return r.Replace(s)
 }
 
+// loginPost completes the inline authorize flow with username/password.
+//
+//	@Summary		SSO inline login
+//	@Description	Authenticate the resource owner from the inline authorize form (or the console hand-off), persist the auth request, and 302-redirect back to the relying party with `code` and `state`.
+//	@Tags			OIDC
+//	@ID				oidc_inline_login
+//	@Accept			x-www-form-urlencoded
+//	@Param			client_id				formData	string	true	"OIDC client_id"
+//	@Param			redirect_uri			formData	string	true	"Registered redirect URI"
+//	@Param			state					formData	string	false	"Opaque state echoed back"
+//	@Param			scope					formData	string	false	"Requested scope"
+//	@Param			username				formData	string	true	"Username or email"
+//	@Param			password				formData	string	true	"Password"
+//	@Param			code_challenge			formData	string	false	"PKCE code challenge"
+//	@Param			code_challenge_method	formData	string	false	"PKCE method"
+//	@Success		302	{string}	string	"Redirect to relying party with code"
+//	@Failure		400	{string}	string	"Invalid client or redirect"
+//	@Failure		401	{string}	string	"Invalid credentials"
+//	@Failure		500	{string}	string	"Internal server error"
+//	@Router			/login [post]
 func (s *OIDCService) loginPost(c *gin.Context) {
 	ctx, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/login")
 	defer span.End()
@@ -211,6 +267,28 @@ func buildRedirect(redirectURI, code, state string) (string, error) {
 	return u.String(), nil
 }
 
+// token implements the OIDC token endpoint.
+//
+//	@Summary		OIDC token endpoint
+//	@Description	OIDC token endpoint. Authenticates the client via Basic auth or `client_id`/`client_secret` form fields and dispatches on `grant_type` (`authorization_code`, `refresh_token`, `client_credentials`, `password`).
+//	@Tags			OIDC
+//	@ID				oidc_token
+//	@Accept			x-www-form-urlencoded
+//	@Produce		json
+//	@Param			grant_type		formData	string	true	"OAuth2 grant type"
+//	@Param			code			formData	string	false	"Authorization code (for `authorization_code`)"
+//	@Param			redirect_uri	formData	string	false	"Redirect URI used at /authorize"
+//	@Param			code_verifier	formData	string	false	"PKCE code verifier"
+//	@Param			refresh_token	formData	string	false	"Refresh token (for `refresh_token`)"
+//	@Param			username		formData	string	false	"Username (for `password`)"
+//	@Param			password		formData	string	false	"Password (for `password`)"
+//	@Param			client_id		formData	string	false	"Client id (when not using Basic auth)"
+//	@Param			client_secret	formData	string	false	"Client secret (when not using Basic auth)"
+//	@Success		200	{object}	tokenResp	"Token response"
+//	@Failure		400	{object}	map[string]string	"OIDC error response"
+//	@Failure		401	{object}	map[string]string	"Client authentication failed"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/token [post]
 func (s *OIDCService) token(c *gin.Context) {
 	ctx, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/token")
 	defer span.End()
@@ -263,6 +341,18 @@ func (s *OIDCService) authenticateClient(c *gin.Context) (*model.OIDCClient, boo
 	return cli, true
 }
 
+// userinfo implements the OIDC userinfo endpoint.
+//
+//	@Summary		OIDC userinfo
+//	@Description	OIDC userinfo endpoint. Validates the bearer access token via the SSO signer and returns standard claims (`sub`, `preferred_username`, `email`, `email_verified`, `name`, `picture`).
+//	@Tags			OIDC
+//	@ID				oidc_userinfo
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	map[string]any		"Userinfo claims"
+//	@Failure		401	{object}	map[string]string	"Invalid token"
+//	@Failure		404	{object}	map[string]string	"User not found"
+//	@Router			/userinfo [get]
 func (s *OIDCService) userinfo(c *gin.Context) {
 	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/userinfo")
 	defer span.End()
@@ -296,6 +386,17 @@ func (s *OIDCService) userinfo(c *gin.Context) {
 	})
 }
 
+// logout invalidates the supplied refresh token.
+//
+//	@Summary		OIDC end-session
+//	@Description	End-session endpoint advertised in discovery. When `refresh_token` is supplied it is removed from the SSO refresh store; access tokens remain valid until expiry.
+//	@Tags			OIDC
+//	@ID				oidc_logout
+//	@Accept			x-www-form-urlencoded
+//	@Produce		json
+//	@Param			refresh_token	formData	string	false	"Refresh token to invalidate"
+//	@Success		200	{object}	map[string]string	"Logout acknowledged"
+//	@Router			/v1/logout [post]
 func (s *OIDCService) logout(c *gin.Context) {
 	_, span := otel.Tracer(iamTracerName).Start(c.Request.Context(), "iam/sso/logout")
 	defer span.End()

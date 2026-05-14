@@ -166,6 +166,23 @@ func (h *Handler) checkClientOwnership(c *gin.Context, id int) bool {
 	return true
 }
 
+// Create registers a new OIDC client.
+//
+//	@Summary		Create OIDC client
+//	@Description	Register a new OIDC client for a downstream service. Returns the generated `client_secret` only on creation; callers must persist it immediately.
+//	@Tags			SSO Clients
+//	@ID				sso_create_client
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		CreateClientReq							true	"OIDC client registration"
+//	@Success		201		{object}	dto.GenericResponse[CreateClientResp]	"Client created successfully"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]				"Forbidden: not service admin for the target service"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/v1/clients [post]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Create(c *gin.Context) {
 	if !requireAdminOrService(c) {
 		return
@@ -186,6 +203,21 @@ func (h *Handler) Create(c *gin.Context) {
 	dto.JSONResponse(c, http.StatusCreated, "Client created successfully", resp)
 }
 
+// List returns OIDC clients visible to the caller.
+//
+//	@Summary		List OIDC clients
+//	@Description	List OIDC clients. Service admins see only clients for their admin services; global admins / service tokens see all. Optional `service` filter narrows the result.
+//	@Tags			SSO Clients
+//	@ID				sso_list_clients
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			service	query		string								false	"Filter by downstream service name"
+//	@Success		200		{object}	dto.GenericResponse[[]ClientResp]	"Clients listed successfully"
+//	@Failure		401		{object}	dto.GenericResponse[any]			"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]			"Forbidden"
+//	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/v1/clients [get]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) List(c *gin.Context) {
 	if !requireAdminOrService(c) {
 		return
@@ -213,6 +245,23 @@ func (h *Handler) List(c *gin.Context) {
 	dto.SuccessResponse(c, clients)
 }
 
+// Get returns a single OIDC client by id.
+//
+//	@Summary		Get OIDC client
+//	@Description	Get an OIDC client by record id. Service admins are restricted to clients for their admin services.
+//	@Tags			SSO Clients
+//	@ID				sso_get_client
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int								true	"Client record id"
+//	@Success		200	{object}	dto.GenericResponse[ClientResp]	"Client retrieved successfully"
+//	@Failure		400	{object}	dto.GenericResponse[any]		"Invalid client id"
+//	@Failure		401	{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		403	{object}	dto.GenericResponse[any]		"Forbidden"
+//	@Failure		404	{object}	dto.GenericResponse[any]		"Client not found"
+//	@Failure		500	{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/v1/clients/{id} [get]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Get(c *gin.Context) {
 	if !requireAdminOrService(c) {
 		return
@@ -236,6 +285,25 @@ func (h *Handler) Get(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// Update modifies an existing OIDC client.
+//
+//	@Summary		Update OIDC client
+//	@Description	Update mutable fields (name, redirect_uris, grants, scopes) of an OIDC client.
+//	@Tags			SSO Clients
+//	@ID				sso_update_client
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int								true	"Client record id"
+//	@Param			request	body		UpdateClientReq					true	"OIDC client update"
+//	@Success		200		{object}	dto.GenericResponse[ClientResp]	"Client updated successfully"
+//	@Failure		400		{object}	dto.GenericResponse[any]		"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]		"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]		"Client not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/v1/clients/{id} [put]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Update(c *gin.Context) {
 	if !requireAdminOrService(c) {
 		return
@@ -263,6 +331,23 @@ func (h *Handler) Update(c *gin.Context) {
 	dto.JSONResponse(c, http.StatusOK, "Client updated successfully", resp)
 }
 
+// Rotate generates a new client secret for an OIDC client.
+//
+//	@Summary		Rotate OIDC client secret
+//	@Description	Rotate the `client_secret` for an OIDC client. The new plaintext secret is returned only once and must be persisted by the caller immediately.
+//	@Tags			SSO Clients
+//	@ID				sso_rotate_client_secret
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int										true	"Client record id"
+//	@Success		200	{object}	dto.GenericResponse[RotateSecretResp]	"Client secret rotated"
+//	@Failure		400	{object}	dto.GenericResponse[any]				"Invalid client id"
+//	@Failure		401	{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403	{object}	dto.GenericResponse[any]				"Forbidden"
+//	@Failure		404	{object}	dto.GenericResponse[any]				"Client not found"
+//	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/v1/clients/{id}/rotate [post]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Rotate(c *gin.Context) {
 	if !requireAdminOrService(c) {
 		return
@@ -285,6 +370,23 @@ func (h *Handler) Rotate(c *gin.Context) {
 	dto.JSONResponse(c, http.StatusOK, "Client secret rotated", resp)
 }
 
+// Delete removes an OIDC client.
+//
+//	@Summary		Delete OIDC client
+//	@Description	Delete an OIDC client. Existing tokens issued for the client are not retroactively revoked.
+//	@Tags			SSO Clients
+//	@ID				sso_delete_client
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int							true	"Client record id"
+//	@Success		200	{object}	dto.GenericResponse[any]	"Client deleted"
+//	@Failure		400	{object}	dto.GenericResponse[any]	"Invalid client id"
+//	@Failure		401	{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403	{object}	dto.GenericResponse[any]	"Forbidden"
+//	@Failure		404	{object}	dto.GenericResponse[any]	"Client not found"
+//	@Failure		500	{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/v1/clients/{id} [delete]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Delete(c *gin.Context) {
 	if !requireAdminOrService(c) {
 		return

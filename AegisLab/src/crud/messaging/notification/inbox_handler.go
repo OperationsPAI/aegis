@@ -41,6 +41,24 @@ func currentUserID(c *gin.Context) (int, bool) {
 	return middleware.GetCurrentUserID(c)
 }
 
+// List returns paginated inbox notifications for the current user
+//
+//	@Summary		List inbox notifications
+//	@Description	List the current user's inbox notifications with optional category, severity, unread, and cursor filters
+//	@Tags			Notification
+//	@ID				list_inbox_notifications
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			unread_only	query		bool						false	"Return only unread notifications"
+//	@Param			category	query		string						false	"Filter by category"
+//	@Param			severity	query		string						false	"Filter by severity"
+//	@Param			cursor		query		int							false	"Pagination cursor (notification ID)"
+//	@Param			limit		query		int							false	"Page size"
+//	@Success		200			{object}	ListInboxResp				"Inbox notifications listed successfully"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/inbox [get]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) List(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -80,6 +98,19 @@ func (h *InboxHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// UnreadCount returns the unread notification count for the current user
+//
+//	@Summary		Get unread notification count
+//	@Description	Return the number of unread inbox notifications for the current user (used by the notification bell)
+//	@Tags			Notification
+//	@ID				get_inbox_unread_count
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	UnreadCountResp				"Unread count retrieved successfully"
+//	@Failure		401	{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500	{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/inbox/unread-count [get]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) UnreadCount(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -94,6 +125,21 @@ func (h *InboxHandler) UnreadCount(c *gin.Context) {
 	c.JSON(http.StatusOK, UnreadCountResp{UnreadCount: n})
 }
 
+// MarkRead marks a single inbox notification as read
+//
+//	@Summary		Mark notification as read
+//	@Description	Mark a single inbox notification as read for the current user
+//	@Tags			Notification
+//	@ID				mark_inbox_notification_read
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int							true	"Notification ID"
+//	@Success		204	{object}	dto.GenericResponse[any]	"Notification marked as read"
+//	@Failure		400	{object}	dto.GenericResponse[any]	"Invalid notification id"
+//	@Failure		401	{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500	{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/inbox/{id}/read [post]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) MarkRead(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -112,6 +158,20 @@ func (h *InboxHandler) MarkRead(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// MarkAllRead marks every (or every category-scoped) inbox notification read
+//
+//	@Summary		Mark all notifications as read
+//	@Description	Mark all inbox notifications (optionally filtered by category) as read for the current user
+//	@Tags			Notification
+//	@ID				mark_all_inbox_notifications_read
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			category	query		string						false	"Restrict to a single category"
+//	@Success		200			{object}	map[string]int				"Number of notifications updated"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/inbox/read-all [post]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) MarkAllRead(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -127,6 +187,21 @@ func (h *InboxHandler) MarkAllRead(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"updated": n})
 }
 
+// Archive archives a single inbox notification
+//
+//	@Summary		Archive notification
+//	@Description	Archive a single inbox notification for the current user
+//	@Tags			Notification
+//	@ID				archive_inbox_notification
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int							true	"Notification ID"
+//	@Success		204	{object}	dto.GenericResponse[any]	"Notification archived"
+//	@Failure		400	{object}	dto.GenericResponse[any]	"Invalid notification id"
+//	@Failure		401	{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500	{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/inbox/{id}/archive [post]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) Archive(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -149,6 +224,20 @@ func (h *InboxHandler) Archive(c *gin.Context) {
 // notification" events. The client uses it to bump the bell counter
 // and prepend new rows without polling. The persisted source of
 // truth remains `GET /inbox`; this stream is the freshness layer.
+// InboxStream is a per-user SSE stream of new-notification events
+//
+//	@Summary		Stream inbox notifications
+//	@Description	Server-Sent Events stream that pushes a `notification` event whenever a new inbox notification arrives for the current user; emits periodic `ping` heartbeats
+//	@Tags			Notification
+//	@ID				stream_inbox_notifications
+//	@Produce		text/event-stream
+//	@Security		BearerAuth
+//	@Success		200	{string}	string						"SSE stream of notification events"
+//	@Failure		401	{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500	{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Failure		503	{object}	dto.GenericResponse[any]	"Pubsub backend not configured"
+//	@Router			/api/v2/inbox/stream [get]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) InboxStream(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -195,6 +284,19 @@ func (h *InboxHandler) InboxStream(c *gin.Context) {
 
 // ---- Subscriptions (preferences) ----
 
+// ListSubscriptions returns the current user's notification subscription preferences
+//
+//	@Summary		List notification subscriptions
+//	@Description	List the current user's per-(category, channel) notification subscription preferences
+//	@Tags			Notification
+//	@ID				list_inbox_subscriptions
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	map[string][]SubscriptionResp	"Subscriptions listed successfully"
+//	@Failure		401	{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		500	{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/api/v2/inbox/subscriptions [get]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) ListSubscriptions(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -213,6 +315,22 @@ func (h *InboxHandler) ListSubscriptions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"items": resp})
 }
 
+// SetSubscription upserts a single notification subscription preference
+//
+//	@Summary		Set notification subscription
+//	@Description	Upsert the current user's subscription preference for a (category, channel) pair
+//	@Tags			Notification
+//	@ID				set_inbox_subscription
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		SetSubscriptionReq			true	"Subscription preference"
+//	@Success		200		{object}	SubscriptionResp			"Subscription updated successfully"
+//	@Failure		400		{object}	dto.GenericResponse[any]	"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/inbox/subscriptions [put]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) SetSubscription(c *gin.Context) {
 	uid, ok := currentUserID(c)
 	if !ok {
@@ -249,6 +367,23 @@ func (h *InboxHandler) SetSubscription(c *gin.Context) {
 // Authn for this endpoint is JWT (any service token; the SSO already
 // issues those via client_credentials), then a simple role/scope
 // gate happens at the router level.
+// PublishEvent ingests a producer event over HTTP and fans it out
+//
+//	@Summary		Publish notification event
+//	@Description	Cross-service ingestion endpoint: accept a producer's notification event and fan it out to recipients. Used by the standalone notification microservice; in the monolith producers call the in-process Publisher directly.
+//	@Tags			Notification
+//	@ID				publish_notification_event
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		PublishEventReq				true	"Notification event"
+//	@Success		200		{object}	PublishEventResp			"Event published successfully"
+//	@Success		202		{object}	map[string]bool				"Event dropped by dedupe"
+//	@Failure		400		{object}	dto.GenericResponse[any]	"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/events:publish [post]
+//	@x-api-type		{"portal":"true"}
 func (h *InboxHandler) PublishEvent(c *gin.Context) {
 	var req PublishEventReq
 	if err := c.ShouldBindJSON(&req); err != nil {

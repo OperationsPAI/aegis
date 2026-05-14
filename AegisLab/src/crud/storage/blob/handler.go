@@ -72,6 +72,18 @@ type listBucketsResp struct {
 // can populate a picker without hard-coded names. Auth lives in the
 // route group; ACL filtering by caller is intentionally not done yet —
 // the registry is treated as public catalog data within the platform.
+//
+//	@Summary		List blob buckets
+//	@Description	List configured blob buckets in the registry
+//	@Tags			Blob
+//	@ID				blob_list_buckets
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.GenericResponse[listBucketsResp]	"Buckets listed successfully"
+//	@Failure		401	{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/blob/buckets [get]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) ListBuckets(c *gin.Context) {
 	names := h.svc.Registry().Names()
 	out := make([]BucketSummary, 0, len(names))
@@ -93,6 +105,25 @@ func (h *Handler) ListBuckets(c *gin.Context) {
 
 // ---- Endpoints ----
 
+// PresignPut returns a presigned PUT URL for uploading an object.
+//
+//	@Summary		Presign object upload
+//	@Description	Issue a presigned PUT URL for uploading an object to the bucket
+//	@Tags			Blob
+//	@ID				blob_presign_put
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket	path		string									true	"Bucket name"
+//	@Param			request	body		presignPutReq							true	"Presign PUT request"
+//	@Success		200		{object}	dto.GenericResponse[PresignedRequest]	"Presigned URL issued"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]				"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"Bucket not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/presign-put [post]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) PresignPut(c *gin.Context) {
 	bucket := c.Param("bucket")
 	var req presignPutReq
@@ -129,6 +160,25 @@ func (h *Handler) PresignPut(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+// PresignGet returns a presigned GET URL for downloading an object.
+//
+//	@Summary		Presign object download
+//	@Description	Issue a presigned GET URL for downloading an object from the bucket
+//	@Tags			Blob
+//	@ID				blob_presign_get
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket	path		string									true	"Bucket name"
+//	@Param			request	body		presignGetReq							true	"Presign GET request"
+//	@Success		200		{object}	dto.GenericResponse[PresignedRequest]	"Presigned URL issued"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]				"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"Bucket or object not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/presign-get [post]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) PresignGet(c *gin.Context) {
 	bucket := c.Param("bucket")
 	var req presignGetReq
@@ -161,6 +211,23 @@ func (h *Handler) PresignGet(c *gin.Context) {
 	c.JSON(http.StatusOK, pr)
 }
 
+// InlineGet streams a single-segment object inline through the API.
+//
+//	@Summary		Inline object download
+//	@Description	Stream object bytes inline through the API for single-segment keys
+//	@Tags			Blob
+//	@ID				blob_inline_get
+//	@Produce		octet-stream
+//	@Security		BearerAuth
+//	@Param			bucket	path		string						true	"Bucket name"
+//	@Param			key		path		string						true	"Object key"
+//	@Success		200		{file}		binary						"Streamed object content"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]	"Bucket or object not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/objects/{key} [get]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) InlineGet(c *gin.Context) {
 	bucket := c.Param("bucket")
 	key := c.Param("key")
@@ -191,6 +258,22 @@ func (h *Handler) InlineGet(c *gin.Context) {
 	_, _ = io.Copy(c.Writer, rc)
 }
 
+// Stat returns object metadata without streaming the body.
+//
+//	@Summary		Stat object
+//	@Description	Return object metadata without streaming the body
+//	@Tags			Blob
+//	@ID				blob_stat
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket	path		string								true	"Bucket name"
+//	@Param			key		path		string								true	"Object key"
+//	@Success		200		{object}	dto.GenericResponse[ObjectMeta]		"Object metadata"
+//	@Failure		401		{object}	dto.GenericResponse[any]			"Authentication required"
+//	@Failure		404		{object}	dto.GenericResponse[any]			"Bucket or object not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/objects/{key} [head]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) Stat(c *gin.Context) {
 	bucket := c.Param("bucket")
 	key := c.Param("key")
@@ -202,6 +285,23 @@ func (h *Handler) Stat(c *gin.Context) {
 	c.JSON(http.StatusOK, meta)
 }
 
+// Delete removes an object from the bucket.
+//
+//	@Summary		Delete object
+//	@Description	Delete an object from the bucket
+//	@Tags			Blob
+//	@ID				blob_delete
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket	path		string						true	"Bucket name"
+//	@Param			key		path		string						true	"Object key"
+//	@Success		204		{object}	dto.GenericResponse[any]	"Object deleted"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]	"Bucket or object not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/objects/{key} [delete]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) Delete(c *gin.Context) {
 	bucket := c.Param("bucket")
 	key := c.Param("key")
@@ -227,6 +327,24 @@ func (h *Handler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// List returns DB-backed object metadata records for the bucket.
+//
+//	@Summary		List object records (DB)
+//	@Description	List object metadata records for the bucket from the metadata database
+//	@Tags			Blob
+//	@ID				blob_list
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket		path		string							true	"Bucket name"
+//	@Param			entity_kind	query		string							false	"Filter by entity kind"
+//	@Param			entity_id	query		string							false	"Filter by entity ID"
+//	@Param			cursor		query		int								false	"Pagination cursor"
+//	@Param			limit		query		int								false	"Page size"
+//	@Success		200			{object}	dto.GenericResponse[listResp]	"Objects listed"
+//	@Failure		401			{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		500			{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/objects [get]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) List(c *gin.Context) {
 	bucket := c.Param("bucket")
 	f := ListFilter{
@@ -260,6 +378,22 @@ func (h *Handler) List(c *gin.Context) {
 // the object bytes directly to the response writer. Used by clients
 // that need keys-with-slashes (zip streaming, file tree responses)
 // without per-segment routing constraints.
+//
+//	@Summary		Stream object (wildcard key)
+//	@Description	Stream object bytes for keys that contain slashes (zip streaming, file tree responses)
+//	@Tags			Blob
+//	@ID				blob_stream_get
+//	@Produce		octet-stream
+//	@Security		BearerAuth
+//	@Param			bucket	path		string						true	"Bucket name"
+//	@Param			key		path		string						true	"Object key (may contain slashes)"
+//	@Success		200		{file}		binary						"Streamed object content"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]	"Bucket or object not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/stream/{key} [get]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) StreamGet(c *gin.Context) {
 	bucket := c.Param("bucket")
 	key := strings.TrimPrefix(c.Param("key"), "/")
@@ -294,6 +428,24 @@ func (h *Handler) StreamGet(c *gin.Context) {
 // distinct from List which reads the metadata DB. Query params follow
 // the S3 list-objects-v2 conventions: prefix, max_keys,
 // continuation_token, delimiter.
+//
+//	@Summary		List driver-level objects
+//	@Description	List objects directly from the storage driver (S3 list-objects-v2 conventions)
+//	@Tags			Blob
+//	@ID				blob_list_objects
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket				path		string								true	"Bucket name"
+//	@Param			prefix				query		string								false	"Key prefix filter"
+//	@Param			max_keys			query		int									false	"Maximum keys per page"
+//	@Param			continuation_token	query		string								false	"Opaque continuation token"
+//	@Param			delimiter			query		string								false	"Hierarchical listing delimiter"
+//	@Success		200					{object}	dto.GenericResponse[ListResult]		"Objects listed"
+//	@Failure		401					{object}	dto.GenericResponse[any]			"Authentication required"
+//	@Failure		404					{object}	dto.GenericResponse[any]			"Bucket not found"
+//	@Failure		500					{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/object-list [get]
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) ListObjects(c *gin.Context) {
 	bucket := c.Param("bucket")
 	opts := ListObjectsOpts{
@@ -317,6 +469,20 @@ func (h *Handler) ListObjects(c *gin.Context) {
 // Raw serves the localfs driver's signed token URLs. Verifies the
 // HMAC + expiry, then either streams the file (GET) or persists the
 // body (PUT). Buckets backed by s3 never produce these tokens.
+//
+//	@Summary		Localfs signed token GET/PUT
+//	@Description	Auth-free endpoint that verifies an HMAC-signed token and either streams (GET) or persists (PUT) the object body. The token itself is the auth.
+//	@Tags			Blob
+//	@ID				blob_raw
+//	@Param			token	path		string						true	"Signed token"
+//	@Success		200		{file}		binary						"Streamed object content (GET)"
+//	@Success		204		{object}	dto.GenericResponse[any]	"Object persisted (PUT)"
+//	@Failure		400		{object}	dto.GenericResponse[any]	"Unknown token op"
+//	@Failure		403		{object}	dto.GenericResponse[any]	"Invalid or expired token"
+//	@Failure		404		{object}	dto.GenericResponse[any]	"Bucket not found"
+//	@Failure		405		{object}	dto.GenericResponse[any]	"Method not allowed for token op"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/blob/raw/{token} [get]
 func (h *Handler) Raw(c *gin.Context) {
 	raw := c.Param("token")
 	tok, err := DecodeToken(h.signingKey, raw)

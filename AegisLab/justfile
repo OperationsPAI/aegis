@@ -298,6 +298,10 @@ generate-admin v:
 generate-python-sdk v:
     just run-command sdk python --target sdk --env local --version {{v}}
 
+# ⚙️ Generate Go API client (consumed by aegisctl) from Swagger documentation
+generate-go-sdk v:
+    just run-command sdk golang --target sdk --env local --version {{v}}
+
 # 🚀 Generate release-ready Portal TypeScript SDK
 release-portal v:
     just run-command sdk typescript --target portal --env release --version {{v}}
@@ -309,6 +313,10 @@ release-admin v:
 # 🚀 Generate release-ready Python SDK
 release-python-sdk v:
     just run-command sdk python --target sdk --env release --version {{v}}
+
+# 🚀 Generate release-ready Go API client
+release-go-sdk v:
+    just run-command sdk golang --target sdk --env release --version {{v}}
 
 # =============================================================================
 # Utilities

@@ -41,6 +41,20 @@ type EntryResp struct {
 	Layer     Layer           `json:"layer"`
 }
 
+// List returns every entry under a configcenter namespace
+//
+//	@Summary		List config entries
+//	@Description	List all config entries (with merged layer info) under a namespace
+//	@Tags			Config Center
+//	@ID				list_config_entries
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			namespace	path		string						true	"Config namespace"
+//	@Success		200			{object}	map[string][]EntryResp		"Config entries listed successfully"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/config/{namespace} [get]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) List(c *gin.Context) {
 	ns := c.Param("namespace")
 	entries, err := h.center.List(c.Request.Context(), ns)
@@ -61,6 +75,22 @@ func (h *Handler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"items": resp})
 }
 
+// Get returns a single config entry
+//
+//	@Summary		Get config entry
+//	@Description	Get the merged value and source layer for a single config key
+//	@Tags			Config Center
+//	@ID				get_config_entry
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			namespace	path		string						true	"Config namespace"
+//	@Param			key			path		string						true	"Config key"
+//	@Success		200			{object}	EntryResp					"Config entry retrieved successfully"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		404			{object}	dto.GenericResponse[any]	"Config entry not found"
+//	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/config/{namespace}/{key} [get]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Get(c *gin.Context) {
 	ns := c.Param("namespace")
 	key := c.Param("key")
@@ -78,6 +108,25 @@ func (h *Handler) Get(c *gin.Context) {
 	})
 }
 
+// Set writes a config entry into the dynamic layer
+//
+//	@Summary		Set config entry
+//	@Description	Write or overwrite a config entry value in the dynamic layer; requires system admin
+//	@Tags			Config Center
+//	@ID				set_config_entry
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			namespace	path		string						true	"Config namespace"
+//	@Param			key			path		string						true	"Config key"
+//	@Param			request		body		SetReq						true	"Config value and audit reason"
+//	@Success		204			{object}	dto.GenericResponse[any]	"Config entry written successfully"
+//	@Failure		400			{object}	dto.GenericResponse[any]	"Invalid request"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403			{object}	dto.GenericResponse[any]	"Forbidden config key"
+//	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/config/{namespace}/{key} [put]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Set(c *gin.Context) {
 	ns := c.Param("namespace")
 	key := c.Param("key")
@@ -119,6 +168,21 @@ func (h *Handler) Set(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Delete removes a config entry from the dynamic layer
+//
+//	@Summary		Delete config entry
+//	@Description	Remove a config entry from the dynamic layer; requires system admin
+//	@Tags			Config Center
+//	@ID				delete_config_entry
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			namespace	path		string						true	"Config namespace"
+//	@Param			key			path		string						true	"Config key"
+//	@Success		204			{object}	dto.GenericResponse[any]	"Config entry deleted successfully"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/config/{namespace}/{key} [delete]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Delete(c *gin.Context) {
 	ns := c.Param("namespace")
 	key := c.Param("key")
@@ -146,6 +210,20 @@ func (h *Handler) Delete(c *gin.Context) {
 // Watch streams every change under a namespace as SSE events. The
 // remote configcenterclient subscribes here to drive its in-process
 // Bind callers.
+// Watch streams namespace change events as SSE
+//
+//	@Summary		Watch config namespace
+//	@Description	Server-Sent Events stream of every change under the given namespace; emits `change` and `ping` events
+//	@Tags			Config Center
+//	@ID				watch_config_namespace
+//	@Produce		text/event-stream
+//	@Security		BearerAuth
+//	@Param			namespace	path		string						true	"Config namespace"
+//	@Success		200			{string}	string						"SSE stream of config changes"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		500			{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/config/{namespace}/watch [get]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) Watch(c *gin.Context) {
 	ns := c.Param("namespace")
 
@@ -186,6 +264,21 @@ func (h *Handler) Watch(c *gin.Context) {
 
 // History returns 501 until the config_audit-backed query lands. The
 // route is registered so callers see a well-typed error rather than 404.
+// History returns the audit history for a config entry
+//
+//	@Summary		Get config entry history
+//	@Description	Return the audit-log history for a single config key; currently returns 501 until the audit query lands
+//	@Tags			Config Center
+//	@ID				get_config_entry_history
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			namespace	path		string						true	"Config namespace"
+//	@Param			key			path		string						true	"Config key"
+//	@Success		200			{object}	dto.GenericResponse[any]	"Config history retrieved successfully"
+//	@Failure		401			{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		501			{object}	dto.GenericResponse[any]	"Config history not implemented"
+//	@Router			/api/v2/config/{namespace}/{key}/history [get]
+//	@x-api-type		{"portal":"true","admin":"true"}
 func (h *Handler) History(c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "config history not implemented"})
 }

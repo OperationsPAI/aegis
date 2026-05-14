@@ -14,6 +14,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// grantAuthCode handles the `authorization_code` grant on /token.
+//
+//	@Summary		OIDC token: authorization_code grant
+//	@Description	Internal dispatch path of /token for `grant_type=authorization_code`. Consumes the one-time code persisted by /authorize, verifies PKCE for public clients, and returns access + refresh tokens.
+//	@Tags			OIDC
+//	@ID				oidc_token_authorization_code
+//	@Accept			x-www-form-urlencoded
+//	@Produce		json
+//	@Param			code			formData	string	true	"Authorization code from /authorize"
+//	@Param			redirect_uri	formData	string	true	"Redirect URI used at /authorize"
+//	@Param			code_verifier	formData	string	false	"PKCE code verifier (required when /authorize used PKCE)"
+//	@Success		200	{object}	tokenResp			"Token response"
+//	@Failure		400	{object}	map[string]string	"OIDC error"
 func (s *OIDCService) grantAuthCode(c *gin.Context, cli *model.OIDCClient) {
 	code := c.PostForm("code")
 	redirectURI := c.PostForm("redirect_uri")
@@ -48,6 +61,17 @@ func (s *OIDCService) grantAuthCode(c *gin.Context, cli *model.OIDCClient) {
 	s.respondUserToken(c, cli, u, true)
 }
 
+// grantRefresh handles the `refresh_token` grant on /token.
+//
+//	@Summary		OIDC token: refresh_token grant
+//	@Description	Internal dispatch path of /token for `grant_type=refresh_token`. Validates the refresh token's owning client, rotates the refresh token, and issues a fresh access token.
+//	@Tags			OIDC
+//	@ID				oidc_token_refresh_token
+//	@Accept			x-www-form-urlencoded
+//	@Produce		json
+//	@Param			refresh_token	formData	string	true	"Refresh token issued by a previous token call"
+//	@Success		200	{object}	tokenResp			"Token response"
+//	@Failure		400	{object}	map[string]string	"OIDC error"
 func (s *OIDCService) grantRefresh(c *gin.Context, cli *model.OIDCClient) {
 	rt := c.PostForm("refresh_token")
 	rec, err := s.loadRefresh(c.Request.Context(), rt)
@@ -69,6 +93,16 @@ func (s *OIDCService) grantRefresh(c *gin.Context, cli *model.OIDCClient) {
 	s.respondUserToken(c, cli, u, true)
 }
 
+// grantClientCredentials handles the `client_credentials` grant on /token.
+//
+//	@Summary		OIDC token: client_credentials grant
+//	@Description	Internal dispatch path of /token for `grant_type=client_credentials`. Issues a service token bound to the client's `service` and configured scopes — used for service-to-service authentication.
+//	@Tags			OIDC
+//	@ID				oidc_token_client_credentials
+//	@Accept			x-www-form-urlencoded
+//	@Produce		json
+//	@Success		200	{object}	tokenResp			"Service token response"
+//	@Failure		500	{object}	map[string]string	"Token signing failed"
 func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClient) {
 	exp := time.Now().Add(utils.ServiceTokenExpiration)
 	claims := jwt.MapClaims{
@@ -93,6 +127,18 @@ func (s *OIDCService) grantClientCredentials(c *gin.Context, cli *model.OIDCClie
 	})
 }
 
+// grantPassword handles the `password` grant on /token.
+//
+//	@Summary		OIDC token: password grant
+//	@Description	Internal dispatch path of /token for `grant_type=password`. Verifies the resource owner's username/password and issues an access token. Intended for trusted first-party CLI/test clients only.
+//	@Tags			OIDC
+//	@ID				oidc_token_password
+//	@Accept			x-www-form-urlencoded
+//	@Produce		json
+//	@Param			username	formData	string	true	"Username or email"
+//	@Param			password	formData	string	true	"Password"
+//	@Success		200	{object}	tokenResp			"Token response"
+//	@Failure		401	{object}	map[string]string	"Invalid credentials"
 func (s *OIDCService) grantPassword(c *gin.Context, cli *model.OIDCClient) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
