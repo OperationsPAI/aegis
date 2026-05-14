@@ -307,11 +307,20 @@ def run():
     assert base_url is not None, "RCABENCH_BASE_URL is not set"
     logger.debug(f"rcabench_base_url: `{base_url}`")
 
-    # Prepare the output directory
-    output_path = Path(os.environ["OUTPUT_PATH"])
-    logger.debug(f"output_path: `{output_path}`")
+    # Prepare the output directory. When OUTPUT_PATH is an `s3://` URL the
+    # job writes nothing to local FS — it uploads the validated datapack to
+    # the bucket at the end. The bucket layout matches what S3DatapackStore
+    # on the API side expects: <datapackName>/<file>.
+    raw_output_path = os.environ["OUTPUT_PATH"]
+    is_s3_output = raw_output_path.startswith("s3://")
+    logger.debug(f"output_path: `{raw_output_path}` (s3={is_s3_output})")
 
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path: Path | str
+    if is_s3_output:
+        output_path = raw_output_path.rstrip("/")
+    else:
+        output_path = Path(raw_output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
 
     # Check input parameters
     namespace = os.environ["NAMESPACE"]
@@ -384,7 +393,10 @@ def run():
         }
         save_json(env_params, path=tempdir / "env.json")
 
-        injection = query_injection(base_url, output_path.name)
+        datapack_name = (
+            output_path.rsplit("/", 1)[-1] if isinstance(output_path, str) else output_path.name
+        )
+        injection = query_injection(base_url, datapack_name)
         if injection:
             save_json(injection, path=tempdir / "injection.json")
 
@@ -392,30 +404,61 @@ def run():
         if kube_info:
             save_json(kube_info, path=tempdir / "k8s.json")
 
-        copy_files(tempdir, output_path)
+        # Validate against the in-memory tempdir BEFORE materializing the
+        # datapack at the destination. For an s3:// destination this keeps
+        # the bucket free of half-written / invalid datapacks; for the
+        # filesystem path it just inverts the order without changing
+        # behaviour (validation reads the same files either way).
+        _, is_valid = valid(tempdir)
+        if not is_valid:
+            logger.error(
+                f"Output validation failed for staging dir {tempdir}. "
+                f"Please check if all required files exist and are valid. "
+                f"Run with DEBUG=true for detailed validation logs."
+            )
+            raise ValueError("Output path validation failed.")
 
-    _, is_valid = valid(output_path)
-    if not is_valid:
-        logger.error(
-            f"Output path validation failed: {output_path}. "
-            f"Please check if all required files exist and are valid. "
-            f"Run with DEBUG=true for detailed validation logs."
-        )
-        raise ValueError("Output path validation failed.")
+        copy_files(tempdir, output_path)
 
 
 @timeit()
-def copy_files(src: Path, dst: Path):
+def copy_files(src: Path, dst: Path | str):
     assert src.is_dir()
-    assert dst.is_dir()
 
     subprocess.run("sha256sum * > sha256sum.txt", cwd=src, shell=True, check=True)
 
+    if isinstance(dst, str) and dst.startswith("s3://"):
+        _upload_dir_to_s3(src, dst)
+        return
+
+    assert isinstance(dst, Path) and dst.is_dir()
     tasks = []
     for file in src.iterdir():
         if file.is_file():
             tasks.append(functools.partial(shutil.copyfile, file, dst / file.name))
 
+    fmap_threadpool(tasks, parallel=8)
+
+
+def _upload_dir_to_s3(src: Path, dst_url: str) -> None:
+    """Upload every regular file under ``src`` to ``<dst_url>/<basename>``.
+
+    Uses fsspec/s3fs so it inherits the same env-driven credential / endpoint
+    detection as ``save_parquet`` on s3:// paths (see ``serde._s3_storage_options``).
+    Parallelism mirrors the filesystem path's thread pool so wall-clock stays
+    comparable.
+    """
+    import fsspec  # lazy import: only needed for the s3 codepath
+
+    base = dst_url.rstrip("/")
+    endpoint = os.environ.get("AWS_ENDPOINT_URL_S3") or os.environ.get("AWS_ENDPOINT_URL")
+    storage_options: dict[str, Any] = {"client_kwargs": {"endpoint_url": endpoint}} if endpoint else {}
+
+    def _upload_one(file: Path) -> None:
+        with open(file, "rb") as f_src, fsspec.open(f"{base}/{file.name}", "wb", **storage_options) as f_dst:
+            shutil.copyfileobj(f_src, f_dst)  # type: ignore[arg-type]
+
+    tasks = [functools.partial(_upload_one, file) for file in src.iterdir() if file.is_file()]
     fmap_threadpool(tasks, parallel=8)
 
 
