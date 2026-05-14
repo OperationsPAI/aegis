@@ -69,6 +69,17 @@ images:
 # move the LB-binding annotations onto `edgeProxy.service.annotations` and
 # leave `microservices.aegisApi.service.annotations` empty so aegis-api
 # upgrades stop churning the EIP.
+frontend:
+  # Toggle for inserting the static-SPA frontend into the edge-proxy path
+  # routing. When false, edge-proxy reverse-proxies everything to the API
+  # backend. When true, `/api/*`, `/auth/*`, `/s/*`, `/healthz`, `/metrics`,
+  # `/readyz`, `/livez` route to the API; everything else routes to the
+  # `<release>-frontend` Service (rendered by the `rcabench-frontend` chart
+  # installed alongside this one).
+  enabled: false
+  service:
+    port: 80
+
 edgeProxy:
   # Caddy fronting aegis-api + intake-grpc. Enabled by default so every pack
   # (kind / local / byte-cluster / prod) presents the same external surface:

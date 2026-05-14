@@ -20,10 +20,22 @@ data:
         tracing {
             span aegis-edge-proxy
         }
+        {{- $apiBackend := printf "%s-aegis-api:%d" .Release.Name (int .Values.microservices.aegisApi.httpPort) }}
         {{- if .Values.gateway.enabled }}
-        reverse_proxy {{ .Release.Name }}-gateway:{{ .Values.gateway.httpPort | default 8086 }}
+        {{- $apiBackend = printf "%s-gateway:%d" .Release.Name (int (.Values.gateway.httpPort | default 8086)) }}
+        {{- end }}
+        {{- if .Values.frontend.enabled }}
+        @api {
+            path /api/* /auth/* /s/* /healthz /metrics /readyz /livez
+        }
+        handle @api {
+            reverse_proxy {{ $apiBackend }}
+        }
+        handle {
+            reverse_proxy {{ .Release.Name }}-frontend:{{ .Values.frontend.service.port | default 80 }}
+        }
         {{- else }}
-        reverse_proxy {{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}
+        reverse_proxy {{ $apiBackend }}
         {{- end }}
     }
     # gRPC intake stays direct: gateway is HTTP-only, intake speaks raw gRPC

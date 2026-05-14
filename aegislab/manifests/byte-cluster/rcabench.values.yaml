@@ -142,6 +142,13 @@ microservices:
       maxReplicas: 8
       targetCPUUtilizationPercentage: 70
 
+frontend:
+  # rcabench-frontend chart is installed as a separate release in the same
+  # namespace. Setting enabled here only flips the edge-proxy Caddyfile to
+  # path-split `/api|/auth|/s|/healthz|/metrics|/readyz|/livez` to the gateway
+  # and everything else to the frontend Service.
+  enabled: true
+
 edgeProxy:
   enabled: true
   replicaCount: 1
