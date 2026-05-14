@@ -1,8 +1,6 @@
 package sso
 
 import (
-	"strings"
-
 	"aegis/boot"
 	httpapi "aegis/boot/wiring/http"
 	"aegis/crud/iam/auth"
@@ -11,6 +9,7 @@ import (
 	"aegis/crud/iam/user"
 	"aegis/platform/router"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 )
 
@@ -32,19 +31,9 @@ func Options(confPath, port string) fx.Option {
 		fx.Provide(auth.NewTokenVerifier),
 		fx.Provide(ssoLocalPermissionChecker),
 		fx.Supply(&router.Handlers{}),
-		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
+		fx.Supply(httpapi.ServerConfig{Addr: httpapi.NormalizeAddr(port, ":8083")}),
 		httpapi.Module,
-		fx.Decorate(decorateEngineWithHealthz),
+		fx.Decorate(func(e *gin.Engine) *gin.Engine { return httpapi.DecorateEngineWithHealthz(e) }),
 		fx.Invoke(registerSSOInitialization),
 	)
-}
-
-func normalizeAddr(port string) string {
-	if port == "" {
-		return ":8083"
-	}
-	if strings.HasPrefix(port, ":") {
-		return port
-	}
-	return ":" + port
 }

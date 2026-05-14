@@ -22,6 +22,14 @@ func NewServer(config ServerConfig, engine *gin.Engine) *http.Server {
 }
 
 func registerServerLifecycle(lc fx.Lifecycle, server *http.Server) {
+	RegisterServerLifecycle(lc, server)
+}
+
+// RegisterServerLifecycle wires an *http.Server into the fx lifecycle:
+// ListenAndServe in a goroutine on start, graceful Shutdown on stop. Use this
+// from binaries (e.g. aegis-gateway) that build their own *http.Server but
+// want the same start/stop semantics as the shared http Module.
+func RegisterServerLifecycle(lc fx.Lifecycle, server *http.Server) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {

@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 
-	"aegis/platform/consts"
+	"aegis/clients/internal/httpclient"
 	"aegis/crud/admin/configcenter"
+	"aegis/platform/consts"
 
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -25,10 +25,8 @@ import (
 // to the SSE watch stream for hot reload. Service-to-service auth
 // uses a Bearer token from TokenSource (typically ssoclient).
 type RemoteClient struct {
-	baseURL  *url.URL
-	http     *http.Client
+	core     *httpclient.Client
 	tokenSrc TokenSource
-	timeout  time.Duration
 
 	mu       sync.Mutex
 	bindings map[string][]*remoteBinding // by namespace
@@ -41,21 +39,17 @@ type RemoteClientConfig struct {
 }
 
 func NewRemoteClient(cfg RemoteClientConfig, tokenSrc TokenSource) (*RemoteClient, error) {
-	u, err := url.Parse(cfg.BaseURL)
+	core, err := httpclient.New(httpclient.Config{
+		BaseURL:     cfg.BaseURL,
+		Timeout:     cfg.Timeout,
+		TokenSource: tokenSrc,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("parse configcenter base url: %w", err)
-	}
-	if cfg.Timeout == 0 {
-		cfg.Timeout = 5 * time.Second
+		return nil, fmt.Errorf("configcenter client: %w", err)
 	}
 	return &RemoteClient{
-		baseURL:  u,
-		http: &http.Client{
-			Timeout:   cfg.Timeout,
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
-		},
+		core:     core,
 		tokenSrc: tokenSrc,
-		timeout:  cfg.Timeout,
 		bindings: make(map[string][]*remoteBinding),
 		watches:  make(map[string]context.CancelFunc),
 	}, nil
@@ -87,15 +81,12 @@ func (c *RemoteClient) Bind(ctx context.Context, namespace, key string, out any,
 }
 
 func (c *RemoteClient) Get(ctx context.Context, namespace, key string) ([]byte, Layer, error) {
-	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/" + key)
+	endpoint := c.core.Endpoint(consts.APIPathConfigPrefix + namespace + "/" + key)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, "", err
 	}
-	if err := c.auth(ctx, req); err != nil {
-		return nil, "", err
-	}
-	resp, err := c.http.Do(req)
+	resp, err := c.core.Do(req)
 	if err != nil {
 		return nil, "", err
 	}
@@ -124,16 +115,13 @@ func (c *RemoteClient) Set(ctx context.Context, namespace, key string, value any
 	if err != nil {
 		return err
 	}
-	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/" + key)
+	endpoint := c.core.Endpoint(consts.APIPathConfigPrefix + namespace + "/" + key)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if err := c.auth(ctx, req); err != nil {
-		return err
-	}
-	resp, err := c.http.Do(req)
+	resp, err := c.core.Do(req)
 	if err != nil {
 		return err
 	}
@@ -146,15 +134,12 @@ func (c *RemoteClient) Set(ctx context.Context, namespace, key string, value any
 }
 
 func (c *RemoteClient) Delete(ctx context.Context, namespace, key string) error {
-	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/" + key)
+	endpoint := c.core.Endpoint(consts.APIPathConfigPrefix + namespace + "/" + key)
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
 		return err
 	}
-	if err := c.auth(ctx, req); err != nil {
-		return err
-	}
-	resp, err := c.http.Do(req)
+	resp, err := c.core.Do(req)
 	if err != nil {
 		return err
 	}
@@ -167,15 +152,12 @@ func (c *RemoteClient) Delete(ctx context.Context, namespace, key string) error 
 }
 
 func (c *RemoteClient) List(ctx context.Context, namespace string) ([]Entry, error) {
-	endpoint := c.url(consts.APIPathConfigPrefix + namespace)
+	endpoint := c.core.Endpoint(consts.APIPathConfigPrefix + namespace)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
-	if err := c.auth(ctx, req); err != nil {
-		return nil, err
-	}
-	resp, err := c.http.Do(req)
+	resp, err := c.core.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -193,31 +175,17 @@ func (c *RemoteClient) List(ctx context.Context, namespace string) ([]Entry, err
 	return out.Items, nil
 }
 
-func (c *RemoteClient) url(path string) string {
-	u := *c.baseURL
-	u.Path = strings.TrimRight(u.Path, "/") + path
-	return u.String()
-}
-
-func (c *RemoteClient) auth(ctx context.Context, req *http.Request) error {
-	if c.tokenSrc == nil {
-		return nil
-	}
-	tok, err := c.tokenSrc.Token(ctx)
-	if err != nil {
-		return fmt.Errorf("acquire service token: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+tok)
-	return nil
-}
-
 // runWatch streams SSE change events for one namespace and reloads
 // every binding under it. The loop reconnects on disconnect with a
 // short backoff; the configcenter is expected to be HA, but a
 // rolling restart should not kill consumers.
 func (c *RemoteClient) runWatch(ctx context.Context, namespace string) {
-	endpoint := c.url(consts.APIPathConfigPrefix + namespace + "/watch")
+	endpoint := c.core.Endpoint(consts.APIPathConfigPrefix + namespace + "/watch")
 	backoff := time.Second
+	// no client timeout for SSE; rely on ctx
+	sseClient := &http.Client{
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
 	for {
 		if ctx.Err() != nil {
 			return
@@ -226,13 +194,9 @@ func (c *RemoteClient) runWatch(ctx context.Context, namespace string) {
 		if err != nil {
 			return
 		}
-		_ = c.auth(ctx, req)
+		_ = c.core.InjectAuth(ctx, req)
 		req.Header.Set("Accept", "text/event-stream")
-		// no client timeout for SSE; rely on ctx
-		client := &http.Client{
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
-		}
-		resp, err := client.Do(req)
+		resp, err := sseClient.Do(req)
 		if err != nil {
 			time.Sleep(backoff)
 			continue

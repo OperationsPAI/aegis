@@ -31,7 +31,7 @@ func ProducerHTTPOptions(port string) fx.Option {
 		fx.Provide(newProducerInitializer),
 		fx.Invoke(registerProducerInitialization),
 		ProducerHTTPModules(),
-		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
+		fx.Supply(httpapi.ServerConfig{Addr: httpapi.NormalizeAddr(port)}),
 		ssoclient.Module,
 		httpapi.Module,
 	)

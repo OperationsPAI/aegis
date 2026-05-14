@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"time"
 
+	"aegis/clients/internal/httpclient"
 	"aegis/platform/consts"
-
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // TokenSource produces a fresh Bearer token for cross-service calls.
@@ -33,9 +31,7 @@ type TokenSource interface {
 // The struct + interface let producers compile against this package
 // without knowing whether their binary will run mono or split.
 type RemoteClient struct {
-	baseURL    *url.URL
-	http       *http.Client
-	tokenSrc   TokenSource
+	core       *httpclient.Client
 	timeout    time.Duration
 	maxRetries int
 }
@@ -49,9 +45,13 @@ type RemoteClientConfig struct {
 }
 
 func NewRemoteClient(cfg RemoteClientConfig, tokenSrc TokenSource) (*RemoteClient, error) {
-	u, err := url.Parse(cfg.BaseURL)
+	core, err := httpclient.New(httpclient.Config{
+		BaseURL:     cfg.BaseURL,
+		Timeout:     cfg.Timeout,
+		TokenSource: tokenSrc,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("parse notification base url: %w", err)
+		return nil, fmt.Errorf("notification client: %w", err)
 	}
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 5 * time.Second
@@ -59,16 +59,7 @@ func NewRemoteClient(cfg RemoteClientConfig, tokenSrc TokenSource) (*RemoteClien
 	if cfg.MaxRetries == 0 {
 		cfg.MaxRetries = 2
 	}
-	return &RemoteClient{
-		baseURL:    u,
-		http: &http.Client{
-			Timeout:   cfg.Timeout,
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
-		},
-		tokenSrc:   tokenSrc,
-		timeout:    cfg.Timeout,
-		maxRetries: cfg.MaxRetries,
-	}, nil
+	return &RemoteClient{core: core, timeout: cfg.Timeout, maxRetries: cfg.MaxRetries}, nil
 }
 
 func (c *RemoteClient) Publish(ctx context.Context, req PublishReq) (*PublishResult, error) {
@@ -76,23 +67,17 @@ func (c *RemoteClient) Publish(ctx context.Context, req PublishReq) (*PublishRes
 	if err != nil {
 		return nil, fmt.Errorf("encode publish request: %w", err)
 	}
-	endpoint := *c.baseURL
-	endpoint.Path = trimSlash(endpoint.Path) + consts.APIPathEventsPublish
+	endpoint := c.core.Endpoint(consts.APIPathEventsPublish)
 
 	var lastErr error
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
-		token, err := c.tokenSrc.Token(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("acquire service token: %w", err)
-		}
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.String(), bytes.NewReader(body))
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
 		}
 		httpReq.Header.Set("Content-Type", "application/json")
-		httpReq.Header.Set("Authorization", "Bearer "+token)
 
-		resp, err := c.http.Do(httpReq)
+		resp, err := c.core.Do(httpReq)
 		if err != nil {
 			lastErr = err
 			if !isRetryable(err) {
@@ -117,13 +102,6 @@ func (c *RemoteClient) Publish(ctx context.Context, req PublishReq) (*PublishRes
 		return &out, nil
 	}
 	return nil, fmt.Errorf("publish failed after %d retries: %w", c.maxRetries, lastErr)
-}
-
-func trimSlash(s string) string {
-	for len(s) > 0 && s[len(s)-1] == '/' {
-		s = s[:len(s)-1]
-	}
-	return s
 }
 
 func isRetryable(err error) bool {

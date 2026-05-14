@@ -11,9 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"aegis/clients/internal/httpclient"
 	"aegis/platform/consts"
-
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // TokenSource produces a fresh Bearer token for cross-service calls.
@@ -25,9 +24,7 @@ type TokenSource interface {
 
 // RemoteClient POSTs producer requests to aegis-blob's HTTP surface.
 type RemoteClient struct {
-	baseURL    *url.URL
-	http       *http.Client
-	tokenSrc   TokenSource
+	core       *httpclient.Client
 	maxRetries int
 }
 
@@ -38,25 +35,18 @@ type RemoteClientConfig struct {
 }
 
 func NewRemoteClient(cfg RemoteClientConfig, tokenSrc TokenSource) (*RemoteClient, error) {
-	u, err := url.Parse(cfg.BaseURL)
+	core, err := httpclient.New(httpclient.Config{
+		BaseURL:     cfg.BaseURL,
+		Timeout:     cfg.Timeout,
+		TokenSource: tokenSrc,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("parse blob base url: %w", err)
-	}
-	if cfg.Timeout == 0 {
-		cfg.Timeout = 5 * time.Second
+		return nil, fmt.Errorf("blob client: %w", err)
 	}
 	if cfg.MaxRetries == 0 {
 		cfg.MaxRetries = 2
 	}
-	return &RemoteClient{
-		baseURL:    u,
-		http: &http.Client{
-			Timeout:   cfg.Timeout,
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
-		},
-		tokenSrc:   tokenSrc,
-		maxRetries: cfg.MaxRetries,
-	}, nil
+	return &RemoteClient{core: core, maxRetries: cfg.MaxRetries}, nil
 }
 
 // escapeKeyPath percent-escapes each segment of key but leaves the
@@ -69,117 +59,39 @@ func escapeKeyPath(key string) string {
 	return strings.Join(parts, "/")
 }
 
-func trimSlash(s string) string {
-	for len(s) > 0 && s[len(s)-1] == '/' {
-		s = s[:len(s)-1]
-	}
-	return s
-}
-
-func (c *RemoteClient) endpoint(path string) string {
-	u := *c.baseURL
-	u.Path = trimSlash(u.Path) + path
-	return u.String()
-}
-
-func (c *RemoteClient) endpointWithQuery(path string, q url.Values) string {
-	u := *c.baseURL
-	u.Path = trimSlash(u.Path) + path
-	if q != nil {
-		u.RawQuery = q.Encode()
-	}
-	return u.String()
-}
-
 // doWithQuery mirrors do() but lets callers pass URL query params
 // without smuggling "?..." through the path.
 func (c *RemoteClient) doWithQuery(ctx context.Context, method, path string, q url.Values, body any, out any) error {
-	var rdr io.Reader
-	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return fmt.Errorf("encode request: %w", err)
-		}
-		rdr = bytes.NewReader(b)
-	}
-	var lastErr error
-	for attempt := 0; attempt <= c.maxRetries; attempt++ {
-		var token string
-		if c.tokenSrc != nil {
-			t, err := c.tokenSrc.Token(ctx)
-			if err != nil {
-				return fmt.Errorf("acquire service token: %w", err)
-			}
-			token = t
-		}
-		req, err := http.NewRequestWithContext(ctx, method, c.endpointWithQuery(path, q), rdr)
-		if err != nil {
-			return err
-		}
-		if body != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		if token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
-		}
-		resp, err := c.http.Do(req)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		if resp.StatusCode >= 500 {
-			lastErr = fmt.Errorf("blob service responded %d", resp.StatusCode)
-			_ = resp.Body.Close()
-			continue
-		}
-		defer func() { _ = resp.Body.Close() }()
-		if resp.StatusCode == http.StatusNoContent {
-			return nil
-		}
-		if resp.StatusCode >= 400 {
-			b, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("blob request failed (%d): %s", resp.StatusCode, string(b))
-		}
-		if out != nil {
-			if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-				return fmt.Errorf("decode response: %w", err)
-			}
-		}
-		return nil
-	}
-	return fmt.Errorf("blob request failed after %d retries: %w", c.maxRetries, lastErr)
+	return c.execute(ctx, method, c.core.EndpointWithQuery(path, q), body, out)
 }
 
 func (c *RemoteClient) do(ctx context.Context, method, path string, body any, out any) error {
-	var rdr io.Reader
+	return c.execute(ctx, method, c.core.Endpoint(path), body, out)
+}
+
+func (c *RemoteClient) execute(ctx context.Context, method, target string, body, out any) error {
+	var raw []byte
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return fmt.Errorf("encode request: %w", err)
 		}
-		rdr = bytes.NewReader(b)
+		raw = b
 	}
 	var lastErr error
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
-		var token string
-		if c.tokenSrc != nil {
-			t, err := c.tokenSrc.Token(ctx)
-			if err != nil {
-				return fmt.Errorf("acquire service token: %w", err)
-			}
-			token = t
+		var reader io.Reader
+		if raw != nil {
+			reader = bytes.NewReader(raw)
 		}
-		req, err := http.NewRequestWithContext(ctx, method, c.endpoint(path), rdr)
+		req, err := http.NewRequestWithContext(ctx, method, target, reader)
 		if err != nil {
 			return err
 		}
 		if body != nil {
 			req.Header.Set("Content-Type", "application/json")
 		}
-		if token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
-		}
-		resp, err := c.http.Do(req)
+		resp, err := c.core.Do(req)
 		if err != nil {
 			lastErr = err
 			continue
@@ -257,7 +169,7 @@ func (c *RemoteClient) PutBytes(ctx context.Context, bucket string, body []byte,
 	for k, v := range pres.Presigned.Headers {
 		httpReq.Header.Set(k, v)
 	}
-	resp, err := c.http.Do(httpReq)
+	resp, err := c.core.HTTP().Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +189,7 @@ func (c *RemoteClient) GetBytes(ctx context.Context, bucket, key string) ([]byte
 	if err != nil {
 		return nil, nil, err
 	}
-	resp, err := c.http.Do(httpReq)
+	resp, err := c.core.HTTP().Do(httpReq)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -338,22 +250,11 @@ func (c *RemoteClient) GetReader(ctx context.Context, bucket, key string) (io.Re
 	// /stream/*key route accepts keys-with-slashes. Don't percent-
 	// escape the slashes themselves — the route is a wildcard.
 	path := consts.APIPathBlobBuckets + url.PathEscape(bucket) + "/stream/" + escapeKeyPath(key)
-	var token string
-	if c.tokenSrc != nil {
-		t, err := c.tokenSrc.Token(ctx)
-		if err != nil {
-			return nil, nil, fmt.Errorf("acquire service token: %w", err)
-		}
-		token = t
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.endpoint(path), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.core.Endpoint(path), nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-	resp, err := c.http.Do(req)
+	resp, err := c.core.Do(req)
 	if err != nil {
 		return nil, nil, err
 	}
