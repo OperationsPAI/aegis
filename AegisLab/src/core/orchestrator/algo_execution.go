@@ -235,21 +235,39 @@ func createAlgoJob(ctx context.Context, gateway *k8s.Gateway, params *algoJobCre
 			"execution_id": params.executionID,
 		})
 
-		volumeMountConfigs, err := getRequiredVolumeMountConfigs(gateway, []consts.VolumeMountName{
-			consts.VolumeMountDataset,
+		// Datapack location is mediated by the same DatapackOutputBackend that
+		// BuildDatapack uses (see datapack_backend.go). In s3 mode we get back
+		// an empty VolumeMountConfigs slice and a `s3://<bucket>` prefix; the
+		// algorithm pod (detector + downstream RCA) then receives INPUT_PATH
+		// as an s3:// URL and the rcabench-platform cli stages it locally.
+		// In pvc mode this preserves the historical behaviour: dataset PVC
+		// mounted at /data, INPUT_PATH=/data/<name>.
+		backend, err := selectDatapackBackend()
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to select datapack input backend", err)
+		}
+		datapackMounts, err := backend.VolumeMountConfigs(gateway)
+		if err != nil {
+			return handleExecutionError(span, logEntry, "failed to get datapack volume mount configurations", err)
+		}
+		expMounts, err := getRequiredVolumeMountConfigs(gateway, []consts.VolumeMountName{
 			consts.VolumeMountExperimentStorage,
 		})
 		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to get volume mount configurations", err)
+			return handleExecutionError(span, logEntry, "failed to get experiment-storage volume mount configurations", err)
 		}
 
-		datapackPathPrefix := volumeMountConfigs[0].MountPath
-		expPathPrefix := volumeMountConfigs[1].MountPath
+		volumeMountConfigs := append([]k8s.VolumeMountConfig{}, datapackMounts...)
+		volumeMountConfigs = append(volumeMountConfigs, expMounts...)
 
-		jobEnvVars, err := getAlgoJobEnvVars(params.jobName, params.executionID, datapackPathPrefix, expPathPrefix, params.payload)
+		datapackPathPrefix := backend.PathPrefix()
+		expPathPrefix := expMounts[0].MountPath
+
+		jobEnvVars, err := getAlgoJobEnvVars(params.jobName, params.executionID, datapackPathPrefix, expPathPrefix, backend, params.payload)
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to get job environment variables", err)
 		}
+		jobEnvVars = append(jobEnvVars, backend.EnvVars()...)
 
 		envVarMap := make(map[string]string, len(jobEnvVars))
 		for _, envVar := range jobEnvVars {
@@ -278,7 +296,7 @@ func createAlgoJob(ctx context.Context, gateway *k8s.Gateway, params *algoJobCre
 }
 
 // getAlgoJobEnvVars constructs the environment variables for the algorithm job
-func getAlgoJobEnvVars(taskID string, executionID int, datapackPathPrefix, expPathPrefix string, payload *executionPayload) ([]corev1.EnvVar, error) {
+func getAlgoJobEnvVars(taskID string, executionID int, datapackPathPrefix, expPathPrefix string, backend DatapackOutputBackend, payload *executionPayload) ([]corev1.EnvVar, error) {
 	tz := config.GetString("system.timezone")
 	if tz == "" {
 		tz = time.Local.String()
@@ -287,12 +305,12 @@ func getAlgoJobEnvVars(taskID string, executionID int, datapackPathPrefix, expPa
 	now := time.Now()
 	timestamp := now.Format(customTimeFormat)
 
-	var outputPath string
-	if payload.algorithm.ContainerName == config.GetDetectorName() {
-		outputPath = filepath.Join(datapackPathPrefix, payload.datapack.Name)
-	} else {
-		outputPath = filepath.Join(expPathPrefix, payload.algorithm.ContainerName, payload.algorithm.Name, timestamp)
-	}
+	// OUTPUT_PATH always lives on the experiment-storage PVC so the init
+	// container can mkdir it on the fly. Detector previously wrote scratch
+	// back into the datapack path itself; with the s3 backend that prefix is
+	// a `s3://` URL where mkdir is meaningless and the rcabench-platform sdk
+	// stages input read-only — so we route every algo's output the same way.
+	outputPath := filepath.Join(expPathPrefix, payload.algorithm.ContainerName, payload.algorithm.Name, timestamp)
 
 	serviceToken, err := issueServiceToken(taskID)
 	if err != nil {
@@ -307,7 +325,7 @@ func getAlgoJobEnvVars(taskID string, executionID int, datapackPathPrefix, expPa
 		{Name: "ABNORMAL_START", Value: strconv.FormatInt(payload.datapack.StartTime.Unix(), 10)},
 		{Name: "ABNORMAL_END", Value: strconv.FormatInt(payload.datapack.EndTime.Unix(), 10)},
 		{Name: "WORKSPACE", Value: "/app"},
-		{Name: "INPUT_PATH", Value: filepath.Join(datapackPathPrefix, payload.datapack.Name)},
+		{Name: "INPUT_PATH", Value: backend.JoinPath(datapackPathPrefix, payload.datapack.Name)},
 		{Name: "OUTPUT_PATH", Value: outputPath},
 		{Name: "RCABENCH_BASE_URL", Value: config.GetString("k8s.service.internal_url")},
 		{Name: "RCABENCH_TOKEN", Value: serviceToken},

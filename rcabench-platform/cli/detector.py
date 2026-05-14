@@ -402,6 +402,57 @@ def build_conclusion_row(
     }
 
 
+_STAGED_INPUT_CACHE: dict[str, Path] = {}
+
+
+def _stage_s3_input_locally(s3_url: str) -> Path:
+    """Mirror an s3://... datapack into a tempdir for path-based consumers.
+
+    The orchestrator hands us INPUT_PATH=s3://aegis-datapack/<name> when the
+    datapack output backend is s3 (see AegisLab/orchestrator/datapack_backend.go).
+    sdk.valid() + downstream loaders still expect a local directory of files,
+    so we mirror the bucket prefix into a tempdir and hand back that Path.
+
+    Endpoint + creds use the same env knobs prepare_inputs._upload_dir_to_s3
+    relies on: AWS_ENDPOINT_URL_S3 / AWS_ENDPOINT_URL + standard AWS_*. The
+    tempdir lives for the process lifetime (the algo Job is one-shot).
+    """
+    cached = _STAGED_INPUT_CACHE.get(s3_url)
+    if cached is not None:
+        return cached
+
+    import atexit
+    import shutil
+    import tempfile
+
+    import fsspec  # lazy import: only needed for the s3 codepath
+
+    base = s3_url.rstrip("/")
+    endpoint = os.environ.get("AWS_ENDPOINT_URL_S3") or os.environ.get("AWS_ENDPOINT_URL")
+    storage_options: dict[str, Any] = {"client_kwargs": {"endpoint_url": endpoint}} if endpoint else {}
+
+    fs, urlpath = fsspec.core.url_to_fs(base, **storage_options)
+    name = base.rsplit("/", 1)[-1]
+
+    staging_root = Path(tempfile.mkdtemp(prefix="aegis-datapack-"))
+    atexit.register(shutil.rmtree, str(staging_root), ignore_errors=True)
+
+    local_dir = staging_root / name
+    local_dir.mkdir(parents=True, exist_ok=True)
+    fs.get(f"{str(urlpath).rstrip('/')}/", f"{str(local_dir).rstrip('/')}/", recursive=True)
+
+    logger.info("Staged s3 datapack from {} to {}", s3_url, local_dir)
+    _STAGED_INPUT_CACHE[s3_url] = local_dir
+    return local_dir
+
+
+def _resolve_input_path(raw: str) -> Path:
+    """Local Path for either a filesystem INPUT_PATH or a scheme:// URL."""
+    if "://" in raw:
+        return _stage_s3_input_locally(raw)
+    return Path(raw)
+
+
 def setup_paths_and_validation(in_p: Path | None, ou_p: Path | None) -> tuple[Path, Path]:
     """Setup and validate input/output paths and trace files."""
     if in_p is None:
@@ -410,7 +461,7 @@ def setup_paths_and_validation(in_p: Path | None, ou_p: Path | None) -> tuple[Pa
             raise ValueError(
                 "INPUT_PATH environment variable is not set. Please set INPUT_PATH to the datapack directory path."
             )
-        in_p = Path(input_path_str)
+        in_p = _resolve_input_path(input_path_str)
 
     if ou_p is None:
         output_path_str = os.environ.get("OUTPUT_PATH", "")
@@ -829,7 +880,7 @@ def platform_convert(
     from rcabench_platform.v3.internal.sources.rcabench import RCABenchDatapackLoader
 
     if in_p is None:
-        in_p = Path(os.environ.get("INPUT_PATH", ""))
+        in_p = _resolve_input_path(os.environ.get("INPUT_PATH", ""))
     if ou_p is None:
         ou_p = Path(os.environ.get("OUTPUT_PATH", ""))
 
@@ -985,7 +1036,9 @@ def run(
     datapack_name = input_path.name
 
     if convert:
-        platform_convert(datapack_name, in_p, ou_p, system)
+        # Pass the staged local input_path (not raw in_p which may be an s3://
+        # URL string from INPUT_PATH env). Avoids re-staging.
+        platform_convert(datapack_name, input_path, ou_p, system)
 
     # Return analysis metadata
     result: AnalysisResult = {
