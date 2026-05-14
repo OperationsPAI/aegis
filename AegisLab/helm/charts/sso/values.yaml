@@ -34,7 +34,10 @@ config:
   port: 8083
   workspace: "/app"
   binaryName: "sso"
-  subcommand: "sso"
+  # cmdutil.RunServe (extracted in commit 215ecee) exposes the SSO
+  # entrypoint as `serve`, matching the other extracted microservices.
+  # Override to `sso` only if running an older binary.
+  subcommand: "serve"
   database:
     mysql:
       host: "rcabench-mysql"

@@ -28,7 +28,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - {{ .Values.config.binaryName | default "sso" }}
-            - {{ .Values.config.subcommand | default "sso" }}
+            - {{ .Values.config.subcommand | default "serve" }}
             - --conf
             - {{ dig "configmap" "configFile" "/etc/aegis/config.prod.toml" (.Values.global | default dict) }}
             - --port

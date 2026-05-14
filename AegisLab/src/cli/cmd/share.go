@@ -126,7 +126,9 @@ var shareListCmd = &cobra.Command{
 
 		c := newClient()
 		var resp client.APIResponse[client.PaginatedData[shareLinkView]]
-		if err := c.Get("/api/v2/share?"+q.Encode(), &resp); err != nil {
+		// Gateway prefix is /api/v2/share/ — without the trailing slash it
+		// falls through to the catch-all aegis-api route and 404s.
+		if err := c.Get("/api/v2/share/?"+q.Encode(), &resp); err != nil {
 			return err
 		}
 		switch output.OutputFormat(flagOutput) {
@@ -166,8 +168,9 @@ var shareRevokeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		code := args[0]
 		c := newClient()
-		var resp client.APIResponse[any]
-		if err := c.Delete("/api/v2/share/"+url.PathEscape(code), &resp); err != nil {
+		// Server returns 204 No Content; pass nil dest so the client
+		// doesn't try to JSON-decode an empty body.
+		if err := c.Delete("/api/v2/share/"+url.PathEscape(code), nil); err != nil {
 			return err
 		}
 		output.PrintInfo(fmt.Sprintf("share link %q revoked", code))

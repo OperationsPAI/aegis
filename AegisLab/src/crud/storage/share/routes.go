@@ -16,6 +16,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 			{
 				g.POST("/upload", handler.Upload)
 				g.GET("", handler.List)
+				g.GET("/", handler.List)
 				g.GET("/:code", handler.GetOne)
 				g.DELETE("/:code", handler.Revoke)
 			}
