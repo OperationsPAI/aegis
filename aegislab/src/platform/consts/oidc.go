@@ -78,3 +78,24 @@ const (
 	OIDCErrorUnauthorizedClient   = "unauthorized_client"
 	OIDCErrorServerError          = "server_error"
 )
+
+// OIDC response_type values (RFC 6749 §3.1.1). Authorization Code flow is the
+// only one currently issued by aegis-sso.
+const (
+	OIDCResponseTypeCode = "code"
+)
+
+// Login-flow error codes surfaced to the console SPA via the
+// `?error=<code>` query param. Kept short + machine-readable so the SPA can
+// map them to localized strings; the backend never builds the human message.
+const (
+	LoginErrorInvalidCredentials      = "invalid_credentials"
+	LoginErrorUnsupportedResponseType = "unsupported_response_type"
+	LoginErrorUnknownClient           = "unknown_client"
+	LoginErrorClientNotConfigured     = "client_not_configured"
+	LoginErrorInvalidRedirectURI      = "invalid_redirect_uri"
+	LoginErrorInvalidClientOrRedirect = "invalid_client_or_redirect"
+	LoginErrorPKCERequired            = "pkce_required"
+	LoginErrorUnsupportedPKCEMethod   = "unsupported_pkce_method"
+	LoginErrorInternal                = "internal_error"
+)
