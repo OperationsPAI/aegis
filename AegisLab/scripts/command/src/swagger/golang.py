@@ -57,10 +57,12 @@ class GoSDK:
         relative_sdk_gen = self.SDK_GEN_DIR.relative_to(PROJECT_ROOT)
         relative_generator_config = self.GENERATOR_CONFIG_DIR.relative_to(PROJECT_ROOT)
 
-        # Use the same audience-filtered spec the python SDK uses (`sdk.json`)
-        # so the Go client and Python SDK stay in lockstep on what's exposed.
+        # aegisctl is an internal admin CLI — it touches portal, admin, and
+        # service surfaces. Feed the full unfiltered spec rather than an
+        # audience-filtered slice (sdk.json/portal.json/admin.json each only
+        # carry their own subset).
         container_input_path = (
-            volume_path / relative_swagger / "converted" / "sdk.json"
+            volume_path / relative_swagger / "openapi3" / "openapi.json"
         )
         container_output_path = volume_path / relative_sdk_gen
         container_config_path = (

@@ -304,6 +304,17 @@ func s3DatapackEnvVars() []corev1.EnvVar {
 
 func ptrBool(b bool) *bool { return &b }
 
+// joinDatapackPath joins a datapack-store path prefix with a datapack name.
+// For local filesystem prefixes filepath.Join is correct; for s3:// URLs
+// filepath.Join collapses "//" to "/" (yielding "s3:/bucket/..."), so route
+// s3:// prefixes through a URL-safe concatenation.
+func joinDatapackPath(prefix, name string) string {
+	if strings.HasPrefix(prefix, "s3://") {
+		return strings.TrimRight(prefix, "/") + "/" + name
+	}
+	return filepath.Join(prefix, name)
+}
+
 func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *datapackPayload, dbConfig *db.DatabaseConfig) ([]corev1.EnvVar, error) {
 	tz := config.GetString("system.timezone")
 	if tz == "" {
@@ -327,8 +338,8 @@ func getDatapackJobEnvVars(taskID string, datapackPathPrefix string, payload *da
 		{Name: "ABNORMAL_START", Value: strconv.FormatInt(payload.datapack.StartTime.Unix(), 10)},
 		{Name: "ABNORMAL_END", Value: strconv.FormatInt(payload.datapack.EndTime.Unix(), 10)},
 		{Name: "WORKSPACE", Value: "/app"},
-		{Name: "INPUT_PATH", Value: filepath.Join(datapackPathPrefix, payload.datapack.Name)},
-		{Name: "OUTPUT_PATH", Value: filepath.Join(datapackPathPrefix, payload.datapack.Name)},
+		{Name: "INPUT_PATH", Value: joinDatapackPath(datapackPathPrefix, payload.datapack.Name)},
+		{Name: "OUTPUT_PATH", Value: joinDatapackPath(datapackPathPrefix, payload.datapack.Name)},
 		{Name: "RCABENCH_BASE_URL", Value: config.GetString("k8s.service.internal_url")},
 		{Name: "RCABENCH_TOKEN", Value: serviceToken},
 		{Name: "RCABENCH_SKIP_STABILITY_VALIDATION", Value: "1"},
