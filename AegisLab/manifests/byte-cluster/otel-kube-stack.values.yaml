@@ -352,6 +352,16 @@ collectors:
           # password (which is now templated through hyperdx.secrets).
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -454,6 +464,16 @@ collectors:
           # password (which is now templated through hyperdx.secrets).
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -600,6 +620,16 @@ collectors:
         clickhouse:
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -720,6 +750,16 @@ collectors:
         clickhouse:
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -836,6 +876,16 @@ collectors:
         clickhouse:
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -952,6 +1002,16 @@ collectors:
         clickhouse:
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -1070,6 +1130,16 @@ collectors:
         clickhouse:
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -1188,6 +1258,16 @@ collectors:
         clickhouse:
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces
@@ -1306,6 +1386,16 @@ collectors:
         clickhouse:
           endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
           database: otel
+          # Multi-replica ClickStack cluster (replicas=2, shards=1). Without
+          # cluster_name the exporter creates plain MergeTree on whichever pod
+          # it connects to, producing diverging per-replica datasets; with it
+          # set, schema is provisioned as Replicated + Distributed ON CLUSTER.
+          cluster_name: default
+          # Pair cluster_name with the explicit Replicated engine — cluster_name
+          # alone only wraps DDL in `ON CLUSTER`; the engine stays MergeTree
+          # without this, defeating replication.
+          table_engine:
+            name: ReplicatedMergeTree
           ttl: 72h
           logs_table_name: otel_logs
           traces_table_name: otel_traces

@@ -33,6 +33,12 @@ clickhouse:
   logsTable: "otel_logs"
   metricsTable: "otel_metrics"
   ttl: "72h"
+  # Name of the ClickHouse cluster (matches `<remote_servers>` in
+  # clickhouse-server config; for the Altinity-style CH operator the default
+  # is `default`). When set, the exporter creates ReplicatedMergeTree +
+  # Distributed tables ON CLUSTER so multi-replica deployments stay in sync.
+  # Leave empty when the endpoint is a single-pod ClickHouse (kind/local).
+  clusterName: ""
 
 service:
   type: ClusterIP

@@ -39,6 +39,17 @@ data:
         metrics_table_name: {{ .Values.clickhouse.metricsTable | default "otel_metrics" | quote }}
         ttl: {{ .Values.clickhouse.ttl | default "72h" | quote }}
         timeout: 5s
+        {{- if .Values.clickhouse.clusterName }}
+        # When pointed at a multi-replica ClickHouse cluster, the exporter must
+        # know the cluster name AND be told to use the Replicated engine. With
+        # only cluster_name the DDL is wrapped in `ON CLUSTER` but the engine
+        # stays plain MergeTree, so each replica still keeps independent data.
+        # Pair both keys for true replication. Leave clusterName empty for
+        # single-pod ClickHouse deployments (kind/local).
+        cluster_name: {{ .Values.clickhouse.clusterName | quote }}
+        table_engine:
+          name: ReplicatedMergeTree
+        {{- end }}
       debug:
         verbosity: basic
     service:
