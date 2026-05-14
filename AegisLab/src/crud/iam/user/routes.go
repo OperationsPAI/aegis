@@ -53,6 +53,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 				users.POST("", middleware.RequireUserCreate, handler.CreateUser)
 				users.PATCH("/:user_id", middleware.RequireUserUpdate, handler.UpdateUser)
 				users.DELETE("/:user_id", middleware.RequireUserDelete, handler.DeleteUser)
+				users.POST("/:user_id/reset-password", middleware.RequireUserUpdate, handler.ResetPassword)
 			}
 		},
 	}

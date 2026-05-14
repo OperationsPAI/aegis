@@ -211,6 +211,53 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	dto.JSONResponse[any](c, http.StatusAccepted, "User updated successfully", resp)
 }
 
+// ResetPassword handles administrative password reset for another user.
+//
+//	@Summary		Reset a user's password (admin)
+//	@Description	Set a new password for the specified user without requiring the old password. Caller must hold user:update:all. On success the target user's existing access and refresh tokens are revoked.
+//	@Tags			Users
+//	@ID				reset_user_password
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			user_id	path		int										true	"User ID"
+//	@Param			request	body		ResetPasswordReq						true	"New password"
+//	@Success		200		{object}	dto.GenericResponse[ResetPasswordResp]	"Password reset successfully"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid user ID/request or password rejected by policy"
+//	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]				"Permission denied"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"User not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/users/{user_id}/reset-password [post]
+//	@x-api-type		{"sdk":"true","admin":"true"}
+func (h *Handler) ResetPassword(c *gin.Context) {
+	targetID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
+	var req ResetPasswordReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
+		return
+	}
+	if err := req.Validate(); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	start := time.Now()
+	actor := actorID(c)
+	details := fmt.Sprintf(`{"target_user_id":%d}`, targetID)
+	resp, err := h.service.ResetPassword(c.Request.Context(), targetID, req.NewPassword)
+	if err != nil {
+		middleware.AuditAction(c, "user.password.reset", details, err, start, actor, consts.ResourceUser)
+		httpx.HandleServiceError(c, err)
+		return
+	}
+	middleware.AuditAction(c, "user.password.reset", details, nil, start, actor, consts.ResourceUser)
+	dto.JSONResponse(c, http.StatusOK, "Password reset successfully", resp)
+}
+
 // AssignUserRole handles user-role assignment
 //
 //	@Summary		Assign global role to user

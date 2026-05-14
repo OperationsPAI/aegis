@@ -7,7 +7,7 @@ import (
 )
 
 func TestServiceCreateUserValidationError(t *testing.T) {
-	service := NewService(nil)
+	service := NewService(nil, nil)
 
 	_, err := service.CreateUser(t.Context(), &CreateUserReq{
 		Username: "demo",

@@ -1,14 +1,21 @@
 package auth
 
 import (
+	user "aegis/crud/iam/user"
+
 	"go.uber.org/fx"
 )
+
+// asUserSessionRevoker binds *TokenStore as user.SessionRevoker so the user
+// service can kick existing sessions on admin password resets.
+func asUserSessionRevoker(ts *TokenStore) user.SessionRevoker { return ts }
 
 var Module = fx.Module("auth",
 	fx.Provide(NewUserRepository),
 	fx.Provide(NewRoleRepository),
 	fx.Provide(NewAPIKeyRepository),
 	fx.Provide(NewTokenStore),
+	fx.Provide(asUserSessionRevoker),
 	fx.Provide(NewService),
 	fx.Provide(AsHandlerService),
 	fx.Provide(NewHandler),

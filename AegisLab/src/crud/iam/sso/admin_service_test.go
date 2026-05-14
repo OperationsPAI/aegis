@@ -27,7 +27,7 @@ func newAdminService(t *testing.T) (*AdminService, sqlmock.Sqlmock, func()) {
 	}), &gorm.Config{})
 	require.NoError(t, err)
 
-	svc := NewAdminService(user.NewService(user.NewRepository(db)), rbac.NewRepository(db))
+	svc := NewAdminService(user.NewService(user.NewRepository(db), nil), rbac.NewRepository(db))
 	return svc, mock, func() { _ = sqlDB.Close() }
 }
 

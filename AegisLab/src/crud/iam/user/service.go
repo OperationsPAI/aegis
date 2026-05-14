@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"aegis/platform/consts"
+	"aegis/platform/crypto"
 	"aegis/platform/dto"
 	"aegis/platform/model"
 	rbac "aegis/crud/iam/rbac"
@@ -18,12 +20,21 @@ import (
 
 const iamTracerName = "aegis/iam"
 
-type Service struct {
-	repo *Repository
+// SessionRevoker invalidates every still-live access token owned by a user.
+// Implemented by *auth.TokenStore and bound to the user service via fx so
+// admin password resets can kick existing sessions. Optional — when nil the
+// service falls back to "no session revocation" (e.g. unit tests).
+type SessionRevoker interface {
+	RevokeAllForUser(ctx context.Context, userID int) error
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo    *Repository
+	revoker SessionRevoker
+}
+
+func NewService(repo *Repository, revoker SessionRevoker) *Service {
+	return &Service{repo: repo, revoker: revoker}
 }
 
 func (s *Service) GetByID(_ context.Context, userID int) (*model.User, error) {
@@ -195,6 +206,68 @@ func (s *Service) UpdateUser(ctx context.Context, req *UpdateUserReq, userID int
 	}
 
 	return NewUserResp(updatedUser), nil
+}
+
+// ResetPassword rewrites the target user's password hash and, when a session
+// revoker is wired, invalidates every still-live token owned by that user so
+// the new password is the only way back in.
+func (s *Service) ResetPassword(ctx context.Context, targetUserID int, newPassword string) (*ResetPasswordResp, error) {
+	ctx, span := otel.Tracer(iamTracerName).Start(ctx, "iam/user/reset_password")
+	defer span.End()
+	tracing.SetSpanAttribute(ctx, "user.id", strconv.Itoa(targetUserID))
+
+	if targetUserID <= 0 {
+		return nil, fmt.Errorf("%w: invalid user id", consts.ErrBadRequest)
+	}
+	if strength, suggestions, err := crypto.ValidatePasswordStrength(newPassword); err != nil {
+		return nil, fmt.Errorf("%w: %v", consts.ErrBadRequest, err)
+	} else if strength == crypto.WeakPassword {
+		msg := "password is too weak"
+		if len(suggestions) > 0 {
+			msg = msg + ": " + suggestions[0]
+		}
+		return nil, fmt.Errorf("%w: %s", consts.ErrBadRequest, msg)
+	}
+
+	hashed, err := crypto.HashPassword(newPassword)
+	if err != nil {
+		return nil, fmt.Errorf("password hashing failed: %w", err)
+	}
+
+	var updatedUser *model.User
+	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
+		repo := NewRepository(tx)
+		u, err := repo.updateMutableUser(targetUserID, func(existing *model.User) {
+			existing.Password = hashed
+		})
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: user not found", consts.ErrNotFound)
+			}
+			return fmt.Errorf("failed to update password: %w", err)
+		}
+		updatedUser = u
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	sessionsRevoked := false
+	if s.revoker != nil {
+		if revErr := s.revoker.RevokeAllForUser(ctx, targetUserID); revErr != nil {
+			// Password is already rewritten — surface the revocation failure
+			// rather than silently leave stale sessions live.
+			return nil, fmt.Errorf("password updated but session revocation failed: %w", revErr)
+		}
+		sessionsRevoked = true
+	}
+
+	return &ResetPasswordResp{
+		UserID:            updatedUser.ID,
+		Username:          updatedUser.Username,
+		SessionsRevoked:   sessionsRevoked,
+		PasswordUpdatedAt: updatedUser.UpdatedAt.UTC().Format(time.RFC3339),
+	}, nil
 }
 
 func (s *Service) AssignRole(ctx context.Context, userID, roleID int) error {
