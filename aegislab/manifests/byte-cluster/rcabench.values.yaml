@@ -2,7 +2,10 @@ global:
   imageRegistry: ""
   # Volcengine LB EIP fronting edge-proxy:8082. Drives SSO redirect URIs +
   # any other "where does the browser reach us" value via chart templates.
-  publicBaseURL: "http://118.196.98.178:8082"
+  # https because edge-proxy terminates TLS with an internal self-signed
+  # cert (see `edgeProxy.tls.enabled` below). The SPA needs a Secure
+  # Context for `crypto.subtle.digest` (PKCE code_challenge).
+  publicBaseURL: "https://118.196.98.178:8082"
   # Single source of truth for the shared backend image — consumed by
   # parent-chart deployments and every extracted subchart (notify, future
   # sso/blob).
@@ -155,6 +158,11 @@ frontend:
 edgeProxy:
   enabled: true
   replicaCount: 1
+  tls:
+    # Self-signed (Caddy internal CA). Browser will warn on first visit;
+    # users accept once. PKCE requires Secure Context, so the SPA loaded
+    # from this LB origin needs HTTPS even without a real cert chain.
+    enabled: true
   service:
     # Public-facing entrypoint for byte-cluster. Volcengine VKE
     # provisions a CLB from its EIP pool on first apply; the EIP is

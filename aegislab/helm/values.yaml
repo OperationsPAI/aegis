@@ -94,6 +94,12 @@ edgeProxy:
   # Service (see edgeProxy.service.annotations override) so routine
   # aegis-api upgrades don't churn the LB.
   enabled: true
+  tls:
+    # Flip on to make Caddy terminate TLS with an internally-issued
+    # self-signed cert (`tls internal`). Required when the SPA is loaded
+    # over a non-localhost origin and needs `crypto.subtle.*` for PKCE.
+    # Off by default — kind / in-cluster talk plain HTTP.
+    enabled: false
   replicaCount: 1
   service:
     type: ClusterIP
