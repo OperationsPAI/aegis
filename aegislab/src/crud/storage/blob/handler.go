@@ -17,6 +17,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// lookupUploaderForACL resolves the uploader for an ACL check, tolerating
+// driver-only objects (legacy data uploaded outside the metadata-DB flow).
+// Returns (nil, nil) when the row is missing — callers should then ACL on
+// bucket-level rules with `uploadedBy=nil`. On any other repo error, writes
+// the error response and returns a non-nil error so the caller bails.
+func (h *Handler) lookupUploaderForACL(c *gin.Context, bucket, key string) (*int, error) {
+	rec, err := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+	if err == nil {
+		return rec.UploadedBy, nil
+	}
+	if errors.Is(err, ErrObjectNotFound) {
+		return nil, nil
+	}
+	h.writeServiceError(c, err)
+	return nil, err
+}
+
 // proxyPresign rewrites a PresignedRequest to point at the same-origin
 // /api/v2/blob/raw/<token> proxy endpoint. The browser then PUTs/GETs
 // bytes through aegis-blob which streams to the underlying driver
@@ -231,12 +248,11 @@ func (h *Handler) PresignGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	rec, err := h.svc.repo.FindByKey(c.Request.Context(), bucket, req.Key)
+	uploadedBy, err := h.lookupUploaderForACL(c, bucket, req.Key)
 	if err != nil {
-		h.writeServiceError(c, err)
-		return
+		return // helper already wrote the response
 	}
-	if !h.auth.CanRead(&b.Config, subjectFromContext(c), rec.UploadedBy) {
+	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -285,12 +301,11 @@ func (h *Handler) InlineGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	rec, err := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+	uploadedBy, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
-		h.writeServiceError(c, err)
 		return
 	}
-	if !h.auth.CanRead(&b.Config, subjectFromContext(c), rec.UploadedBy) {
+	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -359,13 +374,13 @@ func (h *Handler) Delete(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	rec, err := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+	uploadedBy, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
-		h.writeServiceError(c, err)
 		return
 	}
-	if !h.auth.CanWrite(&b.Config, subjectFromContext(c)) &&
-		(rec.UploadedBy == nil || *rec.UploadedBy != subjectFromContext(c).UserID) {
+	sub := subjectFromContext(c)
+	if !h.auth.CanWrite(&b.Config, sub) &&
+		(uploadedBy == nil || *uploadedBy != sub.UserID) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -452,12 +467,11 @@ func (h *Handler) StreamGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	rec, err := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+	uploadedBy, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
-		h.writeServiceError(c, err)
 		return
 	}
-	if !h.auth.CanRead(&b.Config, subjectFromContext(c), rec.UploadedBy) {
+	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -829,12 +843,11 @@ func (h *Handler) ZipObjects(c *gin.Context) {
 		return
 	}
 	for _, key := range req.Keys {
-		rec, recErr := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+		uploadedBy, recErr := h.lookupUploaderForACL(c, bucket, key)
 		if recErr != nil {
-			h.writeServiceError(c, recErr)
 			return
 		}
-		if !h.auth.CanRead(&b.Config, sub, rec.UploadedBy) {
+		if !h.auth.CanRead(&b.Config, sub, uploadedBy) {
 			dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 			return
 		}
