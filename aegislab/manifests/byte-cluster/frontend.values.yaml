@@ -1,6 +1,6 @@
 image:
   repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench-frontend
-  tag: byte-20260515-blob-gaps-r8
+  tag: byte-20260515-blob-gaps-r9
   pullPolicy: IfNotPresent
 
 # Frontend's own nginx /api proxy is unused on byte-cluster (edge-proxy
