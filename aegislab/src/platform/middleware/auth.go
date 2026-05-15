@@ -1,13 +1,37 @@
 package middleware
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"aegis/platform/consts"
-	"aegis/platform/dto"
 	"aegis/platform/crypto"
+	"aegis/platform/dto"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+)
+
+// trusted-header name constants — mirror clients/gateway.Header* without
+// creating an import cycle (middleware ← gateway ← sso ← middleware).
+const (
+	trustedHeaderUserID       = "X-Aegis-User-Id"
+	trustedHeaderUserEmail    = "X-Aegis-User-Email"
+	trustedHeaderRoles        = "X-Aegis-Roles"
+	trustedHeaderTokenAud     = "X-Aegis-Token-Aud"
+	trustedHeaderTokenJti     = "X-Aegis-Token-Jti"
+	trustedHeaderSignature    = "X-Aegis-Signature"
+	trustedHeaderUsername     = "X-Aegis-Username"
+	trustedHeaderIsActive     = "X-Aegis-Is-Active"
+	trustedHeaderIsAdmin      = "X-Aegis-Is-Admin"
+	trustedHeaderAuthType     = "X-Aegis-Auth-Type"
+	trustedHeaderAPIKeyID     = "X-Aegis-Api-Key-Id"
+	trustedHeaderAPIKeyScopes = "X-Aegis-Api-Key-Scopes"
 )
 
 // setUserClaims stashes JWT claims onto the Gin context using the canonical
@@ -70,6 +94,105 @@ func JWTAuth() gin.HandlerFunc {
 		// Both validations failed, return the user token error (more common case)
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized: "+err.Error())
 		c.Abort()
+	}
+}
+
+// TrustedHeaderAuth validates the X-Aegis-Signature HMAC over the
+// gateway-injected trusted-header set, populates the same ctx keys
+// JWTAuth used to populate, and rejects unsigned / forged requests
+// with 401. The gateway is the sole place that parses JWTs; services
+// use this middleware instead of JWTAuth.
+//
+// The signing key is read lazily from viper key "gateway.trusted_header_key".
+// If the key is empty the service refuses to start (caller should assert
+// this at boot time via AssertTrustedHeaderKeyConfigured).
+func TrustedHeaderAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := []byte(strings.TrimSpace(viper.GetString("gateway.trusted_header_key")))
+		if len(key) == 0 {
+			logrus.Error("middleware: gateway.trusted_header_key is empty; rejecting all requests")
+			dto.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
+			return
+		}
+
+		userID := c.GetHeader(trustedHeaderUserID)
+		email := c.GetHeader(trustedHeaderUserEmail)
+		roles := c.GetHeader(trustedHeaderRoles)
+		aud := c.GetHeader(trustedHeaderTokenAud)
+		jti := c.GetHeader(trustedHeaderTokenJti)
+		username := c.GetHeader(trustedHeaderUsername)
+		isActiveStr := c.GetHeader(trustedHeaderIsActive)
+		isAdminStr := c.GetHeader(trustedHeaderIsAdmin)
+		authType := c.GetHeader(trustedHeaderAuthType)
+		apiKeyIDStr := c.GetHeader(trustedHeaderAPIKeyID)
+		apiKeyScopesStr := c.GetHeader(trustedHeaderAPIKeyScopes)
+		sig := c.GetHeader(trustedHeaderSignature)
+
+		if userID == "" && sig == "" {
+			dto.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
+			return
+		}
+
+		canonical := strings.Join([]string{
+			userID, email, roles, aud, jti,
+			username, isActiveStr, isAdminStr, authType,
+			apiKeyIDStr, apiKeyScopesStr,
+		}, "|")
+		mac := hmac.New(sha256.New, key)
+		_, _ = mac.Write([]byte(canonical))
+		expected := hex.EncodeToString(mac.Sum(nil))
+
+		if !hmac.Equal([]byte(sig), []byte(expected)) {
+			dto.ErrorResponse(c, http.StatusUnauthorized, "forged trusted-header set")
+			c.Abort()
+			return
+		}
+
+		uid, _ := strconv.Atoi(userID)
+		isActive := isActiveStr == "1"
+		isAdmin := isAdminStr == "1"
+		apiKeyID, _ := strconv.Atoi(apiKeyIDStr)
+
+		var apiKeyScopes []string
+		if apiKeyScopesStr != "" {
+			apiKeyScopes = strings.Split(apiKeyScopesStr, ",")
+		}
+
+		var roleList []string
+		if roles != "" {
+			roleList = strings.Split(roles, ",")
+		}
+
+		isService := uid == 0 && strings.HasPrefix(roles, consts.ClaimSubjectServicePrefix)
+		if isService {
+			c.Set(consts.CtxKeyIsServiceToken, true)
+			c.Set(consts.CtxKeyTokenType, "service")
+		} else {
+			c.Set(consts.CtxKeyTokenType, "user")
+		}
+
+		c.Set(consts.CtxKeyUserID, uid)
+		c.Set(consts.CtxKeyUsername, username)
+		c.Set(consts.CtxKeyEmail, email)
+		c.Set(consts.CtxKeyIsActive, isActive)
+		c.Set(consts.CtxKeyIsAdmin, isAdmin)
+		c.Set(consts.CtxKeyUserRoles, roleList)
+		c.Set(consts.CtxKeyAuthType, authType)
+		c.Set(consts.CtxKeyAPIKeyID, apiKeyID)
+		c.Set(consts.CtxKeyAPIKeyScopes, apiKeyScopes)
+
+		c.Next()
+	}
+}
+
+// AssertTrustedHeaderKeyConfigured logs a fatal error and exits if
+// gateway.trusted_header_key is empty. Call this at service boot time
+// for any binary that uses TrustedHeaderAuth.
+func AssertTrustedHeaderKeyConfigured() {
+	if strings.TrimSpace(viper.GetString("gateway.trusted_header_key")) == "" {
+		logrus.Fatal("gateway.trusted_header_key must be set; service refuses to start without a signing key")
 	}
 }
 

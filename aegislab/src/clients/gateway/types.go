@@ -83,15 +83,27 @@ type Config struct {
 }
 
 // Trusted-header names injected by the gateway after JWT pre-auth.
-// Upstreams that opt in (Phase C) can trust these instead of
+// Upstreams that opt in to trusted-header auth can trust these instead of
 // re-verifying the JWT. Always sent together with X-Aegis-Signature
 // (HMAC of the canonical header set keyed by gateway.trusted_header_key).
+//
+// Canonical string (v2) — fields joined by "|" in this exact order:
+//
+//	<user_id>|<email>|<roles>|<aud>|<jti>|<username>|<is_active>|<is_admin>|<auth_type>|<api_key_id>|<api_key_scopes>
+//
+// is_active and is_admin are "1" or "0". api_key_scopes is comma-separated.
 const (
-	HeaderUserID    = "X-Aegis-User-Id"
-	HeaderUserEmail = "X-Aegis-User-Email"
-	HeaderRoles     = "X-Aegis-Roles"
-	HeaderTokenAud  = "X-Aegis-Token-Aud"
-	HeaderTokenJti  = "X-Aegis-Token-Jti"
-	HeaderSignature = "X-Aegis-Signature"
-	HeaderRequestID = "X-Aegis-Request-Id"
+	HeaderUserID        = "X-Aegis-User-Id"
+	HeaderUserEmail     = "X-Aegis-User-Email"
+	HeaderRoles         = "X-Aegis-Roles"
+	HeaderTokenAud      = "X-Aegis-Token-Aud"
+	HeaderTokenJti      = "X-Aegis-Token-Jti"
+	HeaderSignature     = "X-Aegis-Signature"
+	HeaderRequestID     = "X-Aegis-Request-Id"
+	HeaderUsername      = "X-Aegis-Username"
+	HeaderIsActive      = "X-Aegis-Is-Active"
+	HeaderIsAdmin       = "X-Aegis-Is-Admin"
+	HeaderAuthType      = "X-Aegis-Auth-Type"
+	HeaderAPIKeyID      = "X-Aegis-Api-Key-Id"
+	HeaderAPIKeyScopes  = "X-Aegis-Api-Key-Scopes"
 )

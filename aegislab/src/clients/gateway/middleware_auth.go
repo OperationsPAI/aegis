@@ -110,41 +110,64 @@ func (a *Authenticator) enforce(r *http.Request, route *Route) error {
 
 func (a *Authenticator) injectUserHeaders(r *http.Request, c *crypto.Claims) {
 	aud := ""
-	if c.Audience != nil && len(c.Audience) > 0 {
+	if len(c.Audience) > 0 {
 		aud = c.Audience[0]
 	}
+	isActive := "0"
+	if c.IsActive {
+		isActive = "1"
+	}
+	isAdmin := "0"
+	if c.IsAdmin {
+		isAdmin = "1"
+	}
 	headers := map[string]string{
-		HeaderUserID:    strconv.Itoa(c.UserID),
-		HeaderUserEmail: c.Email,
-		HeaderRoles:     strings.Join(c.Roles, ","),
-		HeaderTokenAud:  aud,
-		HeaderTokenJti:  c.ID,
+		HeaderUserID:       strconv.Itoa(c.UserID),
+		HeaderUserEmail:    c.Email,
+		HeaderRoles:        strings.Join(c.Roles, ","),
+		HeaderTokenAud:     aud,
+		HeaderTokenJti:     c.ID,
+		HeaderUsername:     c.Username,
+		HeaderIsActive:     isActive,
+		HeaderIsAdmin:      isAdmin,
+		HeaderAuthType:     c.AuthType,
+		HeaderAPIKeyID:     strconv.Itoa(c.APIKeyID),
+		HeaderAPIKeyScopes: strings.Join(c.APIKeyScopes, ","),
 	}
 	a.applyAndSign(r, headers)
 }
 
 func (a *Authenticator) injectServiceHeaders(r *http.Request, c *crypto.ServiceClaims) {
 	aud := ""
-	if c.Audience != nil && len(c.Audience) > 0 {
+	if len(c.Audience) > 0 {
 		aud = c.Audience[0]
 	}
 	headers := map[string]string{
-		HeaderUserID:    "0",
-		HeaderUserEmail: "",
-		HeaderRoles:     consts.ClaimSubjectServicePrefix + c.Service,
-		HeaderTokenAud:  aud,
-		HeaderTokenJti:  c.ID,
+		HeaderUserID:       "0",
+		HeaderUserEmail:    "",
+		HeaderRoles:        consts.ClaimSubjectServicePrefix + c.Service,
+		HeaderTokenAud:     aud,
+		HeaderTokenJti:     c.ID,
+		HeaderUsername:     "service",
+		HeaderIsActive:     "1",
+		HeaderIsAdmin:      "0",
+		HeaderAuthType:     consts.AuthTypeService,
+		HeaderAPIKeyID:     "0",
+		HeaderAPIKeyScopes: "",
 	}
 	a.applyAndSign(r, headers)
 }
 
-// applyAndSign writes the canonical header set and an HMAC-SHA256 over
-// "<user_id>|<email>|<roles>|<aud>|<jti>" so an upstream can detect a
-// caller forging headers from outside the gateway. v1 spec: simple
-// canonicalization, no replay protection (jti carries that).
+// applyAndSign writes the canonical header set and an HMAC-SHA256 over the
+// v2 canonical string so an upstream can detect a caller forging headers
+// from outside the gateway. Canonical order (v2):
+//
+//	<user_id>|<email>|<roles>|<aud>|<jti>|<username>|<is_active>|<is_admin>|<auth_type>|<api_key_id>|<api_key_scopes>
 func (a *Authenticator) applyAndSign(r *http.Request, h map[string]string) {
 	canonical := strings.Join([]string{
 		h[HeaderUserID], h[HeaderUserEmail], h[HeaderRoles], h[HeaderTokenAud], h[HeaderTokenJti],
+		h[HeaderUsername], h[HeaderIsActive], h[HeaderIsAdmin], h[HeaderAuthType],
+		h[HeaderAPIKeyID], h[HeaderAPIKeyScopes],
 	}, "|")
 	mac := hmac.New(sha256.New, a.key)
 	_, _ = mac.Write([]byte(canonical))
