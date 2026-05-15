@@ -239,6 +239,7 @@ blob:
       # by the BuildDatapack k8s Job to project AWS_* env into the
       # rcabench-platform CLI when OUTPUT_PATH=s3://… (PR7).
       creds_secret_name: "rustfs-admin"
+      proxy_uploads: true
     execution:
       driver: "s3"
       endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
@@ -248,6 +249,7 @@ blob:
       path_style: true
       access_key_env: "BLOB_S3_EXECUTION_ACCESS_KEY"
       secret_key_env: "BLOB_S3_EXECUTION_SECRET_KEY"
+      proxy_uploads: true
     shared:
       # Bucket backing the ephemeral file-sharing feature
       # (`POST /api/v2/share/upload` + `GET /s/:code`). Lives on the
@@ -261,6 +263,7 @@ blob:
       path_style: true
       access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
       secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
+      proxy_uploads: true
     # Logical buckets for the helm-chart and dataset stores. These are
     # resolved by blob.Registry when HelmFileStore / DatasetFileStore call
     # the blob.Client (logical name → physical bucket). Same rustfs
@@ -274,6 +277,7 @@ blob:
       path_style: true
       access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
       secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+      proxy_uploads: true
     dataset:
       driver: "s3"
       endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
@@ -283,6 +287,7 @@ blob:
       path_style: true
       access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
       secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+      proxy_uploads: true
   share:
     bucket: "shared"
     # Externally-reachable URL prefix for `/s/:code` redirect URLs.

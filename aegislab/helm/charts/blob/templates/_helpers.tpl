@@ -102,6 +102,9 @@ work without callers needing to adapt.
 {{- if eq $b.driver "localfs" }}
 {{ $pad }}root = {{ $b.root | quote }}
 {{- end }}
+{{- if $b.proxy_uploads }}
+{{ $pad }}proxy_uploads = true
+{{- end }}
 {{- end }}
 {{- with $blob.share | default dict }}
 

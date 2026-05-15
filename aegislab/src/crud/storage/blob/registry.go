@@ -42,6 +42,7 @@ type BucketConfigRecord struct {
 	ContentTypes    string    `gorm:"type:text"` // comma-separated allow-list
 	WriteRoles      string    `gorm:"type:text"` // comma-separated
 	ReadRoles       string    `gorm:"type:text"` // comma-separated
+	ProxyUploads    bool
 	CreatedAt       time.Time `gorm:"autoCreateTime"`
 }
 
@@ -85,6 +86,14 @@ type BucketConfig struct {
 	// ACL — simple role lists; service tokens get the "service" role.
 	WriteRoles []string
 	ReadRoles  []string
+
+	// ProxyUploads forces presign-put / presign-get to mint same-origin
+	// `/api/v2/blob/raw/<token>` URLs instead of returning a direct
+	// driver URL. The browser then PUTs/GETs bytes through aegis-blob,
+	// which streams them to the underlying driver server-side. Used when
+	// the driver's presigned URLs are unreachable from the browser
+	// (e.g. SigV4 break across edge proxies / LBs).
+	ProxyUploads bool
 }
 
 // AllowsContentType returns true if the bucket has no allowlist or the
@@ -273,6 +282,7 @@ func parseBucketConfig(name string) (BucketConfig, error) {
 		InlineMaxBytes:      viper.GetInt64(prefix + ".inline_max_bytes"),
 		WriteRoles:          viper.GetStringSlice(prefix + ".write_roles"),
 		ReadRoles:           viper.GetStringSlice(prefix + ".read_roles"),
+		ProxyUploads:        viper.GetBool(prefix + ".proxy_uploads"),
 	}
 	if cfg.Driver == "" {
 		return cfg, fmt.Errorf("driver is required")
@@ -313,6 +323,7 @@ func bucketConfigToRecord(cfg BucketConfig) BucketConfigRecord {
 		ContentTypes:   strings.Join(cfg.AllowedContentTypes, ","),
 		WriteRoles:     strings.Join(cfg.WriteRoles, ","),
 		ReadRoles:      strings.Join(cfg.ReadRoles, ","),
+		ProxyUploads:   cfg.ProxyUploads,
 	}
 }
 
@@ -341,6 +352,7 @@ func bucketConfigFromRecord(r BucketConfigRecord) BucketConfig {
 		AllowedContentTypes: splitNonEmpty(r.ContentTypes),
 		WriteRoles:          splitNonEmpty(r.WriteRoles),
 		ReadRoles:           splitNonEmpty(r.ReadRoles),
+		ProxyUploads:        r.ProxyUploads,
 	}
 	if cfg.InlineMaxBytes == 0 {
 		cfg.InlineMaxBytes = 64 * 1024

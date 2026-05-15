@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,32 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// proxyPresign rewrites a PresignedRequest to point at the same-origin
+// /api/v2/blob/raw/<token> proxy endpoint. The browser then PUTs/GETs
+// bytes through aegis-blob which streams to the underlying driver
+// server-side. Used when the driver's native presigned URLs aren't
+// reachable from the browser (e.g. SigV4 break across edge proxies).
+func (h *Handler) proxyPresign(bucket, key string, op Operation, ttl time.Duration) (*PresignedRequest, error) {
+	if ttl <= 0 {
+		ttl = 10 * time.Minute
+	}
+	exp := time.Now().Add(ttl)
+	tok, err := EncodeToken(h.signingKey, Token{Bucket: bucket, Key: key, Op: op, Exp: exp.Unix()})
+	if err != nil {
+		return nil, err
+	}
+	method := "PUT"
+	if op == OpGet {
+		method = "GET"
+	}
+	return &PresignedRequest{
+		Method:  method,
+		URL:     "/api/v2/blob/raw/" + url.PathEscape(tok),
+		Headers: map[string]string{},
+		Expires: exp,
+	}, nil
+}
 
 // Handler hosts the HTTP surface — the ingestion role. Auth happens
 // upstream in middleware; per-bucket ACL happens here via Authorizer.
@@ -159,6 +186,17 @@ func (h *Handler) PresignPut(c *gin.Context) {
 		h.writeServiceError(c, err)
 		return
 	}
+	if b.Config.ProxyUploads {
+		pr, perr := h.proxyPresign(bucket, res.Key, OpPut, in.TTL)
+		if perr != nil {
+			dto.ErrorResponse(c, http.StatusInternalServerError, perr.Error())
+			return
+		}
+		if req.ContentType != "" {
+			pr.Headers["Content-Type"] = req.ContentType
+		}
+		res.Presigned = pr
+	}
 	c.JSON(http.StatusOK, res)
 }
 
@@ -202,13 +240,21 @@ func (h *Handler) PresignGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
+	ttl := time.Duration(req.TTLSeconds) * time.Second
 	pr, err := h.svc.PresignGet(c.Request.Context(), bucket, req.Key, GetOpts{
 		ResponseContentType: req.ResponseContentType,
-		TTL:                 time.Duration(req.TTLSeconds) * time.Second,
+		TTL:                 ttl,
 	})
 	if err != nil {
 		h.writeServiceError(c, err)
 		return
+	}
+	if b.Config.ProxyUploads {
+		pr, err = h.proxyPresign(bucket, req.Key, OpGet, ttl)
+		if err != nil {
+			dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 	c.JSON(http.StatusOK, pr)
 }
