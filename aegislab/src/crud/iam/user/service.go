@@ -15,6 +15,7 @@ import (
 	"aegis/platform/tracing"
 
 	"go.opentelemetry.io/otel"
+	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
@@ -33,8 +34,18 @@ type Service struct {
 	revoker SessionRevoker
 }
 
-func NewService(repo *Repository, revoker SessionRevoker) *Service {
-	return &Service{repo: repo, revoker: revoker}
+// ServiceParams lets fx skip the revoker dependency for binaries that
+// don't wire auth.Module (configcenter, notify, …). Methods that need it
+// nil-check before calling — see ResetPassword.
+type ServiceParams struct {
+	fx.In
+
+	Repo    *Repository
+	Revoker SessionRevoker `optional:"true"`
+}
+
+func NewService(p ServiceParams) *Service {
+	return &Service{repo: p.Repo, revoker: p.Revoker}
 }
 
 func (s *Service) GetByID(_ context.Context, userID int) (*model.User, error) {
