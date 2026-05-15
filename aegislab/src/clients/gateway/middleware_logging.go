@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +10,18 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
+
+// redactSensitivePathSegments masks signed-token segments that appear in URL
+// paths. /raw/<HMAC-token> is the only case today — the token is the auth
+// for that endpoint, so it leaking to an OTel collector / log aggregator is
+// equivalent to leaking a 10-minute bearer credential.
+func redactSensitivePathSegments(path string) string {
+	const marker = "/api/v2/blob/raw/"
+	if i := strings.Index(path, marker); i >= 0 {
+		return path[:i+len(marker)] + "<redacted>"
+	}
+	return path
+}
 
 // statusRecorder captures the response status code so the access log
 // can include it without buffering the body.
@@ -51,7 +64,7 @@ func LoggingMiddleware(route *Route, next http.Handler) http.Handler {
 			"route":      route.Prefix,
 			"upstream":   route.Upstream,
 			"method":     r.Method,
-			"path":       r.URL.Path,
+			"path":       redactSensitivePathSegments(r.URL.Path),
 			"status":     rec.status,
 			"latency_ms": time.Since(start).Milliseconds(),
 			"user_id":    r.Header.Get(HeaderUserID),

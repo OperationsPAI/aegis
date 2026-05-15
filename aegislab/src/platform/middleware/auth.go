@@ -114,7 +114,23 @@ func JWTAuth() gin.HandlerFunc {
 // this variable.
 func TrustedHeaderAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.GetHeader(trustedHeaderSignature) == "" && os.Getenv("AEGIS_DEV_JWT_BYPASS") == "true" {
+		hasSig := c.GetHeader(trustedHeaderSignature) != ""
+		hasBearer := c.GetHeader("Authorization") != ""
+		// Inter-service / K8s-Job callers bypass the gateway and present
+		// a service-token JWT directly (e.g. orchestrator k8s.Job →
+		// rcabench-aegis-api with RCABENCH_TOKEN). Gateway hasn't signed
+		// trusted headers for them. Treat "no signature + bearer present"
+		// as a service-direct call and fall through to JWTAuth, which
+		// itself distinguishes user vs service tokens against SSO. Only
+		// in-cluster callers can reach a service directly anyway — the
+		// gateway is the sole internet ingress.
+		if !hasSig && hasBearer {
+			JWTAuth()(c)
+			return
+		}
+		// Dev escape valve for engineers port-forwarding straight to a
+		// service. Explicit opt-in only; production must NOT set this.
+		if !hasSig && os.Getenv("AEGIS_DEV_JWT_BYPASS") == "true" {
 			JWTAuth()(c)
 			return
 		}

@@ -91,33 +91,84 @@ func TestTrustedHeaderAuth_DevJWTBypass(t *testing.T) {
 	}
 }
 
-// TestTrustedHeaderAuth_DevJWTBypass_DisabledByDefault verifies that without
-// AEGIS_DEV_JWT_BYPASS, a request with only an Authorization header and no
-// trusted-header signature is rejected.
-func TestTrustedHeaderAuth_DevJWTBypass_DisabledByDefault(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+// rejectAllSvc fails every token. Used to model an unrecognised bearer
+// reaching the service-direct fall-through.
+type rejectAllSvc struct {
+	noopMiddlewareService
+}
 
+func (rejectAllSvc) VerifyToken(_ context.Context, _ string) (*crypto.Claims, error) {
+	return nil, errors.New("invalid user token")
+}
+
+func (rejectAllSvc) VerifyServiceToken(_ context.Context, _ string) (*crypto.ServiceClaims, error) {
+	return nil, errors.New("invalid service token")
+}
+
+// TestTrustedHeaderAuth_ServiceDirect verifies that a bearer-bearing request
+// without a trusted-header signature falls through to JWTAuth: K8s Jobs and
+// other in-cluster service-direct callers depend on this. A *valid* bearer
+// succeeds; an *invalid* one is rejected by JWTAuth itself.
+func TestTrustedHeaderAuth_ServiceDirect_ValidBearer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 	viper.Set("gateway.trusted_header_key", "test-signing-key")
 	t.Cleanup(func() { viper.Set("gateway.trusted_header_key", "") })
-
-	// Ensure bypass is off regardless of ambient environment.
 	if err := os.Unsetenv("AEGIS_DEV_JWT_BYPASS"); err != nil {
 		t.Fatal(err)
 	}
-
 	w := httptest.NewRecorder()
 	_, router := gin.CreateTestContext(w)
-
 	router.GET("/test", InjectService(bypassSvc{}), TrustedHeaderAuth(), func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
-
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer some-valid-token")
-	// No X-Aegis-Signature → must be rejected by trusted-header check.
 	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("service-direct valid bearer: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
 
+// TestTrustedHeaderAuth_ServiceDirect_InvalidBearer covers the negative path:
+// the service-direct fall-through still rejects forged bearers.
+func TestTrustedHeaderAuth_ServiceDirect_InvalidBearer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	viper.Set("gateway.trusted_header_key", "test-signing-key")
+	t.Cleanup(func() { viper.Set("gateway.trusted_header_key", "") })
+	if err := os.Unsetenv("AEGIS_DEV_JWT_BYPASS"); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+	router.GET("/test", InjectService(rejectAllSvc{}), TrustedHeaderAuth(), func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Authorization", "Bearer forged")
+	router.ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("no bypass: expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf("service-direct invalid bearer: expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestTrustedHeaderAuth_NoAuthMaterial verifies that a request with neither
+// trusted-header signature nor Authorization header is rejected outright.
+func TestTrustedHeaderAuth_NoAuthMaterial(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	viper.Set("gateway.trusted_header_key", "test-signing-key")
+	t.Cleanup(func() { viper.Set("gateway.trusted_header_key", "") })
+	if err := os.Unsetenv("AEGIS_DEV_JWT_BYPASS"); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	_, router := gin.CreateTestContext(w)
+	router.GET("/test", InjectService(rejectAllSvc{}), TrustedHeaderAuth(), func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	// No Authorization, no signature.
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("no-auth: expected 401, got %d: %s", w.Code, w.Body.String())
 	}
 }
