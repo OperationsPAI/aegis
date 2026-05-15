@@ -123,7 +123,7 @@ func LoginWithPassword(server, username, password string) (*LoginResult, error) 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
-	httpClient := &http.Client{Timeout: 30 * time.Second}
+	httpClient := &http.Client{Timeout: 30 * time.Second, Transport: DefaultTransport()}
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("login failed: %w", err)

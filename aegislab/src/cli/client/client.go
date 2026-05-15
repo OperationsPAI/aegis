@@ -68,7 +68,8 @@ func NewClient(baseURL, token string, timeout time.Duration) *Client {
 		BaseURL: baseURL,
 		Token:   token,
 		HTTPClient: &http.Client{
-			Timeout: timeout,
+			Timeout:   timeout,
+			Transport: DefaultTransport(),
 		},
 	}
 }

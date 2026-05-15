@@ -30,7 +30,8 @@ func NewSSEReader(baseURL, path, token string) *SSEReader {
 		url:   baseURL + path,
 		token: token,
 		client: &http.Client{
-			Timeout: 0, // No timeout for streaming connections.
+			Timeout:   0, // No timeout for streaming connections.
+			Transport: DefaultTransport(),
 		},
 	}
 }

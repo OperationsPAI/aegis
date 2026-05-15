@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"aegis/cli/apiclient"
+	"aegis/cli/client"
 	"aegis/cli/internal/cli/clierr"
 	"aegis/cli/internal/cli/exitcode"
 )
@@ -52,7 +53,7 @@ func getLastResponseHeader(name string) string {
 // using the returned ctx so the BearerAuth header gets attached.
 func newAPIClient() (*apiclient.APIClient, context.Context) {
 	cfg := apiclient.NewConfiguration()
-	cfg.HTTPClient = &http.Client{Transport: &captureTransport{base: http.DefaultTransport}}
+	cfg.HTTPClient = &http.Client{Transport: &captureTransport{base: client.DefaultTransport()}}
 	if flagServer != "" {
 		cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(flagServer, "/")}}
 	}
