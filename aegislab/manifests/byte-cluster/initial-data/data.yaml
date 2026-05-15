@@ -464,19 +464,19 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260425-df5a26f
+              default_value: 20260423-3ecac5f
               overridable: true
             - key: frontend.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260425-df5a26f
+              default_value: 20260423-3ecac5f
               overridable: true
             - key: loadgen.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: 20260425-df5a26f
+              default_value: 20260423-3ecac5f
               overridable: true
             - key: otel.instrumentation
               type: 0
