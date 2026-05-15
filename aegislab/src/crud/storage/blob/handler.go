@@ -775,6 +775,24 @@ func (h *Handler) ZipObjects(c *gin.Context) {
 		return
 	}
 	sub := subjectFromContext(c)
+	// Validate everything before touching the response writer — once
+	// `Content-Type: application/zip` is set we can no longer surface a
+	// proper JSON error.
+	if len(req.Keys) == 0 {
+		dto.ErrorResponse(c, http.StatusBadRequest, "keys must be non-empty")
+		return
+	}
+	for _, key := range req.Keys {
+		rec, recErr := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+		if recErr != nil {
+			h.writeServiceError(c, recErr)
+			return
+		}
+		if !h.auth.CanRead(&b.Config, sub, rec.UploadedBy) {
+			dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+			return
+		}
+	}
 	archiveName := req.ArchiveName
 	if archiveName == "" {
 		archiveName = bucket + ".zip"
@@ -784,16 +802,6 @@ func (h *Handler) ZipObjects(c *gin.Context) {
 	zw := zip.NewWriter(c.Writer)
 	var totalBytes int64
 	for _, key := range req.Keys {
-		rec, recErr := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
-		if recErr != nil {
-			_ = zw.Close()
-			// headers already sent; can't return a proper JSON error — abort
-			return
-		}
-		if !h.auth.CanRead(&b.Config, sub, rec.UploadedBy) {
-			_ = zw.Close()
-			return
-		}
 		rc, meta, getErr := h.svc.GetReader(c.Request.Context(), bucket, key)
 		if getErr != nil {
 			_ = zw.Close()

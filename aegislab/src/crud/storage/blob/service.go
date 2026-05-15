@@ -225,9 +225,32 @@ func (s *Service) Copy(ctx context.Context, bucket, srcKey, dstKey string, move 
 	if err != nil {
 		return nil, err
 	}
+	// Best-effort inherit of producer-side fields from src — when src
+	// predates this code path (no DB row), fall back to zero values so
+	// the copy still becomes first-class metadata.
+	srcRec, _ := s.repo.FindByKey(ctx, bucket, srcKey)
 	meta, err := b.Driver.Copy(ctx, srcKey, dstKey)
 	if err != nil {
 		return nil, err
+	}
+	dstRec := &ObjectRecord{
+		Bucket:      bucket,
+		StorageKey:  dstKey,
+		SizeBytes:   meta.Size,
+		ContentType: meta.ContentType,
+		ETag:        meta.ETag,
+	}
+	if srcRec != nil {
+		dstRec.UploadedBy = srcRec.UploadedBy
+		dstRec.EntityKind = srcRec.EntityKind
+		dstRec.EntityID = srcRec.EntityID
+	}
+	if b.Config.RetentionDays > 0 {
+		exp := s.clock.Now().Add(time.Duration(b.Config.RetentionDays) * 24 * time.Hour)
+		dstRec.ExpiresAt = &exp
+	}
+	if err := s.repo.Create(ctx, dstRec); err != nil {
+		return meta, fmt.Errorf("persist dst metadata: %w", err)
 	}
 	if move {
 		if delErr := s.repo.SoftDelete(ctx, bucket, srcKey); delErr != nil {
