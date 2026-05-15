@@ -16,7 +16,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceAdmin,
 		Name:     "systemmetric.admin",
 		Register: func(v2 *gin.RouterGroup) {
-			system := v2.Group("/system", middleware.JWTAuth(), middleware.RequireSystemRead)
+			system := v2.Group("/system", middleware.TrustedHeaderAuth(), middleware.RequireSystemRead)
 			{
 				system.GET("/metrics", handler.GetSystemMetrics)
 				system.GET("/metrics/history", handler.GetSystemMetricsHistory)

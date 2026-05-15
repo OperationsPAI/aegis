@@ -154,6 +154,7 @@ func (a *Authenticator) injectServiceHeaders(r *http.Request, c *crypto.ServiceC
 		HeaderAuthType:     consts.AuthTypeService,
 		HeaderAPIKeyID:     "0",
 		HeaderAPIKeyScopes: "",
+		HeaderTaskID:       c.TaskID,
 	}
 	a.applyAndSign(r, headers)
 }
@@ -162,12 +163,12 @@ func (a *Authenticator) injectServiceHeaders(r *http.Request, c *crypto.ServiceC
 // v2 canonical string so an upstream can detect a caller forging headers
 // from outside the gateway. Canonical order (v2):
 //
-//	<user_id>|<email>|<roles>|<aud>|<jti>|<username>|<is_active>|<is_admin>|<auth_type>|<api_key_id>|<api_key_scopes>
+//	<user_id>|<email>|<roles>|<aud>|<jti>|<username>|<is_active>|<is_admin>|<auth_type>|<api_key_id>|<api_key_scopes>|<task_id>
 func (a *Authenticator) applyAndSign(r *http.Request, h map[string]string) {
 	canonical := strings.Join([]string{
 		h[HeaderUserID], h[HeaderUserEmail], h[HeaderRoles], h[HeaderTokenAud], h[HeaderTokenJti],
 		h[HeaderUsername], h[HeaderIsActive], h[HeaderIsAdmin], h[HeaderAuthType],
-		h[HeaderAPIKeyID], h[HeaderAPIKeyScopes],
+		h[HeaderAPIKeyID], h[HeaderAPIKeyScopes], h[HeaderTaskID],
 	}, "|")
 	mac := hmac.New(sha256.New, a.key)
 	_, _ = mac.Write([]byte(canonical))

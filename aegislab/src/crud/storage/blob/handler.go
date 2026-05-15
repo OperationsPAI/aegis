@@ -561,21 +561,47 @@ func (h *Handler) Raw(c *gin.Context) {
 	}
 	switch tok.Op {
 	case OpGet:
-		if c.Request.Method != http.MethodGet {
+		switch c.Request.Method {
+		case http.MethodHead:
+			meta, err := b.Driver.Stat(c.Request.Context(), tok.Key)
+			if err != nil {
+				h.writeServiceError(c, err)
+				return
+			}
+			if meta.ContentType != "" {
+				c.Header("Content-Type", meta.ContentType)
+			}
+			c.Header("Content-Length", strconv.FormatInt(meta.Size, 10))
+			c.Header("Accept-Ranges", "bytes")
+			c.Status(http.StatusOK)
+			return
+		case http.MethodGet:
+			rc, meta, err := b.Driver.Get(c.Request.Context(), tok.Key)
+			if err != nil {
+				h.writeServiceError(c, err)
+				return
+			}
+			defer func() { _ = rc.Close() }()
+			if meta.ContentType != "" {
+				c.Header("Content-Type", meta.ContentType)
+			}
+			c.Header("Content-Length", strconv.FormatInt(meta.Size, 10))
+			c.Header("Accept-Ranges", "bytes")
+			// hyparquet and the browser <video>/<audio> stack do Range
+			// requests for tail metadata + chunked reads. Delegate to the
+			// stdlib http.ServeContent so we get 206 + ETag handling for
+			// free. ServeContent wants an io.ReadSeeker; for non-seekable
+			// driver streams, fall back to io.Copy.
+			if seeker, ok := rc.(io.ReadSeeker); ok {
+				http.ServeContent(c.Writer, c.Request, tok.Key, meta.UpdatedAt, seeker)
+			} else {
+				_, _ = io.Copy(c.Writer, rc)
+			}
+			return
+		default:
 			dto.ErrorResponse(c, http.StatusMethodNotAllowed, "token is GET-only")
 			return
 		}
-		rc, meta, err := b.Driver.Get(c.Request.Context(), tok.Key)
-		if err != nil {
-			h.writeServiceError(c, err)
-			return
-		}
-		defer func() { _ = rc.Close() }()
-		if meta.ContentType != "" {
-			c.Header("Content-Type", meta.ContentType)
-		}
-		c.Header("Content-Length", strconv.FormatInt(meta.Size, 10))
-		_, _ = io.Copy(c.Writer, rc)
 	case OpPut:
 		if c.Request.Method != http.MethodPut {
 			dto.ErrorResponse(c, http.StatusMethodNotAllowed, "token is PUT-only")

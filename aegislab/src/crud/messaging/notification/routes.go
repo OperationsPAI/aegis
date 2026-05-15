@@ -14,7 +14,7 @@ func RoutesPortalInbox(handler *InboxHandler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "notification.portal.inbox",
 		Register: func(v2 *gin.RouterGroup) {
-			inbox := v2.Group("/inbox", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
+			inbox := v2.Group("/inbox", middleware.TrustedHeaderAuth(), middleware.RequireHumanUserAuth())
 			{
 				inbox.GET("", handler.List)
 				inbox.GET("/unread-count", handler.UnreadCount)
@@ -40,7 +40,7 @@ func RoutesSDKIngestion(handler *InboxHandler) framework.RouteRegistrar {
 		Audience: framework.AudienceSDK,
 		Name:     "notification.sdk.ingestion",
 		Register: func(v2 *gin.RouterGroup) {
-			events := v2.Group("/events", middleware.JWTAuth())
+			events := v2.Group("/events", middleware.TrustedHeaderAuth())
 			{
 				events.POST(":publish", handler.PublishEvent)
 			}

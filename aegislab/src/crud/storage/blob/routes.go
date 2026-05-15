@@ -15,7 +15,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "blob.portal",
 		Register: func(v2 *gin.RouterGroup) {
-			g := v2.Group("/blob", middleware.JWTAuth())
+			g := v2.Group("/blob", middleware.TrustedHeaderAuth())
 			{
 				g.GET("/buckets", handler.ListBuckets)
 				g.POST("/buckets", handler.CreateBucket)
@@ -45,6 +45,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 			// Mounted under /blob so it sits alongside the rest of the
 			// surface but bypasses JWTAuth.
 			v2.GET("/blob/raw/:token", handler.Raw)
+			v2.HEAD("/blob/raw/:token", handler.Raw)
 			v2.PUT("/blob/raw/:token", handler.Raw)
 		},
 	}

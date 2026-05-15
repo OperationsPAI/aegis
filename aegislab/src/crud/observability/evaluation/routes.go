@@ -16,7 +16,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "evaluation.portal",
 		Register: func(v2 *gin.RouterGroup) {
-			evaluations := v2.Group("/evaluations", middleware.JWTAuth())
+			evaluations := v2.Group("/evaluations", middleware.TrustedHeaderAuth())
 			{
 				evaluations.DELETE("/:id", handler.DeleteEvaluation)
 			}
@@ -32,7 +32,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceSDK,
 		Name:     "evaluation.sdk",
 		Register: func(v2 *gin.RouterGroup) {
-			evaluations := v2.Group("/evaluations", middleware.JWTAuth())
+			evaluations := v2.Group("/evaluations", middleware.TrustedHeaderAuth())
 			{
 				evaluations.POST("/datapacks", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListDatapackEvaluationResults)
 				evaluations.POST("/datasets", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListDatasetEvaluationResults)

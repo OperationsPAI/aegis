@@ -12,7 +12,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "observation-portal",
 		Register: func(v2 *gin.RouterGroup) {
-			injections := v2.Group("/injections", middleware.JWTAuth(), middleware.RequireProjectRead)
+			injections := v2.Group("/injections", middleware.TrustedHeaderAuth(), middleware.RequireProjectRead)
 			{
 				injections.GET("/:id/metrics/catalog", handler.GetMetricsCatalog)
 				injections.GET("/:id/metrics/series", handler.GetMetricsSeries)

@@ -14,7 +14,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "task",
 		Register: func(v2 *gin.RouterGroup) {
-			tasks := v2.Group("/tasks", middleware.JWTAuth())
+			tasks := v2.Group("/tasks", middleware.TrustedHeaderAuth())
 			{
 				taskRead := tasks.Group("", middleware.RequireTaskRead)
 				{

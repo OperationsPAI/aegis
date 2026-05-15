@@ -12,7 +12,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceAdmin,
 		Name:     "rbac.admin",
 		Register: func(v2 *gin.RouterGroup) {
-			roles := v2.Group("/roles", middleware.JWTAuth())
+			roles := v2.Group("/roles", middleware.TrustedHeaderAuth())
 			{
 				permissions := roles.Group("/:role_id/permissions")
 				{
@@ -36,7 +36,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 				roles.DELETE("/:role_id", middleware.RequireRoleDelete, handler.DeleteRole)
 			}
 
-			permissions := v2.Group("/permissions", middleware.JWTAuth())
+			permissions := v2.Group("/permissions", middleware.TrustedHeaderAuth())
 			{
 				roles := permissions.Group("/:permission_id/roles")
 				{
@@ -50,7 +50,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 				}
 			}
 
-			resources := v2.Group("/resources", middleware.JWTAuth())
+			resources := v2.Group("/resources", middleware.TrustedHeaderAuth())
 			{
 				resourceRead := resources.Group("", middleware.RequirePermissionRead)
 				{

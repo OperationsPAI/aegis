@@ -12,7 +12,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "share.portal",
 		Register: func(v2 *gin.RouterGroup) {
-			g := v2.Group("/share", middleware.JWTAuth())
+			g := v2.Group("/share", middleware.TrustedHeaderAuth())
 			{
 				g.POST("/upload", handler.Upload)
 				g.GET("", handler.List)

@@ -32,6 +32,7 @@ const (
 	trustedHeaderAuthType     = "X-Aegis-Auth-Type"
 	trustedHeaderAPIKeyID     = "X-Aegis-Api-Key-Id"
 	trustedHeaderAPIKeyScopes = "X-Aegis-Api-Key-Scopes"
+	trustedHeaderTaskID       = "X-Aegis-Task-Id"
 )
 
 // setUserClaims stashes JWT claims onto the Gin context using the canonical
@@ -127,6 +128,7 @@ func TrustedHeaderAuth() gin.HandlerFunc {
 		authType := c.GetHeader(trustedHeaderAuthType)
 		apiKeyIDStr := c.GetHeader(trustedHeaderAPIKeyID)
 		apiKeyScopesStr := c.GetHeader(trustedHeaderAPIKeyScopes)
+		taskID := c.GetHeader(trustedHeaderTaskID)
 		sig := c.GetHeader(trustedHeaderSignature)
 
 		if userID == "" && sig == "" {
@@ -138,7 +140,7 @@ func TrustedHeaderAuth() gin.HandlerFunc {
 		canonical := strings.Join([]string{
 			userID, email, roles, aud, jti,
 			username, isActiveStr, isAdminStr, authType,
-			apiKeyIDStr, apiKeyScopesStr,
+			apiKeyIDStr, apiKeyScopesStr, taskID,
 		}, "|")
 		mac := hmac.New(sha256.New, key)
 		_, _ = mac.Write([]byte(canonical))
@@ -169,6 +171,9 @@ func TrustedHeaderAuth() gin.HandlerFunc {
 		if isService {
 			c.Set(consts.CtxKeyIsServiceToken, true)
 			c.Set(consts.CtxKeyTokenType, "service")
+			if taskID != "" {
+				c.Set(consts.CtxKeyTaskID, taskID)
+			}
 		} else {
 			c.Set(consts.CtxKeyTokenType, "user")
 		}

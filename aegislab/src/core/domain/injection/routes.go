@@ -12,7 +12,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceSDK,
 		Name:     "injection-sdk",
 		Register: func(v2 *gin.RouterGroup) {
-			projects := v2.Group("/projects", middleware.JWTAuth())
+			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
 			{
 				injections := projects.Group("/:project_id/injections")
 				{
@@ -35,7 +35,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 				}
 			}
 
-			injections := v2.Group("/injections", middleware.JWTAuth())
+			injections := v2.Group("/injections", middleware.TrustedHeaderAuth())
 			{
 				injections.GET("/systems", handler.GetSystemMapping)
 				injections.GET("/:id", handler.GetInjection)
@@ -55,12 +55,12 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "injection-portal",
 		Register: func(v2 *gin.RouterGroup) {
-			projects := v2.Group("/projects", middleware.JWTAuth())
+			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
 			{
 				projects.POST("/:project_id/injections/search", middleware.RequireProjectRead, handler.SearchProjectInjections)
 			}
 
-			injections := v2.Group("/injections", middleware.JWTAuth())
+			injections := v2.Group("/injections", middleware.TrustedHeaderAuth())
 			{
 				injections.PATCH("/labels/batch", handler.BatchManageInjectionLabels)
 				injections.POST("/batch-delete", handler.BatchDeleteInjections)

@@ -192,6 +192,11 @@ data:
     auth     = "jwt"
 
     [[gateway.routes]]
+    prefix   = "/api/v2/blob/raw/"
+    upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
+    auth     = "none"
+
+    [[gateway.routes]]
     prefix   = "/api/v2/blob/"
     upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth     = "jwt"

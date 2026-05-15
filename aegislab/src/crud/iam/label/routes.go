@@ -24,7 +24,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "label",
 		Register: func(v2 *gin.RouterGroup) {
-			labels := v2.Group("/labels", middleware.JWTAuth())
+			labels := v2.Group("/labels", middleware.TrustedHeaderAuth())
 			{
 				labelRead := labels.Group("", middleware.RequireLabelRead)
 				{

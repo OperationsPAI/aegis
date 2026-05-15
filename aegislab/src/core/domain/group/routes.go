@@ -15,7 +15,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "group",
 		Register: func(v2 *gin.RouterGroup) {
-			groups := v2.Group("/groups", middleware.JWTAuth(), middleware.RequireTraceRead)
+			groups := v2.Group("/groups", middleware.TrustedHeaderAuth(), middleware.RequireTraceRead)
 			{
 				groups.GET("/:group_id/stats", handler.GetGroupStats)
 				groups.GET("/:group_id/stream", handler.GetGroupStream)

@@ -13,7 +13,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceAdmin,
 		Name:     "chaossystem.admin",
 		Register: func(v2 *gin.RouterGroup) {
-			systems := v2.Group("/systems", middleware.JWTAuth())
+			systems := v2.Group("/systems", middleware.TrustedHeaderAuth())
 			{
 				systemRead := systems.Group("", middleware.RequireSystemRead)
 				{

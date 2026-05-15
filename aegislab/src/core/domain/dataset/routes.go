@@ -13,7 +13,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "dataset.portal",
 		Register: func(v2 *gin.RouterGroup) {
-			datasets := v2.Group("/datasets", middleware.JWTAuth())
+			datasets := v2.Group("/datasets", middleware.TrustedHeaderAuth())
 			{
 				datasetRead := datasets.Group("", middleware.RequireDatasetRead)
 				{
@@ -49,7 +49,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceSDK,
 		Name:     "dataset.sdk",
 		Register: func(v2 *gin.RouterGroup) {
-			datasets := v2.Group("/datasets", middleware.JWTAuth())
+			datasets := v2.Group("/datasets", middleware.TrustedHeaderAuth())
 			{
 				datasetVersions := datasets.Group("/:dataset_id/versions")
 				{

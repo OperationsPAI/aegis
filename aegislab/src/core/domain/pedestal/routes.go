@@ -14,7 +14,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "pedestal",
 		Register: func(v2 *gin.RouterGroup) {
-			pedestal := v2.Group("/pedestal", middleware.JWTAuth())
+			pedestal := v2.Group("/pedestal", middleware.TrustedHeaderAuth())
 			{
 				helm := pedestal.Group("/helm")
 				{

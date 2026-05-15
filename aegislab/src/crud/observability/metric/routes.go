@@ -15,7 +15,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceSDK,
 		Name:     "metric.sdk",
 		Register: func(v2 *gin.RouterGroup) {
-			metrics := v2.Group("/metrics", middleware.JWTAuth())
+			metrics := v2.Group("/metrics", middleware.TrustedHeaderAuth())
 			{
 				metrics.GET("/algorithms", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKMetricsAll, consts.ScopeSDKMetricsRead), handler.GetAlgorithmMetrics)
 				metrics.GET("/executions", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKMetricsAll, consts.ScopeSDKMetricsRead), handler.GetExecutionMetrics)

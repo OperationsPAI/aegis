@@ -16,7 +16,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "project",
 		Register: func(v2 *gin.RouterGroup) {
-			projects := v2.Group("/projects", middleware.JWTAuth())
+			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
 			{
 				projectRead := projects.Group("", middleware.RequireProjectRead)
 				{

@@ -184,6 +184,11 @@ upstream = "aegis-notify:8084"
 auth     = "jwt"
 
 [[gateway.routes]]
+prefix   = "/api/v2/blob/raw/"
+upstream = "aegis-blob:8085"
+auth     = "none"
+
+[[gateway.routes]]
 prefix   = "/api/v2/blob/"
 upstream = "aegis-blob:8085"
 auth     = "jwt"
