@@ -21,13 +21,21 @@ chaosDaemon:
   hostNetwork: true
   runtime: containerd
   socketPath: /run/containerd/containerd.sock
+  # byte-cluster CNI = Cello + Cilium IPVLAN datapath. tproxy's default bridge
+  # mode dies trying to enslave pod eth0 (IPVLAN child) to a bridge, so all
+  # HTTPChaos campaigns fail at startup. The bridgeless image switches tproxy
+  # to install TPROXY rules directly in the pod netns. Inbound only —
+  # `direction: from` is unworkable on this CNI (BPF tc-egress bypasses
+  # iptables). See OperationsPAI/chaos-tproxy docs/bridgeless-mode.md.
+  tproxyBridgeless: true
   image:
     repository: chaos-daemon
-    # Pin chaos-daemon ahead of the global `tag` above: this build carries
-    # the distroless-target fix (see chaos-mesh/chaos-mesh#4971). The
-    # controller-manager + dashboard have no code change vs 20260425-517f3df
-    # so they stay on the global tag.
-    tag: 20260515-nsexec-fix-v2
+    # Carries: (a) bridgeless tproxy (OperationsPAI/chaos-tproxy@8ec81d9 +
+    # OperationsPAI/chaos-mesh@52026165), (b) distroless-target fix from
+    # 20260515-nsexec-fix-v2 lineage (still on chaos-mesh master).
+    # controller-manager + dashboard have no relevant code change so they
+    # stay on the global tag above.
+    tag: 20260515-bridgeless
 
 dashboard:
   image:
