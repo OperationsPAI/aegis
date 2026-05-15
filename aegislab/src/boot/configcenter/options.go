@@ -24,6 +24,7 @@ import (
 	"aegis/crud/admin/configcenter"
 	"aegis/clients/sso"
 	"aegis/crud/iam/user"
+	"aegis/platform/middleware"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
@@ -44,6 +45,8 @@ func Options(confPath, port string) fx.Option {
 		app.WithRemoteVerifier(),
 		ssoclient.Module,
 		configcenter.Module,
+
+		fx.Invoke(func() { middleware.AssertTrustedHeaderKeyConfigured() }),
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),

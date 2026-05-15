@@ -6,6 +6,7 @@ import (
 	rbac "aegis/crud/iam/rbac"
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
+	"aegis/platform/middleware"
 
 	"go.uber.org/fx"
 )
@@ -40,5 +41,6 @@ func Options(confPath, port string) fx.Option {
 		// fx-group registrars + the AggregatePermissions invoke only.
 		rbac.Module,
 		grpcruntimeintake.Module,
+		fx.Invoke(func() { middleware.AssertTrustedHeaderKeyConfigured() }),
 	)
 }

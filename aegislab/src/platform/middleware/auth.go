@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -107,8 +108,17 @@ func JWTAuth() gin.HandlerFunc {
 // The signing key is read lazily from viper key "gateway.trusted_header_key".
 // If the key is empty the service refuses to start (caller should assert
 // this at boot time via AssertTrustedHeaderKeyConfigured).
+//
+// AEGIS_DEV_JWT_BYPASS=true falls back to JWT for direct service access when
+// no X-Aegis-Signature header is present. Production deployments must NOT set
+// this variable.
 func TrustedHeaderAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.GetHeader(trustedHeaderSignature) == "" && os.Getenv("AEGIS_DEV_JWT_BYPASS") == "true" {
+			JWTAuth()(c)
+			return
+		}
+
 		key := []byte(strings.TrimSpace(viper.GetString("gateway.trusted_header_key")))
 		if len(key) == 0 {
 			logrus.Error("middleware: gateway.trusted_header_key is empty; rejecting all requests")

@@ -21,6 +21,7 @@ import (
 	"aegis/crud/storage/blob"
 	"aegis/crud/storage/share"
 	"aegis/clients/sso"
+	"aegis/platform/middleware"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +41,8 @@ func Options(confPath, port string) fx.Option {
 		ssoclient.Module,
 		blob.Module,
 		share.Module,
+
+		fx.Invoke(func() { middleware.AssertTrustedHeaderKeyConfigured() }),
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),
