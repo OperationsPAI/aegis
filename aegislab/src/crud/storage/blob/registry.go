@@ -1,11 +1,51 @@
 package blob
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"regexp"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
 )
+
+// ErrBucketAlreadyExists is returned by Registry.Create when a bucket
+// with that name already exists (from config or DB).
+var ErrBucketAlreadyExists = errors.New("bucket already exists")
+
+// bucketNameRE enforces typical S3-compatible bucket naming.
+var bucketNameRE = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{2,62}$`)
+
+// BucketConfigRecord persists runtime-created buckets in the database.
+// Buckets declared in TOML config are NOT stored here — the DB row is
+// only written for buckets created via POST /buckets at runtime.
+type BucketConfigRecord struct {
+	ID              int64     `gorm:"primaryKey;autoIncrement"`
+	Name            string    `gorm:"uniqueIndex;not null;size:64"`
+	Driver          string    `gorm:"not null;size:32"`
+	Root            string    `gorm:"size:512"`
+	Endpoint        string    `gorm:"size:512"`
+	PublicEndpoint  string    `gorm:"size:512"`
+	Region          string    `gorm:"size:64"`
+	AccessKeyEnv    string    `gorm:"size:128"`
+	SecretKeyEnv    string    `gorm:"size:128"`
+	Bucket          string    `gorm:"size:128"`
+	UseSSL          bool
+	PathStyle       bool
+	MaxObjectBytes  int64
+	RetentionDays   int
+	PublicRead      bool
+	ContentTypes    string    `gorm:"type:text"` // comma-separated allow-list
+	WriteRoles      string    `gorm:"type:text"` // comma-separated
+	ReadRoles       string    `gorm:"type:text"` // comma-separated
+	CreatedAt       time.Time `gorm:"autoCreateTime"`
+}
+
+func (BucketConfigRecord) TableName() string { return "blob_bucket_configs" }
 
 // BucketConfig is the per-bucket policy + driver pointer parsed from
 // `[blob.buckets.<name>]` in config.
@@ -71,12 +111,23 @@ type Bucket struct {
 
 // Registry maps stable bucket name → Driver. Producers only reference
 // bucket names; the registry is the routing role.
+//
+// The mu guards buckets for concurrent hot-add via Create. Config-loaded
+// buckets are written once at boot and never mutated after that, so
+// read-only paths that predate Create are safe without locking; after
+// Create was called callers must hold at least a read lock. In practice
+// Create is rare enough that a simple Mutex (not RWMutex) is fine.
 type Registry struct {
+	mu      sync.Mutex
 	buckets map[string]*Bucket
+	db      *gorm.DB // nil when DB-backed creation is not wired (test-only)
+	deps    RegistryDeps
 }
 
 func (r *Registry) Lookup(name string) (*Bucket, error) {
+	r.mu.Lock()
 	b, ok := r.buckets[name]
+	r.mu.Unlock()
 	if !ok {
 		return nil, ErrBucketNotFound
 	}
@@ -86,11 +137,47 @@ func (r *Registry) Lookup(name string) (*Bucket, error) {
 // Names returns all configured bucket names — used by health checks
 // and the lifecycle worker.
 func (r *Registry) Names() []string {
+	r.mu.Lock()
 	out := make([]string, 0, len(r.buckets))
 	for n := range r.buckets {
 		out = append(out, n)
 	}
+	r.mu.Unlock()
 	return out
+}
+
+// Create validates, persists, and hot-adds a new bucket. Returns
+// ErrBucketAlreadyExists if the name is already registered. The DB row
+// is written first; if driver construction fails the row is removed so
+// the registry stays consistent.
+func (r *Registry) Create(ctx context.Context, cfg BucketConfig) (*Bucket, error) {
+	if !bucketNameRE.MatchString(cfg.Name) {
+		return nil, fmt.Errorf("invalid bucket name %q (must match [a-z0-9][a-z0-9-]{2,62})", cfg.Name)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.buckets[cfg.Name]; exists {
+		return nil, ErrBucketAlreadyExists
+	}
+	if r.db != nil {
+		rec := bucketConfigToRecord(cfg)
+		if err := r.db.WithContext(ctx).Create(&rec).Error; err != nil {
+			if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "Duplicate") {
+				return nil, ErrBucketAlreadyExists
+			}
+			return nil, fmt.Errorf("persist bucket config: %w", err)
+		}
+	}
+	drv, err := buildDriver(cfg, r.deps)
+	if err != nil {
+		if r.db != nil {
+			_ = r.db.WithContext(ctx).Where("name = ?", cfg.Name).Delete(&BucketConfigRecord{}).Error
+		}
+		return nil, fmt.Errorf("build driver for %q: %w", cfg.Name, err)
+	}
+	b := &Bucket{Config: cfg, Driver: drv}
+	r.buckets[cfg.Name] = b
+	return b, nil
 }
 
 // NewTestRegistry builds a Registry from a pre-assembled bucket map.
@@ -111,9 +198,21 @@ type RegistryDeps struct {
 }
 
 // NewRegistryFromConfig assembles the registry from
-// `[blob.buckets.*]`. Unknown drivers fail boot loudly — a typo in a
-// bucket's driver name should not silently fall back to localfs.
+// `[blob.buckets.*]` (static TOML config) plus any rows in the
+// blob_bucket_configs DB table (runtime-created buckets). Unknown
+// drivers fail boot loudly — a typo in a bucket's driver name should
+// not silently fall back to localfs.
 func NewRegistryFromConfig(deps RegistryDeps) (*Registry, error) {
+	return newRegistryFromConfigWithDB(deps, nil)
+}
+
+// NewRegistryFromConfigWithDB is the production wiring path that also
+// loads DB-persisted runtime buckets.
+func NewRegistryFromConfigWithDB(deps RegistryDeps, db *gorm.DB) (*Registry, error) {
+	return newRegistryFromConfigWithDB(deps, db)
+}
+
+func newRegistryFromConfigWithDB(deps RegistryDeps, db *gorm.DB) (*Registry, error) {
 	raw := viper.GetStringMap("blob.buckets")
 	buckets := make(map[string]*Bucket, len(raw))
 
@@ -128,7 +227,27 @@ func NewRegistryFromConfig(deps RegistryDeps) (*Registry, error) {
 		}
 		buckets[name] = &Bucket{Config: cfg, Driver: drv}
 	}
-	return &Registry{buckets: buckets}, nil
+
+	if db != nil {
+		var rows []BucketConfigRecord
+		if err := db.Find(&rows).Error; err != nil {
+			return nil, fmt.Errorf("blob: load db buckets: %w", err)
+		}
+		for _, row := range rows {
+			if _, exists := buckets[row.Name]; exists {
+				// static config wins over DB — skip
+				continue
+			}
+			cfg := bucketConfigFromRecord(row)
+			drv, err := buildDriver(cfg, deps)
+			if err != nil {
+				return nil, fmt.Errorf("blob: db bucket %q driver: %w", row.Name, err)
+			}
+			buckets[row.Name] = &Bucket{Config: cfg, Driver: drv}
+		}
+	}
+
+	return &Registry{buckets: buckets, db: db, deps: deps}, nil
 }
 
 func parseBucketConfig(name string) (BucketConfig, error) {
@@ -173,4 +292,58 @@ func buildDriver(cfg BucketConfig, deps RegistryDeps) (Driver, error) {
 	default:
 		return nil, fmt.Errorf("unknown driver %q", cfg.Driver)
 	}
+}
+
+func bucketConfigToRecord(cfg BucketConfig) BucketConfigRecord {
+	return BucketConfigRecord{
+		Name:           cfg.Name,
+		Driver:         cfg.Driver,
+		Root:           cfg.Root,
+		Endpoint:       cfg.Endpoint,
+		PublicEndpoint: cfg.PublicEndpoint,
+		Region:         cfg.Region,
+		AccessKeyEnv:   cfg.AccessKeyEnv,
+		SecretKeyEnv:   cfg.SecretKeyEnv,
+		Bucket:         cfg.Bucket,
+		UseSSL:         cfg.UseSSL,
+		PathStyle:      cfg.PathStyle,
+		MaxObjectBytes: cfg.MaxObjectBytes,
+		RetentionDays:  cfg.RetentionDays,
+		PublicRead:     cfg.PublicRead,
+		ContentTypes:   strings.Join(cfg.AllowedContentTypes, ","),
+		WriteRoles:     strings.Join(cfg.WriteRoles, ","),
+		ReadRoles:      strings.Join(cfg.ReadRoles, ","),
+	}
+}
+
+func bucketConfigFromRecord(r BucketConfigRecord) BucketConfig {
+	splitNonEmpty := func(s string) []string {
+		if s == "" {
+			return nil
+		}
+		return strings.Split(s, ",")
+	}
+	cfg := BucketConfig{
+		Name:                r.Name,
+		Driver:              r.Driver,
+		Root:                r.Root,
+		Endpoint:            r.Endpoint,
+		PublicEndpoint:      r.PublicEndpoint,
+		Region:              r.Region,
+		AccessKeyEnv:        r.AccessKeyEnv,
+		SecretKeyEnv:        r.SecretKeyEnv,
+		Bucket:              r.Bucket,
+		UseSSL:              r.UseSSL,
+		PathStyle:           r.PathStyle,
+		MaxObjectBytes:      r.MaxObjectBytes,
+		RetentionDays:       r.RetentionDays,
+		PublicRead:          r.PublicRead,
+		AllowedContentTypes: splitNonEmpty(r.ContentTypes),
+		WriteRoles:          splitNonEmpty(r.WriteRoles),
+		ReadRoles:           splitNonEmpty(r.ReadRoles),
+	}
+	if cfg.InlineMaxBytes == 0 {
+		cfg.InlineMaxBytes = 64 * 1024
+	}
+	return cfg
 }

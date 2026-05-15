@@ -28,6 +28,9 @@ type Driver interface {
 	Stat(ctx context.Context, key string) (*ObjectMeta, error)
 	Delete(ctx context.Context, key string) error
 	List(ctx context.Context, opts ListObjectsOpts) (*ListResult, error)
+	// Copy duplicates srcKey to dstKey within the same bucket. Returns
+	// the metadata of the newly-created object.
+	Copy(ctx context.Context, srcKey, dstKey string) (*ObjectMeta, error)
 }
 
 // ListObjectsOpts is the driver-level paginated list request. The
@@ -109,6 +112,10 @@ var (
 	ErrUnauthorized         = errors.New("unauthorized for bucket")
 	ErrObjectTooLarge       = errors.New("object exceeds bucket size limit")
 	ErrContentTypeRejected  = errors.New("content type not allowed for bucket")
+	// ErrPartialMove wraps errors from a move where the copy succeeded
+	// but the subsequent delete of the source failed. The caller should
+	// surface a partial-success response rather than a full error.
+	ErrPartialMove = errors.New("copy succeeded but source delete failed")
 )
 
 // Clock is injectable so tests can pin time. Default impl is realClock.

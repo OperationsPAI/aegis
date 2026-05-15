@@ -7,6 +7,7 @@ import (
 	"aegis/platform/config"
 
 	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
 
 // Module wires the six-role blob skeleton:
@@ -51,8 +52,8 @@ func provideRegistryDeps() RegistryDeps {
 	return RegistryDeps{SigningKey: []byte(key)}
 }
 
-func provideRegistry(deps RegistryDeps) (*Registry, error) {
-	reg, err := NewRegistryFromConfig(deps)
+func provideRegistry(deps RegistryDeps, db *gorm.DB) (*Registry, error) {
+	reg, err := NewRegistryFromConfigWithDB(deps, db)
 	if err != nil {
 		return nil, fmt.Errorf("blob: build registry: %w", err)
 	}

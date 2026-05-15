@@ -217,6 +217,46 @@ func (d *LocalFSDriver) Stat(_ context.Context, key string) (*ObjectMeta, error)
 	}, nil
 }
 
+// Copy duplicates srcKey to dstKey on the local filesystem. It
+// streams bytes from src to dst so no full in-memory buffer is needed.
+func (d *LocalFSDriver) Copy(_ context.Context, srcKey, dstKey string) (*ObjectMeta, error) {
+	srcPath, err := d.resolve(srcKey)
+	if err != nil {
+		return nil, err
+	}
+	dstPath, err := d.resolve(dstKey)
+	if err != nil {
+		return nil, err
+	}
+	src, err := os.Open(srcPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrObjectNotFound
+		}
+		return nil, err
+	}
+	defer func() { _ = src.Close() }()
+	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+		return nil, err
+	}
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = dst.Close() }()
+	n, err := io.Copy(dst, src)
+	if err != nil {
+		return nil, err
+	}
+	ct := mime.TypeByExtension(filepath.Ext(dstPath))
+	return &ObjectMeta{
+		Key:         dstKey,
+		Size:        n,
+		ContentType: ct,
+		UpdatedAt:   time.Now(),
+	}, nil
+}
+
 func (d *LocalFSDriver) Delete(_ context.Context, key string) error {
 	path, err := d.resolve(key)
 	if err != nil {

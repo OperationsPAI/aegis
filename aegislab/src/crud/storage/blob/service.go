@@ -3,6 +3,7 @@ package blob
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -214,6 +215,70 @@ func (s *Service) PutBytes(ctx context.Context, in PresignPutInput, body io.Read
 	}
 	return rec, meta, nil
 }
+
+// Copy duplicates srcKey to dstKey within the bucket. When move is
+// true the copy is followed by a Delete of srcKey; if the Delete fails
+// the error is wrapped with ErrPartialMove so the caller can surface a
+// partial-success response.
+func (s *Service) Copy(ctx context.Context, bucket, srcKey, dstKey string, move bool) (*ObjectMeta, error) {
+	b, err := s.registry.Lookup(bucket)
+	if err != nil {
+		return nil, err
+	}
+	meta, err := b.Driver.Copy(ctx, srcKey, dstKey)
+	if err != nil {
+		return nil, err
+	}
+	if move {
+		if delErr := s.repo.SoftDelete(ctx, bucket, srcKey); delErr != nil {
+			return meta, fmt.Errorf("%w: delete src metadata: %v", ErrPartialMove, delErr)
+		}
+		if delErr := b.Driver.Delete(ctx, srcKey); delErr != nil {
+			return meta, fmt.Errorf("%w: delete src bytes: %v", ErrPartialMove, delErr)
+		}
+	}
+	return meta, nil
+}
+
+// BatchDeleteResult is returned by BatchDelete.
+type BatchDeleteResult struct {
+	Deleted []string        `json:"deleted"`
+	Failed  []BatchFailItem `json:"failed"`
+}
+
+// BatchFailItem describes one key that could not be deleted.
+type BatchFailItem struct {
+	Key   string `json:"key"`
+	Error string `json:"error"`
+}
+
+// BatchDelete deletes up to batchDeleteCap keys, returning partial
+// results. Missing keys are counted as deleted (idempotent).
+func (s *Service) BatchDelete(ctx context.Context, bucket string, keys []string) (*BatchDeleteResult, error) {
+	if len(keys) > batchDeleteCap {
+		return nil, fmt.Errorf("too many keys: max %d", batchDeleteCap)
+	}
+	res := &BatchDeleteResult{}
+	for _, key := range keys {
+		if err := s.Delete(ctx, bucket, key); err != nil {
+			if errors.Is(err, ErrObjectNotFound) {
+				// treat missing as success — idempotent
+				res.Deleted = append(res.Deleted, key)
+				continue
+			}
+			res.Failed = append(res.Failed, BatchFailItem{Key: key, Error: err.Error()})
+		} else {
+			res.Deleted = append(res.Deleted, key)
+		}
+	}
+	return res, nil
+}
+
+const (
+	batchDeleteCap = 1000
+	zipKeyCap      = 1000
+	zipSizeCap     = 10 * 1024 * 1024 * 1024 // 10 GiB
+)
 
 // Registry exposes the routing role for the handler to look up bucket
 // policy without going through every service method.

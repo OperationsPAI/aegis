@@ -18,19 +18,27 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 			g := v2.Group("/blob", middleware.JWTAuth())
 			{
 				g.GET("/buckets", handler.ListBuckets)
+				g.POST("/buckets", handler.CreateBucket)
 				g.POST("/buckets/:bucket/presign-put", handler.PresignPut)
 				g.POST("/buckets/:bucket/presign-get", handler.PresignGet)
-				g.GET("/buckets/:bucket/objects/:key", handler.InlineGet)
-				g.HEAD("/buckets/:bucket/objects/:key", handler.Stat)
-				g.DELETE("/buckets/:bucket/objects/:key", handler.Delete)
+				// *key catch-all routes allow keys with slashes (e.g. a/b/c.txt).
+				// The handler trims the leading "/" from c.Param("key").
+				g.GET("/buckets/:bucket/objects/*key", handler.InlineGet)
+				g.HEAD("/buckets/:bucket/objects/*key", handler.Stat)
+				g.DELETE("/buckets/:bucket/objects/*key", handler.Delete)
 				g.GET("/buckets/:bucket/objects", handler.List)
 				// Driver-level list (storage source-of-truth), distinct
 				// from /objects above which queries the metadata DB.
 				g.GET("/buckets/:bucket/object-list", handler.ListObjects)
-				// Streaming GET that accepts keys-with-slashes
-				// (zip streaming, file tree responses). Distinct from
-				// /objects/:key which matches single-segment keys only.
+				// StreamGet is now redundant with InlineGet (both accept
+				// wildcard keys) but retained for backward compatibility.
 				g.GET("/buckets/:bucket/stream/*key", handler.StreamGet)
+				// Copy / Move within a bucket.
+				g.POST("/buckets/:bucket/copy", handler.CopyObject)
+				// Batch delete — returns per-key deleted/failed lists.
+				g.POST("/buckets/:bucket/delete-batch", handler.BatchDelete)
+				// ZIP streaming — streams selected keys as an archive.
+				g.POST("/buckets/:bucket/zip", handler.ZipObjects)
 			}
 
 			// /raw/:token is auth-free (the HMAC token IS the auth).

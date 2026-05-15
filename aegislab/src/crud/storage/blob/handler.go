@@ -1,7 +1,9 @@
 package blob
 
 import (
+	"archive/zip"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -211,16 +213,17 @@ func (h *Handler) PresignGet(c *gin.Context) {
 	c.JSON(http.StatusOK, pr)
 }
 
-// InlineGet streams a single-segment object inline through the API.
+// InlineGet streams an object inline through the API. Accepts keys with
+// slashes via the *key catch-all route.
 //
 //	@Summary		Inline object download
-//	@Description	Stream object bytes inline through the API for single-segment keys
+//	@Description	Stream object bytes inline through the API; key may contain slashes
 //	@Tags			Blob
 //	@ID				blob_inline_get
 //	@Produce		octet-stream
 //	@Security		BearerAuth
 //	@Param			bucket	path		string						true	"Bucket name"
-//	@Param			key		path		string						true	"Object key"
+//	@Param			key		path		string						true	"Object key (may contain slashes)"
 //	@Success		200		{file}		binary						"Streamed object content"
 //	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
 //	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
@@ -230,7 +233,7 @@ func (h *Handler) PresignGet(c *gin.Context) {
 //	@x-api-type		{"portal":"true"}
 func (h *Handler) InlineGet(c *gin.Context) {
 	bucket := c.Param("bucket")
-	key := c.Param("key")
+	key := strings.TrimPrefix(c.Param("key"), "/")
 	b, err := h.svc.Registry().Lookup(bucket)
 	if err != nil {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
@@ -261,13 +264,13 @@ func (h *Handler) InlineGet(c *gin.Context) {
 // Stat returns object metadata without streaming the body.
 //
 //	@Summary		Stat object
-//	@Description	Return object metadata without streaming the body
+//	@Description	Return object metadata without streaming the body; key may contain slashes
 //	@Tags			Blob
 //	@ID				blob_stat
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			bucket	path		string								true	"Bucket name"
-//	@Param			key		path		string								true	"Object key"
+//	@Param			key		path		string								true	"Object key (may contain slashes)"
 //	@Success		200		{object}	dto.GenericResponse[ObjectMeta]		"Object metadata"
 //	@Failure		401		{object}	dto.GenericResponse[any]			"Authentication required"
 //	@Failure		404		{object}	dto.GenericResponse[any]			"Bucket or object not found"
@@ -276,7 +279,7 @@ func (h *Handler) InlineGet(c *gin.Context) {
 //	@x-api-type		{"portal":"true"}
 func (h *Handler) Stat(c *gin.Context) {
 	bucket := c.Param("bucket")
-	key := c.Param("key")
+	key := strings.TrimPrefix(c.Param("key"), "/")
 	meta, err := h.svc.Stat(c.Request.Context(), bucket, key)
 	if err != nil {
 		h.writeServiceError(c, err)
@@ -288,13 +291,13 @@ func (h *Handler) Stat(c *gin.Context) {
 // Delete removes an object from the bucket.
 //
 //	@Summary		Delete object
-//	@Description	Delete an object from the bucket
+//	@Description	Delete an object from the bucket; key may contain slashes
 //	@Tags			Blob
 //	@ID				blob_delete
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			bucket	path		string						true	"Bucket name"
-//	@Param			key		path		string						true	"Object key"
+//	@Param			key		path		string						true	"Object key (may contain slashes)"
 //	@Success		204		{object}	dto.GenericResponse[any]	"Object deleted"
 //	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
 //	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
@@ -304,7 +307,7 @@ func (h *Handler) Stat(c *gin.Context) {
 //	@x-api-type		{"portal":"true"}
 func (h *Handler) Delete(c *gin.Context) {
 	bucket := c.Param("bucket")
-	key := c.Param("key")
+	key := strings.TrimPrefix(c.Param("key"), "/")
 	b, err := h.svc.Registry().Lookup(bucket)
 	if err != nil {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
@@ -325,6 +328,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
 }
 
 // List returns DB-backed object metadata records for the bucket.
@@ -529,6 +533,292 @@ func (h *Handler) Raw(c *gin.Context) {
 	default:
 		dto.ErrorResponse(c, http.StatusBadRequest, "unknown token op")
 	}
+}
+
+// ---- Create bucket ----
+
+// CreateBucketReq is the wire shape for POST /buckets.
+type CreateBucketReq struct {
+	Name           string   `json:"name"             binding:"required"`
+	Driver         string   `json:"driver"           binding:"required"`
+	Root           string   `json:"root,omitempty"`
+	Endpoint       string   `json:"endpoint,omitempty"`
+	PublicEndpoint string   `json:"public_endpoint,omitempty"`
+	Region         string   `json:"region,omitempty"`
+	AccessKeyEnv   string   `json:"access_key_env,omitempty"`
+	SecretKeyEnv   string   `json:"secret_key_env,omitempty"`
+	Bucket         string   `json:"bucket,omitempty"`
+	UseSSL         bool     `json:"use_ssl,omitempty"`
+	PathStyle      bool     `json:"path_style,omitempty"`
+	MaxObjectBytes int64    `json:"max_object_bytes,omitempty"`
+	RetentionDays  int      `json:"retention_days,omitempty"`
+	PublicRead     bool     `json:"public_read,omitempty"`
+	ContentTypes   []string `json:"content_types,omitempty"`
+	WriteRoles     []string `json:"write_roles,omitempty"`
+	ReadRoles      []string `json:"read_roles,omitempty"`
+}
+
+// CreateBucket provisions a new bucket at runtime and persists it to
+// the database so it survives restarts.
+//
+//	@Summary		Create bucket
+//	@Description	Provision a new bucket at runtime; persists to DB and hot-adds to the registry.
+//	@Tags			Blob
+//	@ID				blob_create_bucket
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		CreateBucketReq					true	"Bucket creation request"
+//	@Success		201		{object}	dto.GenericResponse[BucketSummary]	"Bucket created"
+//	@Failure		400		{object}	dto.GenericResponse[any]			"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]			"Authentication required"
+//	@Failure		409		{object}	dto.GenericResponse[any]			"Bucket already exists"
+//	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/api/v2/blob/buckets [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) CreateBucket(c *gin.Context) {
+	var req CreateBucketReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	cfg := BucketConfig{
+		Name:                req.Name,
+		Driver:              req.Driver,
+		Root:                req.Root,
+		Endpoint:            req.Endpoint,
+		PublicEndpoint:      req.PublicEndpoint,
+		Region:              req.Region,
+		AccessKeyEnv:        req.AccessKeyEnv,
+		SecretKeyEnv:        req.SecretKeyEnv,
+		Bucket:              req.Bucket,
+		UseSSL:              req.UseSSL,
+		PathStyle:           req.PathStyle,
+		MaxObjectBytes:      req.MaxObjectBytes,
+		RetentionDays:       req.RetentionDays,
+		PublicRead:          req.PublicRead,
+		AllowedContentTypes: req.ContentTypes,
+		WriteRoles:          req.WriteRoles,
+		ReadRoles:           req.ReadRoles,
+	}
+	b, err := h.svc.Registry().Create(c.Request.Context(), cfg)
+	if err != nil {
+		if errors.Is(err, ErrBucketAlreadyExists) {
+			dto.ErrorResponse(c, http.StatusConflict, err.Error())
+			return
+		}
+		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	dto.JSONResponse(c, http.StatusCreated, "bucket created", BucketSummary{
+		Name:           b.Config.Name,
+		Driver:         b.Config.Driver,
+		MaxObjectBytes: b.Config.MaxObjectBytes,
+		RetentionDays:  b.Config.RetentionDays,
+		PublicRead:     b.Config.PublicRead,
+	})
+}
+
+// ---- Copy / Move ----
+
+type copyReq struct {
+	Src       string `json:"src"       binding:"required"`
+	Dst       string `json:"dst"       binding:"required"`
+	DeleteSrc bool   `json:"delete_src"`
+}
+
+// CopyObject copies (or moves) an object within the bucket.
+//
+//	@Summary		Copy or move object
+//	@Description	Server-side copy of src to dst. When delete_src=true the operation is a move; if the source delete fails after a successful copy the response is 207 with a partial-success error.
+//	@Tags			Blob
+//	@ID				blob_copy
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket	path		string								true	"Bucket name"
+//	@Param			request	body		copyReq								true	"Copy request"
+//	@Success		200		{object}	dto.GenericResponse[ObjectMeta]		"Object copied"
+//	@Success		207		{object}	dto.GenericResponse[ObjectMeta]		"Copy succeeded but source delete failed"
+//	@Failure		400		{object}	dto.GenericResponse[any]			"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]			"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]			"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]			"Bucket or object not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/copy [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) CopyObject(c *gin.Context) {
+	bucket := c.Param("bucket")
+	var req copyReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	b, err := h.svc.Registry().Lookup(bucket)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+	sub := subjectFromContext(c)
+	if !h.auth.CanWrite(&b.Config, sub) {
+		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return
+	}
+	meta, copyErr := h.svc.Copy(c.Request.Context(), bucket, req.Src, req.Dst, req.DeleteSrc)
+	if copyErr != nil && !errors.Is(copyErr, ErrPartialMove) {
+		h.writeServiceError(c, copyErr)
+		return
+	}
+	if errors.Is(copyErr, ErrPartialMove) {
+		// copy succeeded but source delete failed — return 207
+		dto.JSONResponse(c, http.StatusMultiStatus, copyErr.Error(), meta)
+		return
+	}
+	dto.SuccessResponse(c, meta)
+}
+
+// ---- Batch Delete ----
+
+type batchDeleteReq struct {
+	Keys []string `json:"keys" binding:"required"`
+}
+
+// BatchDelete deletes multiple objects in one request.
+//
+//	@Summary		Batch delete objects
+//	@Description	Delete up to 1000 objects in one request. Returns per-key deleted/failed lists.
+//	@Tags			Blob
+//	@ID				blob_batch_delete
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket	path		string									true	"Bucket name"
+//	@Param			request	body		batchDeleteReq							true	"Batch delete request"
+//	@Success		200		{object}	dto.GenericResponse[BatchDeleteResult]	"Batch delete result"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid request or too many keys"
+//	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]				"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"Bucket not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/delete-batch [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) BatchDelete(c *gin.Context) {
+	bucket := c.Param("bucket")
+	var req batchDeleteReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.Keys) > batchDeleteCap {
+		dto.ErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("too many keys: max %d", batchDeleteCap))
+		return
+	}
+	b, err := h.svc.Registry().Lookup(bucket)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+	sub := subjectFromContext(c)
+	if !h.auth.CanWrite(&b.Config, sub) {
+		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return
+	}
+	res, err := h.svc.BatchDelete(c.Request.Context(), bucket, req.Keys)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	dto.SuccessResponse(c, res)
+}
+
+// ---- ZIP packaging ----
+
+type zipReq struct {
+	Keys        []string `json:"keys"         binding:"required"`
+	ArchiveName string   `json:"archive_name"`
+}
+
+// ZipObjects streams selected objects as a zip archive.
+//
+//	@Summary		Stream objects as ZIP
+//	@Description	Stream up to 1000 keys as a zip archive. Total size is capped at 10 GiB. Per-key read failures abort the archive with 500.
+//	@Tags			Blob
+//	@ID				blob_zip
+//	@Accept			json
+//	@Produce		application/zip
+//	@Security		BearerAuth
+//	@Param			bucket	path	string		true	"Bucket name"
+//	@Param			request	body	zipReq		true	"ZIP request"
+//	@Success		200		{file}	binary		"Streamed zip archive"
+//	@Failure		400		{object}	dto.GenericResponse[any]	"Invalid request or too many keys"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]	"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]	"Bucket not found"
+//	@Failure		413		{object}	dto.GenericResponse[any]	"Total size exceeds 10 GiB cap"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket}/zip [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) ZipObjects(c *gin.Context) {
+	bucket := c.Param("bucket")
+	var req zipReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.Keys) > zipKeyCap {
+		dto.ErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("too many keys: max %d", zipKeyCap))
+		return
+	}
+	b, err := h.svc.Registry().Lookup(bucket)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+	sub := subjectFromContext(c)
+	archiveName := req.ArchiveName
+	if archiveName == "" {
+		archiveName = bucket + ".zip"
+	}
+	c.Header("Content-Type", "application/zip")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, archiveName))
+	zw := zip.NewWriter(c.Writer)
+	var totalBytes int64
+	for _, key := range req.Keys {
+		rec, recErr := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
+		if recErr != nil {
+			_ = zw.Close()
+			// headers already sent; can't return a proper JSON error — abort
+			return
+		}
+		if !h.auth.CanRead(&b.Config, sub, rec.UploadedBy) {
+			_ = zw.Close()
+			return
+		}
+		rc, meta, getErr := h.svc.GetReader(c.Request.Context(), bucket, key)
+		if getErr != nil {
+			_ = zw.Close()
+			return
+		}
+		totalBytes += meta.Size
+		if totalBytes > zipSizeCap {
+			_ = rc.Close()
+			_ = zw.Close()
+			return
+		}
+		fw, createErr := zw.Create(key)
+		if createErr != nil {
+			_ = rc.Close()
+			_ = zw.Close()
+			return
+		}
+		if _, copyErr := io.Copy(fw, rc); copyErr != nil {
+			_ = rc.Close()
+			_ = zw.Close()
+			return
+		}
+		_ = rc.Close()
+	}
+	_ = zw.Close()
 }
 
 func (h *Handler) writeServiceError(c *gin.Context, err error) {

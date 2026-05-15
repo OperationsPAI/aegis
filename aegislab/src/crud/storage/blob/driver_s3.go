@@ -230,6 +230,22 @@ func (d *S3Driver) Delete(ctx context.Context, key string) error {
 	return fmt.Errorf("s3 delete %q: %w", key, err)
 }
 
+// Copy duplicates srcKey to dstKey using S3 server-side CopyObject.
+func (d *S3Driver) Copy(ctx context.Context, srcKey, dstKey string) (*ObjectMeta, error) {
+	src := minio.CopySrcOptions{Bucket: d.bucket, Object: srcKey}
+	dst := minio.CopyDestOptions{Bucket: d.bucket, Object: dstKey}
+	info, err := d.client.CopyObject(ctx, dst, src)
+	if err != nil {
+		return nil, mapS3Err("s3 copy", srcKey, err)
+	}
+	return &ObjectMeta{
+		Key:       dstKey,
+		Size:      info.Size,
+		ETag:      info.ETag,
+		UpdatedAt: info.LastModified,
+	}, nil
+}
+
 // List paginates via minio's StartAfter. We treat the continuation
 // token as the last key returned on the previous page. Delimiter rolls
 // up subtrees into CommonPrefixes (S3 native semantics).
