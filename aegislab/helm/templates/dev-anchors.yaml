@@ -1,0 +1,81 @@
+{{- if .Values.devAnchors.enabled }}
+# Dev anchors: placeholder Deployments + Services that act as
+# `telepresence intercept` targets. Developers run
+#
+#   telepresence intercept <release>-dev-frontend --port 3323:80
+#   telepresence intercept <release>-dev-api      --port 8080:80
+#
+# to redirect traffic landing on /dev/* and /dev/api/* (via the
+# edge-proxy `@dev` matchers) to their laptop. When no intercept is
+# active these anchors serve a 503 placeholder so the URL never 404s.
+# See docs/dev-intercept.md for the full workflow.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-dev-anchor-config
+data:
+  Caddyfile: |
+    :80 {
+        respond "telepresence dev anchor: no active intercept. Run `telepresence intercept <service> --port LOCAL:80` from a developer laptop." 503
+    }
+{{- range $role := list "frontend" "api" }}
+{{- $svc := printf "%s-dev-%s" $.Release.Name $role }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc }}
+  labels:
+    app: {{ $svc }}
+    aegis.dev-anchor/role: {{ $role }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $svc }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svc }}
+        aegis.dev-anchor/role: {{ $role }}
+    spec:
+      containers:
+        - name: caddy
+          image: {{ include "helm.image" (dict "imageConfig" $.Values.images.caddy "global" $.Values.global) }}
+          imagePullPolicy: "{{ $.Values.images.caddy.pullPolicy }}"
+          args: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caddy
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $.Release.Name }}-dev-anchor-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc }}
+  labels:
+    app: {{ $svc }}
+    aegis.dev-anchor/role: {{ $role }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ $svc }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}
+{{- end }}

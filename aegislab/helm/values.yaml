@@ -86,6 +86,14 @@ frontend:
   service:
     port: 80
 
+# Dev anchors: placeholder Deployments + Services that telepresence can
+# intercept to forward /dev/* (frontend) and /dev/api/* (backend) traffic
+# from the edge-proxy down to a developer's laptop. Disabled by default;
+# turn on per cluster that should host dev intercepts. See
+# docs/dev-intercept.md for the developer-side workflow.
+devAnchors:
+  enabled: false
+
 edgeProxy:
   # Caddy fronting aegis-api + intake-grpc. Enabled by default so every pack
   # (kind / local / byte-cluster / prod) presents the same external surface:

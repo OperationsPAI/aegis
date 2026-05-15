@@ -15,6 +15,13 @@ global:
       tag: byte-20260515-hotfix-presign-r2
       pullPolicy: IfNotPresent
 
+# Dev intercept anchors. Enabled on byte-cluster so developers can run
+# `telepresence intercept rcabench-dev-frontend --port 3323:80` and the
+# same for `rcabench-dev-api`, then test laptop code against this EIP
+# without redeploying. See aegislab/docs/dev-intercept.md.
+devAnchors:
+  enabled: true
+
 images:
   busybox:
     name: pair-diag-cn-guangzhou.cr.volces.com/pair/busybox

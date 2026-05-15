@@ -89,6 +89,28 @@ data:
                 header_up Host {host}
             }
         }
+        {{- if .Values.devAnchors.enabled }}
+        # Dev intercept passthrough. `/dev/api/*` routes to the dev-api
+        # anchor Service, `/dev/*` to the dev-frontend anchor. With no
+        # active `telepresence intercept` these anchors serve a 503
+        # placeholder; once a developer runs `telepresence intercept
+        # <release>-dev-{frontend,api} --port LOCAL:80`, traffic flows
+        # to their laptop. Path is NOT rewritten — the local server
+        # sees the full `/dev/...` URL and decides what to do with it
+        # (vite: set `base: '/dev/'`; python serve: serves as-is).
+        @devApi {
+            path /dev/api/*
+        }
+        handle @devApi {
+            reverse_proxy {{ .Release.Name }}-dev-api:80
+        }
+        @dev {
+            path /dev /dev/*
+        }
+        handle @dev {
+            reverse_proxy {{ .Release.Name }}-dev-frontend:80
+        }
+        {{- end }}
         # /auth/* is a SPA route family (login / register / callback /
         # forgot-password). The real auth API lives under /api/v2/auth/*
         # and is covered by the /api/* matcher below.
