@@ -101,26 +101,22 @@ func (s *Service) PresignPut(ctx context.Context, in PresignPutInput) (*PresignP
 	}, nil
 }
 
-// PresignGet routes to the bucket's driver after a metadata check.
+// PresignGet routes to the bucket's driver. Skips the metadata DB
+// gate so legacy objects (driver-only, no ObjectRecord row) are still
+// reachable. Authorization is enforced at the handler layer.
 func (s *Service) PresignGet(ctx context.Context, bucket, key string, opts GetOpts) (*PresignedRequest, error) {
 	b, err := s.registry.Lookup(bucket)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.repo.FindByKey(ctx, bucket, key); err != nil {
-		return nil, err
-	}
 	return b.Driver.PresignGet(ctx, key, opts)
 }
 
-// Stat returns metadata for a single object — DB row enriched with
-// the driver's live stat.
+// Stat returns metadata for a single object from the driver. Driver
+// surfaces ErrObjectNotFound for missing keys.
 func (s *Service) Stat(ctx context.Context, bucket, key string) (*ObjectMeta, error) {
 	b, err := s.registry.Lookup(bucket)
 	if err != nil {
-		return nil, err
-	}
-	if _, err := s.repo.FindByKey(ctx, bucket, key); err != nil {
 		return nil, err
 	}
 	return b.Driver.Stat(ctx, key)
@@ -133,21 +129,19 @@ func (s *Service) Get(ctx context.Context, bucket, key string) (io.ReadCloser, *
 	if err != nil {
 		return nil, nil, err
 	}
-	if _, err := s.repo.FindByKey(ctx, bucket, key); err != nil {
-		return nil, nil, err
-	}
 	return b.Driver.Get(ctx, key)
 }
 
-// Delete soft-deletes the metadata row and best-effort removes the
-// driver-side bytes synchronously. The lifecycle worker (DeletionWorker)
-// re-runs the driver delete for rows where the inline call failed.
+// Delete removes driver-side bytes and soft-deletes the metadata row.
+// Treats a missing metadata row as success (driver-only / legacy data).
+// The lifecycle worker (DeletionWorker) re-runs the driver delete for
+// rows where the inline call failed.
 func (s *Service) Delete(ctx context.Context, bucket, key string) error {
 	b, err := s.registry.Lookup(bucket)
 	if err != nil {
 		return err
 	}
-	if err := s.repo.SoftDelete(ctx, bucket, key); err != nil {
+	if err := s.repo.SoftDelete(ctx, bucket, key); err != nil && !errors.Is(err, ErrObjectNotFound) {
 		return err
 	}
 	return b.Driver.Delete(ctx, key)
