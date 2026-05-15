@@ -19,19 +19,19 @@ import (
 
 // lookupUploaderForACL resolves the uploader for an ACL check, tolerating
 // driver-only objects (legacy data uploaded outside the metadata-DB flow).
-// Returns (nil, nil) when the row is missing — callers should then ACL on
-// bucket-level rules with `uploadedBy=nil`. On any other repo error, writes
-// the error response and returns a non-nil error so the caller bails.
-func (h *Handler) lookupUploaderForACL(c *gin.Context, bucket, key string) (*int, error) {
+// Returns (nil, true, nil) when the DB row exists but has no uploader set.
+// Returns (nil, false, nil) when the row is entirely missing (driver-only object).
+// On any other repo error, writes the error response and returns a non-nil error.
+func (h *Handler) lookupUploaderForACL(c *gin.Context, bucket, key string) (*int, bool, error) {
 	rec, err := h.svc.repo.FindByKey(c.Request.Context(), bucket, key)
 	if err == nil {
-		return rec.UploadedBy, nil
+		return rec.UploadedBy, true, nil
 	}
 	if errors.Is(err, ErrObjectNotFound) {
-		return nil, nil
+		return nil, false, nil
 	}
 	h.writeServiceError(c, err)
-	return nil, err
+	return nil, false, err
 }
 
 // proxyPresign rewrites a PresignedRequest to point at the same-origin
@@ -248,7 +248,7 @@ func (h *Handler) PresignGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, err := h.lookupUploaderForACL(c, bucket, req.Key)
+	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, req.Key)
 	if err != nil {
 		return // helper already wrote the response
 	}
@@ -301,7 +301,7 @@ func (h *Handler) InlineGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, err := h.lookupUploaderForACL(c, bucket, key)
+	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
 		return
 	}
@@ -341,6 +341,19 @@ func (h *Handler) InlineGet(c *gin.Context) {
 func (h *Handler) Stat(c *gin.Context) {
 	bucket := c.Param("bucket")
 	key := strings.TrimPrefix(c.Param("key"), "/")
+	b, err := h.svc.Registry().Lookup(bucket)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, key)
+	if err != nil {
+		return
+	}
+	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
+		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return
+	}
 	meta, err := h.svc.Stat(c.Request.Context(), bucket, key)
 	if err != nil {
 		h.writeServiceError(c, err)
@@ -374,11 +387,18 @@ func (h *Handler) Delete(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, err := h.lookupUploaderForACL(c, bucket, key)
+	uploadedBy, recordExists, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
 		return
 	}
 	sub := subjectFromContext(c)
+	// Driver-only objects (no DB record at all) are legacy data. Require admin
+	// or a trusted service token — bucket-level CanWrite alone is not enough
+	// because an empty write_roles list grants write to every authenticated user.
+	if !recordExists && !middleware.IsCurrentUserAdmin(c) && !sub.IsService {
+		dto.ErrorResponse(c, http.StatusForbidden, "delete of legacy object requires admin")
+		return
+	}
 	if !h.auth.CanWrite(&b.Config, sub) &&
 		(uploadedBy == nil || *uploadedBy != sub.UserID) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
@@ -467,7 +487,7 @@ func (h *Handler) StreamGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, err := h.lookupUploaderForACL(c, bucket, key)
+	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
 		return
 	}
@@ -607,8 +627,17 @@ func (h *Handler) Raw(c *gin.Context) {
 			dto.ErrorResponse(c, http.StatusMethodNotAllowed, "token is PUT-only")
 			return
 		}
+		ct := c.GetHeader("Content-Type")
+		if !b.Config.AllowsContentType(ct) {
+			dto.ErrorResponse(c, http.StatusUnsupportedMediaType, ErrContentTypeRejected.Error())
+			return
+		}
+		if b.Config.MaxObjectBytes > 0 && c.Request.ContentLength > b.Config.MaxObjectBytes {
+			dto.ErrorResponse(c, http.StatusRequestEntityTooLarge, ErrObjectTooLarge.Error())
+			return
+		}
 		_, err := b.Driver.Put(c.Request.Context(), tok.Key, c.Request.Body, PutOpts{
-			ContentType:   c.GetHeader("Content-Type"),
+			ContentType:   ct,
 			ContentLength: c.Request.ContentLength,
 		})
 		if err != nil {
@@ -869,7 +898,7 @@ func (h *Handler) ZipObjects(c *gin.Context) {
 		return
 	}
 	for _, key := range req.Keys {
-		uploadedBy, recErr := h.lookupUploaderForACL(c, bucket, key)
+		uploadedBy, _, recErr := h.lookupUploaderForACL(c, bucket, key)
 		if recErr != nil {
 			return
 		}
