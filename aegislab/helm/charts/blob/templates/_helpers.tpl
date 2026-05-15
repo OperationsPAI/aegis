@@ -66,6 +66,7 @@ work without callers needing to adapt.
 {{- $ctx := .ctx | default . -}}
 {{- $pad := repeat (int (.indent | default 4)) " " -}}
 {{- $blob := $ctx.Values.blob | default $ctx.Values | default dict -}}
+{{- $defaultPublicEndpoint := $blob.publicEndpoint | default "" -}}
 {{- with $blob.client | default dict }}
 
 {{ $pad }}[blob.client]
@@ -80,6 +81,10 @@ work without callers needing to adapt.
 {{ $pad }}driver = {{ $b.driver | quote }}
 {{- if eq $b.driver "s3" }}
 {{ $pad }}endpoint = {{ $b.endpoint | quote }}
+{{- $publicEndpoint := $b.publicEndpoint | default $defaultPublicEndpoint }}
+{{- if $publicEndpoint }}
+{{ $pad }}public_endpoint = {{ $publicEndpoint | quote }}
+{{- end }}
 {{ $pad }}bucket = {{ $b.bucket | quote }}
 {{ $pad }}region = {{ $b.region | default "us-east-1" | quote }}
 {{ $pad }}use_ssl = {{ $b.use_ssl | default false }}

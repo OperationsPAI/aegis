@@ -18,8 +18,13 @@ type BucketConfig struct {
 	Root string
 
 	// s3 family — endpoint, region, credentials env-var names
-	Endpoint     string
-	Region       string
+	Endpoint string
+	// PublicEndpoint, when set, is used to sign presigned URLs handed
+	// out to browsers. The driver still talks to `Endpoint` for its own
+	// S3 calls. Leave empty if the regular `Endpoint` is reachable from
+	// browsers (e.g., the same LB that the SPA loads from).
+	PublicEndpoint string
+	Region         string
 	AccessKeyEnv string
 	SecretKeyEnv string
 	// AccessKey / SecretKey allow embedding credentials directly in the
@@ -133,6 +138,7 @@ func parseBucketConfig(name string) (BucketConfig, error) {
 		Driver:              viper.GetString(prefix + ".driver"),
 		Root:                viper.GetString(prefix + ".root"),
 		Endpoint:            viper.GetString(prefix + ".endpoint"),
+		PublicEndpoint:      viper.GetString(prefix + ".public_endpoint"),
 		Region:              viper.GetString(prefix + ".region"),
 		AccessKeyEnv:        viper.GetString(prefix + ".access_key_env"),
 		SecretKeyEnv:        viper.GetString(prefix + ".secret_key_env"),

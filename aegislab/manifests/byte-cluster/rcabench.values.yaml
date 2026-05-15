@@ -12,7 +12,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260514-stable-023ccd2-r1
+      tag: byte-20260515-hotfix-presign-r1
       pullPolicy: IfNotPresent
 
 images:
@@ -213,6 +213,11 @@ blob:
   # `rustfs-admin` Secret (above).
   client:
     mode: "local"
+  # Externally-reachable host browsers see for presigned URLs. aegis-blob
+  # signs URLs against this host (each bucket inherits unless it sets its
+  # own `publicEndpoint`); edge-proxy reverse-proxies /aegis-*/* paths
+  # back to rustfs with the original Host preserved so SigV4 validates.
+  publicEndpoint: "https://118.196.98.178:8082"
   buckets:
     datapack:
       driver: "s3"
@@ -285,7 +290,7 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260514-stable-023ccd2-r1
+    tag: byte-20260515-hotfix-presign-r1
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench

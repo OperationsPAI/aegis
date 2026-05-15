@@ -22,7 +22,12 @@ import (
 type S3Driver struct {
 	cfg    BucketConfig
 	client *minio.Client
-	bucket string
+	// presignClient signs URLs handed to browsers. It is identical to
+	// `client` unless BucketConfig.PublicEndpoint is set, in which case
+	// it is constructed against the externally-reachable host so SigV4
+	// validates against the browser-visible Host header.
+	presignClient *minio.Client
+	bucket        string
 }
 
 // NewS3Driver constructs the driver, verifies credentials, and ensures
@@ -65,7 +70,21 @@ func NewS3Driver(cfg BucketConfig) (*S3Driver, error) {
 			}
 		}
 	}
-	return &S3Driver{cfg: cfg, client: client, bucket: bucket}, nil
+
+	presignClient := client
+	if cfg.PublicEndpoint != "" {
+		pubEndpoint, pubSSL := normalizeS3Endpoint(cfg.PublicEndpoint, cfg.UseSSL)
+		presignClient, err = minio.New(pubEndpoint, &minio.Options{
+			Creds:        credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure:       pubSSL,
+			Region:       cfg.Region,
+			BucketLookup: bucketLookup(cfg.PathStyle),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("s3 driver presign-init %s: %w", pubEndpoint, err)
+		}
+	}
+	return &S3Driver{cfg: cfg, client: client, presignClient: presignClient, bucket: bucket}, nil
 }
 
 func resolveS3Credentials(cfg BucketConfig) (string, string, error) {
@@ -115,7 +134,7 @@ func presignTTL(d time.Duration) time.Duration {
 
 func (d *S3Driver) PresignPut(ctx context.Context, key string, opts PutOpts) (*PresignedRequest, error) {
 	ttl := presignTTL(opts.TTL)
-	u, err := d.client.PresignedPutObject(ctx, d.bucket, key, ttl)
+	u, err := d.presignClient.PresignedPutObject(ctx, d.bucket, key, ttl)
 	if err != nil {
 		return nil, fmt.Errorf("s3 presign put %q: %w", key, err)
 	}
@@ -140,7 +159,7 @@ func (d *S3Driver) PresignGet(ctx context.Context, key string, opts GetOpts) (*P
 	if opts.ResponseContentDisposition != "" {
 		params.Set("response-content-disposition", opts.ResponseContentDisposition)
 	}
-	u, err := d.client.PresignedGetObject(ctx, d.bucket, key, ttl, params)
+	u, err := d.presignClient.PresignedGetObject(ctx, d.bucket, key, ttl, params)
 	if err != nil {
 		return nil, fmt.Errorf("s3 presign get %q: %w", key, err)
 	}

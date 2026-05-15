@@ -76,6 +76,19 @@ data:
         handle @sso {
             reverse_proxy {{ .Release.Name }}-sso:{{ .Values.sso.service.port | default 8083 }}
         }
+        # Presigned-URL passthrough for rustfs (in-cluster S3 backend).
+        # aegis-blob signs URLs against this edge host (see each
+        # `blob.buckets.*.public_endpoint`), so the browser PUTs/GETs
+        # land here. Preserve the original Host header — SigV4 includes
+        # it in the signature, and the upstream rustfs validates it.
+        @rustfs {
+            path /aegis-*
+        }
+        handle @rustfs {
+            reverse_proxy {{ .Release.Name }}-rustfs:9000 {
+                header_up Host {host}
+            }
+        }
         # /auth/* is a SPA route family (login / register / callback /
         # forgot-password). The real auth API lives under /api/v2/auth/*
         # and is covered by the /api/* matcher below.
