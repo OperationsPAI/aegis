@@ -215,6 +215,17 @@ data:
     upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth     = "none"
 
+    {{- $chUpstream := .Values.gateway.clickhouseUpstream | default "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123" }}
+    [[gateway.routes]]
+    # ClickHouse HTTP proxy for the trajectories sub-app (read-only OTel
+    # trace queries). The frontend hits POST /api/v2/clickhouse/?... ;
+    # strip_prefix rewrites that to POST /?... before the ReverseProxy
+    # dials ClickHouse on 8123.
+    prefix       = "/api/v2/clickhouse/"
+    upstream     = "{{ $chUpstream }}"
+    auth         = "jwt"
+    strip_prefix = true
+
     [[gateway.routes]]
     prefix   = "/api/v2/auth/"
     upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"

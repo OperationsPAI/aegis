@@ -617,6 +617,10 @@ gateway:
   binaryName: "aegis-gateway"
   service:
     type: ClusterIP
+  # ClickHouse HTTP upstream for /api/v2/clickhouse/* (trajectories
+  # sub-app). Defaults to the operator-managed ClickStack headless
+  # Service. Override per-environment if pointing at a different CH.
+  clickhouseUpstream: "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123"
   trustedHeaderKey: ""
   rateLimit:
     rps: 200
