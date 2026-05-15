@@ -23,6 +23,11 @@ chaosDaemon:
   socketPath: /run/containerd/containerd.sock
   image:
     repository: chaos-daemon
+    # Pin chaos-daemon ahead of the global `tag` above: this build carries
+    # the distroless-target fix (see chaos-mesh/chaos-mesh#4971). The
+    # controller-manager + dashboard have no code change vs 20260425-517f3df
+    # so they stay on the global tag.
+    tag: 20260515-nsexec-fix-v2
 
 dashboard:
   image:
