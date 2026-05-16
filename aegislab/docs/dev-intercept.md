@@ -197,3 +197,8 @@ helm values weren't applied (rerun the `helm upgrade` from step 1).
 **SSO cookie missing on `/dev/*`** — should not happen since it's the
 same origin. If it does, ensure your dev server is not stripping the
 `Cookie` header.
+
+**`x509: certificate signed by unknown authority`** when aegisctl hits
+the cluster — Caddy issues a self-signed root that must be trusted
+locally. See [`aegisctl-tls.md`](aegisctl-tls.md) for the
+`aegisctl context trust` TOFU workflow.
