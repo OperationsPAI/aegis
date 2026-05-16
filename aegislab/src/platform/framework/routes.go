@@ -30,14 +30,23 @@ const (
 // A module provides it from `fx.Provide(module.Routes, fx.ResultTags(`group:"routes"`))`.
 type RouteRegistrar struct {
 	// Audience chooses which sub-group of /api/v2 Register is mounted on.
+	// Ignored when BasePath is non-empty.
 	Audience Audience
 
 	// Name is a short human-readable label used only for tracing /
 	// debugging (e.g. "label", "injection.portal").
 	Name string
 
+	// BasePath is the escape hatch for modules that need to mount outside
+	// /api/v2 (e.g. SSR pages at /p/* or vendor static assets at /static/*).
+	// When non-empty, router.New mounts Register on engine.Group(BasePath)
+	// and Audience is ignored. Use sparingly — most API surface should
+	// live under /api/v2 via an Audience-mounted registrar.
+	BasePath string
+
 	// Register attaches this module's routes to the given gin.RouterGroup.
-	// The group passed in is the audience's /api/v2 bucket. The function
-	// should NOT add /api/v2 itself — it's already there.
+	// For audience-mounted registrars the group is the audience's /api/v2
+	// bucket — do NOT re-add /api/v2. For BasePath-mounted registrars the
+	// group is engine.Group(BasePath).
 	Register func(group *gin.RouterGroup)
 }

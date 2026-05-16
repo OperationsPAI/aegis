@@ -2327,6 +2327,58 @@ requirements:
     conflicts: []
     notes: "Backend already returns DetectorResult and GranularityResult in ExecutionDetailResp."
 
+  # ===========================================================================
+  # REQ-9xx: Pages module — static-site rendering from blob
+  # ===========================================================================
+
+  - id: REQ-900
+    title: Pages Module — static-site rendering from blob
+    description: >
+      Self-service static-site hosting. Users upload markdown + assets via a
+      multipart REST endpoint under /api/v2/pages; files land in the
+      `aegis-pages` blob bucket under a per-site UUID prefix. The public
+      surface at /p/:slug/* server-renders .md files to GitHub-styled HTML
+      (goldmark + GFM + chroma) and streams other files raw. Three visibility
+      modes (public_listed | public_unlisted | private). Private sites
+      redirect anonymous callers to /auth/login.
+    priority: P1
+    status: implemented
+    confidence: confirmed
+    source: "src/crud/storage/pages/, docs/pages-api.md"
+
+    code:
+      - path: src/crud/storage/pages/
+        description: "module, handlers, SSR renderer, link-rewrite, embedded GitHub CSS"
+      - path: src/boot/http_modules.go
+        description: "pages.Module wired into apiHTTPModules"
+      - path: src/platform/framework/routes.go
+        description: "RouteRegistrar.BasePath escape hatch for /p/* and /static/pages/* (off the /api/v2 trunk)"
+      - path: src/platform/router/router.go
+        description: "dispatches RouteRegistrar by Audience or BasePath"
+
+    has_mock: false
+
+    tests:
+      - path: src/crud/storage/pages/service_test.go
+        description: "slug uniqueness, validation, owner check, traversal, limits"
+      - path: src/crud/storage/pages/render_test.go
+        description: "link rewriting, image rewriting, fragment/mailto untouched, frontmatter title override"
+
+    docs:
+      - path: docs/pages-api.md
+
+    acceptance:
+      status: pending
+      date: ""
+      notes: ""
+
+    depends_on: [REQ-001]
+    conflicts: []
+    notes: >
+      Bucket `aegis-pages` must be declared once via the existing blob
+      module's config or `POST /api/v2/blob/buckets`. Out of scope for v1:
+      nested sidebar tree, per-page ACL, custom domains, render caching.
+
 # =============================================================================
 # Cross-Repo Audit Summary (2026-04-13, updated after full frontend implementation)
 # =============================================================================

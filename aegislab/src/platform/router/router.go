@@ -23,7 +23,7 @@ type Params struct {
 
 // New assembles the gin.Engine. It iterates every module-provided
 // `framework.RouteRegistrar` via fx-group, dispatching each to its
-// declared audience bucket.
+// declared audience bucket (or to the engine root when BasePath is set).
 func New(params Params) *gin.Engine {
 	router := gin.Default()
 
@@ -47,9 +47,14 @@ func New(params Params) *gin.Engine {
 
 	v2 := router.Group("/api/v2")
 
-	// Framework-registered routes. Each registrar declares an Audience and
-	// is mounted onto the matching /api/v2 sub-group.
+	// Framework-registered routes. Audience-mounted registrars attach to
+	// the matching /api/v2 sub-group; BasePath-mounted registrars attach
+	// at the engine root under that prefix (e.g. SSR /p/*).
 	for _, r := range params.Registrars {
+		if r.BasePath != "" {
+			r.Register(router.Group(r.BasePath))
+			continue
+		}
 		r.Register(v2)
 	}
 

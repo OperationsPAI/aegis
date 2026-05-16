@@ -31,6 +31,7 @@ import (
 	systemmetric "aegis/crud/observability/systemmetric"
 	trace "aegis/crud/observability/trace"
 	blob "aegis/crud/storage/blob"
+	pages "aegis/crud/storage/pages"
 	"aegis/platform/router"
 
 	"go.uber.org/fx"
@@ -81,6 +82,7 @@ func apiHTTPModules() []fx.Option {
 
 		// crud/storage
 		blob.Module,
+		pages.Module,
 
 		// crud/messaging
 		notification.Module,
@@ -111,6 +113,7 @@ func apiHTTPModuleNames() []string {
 		"evaluation", "metric", "observation", "sdk", "system",
 		"systemmetric", "trace",
 		"blob",
+		"pages",
 		"notification",
 		"configcenter", "ratelimiter", "widget",
 		"blobclient", "configcenterclient", "gateway", "notificationclient",

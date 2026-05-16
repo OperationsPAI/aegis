@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{.Title}} · {{.Slug}}</title>
+  <link rel="stylesheet" href="/static/pages/github-markdown.css">
+  <link rel="stylesheet" href="/static/pages/chroma-github.css">
+  <link rel="stylesheet" href="/static/pages/layout.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <h3>{{.SiteTitle}}</h3>
+    <ul>
+      {{range .NavItems}}<li><a href="{{.URL}}"{{if .Active}} class="active"{{end}}>{{.Label}}</a></li>{{end}}
+    </ul>
+  </aside>
+  <main class="markdown-body">{{.Body}}</main>
+</body>
+</html>
