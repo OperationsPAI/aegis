@@ -1,7 +1,10 @@
 name: Publish a single TypeScript SDK (reusable)
 
 # Called by publish-npm.yml. Generates one aegislab TypeScript SDK (portal or
-# admin), then pnpm-publishes it to GitHub Packages.
+# admin), rewrites its scope from @OperationsPAI to @lincyaw, and publishes
+# it to npmjs.org under the public @lincyaw scope using an npm automation
+# token (NPM_TOKEN secret). The token's "automation" type lets the publish
+# step bypass 2FA, so no human OTP is needed.
 #
 # The caller passes `version` as empty-string when the trigger was a git tag;
 # in that case the version is derived from $GITHUB_REF here. This keeps the
@@ -91,8 +94,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@OperationsPAI"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@lincyaw"
 
       - name: Install
         working-directory: aegislab/sdk/typescript/${{ inputs.target }}
@@ -108,8 +111,43 @@ jobs:
             echo "no build script, skipping"
           fi
 
+      # The generator emits @OperationsPAI/* scoped names + a GHPR-targeted
+      # publishConfig because the upstream openapi-generator template was
+      # configured for the original org. Rewrite both before publish so the
+      # package lands on npmjs.org under the @lincyaw public scope.
+      - name: Rewrite scope for npmjs publish
+        working-directory: aegislab/sdk/typescript/${{ inputs.target }}
+        env:
+          TARGET: ${{ inputs.target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "
+            const fs = require('fs');
+            const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const target = process.env.TARGET;
+            p.name = '@lincyaw/' + target;
+            p.description = 'OpenAPI client for @lincyaw/' + target;
+            if (Array.isArray(p.keywords)) {
+              p.keywords = p.keywords.map(k => k.replace(/^@OperationsPAI\\//, '@lincyaw/'));
+            }
+            p.publishConfig = { access: 'public' };
+            fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+          "
+          node -e "
+            const p = require('./package.json');
+            if (p.name !== '@lincyaw/' + process.env.TARGET) {
+              console.error('name not patched:', p.name);
+              process.exit(1);
+            }
+            if (p.publishConfig && p.publishConfig.registry) {
+              console.error('publishConfig.registry should be absent for npmjs publish');
+              process.exit(1);
+            }
+          "
+
       - name: Publish
         working-directory: aegislab/sdk/typescript/${{ inputs.target }}
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm publish --no-git-checks --access restricted
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --no-git-checks --access public
