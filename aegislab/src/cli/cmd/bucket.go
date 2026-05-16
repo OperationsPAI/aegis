@@ -1,49 +1,27 @@
 package cmd
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strconv"
-	"strings"
 
 	"aegis/cli/apiclient"
-	"aegis/cli/client"
 	"aegis/cli/internal/cli/blobref"
 	"aegis/cli/output"
 
 	"github.com/spf13/cobra"
 )
 
-// cliBucketLifecycleRule mirrors the server's BucketLifecycleRule shape;
-// kept local to the CLI because the generated SDK does not yet expose it.
-//
-// TODO(SDK-regen): drop this duplicate once `just swagger-init && just
-// generate-portal` adds BlobBucketLifecycle to the generated SDK.
-type cliBucketLifecycleRule struct {
-	Name            string `json:"name"`
-	MatchPrefix     string `json:"match_prefix"`
-	ExpireAfterDays int    `json:"expire_after_days"`
-	Action          string `json:"action"`
-}
-
-type cliBucketLifecycle struct {
-	Rules []cliBucketLifecycleRule `json:"rules"`
-}
-
-// readLifecycleFile parses + structurally validates a lifecycle JSON
-// file. We only check shape here; server-side Validate() is the
+// readLifecycleFile parses a lifecycle JSON file into the SDK type.
+// Only shape errors are returned here; server-side Validate() is the
 // authoritative gate.
-func readLifecycleFile(path string) (*cliBucketLifecycle, error) {
+func readLifecycleFile(path string) (*apiclient.BlobBucketLifecycle, error) {
 	body, err := os.ReadFile(path) //nolint:gosec // path is user-supplied CLI input
 	if err != nil {
 		return nil, fmt.Errorf("read lifecycle file: %w", err)
 	}
-	var out cliBucketLifecycle
+	var out apiclient.BlobBucketLifecycle
 	if err := json.Unmarshal(body, &out); err != nil {
 		return nil, usageErrorf("invalid lifecycle JSON in %q: %v", path, err)
 	}
@@ -168,8 +146,6 @@ EXAMPLES:
   aegisctl bucket create scratch --driver localfs --root /var/lib/aegis-blob/scratch --lifecycle policy.json
 `,
 	Args: cobra.ExactArgs(1),
-	// TODO(SDK-regen): once the SDK exposes BlobCreateBucketReq.Lifecycle,
-	// drop the raw-HTTP path below in favour of the typed client.
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		if !blobref.IsValidBucketName(name) {
@@ -178,7 +154,7 @@ EXAMPLES:
 		if bucketCreateDriver == "" {
 			return usageErrorf("--driver is required (localfs|s3)")
 		}
-		var lifecycle *cliBucketLifecycle
+		var lifecycle *apiclient.BlobBucketLifecycle
 		if bucketCreateLifecycleFile != "" {
 			lc, err := readLifecycleFile(bucketCreateLifecycleFile)
 			if err != nil {
@@ -191,69 +167,54 @@ EXAMPLES:
 			return err
 		}
 
-		payload := map[string]any{
-			"name":   name,
-			"driver": bucketCreateDriver,
-		}
+		req := apiclient.NewBlobCreateBucketReq(bucketCreateDriver, name)
 		if bucketCreateRoot != "" {
-			payload["root"] = bucketCreateRoot
+			req.SetRoot(bucketCreateRoot)
 		}
 		if bucketCreateEndpoint != "" {
-			payload["endpoint"] = bucketCreateEndpoint
+			req.SetEndpoint(bucketCreateEndpoint)
 		}
 		if bucketCreateRegion != "" {
-			payload["region"] = bucketCreateRegion
+			req.SetRegion(bucketCreateRegion)
 		}
 		if bucketCreateBucketName != "" {
-			payload["bucket"] = bucketCreateBucketName
+			req.SetBucket(bucketCreateBucketName)
 		}
 		if bucketCreatePublic {
-			payload["public_read"] = true
+			req.SetPublicRead(true)
 		}
 		if bucketCreateMaxObjectBytes > 0 {
-			payload["max_object_bytes"] = bucketCreateMaxObjectBytes
+			req.SetMaxObjectBytes(int32(bucketCreateMaxObjectBytes))
 		}
 		if bucketCreateRetentionDays > 0 {
-			payload["retention_days"] = bucketCreateRetentionDays
+			req.SetRetentionDays(int32(bucketCreateRetentionDays))
 		}
 		if lifecycle != nil {
-			payload["lifecycle"] = lifecycle
+			req.SetLifecycle(*lifecycle)
 		}
 
 		if flagDryRun {
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
-				output.PrintJSON(map[string]any{"dry_run": true, "would_create": payload})
+				output.PrintJSON(map[string]any{"dry_run": true, "would_create": req})
 			} else {
-				fmt.Fprintf(os.Stderr, "Dry run — would POST /api/v2/blob/buckets %+v\n", payload)
+				fmt.Fprintf(os.Stderr, "Dry run — would POST /api/v2/blob/buckets %+v\n", req)
 			}
 			return nil
 		}
 
-		body, err := json.Marshal(payload)
-		if err != nil {
-			return fmt.Errorf("marshal create-bucket request: %w", err)
-		}
-		_, status, respBody, err := bucketDoJSON(http.MethodPost, "/api/v2/blob/buckets", body)
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.BlobAPI.BlobCreateBucket(ctx).BlobCreateBucketReq(*req).Execute()
 		if err != nil {
 			return err
 		}
-		if status < 200 || status >= 300 {
-			return bucketTranslateHTTPError("bucket create", status, respBody)
-		}
-		var env struct {
-			Data *apiclient.BlobBucketSummary `json:"data"`
-		}
-		if err := json.Unmarshal(respBody, &env); err != nil {
-			return fmt.Errorf("decode create-bucket response: %w", err)
-		}
-		if env.Data == nil {
+		if resp == nil || resp.Data == nil {
 			return fmt.Errorf("create bucket: empty response")
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(env.Data)
+			output.PrintJSON(resp.Data)
 			return nil
 		}
-		output.PrintInfo(fmt.Sprintf("Bucket %q created (driver=%s)", env.Data.GetName(), env.Data.GetDriver()))
+		output.PrintInfo(fmt.Sprintf("Bucket %q created (driver=%s)", resp.Data.GetName(), resp.Data.GetDriver()))
 		return nil
 	},
 }
@@ -402,33 +363,28 @@ var bucketLifecycleGetCmd = &cobra.Command{
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
-		_, status, body, err := bucketDoJSON(http.MethodGet, "/api/v2/blob/buckets/"+name+"/lifecycle", nil)
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.BlobAPI.BlobGetBucketLifecycle(ctx, name).Execute()
 		if err != nil {
 			return err
 		}
-		if status < 200 || status >= 300 {
-			return bucketTranslateHTTPError("bucket lifecycle get", status, body)
-		}
-		var env struct {
-			Data *cliBucketLifecycle `json:"data"`
-		}
-		if err := json.Unmarshal(body, &env); err != nil {
-			return fmt.Errorf("decode lifecycle response: %w", err)
-		}
-		if env.Data == nil {
-			env.Data = &cliBucketLifecycle{Rules: []cliBucketLifecycleRule{}}
+		var lc apiclient.BlobBucketLifecycle
+		if resp != nil && resp.Data != nil {
+			lc = *resp.Data
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
-			output.PrintJSON(env.Data)
+			output.PrintJSON(lc)
 			return nil
 		}
-		if len(env.Data.Rules) == 0 {
+		rules := lc.GetRules()
+		if len(rules) == 0 {
 			fmt.Println("(no lifecycle policy)")
 			return nil
 		}
-		rows := make([][]string, 0, len(env.Data.Rules))
-		for _, r := range env.Data.Rules {
-			rows = append(rows, []string{r.Name, r.MatchPrefix, strconv.Itoa(r.ExpireAfterDays), r.Action})
+		rows := make([][]string, 0, len(rules))
+		for i := range rules {
+			r := &rules[i]
+			rows = append(rows, []string{r.GetName(), r.GetMatchPrefix(), strconv.Itoa(int(r.GetExpireAfterDays())), r.GetAction()})
 		}
 		output.PrintTable([]string{"NAME", "MATCH_PREFIX", "EXPIRE_AFTER_DAYS", "ACTION"}, rows)
 		return nil
@@ -454,31 +410,25 @@ var bucketLifecycleSetCmd = &cobra.Command{
 		if err := requireAPIContext(true); err != nil {
 			return err
 		}
+		ruleCount := len(lc.GetRules())
 		if flagDryRun {
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
 				output.PrintJSON(map[string]any{
 					"dry_run":    true,
 					"would_put":  "/api/v2/blob/buckets/" + name + "/lifecycle",
-					"rule_count": len(lc.Rules),
+					"rule_count": ruleCount,
 					"policy":     lc,
 				})
 			} else {
-				fmt.Fprintf(os.Stderr, "Dry run — would PUT /api/v2/blob/buckets/%s/lifecycle (%d rule(s))\n", name, len(lc.Rules))
+				fmt.Fprintf(os.Stderr, "Dry run — would PUT /api/v2/blob/buckets/%s/lifecycle (%d rule(s))\n", name, ruleCount)
 			}
 			return nil
 		}
-		body, err := json.Marshal(lc)
-		if err != nil {
-			return fmt.Errorf("marshal lifecycle: %w", err)
-		}
-		_, status, respBody, err := bucketDoJSON(http.MethodPut, "/api/v2/blob/buckets/"+name+"/lifecycle", body)
-		if err != nil {
+		cli, ctx := newAPIClient()
+		if _, _, err := cli.BlobAPI.BlobPutBucketLifecycle(ctx, name).BlobBucketLifecycle(*lc).Execute(); err != nil {
 			return err
 		}
-		if status < 200 || status >= 300 {
-			return bucketTranslateHTTPError("bucket lifecycle set", status, respBody)
-		}
-		output.PrintInfo(fmt.Sprintf("lifecycle updated for %q (%d rule(s))", name, len(lc.Rules)))
+		output.PrintInfo(fmt.Sprintf("lifecycle updated for %q (%d rule(s))", name, ruleCount))
 		return nil
 	},
 }
@@ -498,7 +448,7 @@ var bucketLifecycleClearCmd = &cobra.Command{
 		if !bucketLifecycleClrYes && !flagDryRun {
 			return usageErrorf("--yes is required to clear the policy on %q", name)
 		}
-		empty := cliBucketLifecycle{Rules: []cliBucketLifecycleRule{}}
+		empty := apiclient.BlobBucketLifecycle{Rules: []apiclient.BlobBucketLifecycleRule{}}
 		if flagDryRun {
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
 				output.PrintJSON(map[string]any{
@@ -511,76 +461,13 @@ var bucketLifecycleClearCmd = &cobra.Command{
 			}
 			return nil
 		}
-		body, _ := json.Marshal(empty)
-		_, status, respBody, err := bucketDoJSON(http.MethodPut, "/api/v2/blob/buckets/"+name+"/lifecycle", body)
-		if err != nil {
+		cli, ctx := newAPIClient()
+		if _, _, err := cli.BlobAPI.BlobPutBucketLifecycle(ctx, name).BlobBucketLifecycle(empty).Execute(); err != nil {
 			return err
-		}
-		if status < 200 || status >= 300 {
-			return bucketTranslateHTTPError("bucket lifecycle clear", status, respBody)
 		}
 		output.PrintInfo(fmt.Sprintf("lifecycle cleared for %q", name))
 		return nil
 	},
-}
-
-// bucketDoJSON is the raw-HTTP fallback used until the SDK regen exposes
-// the Lifecycle field on BlobCreateBucketReq and the new lifecycle
-// endpoints. Mirrors the pagesDoMultipart pattern in page.go.
-//
-// TODO(SDK-regen): once `just generate-portal` adds BlobGetBucketLifecycle
-// / BlobPutBucketLifecycle, switch callers to the typed client and remove
-// this helper.
-func bucketDoJSON(method, path string, body []byte) (*http.Response, int, []byte, error) {
-	if flagServer == "" {
-		return nil, 0, nil, missingEnvErrorf("--server or AEGIS_SERVER is required")
-	}
-	rawURL := strings.TrimRight(flagServer, "/") + path
-	var reader io.Reader
-	if body != nil {
-		reader = bytes.NewReader(body)
-	}
-	req, err := http.NewRequestWithContext(context.Background(), method, rawURL, reader)
-	if err != nil {
-		return nil, 0, nil, fmt.Errorf("build request: %w", err)
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Accept", "application/json")
-	if flagToken != "" {
-		req.Header.Set("Authorization", "Bearer "+flagToken)
-	}
-	httpClient := &http.Client{Transport: client.TransportFor(resolveTLSOptions())}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, 0, nil, fmt.Errorf("%s %s: %w", method, path, err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
-	}
-	return resp, resp.StatusCode, respBody, nil
-}
-
-func bucketTranslateHTTPError(op string, status int, body []byte) error {
-	msg := serverErrorMessage(body, status)
-	switch status {
-	case http.StatusBadRequest:
-		return usageErrorf("%s: %s", op, msg)
-	case http.StatusUnauthorized, http.StatusForbidden:
-		return authErrorf("%s: %s", op, msg)
-	case http.StatusNotFound:
-		return notFoundErrorf("%s: %s", op, msg)
-	case http.StatusConflict:
-		return conflictErrorf("%s: %s", op, msg)
-	default:
-		if status >= 500 {
-			return fmt.Errorf("%s: server returned HTTP %d: %s", op, status, msg)
-		}
-		return fmt.Errorf("%s: HTTP %d: %s", op, status, msg)
-	}
 }
 
 func init() {
