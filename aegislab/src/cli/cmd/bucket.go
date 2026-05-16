@@ -274,11 +274,7 @@ var bucketRmCmd = &cobra.Command{
 	Aliases: []string{"delete"},
 	Short:   "Delete a bucket (refuses to delete non-empty buckets without --force)",
 	Long: `Delete a bucket. Refuses to delete a non-empty bucket unless --force is
-given.
-
-NOTE: The backend does not yet expose a bucket-delete endpoint
-(POST/DELETE /api/v2/blob/buckets/:name). This command will error out until
-the backend ships that route. See the project notes for the tracking issue.
+given (which forwards force=true on the server-side DELETE).
 
 EXAMPLES:
   aegisctl bucket rm aegis-scratch --yes
@@ -302,15 +298,13 @@ EXAMPLES:
 		if err := confirmDeletion("bucket", name, 0, yes); err != nil {
 			return err
 		}
-		// Stubbed: backend endpoint is not implemented; surface a structured
-		// server-side 404/501-style error rather than silently no-op.
-		c := newClient()
-		var resp struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
+		cli, ctx := newAPIClient()
+		req := cli.BlobAPI.BlobDeleteBucket(ctx, name)
+		if bucketRmForce {
+			req = req.Force(true)
 		}
-		if err := c.Delete("/api/v2/blob/buckets/"+name, &resp); err != nil {
-			return fmt.Errorf("bucket rm: backend endpoint is not yet implemented (DELETE /api/v2/blob/buckets/%s): %w", name, err)
+		if _, _, err := req.Execute(); err != nil {
+			return err
 		}
 		output.PrintInfo(fmt.Sprintf("Bucket %q deleted", name))
 		return nil
