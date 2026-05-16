@@ -20,6 +20,15 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				g.GET("/:code", handler.GetOne)
 				g.DELETE("/:code", handler.Revoke)
 			}
+			// Presigned-PUT flow: init reserves a code + PUT URL, commit
+			// finalises the share row after the client uploads directly
+			// to the object store. Human-only — service tokens shouldn't
+			// be shotgun-uploading.
+			humanOnly := v2.Group("/share", middleware.TrustedHeaderAuth(), middleware.RequireHumanUserAuth())
+			{
+				humanOnly.POST("/init", handler.InitUpload)
+				humanOnly.POST("/:code/commit", handler.CommitUpload)
+			}
 		},
 	}
 }
