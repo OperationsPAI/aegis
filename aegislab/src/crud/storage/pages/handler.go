@@ -49,6 +49,16 @@ type Handler struct {
 
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
+// uploadBodyCap is the inclusive byte ceiling enforced on every multipart
+// management request. It's MaxTotalSize plus a small headroom for the
+// multipart boundaries / per-part headers — exceeding it returns 413
+// before the body is even parsed.
+const uploadBodyCap int64 = 1 * 1024 * 1024 // additional headroom over MaxTotalSize
+
+func capBody(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxTotalSize+uploadBodyCap)
+}
+
 // CreatePage uploads a brand new site.
 //
 //	@Summary		Create page site
@@ -75,13 +85,14 @@ func (h *Handler) CreatePage(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
+	capBody(c)
 	slug := strings.TrimSpace(c.PostForm("slug"))
 	visibility := strings.TrimSpace(c.PostForm("visibility"))
 	title := strings.TrimSpace(c.PostForm("title"))
 
 	files, err := collectFiles(c)
 	if err != nil {
-		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		writeServiceError(c, err)
 		return
 	}
 
@@ -125,9 +136,10 @@ func (h *Handler) ReplacePage(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	capBody(c)
 	files, err := collectFiles(c)
 	if err != nil {
-		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		writeServiceError(c, err)
 		return
 	}
 	site, err := h.svc.ReplaceFiles(c.Request.Context(), uid, id, files)
@@ -313,6 +325,9 @@ func (h *Handler) Detail(c *gin.Context) {
 func collectFiles(c *gin.Context) ([]UploadFile, error) {
 	form, err := c.MultipartForm()
 	if err != nil {
+		if isBodyTooLarge(err) {
+			return nil, ErrTotalTooLarge
+		}
 		return nil, err
 	}
 	var out []UploadFile
@@ -324,6 +339,9 @@ func collectFiles(c *gin.Context) ([]UploadFile, error) {
 			}
 			body, err := readMultipart(fh)
 			if err != nil {
+				if isBodyTooLarge(err) {
+					return nil, ErrTotalTooLarge
+				}
 				return nil, err
 			}
 			ct := fh.Header.Get("Content-Type")
@@ -338,6 +356,22 @@ func collectFiles(c *gin.Context) ([]UploadFile, error) {
 		}
 	}
 	return out, nil
+}
+
+// isBodyTooLarge unwraps the various flavours of "request body exceeds
+// MaxBytesReader cap" — Go reports it as *http.MaxBytesError from 1.19+,
+// but multipart parsing layers may wrap it in a string-form error.
+func isBodyTooLarge(err error) bool {
+	if err == nil {
+		return false
+	}
+	var maxBytes *http.MaxBytesError
+	if errors.As(err, &maxBytes) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "http: request body too large") ||
+		strings.Contains(msg, "multipart: NextPart: http: request body too large")
 }
 
 func readMultipart(fh *multipart.FileHeader) ([]byte, error) {
@@ -407,6 +441,8 @@ func writeServiceError(c *gin.Context, err error) {
 		errors.Is(err, ErrTotalTooLarge),
 		errors.Is(err, ErrTooManyFiles):
 		dto.ErrorResponse(c, http.StatusRequestEntityTooLarge, err.Error())
+	case isBodyTooLarge(err):
+		dto.ErrorResponse(c, http.StatusRequestEntityTooLarge, ErrTotalTooLarge.Error())
 	default:
 		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}

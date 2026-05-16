@@ -95,8 +95,10 @@ All fields optional. Slug changes go through the uniqueness check.
 
 ### `DELETE /api/v2/pages/{id}` — delete site
 
-Owner only. Lists the blob prefix, deletes every object, then removes the
-DB row. Returns 204.
+Owner only. Removes the DB row first inside a transaction, then
+best-effort deletes every object under `{site_uuid}/`. A transient blob
+failure logs the orphan prefix for external GC; the API still returns 204
+because the row is already gone. Returns 204.
 
 ### `GET /api/v2/pages` — my sites
 
@@ -113,8 +115,8 @@ Lists the caller's sites, newest first. Query: `?limit=&offset=`.
 ### `GET /api/v2/pages/{id}` — detail
 
 `OptionalJWTAuth`. Returns `PageSiteResponse` plus `files: [{path, size_bytes}]`.
-Private sites are restricted to the owner — non-owners (or anonymous
-callers) get 404.
+Private sites collapse to 404 for non-owners (anonymous or otherwise) so
+the API does not leak existence — mirrors the SSR `/p/:slug` behaviour.
 
 ## Public SSR
 

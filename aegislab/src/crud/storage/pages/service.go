@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -12,7 +13,14 @@ import (
 	blobclient "aegis/clients/blob"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
+
+// resolveSlugMaxAttempts caps the auto-suffix loop on derived slugs so a
+// pathological collision spike (or buggy unique-index translation) cannot
+// stall the request indefinitely.
+const resolveSlugMaxAttempts = 1000
 
 // Domain errors. The handler maps these to HTTP codes; do not return raw
 // repo / blob errors above the service layer.
@@ -54,9 +62,11 @@ func NewService(repo *Repository, blob blobclient.Client) *Service {
 	return &Service{repo: repo, blob: blob}
 }
 
-// CreateSite validates input, allocates a slug + UUID, writes every file
-// to blob, then persists the row. The caller is the human user that owns
-// the new site.
+// CreateSite validates input, claims a slug + UUID via DB unique-violation
+// (no read-then-write race), then writes blobs, then updates the row's
+// counters. On any failure after the row is committed we best-effort clean
+// the partial blob prefix; the row stays so the caller can retry via
+// /upload to refill.
 func (s *Service) CreateSite(ctx context.Context, ownerID int, slug, visibility, title string, files []UploadFile) (*PageSite, error) {
 	if visibility == "" {
 		visibility = VisibilityPublicUnlisted
@@ -78,28 +88,83 @@ func (s *Service) CreateSite(ctx context.Context, ownerID int, slug, visibility,
 		return nil, ErrNoFiles
 	}
 
-	slug, err = s.resolveSlug(ctx, slug, title, cleaned)
+	site, err := s.claimSlugRow(ctx, ownerID, slug, visibility, title, cleaned)
 	if err != nil {
 		return nil, err
 	}
 
+	if err := s.writeFiles(ctx, site, cleaned); err != nil {
+		// Best-effort cleanup of any partial prefix; row stays for retry.
+		s.cleanupOrphanBlobs(ctx, site.SiteUUID)
+		return nil, err
+	}
+	site.FileCount = int32(len(cleaned))
+	site.SizeBytes = totalSize(cleaned)
+	site.UpdatedAt = time.Now().UTC()
+	if err := s.repo.Update(ctx, site); err != nil {
+		s.cleanupOrphanBlobs(ctx, site.SiteUUID)
+		return nil, err
+	}
+	return site, nil
+}
+
+// claimSlugRow inserts the row that owns the desired slug. If the caller
+// passed an explicit slug, that's used verbatim; an empty slug is
+// auto-derived from title/filename. Slug collisions are detected by the
+// DB's unique index — for derived slugs we retry with -2, -3, … up to
+// resolveSlugMaxAttempts; for an explicit slug we surface ErrSlugTaken
+// on the first collision.
+func (s *Service) claimSlugRow(ctx context.Context, ownerID int, requestedSlug, visibility, title string, cleaned []UploadFile) (*PageSite, error) {
+	if requestedSlug != "" {
+		if !SlugRegex.MatchString(requestedSlug) {
+			return nil, ErrInvalidSlug
+		}
+		return s.insertRow(ctx, ownerID, requestedSlug, visibility, title)
+	}
+	base := deriveSlug(title, cleaned)
+	if base == "" {
+		base = "site"
+	}
+	if !SlugRegex.MatchString(base) {
+		base = sanitiseSlug(base)
+		if !SlugRegex.MatchString(base) {
+			base = "site"
+		}
+	}
+	candidate := base
+	for i := 2; i <= resolveSlugMaxAttempts; i++ {
+		site, err := s.insertRow(ctx, ownerID, candidate, visibility, title)
+		if err == nil {
+			return site, nil
+		}
+		if !errors.Is(err, ErrSlugTaken) {
+			return nil, err
+		}
+		candidate = fmt.Sprintf("%s-%d", base, i)
+		if !SlugRegex.MatchString(candidate) {
+			return nil, ErrInvalidSlug
+		}
+	}
+	return nil, ErrSlugTaken
+}
+
+// insertRow tries a single insert; gorm.ErrDuplicatedKey collapses to
+// ErrSlugTaken so callers can react without inspecting raw DB errors.
+func (s *Service) insertRow(ctx context.Context, ownerID int, slug, visibility, title string) (*PageSite, error) {
+	now := time.Now().UTC()
 	site := &PageSite{
 		SiteUUID:   uuid.NewString(),
 		OwnerID:    ownerID,
 		Slug:       slug,
 		Visibility: visibility,
 		Title:      title,
-		CreatedAt:  time.Now().UTC(),
-		UpdatedAt:  time.Now().UTC(),
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
-	if err := s.writeFiles(ctx, site, cleaned); err != nil {
-		return nil, err
-	}
-	site.FileCount = int32(len(cleaned))
-	site.SizeBytes = totalSize(cleaned)
 	if err := s.repo.Create(ctx, site); err != nil {
-		// Best-effort cleanup so a DB failure doesn't leave orphan blobs.
-		_ = s.deletePrefix(ctx, site.SiteUUID)
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, ErrSlugTaken
+		}
 		return nil, err
 	}
 	return site, nil
@@ -182,9 +247,11 @@ func (s *Service) UpdateMeta(ctx context.Context, callerID int, siteID int64, sl
 	return site, nil
 }
 
-// DeleteSite removes blob storage and the DB row. Best-effort on blob —
-// missing-bucket / driver errors are returned but DB row is still removed
-// to avoid orphan rows.
+// DeleteSite removes the DB row first, then best-effort cleans the blob
+// prefix. A transient blob failure leaves an orphaned prefix that gets
+// logged for later GC — the caller sees success because the row is gone
+// (idempotent re-delete would 404). Reversing the order would expose a
+// stale DB row with phantom files on transient blob errors.
 func (s *Service) DeleteSite(ctx context.Context, callerID int, siteID int64) error {
 	site, err := s.repo.FindByID(ctx, siteID)
 	if err != nil {
@@ -193,10 +260,11 @@ func (s *Service) DeleteSite(ctx context.Context, callerID int, siteID int64) er
 	if site.OwnerID != callerID {
 		return ErrForbidden
 	}
-	if err := s.deletePrefix(ctx, site.SiteUUID); err != nil {
+	if err := s.repo.Delete(ctx, site.ID); err != nil {
 		return err
 	}
-	return s.repo.Delete(ctx, site.ID)
+	s.cleanupOrphanBlobs(ctx, site.SiteUUID)
+	return nil
 }
 
 // Mine returns the caller's sites.
@@ -209,15 +277,16 @@ func (s *Service) Public(ctx context.Context, limit, offset int) ([]PageSite, er
 	return s.repo.ListPublic(ctx, limit, offset)
 }
 
-// Detail returns the site row plus its file listing. The caller's ID is
-// passed in so private-visibility sites can be gated to the owner.
+// Detail returns the site row plus its file listing. Private sites
+// collapse to ErrNotFound for non-owners (anonymous or otherwise) so the
+// API does not leak existence — mirrors the SSR /p/:slug behaviour.
 func (s *Service) Detail(ctx context.Context, callerID int, siteID int64) (*PageSite, []FileEntry, error) {
 	site, err := s.repo.FindByID(ctx, siteID)
 	if err != nil {
 		return nil, nil, err
 	}
 	if site.Visibility == VisibilityPrivate && site.OwnerID != callerID {
-		return nil, nil, ErrForbidden
+		return nil, nil, ErrNotFound
 	}
 	files, err := s.listFiles(ctx, site.SiteUUID)
 	if err != nil {
@@ -359,46 +428,18 @@ func (s *Service) listFiles(ctx context.Context, siteUUID string) ([]FileEntry, 
 	return out, nil
 }
 
-func (s *Service) resolveSlug(ctx context.Context, requested, title string, files []UploadFile) (string, error) {
-	if requested != "" {
-		if !SlugRegex.MatchString(requested) {
-			return "", ErrInvalidSlug
-		}
-		taken, err := s.repo.SlugExists(ctx, requested)
-		if err != nil {
-			return "", err
-		}
-		if taken {
-			return "", ErrSlugTaken
-		}
-		return requested, nil
+// cleanupOrphanBlobs best-effort deletes every key under {siteUUID}/.
+// Errors are logged with siteUUID so an external GC can pick up the
+// orphan prefix; callers never see the underlying error because the row
+// state is already authoritative.
+func (s *Service) cleanupOrphanBlobs(ctx context.Context, siteUUID string) {
+	if err := s.deletePrefix(ctx, siteUUID); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"site_uuid": siteUUID,
+			"bucket":    BucketName,
+			"error":     err.Error(),
+		}).Warn("pages: orphaned blob prefix, manual GC required")
 	}
-	base := deriveSlug(title, files)
-	if base == "" {
-		base = "site"
-	}
-	if !SlugRegex.MatchString(base) {
-		// truncate / sanitise as last resort
-		base = sanitiseSlug(base)
-		if !SlugRegex.MatchString(base) {
-			base = "site"
-		}
-	}
-	candidate := base
-	for i := 2; i < 1000; i++ {
-		taken, err := s.repo.SlugExists(ctx, candidate)
-		if err != nil {
-			return "", err
-		}
-		if !taken {
-			return candidate, nil
-		}
-		candidate = fmt.Sprintf("%s-%d", base, i)
-		if !SlugRegex.MatchString(candidate) {
-			return "", ErrInvalidSlug
-		}
-	}
-	return "", ErrSlugTaken
 }
 
 func deriveSlug(title string, files []UploadFile) string {
@@ -455,19 +496,25 @@ func totalSize(files []UploadFile) int64 {
 	return n
 }
 
-// cleanRelPath enforces: no leading slash, no .. segments, no absolute paths,
-// no Windows drive letters. Any ".." segment anywhere in the raw input is
-// rejected even if path.Clean would resolve it harmlessly — user intent of
-// "escape outward" is treated as the failure mode regardless of net effect.
+// cleanRelPath enforces: no leading slash, no .. segments, no absolute
+// paths, no Windows drive letters, no embedded backslashes. The input is
+// URL-decoded first so a caller can't bypass the rules with `%2e%2e`.
+// Any ".." segment anywhere in the (decoded) input is rejected even if
+// path.Clean would resolve it harmlessly — the intent to "escape
+// outward" is the failure mode regardless of net effect.
 func cleanRelPath(p string) (string, error) {
 	if p == "" {
 		return "", ErrPathTraversal
 	}
+	decoded, err := url.PathUnescape(p)
+	if err != nil {
+		return "", ErrPathTraversal
+	}
+	p = decoded
 	if strings.HasPrefix(p, "/") || strings.HasPrefix(p, "\\") {
 		return "", ErrPathTraversal
 	}
 	if strings.Contains(p, "\\") {
-		// Disallow backslash entirely — keeps the surface portable.
 		return "", ErrPathTraversal
 	}
 	for _, seg := range strings.Split(p, "/") {
