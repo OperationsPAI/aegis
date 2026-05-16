@@ -1,14 +1,11 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"os"
 	"os/exec"
@@ -18,7 +15,7 @@ import (
 	"strings"
 
 	"aegis/cli/apiclient"
-	"aegis/cli/client"
+	apiclientext "aegis/cli/apiclient_ext"
 	"aegis/cli/internal/cli/pagedir"
 	"aegis/cli/output"
 
@@ -162,132 +159,89 @@ func pagePushDryRun(plan *pagedir.Plan, slug, title, visibility string) error {
 	return nil
 }
 
-// pagePushUpload builds a multipart/form-data request directly because the
-// generated SDK's PagesCreate accepts only a single *os.File and uses its OS
-// basename as the part filename — neither shape matches the
-// /api/v2/pages contract (multiple files keyed by site-relative path).
+// pagePushUpload delegates to the apiclient_ext typed wrapper, which builds
+// the multipart body with per-part site-relative filenames (the generated
+// SDK can't — it accepts only a single *os.File and uses filepath.Base).
+// We keep the CLI's rich HTTP-status → exit-code mapping local to this file.
 func pagePushUpload(plan *pagedir.Plan, slug, title, visibility string) (*apiclient.PagesPageSiteResponse, error) {
-	body, contentType, err := buildPagesMultipart(plan, slug, title, visibility)
+	if flagServer == "" {
+		return nil, missingEnvErrorf("--server or AEGIS_SERVER is required")
+	}
+	files, cleanup, err := openPlanUploads(plan)
 	if err != nil {
 		return nil, err
 	}
-	resp, status, respBody, err := pagesDoMultipart(http.MethodPost, "/api/v2/pages", body, contentType)
+	defer cleanup()
+
+	cli, ctx := newAPIClient()
+	data, httpResp, err := apiclientext.PagesCreateMulti(ctx, cli.GetConfig(), slug, visibility, title, files)
 	if err != nil {
-		return nil, err
+		return nil, mapPagesHTTPError(httpResp, err)
 	}
-	return decodePagesResponse(status, respBody, resp)
+	if data == nil {
+		return nil, fmt.Errorf("page push: empty response data")
+	}
+	return data, nil
 }
 
-func buildPagesMultipart(plan *pagedir.Plan, slug, title, visibility string) (io.Reader, string, error) {
-	var buf bytes.Buffer
-	mw := multipart.NewWriter(&buf)
-	if slug != "" {
-		if err := mw.WriteField("slug", slug); err != nil {
-			return nil, "", err
-		}
-	}
-	if title != "" {
-		if err := mw.WriteField("title", title); err != nil {
-			return nil, "", err
-		}
-	}
-	if visibility != "" {
-		if err := mw.WriteField("visibility", visibility); err != nil {
-			return nil, "", err
+// openPlanUploads turns a pagedir.Plan into apiclient_ext.FileUpload parts.
+// The returned cleanup func closes every opened file regardless of whether
+// the upload succeeded or failed; deferring it at the call site keeps file
+// descriptors bounded even on early returns.
+func openPlanUploads(plan *pagedir.Plan) ([]apiclientext.FileUpload, func(), error) {
+	files := make([]apiclientext.FileUpload, 0, len(plan.Entries))
+	opened := make([]*os.File, 0, len(plan.Entries))
+	cleanup := func() {
+		for _, f := range opened {
+			_ = f.Close()
 		}
 	}
 	for _, e := range plan.Entries {
-		hdr := make(textproto.MIMEHeader)
-		hdr.Set("Content-Disposition",
-			fmt.Sprintf(`form-data; name="files"; filename=%q`, e.RelPath))
-		hdr.Set("Content-Type", "application/octet-stream")
-		part, err := mw.CreatePart(hdr)
-		if err != nil {
-			return nil, "", err
-		}
 		f, err := os.Open(e.AbsPath) //nolint:gosec // path comes from our own walker, already validated.
 		if err != nil {
-			return nil, "", fmt.Errorf("open %q: %w", e.AbsPath, err)
+			cleanup()
+			return nil, func() {}, fmt.Errorf("open %q: %w", e.AbsPath, err)
 		}
-		if _, err := io.Copy(part, f); err != nil {
-			_ = f.Close()
-			return nil, "", fmt.Errorf("read %q: %w", e.AbsPath, err)
-		}
-		_ = f.Close()
+		opened = append(opened, f)
+		files = append(files, apiclientext.FileUpload{
+			Name:     "files",
+			Filename: e.RelPath,
+			Content:  f,
+		})
 	}
-	if err := mw.Close(); err != nil {
-		return nil, "", err
-	}
-	return &buf, mw.FormDataContentType(), nil
+	return files, cleanup, nil
 }
 
-// pagesDoMultipart sends a multipart request to <flagServer><path> using the
-// same transport / auth header as the generated client.
-func pagesDoMultipart(method, path string, body io.Reader, contentType string) (*http.Response, int, []byte, error) {
-	if flagServer == "" {
-		return nil, 0, nil, missingEnvErrorf("--server or AEGIS_SERVER is required")
+// mapPagesHTTPError converts a wrapper-returned error + *http.Response into
+// the CLI's exit-code-bearing error sentinels. When httpResp is nil we have
+// a transport-level failure and pass the error through unchanged.
+func mapPagesHTTPError(httpResp *http.Response, err error) error {
+	if httpResp == nil {
+		return err
 	}
-	rawURL := strings.TrimRight(flagServer, "/") + path
-	req, err := http.NewRequestWithContext(context.Background(), method, rawURL, body)
-	if err != nil {
-		return nil, 0, nil, fmt.Errorf("build request: %w", err)
+	body, _ := io.ReadAll(httpResp.Body)
+	msg := serverErrorMessage(body, httpResp.StatusCode)
+	if rid := httpResp.Header.Get("X-Request-Id"); rid != "" {
+		msg = msg + " (request_id=" + rid + ")"
 	}
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Accept", "application/json")
-	if flagToken != "" {
-		req.Header.Set("Authorization", "Bearer "+flagToken)
-	}
-	httpClient := &http.Client{Transport: client.TransportFor(resolveTLSOptions())}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, 0, nil, fmt.Errorf("POST %s: %w", path, err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
-	}
-	return resp, resp.StatusCode, b, nil
-}
-
-func decodePagesResponse(status int, body []byte, resp *http.Response) (*apiclient.PagesPageSiteResponse, error) {
-	if status >= 200 && status < 300 {
-		var env struct {
-			Data *apiclient.PagesPageSiteResponse `json:"data"`
-		}
-		if err := json.Unmarshal(body, &env); err != nil {
-			return nil, fmt.Errorf("decode response: %w", err)
-		}
-		if env.Data == nil {
-			return nil, fmt.Errorf("page push: empty response data")
-		}
-		return env.Data, nil
-	}
-	// Translate selected 4xx into specific exit codes.
-	msg := serverErrorMessage(body, status)
-	if resp != nil {
-		if rid := resp.Header.Get("X-Request-Id"); rid != "" {
-			msg = msg + " (request_id=" + rid + ")"
-		}
-	}
-	switch status {
+	switch httpResp.StatusCode {
 	case http.StatusBadRequest:
 		if strings.Contains(strings.ToLower(msg), "slug") &&
 			strings.Contains(strings.ToLower(msg), "tak") {
-			return nil, conflictErrorf("page push: %s", msg)
+			return conflictErrorf("page push: %s", msg)
 		}
-		return nil, usageErrorf("page push: %s", msg)
+		return usageErrorf("page push: %s", msg)
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return nil, authErrorf("page push: %s", msg)
+		return authErrorf("page push: %s", msg)
 	case http.StatusConflict:
-		return nil, conflictErrorf("page push: %s", msg)
+		return conflictErrorf("page push: %s", msg)
 	case http.StatusRequestEntityTooLarge:
-		return nil, usageErrorf("page push: %s", msg)
+		return usageErrorf("page push: %s", msg)
 	default:
-		if status >= 500 {
-			return nil, fmt.Errorf("page push: server returned HTTP %d: %s", status, msg)
+		if httpResp.StatusCode >= 500 {
+			return fmt.Errorf("page push: server returned HTTP %d: %s", httpResp.StatusCode, msg)
 		}
-		return nil, fmt.Errorf("page push: HTTP %d: %s", status, msg)
+		return fmt.Errorf("page push: HTTP %d: %s", httpResp.StatusCode, msg)
 	}
 }
 
