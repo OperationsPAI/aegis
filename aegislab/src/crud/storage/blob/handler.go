@@ -654,23 +654,24 @@ func (h *Handler) Raw(c *gin.Context) {
 
 // CreateBucketReq is the wire shape for POST /buckets.
 type CreateBucketReq struct {
-	Name           string   `json:"name"             binding:"required"`
-	Driver         string   `json:"driver"           binding:"required"`
-	Root           string   `json:"root,omitempty"`
-	Endpoint       string   `json:"endpoint,omitempty"`
-	PublicEndpoint string   `json:"public_endpoint,omitempty"`
-	Region         string   `json:"region,omitempty"`
-	AccessKeyEnv   string   `json:"access_key_env,omitempty"`
-	SecretKeyEnv   string   `json:"secret_key_env,omitempty"`
-	Bucket         string   `json:"bucket,omitempty"`
-	UseSSL         bool     `json:"use_ssl,omitempty"`
-	PathStyle      bool     `json:"path_style,omitempty"`
-	MaxObjectBytes int64    `json:"max_object_bytes,omitempty"`
-	RetentionDays  int      `json:"retention_days,omitempty"`
-	PublicRead     bool     `json:"public_read,omitempty"`
-	ContentTypes   []string `json:"content_types,omitempty"`
-	WriteRoles     []string `json:"write_roles,omitempty"`
-	ReadRoles      []string `json:"read_roles,omitempty"`
+	Name           string           `json:"name"             binding:"required"`
+	Driver         string           `json:"driver"           binding:"required"`
+	Root           string           `json:"root,omitempty"`
+	Endpoint       string           `json:"endpoint,omitempty"`
+	PublicEndpoint string           `json:"public_endpoint,omitempty"`
+	Region         string           `json:"region,omitempty"`
+	AccessKeyEnv   string           `json:"access_key_env,omitempty"`
+	SecretKeyEnv   string           `json:"secret_key_env,omitempty"`
+	Bucket         string           `json:"bucket,omitempty"`
+	UseSSL         bool             `json:"use_ssl,omitempty"`
+	PathStyle      bool             `json:"path_style,omitempty"`
+	MaxObjectBytes int64            `json:"max_object_bytes,omitempty"`
+	RetentionDays  int              `json:"retention_days,omitempty"`
+	PublicRead     bool             `json:"public_read,omitempty"`
+	ContentTypes   []string         `json:"content_types,omitempty"`
+	WriteRoles     []string         `json:"write_roles,omitempty"`
+	ReadRoles      []string         `json:"read_roles,omitempty"`
+	Lifecycle      *BucketLifecycle `json:"lifecycle,omitempty"`
 }
 
 // CreateBucket provisions a new bucket at runtime and persists it to
@@ -715,11 +716,16 @@ func (h *Handler) CreateBucket(c *gin.Context) {
 		AllowedContentTypes: req.ContentTypes,
 		WriteRoles:          req.WriteRoles,
 		ReadRoles:           req.ReadRoles,
+		Lifecycle:           req.Lifecycle,
 	}
 	b, err := h.svc.Registry().Create(c.Request.Context(), cfg)
 	if err != nil {
 		if errors.Is(err, ErrBucketAlreadyExists) {
 			dto.ErrorResponse(c, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, ErrBucketLifecycleInvalid) {
+			dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
