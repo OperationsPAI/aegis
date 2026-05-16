@@ -31,6 +31,8 @@ type Context struct {
 	Password       string    `yaml:"password,omitempty"`
 	DefaultProject string    `yaml:"default-project,omitempty"`
 	TokenExpiry    time.Time `yaml:"token-expiry,omitempty"`
+	CACert         string    `yaml:"ca-cert,omitempty"`
+	Insecure       bool      `yaml:"insecure-skip-tls-verify,omitempty"`
 }
 
 func (c *Context) UnmarshalYAML(value *yaml.Node) error {
@@ -43,6 +45,8 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 		Password       string    `yaml:"password,omitempty"`
 		DefaultProject string    `yaml:"default-project,omitempty"`
 		TokenExpiry    time.Time `yaml:"token-expiry,omitempty"`
+		CACert         string    `yaml:"ca-cert,omitempty"`
+		Insecure       bool      `yaml:"insecure-skip-tls-verify,omitempty"`
 	}
 
 	var raw rawContext
@@ -58,6 +62,8 @@ func (c *Context) UnmarshalYAML(value *yaml.Node) error {
 	c.Password = raw.Password
 	c.DefaultProject = raw.DefaultProject
 	c.TokenExpiry = raw.TokenExpiry
+	c.CACert = raw.CACert
+	c.Insecure = raw.Insecure
 	return nil
 }
 
