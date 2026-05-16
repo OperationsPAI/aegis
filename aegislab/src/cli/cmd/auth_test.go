@@ -34,7 +34,7 @@ func TestAuthLoginWithPasswordStdinSavesContextAndPrintsJSON(t *testing.T) {
 	authLoginCmd.SetIn(strings.NewReader("bootstrap-secret\n"))
 
 	expiresAt := time.Date(2026, 4, 20, 12, 30, 0, 0, time.UTC)
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
 		if server != authLoginServer {
 			t.Fatalf("unexpected server: %q", server)
 		}
@@ -109,7 +109,7 @@ func TestAuthLoginWithPasswordFile(t *testing.T) {
 	}
 	authLoginPasswordFile = passwordFile
 
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
 		if password != "from-file" {
 			t.Fatalf("unexpected password: %q", password)
 		}
@@ -151,7 +151,7 @@ func TestAuthLoginInvalidCredentialsDoNotLeakPassword(t *testing.T) {
 	authLoginUsername = "admin"
 	t.Setenv("AEGIS_PASSWORD", "env-secret")
 
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
 		if password != "env-secret" {
 			t.Fatalf("unexpected password: %q", password)
 		}
@@ -194,7 +194,7 @@ func TestAuthLoginWithoutFlagsUsesStoredCredentials(t *testing.T) {
 		username string
 		password string
 	}
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
 		calledWith.username = username
 		calledWith.password = password
 		return &client.LoginResult{
@@ -248,7 +248,7 @@ func TestAuthLoginFlagsOverrideAndUpdateStoredCredentials(t *testing.T) {
 	authLoginPasswordStdin = true
 	authLoginCmd.SetIn(strings.NewReader("new-secret\n"))
 
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
 		if username != "new-user" || password != "new-secret" {
 			t.Fatalf("flags didn't override stored creds: %s/%s", username, password)
 		}
@@ -314,7 +314,7 @@ func TestAuthLoginPreservesStoredCredentialsAcrossTokenRefresh(t *testing.T) {
 	authLoginPasswordStdin = true
 	authLoginCmd.SetIn(strings.NewReader("stored-secret\n"))
 
-	passwordLoginFunc = func(server, username, password string) (*client.LoginResult, error) {
+	passwordLoginFunc = func(server, username, password string, _ client.TLSOptions) (*client.LoginResult, error) {
 		return &client.LoginResult{
 			Token:     "refreshed-jwt",
 			ExpiresAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),

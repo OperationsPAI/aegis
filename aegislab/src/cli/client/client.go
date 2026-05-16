@@ -59,8 +59,14 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-// NewClient creates a new API client.
+// NewClient creates a new API client with default (env+autodiscovered) TLS.
 func NewClient(baseURL, token string, timeout time.Duration) *Client {
+	return NewClientWithTLS(baseURL, token, timeout, TLSOptions{})
+}
+
+// NewClientWithTLS creates a new API client whose underlying transport
+// is built from the supplied TLSOptions on top of env + auto-discovery.
+func NewClientWithTLS(baseURL, token string, timeout time.Duration, opts TLSOptions) *Client {
 	if timeout == 0 {
 		timeout = 30 * time.Second
 	}
@@ -69,7 +75,7 @@ func NewClient(baseURL, token string, timeout time.Duration) *Client {
 		Token:   token,
 		HTTPClient: &http.Client{
 			Timeout:   timeout,
-			Transport: DefaultTransport(),
+			Transport: TransportFor(opts),
 		},
 	}
 }

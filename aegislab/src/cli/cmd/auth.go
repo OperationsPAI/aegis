@@ -30,8 +30,8 @@ var authLoginPasswordStdin bool
 var authLoginContext string
 
 var (
-	apiKeyLoginFunc   = client.LoginWithAPIKey
-	passwordLoginFunc = client.LoginWithPassword
+	apiKeyLoginFunc   = client.LoginWithAPIKeyTLS
+	passwordLoginFunc = client.LoginWithPasswordTLS
 )
 
 type authLoginJSONResult struct {
@@ -67,17 +67,18 @@ var authLoginCmd = &cobra.Command{
 			return err
 		}
 
+		tlsOpts := resolveTLSOptions()
 		var result *client.LoginResult
 		switch mode {
 		case "password":
 			output.PrintInfo(fmt.Sprintf("Logging in to %s as %s...", server, username))
-			result, err = passwordLoginFunc(server, username, password)
+			result, err = passwordLoginFunc(server, username, password, tlsOpts)
 			if err != nil {
 				return err
 			}
 		case "api_key":
 			output.PrintInfo(fmt.Sprintf("Exchanging API key token with %s using %s...", server, keyID))
-			result, err = apiKeyLoginFunc(server, keyID, keySecret)
+			result, err = apiKeyLoginFunc(server, keyID, keySecret, tlsOpts)
 			if err != nil {
 				return err
 			}
@@ -85,7 +86,7 @@ var authLoginCmd = &cobra.Command{
 			return fmt.Errorf("unsupported login mode %q", mode)
 		}
 
-		if err := saveLoginContext(ctxName, server, mode, username, password, result); err != nil {
+		if err := saveLoginContext(ctxName, server, mode, username, password, result, tlsOpts); err != nil {
 			return err
 		}
 
@@ -230,7 +231,7 @@ func resolveAuthLoginContextName() string {
 	return ctxName
 }
 
-func saveLoginContext(ctxName, server, mode, username, password string, result *client.LoginResult) error {
+func saveLoginContext(ctxName, server, mode, username, password string, result *client.LoginResult, tlsOpts client.TLSOptions) error {
 	if cfg.Contexts == nil {
 		cfg.Contexts = make(map[string]config.Context)
 	}
@@ -239,6 +240,12 @@ func saveLoginContext(ctxName, server, mode, username, password string, result *
 	ctx.Token = result.Token
 	ctx.AuthType = result.AuthType
 	ctx.TokenExpiry = result.ExpiresAt
+	if tlsOpts.CACert != "" {
+		ctx.CACert = tlsOpts.CACert
+	}
+	if tlsOpts.Insecure {
+		ctx.Insecure = true
+	}
 
 	// Persist credentials of the auth-type we just used. Do NOT clear the
 	// stored creds for the other auth-type — operators sometimes keep both

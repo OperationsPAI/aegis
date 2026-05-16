@@ -21,6 +21,8 @@ var contextSetServer string
 var contextSetDefaultProject string
 var contextSetUsername string
 var contextSetPasswordStdin bool
+var contextSetCACert string
+var contextSetInsecure bool
 
 var contextSetCmd = &cobra.Command{
 	Use:   "set",
@@ -50,6 +52,12 @@ var contextSetCmd = &cobra.Command{
 				return err
 			}
 			ctx.Password = password
+		}
+		if contextSetCACert != "" {
+			ctx.CACert = expandPath(contextSetCACert)
+		}
+		if cmd.Flags().Lookup("insecure-skip-tls-verify").Changed {
+			ctx.Insecure = contextSetInsecure
 		}
 
 		cfg.Contexts[contextSetName] = ctx
@@ -124,8 +132,11 @@ func init() {
 	contextSetCmd.Flags().StringVar(&contextSetDefaultProject, "default-project", "", "Default project ID")
 	contextSetCmd.Flags().StringVar(&contextSetUsername, "username", "", "Stored username for unattended re-login")
 	contextSetCmd.Flags().BoolVar(&contextSetPasswordStdin, "password-stdin", false, "Read stored password from stdin (paired with --username)")
+	contextSetCmd.Flags().StringVar(&contextSetCACert, "ca-cert", "", "Absolute path to a PEM file with extra trusted CA(s)")
+	contextSetCmd.Flags().BoolVar(&contextSetInsecure, "insecure-skip-tls-verify", false, "Persist insecure-skip-tls-verify=true on this context (DEV ONLY)")
 
 	contextCmd.AddCommand(contextSetCmd)
 	contextCmd.AddCommand(contextUseCmd)
 	contextCmd.AddCommand(contextListCmd)
+	contextCmd.AddCommand(contextTrustCmd)
 }

@@ -121,6 +121,13 @@ func executeError(err error) int {
 	if err == nil {
 		return ExitCodeSuccess
 	}
+	// TLS verification failures get a multi-line remediation message
+	// pointing at the four supported escape hatches (context trust,
+	// context set --ca-cert, --ca-cert flag, --insecure-skip-tls-verify).
+	if tlsErr := translateTLSError(err); tlsErr != nil {
+		output.PrintCLIError(tlsErr, output.OutputFormat(flagOutput))
+		return tlsErr.ExitCode
+	}
 	var cliErr *clierr.CLIError
 	if errors.As(err, &cliErr) {
 		output.PrintCLIError(cliErr, output.OutputFormat(flagOutput))
