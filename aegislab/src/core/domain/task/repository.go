@@ -51,6 +51,17 @@ func (r *Repository) UpdateExecuteTime(taskID string, executeTime int64) error {
 		Update("execute_time", executeTime).Error
 }
 
+// MarkCancelled transitions a single non-terminal task to the Cancelled
+// terminal state. No-op if the row is already terminal — caller decides
+// whether to surface that as 200 or 409.
+func (r *Repository) MarkCancelled(taskID string) error {
+	return r.db.Model(&model.Task{}).
+		Where("id = ? AND status != ? AND state IN ?",
+			taskID, consts.CommonDeleted,
+			[]consts.TaskState{consts.TaskPending, consts.TaskRescheduled, consts.TaskRunning}).
+		Update("state", consts.TaskCancelled).Error
+}
+
 func (r *Repository) List(limit, offset int, filters *ListTaskFilters) ([]model.Task, int64, error) {
 	var (
 		tasks []model.Task

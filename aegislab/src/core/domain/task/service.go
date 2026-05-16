@@ -8,8 +8,9 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
-	redisinfra "aegis/platform/redis"
+	k8sinfra "aegis/platform/k8s"
 	"aegis/platform/model"
+	redisinfra "aegis/platform/redis"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -21,14 +22,16 @@ type Service struct {
 	logService *TaskLogService
 	loki       *LokiGateway
 	redis      *redisinfra.Gateway
+	k8s        *k8sinfra.Gateway
 }
 
-func NewService(repository *Repository, logService *TaskLogService, loki *LokiGateway, redis *redisinfra.Gateway) *Service {
+func NewService(repository *Repository, logService *TaskLogService, loki *LokiGateway, redis *redisinfra.Gateway, k8s *k8sinfra.Gateway) *Service {
 	return &Service{
 		repository: repository,
 		logService: logService,
 		loki:       loki,
 		redis:      redis,
+		k8s:        k8s,
 	}
 }
 
@@ -139,6 +142,83 @@ func (s *Service) emitExpediteScheduledEvent(ctx context.Context, task *model.Ta
 		logrus.WithField("task_id", task.ID).
 			Warnf("failed to emit expedite task.scheduled event: %v", err)
 	}
+}
+
+// CancelTask marks a non-terminal task as Cancelled and best-effort evicts
+// its redis queue entries + cluster-side PodChaos CRDs labelled with
+// task_id=<id>. Mirrors trace.Service.CancelTrace but scoped to a single
+// task — used by the UI when only one execution/injection needs to stop.
+//
+// Contract:
+//   - task not found → wrapped consts.ErrNotFound
+//   - task already terminal (Completed/Error/Cancelled) → no-op response
+//     with state set to the current terminal state, no error
+//   - otherwise: DB state → Cancelled, redis queue entries best-effort
+//     evicted, PodChaos with label task_id=<id> best-effort deleted
+func (s *Service) CancelTask(ctx context.Context, taskID string) (*CancelTaskResp, error) {
+	task, err := s.repository.GetByID(taskID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: task id: %s", consts.ErrNotFound, taskID)
+		}
+		return nil, fmt.Errorf("failed to load task: %w", err)
+	}
+
+	logEntry := logrus.WithField("task_id", taskID)
+
+	switch task.State {
+	case consts.TaskCompleted, consts.TaskError, consts.TaskCancelled:
+		return &CancelTaskResp{
+			TaskID: taskID,
+			State:  consts.GetTaskStateName(task.State),
+			Message: fmt.Sprintf("task already terminal (%s); nothing to cancel",
+				consts.GetTaskStateName(task.State)),
+		}, nil
+	}
+
+	if err := s.repository.MarkCancelled(taskID); err != nil {
+		return nil, fmt.Errorf("failed to mark task cancelled: %w", err)
+	}
+
+	resp := &CancelTaskResp{
+		TaskID: taskID,
+		State:  consts.GetTaskStateName(consts.TaskCancelled),
+	}
+
+	if s.redis != nil {
+		removed := false
+		if ok := s.redis.RemoveFromZSet(ctx, redisinfra.DelayedQueueKey, taskID); ok {
+			removed = true
+		}
+		if ok, err := s.redis.RemoveFromList(ctx, redisinfra.ReadyQueueKey, taskID); err == nil && ok {
+			removed = true
+		} else if err != nil {
+			logEntry.Warnf("failed to remove task from ready queue: %v", err)
+		}
+		if ok := s.redis.RemoveFromZSet(ctx, redisinfra.DeadLetterKey, taskID); ok {
+			removed = true
+		}
+		if err := s.redis.DeleteTaskIndex(ctx, taskID); err != nil {
+			logEntry.Warnf("failed to clear task index: %v", err)
+		}
+		if removed {
+			resp.RemovedRedisTasks = append(resp.RemovedRedisTasks, taskID)
+		}
+	}
+
+	if s.k8s != nil {
+		deleted, warnings := s.k8s.DeleteChaosCRDsByLabel(ctx, consts.JobLabelTaskID, taskID)
+		for _, d := range deleted {
+			resp.DeletedPodChaos = append(resp.DeletedPodChaos, d.Name)
+		}
+		for _, w := range warnings {
+			logEntry.Warnf("chaos CRD cleanup warning: %v", w)
+		}
+	}
+
+	resp.Message = fmt.Sprintf("cancelled task %s (podchaos=%d, redis_evicted=%d)",
+		taskID, len(resp.DeletedPodChaos), len(resp.RemovedRedisTasks))
+	return resp, nil
 }
 
 func (s *Service) GetForLogStream(ctx context.Context, taskID string) (*model.Task, error) {

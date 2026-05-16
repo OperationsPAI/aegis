@@ -137,6 +137,38 @@ func (h *Handler) ExpediteTask(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// CancelTask handles best-effort cancellation of a single task.
+//
+//	@Summary		Cancel a task (best-effort)
+//	@Description	Marks the task as Cancelled if it is currently Pending/Rescheduled/Running, evicts its entry from the redis queues, and best-effort deletes any chaos CRDs labelled with task_id=<id>. Returns 200 with a no-op response when the task is already terminal.
+//	@Tags			Tasks
+//	@ID				cancel_task
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			task_id	path		string									true	"Task ID"
+//	@Success		200		{object}	dto.GenericResponse[CancelTaskResp]		"Task cancelled (or already terminal)"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid task ID"
+//	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]				"Permission denied"
+//	@Failure		404		{object}	dto.GenericResponse[any]				"Task not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/tasks/{task_id}/cancel [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) CancelTask(c *gin.Context) {
+	taskID := c.Param(consts.URLPathTaskID)
+	if !utils.IsValidUUID(taskID) {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid task ID")
+		return
+	}
+
+	resp, err := h.service.CancelTask(c.Request.Context(), taskID)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+
+	dto.SuccessResponse(c, resp)
+}
+
 // ListTasks handles simple task listing
 //
 //	@Summary		List tasks
