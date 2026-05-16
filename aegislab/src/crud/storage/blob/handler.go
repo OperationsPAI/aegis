@@ -690,7 +690,7 @@ type CreateBucketReq struct {
 //	@Failure		409		{object}	dto.GenericResponse[any]			"Bucket already exists"
 //	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/blob/buckets [post]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true","admin":"true"}
 func (h *Handler) CreateBucket(c *gin.Context) {
 	var req CreateBucketReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -761,7 +761,7 @@ type copyReq struct {
 //	@Failure		404		{object}	dto.GenericResponse[any]			"Bucket or object not found"
 //	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/blob/buckets/{bucket}/copy [post]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true","admin":"true"}
 func (h *Handler) CopyObject(c *gin.Context) {
 	bucket := c.Param("bucket")
 	var req copyReq
@@ -816,7 +816,7 @@ type batchDeleteReq struct {
 //	@Failure		404		{object}	dto.GenericResponse[any]				"Bucket not found"
 //	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/blob/buckets/{bucket}/delete-batch [post]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true","admin":"true"}
 func (h *Handler) BatchDelete(c *gin.Context) {
 	bucket := c.Param("bucket")
 	var req batchDeleteReq
