@@ -12,5 +12,11 @@ Start with [`../../aegislab/docs/aegisctl-cli-spec.md`](../../aegislab/docs/aegi
 | [`app-label-key.md`](./app-label-key.md) | Per-system `AppLabelKey` design — why `otel-demo` uses `app.kubernetes.io/name` while `ts` uses `app` |
 | [`benchmark-integration-playbook.md`](./benchmark-integration-playbook.md) | Consolidated playbook for onboarding a new benchmark (sockshop/hs/sn/mm/tea lessons): 5-layer model, step-by-step template, per-system diff table, reusable Jaeger→OTLP bridge + dsb-wrk2 infra, recurring gotchas |
 
+Operational runbooks scoped to a single sub-repo live alongside their code:
+
+| Repo | Index |
+|------|-------|
+| aegislab | [`../../aegislab/docs/README.md`](../../aegislab/docs/README.md) — share-upload three-step flow, telepresence dev-intercept, edge-proxy host-aliasing |
+
 Short-form pitfalls index lives in the auto-memory at
 `~/.claude/projects/-home-ddq-AoyangSpace-aegis/memory/aegislab_e2e_pitfalls.md`.
