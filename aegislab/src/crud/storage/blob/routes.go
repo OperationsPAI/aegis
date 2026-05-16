@@ -19,6 +19,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 			{
 				g.GET("/buckets", handler.ListBuckets)
 				g.POST("/buckets", handler.CreateBucket)
+				g.DELETE("/buckets/:bucket", handler.DeleteBucket)
 				g.POST("/buckets/:bucket/presign-put", handler.PresignPut)
 				g.POST("/buckets/:bucket/presign-get", handler.PresignGet)
 				// *key catch-all routes allow keys with slashes (e.g. a/b/c.txt).
