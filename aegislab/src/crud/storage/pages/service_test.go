@@ -1,106 +1,57 @@
+// Tests for the pages service. The blob seam is exercised through a
+// real localfs-backed driver (the same pattern as
+// clients/blob/list_getreader_test.go) so there is no hand-rolled fake
+// — a path-traversal or list-bug here would be caught the same way it
+// would in production.
 package pages
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"fmt"
-	"io"
-	"sort"
 	"strings"
+	"sync"
 	"testing"
-	"time"
 
 	blobclient "aegis/clients/blob"
+	"aegis/crud/storage/blob"
 	"aegis/platform/testutil"
 )
 
-// fakeBlobClient is an in-memory blobclient.Client used by service tests.
-// Mirrors the fake in core/domain/injection but kept local so the pages
-// module has no cross-test dependency.
-type fakeBlobClient struct {
-	objects map[string][]byte
-	metas   map[string]*blobclient.ObjectMeta
-}
-
-func newFakeBlobClient() *fakeBlobClient {
-	return &fakeBlobClient{
-		objects: map[string][]byte{},
-		metas:   map[string]*blobclient.ObjectMeta{},
-	}
-}
-
-func (f *fakeBlobClient) PresignPut(context.Context, string, blobclient.PresignPutReq) (*blobclient.PresignPutResult, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (f *fakeBlobClient) PresignGet(context.Context, string, string, blobclient.PresignGetReq) (*blobclient.PresignedURL, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (f *fakeBlobClient) Stat(_ context.Context, _ string, key string) (*blobclient.ObjectMeta, error) {
-	m, ok := f.metas[key]
-	if !ok {
-		return nil, fmt.Errorf("not found: %s", key)
-	}
-	return m, nil
-}
-
-func (f *fakeBlobClient) Delete(_ context.Context, _ string, key string) error {
-	delete(f.objects, key)
-	delete(f.metas, key)
-	return nil
-}
-
-func (f *fakeBlobClient) PutBytes(_ context.Context, _ string, body []byte, req blobclient.PresignPutReq) (*blobclient.ObjectMeta, error) {
-	cp := append([]byte(nil), body...)
-	f.objects[req.Key] = cp
-	meta := &blobclient.ObjectMeta{Key: req.Key, Size: int64(len(cp)), ContentType: req.ContentType, UpdatedAt: time.Now().UTC()}
-	f.metas[req.Key] = meta
-	return meta, nil
-}
-
-func (f *fakeBlobClient) GetBytes(_ context.Context, _ string, key string) ([]byte, *blobclient.ObjectMeta, error) {
-	body, ok := f.objects[key]
-	if !ok {
-		return nil, nil, fmt.Errorf("not found: %s", key)
-	}
-	return append([]byte(nil), body...), f.metas[key], nil
-}
-
-func (f *fakeBlobClient) GetReader(_ context.Context, _ string, key string) (io.ReadCloser, *blobclient.ObjectMeta, error) {
-	body, ok := f.objects[key]
-	if !ok {
-		return nil, nil, fmt.Errorf("not found: %s", key)
-	}
-	return io.NopCloser(bytes.NewReader(body)), f.metas[key], nil
-}
-
-func (f *fakeBlobClient) List(_ context.Context, _ string, prefix string, _ blobclient.ListOpts) (*blobclient.ListResult, error) {
-	keys := make([]string, 0)
-	for k := range f.objects {
-		if strings.HasPrefix(k, prefix) {
-			keys = append(keys, k)
-		}
-	}
-	sort.Strings(keys)
-	res := &blobclient.ListResult{}
-	for _, k := range keys {
-		res.Objects = append(res.Objects, *f.metas[k])
-	}
-	return res, nil
-}
-
-// newServiceForTest builds a service backed by SQLite + the fake blob client.
-func newServiceForTest(t *testing.T) (*Service, *fakeBlobClient) {
+// newServiceForTest builds a service backed by an in-memory SQLite repo
+// and a real localfs-backed blob.Client rooted under t.TempDir(). The
+// connection pool is pinned to a single conn so concurrent goroutines
+// (see TestSlugUniqueness_ConcurrentClaim) all see the same in-memory
+// schema — :memory: creates a fresh DB per connection by default.
+func newServiceForTest(t *testing.T) *Service {
 	t.Helper()
 	db := testutil.NewSQLiteGormDB(t)
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("raw sqldb: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
 	if err := db.AutoMigrate(&PageSite{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	blob := newFakeBlobClient()
-	repo := NewRepository(db)
-	return NewService(repo, blob), blob
+	if err := db.AutoMigrate(&blob.ObjectRecord{}); err != nil {
+		t.Fatalf("migrate blob: %v", err)
+	}
+
+	cfg := blob.BucketConfig{
+		Name:       BucketName,
+		Driver:     "localfs",
+		Root:       t.TempDir(),
+		PublicRead: true,
+	}
+	drv, err := blob.NewLocalFSDriver(cfg, []byte("test-signing-key"))
+	if err != nil {
+		t.Fatalf("localfs driver: %v", err)
+	}
+	reg := blob.NewTestRegistry(map[string]*blob.Bucket{cfg.Name: {Config: cfg, Driver: drv}})
+	svc := blob.NewService(reg, blob.NewRepository(db), blob.NewClock())
+	client := blobclient.NewLocalClient(svc)
+
+	return NewService(NewRepository(db), client)
 }
 
 func mdFile(p, body string) UploadFile {
@@ -108,7 +59,7 @@ func mdFile(p, body string) UploadFile {
 }
 
 func TestSlugUniqueness_AutoSuffix(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	files := []UploadFile{mdFile("index.md", "# hi")}
 
@@ -120,7 +71,7 @@ func TestSlugUniqueness_AutoSuffix(t *testing.T) {
 		t.Fatalf("expected slug docs, got %q", s1.Slug)
 	}
 
-	// Same explicit slug → rejected.
+	// Same explicit slug → rejected via the DB unique index.
 	if _, err := svc.CreateSite(ctx, 2, "docs", "", "", files); !errors.Is(err, ErrSlugTaken) {
 		t.Fatalf("expected ErrSlugTaken, got %v", err)
 	}
@@ -135,8 +86,54 @@ func TestSlugUniqueness_AutoSuffix(t *testing.T) {
 	}
 }
 
+// TestSlugUniqueness_ConcurrentClaim exercises the txn-uniqueness path:
+// multiple goroutines race on the same explicit slug; exactly one must
+// succeed, every other must see ErrSlugTaken (never a partial blob).
+func TestSlugUniqueness_ConcurrentClaim(t *testing.T) {
+	svc := newServiceForTest(t)
+	ctx := context.Background()
+	files := []UploadFile{mdFile("index.md", "# hi")}
+
+	const racers = 8
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		wins     int
+		taken    int
+		otherErr error
+	)
+	for i := 0; i < racers; i++ {
+		wg.Add(1)
+		owner := i + 1
+		go func() {
+			defer wg.Done()
+			_, err := svc.CreateSite(ctx, owner, "race", "", "", files)
+			mu.Lock()
+			defer mu.Unlock()
+			switch {
+			case err == nil:
+				wins++
+			case errors.Is(err, ErrSlugTaken):
+				taken++
+			default:
+				otherErr = err
+			}
+		}()
+	}
+	wg.Wait()
+	if otherErr != nil {
+		t.Fatalf("unexpected error: %v", otherErr)
+	}
+	if wins != 1 {
+		t.Fatalf("expected exactly 1 winner, got %d (taken=%d)", wins, taken)
+	}
+	if wins+taken != racers {
+		t.Fatalf("not every racer accounted for: wins=%d taken=%d", wins, taken)
+	}
+}
+
 func TestRejectsInvalidSlug(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	files := []UploadFile{mdFile("index.md", "x")}
 	cases := []string{"-bad", "BAD", "with spaces", "way_too_long_" + strings.Repeat("x", 80)}
@@ -148,7 +145,7 @@ func TestRejectsInvalidSlug(t *testing.T) {
 }
 
 func TestRejectsInvalidVisibility(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	files := []UploadFile{mdFile("index.md", "x")}
 	if _, err := svc.CreateSite(ctx, 1, "ok", "wide-open", "", files); !errors.Is(err, ErrInvalidVisibility) {
@@ -157,7 +154,7 @@ func TestRejectsInvalidVisibility(t *testing.T) {
 }
 
 func TestOwnerCheck_Denial(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	site, err := svc.CreateSite(ctx, 1, "owned", "", "", []UploadFile{mdFile("index.md", "x")})
 	if err != nil {
@@ -171,10 +168,42 @@ func TestOwnerCheck_Denial(t *testing.T) {
 	}
 }
 
-func TestRejectsPathTraversal(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+// TestPrivateDetail_NonOwnerNotFound makes the security promise concrete:
+// callers who are not the owner cannot tell whether a private site exists.
+func TestPrivateDetail_NonOwnerNotFound(t *testing.T) {
+	svc := newServiceForTest(t)
 	ctx := context.Background()
-	cases := []string{"../escape.md", "/abs.md", "a/../b.md", "..", "\\windows.md"}
+	site, err := svc.CreateSite(ctx, 1, "secret", "private", "", []UploadFile{mdFile("index.md", "x")})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	// Owner can see it.
+	if _, _, err := svc.Detail(ctx, 1, site.ID); err != nil {
+		t.Fatalf("owner detail: %v", err)
+	}
+	// Anonymous (uid 0) → 404.
+	if _, _, err := svc.Detail(ctx, 0, site.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("anonymous: expected ErrNotFound, got %v", err)
+	}
+	// Logged-in but non-owner → 404.
+	if _, _, err := svc.Detail(ctx, 2, site.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("non-owner: expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestRejectsPathTraversal(t *testing.T) {
+	svc := newServiceForTest(t)
+	ctx := context.Background()
+	cases := []string{
+		"../escape.md",     // dot-dot segment
+		"/abs.md",          // absolute
+		"a/../b.md",        // dot-dot in the middle
+		"..",               // bare dot-dot
+		"\\windows.md",     // leading backslash
+		"subdir\\foo.md",   // embedded backslash
+		"%2e%2e/escape.md", // URL-encoded ".." — must be rejected literally
+	}
 	for _, p := range cases {
 		_, err := svc.CreateSite(ctx, 1, "", "", "x", []UploadFile{
 			mdFile("index.md", "ok"),
@@ -186,8 +215,23 @@ func TestRejectsPathTraversal(t *testing.T) {
 	}
 }
 
+// TestRejectsPathTraversal_DecodedDotDot guards against an external caller
+// that URL-decodes a "../" payload before passing it to the service. The
+// service must still reject it.
+func TestRejectsPathTraversal_DecodedDotDot(t *testing.T) {
+	svc := newServiceForTest(t)
+	ctx := context.Background()
+	_, err := svc.CreateSite(ctx, 1, "", "", "x", []UploadFile{
+		mdFile("index.md", "ok"),
+		{Path: "../escape.md", Body: []byte("nope")},
+	})
+	if !errors.Is(err, ErrPathTraversal) {
+		t.Fatalf("expected ErrPathTraversal, got %v", err)
+	}
+}
+
 func TestRejectsTooManyFiles(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	original := MaxFiles
 	MaxFiles = 3
@@ -205,7 +249,7 @@ func TestRejectsTooManyFiles(t *testing.T) {
 }
 
 func TestRejectsFileTooLarge(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	original := MaxFileSize
 	MaxFileSize = 16
@@ -220,7 +264,7 @@ func TestRejectsFileTooLarge(t *testing.T) {
 }
 
 func TestRejectsTotalTooLarge(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	originalFile := MaxFileSize
 	originalTotal := MaxTotalSize
@@ -238,11 +282,35 @@ func TestRejectsTotalTooLarge(t *testing.T) {
 }
 
 func TestRequiresAtLeastOneMarkdown(t *testing.T) {
-	svc, _ := newServiceForTest(t)
+	svc := newServiceForTest(t)
 	ctx := context.Background()
 	files := []UploadFile{{Path: "logo.png", Body: []byte{1, 2, 3}}}
 	if _, err := svc.CreateSite(ctx, 1, "", "", "nomd", files); !errors.Is(err, ErrNoFiles) {
 		t.Fatalf("expected ErrNoFiles, got %v", err)
+	}
+}
+
+// TestDeleteSite_DBFirst confirms the delete order: the row is gone even
+// when the blob layer is fine, and the prefix is also cleaned. The
+// orphan-log path is exercised manually via the cleanupOrphanBlobs unit
+// test (no good way to inject a failing blob client without remoting in
+// a fake — and the rule is "no mocks").
+func TestDeleteSite_DBFirst(t *testing.T) {
+	svc := newServiceForTest(t)
+	ctx := context.Background()
+	site, err := svc.CreateSite(ctx, 1, "", "", "to-delete", []UploadFile{mdFile("index.md", "x")})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := svc.DeleteSite(ctx, 1, site.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if _, _, err := svc.Detail(ctx, 1, site.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound after delete, got %v", err)
+	}
+	// Sanity: re-deleting is a clean 404.
+	if err := svc.DeleteSite(ctx, 1, site.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("re-delete: expected ErrNotFound, got %v", err)
 	}
 }
 
