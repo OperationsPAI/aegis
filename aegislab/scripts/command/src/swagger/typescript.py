@@ -187,6 +187,19 @@ def _generate_typescript_helper(
     # Copy the generated
     shutil.copytree(gen_dir, dst_dir)
 
+    # openapi-generator's typescript-axios template hard-codes
+    # `publishConfig.registry = https://npm.pkg.github.com` for any scoped
+    # package, regardless of gitUserId / npmRepository config. We publish to
+    # npmjs.org under @lincyaw, so rewrite publishConfig to drop the GHPR
+    # registry and mark the package public.
+    pkg_path = dst_dir / "package.json"
+    with open(pkg_path) as f:
+        pkg = json.load(f)
+    pkg["publishConfig"] = {"access": "public"}
+    with open(pkg_path, "w") as f:
+        json.dump(pkg, f, indent=2)
+        f.write("\n")
+
     console.print(
         f"[bold green]✅ TypeScript {msg} post-processing completed successfully![/bold green]"
     )

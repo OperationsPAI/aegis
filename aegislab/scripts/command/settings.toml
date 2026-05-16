@@ -22,11 +22,11 @@ git_user_id = "OperationsPAI"
 git_repo_id = "aegislab"
 
 [default.sdk.typescript.portal]
-npm_name = "@OperationsPAI/portal"
+npm_name = "@lincyaw/portal"
 npm_description = "TypeScript Portal SDK for RCABench API"
 
 [default.sdk.typescript.admin]
-npm_name = "@OperationsPAI/admin"
+npm_name = "@lincyaw/admin"
 npm_description = "TypeScript Admin SDK for RCABench API"
 
 [default.command_urls]
