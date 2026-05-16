@@ -318,6 +318,8 @@ func init() {
 	rootCmd.AddCommand(systemCmd)
 	rootCmd.AddCommand(shareCmd)
 	rootCmd.AddCommand(userCmd)
+	rootCmd.AddCommand(blobCmd)
+	rootCmd.AddCommand(bucketCmd)
 }
 
 // setupDryRunRegistry records which commands opt in to --dry-run. It must be
