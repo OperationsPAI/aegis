@@ -696,15 +696,13 @@ func copyOneRemote(srcBucket, srcKey, dstBucket, dstKey string, ifNotExists, del
 	}
 	if srcBucket == dstBucket {
 		// Server-side copy within a bucket (the only shape the backend
-		// supports today). Hand-written POST because the SDK doesn't expose
-		// CopyObject.
-		c := newClient()
-		body := map[string]any{"src": srcKey, "dst": dstKey, "delete_src": deleteSrc}
-		var resp struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
+		// supports today).
+		cli, ctx := newAPIClient()
+		req := apiclient.NewBlobCopyReq(dstKey, srcKey)
+		if deleteSrc {
+			req.SetDeleteSrc(true)
 		}
-		if err := c.Post("/api/v2/blob/buckets/"+url.PathEscape(srcBucket)+"/copy", body, &resp); err != nil {
+		if _, _, err := cli.BlobAPI.BlobCopy(ctx, srcBucket).BlobCopyReq(*req).Execute(); err != nil {
 			return fmt.Errorf("server-side copy: %w", err)
 		}
 		return nil
@@ -866,31 +864,26 @@ See also: aegisctl blob mv.`,
 		if err := confirmDeletion("prefix", fmt.Sprintf("%s:%s (%d objects)", ref.Bucket, ref.Key, len(keys)), 0, blobRmYes); err != nil {
 			return err
 		}
-		// SDK has no batch-delete; hand-written POST.
-		c := newClient()
-		body := map[string]any{"keys": keys}
-		var resp struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-			Data    struct {
-				Deleted []string `json:"deleted"`
-				Failed  []struct {
-					Key   string `json:"key"`
-					Error string `json:"error"`
-				} `json:"failed"`
-			} `json:"data"`
-		}
-		if err := c.Post("/api/v2/blob/buckets/"+url.PathEscape(ref.Bucket)+"/delete-batch", body, &resp); err != nil {
+		cli, ctx := newAPIClient()
+		body := apiclient.NewBlobBatchDeleteReq(keys)
+		resp, _, err := cli.BlobAPI.BlobBatchDelete(ctx, ref.Bucket).BlobBatchDeleteReq(*body).Execute()
+		if err != nil {
 			return err
 		}
-		if len(resp.Data.Failed) > 0 {
-			fmt.Fprintf(os.Stderr, "batch delete: %d failures:\n", len(resp.Data.Failed))
-			for _, f := range resp.Data.Failed {
-				fmt.Fprintf(os.Stderr, "  %s: %s\n", f.Key, f.Error)
+		var deleted []string
+		var failed []apiclient.BlobBatchFailItem
+		if resp.Data != nil {
+			deleted = resp.Data.GetDeleted()
+			failed = resp.Data.GetFailed()
+		}
+		if len(failed) > 0 {
+			fmt.Fprintf(os.Stderr, "batch delete: %d failures:\n", len(failed))
+			for _, f := range failed {
+				fmt.Fprintf(os.Stderr, "  %s: %s\n", f.GetKey(), f.GetError())
 			}
 			return workflowFailureErrorf("batch delete completed with failures")
 		}
-		output.PrintInfo(fmt.Sprintf("deleted %d objects under %s:%s", len(resp.Data.Deleted), ref.Bucket, ref.Key))
+		output.PrintInfo(fmt.Sprintf("deleted %d objects under %s:%s", len(deleted), ref.Bucket, ref.Key))
 		return nil
 	},
 }
