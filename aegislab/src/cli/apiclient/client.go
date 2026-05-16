@@ -79,6 +79,8 @@ type APIClient struct {
 
 	ObservationAPI ObservationAPI
 
+	PagesAPI PagesAPI
+
 	PedestalAPI PedestalAPI
 
 	PermissionsAPI PermissionsAPI
@@ -145,6 +147,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.NotificationAPI = (*NotificationAPIService)(&c.common)
 	c.OIDCAPI = (*OIDCAPIService)(&c.common)
 	c.ObservationAPI = (*ObservationAPIService)(&c.common)
+	c.PagesAPI = (*PagesAPIService)(&c.common)
 	c.PedestalAPI = (*PedestalAPIService)(&c.common)
 	c.PermissionsAPI = (*PermissionsAPIService)(&c.common)
 	c.ProjectsAPI = (*ProjectsAPIService)(&c.common)

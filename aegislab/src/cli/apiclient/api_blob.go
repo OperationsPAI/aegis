@@ -24,13 +24,57 @@ import (
 type BlobAPI interface {
 
 	/*
-		BlobDelete Delete object
+		BlobBatchDelete Batch delete objects
 
-		Delete an object from the bucket
+		Delete up to 1000 objects in one request. Returns per-key deleted/failed lists.
 
 		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 		@param bucket Bucket name
-		@param key Object key
+		@return ApiBlobBatchDeleteRequest
+	*/
+	BlobBatchDelete(ctx context.Context, bucket string) ApiBlobBatchDeleteRequest
+
+	// BlobBatchDeleteExecute executes the request
+	//  @return DtoGenericResponseBlobBatchDeleteResult
+	BlobBatchDeleteExecute(r ApiBlobBatchDeleteRequest) (*DtoGenericResponseBlobBatchDeleteResult, *http.Response, error)
+
+	/*
+		BlobCopy Copy or move object
+
+		Server-side copy of src to dst. When delete_src=true the operation is a move; if the source delete fails after a successful copy the response is 207 with a partial-success error.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param bucket Bucket name
+		@return ApiBlobCopyRequest
+	*/
+	BlobCopy(ctx context.Context, bucket string) ApiBlobCopyRequest
+
+	// BlobCopyExecute executes the request
+	//  @return DtoGenericResponseBlobObjectMeta
+	BlobCopyExecute(r ApiBlobCopyRequest) (*DtoGenericResponseBlobObjectMeta, *http.Response, error)
+
+	/*
+		BlobCreateBucket Create bucket
+
+		Provision a new bucket at runtime; persists to DB and hot-adds to the registry.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@return ApiBlobCreateBucketRequest
+	*/
+	BlobCreateBucket(ctx context.Context) ApiBlobCreateBucketRequest
+
+	// BlobCreateBucketExecute executes the request
+	//  @return DtoGenericResponseBlobBucketSummary
+	BlobCreateBucketExecute(r ApiBlobCreateBucketRequest) (*DtoGenericResponseBlobBucketSummary, *http.Response, error)
+
+	/*
+		BlobDelete Delete object
+
+		Delete an object from the bucket; key may contain slashes
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param bucket Bucket name
+		@param key Object key (may contain slashes)
 		@return ApiBlobDeleteRequest
 	*/
 	BlobDelete(ctx context.Context, bucket string, key string) ApiBlobDeleteRequest
@@ -40,13 +84,28 @@ type BlobAPI interface {
 	BlobDeleteExecute(r ApiBlobDeleteRequest) (*DtoGenericResponseAny, *http.Response, error)
 
 	/*
-		BlobInlineGet Inline object download
+		BlobDeleteBucket Delete bucket
 
-		Stream object bytes inline through the API for single-segment keys
+		Drop a runtime-created bucket. Returns 409 with sample keys when the bucket is non-empty and force is false; with force=true all objects are deleted first. Buckets declared in static config cannot be dropped.
 
 		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 		@param bucket Bucket name
-		@param key Object key
+		@return ApiBlobDeleteBucketRequest
+	*/
+	BlobDeleteBucket(ctx context.Context, bucket string) ApiBlobDeleteBucketRequest
+
+	// BlobDeleteBucketExecute executes the request
+	//  @return DtoGenericResponseAny
+	BlobDeleteBucketExecute(r ApiBlobDeleteBucketRequest) (*DtoGenericResponseAny, *http.Response, error)
+
+	/*
+		BlobInlineGet Inline object download
+
+		Stream object bytes inline through the API; key may contain slashes
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param bucket Bucket name
+		@param key Object key (may contain slashes)
 		@return ApiBlobInlineGetRequest
 	*/
 	BlobInlineGet(ctx context.Context, bucket string, key string) ApiBlobInlineGetRequest
@@ -147,11 +206,11 @@ type BlobAPI interface {
 	/*
 		BlobStat Stat object
 
-		Return object metadata without streaming the body
+		Return object metadata without streaming the body; key may contain slashes
 
 		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 		@param bucket Bucket name
-		@param key Object key
+		@param key Object key (may contain slashes)
 		@return ApiBlobStatRequest
 	*/
 	BlobStat(ctx context.Context, bucket string, key string) ApiBlobStatRequest
@@ -175,10 +234,562 @@ type BlobAPI interface {
 	// BlobStreamGetExecute executes the request
 	//  @return *os.File
 	BlobStreamGetExecute(r ApiBlobStreamGetRequest) (*os.File, *http.Response, error)
+
+	/*
+		BlobZip Stream objects as ZIP
+
+		Stream up to 1000 keys as a zip archive. Total size is capped at 10 GiB. Per-key read failures abort the archive with 500.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param bucket Bucket name
+		@return ApiBlobZipRequest
+	*/
+	BlobZip(ctx context.Context, bucket string) ApiBlobZipRequest
+
+	// BlobZipExecute executes the request
+	//  @return *os.File
+	BlobZipExecute(r ApiBlobZipRequest) (*os.File, *http.Response, error)
 }
 
 // BlobAPIService BlobAPI service
 type BlobAPIService service
+
+type ApiBlobBatchDeleteRequest struct {
+	ctx                context.Context
+	ApiService         BlobAPI
+	bucket             string
+	blobBatchDeleteReq *BlobBatchDeleteReq
+}
+
+// Batch delete request
+func (r ApiBlobBatchDeleteRequest) BlobBatchDeleteReq(blobBatchDeleteReq BlobBatchDeleteReq) ApiBlobBatchDeleteRequest {
+	r.blobBatchDeleteReq = &blobBatchDeleteReq
+	return r
+}
+
+func (r ApiBlobBatchDeleteRequest) Execute() (*DtoGenericResponseBlobBatchDeleteResult, *http.Response, error) {
+	return r.ApiService.BlobBatchDeleteExecute(r)
+}
+
+/*
+BlobBatchDelete Batch delete objects
+
+Delete up to 1000 objects in one request. Returns per-key deleted/failed lists.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param bucket Bucket name
+	@return ApiBlobBatchDeleteRequest
+*/
+func (a *BlobAPIService) BlobBatchDelete(ctx context.Context, bucket string) ApiBlobBatchDeleteRequest {
+	return ApiBlobBatchDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		bucket:     bucket,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseBlobBatchDeleteResult
+func (a *BlobAPIService) BlobBatchDeleteExecute(r ApiBlobBatchDeleteRequest) (*DtoGenericResponseBlobBatchDeleteResult, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseBlobBatchDeleteResult
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobBatchDelete")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets/{bucket}/delete-batch"
+	localVarPath = strings.Replace(localVarPath, "{"+"bucket"+"}", url.PathEscape(parameterValueToString(r.bucket, "bucket")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.blobBatchDeleteReq == nil {
+		return localVarReturnValue, nil, reportError("blobBatchDeleteReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.blobBatchDeleteReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiBlobCopyRequest struct {
+	ctx         context.Context
+	ApiService  BlobAPI
+	bucket      string
+	blobCopyReq *BlobCopyReq
+}
+
+// Copy request
+func (r ApiBlobCopyRequest) BlobCopyReq(blobCopyReq BlobCopyReq) ApiBlobCopyRequest {
+	r.blobCopyReq = &blobCopyReq
+	return r
+}
+
+func (r ApiBlobCopyRequest) Execute() (*DtoGenericResponseBlobObjectMeta, *http.Response, error) {
+	return r.ApiService.BlobCopyExecute(r)
+}
+
+/*
+BlobCopy Copy or move object
+
+Server-side copy of src to dst. When delete_src=true the operation is a move; if the source delete fails after a successful copy the response is 207 with a partial-success error.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param bucket Bucket name
+	@return ApiBlobCopyRequest
+*/
+func (a *BlobAPIService) BlobCopy(ctx context.Context, bucket string) ApiBlobCopyRequest {
+	return ApiBlobCopyRequest{
+		ApiService: a,
+		ctx:        ctx,
+		bucket:     bucket,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseBlobObjectMeta
+func (a *BlobAPIService) BlobCopyExecute(r ApiBlobCopyRequest) (*DtoGenericResponseBlobObjectMeta, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseBlobObjectMeta
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobCopy")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets/{bucket}/copy"
+	localVarPath = strings.Replace(localVarPath, "{"+"bucket"+"}", url.PathEscape(parameterValueToString(r.bucket, "bucket")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.blobCopyReq == nil {
+		return localVarReturnValue, nil, reportError("blobCopyReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.blobCopyReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiBlobCreateBucketRequest struct {
+	ctx                 context.Context
+	ApiService          BlobAPI
+	blobCreateBucketReq *BlobCreateBucketReq
+}
+
+// Bucket creation request
+func (r ApiBlobCreateBucketRequest) BlobCreateBucketReq(blobCreateBucketReq BlobCreateBucketReq) ApiBlobCreateBucketRequest {
+	r.blobCreateBucketReq = &blobCreateBucketReq
+	return r
+}
+
+func (r ApiBlobCreateBucketRequest) Execute() (*DtoGenericResponseBlobBucketSummary, *http.Response, error) {
+	return r.ApiService.BlobCreateBucketExecute(r)
+}
+
+/*
+BlobCreateBucket Create bucket
+
+Provision a new bucket at runtime; persists to DB and hot-adds to the registry.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiBlobCreateBucketRequest
+*/
+func (a *BlobAPIService) BlobCreateBucket(ctx context.Context) ApiBlobCreateBucketRequest {
+	return ApiBlobCreateBucketRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseBlobBucketSummary
+func (a *BlobAPIService) BlobCreateBucketExecute(r ApiBlobCreateBucketRequest) (*DtoGenericResponseBlobBucketSummary, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseBlobBucketSummary
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobCreateBucket")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.blobCreateBucketReq == nil {
+		return localVarReturnValue, nil, reportError("blobCreateBucketReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.blobCreateBucketReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
 
 type ApiBlobDeleteRequest struct {
 	ctx        context.Context
@@ -194,11 +805,11 @@ func (r ApiBlobDeleteRequest) Execute() (*DtoGenericResponseAny, *http.Response,
 /*
 BlobDelete Delete object
 
-Delete an object from the bucket
+Delete an object from the bucket; key may contain slashes
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param bucket Bucket name
-	@param key Object key
+	@param key Object key (may contain slashes)
 	@return ApiBlobDeleteRequest
 */
 func (a *BlobAPIService) BlobDelete(ctx context.Context, bucket string, key string) ApiBlobDeleteRequest {
@@ -345,6 +956,199 @@ func (a *BlobAPIService) BlobDeleteExecute(r ApiBlobDeleteRequest) (*DtoGenericR
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiBlobDeleteBucketRequest struct {
+	ctx        context.Context
+	ApiService BlobAPI
+	bucket     string
+	force      *bool
+}
+
+// Delete all objects before dropping the bucket
+func (r ApiBlobDeleteBucketRequest) Force(force bool) ApiBlobDeleteBucketRequest {
+	r.force = &force
+	return r
+}
+
+func (r ApiBlobDeleteBucketRequest) Execute() (*DtoGenericResponseAny, *http.Response, error) {
+	return r.ApiService.BlobDeleteBucketExecute(r)
+}
+
+/*
+BlobDeleteBucket Delete bucket
+
+Drop a runtime-created bucket. Returns 409 with sample keys when the bucket is non-empty and force is false; with force=true all objects are deleted first. Buckets declared in static config cannot be dropped.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param bucket Bucket name
+	@return ApiBlobDeleteBucketRequest
+*/
+func (a *BlobAPIService) BlobDeleteBucket(ctx context.Context, bucket string) ApiBlobDeleteBucketRequest {
+	return ApiBlobDeleteBucketRequest{
+		ApiService: a,
+		ctx:        ctx,
+		bucket:     bucket,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseAny
+func (a *BlobAPIService) BlobDeleteBucketExecute(r ApiBlobDeleteBucketRequest) (*DtoGenericResponseAny, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodDelete
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseAny
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobDeleteBucket")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets/{bucket}"
+	localVarPath = strings.Replace(localVarPath, "{"+"bucket"+"}", url.PathEscape(parameterValueToString(r.bucket, "bucket")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.force != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "force", r.force, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v DtoGenericResponseBlobDeleteBucketResp
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiBlobInlineGetRequest struct {
 	ctx        context.Context
 	ApiService BlobAPI
@@ -359,11 +1163,11 @@ func (r ApiBlobInlineGetRequest) Execute() (*os.File, *http.Response, error) {
 /*
 BlobInlineGet Inline object download
 
-Stream object bytes inline through the API for single-segment keys
+Stream object bytes inline through the API; key may contain slashes
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param bucket Bucket name
-	@param key Object key
+	@param key Object key (may contain slashes)
 	@return ApiBlobInlineGetRequest
 */
 func (a *BlobAPIService) BlobInlineGet(ctx context.Context, bucket string, key string) ApiBlobInlineGetRequest {
@@ -1554,11 +2358,11 @@ func (r ApiBlobStatRequest) Execute() (*DtoGenericResponseBlobObjectMeta, *http.
 /*
 BlobStat Stat object
 
-Return object metadata without streaming the body
+Return object metadata without streaming the body; key may contain slashes
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param bucket Bucket name
-	@param key Object key
+	@param key Object key (may contain slashes)
 	@return ApiBlobStatRequest
 */
 func (a *BlobAPIService) BlobStat(ctx context.Context, bucket string, key string) ApiBlobStatRequest {
@@ -1824,6 +2628,201 @@ func (a *BlobAPIService) BlobStreamGetExecute(r ApiBlobStreamGetRequest) (*os.Fi
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiBlobZipRequest struct {
+	ctx        context.Context
+	ApiService BlobAPI
+	bucket     string
+	blobZipReq *BlobZipReq
+}
+
+// ZIP request
+func (r ApiBlobZipRequest) BlobZipReq(blobZipReq BlobZipReq) ApiBlobZipRequest {
+	r.blobZipReq = &blobZipReq
+	return r
+}
+
+func (r ApiBlobZipRequest) Execute() (*os.File, *http.Response, error) {
+	return r.ApiService.BlobZipExecute(r)
+}
+
+/*
+BlobZip Stream objects as ZIP
+
+Stream up to 1000 keys as a zip archive. Total size is capped at 10 GiB. Per-key read failures abort the archive with 500.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param bucket Bucket name
+	@return ApiBlobZipRequest
+*/
+func (a *BlobAPIService) BlobZip(ctx context.Context, bucket string) ApiBlobZipRequest {
+	return ApiBlobZipRequest{
+		ApiService: a,
+		ctx:        ctx,
+		bucket:     bucket,
+	}
+}
+
+// Execute executes the request
+//
+//	@return *os.File
+func (a *BlobAPIService) BlobZipExecute(r ApiBlobZipRequest) (*os.File, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *os.File
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobZip")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets/{bucket}/zip"
+	localVarPath = strings.Replace(localVarPath, "{"+"bucket"+"}", url.PathEscape(parameterValueToString(r.bucket, "bucket")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.blobZipReq == nil {
+		return localVarReturnValue, nil, reportError("blobZipReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/zip"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.blobZipReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 413 {
 			var v DtoGenericResponseAny
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {

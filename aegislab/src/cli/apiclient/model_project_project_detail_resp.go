@@ -24,6 +24,7 @@ type ProjectProjectDetailResp struct {
 	CreatedAt            *string                       `json:"created_at,omitempty"`
 	Datapacks            []InjectionInjectionResp      `json:"datapacks,omitempty"`
 	Datasets             []ProjectProjectDatasetItem   `json:"datasets,omitempty"`
+	Description          *string                       `json:"description,omitempty"`
 	ExecutionCount       *int32                        `json:"execution_count,omitempty"`
 	Id                   *int32                        `json:"id,omitempty"`
 	InjectionCount       *int32                        `json:"injection_count,omitempty"`
@@ -183,6 +184,38 @@ func (o *ProjectProjectDetailResp) HasDatasets() bool {
 // SetDatasets gets a reference to the given []ProjectProjectDatasetItem and assigns it to the Datasets field.
 func (o *ProjectProjectDetailResp) SetDatasets(v []ProjectProjectDatasetItem) {
 	o.Datasets = v
+}
+
+// GetDescription returns the Description field value if set, zero value otherwise.
+func (o *ProjectProjectDetailResp) GetDescription() string {
+	if o == nil || IsNil(o.Description) {
+		var ret string
+		return ret
+	}
+	return *o.Description
+}
+
+// GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ProjectProjectDetailResp) GetDescriptionOk() (*string, bool) {
+	if o == nil || IsNil(o.Description) {
+		return nil, false
+	}
+	return o.Description, true
+}
+
+// HasDescription returns a boolean if a field has been set.
+func (o *ProjectProjectDetailResp) HasDescription() bool {
+	if o != nil && !IsNil(o.Description) {
+		return true
+	}
+
+	return false
+}
+
+// SetDescription gets a reference to the given string and assigns it to the Description field.
+func (o *ProjectProjectDetailResp) SetDescription(v string) {
+	o.Description = &v
 }
 
 // GetExecutionCount returns the ExecutionCount field value if set, zero value otherwise.
@@ -559,6 +592,9 @@ func (o ProjectProjectDetailResp) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Datasets) {
 		toSerialize["datasets"] = o.Datasets
 	}
+	if !IsNil(o.Description) {
+		toSerialize["description"] = o.Description
+	}
 	if !IsNil(o.ExecutionCount) {
 		toSerialize["execution_count"] = o.ExecutionCount
 	}
@@ -618,6 +654,7 @@ func (o *ProjectProjectDetailResp) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "created_at")
 		delete(additionalProperties, "datapacks")
 		delete(additionalProperties, "datasets")
+		delete(additionalProperties, "description")
 		delete(additionalProperties, "execution_count")
 		delete(additionalProperties, "id")
 		delete(additionalProperties, "injection_count")
