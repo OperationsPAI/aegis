@@ -117,12 +117,13 @@ func (req *ManageProjectLabelReq) Validate() error {
 
 // ProjectResp represents basic project response.
 type ProjectResp struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	IsPublic  bool      `json:"is_public"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	IsPublic    bool      `json:"is_public"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 
 	LastInjectionAt *time.Time      `json:"last_injection_at,omitempty"`
 	LastExecutionAt *time.Time      `json:"last_execution_at,omitempty"`
@@ -133,12 +134,13 @@ type ProjectResp struct {
 
 func NewProjectResp(project *model.Project, stats *dto.ProjectStatistics) *ProjectResp {
 	resp := &ProjectResp{
-		ID:        project.ID,
-		Name:      project.Name,
-		IsPublic:  project.IsPublic,
-		Status:    consts.GetStatusTypeName(project.Status),
-		CreatedAt: project.CreatedAt,
-		UpdatedAt: project.UpdatedAt,
+		ID:          project.ID,
+		Name:        project.Name,
+		Description: project.Description,
+		IsPublic:    project.IsPublic,
+		Status:      consts.GetStatusTypeName(project.Status),
+		CreatedAt:   project.CreatedAt,
+		UpdatedAt:   project.UpdatedAt,
 	}
 
 	if stats != nil {

@@ -74,27 +74,47 @@ type ChaosSystemWriter interface {
 	EnsureCountForNamespace(ctx context.Context, systemName, namespace string) (bool, error)
 }
 
-type Service struct {
-	repo         *Repository
-	store        DatapackStorage
-	lokiClient   *loki.Client
-	containers   container.Reader
-	datasets     dataset.Reader
-	labels       label.Writer
-	redis        *redis.Gateway
-	chaosSystems ChaosSystemWriter
+// TaskCanceller is the narrow contract injection.Service needs to cancel
+// the task backing an injection. Implemented by *task.Service via an
+// app-level adapter so this package owns its own DTO shape and avoids
+// pulling task into the injection import graph.
+type TaskCanceller interface {
+	CancelTask(ctx context.Context, taskID string) (*CancelInjectionTaskResult, error)
 }
 
-func NewService(repo *Repository, store DatapackStorage, lokiClient *loki.Client, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter) *Service {
+// CancelInjectionTaskResult is the structural projection of the underlying
+// task cancel response consumed by injection.Service.
+type CancelInjectionTaskResult struct {
+	TaskID            string
+	State             string
+	Message           string
+	DeletedPodChaos   []string
+	RemovedRedisTasks []string
+}
+
+type Service struct {
+	repo          *Repository
+	store         DatapackStorage
+	lokiClient    *loki.Client
+	containers    container.Reader
+	datasets      dataset.Reader
+	labels        label.Writer
+	redis         *redis.Gateway
+	chaosSystems  ChaosSystemWriter
+	taskCanceller TaskCanceller
+}
+
+func NewService(repo *Repository, store DatapackStorage, lokiClient *loki.Client, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter, taskCanceller TaskCanceller) *Service {
 	return &Service{
-		repo:         repo,
-		store:        store,
-		lokiClient:   lokiClient,
-		containers:   containers,
-		datasets:     datasets,
-		labels:       labels,
-		redis:        redis,
-		chaosSystems: chaosSystems,
+		repo:          repo,
+		store:         store,
+		lokiClient:    lokiClient,
+		containers:    containers,
+		datasets:      datasets,
+		labels:        labels,
+		redis:         redis,
+		chaosSystems:  chaosSystems,
+		taskCanceller: taskCanceller,
 	}
 }
 
@@ -1236,6 +1256,45 @@ func (s *Service) batchDeleteByLabels(labelItems []dto.LabelItem) error {
 		return fmt.Errorf("failed to list injection ids by labels: %w", err)
 	}
 	return s.batchDeleteByIDs(injectionIDs)
+}
+
+// CancelInjection cascades cancellation through to the task that backs the
+// injection. The DB write + redis eviction + chaos CRD delete all happen
+// inside task.Service.CancelTask; this method just resolves injection_id →
+// task_id and surfaces the underlying outcome.
+//
+// Contract:
+//   - injection not found → wrapped consts.ErrNotFound
+//   - injection has no associated task (already detached / never submitted) →
+//     wrapped consts.ErrBadRequest
+//   - task already terminal → response carries the terminal state with no error
+func (s *Service) CancelInjection(ctx context.Context, injectionID int) (*CancelInjectionResp, error) {
+	injection, err := s.repo.loadInjection(injectionID)
+	if err != nil {
+		if errors.Is(err, consts.ErrNotFound) {
+			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, injectionID)
+		}
+		return nil, fmt.Errorf("failed to load injection: %w", err)
+	}
+	if injection.TaskID == nil || *injection.TaskID == "" {
+		return nil, fmt.Errorf("%w: injection %d has no associated task to cancel", consts.ErrBadRequest, injectionID)
+	}
+	if s.taskCanceller == nil {
+		return nil, fmt.Errorf("task canceller is not wired")
+	}
+
+	result, err := s.taskCanceller.CancelTask(ctx, *injection.TaskID)
+	if err != nil {
+		return nil, err
+	}
+	return &CancelInjectionResp{
+		InjectionID:       injectionID,
+		TaskID:            result.TaskID,
+		State:             result.State,
+		Message:           result.Message,
+		DeletedPodChaos:   result.DeletedPodChaos,
+		RemovedRedisTasks: result.RemovedRedisTasks,
+	}, nil
 }
 
 func splitLabelCondition(item string) [2]string {

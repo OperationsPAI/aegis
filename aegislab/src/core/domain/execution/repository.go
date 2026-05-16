@@ -85,6 +85,12 @@ func (r *Repository) listExecutionsView(limit, offset int, req *ListExecutionReq
 	if req.Status != nil {
 		query = query.Where("status = ?", *req.Status)
 	}
+	if req.ProjectID != nil {
+		query = query.
+			Joins("JOIN tasks ON tasks.id = executions.task_id").
+			Joins("JOIN traces ON traces.id = tasks.trace_id").
+			Where("traces.project_id = ?", *req.ProjectID)
+	}
 	for _, condition := range labelConditions {
 		subQuery := r.db.Table("execution_injection_labels eil").
 			Select("eil.execution_id").
