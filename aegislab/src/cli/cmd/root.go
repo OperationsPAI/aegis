@@ -25,6 +25,13 @@ var (
 	flagNonInteractive bool
 	flagDryRun         bool
 	flagVersion        bool
+	flagCACert         string
+	flagInsecure       bool
+
+	// Tracks whether --insecure-skip-tls-verify was set explicitly (so we
+	// can distinguish "user passed --insecure=false" from "user did not
+	// pass the flag at all" when falling back to env/context values).
+	flagInsecureSet bool
 
 	// Resolved at PersistentPreRun time.
 	cfg *config.Config
@@ -99,6 +106,15 @@ ENVIRONMENT VARIABLES:
   AEGIS_OUTPUT      - Output format: table|json|ndjson (overridden by --output flag)
   AEGIS_TIMEOUT     - Request timeout in seconds (overridden by --request-timeout flag)
   AEGIS_NON_INTERACTIVE - Set true/1 to disable prompts and require explicit input
+  AEGIS_CA_CERT     - Path to PEM file with extra trusted CA(s) (--ca-cert)
+  AEGIS_INSECURE_SKIP_VERIFY - Truthy disables TLS verification (--insecure-skip-tls-verify)
+
+TLS RESOLUTION ORDER:
+  --ca-cert / --insecure-skip-tls-verify   (highest priority)
+  AEGIS_CA_CERT / AEGIS_INSECURE_SKIP_VERIFY env vars
+  active context's ca-cert / insecure-skip-tls-verify fields
+  auto-discovery (~/.aegisctl/certs/*.{crt,pem}, ~/.aegisctl/ca.crt; lowest)
+  See 'aegisctl context trust --help' for the TOFU workflow.
 
 NAMING CONVENTION:
   Most commands accept human-readable names instead of numeric IDs.
@@ -180,6 +196,11 @@ NAMING CONVENTION:
 				}
 			}
 		}
+
+		// Track whether the user explicitly set --insecure-skip-tls-verify
+		// so resolveTLSOptions can fall back to env/context when the flag
+		// is absent (vs. honour --insecure=false when explicitly set).
+		flagInsecureSet = cmd.Flags().Lookup("insecure-skip-tls-verify").Changed
 
 		// Respect --no-color and NO_COLOR for all colorized output.
 		output.SetNoColor(flagNoColor || os.Getenv("NO_COLOR") != "")
@@ -271,6 +292,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagNonInteractive, "non-interactive", false, "Disable prompts and require explicit input (env: AEGIS_NON_INTERACTIVE)")
 	rootCmd.PersistentFlags().BoolVar(&flagDryRun, "dry-run", false, "Show what would be done without executing")
 	rootCmd.PersistentFlags().BoolVar(&flagVersion, "version", false, "Print version information and exit")
+	rootCmd.PersistentFlags().StringVar(&flagCACert, "ca-cert", "", "Path to PEM file with extra trusted CA(s) (env: AEGIS_CA_CERT)")
+	rootCmd.PersistentFlags().BoolVar(&flagInsecure, "insecure-skip-tls-verify", false, "Disable TLS verification — DEV ONLY (env: AEGIS_INSECURE_SKIP_VERIFY)")
 
 	// Register subcommands.
 	rootCmd.AddCommand(authCmd)
