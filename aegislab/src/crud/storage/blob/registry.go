@@ -189,6 +189,37 @@ func (r *Registry) Create(ctx context.Context, cfg BucketConfig) (*Bucket, error
 	return b, nil
 }
 
+// HasDB reports whether the registry is backed by a database. Buckets
+// declared in static TOML config have no DB row and cannot be dropped
+// at runtime — Drop reports an error in that case.
+func (r *Registry) HasDB() bool { return r.db != nil }
+
+// Drop removes a runtime-created bucket from the registry and the DB.
+// Buckets declared in static TOML config (no DB row) are refused with
+// an error — operators must edit the config file and restart.
+func (r *Registry) Drop(ctx context.Context, name string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.buckets[name]; !exists {
+		return ErrBucketNotFound
+	}
+	if r.db == nil {
+		return fmt.Errorf("bucket %q is not DB-backed (declared in static config)", name)
+	}
+	res := r.db.WithContext(ctx).Where("name = ?", name).Delete(&BucketConfigRecord{})
+	if res.Error != nil {
+		return fmt.Errorf("delete bucket config row: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		// No DB row means this bucket came from static TOML even though
+		// db is set — refuse the drop rather than leave the registry and
+		// config out of sync.
+		return fmt.Errorf("bucket %q is not DB-backed (declared in static config)", name)
+	}
+	delete(r.buckets, name)
+	return nil
+}
+
 // NewTestRegistry builds a Registry from a pre-assembled bucket map.
 // Intended for tests that wire drivers by hand and want to bypass the
 // viper-config path used in production.
@@ -198,6 +229,17 @@ func NewTestRegistry(buckets map[string]*Bucket) *Registry {
 		cp[k] = v
 	}
 	return &Registry{buckets: cp}
+}
+
+// NewTestRegistryWithDB is like NewTestRegistry but also wires a DB
+// connection so Drop can persist its row deletes. Tests seed the
+// blob_bucket_configs table separately.
+func NewTestRegistryWithDB(buckets map[string]*Bucket, db *gorm.DB) *Registry {
+	cp := make(map[string]*Bucket, len(buckets))
+	for k, v := range buckets {
+		cp[k] = v
+	}
+	return &Registry{buckets: cp, db: db}
 }
 
 // RegistryDeps lets the fx wiring inject the signing key (used by

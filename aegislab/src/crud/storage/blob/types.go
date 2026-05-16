@@ -116,6 +116,9 @@ var (
 	// but the subsequent delete of the source failed. The caller should
 	// surface a partial-success response rather than a full error.
 	ErrPartialMove = errors.New("copy succeeded but source delete failed")
+	// ErrBucketNotEmpty is returned by DeleteBucket when force=false and
+	// the bucket still contains objects. Handler surfaces it as 409.
+	ErrBucketNotEmpty = errors.New("bucket not empty")
 )
 
 // Clock is injectable so tests can pin time. Default impl is realClock.

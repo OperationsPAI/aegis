@@ -125,6 +125,15 @@ func (r *Repository) HardDelete(ctx context.Context, id int64) error {
 		Delete(&ObjectRecord{}).Error
 }
 
+// HardDeleteByBucket removes every metadata row for the given bucket
+// regardless of soft-delete state. Called after a successful force
+// drop so the row count stays consistent with the driver-side purge.
+func (r *Repository) HardDeleteByBucket(ctx context.Context, bucket string) error {
+	return r.DB.WithContext(ctx).
+		Where("bucket = ?", bucket).
+		Delete(&ObjectRecord{}).Error
+}
+
 // ListByEntity is the inverse-index lookup ("show me everything dataset
 // 42 owns").
 type ListFilter struct {
