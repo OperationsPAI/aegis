@@ -20,6 +20,10 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				g.GET("/buckets", handler.ListBuckets)
 				g.POST("/buckets", handler.CreateBucket)
 				g.DELETE("/buckets/:bucket", handler.DeleteBucket)
+				// Lifecycle policy persistence. Execution is deferred —
+				// see lifecycleExecutionDeferred in bucket_lifecycle.go.
+				g.GET("/buckets/:bucket/lifecycle", handler.GetBucketLifecycle)
+				g.PUT("/buckets/:bucket/lifecycle", handler.PutBucketLifecycle)
 				g.POST("/buckets/:bucket/presign-put", handler.PresignPut)
 				g.POST("/buckets/:bucket/presign-get", handler.PresignGet)
 				// *key catch-all routes allow keys with slashes (e.g. a/b/c.txt).

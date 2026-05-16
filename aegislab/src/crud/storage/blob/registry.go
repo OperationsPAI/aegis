@@ -24,25 +24,28 @@ var bucketNameRE = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{2,62}$`)
 // Buckets declared in TOML config are NOT stored here — the DB row is
 // only written for buckets created via POST /buckets at runtime.
 type BucketConfigRecord struct {
-	ID              int64     `gorm:"primaryKey;autoIncrement"`
-	Name            string    `gorm:"uniqueIndex;not null;size:64"`
-	Driver          string    `gorm:"not null;size:32"`
-	Root            string    `gorm:"size:512"`
-	Endpoint        string    `gorm:"size:512"`
-	PublicEndpoint  string    `gorm:"size:512"`
-	Region          string    `gorm:"size:64"`
-	AccessKeyEnv    string    `gorm:"size:128"`
-	SecretKeyEnv    string    `gorm:"size:128"`
-	Bucket          string    `gorm:"size:128"`
-	UseSSL          bool
-	PathStyle       bool
-	MaxObjectBytes  int64
-	RetentionDays   int
-	PublicRead      bool
-	ContentTypes    string    `gorm:"type:text"` // comma-separated allow-list
-	WriteRoles      string    `gorm:"type:text"` // comma-separated
-	ReadRoles       string    `gorm:"type:text"` // comma-separated
-	ProxyUploads    bool
+	ID             int64  `gorm:"primaryKey;autoIncrement"`
+	Name           string `gorm:"uniqueIndex;not null;size:64"`
+	Driver         string `gorm:"not null;size:32"`
+	Root           string `gorm:"size:512"`
+	Endpoint       string `gorm:"size:512"`
+	PublicEndpoint string `gorm:"size:512"`
+	Region         string `gorm:"size:64"`
+	AccessKeyEnv   string `gorm:"size:128"`
+	SecretKeyEnv   string `gorm:"size:128"`
+	Bucket         string `gorm:"size:128"`
+	UseSSL         bool
+	PathStyle      bool
+	MaxObjectBytes int64
+	RetentionDays  int
+	PublicRead     bool
+	ContentTypes   string `gorm:"type:text"` // comma-separated allow-list
+	WriteRoles     string `gorm:"type:text"` // comma-separated
+	ReadRoles      string `gorm:"type:text"` // comma-separated
+	ProxyUploads   bool
+	// LifecycleConfig is the JSON-encoded BucketLifecycle policy.
+	// Persistence-only in v1; the DeletionWorker does not consume it yet.
+	LifecycleConfig string    `gorm:"column:lifecycle_config;type:text;size:4096"`
 	CreatedAt       time.Time `gorm:"autoCreateTime"`
 }
 
@@ -66,8 +69,8 @@ type BucketConfig struct {
 	// browsers (e.g., the same LB that the SPA loads from).
 	PublicEndpoint string
 	Region         string
-	AccessKeyEnv string
-	SecretKeyEnv string
+	AccessKeyEnv   string
+	SecretKeyEnv   string
 	// AccessKey / SecretKey allow embedding credentials directly in the
 	// TOML (dev only — prefer *Env in shared deploys).
 	AccessKey string
@@ -94,6 +97,11 @@ type BucketConfig struct {
 	// the driver's presigned URLs are unreachable from the browser
 	// (e.g. SigV4 break across edge proxies / LBs).
 	ProxyUploads bool
+
+	// Lifecycle is the runtime-set retention policy persisted alongside
+	// the bucket config. Validated on write; execution is deferred — see
+	// lifecycleExecutionDeferred in bucket_lifecycle.go.
+	Lifecycle *BucketLifecycle
 }
 
 // AllowsContentType returns true if the bucket has no allowlist or the
@@ -163,13 +171,19 @@ func (r *Registry) Create(ctx context.Context, cfg BucketConfig) (*Bucket, error
 	if !bucketNameRE.MatchString(cfg.Name) {
 		return nil, fmt.Errorf("invalid bucket name %q (must match [a-z0-9][a-z0-9-]{2,62})", cfg.Name)
 	}
+	if err := cfg.Lifecycle.Validate(); err != nil {
+		return nil, err
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.buckets[cfg.Name]; exists {
 		return nil, ErrBucketAlreadyExists
 	}
 	if r.db != nil {
-		rec := bucketConfigToRecord(cfg)
+		rec, err := bucketConfigToRecord(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("encode lifecycle: %w", err)
+		}
 		if err := r.db.WithContext(ctx).Create(&rec).Error; err != nil {
 			if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "Duplicate") {
 				return nil, ErrBucketAlreadyExists
@@ -187,6 +201,44 @@ func (r *Registry) Create(ctx context.Context, cfg BucketConfig) (*Bucket, error
 	b := &Bucket{Config: cfg, Driver: drv}
 	r.buckets[cfg.Name] = b
 	return b, nil
+}
+
+// SetLifecycle replaces a bucket's lifecycle policy, both in the
+// in-memory Bucket.Config and (when DB-backed) in the persisted row.
+// A nil policy clears the column. Static-config buckets without a DB
+// row are refused — those policies belong in TOML.
+//
+// lifecycleExecutionDeferred: this updates the stored shape only; no
+// sweep / GC consumes the rules yet.
+func (r *Registry) SetLifecycle(ctx context.Context, name string, lc *BucketLifecycle) error {
+	if err := lc.Validate(); err != nil {
+		return err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	b, exists := r.buckets[name]
+	if !exists {
+		return ErrBucketNotFound
+	}
+	if r.db == nil {
+		return fmt.Errorf("bucket %q is not DB-backed (declared in static config)", name)
+	}
+	enc, err := encodeBucketLifecycle(lc)
+	if err != nil {
+		return fmt.Errorf("encode lifecycle: %w", err)
+	}
+	res := r.db.WithContext(ctx).
+		Model(&BucketConfigRecord{}).
+		Where("name = ?", name).
+		Update("lifecycle_config", enc)
+	if res.Error != nil {
+		return fmt.Errorf("persist lifecycle: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return fmt.Errorf("bucket %q is not DB-backed (declared in static config)", name)
+	}
+	b.Config.Lifecycle = lc
+	return nil
 }
 
 // HasDB reports whether the registry is backed by a database. Buckets
@@ -240,6 +292,17 @@ func NewTestRegistryWithDB(buckets map[string]*Bucket, db *gorm.DB) *Registry {
 		cp[k] = v
 	}
 	return &Registry{buckets: cp, db: db}
+}
+
+// NewTestRegistryWithDeps is like NewTestRegistryWithDB but also wires
+// RegistryDeps so tests that exercise Registry.Create with a localfs
+// driver can supply a non-empty signing key.
+func NewTestRegistryWithDeps(buckets map[string]*Bucket, db *gorm.DB, deps RegistryDeps) *Registry {
+	cp := make(map[string]*Bucket, len(buckets))
+	for k, v := range buckets {
+		cp[k] = v
+	}
+	return &Registry{buckets: cp, db: db, deps: deps}
 }
 
 // RegistryDeps lets the fx wiring inject the signing key (used by
@@ -346,27 +409,32 @@ func buildDriver(cfg BucketConfig, deps RegistryDeps) (Driver, error) {
 	}
 }
 
-func bucketConfigToRecord(cfg BucketConfig) BucketConfigRecord {
-	return BucketConfigRecord{
-		Name:           cfg.Name,
-		Driver:         cfg.Driver,
-		Root:           cfg.Root,
-		Endpoint:       cfg.Endpoint,
-		PublicEndpoint: cfg.PublicEndpoint,
-		Region:         cfg.Region,
-		AccessKeyEnv:   cfg.AccessKeyEnv,
-		SecretKeyEnv:   cfg.SecretKeyEnv,
-		Bucket:         cfg.Bucket,
-		UseSSL:         cfg.UseSSL,
-		PathStyle:      cfg.PathStyle,
-		MaxObjectBytes: cfg.MaxObjectBytes,
-		RetentionDays:  cfg.RetentionDays,
-		PublicRead:     cfg.PublicRead,
-		ContentTypes:   strings.Join(cfg.AllowedContentTypes, ","),
-		WriteRoles:     strings.Join(cfg.WriteRoles, ","),
-		ReadRoles:      strings.Join(cfg.ReadRoles, ","),
-		ProxyUploads:   cfg.ProxyUploads,
+func bucketConfigToRecord(cfg BucketConfig) (BucketConfigRecord, error) {
+	lc, err := encodeBucketLifecycle(cfg.Lifecycle)
+	if err != nil {
+		return BucketConfigRecord{}, err
 	}
+	return BucketConfigRecord{
+		Name:            cfg.Name,
+		Driver:          cfg.Driver,
+		Root:            cfg.Root,
+		Endpoint:        cfg.Endpoint,
+		PublicEndpoint:  cfg.PublicEndpoint,
+		Region:          cfg.Region,
+		AccessKeyEnv:    cfg.AccessKeyEnv,
+		SecretKeyEnv:    cfg.SecretKeyEnv,
+		Bucket:          cfg.Bucket,
+		UseSSL:          cfg.UseSSL,
+		PathStyle:       cfg.PathStyle,
+		MaxObjectBytes:  cfg.MaxObjectBytes,
+		RetentionDays:   cfg.RetentionDays,
+		PublicRead:      cfg.PublicRead,
+		ContentTypes:    strings.Join(cfg.AllowedContentTypes, ","),
+		WriteRoles:      strings.Join(cfg.WriteRoles, ","),
+		ReadRoles:       strings.Join(cfg.ReadRoles, ","),
+		ProxyUploads:    cfg.ProxyUploads,
+		LifecycleConfig: lc,
+	}, nil
 }
 
 func bucketConfigFromRecord(r BucketConfigRecord) BucketConfig {
@@ -395,6 +463,9 @@ func bucketConfigFromRecord(r BucketConfigRecord) BucketConfig {
 		WriteRoles:          splitNonEmpty(r.WriteRoles),
 		ReadRoles:           splitNonEmpty(r.ReadRoles),
 		ProxyUploads:        r.ProxyUploads,
+	}
+	if lc, err := decodeBucketLifecycle(r.LifecycleConfig); err == nil {
+		cfg.Lifecycle = lc
 	}
 	if cfg.InlineMaxBytes == 0 {
 		cfg.InlineMaxBytes = 64 * 1024
