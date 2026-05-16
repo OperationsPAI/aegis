@@ -35,7 +35,7 @@ func NewHandler(service HandlerService) *Handler {
 //	@Failure		403		{object}	dto.GenericResponse[any]						"Permission denied"
 //	@Failure		500		{object}	dto.GenericResponse[any]						"Internal server error"
 //	@Router			/api/v2/evaluations/datapacks [post]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) ListDatapackEvaluationResults(c *gin.Context) {
 	userID, exists := middleware.GetCurrentUserID(c)
 	if !exists || userID <= 0 {
@@ -78,7 +78,7 @@ func (h *Handler) ListDatapackEvaluationResults(c *gin.Context) {
 //	@Failure		403		{object}	dto.GenericResponse[any]						"Permission denied"
 //	@Failure		500		{object}	dto.GenericResponse[any]						"Internal server error"
 //	@Router			/api/v2/evaluations/datasets [post]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) ListDatasetEvaluationResults(c *gin.Context) {
 	userID, exists := middleware.GetCurrentUserID(c)
 	if !exists || userID <= 0 {
@@ -120,7 +120,7 @@ func (h *Handler) ListDatasetEvaluationResults(c *gin.Context) {
 //	@Failure		401		{object}	dto.GenericResponse[any]							"Authentication required"
 //	@Failure		500		{object}	dto.GenericResponse[any]							"Internal server error"
 //	@Router			/api/v2/evaluations [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) ListEvaluations(c *gin.Context) {
 	var req ListEvaluationReq
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -155,7 +155,7 @@ func (h *Handler) ListEvaluations(c *gin.Context) {
 //	@Failure		404	{object}	dto.GenericResponse[any]			"Evaluation not found"
 //	@Failure		500	{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/evaluations/{id} [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true"}
 func (h *Handler) GetEvaluation(c *gin.Context) {
 	id, ok := httpx.ParsePositiveID(c, c.Param(consts.URLPathID), "evaluation ID")
 	if !ok {
