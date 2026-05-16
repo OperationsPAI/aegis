@@ -15,6 +15,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Register: func(v2 *gin.RouterGroup) {
 			executions := v2.Group("/executions", middleware.TrustedHeaderAuth())
 			{
+				executions.GET("", handler.ListExecutions)
 				executions.GET("/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.ListAvailableExecutionLabels)
 				executions.POST("/batch-delete", handler.BatchDeleteExecutions)
 				executions.POST("/compare", handler.CompareExecutions)

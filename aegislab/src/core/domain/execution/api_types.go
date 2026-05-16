@@ -123,6 +123,7 @@ type ListExecutionReq struct {
 	Status     *consts.StatusType     `form:"status" binding:"omitempty"`
 	Labels     []string               `form:"labels" binding:"omitempty"`
 	DatapackID *int                   `form:"datapack_id" binding:"omitempty"`
+	ProjectID  *int                   `form:"project_id" binding:"omitempty"`
 }
 
 func (req *ListExecutionReq) Validate() error {
@@ -137,6 +138,9 @@ func (req *ListExecutionReq) Validate() error {
 	}
 	if err := validateExecutionLabels(req.Labels); err != nil {
 		return err
+	}
+	if req.ProjectID != nil && *req.ProjectID <= 0 {
+		return fmt.Errorf("project_id must be positive")
 	}
 	return nil
 }
