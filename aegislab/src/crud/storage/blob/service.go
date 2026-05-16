@@ -291,6 +291,89 @@ func (s *Service) BatchDelete(ctx context.Context, bucket string, keys []string)
 	return res, nil
 }
 
+// PeekObjects returns up to `limit` object keys from the bucket's
+// driver-level listing. Used by DeleteBucket to surface a non-empty
+// guard error with sample keys without paginating the whole bucket.
+func (s *Service) PeekObjects(ctx context.Context, bucket string, limit int) ([]string, error) {
+	b, err := s.registry.Lookup(bucket)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+	res, err := b.Driver.List(ctx, ListObjectsOpts{MaxKeys: limit})
+	if err != nil {
+		return nil, err
+	}
+	keys := make([]string, 0, len(res.Items))
+	for _, it := range res.Items {
+		keys = append(keys, it.Key)
+	}
+	return keys, nil
+}
+
+// DeleteBucket drops a runtime-created bucket. When force is false and
+// the bucket has any objects, ErrBucketNotEmpty is returned with a
+// sample of keys (up to 10) the caller can surface to the operator.
+// When force is true, all objects are deleted via the driver before
+// the registry row is dropped. Static-config buckets cannot be deleted
+// and return a fmt-wrapped error from the registry.
+func (s *Service) DeleteBucket(ctx context.Context, bucket string, force bool) ([]string, error) {
+	if _, err := s.registry.Lookup(bucket); err != nil {
+		return nil, err
+	}
+	samples, err := s.PeekObjects(ctx, bucket, 10)
+	if err != nil {
+		return nil, err
+	}
+	if len(samples) > 0 && !force {
+		return samples, ErrBucketNotEmpty
+	}
+	if force {
+		if err := s.purgeBucket(ctx, bucket); err != nil {
+			return nil, err
+		}
+	}
+	if err := s.registry.Drop(ctx, bucket); err != nil {
+		return nil, err
+	}
+	if err := s.repo.HardDeleteByBucket(ctx, bucket); err != nil {
+		return nil, fmt.Errorf("purge metadata: %w", err)
+	}
+	return nil, nil
+}
+
+// purgeBucket walks the driver listing and deletes every object. Each
+// page is bounded by batchDeleteCap; failures abort the sweep so the
+// caller can retry without leaving a half-dropped bucket.
+func (s *Service) purgeBucket(ctx context.Context, bucket string) error {
+	b, err := s.registry.Lookup(bucket)
+	if err != nil {
+		return err
+	}
+	var token string
+	for {
+		res, listErr := b.Driver.List(ctx, ListObjectsOpts{
+			MaxKeys:           batchDeleteCap,
+			ContinuationToken: token,
+		})
+		if listErr != nil {
+			return fmt.Errorf("list during purge: %w", listErr)
+		}
+		for _, it := range res.Items {
+			if delErr := b.Driver.Delete(ctx, it.Key); delErr != nil && !errors.Is(delErr, ErrObjectNotFound) {
+				return fmt.Errorf("delete %q during purge: %w", it.Key, delErr)
+			}
+		}
+		if !res.IsTruncated || res.NextContinuationToken == "" {
+			break
+		}
+		token = res.NextContinuationToken
+	}
+	return nil
+}
+
 const (
 	batchDeleteCap = 1000
 	zipKeyCap      = 1000

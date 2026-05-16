@@ -654,23 +654,24 @@ func (h *Handler) Raw(c *gin.Context) {
 
 // CreateBucketReq is the wire shape for POST /buckets.
 type CreateBucketReq struct {
-	Name           string   `json:"name"             binding:"required"`
-	Driver         string   `json:"driver"           binding:"required"`
-	Root           string   `json:"root,omitempty"`
-	Endpoint       string   `json:"endpoint,omitempty"`
-	PublicEndpoint string   `json:"public_endpoint,omitempty"`
-	Region         string   `json:"region,omitempty"`
-	AccessKeyEnv   string   `json:"access_key_env,omitempty"`
-	SecretKeyEnv   string   `json:"secret_key_env,omitempty"`
-	Bucket         string   `json:"bucket,omitempty"`
-	UseSSL         bool     `json:"use_ssl,omitempty"`
-	PathStyle      bool     `json:"path_style,omitempty"`
-	MaxObjectBytes int64    `json:"max_object_bytes,omitempty"`
-	RetentionDays  int      `json:"retention_days,omitempty"`
-	PublicRead     bool     `json:"public_read,omitempty"`
-	ContentTypes   []string `json:"content_types,omitempty"`
-	WriteRoles     []string `json:"write_roles,omitempty"`
-	ReadRoles      []string `json:"read_roles,omitempty"`
+	Name           string           `json:"name"             binding:"required"`
+	Driver         string           `json:"driver"           binding:"required"`
+	Root           string           `json:"root,omitempty"`
+	Endpoint       string           `json:"endpoint,omitempty"`
+	PublicEndpoint string           `json:"public_endpoint,omitempty"`
+	Region         string           `json:"region,omitempty"`
+	AccessKeyEnv   string           `json:"access_key_env,omitempty"`
+	SecretKeyEnv   string           `json:"secret_key_env,omitempty"`
+	Bucket         string           `json:"bucket,omitempty"`
+	UseSSL         bool             `json:"use_ssl,omitempty"`
+	PathStyle      bool             `json:"path_style,omitempty"`
+	MaxObjectBytes int64            `json:"max_object_bytes,omitempty"`
+	RetentionDays  int              `json:"retention_days,omitempty"`
+	PublicRead     bool             `json:"public_read,omitempty"`
+	ContentTypes   []string         `json:"content_types,omitempty"`
+	WriteRoles     []string         `json:"write_roles,omitempty"`
+	ReadRoles      []string         `json:"read_roles,omitempty"`
+	Lifecycle      *BucketLifecycle `json:"lifecycle,omitempty"`
 }
 
 // CreateBucket provisions a new bucket at runtime and persists it to
@@ -690,7 +691,7 @@ type CreateBucketReq struct {
 //	@Failure		409		{object}	dto.GenericResponse[any]			"Bucket already exists"
 //	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/blob/buckets [post]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true","admin":"true"}
 func (h *Handler) CreateBucket(c *gin.Context) {
 	var req CreateBucketReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -715,11 +716,16 @@ func (h *Handler) CreateBucket(c *gin.Context) {
 		AllowedContentTypes: req.ContentTypes,
 		WriteRoles:          req.WriteRoles,
 		ReadRoles:           req.ReadRoles,
+		Lifecycle:           req.Lifecycle,
 	}
 	b, err := h.svc.Registry().Create(c.Request.Context(), cfg)
 	if err != nil {
 		if errors.Is(err, ErrBucketAlreadyExists) {
 			dto.ErrorResponse(c, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, ErrBucketLifecycleInvalid) {
+			dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -732,6 +738,80 @@ func (h *Handler) CreateBucket(c *gin.Context) {
 		RetentionDays:  b.Config.RetentionDays,
 		PublicRead:     b.Config.PublicRead,
 	})
+}
+
+// ---- Delete bucket ----
+
+// DeleteBucketResp is the 409 body when the bucket is not empty and
+// force was not set; surfaces a sample of remaining keys to the caller.
+type DeleteBucketResp struct {
+	Code       string   `json:"code"`
+	Message    string   `json:"message"`
+	SampleKeys []string `json:"sample_keys,omitempty"`
+}
+
+// DeleteBucket drops a runtime-created bucket. With force=false (the
+// default) a non-empty bucket returns 409 with a sample of remaining
+// keys; with force=true the handler purges every object first.
+//
+//	@Summary		Delete bucket
+//	@Description	Drop a runtime-created bucket. Returns 409 with sample keys when the bucket is non-empty and force is false; with force=true all objects are deleted first. Buckets declared in static config cannot be dropped.
+//	@Tags			Blob
+//	@ID				blob_delete_bucket
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			bucket	path		string										true	"Bucket name"
+//	@Param			force	query		bool										false	"Delete all objects before dropping the bucket"
+//	@Success		204		{object}	dto.GenericResponse[any]					"Bucket deleted"
+//	@Failure		400		{object}	dto.GenericResponse[any]					"Cannot delete a config-declared bucket"
+//	@Failure		401		{object}	dto.GenericResponse[any]					"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]					"Forbidden"
+//	@Failure		404		{object}	dto.GenericResponse[any]					"Bucket not found"
+//	@Failure		409		{object}	dto.GenericResponse[DeleteBucketResp]		"Bucket not empty"
+//	@Failure		500		{object}	dto.GenericResponse[any]					"Internal server error"
+//	@Router			/api/v2/blob/buckets/{bucket} [delete]
+//	@x-api-type		{"portal":"true","sdk":"true","admin":"true"}
+func (h *Handler) DeleteBucket(c *gin.Context) {
+	bucket := c.Param("bucket")
+	b, err := h.svc.Registry().Lookup(bucket)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+	sub := subjectFromContext(c)
+	if !h.auth.CanWrite(&b.Config, sub) {
+		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
+		return
+	}
+	// TODO: ownership/RBAC — blob has no per-bucket ownership today; a
+	// caller with bucket write permission can drop the bucket. Mirror
+	// the pages module's RequireAnyPermission once blob grows a
+	// permission resource.
+	force := false
+	if s := c.Query("force"); s != "" {
+		if v, perr := strconv.ParseBool(s); perr == nil {
+			force = v
+		}
+	}
+	samples, err := h.svc.DeleteBucket(c.Request.Context(), bucket, force)
+	if errors.Is(err, ErrBucketNotEmpty) {
+		dto.JSONResponse(c, http.StatusConflict, "bucket not empty", DeleteBucketResp{
+			Code:       "bucket_not_empty",
+			Message:    "bucket has objects; retry with force=true to drop them",
+			SampleKeys: samples,
+		})
+		return
+	}
+	if err != nil {
+		if strings.Contains(err.Error(), "not DB-backed") {
+			dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.writeServiceError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
 }
 
 // ---- Copy / Move ----
@@ -761,7 +841,7 @@ type copyReq struct {
 //	@Failure		404		{object}	dto.GenericResponse[any]			"Bucket or object not found"
 //	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
 //	@Router			/api/v2/blob/buckets/{bucket}/copy [post]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true","admin":"true"}
 func (h *Handler) CopyObject(c *gin.Context) {
 	bucket := c.Param("bucket")
 	var req copyReq
@@ -816,7 +896,7 @@ type batchDeleteReq struct {
 //	@Failure		404		{object}	dto.GenericResponse[any]				"Bucket not found"
 //	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/blob/buckets/{bucket}/delete-batch [post]
-//	@x-api-type		{"portal":"true"}
+//	@x-api-type		{"portal":"true","sdk":"true","admin":"true"}
 func (h *Handler) BatchDelete(c *gin.Context) {
 	bucket := c.Param("bucket")
 	var req batchDeleteReq

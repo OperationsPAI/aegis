@@ -10,6 +10,7 @@ import (
 	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 type Handler struct {
@@ -72,8 +73,14 @@ func (h *Handler) viewOf(l *ShareLink) linkView {
 
 // Upload handles multipart/form-data upload.
 //
-//	@Summary		Upload a file to share
-//	@Description	Upload a file via multipart/form-data and obtain a short share code
+// Deprecated: prefer /init + presigned PUT + /commit for large files.
+// The streaming multipart path buffers the body through aegislab and
+// the edge proxy, which on slow / lossy international links measured
+// ~38 KB/s on a 17.9 MB APK. New clients should call InitUpload, PUT
+// to the returned URL, then CommitUpload.
+//
+//	@Summary		Upload a file to share (deprecated)
+//	@Description	Deprecated — prefer /init + presigned PUT + /commit for large files. Upload a file via multipart/form-data and obtain a short share code.
 //	@Tags			Share
 //	@ID				share_upload
 //	@Accept			mpfd
@@ -129,6 +136,168 @@ func (h *Handler) Upload(c *gin.Context) {
 		resp.ExpiresAt = res.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z")
 	}
 	dto.JSONResponse(c, http.StatusOK, "share link created", resp)
+}
+
+// initUploadReq is the JSON body of POST /api/v2/share/init.
+type initUploadReq struct {
+	Filename    string `json:"filename"`
+	Size        int64  `json:"size"`
+	ContentType string `json:"content_type"`
+	TTLSeconds  int64  `json:"ttl_seconds"`
+	MaxViews    int    `json:"max_views"`
+}
+
+// initUploadResp is the JSON body of the InitUpload response.
+type initUploadResp struct {
+	Code            string            `json:"code"`
+	PresignedPutURL string            `json:"presigned_put_url"`
+	Method          string            `json:"method"`
+	Headers         map[string]string `json:"headers,omitempty"`
+	ExpiresAt       string            `json:"expires_at"`
+	MaxSize         int64             `json:"max_size"`
+	CommitURL       string            `json:"commit_url"`
+	Bucket          string            `json:"bucket"`
+	ObjectKey       string            `json:"object_key"`
+}
+
+// commitUploadReq is the JSON body of POST /api/v2/share/{code}/commit.
+type commitUploadReq struct {
+	Size        int64  `json:"size,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
+	SHA256      string `json:"sha256,omitempty"`
+}
+
+// InitUpload reserves a short code + presigned PUT URL for a new share.
+// Bytes are uploaded directly to the object store via the returned URL;
+// the client then calls CommitUpload to finalise the share row.
+//
+//	@Summary		Reserve a presigned PUT for a new share
+//	@Description	Step 1 of the presigned-PUT flow. Validates quota + per-file cap, reserves a short code in 'pending' lifecycle, and returns a presigned PUT URL (15 min TTL) plus the commit URL the client must call after the PUT lands.
+//	@Tags			Share
+//	@ID				share_init_upload
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		initUploadReq						true	"Init upload request"
+//	@Success		200		{object}	dto.GenericResponse[initUploadResp]	"Init successful"
+//	@Failure		400		{object}	dto.GenericResponse[any]			"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]			"Authentication required"
+//	@Failure		413		{object}	dto.GenericResponse[any]			"File exceeds upload limit"
+//	@Failure		507		{object}	dto.GenericResponse[any]			"User quota exceeded"
+//	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/api/v2/share/init [post]
+//	@x-api-type		{"portal":"true","sdk":"true"}
+func (h *Handler) InitUpload(c *gin.Context) {
+	uid, ok := middleware.GetCurrentUserID(c)
+	if !ok || uid <= 0 {
+		dto.ErrorResponse(c, http.StatusUnauthorized, "missing user id")
+		return
+	}
+	var body initUploadReq
+	if err := c.ShouldBindJSON(&body); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "invalid body: "+err.Error())
+		return
+	}
+	if body.Filename == "" {
+		dto.ErrorResponse(c, http.StatusBadRequest, "filename is required")
+		return
+	}
+	if body.Size <= 0 {
+		dto.ErrorResponse(c, http.StatusBadRequest, "size must be > 0")
+		return
+	}
+
+	res, err := h.svc.InitUpload(c.Request.Context(), InitUploadInput{
+		OwnerUserID: uid,
+		Filename:    body.Filename,
+		ContentType: body.ContentType,
+		Size:        body.Size,
+		TTLSeconds:  body.TTLSeconds,
+		MaxViews:    body.MaxViews,
+	})
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	dto.JSONResponse(c, http.StatusOK, "init upload", initUploadResp{
+		Code:            res.Code,
+		PresignedPutURL: res.PresignedURL,
+		Method:          res.Method,
+		Headers:         res.Headers,
+		ExpiresAt:       res.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z"),
+		MaxSize:         res.MaxSize,
+		CommitURL:       res.CommitURL,
+		Bucket:          res.Bucket,
+		ObjectKey:       res.ObjectKey,
+	})
+}
+
+// CommitUpload finalises a pending share after the client's direct PUT
+// to the presigned URL completes. The server Stats the object to
+// confirm it landed, optionally verifies size, and flips lifecycle to
+// 'live'. Safe to retry — second invocation is a no-op.
+//
+//	@Summary		Commit a presigned-PUT share upload
+//	@Description	Step 3 of the presigned-PUT flow. Stats the object to confirm the PUT landed and flips the share row from 'pending' to 'live'. Idempotent on retry.
+//	@Tags			Share
+//	@ID				share_commit_upload
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			code	path		string							true	"Share short code"
+//	@Param			body	body		commitUploadReq					false	"Optional verification body"
+//	@Success		200		{object}	dto.GenericResponse[uploadResp]	"Commit successful"
+//	@Failure		400		{object}	dto.GenericResponse[any]		"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]		"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]		"Forbidden (non-owner)"
+//	@Failure		404		{object}	dto.GenericResponse[any]		"Share not found or object missing"
+//	@Failure		413		{object}	dto.GenericResponse[any]		"Uploaded object exceeds size limit"
+//	@Failure		409		{object}	dto.GenericResponse[any]		"Size mismatch between declared and uploaded"
+//	@Failure		500		{object}	dto.GenericResponse[any]		"Internal server error"
+//	@Router			/api/v2/share/{code}/commit [post]
+//	@x-api-type		{"portal":"true","sdk":"true"}
+func (h *Handler) CommitUpload(c *gin.Context) {
+	uid, ok := middleware.GetCurrentUserID(c)
+	if !ok || uid <= 0 {
+		dto.ErrorResponse(c, http.StatusUnauthorized, "missing user id")
+		return
+	}
+	code := c.Param("code")
+	if code == "" {
+		dto.ErrorResponse(c, http.StatusBadRequest, "code is required")
+		return
+	}
+	var body commitUploadReq
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&body); err != nil {
+			dto.ErrorResponse(c, http.StatusBadRequest, "invalid body: "+err.Error())
+			return
+		}
+	}
+
+	res, err := h.svc.CommitUpload(c.Request.Context(), CommitUploadInput{
+		OwnerUserID: uid,
+		Code:        code,
+		Size:        body.Size,
+		ContentType: body.ContentType,
+		SHA256:      body.SHA256,
+	})
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	logrus.WithFields(logrus.Fields{
+		"event":   "share.commit",
+		"code":    code,
+		"user_id": uid,
+		"size":    res.Size,
+	}).Info("share commit")
+
+	resp := uploadResp{ShortCode: res.ShortCode, ShareURL: res.ShareURL, Size: res.Size}
+	if res.ExpiresAt != nil {
+		resp.ExpiresAt = res.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z")
+	}
+	dto.JSONResponse(c, http.StatusOK, "share committed", resp)
 }
 
 // List returns share links owned by the current user.
@@ -295,6 +464,10 @@ func (h *Handler) writeServiceError(c *gin.Context, err error) {
 		dto.ErrorResponse(c, http.StatusForbidden, err.Error())
 	case errors.Is(err, ErrShortCodeFailure):
 		dto.ErrorResponse(c, http.StatusServiceUnavailable, err.Error())
+	case errors.Is(err, ErrCommitObjectMissing):
+		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+	case errors.Is(err, ErrCommitSizeMismatch):
+		dto.ErrorResponse(c, http.StatusConflict, err.Error())
 	default:
 		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}

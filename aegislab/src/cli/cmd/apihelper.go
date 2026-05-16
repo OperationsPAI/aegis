@@ -53,7 +53,7 @@ func getLastResponseHeader(name string) string {
 // using the returned ctx so the BearerAuth header gets attached.
 func newAPIClient() (*apiclient.APIClient, context.Context) {
 	cfg := apiclient.NewConfiguration()
-	cfg.HTTPClient = &http.Client{Transport: &captureTransport{base: client.DefaultTransport()}}
+	cfg.HTTPClient = &http.Client{Transport: &captureTransport{base: client.TransportFor(resolveTLSOptions())}}
 	if flagServer != "" {
 		cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(flagServer, "/")}}
 	}

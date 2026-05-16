@@ -21,6 +21,7 @@ var _ MappedNullable = &TeamTeamProjectItem{}
 // TeamTeamProjectItem struct for TeamTeamProjectItem
 type TeamTeamProjectItem struct {
 	CreatedAt            *string        `json:"created_at,omitempty"`
+	Description          *string        `json:"description,omitempty"`
 	ExecutionCount       *int32         `json:"execution_count,omitempty"`
 	Id                   *int32         `json:"id,omitempty"`
 	InjectionCount       *int32         `json:"injection_count,omitempty"`
@@ -83,6 +84,38 @@ func (o *TeamTeamProjectItem) HasCreatedAt() bool {
 // SetCreatedAt gets a reference to the given string and assigns it to the CreatedAt field.
 func (o *TeamTeamProjectItem) SetCreatedAt(v string) {
 	o.CreatedAt = &v
+}
+
+// GetDescription returns the Description field value if set, zero value otherwise.
+func (o *TeamTeamProjectItem) GetDescription() string {
+	if o == nil || IsNil(o.Description) {
+		var ret string
+		return ret
+	}
+	return *o.Description
+}
+
+// GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TeamTeamProjectItem) GetDescriptionOk() (*string, bool) {
+	if o == nil || IsNil(o.Description) {
+		return nil, false
+	}
+	return o.Description, true
+}
+
+// HasDescription returns a boolean if a field has been set.
+func (o *TeamTeamProjectItem) HasDescription() bool {
+	if o != nil && !IsNil(o.Description) {
+		return true
+	}
+
+	return false
+}
+
+// SetDescription gets a reference to the given string and assigns it to the Description field.
+func (o *TeamTeamProjectItem) SetDescription(v string) {
+	o.Description = &v
 }
 
 // GetExecutionCount returns the ExecutionCount field value if set, zero value otherwise.
@@ -418,6 +451,9 @@ func (o TeamTeamProjectItem) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.CreatedAt) {
 		toSerialize["created_at"] = o.CreatedAt
 	}
+	if !IsNil(o.Description) {
+		toSerialize["description"] = o.Description
+	}
 	if !IsNil(o.ExecutionCount) {
 		toSerialize["execution_count"] = o.ExecutionCount
 	}
@@ -471,6 +507,7 @@ func (o *TeamTeamProjectItem) UnmarshalJSON(data []byte) (err error) {
 
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
 		delete(additionalProperties, "created_at")
+		delete(additionalProperties, "description")
 		delete(additionalProperties, "execution_count")
 		delete(additionalProperties, "id")
 		delete(additionalProperties, "injection_count")

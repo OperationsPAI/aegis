@@ -2668,6 +2668,52 @@ requirements:
   - dataset-schema
   parent: REQ-902
   notes: Project-level evaluation browsing exists today even though the dedicated evaluation route tree remains incomplete.
+- id: REQ-830
+  title: Blob Storage Bucket Lifecycle Endpoints
+  description: 'Backend exposes runtime bucket management on top of the existing blob object surface: POST /api/v2/blob/buckets creates a DB-persisted bucket, DELETE /api/v2/blob/buckets/{bucket} drops a runtime-created bucket (with force flag and non-empty guard returning 409 + sample keys), POST /api/v2/blob/buckets/{bucket}/copy copies/moves an object within the bucket, and POST /api/v2/blob/buckets/{bucket}/delete-batch deletes up to 1000 keys in one call. All four are tagged @x-api-type portal/sdk/admin so the generated Go SDK and Apifox spec pick them up. Static-config (TOML) buckets cannot be dropped — operators edit the config and restart.'
+  priority: P1
+  status: implemented
+  confidence: confirmed
+  source: aegislab/src/crud/storage/blob/handler.go, registry.go, service.go
+  type: capability
+  repo: aegislab
+  code:
+  - path: aegislab/src/crud/storage/blob/handler.go
+    description: CreateBucket / DeleteBucket / CopyObject / BatchDelete handlers with swagger annotations
+  - path: aegislab/src/crud/storage/blob/routes.go
+    description: DELETE /buckets/:bucket route registration
+  - path: aegislab/src/crud/storage/blob/service.go
+    description: DeleteBucket + purgeBucket + PeekObjects service methods
+  - path: aegislab/src/crud/storage/blob/registry.go
+    description: Registry.Drop / HasDB — guards static-config buckets against runtime deletion
+  - path: aegislab/src/crud/storage/blob/repository.go
+    description: HardDeleteByBucket purges metadata rows after a force drop
+  - path: aegislab/src/crud/storage/blob/bucket_lifecycle.go
+    description: BucketLifecycle / BucketLifecycleRule shapes and Validate() — persistence only; execution deferred (lifecycleExecutionDeferred)
+  - path: aegislab/src/crud/storage/blob/bucket_lifecycle_handler.go
+    description: GET / PUT /api/v2/blob/buckets/:bucket/lifecycle handlers
+  - path: aegislab/src/cli/cmd/bucket.go
+    description: aegisctl bucket create --lifecycle wiring and bucket lifecycle get/set/clear subcommands (raw HTTP until SDK regen)
+  frontend: []
+  chaos_code: []
+  rcabench_code: []
+  tests:
+  - path: aegislab/src/crud/storage/blob/delete_bucket_test.go
+    description: empty / non-empty / force / not-found / static-config paths
+  - path: aegislab/src/crud/storage/blob/bucket_lifecycle_test.go
+    description: validation matrix, encode/decode round-trip, CreateBucket+Lifecycle, GET/PUT/non-owner-deny handlers
+  - path: aegislab/src/cli/cmd/bucket_lifecycle_test.go
+    description: cobra-level arg + dry-run + schema-dump coverage for bucket lifecycle get/set/clear
+  docs: []
+  acceptance:
+    status: pending
+    date: ''
+    notes: ''
+  depends_on: []
+  conflicts: []
+  contracts:
+  - openapi-backend-sdk
+  notes: 'Per-bucket ownership/RBAC is deferred — a caller with bucket write permission can drop any runtime-created bucket. TODO in handler.DeleteBucket points at the future hook; mirror the pages module pattern when blob grows a permission resource. Lifecycle config persistence landed on the feat/blob-lifecycle branch: BucketConfigRecord gained a lifecycle_config JSON column, CreateBucket accepts an optional Lifecycle policy, and GET / PUT /api/v2/blob/buckets/:bucket/lifecycle replace it at runtime (validated: ≤50 rules, expire_after_days ∈ [1,3650], action ∈ {"delete"}, match_prefix ≤ 256 chars, unique names, ≤4 KB encoded). Execution (a GC sweep that consumes the rules) is still deferred — see lifecycleExecutionDeferred in bucket_lifecycle.go and the // TODO(SDK-regen) marker in cli/cmd/bucket.go for the next-stage tasks.'
 - id: REQ-900
   title: Cross-Repo Fault Injection Lifecycle
   description: Fault injection is an end-to-end workspace feature spanning chaos-experiment library builders, aegislab API/orchestration, and frontend authoring and datapack inspection flows.

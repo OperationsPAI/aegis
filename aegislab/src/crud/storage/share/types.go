@@ -94,4 +94,17 @@ var (
 	ErrUploadTooLarge   = errors.New("file exceeds share upload limit")
 	ErrShortCodeFailure = errors.New("could not allocate short code")
 	ErrForbidden        = errors.New("forbidden")
+	// ErrCommitObjectMissing surfaces when the client tries to commit a
+	// pending share but the object hasn't actually been PUT to the
+	// backend yet (or has been GC'd).
+	ErrCommitObjectMissing = errors.New("share object not found in backend; PUT not completed")
+	// ErrCommitSizeMismatch flags a Stat mismatch between the size the
+	// client declared and the size the backend reports.
+	ErrCommitSizeMismatch = errors.New("share commit size mismatch with backend object")
+)
+
+// Lifecycle states for ShareLink.LifecycleState.
+const (
+	LifecyclePending = "pending"
+	LifecycleLive    = "live"
 )

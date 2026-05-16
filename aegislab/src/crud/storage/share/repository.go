@@ -51,6 +51,20 @@ func (r *Repository) SetStatus(ctx context.Context, id int64, status int) error 
 	return r.DB.WithContext(ctx).Model(&ShareLink{}).Where("id = ?", id).Update("status", status).Error
 }
 
+// CommitUpdate flips a pending row to live and stamps the size /
+// content-type observed from the backend Stat. Idempotent: re-applying
+// it on an already-live row is a no-op (used by retry-safe commit).
+func (r *Repository) CommitUpdate(ctx context.Context, id int64, lifecycle string, size int64, contentType string) error {
+	updates := map[string]any{
+		"lifecycle_state": lifecycle,
+		"size_bytes":      size,
+	}
+	if contentType != "" {
+		updates["content_type"] = contentType
+	}
+	return r.DB.WithContext(ctx).Model(&ShareLink{}).Where("id = ?", id).Updates(updates).Error
+}
+
 func (r *Repository) SoftDelete(ctx context.Context, id int64) error {
 	return r.DB.WithContext(ctx).Delete(&ShareLink{}, id).Error
 }
