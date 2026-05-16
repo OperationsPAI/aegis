@@ -41,3 +41,19 @@ type RouteRegistrar struct {
 	// should NOT add /api/v2 itself — it's already there.
 	Register func(group *gin.RouterGroup)
 }
+
+// EngineRegistrar is the escape hatch for modules that need to register
+// routes outside the /api/v2 prefix (e.g. SSR pages at /p/* or vendor
+// static assets at /static/*). Use sparingly — the API surface should
+// live under /api/v2.
+//
+// A module provides it from
+// `fx.Provide(fx.Annotate(module.EngineRoutes, fx.ResultTags(`group:"engine_routes"`)))`.
+type EngineRegistrar struct {
+	// Name is a short human-readable label used only for tracing /
+	// debugging (e.g. "pages.ssr").
+	Name string
+
+	// Register attaches routes to the root gin.Engine.
+	Register func(engine *gin.Engine)
+}

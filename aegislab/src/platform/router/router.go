@@ -16,9 +16,10 @@ import (
 type Params struct {
 	fx.In
 
-	Handlers   *Handlers
-	Middleware middleware.Service
-	Registrars []framework.RouteRegistrar `group:"routes"`
+	Handlers          *Handlers
+	Middleware        middleware.Service
+	Registrars        []framework.RouteRegistrar  `group:"routes"`
+	EngineRegistrars  []framework.EngineRegistrar `group:"engine_routes"`
 }
 
 // New assembles the gin.Engine. It iterates every module-provided
@@ -51,6 +52,12 @@ func New(params Params) *gin.Engine {
 	// is mounted onto the matching /api/v2 sub-group.
 	for _, r := range params.Registrars {
 		r.Register(v2)
+	}
+
+	// Module-contributed top-level routes (SSR pages, static assets, …).
+	// Use sparingly — most APIs should live under /api/v2.
+	for _, r := range params.EngineRegistrars {
+		r.Register(router)
 	}
 
 	// Swagger documentation
