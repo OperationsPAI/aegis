@@ -15,17 +15,11 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
-	"github.com/yuin/goldmark/util"
 )
 
 //go:embed assets/*
 var assetsFS embed.FS
-
-// AssetFS exposes the embedded asset tree so the /static/pages/* route can
-// serve the CSS files without re-embedding.
-func AssetFS() embed.FS { return assetsFS }
 
 // pageTemplate is parsed lazily from the embedded layout file.
 var pageTemplate = template.Must(template.ParseFS(assetsFS, "assets/page.html.tmpl"))
@@ -79,9 +73,9 @@ func RenderMarkdown(in RenderInput) ([]byte, error) {
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 		),
-		goldmark.WithRendererOptions(
-			html.WithUnsafe(), // GitHub-style markdown is HTML-friendly by design
-		),
+		// Deliberately no html.WithUnsafe(): raw HTML in user-supplied
+		// markdown is escaped by goldmark's default. This is the only
+		// XSS gate — the body is then injected as template.HTML.
 	)
 
 	ctx := parser.NewContext()
@@ -106,7 +100,7 @@ func RenderMarkdown(in RenderInput) ([]byte, error) {
 		SiteTitle: firstNonEmpty(in.SiteTitle, in.Slug),
 		Slug:      in.Slug,
 		NavItems:  buildNav(in.Slug, in.CurrentPath, in.MarkdownPaths),
-		Body:      template.HTML(body.String()), //nolint:gosec // goldmark output is already safe HTML
+		Body:      template.HTML(body.String()), //nolint:gosec // goldmark configured without WithUnsafe; raw HTML in source is escaped
 	}
 	var out bytes.Buffer
 	if err := pageTemplate.Execute(&out, view); err != nil {
@@ -203,7 +197,3 @@ func firstNonEmpty(a, b string) string {
 	}
 	return b
 }
-
-// Silence the unused import linter when goldmark.Markdown is referenced
-// only via the constructor chain.
-var _ = util.Prioritized
