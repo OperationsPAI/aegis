@@ -21,23 +21,24 @@ var _ MappedNullable = &BlobCreateBucketReq{}
 
 // BlobCreateBucketReq struct for BlobCreateBucketReq
 type BlobCreateBucketReq struct {
-	AccessKeyEnv         *string  `json:"access_key_env,omitempty"`
-	Bucket               *string  `json:"bucket,omitempty"`
-	ContentTypes         []string `json:"content_types,omitempty"`
-	Driver               string   `json:"driver"`
-	Endpoint             *string  `json:"endpoint,omitempty"`
-	MaxObjectBytes       *int32   `json:"max_object_bytes,omitempty"`
-	Name                 string   `json:"name"`
-	PathStyle            *bool    `json:"path_style,omitempty"`
-	PublicEndpoint       *string  `json:"public_endpoint,omitempty"`
-	PublicRead           *bool    `json:"public_read,omitempty"`
-	ReadRoles            []string `json:"read_roles,omitempty"`
-	Region               *string  `json:"region,omitempty"`
-	RetentionDays        *int32   `json:"retention_days,omitempty"`
-	Root                 *string  `json:"root,omitempty"`
-	SecretKeyEnv         *string  `json:"secret_key_env,omitempty"`
-	UseSsl               *bool    `json:"use_ssl,omitempty"`
-	WriteRoles           []string `json:"write_roles,omitempty"`
+	AccessKeyEnv         *string              `json:"access_key_env,omitempty"`
+	Bucket               *string              `json:"bucket,omitempty"`
+	ContentTypes         []string             `json:"content_types,omitempty"`
+	Driver               string               `json:"driver"`
+	Endpoint             *string              `json:"endpoint,omitempty"`
+	Lifecycle            *BlobBucketLifecycle `json:"lifecycle,omitempty"`
+	MaxObjectBytes       *int32               `json:"max_object_bytes,omitempty"`
+	Name                 string               `json:"name"`
+	PathStyle            *bool                `json:"path_style,omitempty"`
+	PublicEndpoint       *string              `json:"public_endpoint,omitempty"`
+	PublicRead           *bool                `json:"public_read,omitempty"`
+	ReadRoles            []string             `json:"read_roles,omitempty"`
+	Region               *string              `json:"region,omitempty"`
+	RetentionDays        *int32               `json:"retention_days,omitempty"`
+	Root                 *string              `json:"root,omitempty"`
+	SecretKeyEnv         *string              `json:"secret_key_env,omitempty"`
+	UseSsl               *bool                `json:"use_ssl,omitempty"`
+	WriteRoles           []string             `json:"write_roles,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -212,6 +213,38 @@ func (o *BlobCreateBucketReq) HasEndpoint() bool {
 // SetEndpoint gets a reference to the given string and assigns it to the Endpoint field.
 func (o *BlobCreateBucketReq) SetEndpoint(v string) {
 	o.Endpoint = &v
+}
+
+// GetLifecycle returns the Lifecycle field value if set, zero value otherwise.
+func (o *BlobCreateBucketReq) GetLifecycle() BlobBucketLifecycle {
+	if o == nil || IsNil(o.Lifecycle) {
+		var ret BlobBucketLifecycle
+		return ret
+	}
+	return *o.Lifecycle
+}
+
+// GetLifecycleOk returns a tuple with the Lifecycle field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *BlobCreateBucketReq) GetLifecycleOk() (*BlobBucketLifecycle, bool) {
+	if o == nil || IsNil(o.Lifecycle) {
+		return nil, false
+	}
+	return o.Lifecycle, true
+}
+
+// HasLifecycle returns a boolean if a field has been set.
+func (o *BlobCreateBucketReq) HasLifecycle() bool {
+	if o != nil && !IsNil(o.Lifecycle) {
+		return true
+	}
+
+	return false
+}
+
+// SetLifecycle gets a reference to the given BlobBucketLifecycle and assigns it to the Lifecycle field.
+func (o *BlobCreateBucketReq) SetLifecycle(v BlobBucketLifecycle) {
+	o.Lifecycle = &v
 }
 
 // GetMaxObjectBytes returns the MaxObjectBytes field value if set, zero value otherwise.
@@ -613,6 +646,9 @@ func (o BlobCreateBucketReq) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Endpoint) {
 		toSerialize["endpoint"] = o.Endpoint
 	}
+	if !IsNil(o.Lifecycle) {
+		toSerialize["lifecycle"] = o.Lifecycle
+	}
 	if !IsNil(o.MaxObjectBytes) {
 		toSerialize["max_object_bytes"] = o.MaxObjectBytes
 	}
@@ -696,6 +732,7 @@ func (o *BlobCreateBucketReq) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "content_types")
 		delete(additionalProperties, "driver")
 		delete(additionalProperties, "endpoint")
+		delete(additionalProperties, "lifecycle")
 		delete(additionalProperties, "max_object_bytes")
 		delete(additionalProperties, "name")
 		delete(additionalProperties, "path_style")

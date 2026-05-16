@@ -99,6 +99,21 @@ type BlobAPI interface {
 	BlobDeleteBucketExecute(r ApiBlobDeleteBucketRequest) (*DtoGenericResponseAny, *http.Response, error)
 
 	/*
+		BlobGetBucketLifecycle Get bucket lifecycle policy
+
+		Return the lifecycle policy persisted for the bucket. Empty rules list when no policy is set. Execution is deferred — see lifecycleExecutionDeferred.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param bucket Bucket name
+		@return ApiBlobGetBucketLifecycleRequest
+	*/
+	BlobGetBucketLifecycle(ctx context.Context, bucket string) ApiBlobGetBucketLifecycleRequest
+
+	// BlobGetBucketLifecycleExecute executes the request
+	//  @return DtoGenericResponseBlobBucketLifecycle
+	BlobGetBucketLifecycleExecute(r ApiBlobGetBucketLifecycleRequest) (*DtoGenericResponseBlobBucketLifecycle, *http.Response, error)
+
+	/*
 		BlobInlineGet Inline object download
 
 		Stream object bytes inline through the API; key may contain slashes
@@ -187,6 +202,21 @@ type BlobAPI interface {
 	// BlobPresignPutExecute executes the request
 	//  @return DtoGenericResponseBlobPresignedRequest
 	BlobPresignPutExecute(r ApiBlobPresignPutRequest) (*DtoGenericResponseBlobPresignedRequest, *http.Response, error)
+
+	/*
+		BlobPutBucketLifecycle Replace bucket lifecycle policy
+
+		Replace the lifecycle policy for a bucket. Empty rules clears the policy. Static-config buckets cannot be mutated at runtime.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param bucket Bucket name
+		@return ApiBlobPutBucketLifecycleRequest
+	*/
+	BlobPutBucketLifecycle(ctx context.Context, bucket string) ApiBlobPutBucketLifecycleRequest
+
+	// BlobPutBucketLifecycleExecute executes the request
+	//  @return DtoGenericResponseBlobBucketLifecycle
+	BlobPutBucketLifecycleExecute(r ApiBlobPutBucketLifecycleRequest) (*DtoGenericResponseBlobBucketLifecycle, *http.Response, error)
 
 	/*
 		BlobRaw Localfs signed token GET/PUT
@@ -1149,6 +1179,156 @@ func (a *BlobAPIService) BlobDeleteBucketExecute(r ApiBlobDeleteBucketRequest) (
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiBlobGetBucketLifecycleRequest struct {
+	ctx        context.Context
+	ApiService BlobAPI
+	bucket     string
+}
+
+func (r ApiBlobGetBucketLifecycleRequest) Execute() (*DtoGenericResponseBlobBucketLifecycle, *http.Response, error) {
+	return r.ApiService.BlobGetBucketLifecycleExecute(r)
+}
+
+/*
+BlobGetBucketLifecycle Get bucket lifecycle policy
+
+Return the lifecycle policy persisted for the bucket. Empty rules list when no policy is set. Execution is deferred — see lifecycleExecutionDeferred.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param bucket Bucket name
+	@return ApiBlobGetBucketLifecycleRequest
+*/
+func (a *BlobAPIService) BlobGetBucketLifecycle(ctx context.Context, bucket string) ApiBlobGetBucketLifecycleRequest {
+	return ApiBlobGetBucketLifecycleRequest{
+		ApiService: a,
+		ctx:        ctx,
+		bucket:     bucket,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseBlobBucketLifecycle
+func (a *BlobAPIService) BlobGetBucketLifecycleExecute(r ApiBlobGetBucketLifecycleRequest) (*DtoGenericResponseBlobBucketLifecycle, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseBlobBucketLifecycle
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobGetBucketLifecycle")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets/{bucket}/lifecycle"
+	localVarPath = strings.Replace(localVarPath, "{"+"bucket"+"}", url.PathEscape(parameterValueToString(r.bucket, "bucket")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiBlobInlineGetRequest struct {
 	ctx        context.Context
 	ApiService BlobAPI
@@ -2081,6 +2261,190 @@ func (a *BlobAPIService) BlobPresignPutExecute(r ApiBlobPresignPutRequest) (*Dto
 	}
 	// body params
 	localVarPostBody = r.blobPresignPutReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiBlobPutBucketLifecycleRequest struct {
+	ctx                 context.Context
+	ApiService          BlobAPI
+	bucket              string
+	blobBucketLifecycle *BlobBucketLifecycle
+}
+
+// New lifecycle policy
+func (r ApiBlobPutBucketLifecycleRequest) BlobBucketLifecycle(blobBucketLifecycle BlobBucketLifecycle) ApiBlobPutBucketLifecycleRequest {
+	r.blobBucketLifecycle = &blobBucketLifecycle
+	return r
+}
+
+func (r ApiBlobPutBucketLifecycleRequest) Execute() (*DtoGenericResponseBlobBucketLifecycle, *http.Response, error) {
+	return r.ApiService.BlobPutBucketLifecycleExecute(r)
+}
+
+/*
+BlobPutBucketLifecycle Replace bucket lifecycle policy
+
+Replace the lifecycle policy for a bucket. Empty rules clears the policy. Static-config buckets cannot be mutated at runtime.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param bucket Bucket name
+	@return ApiBlobPutBucketLifecycleRequest
+*/
+func (a *BlobAPIService) BlobPutBucketLifecycle(ctx context.Context, bucket string) ApiBlobPutBucketLifecycleRequest {
+	return ApiBlobPutBucketLifecycleRequest{
+		ApiService: a,
+		ctx:        ctx,
+		bucket:     bucket,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseBlobBucketLifecycle
+func (a *BlobAPIService) BlobPutBucketLifecycleExecute(r ApiBlobPutBucketLifecycleRequest) (*DtoGenericResponseBlobBucketLifecycle, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPut
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseBlobBucketLifecycle
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobPutBucketLifecycle")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/blob/buckets/{bucket}/lifecycle"
+	localVarPath = strings.Replace(localVarPath, "{"+"bucket"+"}", url.PathEscape(parameterValueToString(r.bucket, "bucket")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.blobBucketLifecycle == nil {
+		return localVarReturnValue, nil, reportError("blobBucketLifecycle is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.blobBucketLifecycle
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
