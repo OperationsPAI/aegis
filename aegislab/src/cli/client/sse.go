@@ -24,14 +24,20 @@ type SSEReader struct {
 	client *http.Client
 }
 
-// NewSSEReader creates a new SSE reader for the given endpoint.
+// NewSSEReader creates a new SSE reader for the given endpoint using
+// the default (env+autodiscovered) TLS bundle.
 func NewSSEReader(baseURL, path, token string) *SSEReader {
+	return NewSSEReaderWithTLS(baseURL, path, token, TLSOptions{})
+}
+
+// NewSSEReaderWithTLS creates a new SSE reader with explicit TLS options.
+func NewSSEReaderWithTLS(baseURL, path, token string, opts TLSOptions) *SSEReader {
 	return &SSEReader{
 		url:   baseURL + path,
 		token: token,
 		client: &http.Client{
 			Timeout:   0, // No timeout for streaming connections.
-			Transport: DefaultTransport(),
+			Transport: TransportFor(opts),
 		},
 	}
 }

@@ -101,6 +101,11 @@ type ssoTokenError struct {
 // process and mint the same JWT, but the OIDC path is the supported
 // surface going forward.
 func LoginWithPassword(server, username, password string) (*LoginResult, error) {
+	return LoginWithPasswordTLS(server, username, password, TLSOptions{})
+}
+
+// LoginWithPasswordTLS is LoginWithPassword with explicit TLS options.
+func LoginWithPasswordTLS(server, username, password string, opts TLSOptions) (*LoginResult, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
 		return nil, fmt.Errorf("username is required")
@@ -123,7 +128,7 @@ func LoginWithPassword(server, username, password string) (*LoginResult, error) 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
-	httpClient := &http.Client{Timeout: 30 * time.Second, Transport: DefaultTransport()}
+	httpClient := &http.Client{Timeout: 30 * time.Second, Transport: TransportFor(opts)}
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("login failed: %w", err)
@@ -162,6 +167,11 @@ func LoginWithPassword(server, username, password string) (*LoginResult, error) 
 
 // LoginWithAPIKey exchanges a Key ID / Key Secret signature for a bearer token.
 func LoginWithAPIKey(server, keyID, keySecret string) (*LoginResult, error) {
+	return LoginWithAPIKeyTLS(server, keyID, keySecret, TLSOptions{})
+}
+
+// LoginWithAPIKeyTLS is LoginWithAPIKey with explicit TLS options.
+func LoginWithAPIKeyTLS(server, keyID, keySecret string, opts TLSOptions) (*LoginResult, error) {
 	keyID = strings.TrimSpace(keyID)
 	keySecret = strings.TrimSpace(keySecret)
 	if keyID == "" {
@@ -171,7 +181,7 @@ func LoginWithAPIKey(server, keyID, keySecret string) (*LoginResult, error) {
 		return nil, fmt.Errorf("key secret is required")
 	}
 
-	c := NewClient(server, "", 30*time.Second)
+	c := NewClientWithTLS(server, "", 30*time.Second, opts)
 	debugInfo, err := PrepareAPIKeyTokenDebug(keyID, keySecret, time.Now().UTC(), "")
 	if err != nil {
 		return nil, fmt.Errorf("prepare signed headers: %w", err)

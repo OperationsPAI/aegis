@@ -9,35 +9,53 @@ import (
 	"strings"
 )
 
-// DefaultTransport returns an http.RoundTripper derived from
-// http.DefaultTransport with a TLS config that trusts:
-//
-//   - the system root pool,
-//   - every PEM file under ~/.aegisctl/certs/*.{crt,pem},
-//   - the file at ~/.aegisctl/ca.crt (if present),
-//   - the file pointed to by $AEGIS_CA_CERT (if set).
-//
-// $AEGIS_INSECURE_SKIP_VERIFY=1 disables verification entirely (for
-// scratch clusters that haven't trusted a real CA yet).
-//
-// The auto-discovery is here because bytecluster runs `tls internal` —
-// edge-proxy Caddy issues a self-signed root and clients need to trust it
-// without juggling SSL_CERT_FILE on every invocation.
+// TLSOptions controls how the HTTP transport is built. Both fields take
+// precedence over env vars and the auto-discovered files in
+// ~/.aegisctl/certs/ and ~/.aegisctl/ca.crt.
+type TLSOptions struct {
+	// CACert is an absolute path to a PEM file containing one or more
+	// CA certificates to trust. Empty means "no explicit override".
+	CACert string
+	// Insecure disables certificate verification entirely. When true,
+	// CACert is ignored.
+	Insecure bool
+}
+
+// DefaultTransport returns an http.RoundTripper that trusts the system
+// root pool plus everything auto-discovered under ~/.aegisctl/ and the
+// env vars AEGIS_CA_CERT / AEGIS_INSECURE_SKIP_VERIFY. Callers that
+// have already resolved TLS options through the flag/env/context chain
+// should use TransportFor instead.
 func DefaultTransport() http.RoundTripper {
+	return TransportFor(TLSOptions{})
+}
+
+// TransportFor returns an http.RoundTripper built from the given
+// options merged with env vars and auto-discovery. The merge order is:
+//
+//   - opts.Insecure (explicit caller request) OR env truthy
+//   - opts.CACert (explicit caller request) layered on top of the
+//     system pool plus all auto-discovered files
+//
+// bytecluster's edge-proxy runs Caddy `tls internal`, which issues a
+// self-signed root that engineers must trust out-of-band. The
+// auto-discovery + TOFU dance is here so users don't have to juggle
+// SSL_CERT_FILE on every invocation.
+func TransportFor(opts TLSOptions) http.RoundTripper {
 	base, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
 		return http.DefaultTransport
 	}
 	t := base.Clone()
-	cfg := tlsConfig()
+	cfg := tlsConfigFor(opts)
 	if cfg != nil {
 		t.TLSClientConfig = cfg
 	}
 	return t
 }
 
-func tlsConfig() *tls.Config {
-	insecure := envTruthy(os.Getenv("AEGIS_INSECURE_SKIP_VERIFY"))
+func tlsConfigFor(opts TLSOptions) *tls.Config {
+	insecure := opts.Insecure || envTruthy(os.Getenv("AEGIS_INSECURE_SKIP_VERIFY"))
 
 	pool, _ := x509.SystemCertPool()
 	if pool == nil {
@@ -71,11 +89,16 @@ func tlsConfig() *tls.Config {
 			added = true
 		}
 	}
+	if opts.CACert != "" {
+		if appendCAFile(pool, opts.CACert) {
+			added = true
+		}
+	}
 
 	if !insecure && !added {
 		return nil
 	}
-	cfg := &tls.Config{InsecureSkipVerify: insecure}
+	cfg := &tls.Config{InsecureSkipVerify: insecure} //nolint:gosec // insecure is an explicit opt-in for dev clusters
 	if added {
 		cfg.RootCAs = pool
 	}
