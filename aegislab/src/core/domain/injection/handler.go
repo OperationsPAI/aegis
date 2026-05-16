@@ -848,6 +848,35 @@ func spanFromGin(c *gin.Context, operation string) (context.Context, trace.Span,
 	return spanCtx, trace.SpanFromContext(spanCtx), true
 }
 
+// CancelInjection handles best-effort cancellation of a fault injection.
+//
+//	@Summary		Cancel a fault injection (best-effort)
+//	@Description	Cascade-cancels the task that backs the injection — marks the task row as Cancelled, evicts redis queue entries, and best-effort deletes chaos CRDs labelled with task_id=<id>. Returns 200 with the terminal state when the injection's task is already terminal.
+//	@Tags			Injections
+//	@ID				cancel_injection
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int										true	"Injection ID"
+//	@Success		200	{object}	dto.GenericResponse[CancelInjectionResp]	"Injection cancelled (or task already terminal)"
+//	@Failure		400	{object}	dto.GenericResponse[any]				"Invalid injection ID or injection has no associated task"
+//	@Failure		401	{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403	{object}	dto.GenericResponse[any]				"Permission denied"
+//	@Failure		404	{object}	dto.GenericResponse[any]				"Injection not found"
+//	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/injections/{id}/cancel [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) CancelInjection(c *gin.Context) {
+	id, ok := parsePositiveID(c, "id", "injection ID")
+	if !ok {
+		return
+	}
+	resp, err := h.service.CancelInjection(c.Request.Context(), id)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 func parsePositiveID(c *gin.Context, key, label string) (int, bool) {
 	id, ok := httpx.ParsePositiveID(c, c.Param(key), label)
 	return id, ok
