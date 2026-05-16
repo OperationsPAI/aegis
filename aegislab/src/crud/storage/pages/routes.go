@@ -7,11 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RoutesPortal mounts the management API. The handlers carry
-// @x-api-type {"portal":"true","sdk":"true"} so a single registration
-// covers both audiences — the SDK generator picks them up from swagger.
-// A second registrar would just duplicate the handler chain and panic
-// gin at startup.
+// RoutesPortal mounts the management API. Each handler's swagger block
+// carries an x-api-type annotation listing both portal and sdk audiences,
+// so a single registration covers both — the SDK generator picks them up
+// from swagger. A second registrar would just duplicate the handler chain
+// and panic gin at startup.
 func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
