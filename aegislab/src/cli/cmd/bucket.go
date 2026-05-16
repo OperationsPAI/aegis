@@ -145,6 +145,8 @@ EXAMPLES:
 			if err := json.Unmarshal(body, &probe); err != nil {
 				return usageErrorf("invalid lifecycle JSON in %q: %v", bucketCreateLifecycleFile, err)
 			}
+			// TODO(REQ-830): BlobCreateBucketReq has no Lifecycle field yet;
+			// wire through once the SDK / server adds runtime lifecycle policy.
 			output.PrintInfo("Note: --lifecycle is parsed for validity but the server does not yet consume it; ignored for now.")
 		}
 
@@ -172,41 +174,35 @@ EXAMPLES:
 			return nil
 		}
 
-		// The generated SDK does not (yet) expose CreateBucket; fall back to
-		// a hand-written POST so we don't block on SDK regen.
-		c := newClient()
-		body := map[string]any{
-			"name":   name,
-			"driver": bucketCreateDriver,
-		}
+		cli, ctx := newAPIClient()
+		req := apiclient.NewBlobCreateBucketReq(bucketCreateDriver, name)
 		if bucketCreateRoot != "" {
-			body["root"] = bucketCreateRoot
+			req.SetRoot(bucketCreateRoot)
 		}
 		if bucketCreateEndpoint != "" {
-			body["endpoint"] = bucketCreateEndpoint
+			req.SetEndpoint(bucketCreateEndpoint)
 		}
 		if bucketCreateRegion != "" {
-			body["region"] = bucketCreateRegion
+			req.SetRegion(bucketCreateRegion)
 		}
 		if bucketCreateBucketName != "" {
-			body["bucket"] = bucketCreateBucketName
+			req.SetBucket(bucketCreateBucketName)
 		}
 		if bucketCreatePublic {
-			body["public_read"] = true
+			req.SetPublicRead(true)
 		}
 		if bucketCreateMaxObjectBytes > 0 {
-			body["max_object_bytes"] = bucketCreateMaxObjectBytes
+			req.SetMaxObjectBytes(int32(bucketCreateMaxObjectBytes))
 		}
 		if bucketCreateRetentionDays > 0 {
-			body["retention_days"] = bucketCreateRetentionDays
+			req.SetRetentionDays(int32(bucketCreateRetentionDays))
 		}
-		var resp struct {
-			Code    int                          `json:"code"`
-			Message string                       `json:"message"`
-			Data    apiclient.BlobBucketSummary  `json:"data"`
-		}
-		if err := c.Post("/api/v2/blob/buckets", body, &resp); err != nil {
+		resp, _, err := cli.BlobAPI.BlobCreateBucket(ctx).BlobCreateBucketReq(*req).Execute()
+		if err != nil {
 			return err
+		}
+		if resp.Data == nil {
+			return fmt.Errorf("create bucket: empty response")
 		}
 		if output.OutputFormat(flagOutput) == output.FormatJSON {
 			output.PrintJSON(resp.Data)
