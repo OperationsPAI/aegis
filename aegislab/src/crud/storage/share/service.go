@@ -24,6 +24,7 @@ type Repo interface {
 	SoftDelete(ctx context.Context, id int64) error
 	ListByOwner(ctx context.Context, f ListFilter) ([]ShareLink, int64, error)
 	SumUserBytes(ctx context.Context, userID int) (int64, error)
+	CommitUpdate(ctx context.Context, id int64, lifecycle string, size int64, contentType string) error
 }
 
 type Service struct {
@@ -116,6 +117,7 @@ func (s *Service) Upload(ctx context.Context, in UploadInput) (*UploadResult, er
 		ExpiresAt:        expiresAt,
 		MaxViews:         maxViews,
 		Status:           1,
+		LifecycleState:   LifecycleLive,
 	}
 	if err := s.repo.Create(ctx, link); err != nil {
 		_ = s.backend.Delete(ctx, s.cfg.Bucket, key)
@@ -140,6 +142,11 @@ func (s *Service) resolveLink(ctx context.Context, code string) (*ShareLink, err
 		return nil, err
 	}
 	if link.Status != 1 {
+		return nil, ErrShareGone
+	}
+	if link.LifecycleState != "" && link.LifecycleState != LifecycleLive {
+		// Pending presigned uploads are not viewable until the PUT lands
+		// and CommitUpload flips lifecycle_state to 'live'.
 		return nil, ErrShareGone
 	}
 	now := s.clock.Now()
@@ -228,6 +235,197 @@ func (s *Service) ListOwn(ctx context.Context, ownerID int, page, size int, incl
 		Size:           size,
 		Now:            s.clock.Now().Unix(),
 	})
+}
+
+// InitUploadInput is what a client sends to /api/v2/share/init to
+// reserve a code + presigned PUT URL before transferring the body.
+type InitUploadInput struct {
+	OwnerUserID int
+	Filename    string
+	ContentType string
+	Size        int64
+	TTLSeconds  int64
+	MaxViews    int
+}
+
+// InitUploadResult is the server's response to InitUpload — code,
+// presigned PUT URL, expiry, and the commit URL the client must call
+// after the PUT completes.
+type InitUploadResult struct {
+	Code         string            `json:"code"`
+	PresignedURL string            `json:"presigned_put_url"`
+	Method       string            `json:"method"`
+	Headers      map[string]string `json:"headers,omitempty"`
+	ExpiresAt    time.Time         `json:"expires_at"`
+	MaxSize      int64             `json:"max_size"`
+	CommitURL    string            `json:"commit_url"`
+	Bucket       string            `json:"bucket"`
+	ObjectKey    string            `json:"object_key"`
+}
+
+// presignedPutTTL is the lifetime of the PUT URL returned to clients.
+// 15 minutes is the trade-off between letting a slow international
+// link finish (the original 7m54s case was ~38 KB/s for 17.9 MB) and
+// not leaving forgotten reservations open forever.
+const presignedPutTTL = 15 * time.Minute
+
+func (s *Service) InitUpload(ctx context.Context, in InitUploadInput) (*InitUploadResult, error) {
+	if s.cfg.MaxUploadBytes > 0 && in.Size > s.cfg.MaxUploadBytes {
+		return nil, ErrUploadTooLarge
+	}
+	if in.Size < 0 {
+		return nil, fmt.Errorf("share: negative size")
+	}
+	if s.cfg.UserQuotaBytes > 0 {
+		used, err := s.repo.SumUserBytes(ctx, in.OwnerUserID)
+		if err != nil {
+			return nil, fmt.Errorf("share: read quota: %w", err)
+		}
+		if used+in.Size > s.cfg.UserQuotaBytes {
+			return nil, ErrQuotaExceeded
+		}
+	}
+
+	code, err := AllocateShortCode(ctx, s.repo)
+	if err != nil {
+		return nil, err
+	}
+	key := s.buildObjectKey(code, in.Filename)
+
+	pr, err := s.backend.PresignPut(ctx, s.cfg.Bucket, key, blob.PutOpts{
+		ContentType:   in.ContentType,
+		ContentLength: in.Size,
+		TTL:           presignedPutTTL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("share: presign put: %w", err)
+	}
+
+	expiresAt := s.computeExpiry(in.TTLSeconds)
+	var maxViews *int
+	if in.MaxViews > 0 {
+		v := in.MaxViews
+		if s.cfg.MaxViews > 0 && v > s.cfg.MaxViews {
+			v = s.cfg.MaxViews
+		}
+		maxViews = &v
+	}
+
+	link := &ShareLink{
+		ShortCode:        code,
+		Bucket:           s.cfg.Bucket,
+		ObjectKey:        key,
+		OwnerUserID:      in.OwnerUserID,
+		OriginalFilename: in.Filename,
+		ContentType:      in.ContentType,
+		SizeBytes:        in.Size,
+		ExpiresAt:        expiresAt,
+		MaxViews:         maxViews,
+		Status:           1,
+		LifecycleState:   LifecyclePending,
+	}
+	if err := s.repo.Create(ctx, link); err != nil {
+		return nil, fmt.Errorf("share: persist pending: %w", err)
+	}
+
+	prExpires := pr.Expires
+	if prExpires.IsZero() {
+		prExpires = s.clock.Now().Add(presignedPutTTL)
+	}
+	return &InitUploadResult{
+		Code:         code,
+		PresignedURL: pr.URL,
+		Method:       pr.Method,
+		Headers:      pr.Headers,
+		ExpiresAt:    prExpires,
+		MaxSize:      s.cfg.MaxUploadBytes,
+		CommitURL:    "/api/v2/share/" + code + "/commit",
+		Bucket:       s.cfg.Bucket,
+		ObjectKey:    key,
+	}, nil
+}
+
+// CommitUploadInput is the body of /api/v2/share/{code}/commit. All
+// fields are optional verifications — the server uses them to detect a
+// PUT that landed truncated or with a different content-type than the
+// client expected.
+type CommitUploadInput struct {
+	OwnerUserID int
+	Code        string
+	Size        int64
+	ContentType string
+	SHA256      string
+}
+
+func (s *Service) CommitUpload(ctx context.Context, in CommitUploadInput) (*UploadResult, error) {
+	link, err := s.repo.FindByCode(ctx, in.Code)
+	if err != nil {
+		return nil, err
+	}
+	if link.OwnerUserID != in.OwnerUserID {
+		return nil, ErrForbidden
+	}
+
+	// Idempotency: if a previous commit already flipped to live, return
+	// the existing row as-is. The client retried — that's fine.
+	if link.LifecycleState == LifecycleLive {
+		return &UploadResult{
+			ShortCode: link.ShortCode,
+			ShareURL:  s.shareURL(link.ShortCode),
+			ExpiresAt: link.ExpiresAt,
+			Size:      link.SizeBytes,
+		}, nil
+	}
+	if link.LifecycleState != LifecyclePending {
+		return nil, ErrShareGone
+	}
+
+	meta, err := s.backend.Stat(ctx, link.Bucket, link.ObjectKey)
+	if err != nil {
+		return nil, ErrCommitObjectMissing
+	}
+
+	finalSize := link.SizeBytes
+	if meta.Size > 0 {
+		finalSize = meta.Size
+	}
+	// Two mismatch sources: declared-at-init size vs. actual stored size,
+	// and (if the client repeats it on commit) declared-at-commit vs.
+	// stored. Both must match to detect a truncated PUT.
+	if meta.Size > 0 && link.SizeBytes > 0 && link.SizeBytes != meta.Size {
+		return nil, ErrCommitSizeMismatch
+	}
+	if in.Size > 0 && meta.Size > 0 && in.Size != meta.Size {
+		return nil, ErrCommitSizeMismatch
+	}
+	if s.cfg.MaxUploadBytes > 0 && finalSize > s.cfg.MaxUploadBytes {
+		// PUT exceeded the declared size — drop the object and the
+		// pending row so the caller can't sneak past the quota check.
+		_ = s.backend.Delete(ctx, link.Bucket, link.ObjectKey)
+		_ = s.repo.SetStatus(ctx, link.ID, 0)
+		return nil, ErrUploadTooLarge
+	}
+
+	finalContentType := link.ContentType
+	if in.ContentType != "" {
+		finalContentType = in.ContentType
+	} else if meta.ContentType != "" {
+		finalContentType = meta.ContentType
+	}
+
+	if err := s.repo.CommitUpdate(ctx, link.ID, LifecycleLive, finalSize, finalContentType); err != nil {
+		return nil, fmt.Errorf("share: commit: %w", err)
+	}
+	link.LifecycleState = LifecycleLive
+	link.SizeBytes = finalSize
+	link.ContentType = finalContentType
+
+	return &UploadResult{
+		ShortCode: link.ShortCode,
+		ShareURL:  s.shareURL(link.ShortCode),
+		ExpiresAt: link.ExpiresAt,
+		Size:      finalSize,
+	}, nil
 }
 
 func (s *Service) computeExpiry(ttlSeconds int64) *time.Time {
