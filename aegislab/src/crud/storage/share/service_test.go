@@ -11,8 +11,8 @@ import (
 )
 
 type fakeRepo struct {
-	rows     []*ShareLink
-	nextID   int64
+	rows      []*ShareLink
+	nextID    int64
 	userBytes map[int]int64
 }
 
@@ -63,6 +63,26 @@ func (f *fakeRepo) SetStatus(_ context.Context, id int64, status int) error {
 
 func (f *fakeRepo) SoftDelete(_ context.Context, _ int64) error { return nil }
 
+func (f *fakeRepo) CommitUpdate(_ context.Context, id int64, lifecycle string, size int64, ct string) error {
+	for _, r := range f.rows {
+		if r.ID == id {
+			prev := r.LifecycleState
+			r.LifecycleState = lifecycle
+			if size > 0 {
+				if prev != LifecycleLive && lifecycle == LifecycleLive {
+					f.userBytes[r.OwnerUserID] += size - r.SizeBytes
+				}
+				r.SizeBytes = size
+			}
+			if ct != "" {
+				r.ContentType = ct
+			}
+			return nil
+		}
+	}
+	return ErrShareNotFound
+}
+
 func (f *fakeRepo) ListByOwner(_ context.Context, fi ListFilter) ([]ShareLink, int64, error) {
 	out := []ShareLink{}
 	for _, r := range f.rows {
@@ -100,8 +120,12 @@ func (b *fakeBackend) Get(_ context.Context, bucket, key string) (io.ReadCloser,
 	return io.NopCloser(bytes.NewReader(body)), &blob.ObjectMeta{Key: key, Size: int64(len(body))}, nil
 }
 
-func (b *fakeBackend) Stat(_ context.Context, _, key string) (*blob.ObjectMeta, error) {
-	return &blob.ObjectMeta{Key: key}, nil
+func (b *fakeBackend) Stat(_ context.Context, bucket, key string) (*blob.ObjectMeta, error) {
+	body, ok := b.puts[bucket+"/"+key]
+	if !ok {
+		return nil, blob.ErrObjectNotFound
+	}
+	return &blob.ObjectMeta{Key: key, Size: int64(len(body))}, nil
 }
 
 func (b *fakeBackend) Delete(_ context.Context, bucket, key string) error {
@@ -229,6 +253,158 @@ func TestRevokeFlipsStatusAndDeletesObject(t *testing.T) {
 	}
 	if _, err := svc.View(context.Background(), res.ShortCode); err != ErrShareGone {
 		t.Fatalf("post-revoke view want gone, got %v", err)
+	}
+}
+
+// simulateClientPut puts bytes for a pending code by writing directly
+// into the fake backend, mimicking what the client would do against the
+// presigned PUT URL.
+func simulateClientPut(t *testing.T, repo *fakeRepo, be *fakeBackend, code string, body []byte) {
+	t.Helper()
+	for _, r := range repo.rows {
+		if r.ShortCode == code {
+			be.puts[r.Bucket+"/"+r.ObjectKey] = body
+			return
+		}
+	}
+	t.Fatalf("pending row for code %q not found", code)
+}
+
+func TestInitUploadHappyPath(t *testing.T) {
+	svc, repo, _ := newTestService(t)
+	res, err := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 42, Filename: "hi.txt", ContentType: "text/plain", Size: 100, TTLSeconds: 60, MaxViews: 2,
+	})
+	if err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	if res.Code == "" || res.PresignedURL == "" || res.CommitURL == "" {
+		t.Fatalf("bad init result: %+v", res)
+	}
+	if res.MaxSize != 1024 {
+		t.Fatalf("MaxSize=%d, want 1024", res.MaxSize)
+	}
+	if len(repo.rows) != 1 {
+		t.Fatalf("rows=%d, want 1", len(repo.rows))
+	}
+	if repo.rows[0].LifecycleState != LifecyclePending {
+		t.Fatalf("lifecycle=%q, want pending", repo.rows[0].LifecycleState)
+	}
+}
+
+func TestInitUploadRejectsOverQuota(t *testing.T) {
+	svc, repo, _ := newTestService(t)
+	repo.userBytes[7] = 2040
+	_, err := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 7, Filename: "x", Size: 100,
+	})
+	if err != ErrQuotaExceeded {
+		t.Fatalf("want ErrQuotaExceeded, got %v", err)
+	}
+}
+
+func TestInitUploadRejectsOversize(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	_, err := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 1, Filename: "x", Size: 4096,
+	})
+	if err != ErrUploadTooLarge {
+		t.Fatalf("want ErrUploadTooLarge, got %v", err)
+	}
+}
+
+func TestCommitUploadRequiresStatSuccess(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	res, err := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 1, Filename: "a.txt", Size: 10,
+	})
+	if err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	_, err = svc.CommitUpload(context.Background(), CommitUploadInput{OwnerUserID: 1, Code: res.Code})
+	if err != ErrCommitObjectMissing {
+		t.Fatalf("want ErrCommitObjectMissing, got %v", err)
+	}
+}
+
+func TestCommitUploadHappyPath(t *testing.T) {
+	svc, repo, be := newTestService(t)
+	init, err := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 9, Filename: "a.bin", Size: 5,
+	})
+	if err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	simulateClientPut(t, repo, be, init.Code, []byte("hello"))
+	res, err := svc.CommitUpload(context.Background(), CommitUploadInput{OwnerUserID: 9, Code: init.Code, Size: 5})
+	if err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+	if res.Size != 5 {
+		t.Fatalf("size=%d", res.Size)
+	}
+	if repo.rows[0].LifecycleState != LifecycleLive {
+		t.Fatalf("lifecycle=%q, want live", repo.rows[0].LifecycleState)
+	}
+	// Post-commit view should resolve.
+	if _, err := svc.View(context.Background(), init.Code); err != nil {
+		t.Fatalf("view post-commit: %v", err)
+	}
+}
+
+func TestCommitUploadRejectsNonOwner(t *testing.T) {
+	svc, repo, be := newTestService(t)
+	init, _ := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 1, Filename: "a", Size: 3,
+	})
+	simulateClientPut(t, repo, be, init.Code, []byte("abc"))
+	if _, err := svc.CommitUpload(context.Background(), CommitUploadInput{OwnerUserID: 2, Code: init.Code}); err != ErrForbidden {
+		t.Fatalf("want forbidden, got %v", err)
+	}
+}
+
+func TestCommitUploadIdempotent(t *testing.T) {
+	svc, repo, be := newTestService(t)
+	init, _ := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 5, Filename: "a", Size: 4,
+	})
+	simulateClientPut(t, repo, be, init.Code, []byte("data"))
+	first, err := svc.CommitUpload(context.Background(), CommitUploadInput{OwnerUserID: 5, Code: init.Code})
+	if err != nil {
+		t.Fatalf("first commit: %v", err)
+	}
+	second, err := svc.CommitUpload(context.Background(), CommitUploadInput{OwnerUserID: 5, Code: init.Code})
+	if err != nil {
+		t.Fatalf("second commit must be no-op, got %v", err)
+	}
+	if first.ShortCode != second.ShortCode || first.Size != second.Size {
+		t.Fatalf("commit not idempotent: %+v vs %+v", first, second)
+	}
+	if repo.rows[0].LifecycleState != LifecycleLive {
+		t.Fatalf("lifecycle=%q", repo.rows[0].LifecycleState)
+	}
+}
+
+func TestCommitUploadSizeMismatch(t *testing.T) {
+	svc, repo, be := newTestService(t)
+	init, _ := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 1, Filename: "a", Size: 10,
+	})
+	// Client uploaded fewer bytes than declared.
+	simulateClientPut(t, repo, be, init.Code, []byte("abc"))
+	_, err := svc.CommitUpload(context.Background(), CommitUploadInput{OwnerUserID: 1, Code: init.Code, Size: 10})
+	if err != ErrCommitSizeMismatch {
+		t.Fatalf("want ErrCommitSizeMismatch, got %v", err)
+	}
+}
+
+func TestViewBeforeCommitReturnsGone(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	init, _ := svc.InitUpload(context.Background(), InitUploadInput{
+		OwnerUserID: 1, Filename: "a", Size: 4,
+	})
+	if _, err := svc.View(context.Background(), init.Code); err != ErrShareGone {
+		t.Fatalf("want gone, got %v", err)
 	}
 }
 
