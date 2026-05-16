@@ -10,6 +10,17 @@ import (
 	"aegis/platform/utils"
 )
 
+// CancelTaskResp describes the outcome of a best-effort task cancellation.
+// All slice fields are optional so partial success renders cleanly. Mirrors
+// the trace-level CancelTraceResp but scoped to a single task_id.
+type CancelTaskResp struct {
+	TaskID            string   `json:"task_id,omitempty"`
+	State             string   `json:"state,omitempty"`
+	Message           string   `json:"message,omitempty"`
+	DeletedPodChaos   []string `json:"deleted_podchaos,omitempty"`
+	RemovedRedisTasks []string `json:"removed_redis_tasks,omitempty"`
+}
+
 // BatchDeleteTaskReq represents the request to batch delete tasks.
 type BatchDeleteTaskReq struct {
 	IDs []string `json:"ids" binding:"required"`

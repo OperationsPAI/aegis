@@ -68,6 +68,44 @@ func (h *Handler) ListProjectExecutions(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// ListExecutions lists algorithm executions across projects (portal).
+//
+//	@Summary		List executions
+//	@Description	Get paginated list of algorithm executions across projects the caller can read. Use the project_id query param to scope results to a single project.
+//	@Tags			Executions
+//	@ID				list_executions
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			page		query		int													false	"Page number"	default(1)
+//	@Param			size		query		int													false	"Page size"		default(20)
+//	@Param			project_id	query		int													false	"Filter by project ID"
+//	@Param			state		query		consts.ExecutionState								false	"Filter by execution state"
+//	@Param			status		query		consts.StatusType									false	"Filter by status"
+//	@Param			labels		query		[]string											false	"Filter by labels (key:value, repeatable)"
+//	@Success		200			{object}	dto.GenericResponse[dto.ListResp[ExecutionResp]]	"Executions retrieved successfully"
+//	@Failure		400			{object}	dto.GenericResponse[any]							"Invalid query parameters"
+//	@Failure		401			{object}	dto.GenericResponse[any]							"Authentication required"
+//	@Failure		403			{object}	dto.GenericResponse[any]							"Permission denied"
+//	@Failure		500			{object}	dto.GenericResponse[any]							"Internal server error"
+//	@Router			/api/v2/executions [get]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) ListExecutions(c *gin.Context) {
+	var req ListExecutionReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
+		return
+	}
+	if err := req.Validate(); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+	resp, err := h.service.ListExecutions(c.Request.Context(), &req)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 // SubmitAlgorithmExecution submits batch algorithm execution for multiple datapacks or datasets
 //
 //	@Summary		Submit batch algorithm execution

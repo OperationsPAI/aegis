@@ -1,12 +1,15 @@
 package app
 
 import (
+	"context"
+
 	blobclient "aegis/clients/blob"
 	configcenterclient "aegis/clients/configcenter"
 	gateway "aegis/clients/gateway"
 	notificationclient "aegis/clients/notification"
 	chaossystem "aegis/core/domain/chaossystem"
 	container "aegis/core/domain/container"
+	dashboard "aegis/core/domain/dashboard"
 	dataset "aegis/core/domain/dataset"
 	execution "aegis/core/domain/execution"
 	group "aegis/core/domain/group"
@@ -54,6 +57,7 @@ func apiHTTPModules() []fx.Option {
 		// core/domain
 		chaossystem.Module,
 		container.Module,
+		dashboard.Module,
 		dataset.Module,
 		execution.Module,
 		group.Module,
@@ -101,7 +105,7 @@ func apiHTTPModules() []fx.Option {
 // by smoke / registry tests. Kept in sync with apiHTTPModules above.
 func apiHTTPModuleNames() []string {
 	return []string{
-		"chaossystem", "container", "dataset", "execution", "group",
+		"chaossystem", "container", "dashboard", "dataset", "execution", "group",
 		"injection", "pedestal", "task",
 		"label", "project", "team",
 		"evaluation", "metric", "observation", "sdk", "system",
@@ -114,6 +118,33 @@ func apiHTTPModuleNames() []string {
 }
 
 //go:generate echo "no generator: edit apiHTTPModules above by hand"
+
+// taskCancellerAdapter bridges *task.Service into the narrow
+// injection.TaskCanceller seam so injection cancel can cascade-cancel the
+// task that backs the injection without injection.Service importing the
+// task package (and risking the reverse import cycle).
+type taskCancellerAdapter struct{ svc *task.Service }
+
+func (a taskCancellerAdapter) CancelTask(ctx context.Context, taskID string) (*injection.CancelInjectionTaskResult, error) {
+	r, err := a.svc.CancelTask(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if r == nil {
+		return nil, nil
+	}
+	return &injection.CancelInjectionTaskResult{
+		TaskID:            r.TaskID,
+		State:             r.State,
+		Message:           r.Message,
+		DeletedPodChaos:   r.DeletedPodChaos,
+		RemovedRedisTasks: r.RemovedRedisTasks,
+	}, nil
+}
+
+func newTaskCanceller(svc *task.Service) injection.TaskCanceller {
+	return taskCancellerAdapter{svc: svc}
+}
 
 // chaosSystemWriterAdapter bridges chaossystem.Writer (admin-scoped, broad)
 // to the narrow injection.ChaosSystemWriter the injection module needs for
@@ -139,6 +170,7 @@ func ExecutionInjectionOwnerModules() fx.Option {
 		blob.Module,
 		blobclient.Module,
 		fx.Provide(chaosSystemWriterAdapter),
+		fx.Provide(newTaskCanceller),
 	)
 }
 
@@ -146,5 +178,6 @@ func ProducerHTTPModules() fx.Option {
 	return fx.Options(
 		fx.Options(apiHTTPModules()...),
 		fx.Provide(chaosSystemWriterAdapter),
+		fx.Provide(newTaskCanceller),
 	)
 }

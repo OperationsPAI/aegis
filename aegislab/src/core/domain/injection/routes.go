@@ -65,6 +65,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				injections.PATCH("/labels/batch", handler.BatchManageInjectionLabels)
 				injections.POST("/batch-delete", handler.BatchDeleteInjections)
 				injections.POST("/upload", handler.UploadDatapack)
+				injections.POST("/:id/cancel", middleware.RequireTaskStop, handler.CancelInjection)
 				injections.PUT("/:id/groundtruth", handler.UpdateGroundtruth)
 
 				observation := injections.Group("", middleware.RequireProjectRead)

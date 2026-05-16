@@ -7,7 +7,7 @@ import (
 )
 
 func TestServiceSearchNilRequest(t *testing.T) {
-	service := NewService(nil, nil, nil, nil, nil, nil, nil, nil)
+	service := NewService(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := service.Search(t.Context(), nil, nil)
 
@@ -16,7 +16,7 @@ func TestServiceSearchNilRequest(t *testing.T) {
 }
 
 func TestServiceListNoIssuesEmptyLabelsSucceeds(t *testing.T) {
-	service := NewService(nil, nil, nil, nil, nil, nil, nil, nil)
+	service := NewService(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	resp, err := service.ListNoIssues(t.Context(), &ListInjectionNoIssuesReq{}, nil)
 

@@ -25,6 +25,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 
 				tasks.POST("/batch-delete", middleware.RequireTaskDelete, handler.BatchDelete)
 				tasks.POST("/:task_id/expedite", middleware.RequireTaskExecute, handler.ExpediteTask)
+				tasks.POST("/:task_id/cancel", middleware.RequireTaskStop, handler.CancelTask)
 			}
 		},
 	}

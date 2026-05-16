@@ -668,6 +668,18 @@ type InjectionWarnings struct {
 	BatchesExistInDatabase    []int    `json:"batches_exist_in_database,omitempty"`    // Batch indices that already exist in database
 }
 
+// CancelInjectionResp describes the outcome of best-effort cancellation of
+// an injection — cascades through to the underlying task's redis queue
+// entries and chaos CRDs.
+type CancelInjectionResp struct {
+	InjectionID       int      `json:"injection_id"`
+	TaskID            string   `json:"task_id,omitempty"`
+	State             string   `json:"state,omitempty"`
+	Message           string   `json:"message,omitempty"`
+	DeletedPodChaos   []string `json:"deleted_podchaos,omitempty"`
+	RemovedRedisTasks []string `json:"removed_redis_tasks,omitempty"`
+}
+
 type SubmitInjectionResp struct {
 	GroupID       string                `json:"group_id"`
 	Items         []SubmitInjectionItem `json:"items"`
