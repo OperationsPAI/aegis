@@ -2352,9 +2352,9 @@ requirements:
       - path: src/boot/http_modules.go
         description: "pages.Module wired into apiHTTPModules"
       - path: src/platform/framework/routes.go
-        description: "EngineRegistrar for /p/* and /static/pages/* (escape hatch from /api/v2)"
+        description: "RouteRegistrar.BasePath escape hatch for /p/* and /static/pages/* (off the /api/v2 trunk)"
       - path: src/platform/router/router.go
-        description: "consumes `engine_routes` fx group"
+        description: "dispatches RouteRegistrar by Audience or BasePath"
 
     has_mock: false
 
