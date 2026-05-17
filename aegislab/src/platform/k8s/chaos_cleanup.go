@@ -296,6 +296,65 @@ func stripFinalizersAndDelete(
 	return nil
 }
 
+// ListNamespaceChaosResources returns a count, per chaos-mesh.org resource,
+// of how many instances live in <namespace>. Used by the namespace reclaimer
+// to gate "is this namespace still actively faulting?" — a non-empty result
+// means the reclaimer must skip this ns. Empty map + nil means "no chaos
+// CRs found"; a non-empty warnings slice is advisory (transient list errors,
+// missing CRDs, etc.) and is not fatal.
+func ListNamespaceChaosResources(ctx context.Context, namespace string) (map[string]int, []error) {
+	client, err := getK8sClient()
+	if err != nil {
+		return nil, []error{k8sClientNotAvailableErr(err)}
+	}
+	dyn, err := getK8sDynamicClient()
+	if err != nil {
+		return nil, []error{fmt.Errorf("kubernetes dynamic client not available: %w", err)}
+	}
+	return listNamespaceChaosResourcesWith(ctx, &discoveryChaosLister{client: client.Discovery()}, dyn, namespace)
+}
+
+func listNamespaceChaosResourcesWith(
+	ctx context.Context,
+	lister chaosResourceLister,
+	dyn dynamic.Interface,
+	namespace string,
+) (map[string]int, []error) {
+	if namespace == "" {
+		return nil, []error{fmt.Errorf("namespace must be non-empty")}
+	}
+	if lister == nil || dyn == nil {
+		return nil, []error{fmt.Errorf("chaos list misconfigured: lister or dynamic client nil")}
+	}
+	gvrs, err := lister.NamespacedChaosGVRs(ctx)
+	if err != nil {
+		return nil, []error{fmt.Errorf("discover chaos-mesh CRDs: %w", err)}
+	}
+	if len(gvrs) == 0 {
+		return map[string]int{}, nil
+	}
+	counts := make(map[string]int, len(gvrs))
+	var warnings []error
+	for _, gvr := range gvrs {
+		if gvr.Group != ChaosMeshAPIGroup {
+			warnings = append(warnings, fmt.Errorf("refusing to list non-chaos GVR %s", gvr.String()))
+			continue
+		}
+		list, lerr := dyn.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
+		if lerr != nil {
+			if k8serrors.IsNotFound(lerr) {
+				continue
+			}
+			warnings = append(warnings, fmt.Errorf("list %s in %s: %w", gvr.Resource, namespace, lerr))
+			continue
+		}
+		if n := len(list.Items); n > 0 {
+			counts[gvr.Resource] = n
+		}
+	}
+	return counts, warnings
+}
+
 // SummarizeChaosCleanup renders a single-line, alphabetised description of
 // what was reaped, suitable for a logrus.Info call. Empty summary returns
 // the empty string so the caller can short-circuit logging.

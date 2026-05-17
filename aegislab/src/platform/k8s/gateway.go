@@ -121,6 +121,13 @@ func (g *Gateway) CleanupNamespaceChaosResources(ctx context.Context, namespace 
 	return CleanupNamespaceChaosResources(ctx, namespace)
 }
 
+// ListNamespaceChaosResources returns per-resource counts of chaos-mesh.org
+// CRs that live in <namespace>, without deleting anything. Used by the
+// namespace reclaimer's predicate that refuses to drop a ns with live faults.
+func (g *Gateway) ListNamespaceChaosResources(ctx context.Context, namespace string) (map[string]int, []error) {
+	return ListNamespaceChaosResources(ctx, namespace)
+}
+
 // EnsureNamespace creates the namespace if it doesn't exist. Returns
 // (created, err). Harmless on existing namespaces — AlreadyExists is treated
 // as success. Breaks the submit→restart-pedestal chicken-and-egg: a first-run
@@ -150,6 +157,66 @@ func (g *Gateway) EnsureNamespace(ctx context.Context, name string) (bool, error
 		return false, fmt.Errorf("create namespace %q: %w", name, err)
 	}
 	return true, nil
+}
+
+// DeleteNamespace deletes <name> with foreground propagation so the call
+// returns only after the apiserver has finished reaping dependent objects.
+// NotFound is treated as success: the reclaimer's job is "ensure ns is gone",
+// not "we did the delete". Caller passes a context with timeout to bound the
+// wait — kube-apiserver finalization can take a minute on a slow cluster.
+func (g *Gateway) DeleteNamespace(ctx context.Context, name string) error {
+	client, err := getK8sClient()
+	if err != nil {
+		return k8sClientNotAvailableErr(err)
+	}
+	prop := metav1.DeletePropagationForeground
+	if err := client.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{
+		PropagationPolicy: &prop,
+	}); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("delete namespace %q: %w", name, err)
+	}
+	return nil
+}
+
+// GetNamespaceLabels returns the label map on <name>. Returns (nil, nil) when
+// the namespace does not exist — the reclaimer treats that as "already gone".
+func (g *Gateway) GetNamespaceLabels(ctx context.Context, name string) (map[string]string, error) {
+	client, err := getK8sClient()
+	if err != nil {
+		return nil, k8sClientNotAvailableErr(err)
+	}
+	ns, err := client.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get namespace %q: %w", name, err)
+	}
+	return ns.Labels, nil
+}
+
+// ListClusterNamespaces returns every namespace name in the cluster. Used by
+// the namespace reclaimer to enumerate candidates without iterating
+// chaos-system configs (the reclaimer wants to catch leaked namespaces whose
+// index is beyond the current registered Count, e.g. sockshop14 when count
+// was rolled back to 10).
+func (g *Gateway) ListClusterNamespaces(ctx context.Context) ([]string, error) {
+	client, err := getK8sClient()
+	if err != nil {
+		return nil, k8sClientNotAvailableErr(err)
+	}
+	list, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list namespaces: %w", err)
+	}
+	names := make([]string, 0, len(list.Items))
+	for i := range list.Items {
+		names = append(names, list.Items[i].Name)
+	}
+	return names, nil
 }
 
 // NamespaceHasWorkload reports whether the given namespace contains at least

@@ -240,6 +240,55 @@ func (g *Gateway) uninstallRelease(actionConfig *action.Configuration, releaseNa
 	return nil
 }
 
+// Uninstall is the public counterpart to uninstallRelease used by callers
+// that want to drop a release without going through the Install->reinstall
+// dance. NotFound is treated as success so the caller can chain a follow-up
+// namespace delete without a defensive pre-check.
+func (g *Gateway) Uninstall(ctx context.Context, namespace, releaseName string, timeout time.Duration) error {
+	_, actionConfig, err := newRuntime(namespace)
+	if err != nil {
+		return err
+	}
+	return g.uninstallRelease(actionConfig, releaseName, timeout)
+}
+
+// ReleaseInfo is the small slice of helm release metadata the namespace
+// reclaimer needs to decide whether a release is idle. Pulled out of the
+// helm SDK type so callers don't have to import release.Release.
+type ReleaseInfo struct {
+	Name         string
+	Namespace    string
+	Status       string
+	LastDeployed time.Time
+}
+
+// GetReleaseInfo returns LastDeployed + status for a release in <namespace>.
+// Returns (nil, nil) when the release does not exist — callers should treat
+// that as "nothing to reclaim here".
+func (g *Gateway) GetReleaseInfo(namespace, releaseName string) (*ReleaseInfo, error) {
+	_, actionConfig, err := newRuntime(namespace)
+	if err != nil {
+		return nil, err
+	}
+	statusAction := action.NewStatus(actionConfig)
+	rel, err := statusAction.Run(releaseName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get release status: %w", err)
+	}
+	if rel == nil || rel.Info == nil {
+		return nil, nil
+	}
+	return &ReleaseInfo{
+		Name:         rel.Name,
+		Namespace:    rel.Namespace,
+		Status:       rel.Info.Status.String(),
+		LastDeployed: rel.Info.LastDeployed.Time,
+	}, nil
+}
+
 func newRuntime(namespace string) (*cli.EnvSettings, *action.Configuration, error) {
 	settings := cli.New()
 	settings.SetNamespace(namespace)
