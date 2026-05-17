@@ -115,7 +115,7 @@ data:
         # forgot-password). The real auth API lives under /api/v2/auth/*
         # and is covered by the /api/* matcher below.
         @api {
-            path /api/* /s/* /healthz /metrics /readyz /livez
+            path /api/* /s/* /p/* /static/pages/* /healthz /metrics /readyz /livez
         }
         handle @api {
             reverse_proxy {{ $apiBackend }}

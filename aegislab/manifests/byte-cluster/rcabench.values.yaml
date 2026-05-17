@@ -12,7 +12,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260517-datapack-query-r4
+      tag: byte-20260517-pages-perms-r3
       pullPolicy: IfNotPresent
 
 # Dev intercept anchors. Enabled on byte-cluster so developers can run
@@ -120,6 +120,17 @@ rustfs:
     image:
       name: pair-cn-shanghai.cr.volces.com/opspai/mc
       tag: latest
+    # Override the chart's default name list because we need
+    # `aegis-pages` provisioned for the pages module (CRUD storage). The
+    # subchart values supply the base set; this list replaces it, so the
+    # original five must be repeated.
+    names:
+      - aegis-datapack
+      - aegis-execution
+      - aegis-shared
+      - aegis-helm-chart
+      - aegis-dataset
+      - aegis-pages
 
 microservices:
   aegisApi:
@@ -264,6 +275,21 @@ blob:
       access_key_env: "BLOB_S3_SHARED_ACCESS_KEY"
       secret_key_env: "BLOB_S3_SHARED_SECRET_KEY"
       proxy_uploads: true
+    pages:
+      # Bucket backing the pages module (`/api/v2/pages` +
+      # `/p/:slug`). Same rustfs as datapack — reusing the datapack
+      # credential env saves wiring a separate Secret key. The
+      # `aegis-pages` bucket is created by the `rustfs-init-bucket` Job
+      # (see rustfs.initBuckets.names above).
+      driver: "s3"
+      endpoint: "http://rcabench-rustfs.exp.svc.cluster.local:9000"
+      bucket: "aegis-pages"
+      region: "us-east-1"
+      use_ssl: false
+      path_style: true
+      access_key_env: "BLOB_S3_DATAPACK_ACCESS_KEY"
+      secret_key_env: "BLOB_S3_DATAPACK_SECRET_KEY"
+      proxy_uploads: true
     # Logical buckets for the helm-chart and dataset stores. These are
     # resolved by blob.Registry when HelmFileStore / DatasetFileStore call
     # the blob.Client (logical name → physical bucket). Same rustfs
@@ -302,7 +328,7 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260517-sdk-1.5.0-pages-r3
+    tag: byte-20260517-pages-perms-r3
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench

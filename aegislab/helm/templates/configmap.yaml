@@ -215,6 +215,20 @@ data:
     upstream = "{{ .Release.Name }}-blob:{{ .Values.blob.httpPort }}"
     auth     = "none"
 
+    # Pages SSR + static assets. The aegis-api `/p/:slug` handler uses
+    # OptionalJWTAuth (private sites 404 for non-owners), so the gateway
+    # must let unauthenticated requests through; otherwise public pages
+    # would 401 before reaching the renderer.
+    [[gateway.routes]]
+    prefix   = "/p/"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "none"
+
+    [[gateway.routes]]
+    prefix   = "/static/pages/"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "none"
+
     {{- $chUpstream := .Values.gateway.clickhouseUpstream | default "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123" }}
     [[gateway.routes]]
     # ClickHouse HTTP proxy for the trajectories sub-app (read-only OTel
