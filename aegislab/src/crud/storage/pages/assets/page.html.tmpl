@@ -16,8 +16,17 @@
 <body>
   <aside class="sidebar">
     <h3>{{.SiteTitle}}</h3>
-    <ul>
-      {{range .NavItems}}<li><a href="{{.URL}}"{{if .Active}} class="active"{{end}}>{{.Label}}</a></li>{{end}}
+    <ul class="files">
+      {{range .NavItems}}
+      <li class="file{{if .Active}} active{{end}}{{if .IsMD}} md{{else}} raw{{end}}">
+        <a class="file-link" href="{{.URL}}" title="{{.Path}}">
+          <span class="file-icon" aria-hidden="true">{{if .IsMD}}M{{else}}·{{end}}</span>
+          <span class="file-name">{{.Label}}</span>
+          <span class="file-size">{{.SizeText}}</span>
+        </a>
+        {{if .IsMD}}<a class="file-raw" href="{{.RawURL}}" title="View raw source">raw</a>{{end}}
+      </li>
+      {{end}}
     </ul>
   </aside>
   <main class="markdown-body">{{.Body}}</main>

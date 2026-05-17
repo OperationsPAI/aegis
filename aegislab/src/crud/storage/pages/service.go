@@ -326,6 +326,13 @@ func (s *Service) ListMarkdownFiles(ctx context.Context, site *PageSite) ([]stri
 	return out, nil
 }
 
+// ListAllFiles returns every file under the site prefix, sorted by path.
+// Used by the renderer to build a gist-style file-explorer sidebar that
+// shows both rendered markdown and raw assets.
+func (s *Service) ListAllFiles(ctx context.Context, site *PageSite) ([]FileEntry, error) {
+	return s.listFiles(ctx, site.SiteUUID)
+}
+
 // ---- internal helpers ----
 
 func (s *Service) checkFiles(files []UploadFile) error {

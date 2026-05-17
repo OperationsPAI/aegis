@@ -10,11 +10,11 @@ import (
 func renderHelper(t *testing.T, src, currentPath string) string {
 	t.Helper()
 	out, err := RenderMarkdown(RenderInput{
-		Slug:          "demo",
-		SiteTitle:     "Demo Site",
-		CurrentPath:   currentPath,
-		MarkdownPaths: []string{currentPath},
-		Source:        []byte(src),
+		Slug:        "demo",
+		SiteTitle:   "Demo Site",
+		CurrentPath: currentPath,
+		Files:       []FileEntry{{Path: currentPath, SizeBytes: int64(len(src))}},
+		Source:      []byte(src),
 	})
 	if err != nil {
 		t.Fatalf("render: %v", err)
@@ -101,11 +101,11 @@ func TestMailtoAndTelUntouched(t *testing.T) {
 func TestFrontmatterTitleOverridesSiteTitle(t *testing.T) {
 	src := "---\ntitle: Custom Page Title\n---\n# body"
 	out, err := RenderMarkdown(RenderInput{
-		Slug:          "demo",
-		SiteTitle:     "Site Wide Title",
-		CurrentPath:   "index.md",
-		MarkdownPaths: []string{"index.md"},
-		Source:        []byte(src),
+		Slug:        "demo",
+		SiteTitle:   "Site Wide Title",
+		CurrentPath: "index.md",
+		Files:       []FileEntry{{Path: "index.md", SizeBytes: int64(len(src))}},
+		Source:      []byte(src),
 	})
 	if err != nil {
 		t.Fatalf("render: %v", err)

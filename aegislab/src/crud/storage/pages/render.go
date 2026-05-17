@@ -65,6 +65,13 @@ func (h *RenderHandler) Render(c *gin.Context) {
 		return
 	}
 
+	// `?raw=1` always returns the underlying bytes, regardless of file type.
+	// For markdown files this is the only way to see the unrendered source;
+	// for non-markdown it just degrades to the same path serveRaw uses.
+	if c.Query("raw") == "1" {
+		h.serveRaw(c, site, cleaned)
+		return
+	}
 	if strings.HasSuffix(strings.ToLower(cleaned), ".md") {
 		h.serveMarkdown(c, site, cleaned)
 		return
@@ -78,17 +85,17 @@ func (h *RenderHandler) serveMarkdown(c *gin.Context, site *PageSite, cleanedPat
 		h.notFound(c)
 		return
 	}
-	mdPaths, err := h.svc.ListMarkdownFiles(c.Request.Context(), site)
+	files, err := h.svc.ListAllFiles(c.Request.Context(), site)
 	if err != nil {
 		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	out, err := RenderMarkdown(RenderInput{
-		Slug:          site.Slug,
-		SiteTitle:     site.Title,
-		CurrentPath:   cleanedPath,
-		MarkdownPaths: mdPaths,
-		Source:        body,
+		Slug:        site.Slug,
+		SiteTitle:   site.Title,
+		CurrentPath: cleanedPath,
+		Files:       files,
+		Source:      body,
 	})
 	if err != nil {
 		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())

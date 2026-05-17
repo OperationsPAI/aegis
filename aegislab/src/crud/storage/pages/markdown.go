@@ -61,11 +61,20 @@ var assetsFS embed.FS
 // pageTemplate is parsed lazily from the embedded layout file.
 var pageTemplate = template.Must(template.ParseFS(assetsFS, "assets/page.html.tmpl"))
 
-// NavItem is one entry in the sidebar nav list.
+// NavItem is one entry in the sidebar file explorer. `Path` is the full
+// site-relative path (used for sorting + de-dup). `Label` is the leaf
+// name shown in the UI. `URL` resolves to the SSR renderer for markdown
+// files and to the raw-bytes path for everything else; `RawURL` is the
+// always-raw alternative shown next to markdown entries so authors can
+// jump from rendered view to source.
 type NavItem struct {
-	Label  string
-	URL    string
-	Active bool
+	Path     string
+	Label    string
+	URL      string
+	RawURL   string
+	IsMD     bool
+	SizeText string
+	Active   bool
 }
 
 // PageView is the variables block fed to the layout template.
@@ -74,16 +83,19 @@ type PageView struct {
 	SiteTitle string
 	Slug      string
 	NavItems  []NavItem
+	IsRaw     bool // currently viewing the raw source of a .md
+	RawURL    string
+	RenderURL string
 	Body      template.HTML
 }
 
 // RenderInput is what RenderMarkdown needs from the caller.
 type RenderInput struct {
-	Slug          string
-	SiteTitle     string
-	CurrentPath   string   // site-relative .md path (e.g. "docs/foo.md")
-	MarkdownPaths []string // site-relative .md paths for the sidebar
-	Source        []byte
+	Slug        string
+	SiteTitle   string
+	CurrentPath string      // site-relative .md path (e.g. "docs/foo.md")
+	Files       []FileEntry // every file in the site — drives the sidebar
+	Source      []byte
 }
 
 // RenderMarkdown converts the markdown source to a full HTML document
@@ -140,7 +152,9 @@ func RenderMarkdown(in RenderInput) ([]byte, error) {
 		Title:     title,
 		SiteTitle: firstNonEmpty(in.SiteTitle, in.Slug),
 		Slug:      in.Slug,
-		NavItems:  buildNav(in.Slug, in.CurrentPath, in.MarkdownPaths),
+		NavItems:  buildNav(in.Slug, in.CurrentPath, in.Files),
+		RawURL:    "/p/" + in.Slug + "/" + in.CurrentPath + "?raw=1",
+		RenderURL: "/p/" + in.Slug + "/" + in.CurrentPath,
 		Body:      template.HTML(sanitized), //nolint:gosec // bluemonday UGC policy sanitizes the rendered body above
 	}
 	var out bytes.Buffer
@@ -212,20 +226,56 @@ func metaTitle(ctx parser.Context) string {
 	return ""
 }
 
-func buildNav(slug, currentPath string, paths []string) []NavItem {
-	out := make([]NavItem, 0, len(paths))
-	sorted := append([]string(nil), paths...)
-	sort.Strings(sorted)
-	for _, p := range sorted {
-		out = append(out, NavItem{
-			Label:  navLabel(p),
-			URL:    "/p/" + slug + "/" + p,
-			Active: p == currentPath,
-		})
+// buildNav produces the gist-style file explorer for the sidebar. Every
+// file in the site shows up; markdown files link to the SSR-rendered
+// view while everything else (svg, png, json, …) links to the raw bytes.
+// Markdown entries also expose a `raw` URL so authors can flip from
+// rendered to source view.
+func buildNav(slug, currentPath string, files []FileEntry) []NavItem {
+	out := make([]NavItem, 0, len(files))
+	sorted := append([]FileEntry(nil), files...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Path < sorted[j].Path })
+	for _, f := range sorted {
+		isMD := strings.HasSuffix(strings.ToLower(f.Path), ".md")
+		entry := NavItem{
+			Path:     f.Path,
+			Label:    f.Path,
+			URL:      "/p/" + slug + "/" + f.Path,
+			IsMD:     isMD,
+			SizeText: humanSize(f.SizeBytes),
+			Active:   f.Path == currentPath,
+		}
+		if isMD {
+			entry.RawURL = entry.URL + "?raw=1"
+		}
+		out = append(out, entry)
 	}
 	return out
 }
 
+// humanSize renders an upload size in the smallest unit that fits in
+// three integer digits. Used purely for the sidebar — precision beyond
+// "is this a few KB or a few MB" is not the point.
+func humanSize(n int64) string {
+	const (
+		kib = 1024
+		mib = 1024 * kib
+		gib = 1024 * mib
+	)
+	switch {
+	case n >= gib:
+		return fmt.Sprintf("%.1f GB", float64(n)/gib)
+	case n >= mib:
+		return fmt.Sprintf("%.1f MB", float64(n)/mib)
+	case n >= kib:
+		return fmt.Sprintf("%.1f KB", float64(n)/kib)
+	default:
+		return fmt.Sprintf("%d B", n)
+	}
+}
+
+// navLabel is kept for backwards compatibility with callers outside the
+// renderer; nav entries themselves render the full site-relative path.
 func navLabel(p string) string {
 	base := path.Base(p)
 	base = strings.TrimSuffix(base, path.Ext(base))
