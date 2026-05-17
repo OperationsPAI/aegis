@@ -5,12 +5,14 @@ package injection
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"aegis/platform/consts"
 
@@ -25,15 +27,15 @@ func (s *Service) queryDatapackFileContent(ctx context.Context, id int, filePath
 		return "", 0, nil, err
 	}
 
-	fullPath, err := s.store.ResolveFilePath(injection.Name, filePath)
-	if err != nil {
-		return "", 0, nil, fmt.Errorf("invalid file path: %w", err)
-	}
-	if filepath.Ext(fullPath) != ".parquet" {
+	if filepath.Ext(filePath) != ".parquet" {
 		return "", 0, nil, fmt.Errorf("file is not a parquet file: %s", filePath)
 	}
+	fullPath, err := s.store.ParquetReaderPath(ctx, injection.Name, filePath, 15*time.Minute)
+	if err != nil {
+		return "", 0, nil, fmt.Errorf("resolve parquet: %w", err)
+	}
 
-	connector, err := duckdb.NewConnector("", nil)
+	connector, err := newDuckDBConnector()
 	if err != nil {
 		return "", 0, nil, err
 	}
@@ -149,8 +151,10 @@ type datapackParquet struct {
 }
 
 // listDatapackParquets enumerates parquet files that actually exist in the
-// datapack root. Missing files are silently skipped — that is data, not error.
-func (s *Service) listDatapackParquets(injectionName string) ([]datapackParquet, error) {
+// datapack root and resolves each to a DuckDB-readable path (filesystem
+// path for local stores, presigned HTTPS URL for S3-backed stores).
+// Missing files are silently skipped — that is data, not error.
+func (s *Service) listDatapackParquets(ctx context.Context, injectionName string) ([]datapackParquet, error) {
 	tree, err := s.store.BuildFileTree(injectionName, "", 0)
 	if err != nil {
 		return nil, err
@@ -168,7 +172,9 @@ func (s *Service) listDatapackParquets(injectionName string) ([]datapackParquet,
 		if view == "" {
 			continue
 		}
-		resolved, err := s.store.ResolveFilePath(injectionName, item.Path)
+		// 15-minute TTL covers schema describe + count(*) + several
+		// follow-up user queries against the same VIEW in this connection.
+		resolved, err := s.store.ParquetReaderPath(ctx, injectionName, item.Path, 15*time.Minute)
 		if err != nil {
 			// Existence was just confirmed by BuildFileTree; a resolve failure
 			// here is genuinely abnormal and worth surfacing.
@@ -178,6 +184,24 @@ func (s *Service) listDatapackParquets(injectionName string) ([]datapackParquet,
 		out = append(out, datapackParquet{view: view, file: item.Path, path: resolved})
 	}
 	return out, nil
+}
+
+// newDuckDBConnector returns a duckdb connector whose init callback
+// loads the httpfs extension on every new connection. DuckDB extensions
+// are per-connection, so this must run before any read_parquet() against
+// an HTTPS URL (the S3-backed presigned URLs we hand out).
+func newDuckDBConnector() (*duckdb.Connector, error) {
+	return duckdb.NewConnector("", func(execer driver.ExecerContext) error {
+		for _, stmt := range []string{
+			"INSTALL httpfs",
+			"LOAD httpfs",
+		} {
+			if _, err := execer.ExecContext(context.Background(), stmt, nil); err != nil {
+				return fmt.Errorf("duckdb init %s: %w", stmt, err)
+			}
+		}
+		return nil
+	})
 }
 
 var viewNameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_]+`)
@@ -205,7 +229,7 @@ func (s *Service) getDatapackSchema(ctx context.Context, id int) (*DatapackSchem
 		}
 		return nil, err
 	}
-	parquets, err := s.listDatapackParquets(injection.Name)
+	parquets, err := s.listDatapackParquets(ctx, injection.Name)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) {
 			return &DatapackSchemaResp{Tables: []DatapackTableSchema{}}, nil
@@ -216,7 +240,7 @@ func (s *Service) getDatapackSchema(ctx context.Context, id int) (*DatapackSchem
 		return &DatapackSchemaResp{Tables: []DatapackTableSchema{}}, nil
 	}
 
-	connector, err := duckdb.NewConnector("", nil)
+	connector, err := newDuckDBConnector()
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +355,7 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 	if err != nil {
 		return nil, err
 	}
-	parquets, err := s.listDatapackParquets(injection.Name)
+	parquets, err := s.listDatapackParquets(ctx, injection.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -339,17 +363,12 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 		return nil, fmt.Errorf("%w: datapack has no parquet files", consts.ErrNotFound)
 	}
 
-	connector, err := duckdb.NewConnector("", nil)
+	connector, err := newDuckDBConnector()
 	if err != nil {
 		return nil, err
 	}
 
-	// Prepare an isolated connection: register VIEWs, then disable external
-	// access so the user SQL can only see what we exposed.
-	setupConn, err := connector.Connect(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// Register VIEWs (httpfs is loaded by the connector init for every conn).
 	setupDB := sql.OpenDB(connector)
 	for _, p := range parquets {
 		stmt := fmt.Sprintf(
@@ -357,12 +376,10 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 			quoteIdent(p.view), p.path,
 		)
 		if _, err := setupDB.ExecContext(ctx, stmt); err != nil {
-			_ = setupConn.Close()
 			_ = setupDB.Close()
 			return nil, fmt.Errorf("failed to register view %s: %w", p.view, err)
 		}
 	}
-	_ = setupConn.Close()
 	_ = setupDB.Close()
 
 	pr, pw := io.Pipe()
