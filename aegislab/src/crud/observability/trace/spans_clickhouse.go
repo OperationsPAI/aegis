@@ -44,7 +44,7 @@ type OTelSpanRow struct {
 	ServiceName     string
 	SpanName        string
 	Timestamp       time.Time
-	DurationNanos   int64
+	DurationNanos   uint64
 	StatusCode      string
 	SpanAttributes  map[string]string
 	ResourceService string
@@ -126,7 +126,7 @@ func (r *clickHouseSpanReader) ReadSpansByTraceID(ctx context.Context, traceID s
 			row     OTelSpanRow
 			attrs   map[string]string
 			ts      time.Time
-			dur     int64
+			dur     uint64
 			statusC string
 		)
 		if err := rows.Scan(
