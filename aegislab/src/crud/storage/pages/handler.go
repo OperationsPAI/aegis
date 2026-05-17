@@ -322,6 +322,17 @@ func (h *Handler) Detail(c *gin.Context) {
 
 // ---- helpers ----
 
+// collectFiles iterates the parsed multipart form and recovers each part's
+// original filename from its raw Content-Disposition header. We can't trust
+// `fh.Filename` because Go's `multipart.FileHeader.Filename` is populated via
+// `filepath.Base`, so site-relative paths like `assets/foo.png` collapse to
+// `foo.png` and the SSR renderer can't find them later. The full part header
+// map is still on `fh.Header`, so we re-parse Content-Disposition ourselves
+// to get the path the client sent, then sanitize it (no leading `/`, no
+// `..`). The part-level Content-Type is honoured unless it is the generic
+// `application/octet-stream` (what the CLI sends when it can't infer one),
+// in which case we derive a real MIME from the extension so the renderer
+// can serve PNG/SVG/CSS with the right type to the browser.
 func collectFiles(c *gin.Context) ([]UploadFile, error) {
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -333,9 +344,16 @@ func collectFiles(c *gin.Context) ([]UploadFile, error) {
 	var out []UploadFile
 	for field, hs := range form.File {
 		for _, fh := range hs {
-			rel := strings.TrimSpace(fh.Filename)
+			rel := recoverPartFilename(fh)
+			if rel == "" {
+				rel = strings.TrimSpace(fh.Filename)
+			}
 			if rel == "" {
 				rel = field
+			}
+			rel, err := sanitizeUploadPath(rel)
+			if err != nil {
+				return nil, err
 			}
 			body, err := readMultipart(fh)
 			if err != nil {
@@ -345,8 +363,10 @@ func collectFiles(c *gin.Context) ([]UploadFile, error) {
 				return nil, err
 			}
 			ct := fh.Header.Get("Content-Type")
-			if ct == "" {
-				ct = mime.TypeByExtension(filepath.Ext(rel))
+			if ct == "" || ct == "application/octet-stream" {
+				if derived := mime.TypeByExtension(filepath.Ext(rel)); derived != "" {
+					ct = derived
+				}
 			}
 			out = append(out, UploadFile{
 				Path:        rel,
@@ -356,6 +376,54 @@ func collectFiles(c *gin.Context) ([]UploadFile, error) {
 		}
 	}
 	return out, nil
+}
+
+// recoverPartFilename re-parses the raw Content-Disposition header on a
+// FileHeader to recover the original filename parameter (with directory
+// slashes intact). Returns "" if the header doesn't carry one.
+func recoverPartFilename(fh *multipart.FileHeader) string {
+	raw := fh.Header.Get("Content-Disposition")
+	if raw == "" {
+		return ""
+	}
+	_, params, err := mime.ParseMediaType(raw)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(params["filename"])
+}
+
+func readMultipart(fh *multipart.FileHeader) ([]byte, error) {
+	f, err := fh.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	return io.ReadAll(f)
+}
+
+// sanitizeUploadPath produces a forward-slash relative path safe to use as
+// an object key. Rejects absolute paths, `..` escape, and empty strings.
+func sanitizeUploadPath(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	raw = strings.ReplaceAll(raw, "\\", "/")
+	raw = strings.TrimLeft(raw, "/")
+	if raw == "" {
+		return "", errors.New("upload filename is empty")
+	}
+	cleaned := filepath.ToSlash(filepath.Clean(raw))
+	if cleaned == "." || cleaned == ".." {
+		return "", errors.New("upload filename resolves to current/parent dir")
+	}
+	if strings.HasPrefix(cleaned, "../") || cleaned == ".." {
+		return "", errors.New("upload filename escapes the site root")
+	}
+	for _, seg := range strings.Split(cleaned, "/") {
+		if seg == ".." {
+			return "", errors.New("upload filename contains parent-dir traversal")
+		}
+	}
+	return cleaned, nil
 }
 
 // isBodyTooLarge unwraps the various flavours of "request body exceeds
@@ -372,15 +440,6 @@ func isBodyTooLarge(err error) bool {
 	msg := err.Error()
 	return strings.Contains(msg, "http: request body too large") ||
 		strings.Contains(msg, "multipart: NextPart: http: request body too large")
-}
-
-func readMultipart(fh *multipart.FileHeader) ([]byte, error) {
-	f, err := fh.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = f.Close() }()
-	return io.ReadAll(f)
 }
 
 func pathID(c *gin.Context) (int64, error) {

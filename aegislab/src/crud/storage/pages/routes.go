@@ -46,9 +46,16 @@ func RoutesEngine(render *RenderHandler) framework.RouteRegistrar {
 		Name:     "pages.ssr",
 		BasePath: "/",
 		Register: func(root *gin.RouterGroup) {
+			// HEAD mirrors GET so health probes and browser preflight
+			// checks (`curl -I`, link checkers) don't get a misleading
+			// 404 from gin's default GET-only routing. The Render
+			// handler is GET-shaped — gin discards the body on HEAD.
 			root.GET("/p/:slug", middleware.OptionalJWTAuth(), render.Render)
+			root.HEAD("/p/:slug", middleware.OptionalJWTAuth(), render.Render)
 			root.GET("/p/:slug/*filepath", middleware.OptionalJWTAuth(), render.Render)
+			root.HEAD("/p/:slug/*filepath", middleware.OptionalJWTAuth(), render.Render)
 			root.GET("/static/pages/*filepath", ServeStaticAssets)
+			root.HEAD("/static/pages/*filepath", ServeStaticAssets)
 		},
 	}
 }
