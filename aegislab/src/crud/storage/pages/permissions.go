@@ -37,3 +37,27 @@ func Permissions() framework.PermissionRegistrar {
 		},
 	}
 }
+
+// RoleGrants associates the pages permissions with the system roles.
+// Without this, even RoleSuperAdmin gets 403 on /api/v2/pages because
+// RequireAnyPermission does not short-circuit on isAdmin — it queries
+// the user's RBAC set. RoleSuperAdmin is seeded with every is_system=true
+// permission, so registering these rules through the framework
+// aggregator is what gets admin access to actually flow through.
+// RoleAdmin gets pages:manage:all so it can curate any user's pages;
+// RoleUser gets the own-scoped read/write pair so authors can manage
+// their own sites.
+func RoleGrants() framework.RoleGrantsRegistrar {
+	return framework.RoleGrantsRegistrar{
+		Module: "pages",
+		Grants: map[consts.RoleName][]consts.PermissionRule{
+			consts.RoleAdmin: {
+				PermPagesManageAll,
+			},
+			consts.RoleUser: {
+				PermPagesReadOwn,
+				PermPagesWriteOwn,
+			},
+		},
+	}
+}

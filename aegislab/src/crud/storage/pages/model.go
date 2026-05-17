@@ -13,8 +13,12 @@ const (
 	VisibilityPrivate        = "private"
 )
 
-// Bucket name used for every page site's blob prefix.
-const BucketName = "aegis-pages"
+// BucketName is the LOGICAL bucket name the blob Registry resolves to
+// a physical S3 bucket via `blob.buckets.<name>.bucket`. Convention
+// across modules (datapack, dataset, shared, …) is short logical →
+// `aegis-<x>` physical; passing the physical name here would surface as
+// `ErrBucketNotFound` on every PutBytes/GetBytes call.
+const BucketName = "pages"
 
 // Upload limits — kept as package vars so tests can override.
 var (

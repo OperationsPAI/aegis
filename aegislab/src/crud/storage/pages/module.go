@@ -19,6 +19,7 @@ var Module = fx.Module("pages",
 		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(RoutesEngine, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(Permissions, fx.ResultTags(`group:"permissions"`)),
+		fx.Annotate(RoleGrants, fx.ResultTags(`group:"role_grants"`)),
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
 	),
 )
