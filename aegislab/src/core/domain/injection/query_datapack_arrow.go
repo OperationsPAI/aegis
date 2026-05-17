@@ -374,41 +374,35 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 		return nil, err
 	}
 
-	// Reserve one connection up front. The in-memory DuckDB database lives
-	// only as long as at least one connection from this connector is open;
-	// without a keeper, closing setupDB below would destroy the database
-	// before the goroutine's query connection can open, surfacing as
-	// "could not connect to database".
-	keeperConn, err := connector.Connect(ctx)
+	// Single connection for setup + query. Opening a second connection in
+	// the goroutine fails with "could not connect to database" once the
+	// setup conn is released, because go-duckdb tears the in-memory DB
+	// down with the last open conn. Running the VIEW DDL on the same
+	// conn that later serves the Arrow query also sidesteps any
+	// per-connection visibility surprises.
+	conn, err := connector.Connect(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("duckdb keeper connect: %w", err)
+		return nil, fmt.Errorf("duckdb connect: %w", err)
 	}
-
-	// Register VIEWs (httpfs is loaded by the connector init for every conn).
-	setupDB := sql.OpenDB(connector)
+	execer, ok := conn.(driver.ExecerContext)
+	if !ok {
+		_ = conn.Close()
+		return nil, fmt.Errorf("duckdb conn does not implement ExecerContext")
+	}
 	for _, p := range parquets {
 		stmt := fmt.Sprintf(
 			"CREATE OR REPLACE VIEW %s AS SELECT * FROM read_parquet('%s')",
 			quoteIdent(p.view), p.path,
 		)
-		if _, err := setupDB.ExecContext(ctx, stmt); err != nil {
-			_ = setupDB.Close()
-			_ = keeperConn.Close()
+		if _, err := execer.ExecContext(ctx, stmt, nil); err != nil {
+			_ = conn.Close()
 			return nil, fmt.Errorf("failed to register view %s: %w", p.view, err)
 		}
 	}
-	_ = setupDB.Close()
 
 	pr, pw := io.Pipe()
 	go func() {
 		defer func() { _ = pw.Close() }()
-		defer func() { _ = keeperConn.Close() }()
-
-		conn, err := connector.Connect(ctx)
-		if err != nil {
-			_ = pw.CloseWithError(fmt.Errorf("connect failed: %w", err))
-			return
-		}
 		defer func() { _ = conn.Close() }()
 
 		arrow, err := duckdb.NewArrowFromConn(conn)
