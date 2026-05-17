@@ -166,6 +166,7 @@ func ExecutionInjectionOwnerModules() fx.Option {
 		execution.Module,
 		injection.Module,
 		label.Module,
+		task.Module,
 		// injection/container/dataset constructors switch on
 		// `jfs.backend` and need a blob.Client when backend = "s3".
 		// blob.Module provides the in-process Service that LocalClient
