@@ -374,6 +374,16 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 		return nil, err
 	}
 
+	// Reserve one connection up front. The in-memory DuckDB database lives
+	// only as long as at least one connection from this connector is open;
+	// without a keeper, closing setupDB below would destroy the database
+	// before the goroutine's query connection can open, surfacing as
+	// "could not connect to database".
+	keeperConn, err := connector.Connect(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("duckdb keeper connect: %w", err)
+	}
+
 	// Register VIEWs (httpfs is loaded by the connector init for every conn).
 	setupDB := sql.OpenDB(connector)
 	for _, p := range parquets {
@@ -383,6 +393,7 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 		)
 		if _, err := setupDB.ExecContext(ctx, stmt); err != nil {
 			_ = setupDB.Close()
+			_ = keeperConn.Close()
 			return nil, fmt.Errorf("failed to register view %s: %w", p.view, err)
 		}
 	}
@@ -391,6 +402,7 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 	pr, pw := io.Pipe()
 	go func() {
 		defer func() { _ = pw.Close() }()
+		defer func() { _ = keeperConn.Close() }()
 
 		conn, err := connector.Connect(ctx)
 		if err != nil {
