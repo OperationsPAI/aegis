@@ -50,8 +50,12 @@ data:
       {{- if $host -}}
         {{- $siteAddr = printf "%s:%d" $host $port -}}
       {{- end -}}
+    {{- end -}}
+    {{- $addrs := list $siteAddr -}}
+    {{- range .Values.global.additionalSiteAddresses | default list -}}
+      {{- $addrs = append $addrs . -}}
     {{- end }}
-    {{ $siteAddr }} {
+    {{ join ", " $addrs }} {
         tracing {
             span aegis-edge-proxy
         }

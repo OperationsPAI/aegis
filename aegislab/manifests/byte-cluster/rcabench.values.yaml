@@ -6,6 +6,17 @@ global:
   # cert (see `edgeProxy.tls.enabled` below). The SPA needs a Secure
   # Context for `crypto.subtle.digest` (PKCE code_challenge).
   publicBaseURL: "https://118.196.98.178:8082"
+  # Second public ingress: a NAT proxy CLB that forwards external
+  # 23.189.248.55:38082 to the same edge-proxy backend. The CLB does port
+  # translation, so traffic reaches the pod on listener :8082 (not :38082).
+  # The site-address port here is the LISTENER port, while Caddy ignores
+  # the port in the Host header when matching site blocks — so we list
+  # the host on the existing :8082 listener, NOT on a fake :38082
+  # listener (lost a debug session 2026-05-17 trying the latter).
+  # Caddy will also issue the internal cert with `23.189.248.55` in the
+  # SAN list.
+  additionalSiteAddresses:
+    - "23.189.248.55:8082"
   # Single source of truth for the shared backend image — consumed by
   # parent-chart deployments and every extracted subchart (notify, future
   # sso/blob).

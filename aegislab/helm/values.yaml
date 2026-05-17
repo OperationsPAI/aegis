@@ -16,6 +16,16 @@ global:
   # other "where does the browser reach us" value from it. Leave empty for
   # in-cluster / dev installs (subcharts fall back to localhost defaults).
   publicBaseURL: ""
+  # Extra `host:port` site addresses to attach to the edge-proxy Caddy
+  # site block alongside the one derived from publicBaseURL. Use when a
+  # second EIP / NAT CLB fronts the same backend (clients reach edge-proxy
+  # with a different Host header). NB: the `port` here is the in-pod
+  # LISTENER port Caddy binds — when an external CLB does port translation
+  # (e.g. 38082 → 8082), put the in-pod port (`8082`), not the external
+  # one. Caddy ignores the port in the Host header when matching, so the
+  # hostname is what does the routing. `tls internal` will also issue a
+  # local-CA cert covering every listed hostname. Each entry: `host:port`.
+  additionalSiteAddresses: []
   # Shared backend image (re-used by parent + notify/blob/gateway subcharts).
   images:
     rcabench:
