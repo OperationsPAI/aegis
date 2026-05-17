@@ -12,7 +12,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260517-sdk-1.5.0-pages-r3
+      tag: byte-20260517-datapack-query-r3
       pullPolicy: IfNotPresent
 
 # Dev intercept anchors. Enabled on byte-cluster so developers can run
