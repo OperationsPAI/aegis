@@ -8,16 +8,22 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	blobclient "aegis/clients/blob"
+	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/model"
 	"aegis/platform/utils"
+
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"github.com/sirupsen/logrus"
 )
@@ -28,8 +34,11 @@ import (
 // "directory") are preserved by treating the datapack name as a key
 // prefix.
 type S3DatapackStore struct {
-	client blobclient.Client
-	bucket string
+	client        blobclient.Client
+	bucket        string
+	presignOnce   sync.Once
+	presignClient *minio.Client
+	presignErr    error
 }
 
 // NewS3DatapackStore constructs the S3-backed DatapackStorage. Bucket
@@ -271,26 +280,83 @@ func (s *S3DatapackStore) ResolveFilePath(datapackName, filePath string) (string
 	return s.resolveKey(datapackName, filePath)
 }
 
-// ParquetReaderPath returns a presigned HTTPS URL pointing at the object.
-// DuckDB's httpfs extension can `read_parquet()` it directly. TTL must
-// outlast the query — 10 minutes is a sensible default for one-shot
-// schema-and-query usage; for connections that run multiple sequential
-// queries against the same VIEW, set a longer TTL.
+// ParquetReaderPath returns a presigned URL pointing at the parquet
+// object, signed for the INTERNAL S3 endpoint so an in-cluster DuckDB
+// httpfs HEAD/GET reaches rustfs directly (the public-endpoint URL
+// returned by blob.PresignGet is fronted by a self-signed TLS proxy
+// libcurl can't validate). TTL must outlast the query — 15 minutes by
+// default.
 func (s *S3DatapackStore) ParquetReaderPath(ctx context.Context, datapackName, filePath string, ttl time.Duration) (string, error) {
 	key, err := s.resolveKey(datapackName, filePath)
 	if err != nil {
 		return "", err
 	}
 	if ttl <= 0 {
-		ttl = 10 * time.Minute
+		ttl = 15 * time.Minute
 	}
-	presigned, err := s.client.PresignGet(ctx, s.bucket, key, blobclient.PresignGetReq{
-		TTLSeconds: int(ttl.Seconds()),
-	})
+	client, err := s.internalPresignClient()
+	if err != nil {
+		return "", err
+	}
+	u, err := client.PresignedGetObject(ctx, s.physicalBucket(), key, ttl, url.Values{})
 	if err != nil {
 		return "", fmt.Errorf("%w: presign %s/%s: %v", consts.ErrNotFound, datapackName, filePath, err)
 	}
-	return presigned.URL, nil
+	return u.String(), nil
+}
+
+// physicalBucket resolves the configured physical S3 bucket name for the
+// logical "datapack" bucket. Falls back to the logical name if unset
+// (matches the legacy convention used by NewS3Driver).
+func (s *S3DatapackStore) physicalBucket() string {
+	if v := config.GetString("blob.buckets." + s.bucket + ".bucket"); v != "" {
+		return v
+	}
+	return s.bucket
+}
+
+// internalPresignClient lazily constructs a minio client targeted at
+// the in-cluster rustfs endpoint and caches it. Used only by
+// ParquetReaderPath; all other I/O goes through the blob client.
+func (s *S3DatapackStore) internalPresignClient() (*minio.Client, error) {
+	s.presignOnce.Do(func() {
+		prefix := "blob.buckets." + s.bucket
+		endpoint := config.GetString(prefix + ".endpoint")
+		if endpoint == "" {
+			s.presignErr = fmt.Errorf("blob.buckets.%s.endpoint not configured", s.bucket)
+			return
+		}
+		host, useSSL := normalizeMinioEndpoint(endpoint, config.GetBool(prefix+".use_ssl"))
+		accessKey := os.Getenv(config.GetString(prefix + ".access_key_env"))
+		secretKey := os.Getenv(config.GetString(prefix + ".secret_key_env"))
+		if accessKey == "" || secretKey == "" {
+			s.presignErr = fmt.Errorf("blob.buckets.%s missing S3 credentials in env", s.bucket)
+			return
+		}
+		opts := &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure: useSSL,
+			Region: config.GetString(prefix + ".region"),
+		}
+		if config.GetBool(prefix + ".path_style") {
+			opts.BucketLookup = minio.BucketLookupPath
+		} else {
+			opts.BucketLookup = minio.BucketLookupDNS
+		}
+		s.presignClient, s.presignErr = minio.New(host, opts)
+	})
+	return s.presignClient, s.presignErr
+}
+
+func normalizeMinioEndpoint(raw string, defaultSSL bool) (string, bool) {
+	switch {
+	case strings.HasPrefix(raw, "https://"):
+		return strings.TrimPrefix(raw, "https://"), true
+	case strings.HasPrefix(raw, "http://"):
+		return strings.TrimPrefix(raw, "http://"), false
+	default:
+		return raw, defaultSSL
+	}
 }
 
 func (s *S3DatapackStore) resolveKey(datapackName, filePath string) (string, error) {
