@@ -70,31 +70,35 @@ func (r *Repository) List(limit, offset int, filters *ListTaskFilters) ([]model.
 
 	query := r.db.Model(&model.Task{})
 	if filters.Immediate != nil {
-		query = query.Where("immediate = ?", *filters.Immediate)
+		query = query.Where("tasks.immediate = ?", *filters.Immediate)
 	}
 	if filters.TaskType != nil {
-		query = query.Where("type = ?", *filters.TaskType)
+		query = query.Where("tasks.type = ?", *filters.TaskType)
 	}
 	if filters.TraceID != "" {
-		query = query.Where("trace_id = ?", filters.TraceID)
+		query = query.Where("tasks.trace_id = ?", filters.TraceID)
 	}
-	if filters.GroupID != "" {
-		query = query.Where("group_id = ?", filters.GroupID)
-	}
-	if filters.ProjectID > 0 {
-		query = query.Where("project_id = ?", filters.ProjectID)
+	// group_id / project_id live on traces, not tasks — JOIN through trace_id.
+	if filters.GroupID != "" || filters.ProjectID > 0 {
+		query = query.Joins("JOIN traces ON traces.id = tasks.trace_id")
+		if filters.GroupID != "" {
+			query = query.Where("traces.group_id = ?", filters.GroupID)
+		}
+		if filters.ProjectID > 0 {
+			query = query.Where("traces.project_id = ?", filters.ProjectID)
+		}
 	}
 	if filters.State != nil {
-		query = query.Where("state = ?", *filters.State)
+		query = query.Where("tasks.state = ?", *filters.State)
 	}
 	if filters.Status != nil {
-		query = query.Where("status = ?", *filters.Status)
+		query = query.Where("tasks.status = ?", *filters.Status)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count tasks: %w", err)
 	}
-	if err := query.Limit(limit).Offset(offset).Order("created_at DESC").Find(&tasks).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Order("tasks.created_at DESC").Find(&tasks).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list tasks: %w", err)
 	}
 	return tasks, total, nil
