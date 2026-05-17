@@ -2,6 +2,7 @@ package injection
 
 import (
 	"archive/zip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	blobclient "aegis/clients/blob"
 	"aegis/platform/config"
@@ -141,6 +143,10 @@ func (s *FilesystemDatapackStore) OpenFile(datapackName, filePath string) (strin
 }
 
 func (s *FilesystemDatapackStore) ResolveFilePath(datapackName, filePath string) (string, error) {
+	return s.resolveFilePath(datapackName, filePath)
+}
+
+func (s *FilesystemDatapackStore) ParquetReaderPath(_ context.Context, datapackName, filePath string, _ time.Duration) (string, error) {
 	return s.resolveFilePath(datapackName, filePath)
 }
 

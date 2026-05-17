@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	blobclient "aegis/clients/blob"
 	"aegis/platform/consts"
@@ -268,6 +269,28 @@ func guessContentTypeByExt(name string) string {
 
 func (s *S3DatapackStore) ResolveFilePath(datapackName, filePath string) (string, error) {
 	return s.resolveKey(datapackName, filePath)
+}
+
+// ParquetReaderPath returns a presigned HTTPS URL pointing at the object.
+// DuckDB's httpfs extension can `read_parquet()` it directly. TTL must
+// outlast the query — 10 minutes is a sensible default for one-shot
+// schema-and-query usage; for connections that run multiple sequential
+// queries against the same VIEW, set a longer TTL.
+func (s *S3DatapackStore) ParquetReaderPath(ctx context.Context, datapackName, filePath string, ttl time.Duration) (string, error) {
+	key, err := s.resolveKey(datapackName, filePath)
+	if err != nil {
+		return "", err
+	}
+	if ttl <= 0 {
+		ttl = 10 * time.Minute
+	}
+	presigned, err := s.client.PresignGet(ctx, s.bucket, key, blobclient.PresignGetReq{
+		TTLSeconds: int(ttl.Seconds()),
+	})
+	if err != nil {
+		return "", fmt.Errorf("%w: presign %s/%s: %v", consts.ErrNotFound, datapackName, filePath, err)
+	}
+	return presigned.URL, nil
 }
 
 func (s *S3DatapackStore) resolveKey(datapackName, filePath string) (string, error) {
