@@ -84,7 +84,7 @@ func (s *Service) queryDatapackFileContent(ctx context.Context, id int, filePath
 		}
 		defer rdr.Release()
 
-		writer := ipc.NewWriter(pw, ipc.WithSchema(rdr.Schema()), ipc.WithZstd())
+		writer := ipc.NewWriter(pw, ipc.WithSchema(rdr.Schema()))
 		defer func() { _ = writer.Close() }()
 
 		for rdr.Next() {
@@ -418,7 +418,7 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 		}
 		defer rdr.Release()
 
-		writer := ipc.NewWriter(pw, ipc.WithSchema(rdr.Schema()), ipc.WithZstd())
+		writer := ipc.NewWriter(pw, ipc.WithSchema(rdr.Schema()))
 		defer func() { _ = writer.Close() }()
 
 		for rdr.Next() {
