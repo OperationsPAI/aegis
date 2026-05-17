@@ -936,6 +936,32 @@ type DatapackFilesResp struct {
 	DirCount  int                `json:"dir_count"`  // Number of directories
 }
 
+// DatapackColumnSchema describes a single column of a datapack table (parquet).
+type DatapackColumnSchema struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+// DatapackTableSchema describes a logical table exposed as a DuckDB VIEW over a
+// parquet file in the datapack. Only tables whose backing parquet exists are
+// returned — missing files are silently skipped, never an error.
+type DatapackTableSchema struct {
+	Name    string                 `json:"name"`    // VIEW name, e.g. "abnormal_traces"
+	File    string                 `json:"file"`    // Source parquet relative path
+	Rows    int64                  `json:"rows"`    // Row count, -1 if unknown
+	Columns []DatapackColumnSchema `json:"columns"` // Column metadata
+}
+
+// DatapackSchemaResp is the response for GET /api/v2/injections/:id/datapack-schema.
+type DatapackSchemaResp struct {
+	Tables []DatapackTableSchema `json:"tables"`
+}
+
+// DatapackQueryReq is the body of POST /api/v2/injections/:id/datapack-query.
+type DatapackQueryReq struct {
+	SQL string `json:"sql" binding:"required"`
+}
+
 // parseFaultTypeParam accepts either a chaos type name (e.g. "NetworkLoss")
 // or its numeric id (e.g. "18") and returns the corresponding ChaosType.
 // Membership in ChaosTypeMap is enforced by validateChaosType after this

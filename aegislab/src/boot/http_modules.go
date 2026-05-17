@@ -25,7 +25,6 @@ import (
 	notification "aegis/crud/messaging/notification"
 	evaluation "aegis/crud/observability/evaluation"
 	metric "aegis/crud/observability/metric"
-	observation "aegis/crud/observability/observation"
 	sdk "aegis/crud/observability/sdk"
 	system "aegis/crud/observability/system"
 	systemmetric "aegis/crud/observability/systemmetric"
@@ -74,7 +73,6 @@ func apiHTTPModules() []fx.Option {
 		// crud/observability
 		evaluation.Module,
 		metric.Module,
-		observation.Module,
 		sdk.Module,
 		system.Module,
 		systemmetric.Module,
