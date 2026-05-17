@@ -119,7 +119,7 @@ func (s *S3DatapackStore) BuildFileTree(datapackName, baseURL string, datapackID
 		return nil, fmt.Errorf("failed to probe datapack %s: %w", datapackName, err)
 	}
 	if len(probe.Objects) == 0 && len(probe.CommonPrefixes) == 0 {
-		return nil, fmt.Errorf("datapack directory not found for datapack id %d", datapackID)
+		return nil, fmt.Errorf("%w: datapack directory not found for datapack id %d", consts.ErrNotFound, datapackID)
 	}
 
 	resp := &DatapackFilesResp{Files: []DatapackFileItem{}}

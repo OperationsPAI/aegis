@@ -1228,7 +1228,7 @@ func (s *Service) getReadyDatapack(id int) (*model.FaultInjection, error) {
 		return nil, fmt.Errorf("failed to get injection: %w", err)
 	}
 	if injection.State < consts.DatapackBuildSuccess {
-		return nil, fmt.Errorf("datapack %d is not ready", id)
+		return nil, fmt.Errorf("%w: datapack %d is not ready", consts.ErrNotFound, id)
 	}
 	return injection, nil
 }

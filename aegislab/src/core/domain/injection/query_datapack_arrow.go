@@ -5,6 +5,7 @@ package injection
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -196,10 +197,19 @@ func sanitizeViewName(raw string) string {
 func (s *Service) getDatapackSchema(ctx context.Context, id int) (*DatapackSchemaResp, error) {
 	injection, err := s.getReadyDatapack(id)
 	if err != nil {
+		// Not-ready datapack is a normal pre-data state for the SQL editor;
+		// return an empty schema instead of bubbling 404 so the page can
+		// show "no tables yet" rather than an error.
+		if errors.Is(err, consts.ErrNotFound) {
+			return &DatapackSchemaResp{Tables: []DatapackTableSchema{}}, nil
+		}
 		return nil, err
 	}
 	parquets, err := s.listDatapackParquets(injection.Name)
 	if err != nil {
+		if errors.Is(err, consts.ErrNotFound) {
+			return &DatapackSchemaResp{Tables: []DatapackTableSchema{}}, nil
+		}
 		return nil, err
 	}
 	if len(parquets) == 0 {
