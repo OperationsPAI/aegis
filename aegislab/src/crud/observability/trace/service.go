@@ -21,10 +21,11 @@ type Service struct {
 	repo  *Repository
 	redis *redisinfra.Gateway
 	k8s   *k8sinfra.Gateway
+	spans SpanReader
 }
 
-func NewService(repo *Repository, redis *redisinfra.Gateway, k8s *k8sinfra.Gateway) *Service {
-	return &Service{repo: repo, redis: redis, k8s: k8s}
+func NewService(repo *Repository, redis *redisinfra.Gateway, k8s *k8sinfra.Gateway, spans SpanReader) *Service {
+	return &Service{repo: repo, redis: redis, k8s: k8s, spans: spans}
 }
 
 // CancelTrace marks a trace as Cancelled and performs best-effort cleanup of
@@ -199,6 +200,47 @@ func (s *Service) GetTraceStreamAlgorithms(ctx context.Context, traceID string) 
 		}
 	}
 	return filtered, nil
+}
+
+// GetTraceSpans returns every OTel span the aegislab orchestrator emitted
+// for traceID, fanned out from otel.otel_traces via the aegis trace_id
+// SpanAttribute. The trace's existence in PostgreSQL is verified first so a
+// 404 still distinguishes "no such aegis trace" from "trace exists but the
+// OTel collector hasn't ingested anything yet". An empty list is a valid
+// 200 response in the latter case.
+func (s *Service) GetTraceSpans(ctx context.Context, traceID string) (*SpansResp, error) {
+	if _, err := s.repo.GetTraceByID(traceID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
+		}
+		return nil, fmt.Errorf("failed to load trace: %w", err)
+	}
+	if s.spans == nil {
+		return nil, fmt.Errorf("clickhouse span reader not configured")
+	}
+	rows, err := s.spans.ReadSpansByTraceID(ctx, traceID)
+	if err != nil {
+		return nil, fmt.Errorf("read spans: %w", err)
+	}
+	out := &SpansResp{Spans: make([]SpanNode, 0, len(rows))}
+	for _, r := range rows {
+		endTS := r.Timestamp
+		if r.DurationNanos > 0 {
+			endTS = r.Timestamp.Add(time.Duration(r.DurationNanos))
+		}
+		out.Spans = append(out.Spans, SpanNode{
+			OTelTraceID:  r.TraceID,
+			SpanID:       r.SpanID,
+			ParentSpanID: r.ParentSpanID,
+			Service:      r.ServiceName,
+			Op:           r.SpanName,
+			StartTS:      r.Timestamp,
+			EndTS:        endTS,
+			Status:       r.StatusCode,
+			Attrs:        r.SpanAttributes,
+		})
+	}
+	return out, nil
 }
 
 func (s *Service) ReadTraceStreamMessages(ctx context.Context, streamKey, lastID string, count int64, block time.Duration) ([]goredis.XStream, error) {

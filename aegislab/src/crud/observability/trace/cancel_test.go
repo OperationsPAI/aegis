@@ -27,7 +27,7 @@ func newCancelService(t *testing.T) (*Service, sqlmock.Sqlmock, func()) {
 
 	// nil redis + nil k8s — CancelTrace tolerates both, so the unit test
 	// exercises only the DB/state-machine logic.
-	svc := NewService(NewRepository(db), nil, nil)
+	svc := NewService(NewRepository(db), nil, nil, nil)
 	return svc, mock, func() { _ = sqlDB.Close() }
 }
 

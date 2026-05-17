@@ -174,6 +174,30 @@ type TraceDetailResp struct {
 	Tasks []dto.TaskResp `json:"tasks"`
 }
 
+// SpanNode is one OTel span emitted by the aegislab orchestrator while a
+// trace was running, projected from otel.otel_traces. The shape intentionally
+// mirrors a flat span list: parent_id points to span_id (within the same
+// otel_trace_id), and the frontend rebuilds the tree client-side. Multiple
+// OTel TraceIds can appear under a single aegis trace UUID (one per task
+// dispatch); they're returned interleaved and the frontend groups by
+// otel_trace_id when rendering.
+type SpanNode struct {
+	OTelTraceID  string            `json:"otel_trace_id"`
+	SpanID       string            `json:"span_id"`
+	ParentSpanID string            `json:"parent_id,omitempty"`
+	Service      string            `json:"service,omitempty"`
+	Op           string            `json:"op,omitempty"`
+	StartTS      time.Time         `json:"start_ts"`
+	EndTS        time.Time         `json:"end_ts"`
+	Status       string            `json:"status,omitempty"`
+	Attrs        map[string]string `json:"attrs,omitempty"`
+}
+
+// SpansResp wraps the flat span list. Ordered by start_ts ASC.
+type SpansResp struct {
+	Spans []SpanNode `json:"spans"`
+}
+
 func NewTraceDetailResp(trace *model.Trace) *TraceDetailResp {
 	resp := &TraceDetailResp{
 		TraceResp: *NewTraceResp(trace),
