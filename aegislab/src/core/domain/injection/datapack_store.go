@@ -80,7 +80,7 @@ func (s *FilesystemDatapackStore) BuildFileTree(datapackName, baseURL string, da
 		return nil, fmt.Errorf("invalid path access to %s", workDir)
 	}
 	if _, err := os.Stat(workDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("datapack directory not found for datapack id %d", datapackID)
+		return nil, fmt.Errorf("%w: datapack directory not found for datapack id %d", consts.ErrNotFound, datapackID)
 	}
 
 	resp := &DatapackFilesResp{
