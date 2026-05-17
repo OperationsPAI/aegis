@@ -969,6 +969,14 @@ func (s *Service) QueryDatapackFile(ctx context.Context, id int, filePath string
 	return s.queryDatapackFileContent(ctx, id, filePath)
 }
 
+func (s *Service) GetDatapackSchema(ctx context.Context, id int) (*DatapackSchemaResp, error) {
+	return s.getDatapackSchema(ctx, id)
+}
+
+func (s *Service) QueryDatapack(ctx context.Context, id int, userSQL string) (io.ReadCloser, error) {
+	return s.runDatapackQuery(ctx, id, userSQL)
+}
+
 func (s *Service) UpdateGroundtruth(_ context.Context, id int, req *UpdateGroundtruthReq) error {
 	if _, err := s.repo.loadInjection(id); err != nil {
 		return err

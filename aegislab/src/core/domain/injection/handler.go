@@ -616,6 +616,83 @@ func (h *Handler) QueryDatapackFile(c *gin.Context) {
 	}
 }
 
+// GetDatapackSchema returns the list of logical tables (VIEWs over the
+// datapack's parquet files) and their column metadata for SQL-editor
+// auto-completion.
+//
+//	@Summary		Get datapack SQL schema
+//	@Description	List logical tables exposed over the datapack's parquet files (one VIEW per parquet that actually exists). Used by the in-portal SQL editor for autocomplete.
+//	@Tags			Injections
+//	@ID				get_datapack_schema
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int										true	"Injection ID"
+//	@Success		200	{object}	dto.GenericResponse[DatapackSchemaResp]	"Schema"
+//	@Failure		400	{object}	dto.GenericResponse[any]				"Invalid injection ID"
+//	@Failure		401	{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		403	{object}	dto.GenericResponse[any]				"Permission denied"
+//	@Failure		404	{object}	dto.GenericResponse[any]				"Datapack not ready"
+//	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/injections/{id}/datapack-schema [get]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) GetDatapackSchema(c *gin.Context) {
+	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetDatapackSchema(c.Request.Context(), id)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
+// QueryDatapack runs a read-only SQL query against the datapack's parquet
+// files via DuckDB and streams the result as Arrow IPC. Only SELECT / WITH
+// statements are accepted; references resolve against pre-registered VIEWs
+// (one per parquet file present in the datapack).
+//
+//	@Summary		Run SQL on datapack
+//	@Description	Execute a read-only SELECT/WITH query over VIEWs exposed by GetDatapackSchema. Result is streamed as Arrow IPC.
+//	@Tags			Injections
+//	@ID				query_datapack
+//	@Accept			json
+//	@Produce		application/vnd.apache.arrow.stream
+//	@Security		BearerAuth
+//	@Param			id		path		int							true	"Injection ID"
+//	@Param			request	body		DatapackQueryReq			true	"SQL query body"
+//	@Success		200		{file}		binary						"Arrow IPC stream"
+//	@Failure		400		{object}	dto.GenericResponse[any]	"Invalid SQL or injection ID"
+//	@Failure		401		{object}	dto.GenericResponse[any]	"Authentication required"
+//	@Failure		403		{object}	dto.GenericResponse[any]	"Permission denied"
+//	@Failure		404		{object}	dto.GenericResponse[any]	"Datapack not ready or no parquet files"
+//	@Failure		500		{object}	dto.GenericResponse[any]	"Internal server error"
+//	@Router			/api/v2/injections/{id}/datapack-query [post]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) QueryDatapack(c *gin.Context) {
+	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
+	if !ok {
+		return
+	}
+	var req DatapackQueryReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request: "+err.Error())
+		return
+	}
+	reader, err := h.service.QueryDatapack(c.Request.Context(), id, req.SQL)
+	if err != nil && httpx.HandleServiceError(c, err) {
+		return
+	}
+	defer func() { _ = reader.Close() }()
+	c.Header("Content-Type", "application/vnd.apache.arrow.stream")
+	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+	c.Header("X-Accel-Buffering", "no")
+	c.Status(http.StatusOK)
+	if _, err := io.Copy(c.Writer, reader); err != nil {
+		logrus.Errorf("failed to stream query result: %v", err)
+	}
+}
+
 // UpdateGroundtruth handles updating ground truth for a datapack
 //
 //	@Summary		Update datapack ground truth

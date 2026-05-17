@@ -44,6 +44,8 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 				injections.GET("/:id/files", handler.ListDatapackFiles)
 				injections.GET("/:id/files/download", handler.DownloadDatapackFile)
 				injections.GET("/:id/files/query", handler.QueryDatapackFile)
+				injections.GET("/:id/datapack-schema", handler.GetDatapackSchema)
+				injections.POST("/:id/datapack-query", handler.QueryDatapack)
 				injections.PATCH("/:id/labels", handler.ManageInjectionCustomLabels)
 			}
 		},
