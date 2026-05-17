@@ -229,6 +229,18 @@ data:
     upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
     auth     = "none"
 
+    # Pages management API. The module enforces its own per-route auth
+    # (OptionalJWTAuth on /:id + /public for anonymous read access;
+    # JWTAuth + RequireAnyPermission on the authed subgroup), so the
+    # gateway must NOT force a JWT at the edge — doing so would 401
+    # anonymous detail/public-list fetches before the OptionalJWTAuth
+    # path is reached, and it would 401 SDK clients that were generated
+    # without a security requirement on the public endpoints.
+    [[gateway.routes]]
+    prefix   = "/api/v2/pages"
+    upstream = "{{ .Release.Name }}-aegis-api:{{ .Values.microservices.aegisApi.httpPort }}"
+    auth     = "none"
+
     {{- $chUpstream := .Values.gateway.clickhouseUpstream | default "clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:8123" }}
     [[gateway.routes]]
     # ClickHouse HTTP proxy for the trajectories sub-app (read-only OTel
