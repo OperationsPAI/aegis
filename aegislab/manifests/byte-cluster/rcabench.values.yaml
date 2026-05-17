@@ -23,7 +23,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260517-pages-perms-r7
+      tag: byte-20260517-orch-spans-r1
       pullPolicy: IfNotPresent
 
 # Dev intercept anchors. Enabled on byte-cluster so developers can run
@@ -339,7 +339,7 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260517-pages-perms-r7
+    tag: byte-20260517-orch-spans-r1
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench
