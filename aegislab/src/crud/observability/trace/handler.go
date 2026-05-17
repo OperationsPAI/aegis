@@ -58,6 +58,42 @@ func (h *Handler) GetTrace(c *gin.Context) {
 	dto.SuccessResponse(c, resp)
 }
 
+// GetTraceSpans returns every OTel span the orchestrator emitted while the
+// trace was running, queried from ClickHouse otel.otel_traces filtered by
+// the aegis trace_id SpanAttribute. Returns 200 with an empty list when the
+// trace exists but no spans have been ingested yet (e.g. the collector is
+// behind or tracing was disabled).
+//
+//	@Summary		Get orchestrator OTel spans for a trace
+//	@Description	Returns the full flat list of OTel spans emitted by aegislab while this trace was running. The frontend rebuilds the parent/child tree client-side. Multiple OTel TraceIds may be returned interleaved (one per task dispatch); group by otel_trace_id when rendering.
+//	@Tags			Traces
+//	@ID				get_trace_spans
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			trace_id	path		string								true	"Trace ID"
+//	@Success		200			{object}	dto.GenericResponse[SpansResp]		"Spans retrieved successfully"
+//	@Failure		400			{object}	dto.GenericResponse[any]			"Invalid trace ID"
+//	@Failure		401			{object}	dto.GenericResponse[any]			"Authentication required"
+//	@Failure		403			{object}	dto.GenericResponse[any]			"Permission denied"
+//	@Failure		404			{object}	dto.GenericResponse[any]			"Trace not found"
+//	@Failure		500			{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/api/v2/traces/{trace_id}/spans [get]
+//	@x-api-type		{"portal":"true"}
+func (h *Handler) GetTraceSpans(c *gin.Context) {
+	traceID := c.Param(consts.URLPathTraceID)
+	if !utils.IsValidUUID(traceID) {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid trace ID")
+		return
+	}
+
+	resp, err := h.service.GetTraceSpans(c.Request.Context(), traceID)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+
+	dto.SuccessResponse(c, resp)
+}
+
 // CancelTrace handles best-effort cancellation of a running trace.
 //
 //	@Summary		Cancel a running trace (best-effort)

@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -456,6 +457,31 @@ class SDKPostProcesser:
 
         for old_name in list(schemas.keys()):
             new_name = old_name
+
+            # Collapse multi-segment directory prefixes swag synthesises from
+            # a model's full Go package path down to just the leaf package
+            # segment. Keeps the published SDK type names stable across
+            # internal package moves — e.g. when `src/trace` became
+            # `src/crud/observability/trace`, swag started emitting
+            # 'crud_observability_trace.TraceDetailResp' instead of
+            # 'trace.TraceDetailResp'. Without this normalisation every such
+            # move is a breaking rename for every SDK consumer. The regex
+            # collapses any lowercase-underscored chain that ends in `.` to
+            # just the last segment, in place — so it also handles wrapped
+            # forms like 'GenericResponse-crud_storage_pages.PageSiteResponse'.
+            new_name = re.sub(
+                r"(?:[a-z][a-z0-9]*_)+([a-z][a-z0-9]*)\.",
+                r"\1.",
+                new_name,
+            )
+            # And the wrapped form 'GenericResponse-pkg_subpkg_leaf_Model'
+            # (no '.' between leaf and Model — swag emits this for
+            # generic-typed responses). Collapse to 'leaf_Model'.
+            new_name = re.sub(
+                r"(?:[a-z][a-z0-9]*_)+([a-z][a-z0-9]*_)([A-Z])",
+                r"\1\2",
+                new_name,
+            )
 
             # Remove 'consts.' prefix
             if new_name.startswith("consts."):

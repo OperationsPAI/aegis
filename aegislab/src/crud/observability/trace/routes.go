@@ -16,6 +16,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 			{
 				traces.GET("", handler.ListTraces)
 				traces.GET("/:trace_id", handler.GetTrace)
+				traces.GET("/:trace_id/spans", handler.GetTraceSpans)
 				traces.GET("/:trace_id/stream", handler.GetTraceStream)
 			}
 			tracesWrite := v2.Group("/traces", middleware.TrustedHeaderAuth(), middleware.RequireTraceWrite)
