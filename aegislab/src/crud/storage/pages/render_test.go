@@ -116,17 +116,38 @@ func TestFrontmatterTitleOverridesSiteTitle(t *testing.T) {
 }
 
 // TestXSS_RawScriptTagEscaped: a `<script>` block in markdown source must
-// never appear in the rendered output. goldmark without WithUnsafe drops
-// raw HTML to `<!-- raw HTML omitted -->` comments.
+// never appear in the rendered markdown body. The page template itself
+// embeds <script> tags for KaTeX + Mermaid, so we scope the check to the
+// `<main class="markdown-body">…</main>` region only.
 func TestXSS_RawScriptTagEscaped(t *testing.T) {
 	html := renderHelper(t, `<script>alert(1)</script>`, "index.md")
-	lower := strings.ToLower(html)
+	body := extractMarkdownBody(t, html)
+	lower := strings.ToLower(body)
 	if strings.Contains(lower, "<script") {
-		t.Fatalf("raw <script> leaked into output:\n%s", html)
+		t.Fatalf("raw <script> leaked into body:\n%s", body)
 	}
-	if strings.Contains(html, "alert(1)") {
-		t.Fatalf("script body leaked into output:\n%s", html)
+	if strings.Contains(body, "alert(1)") {
+		t.Fatalf("script body leaked into body:\n%s", body)
 	}
+}
+
+// extractMarkdownBody pulls the rendered content out of the page shell so
+// XSS assertions don't get tripped up by the template's own <script> tags
+// (KaTeX, Mermaid). Falls the test if the marker is missing.
+func extractMarkdownBody(t *testing.T, html string) string {
+	t.Helper()
+	const open = `<main class="markdown-body">`
+	const close = `</main>`
+	i := strings.Index(html, open)
+	if i < 0 {
+		t.Fatalf("page shell missing markdown body marker:\n%s", html)
+	}
+	rest := html[i+len(open):]
+	j := strings.Index(rest, close)
+	if j < 0 {
+		t.Fatalf("page shell missing markdown body close marker:\n%s", html)
+	}
+	return rest[:j]
 }
 
 // TestXSS_JavaScriptHrefInRawHTML: a raw `<a href="javascript:…">` must

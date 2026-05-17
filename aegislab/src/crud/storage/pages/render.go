@@ -104,9 +104,13 @@ func (h *RenderHandler) serveRaw(c *gin.Context, site *PageSite, cleanedPath str
 		return
 	}
 	defer func() { _ = rc.Close() }()
-	ct := meta.ContentType
+	// Prefer extension-derived MIME so historical uploads that were stored
+	// with a generic `application/octet-stream` still render correctly —
+	// browsers refuse `<img src=".../foo.svg">` served as octet-stream
+	// even when the bytes are a valid SVG.
+	ct := mime.TypeByExtension(filepath.Ext(cleanedPath))
 	if ct == "" {
-		ct = mime.TypeByExtension(filepath.Ext(cleanedPath))
+		ct = meta.ContentType
 	}
 	if ct == "" {
 		ct = "application/octet-stream"

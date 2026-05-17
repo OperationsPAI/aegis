@@ -9,14 +9,51 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark-highlighting/v2"
 	meta "github.com/yuin/goldmark-meta"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 )
+
+// htmlSanitizer is the allow-list applied to user-supplied markdown HTML.
+// We enable goldmark's WithUnsafe so raw `<details>`, `<video>`, `<kbd>`,
+// inline SVG, etc. survive the renderer; the bluemonday pass then strips
+// `<script>`, event handlers, and any other XSS vector before the body is
+// injected into the page template.
+//
+// Built once at package init — bluemonday policies are read-only after
+// construction and safe to share across goroutines.
+var htmlSanitizer = func() *bluemonday.Policy {
+	p := bluemonday.UGCPolicy()
+	// UGCPolicy doesn't cover HTML5 media; allow the common video / audio
+	// + their <source> children so embedded clips work.
+	p.AllowElements("video", "audio", "source", "track")
+	p.AllowAttrs("controls", "autoplay", "loop", "muted", "poster", "preload", "playsinline", "width", "height").OnElements("video", "audio")
+	p.AllowAttrs("src", "type", "media").OnElements("source")
+	p.AllowAttrs("src", "kind", "srclang", "label", "default").OnElements("track")
+	// Allow the chroma-highlighted code blocks to keep their inline style
+	// attributes — the GFM renderer emits color spans rather than classes,
+	// and stripping `style` would flatten every code listing back to mono
+	// black text. bluemonday's style sanitizer keeps it safe.
+	p.AllowStyles("color", "background-color", "font-weight").Globally()
+	// Mermaid loader needs to find `<pre><code class="language-mermaid">`;
+	// UGCPolicy already allows `class` on those, but keep it explicit so
+	// future policy upgrades don't silently break the loader.
+	p.AllowAttrs("class").OnElements("code", "pre", "span", "div")
+	// Anchor IDs from goldmark's auto-heading-id extension; needed so
+	// footnote backrefs and TOC anchors keep working.
+	p.AllowAttrs("id").Globally()
+	// UGCPolicy whitelists http/https/mailto. Extend to tel: so phone
+	// links from markdown survive (UGCPolicy strips unknown schemes
+	// silently).
+	p.AllowURLSchemes("http", "https", "mailto", "tel")
+	return p
+}()
 
 //go:embed assets/*
 var assetsFS embed.FS
@@ -73,9 +110,12 @@ func RenderMarkdown(in RenderInput) ([]byte, error) {
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 		),
-		// Deliberately no html.WithUnsafe(): raw HTML in user-supplied
-		// markdown is escaped by goldmark's default. This is the only
-		// XSS gate — the body is then injected as template.HTML.
+		goldmark.WithRendererOptions(
+			// Let raw HTML through goldmark — `<details>`, `<video>`,
+			// `<kbd>`, inline SVG, etc. The bluemonday pass below is
+			// the actual XSS gate.
+			html.WithUnsafe(),
+		),
 	)
 
 	ctx := parser.NewContext()
@@ -86,6 +126,7 @@ func RenderMarkdown(in RenderInput) ([]byte, error) {
 	if err := md.Renderer().Render(&body, in.Source, doc); err != nil {
 		return nil, fmt.Errorf("render markdown: %w", err)
 	}
+	sanitized := htmlSanitizer.SanitizeBytes(body.Bytes())
 
 	title := in.SiteTitle
 	if t := metaTitle(ctx); t != "" {
@@ -100,7 +141,7 @@ func RenderMarkdown(in RenderInput) ([]byte, error) {
 		SiteTitle: firstNonEmpty(in.SiteTitle, in.Slug),
 		Slug:      in.Slug,
 		NavItems:  buildNav(in.Slug, in.CurrentPath, in.MarkdownPaths),
-		Body:      template.HTML(body.String()), //nolint:gosec // goldmark configured without WithUnsafe; raw HTML in source is escaped
+		Body:      template.HTML(sanitized), //nolint:gosec // bluemonday UGC policy sanitizes the rendered body above
 	}
 	var out bytes.Buffer
 	if err := pageTemplate.Execute(&out, view); err != nil {
