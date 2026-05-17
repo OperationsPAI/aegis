@@ -13,25 +13,7 @@ import (
 	"aegis/cli/output"
 )
 
-// pedestal_reclaim.go: aegisctl-side surface for the NamespaceReclaimer in
-// the backend. The CLI lets an operator preview decisions (default) or
-// trigger a one-shot reclaim against the live cluster via helm + kubectl
-// shell-outs. The in-backend reconciler runs the same logic on its own
-// schedule — see core/orchestrator/namespace_reclaimer.go for the
-// authoritative predicate set.
-//
-// State sources used here:
-//   helm list -A -o json      → release name, namespace, last_deployed
-//   kubectl get ns -o json     → labels (managed-by check)
-//   kubectl api-resources + kubectl get <gvr> → active chaos CRs per ns
-//
-// The Redis ns-lock predicate is NOT checked from the CLI (no redis access);
-// the operator should trust that the backend reconciler will respect that
-// invariant. The CLI surfaces this gap as a column note when --apply is
-// used.
-
 var (
-	reclaimDryRun           bool
 	reclaimApply            bool
 	reclaimSystem           string
 	reclaimMax              int
@@ -47,7 +29,7 @@ whose helm release has been idle past the configured TTL and either print a
 decision table (default) or perform the helm-uninstall + namespace-delete
 sequence.
 
-By default this is a DRY RUN. Pass --apply to actually delete. Predicates
+By default this is a DRY RUN — only --apply actually deletes. Predicates
 mirror the backend NamespaceReclaimer:
 
   1. namespace name matches a registered system's ns_pattern
@@ -65,20 +47,13 @@ running, prefer running this CLI from outside the active window.`,
   aegisctl pedestal reclaim --apply --max 5              # actually reclaim, up to 5
   aegisctl pedestal reclaim --apply --include-unlabeled  # catch legacy sockshop0..9`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// --apply wins over the default --dry-run=true; the operator must
-		// be explicit to actually delete, but doesn't have to also pass
-		// --dry-run=false.
-		if cmd.Flags().Changed("dry-run") && !reclaimDryRun && !reclaimApply {
-			return fmt.Errorf("--dry-run=false alone has no effect; pass --apply to actually delete")
-		}
 		apply := reclaimApply && !flagDryRun
 		return runPedestalReclaim(apply, reclaimSystem, reclaimMax, reclaimIdleTTLHoursFlag, reclaimIncludeUnlabeled)
 	},
 }
 
 func init() {
-	pedestalReclaimCmd.Flags().BoolVar(&reclaimDryRun, "dry-run", true, "Preview decisions without deleting (default true)")
-	pedestalReclaimCmd.Flags().BoolVar(&reclaimApply, "apply", false, "Actually perform helm uninstall + namespace delete")
+	pedestalReclaimCmd.Flags().BoolVar(&reclaimApply, "apply", false, "Actually perform helm uninstall + namespace delete (default: dry-run via root --dry-run=true)")
 	pedestalReclaimCmd.Flags().StringVar(&reclaimSystem, "system", "", "Filter to a single system (matched against ns_pattern). Empty = all systems.")
 	pedestalReclaimCmd.Flags().IntVar(&reclaimMax, "max", 0, "Maximum reclaims per invocation. 0 = no limit (manual-mode default).")
 	pedestalReclaimCmd.Flags().IntVar(&reclaimIdleTTLHoursFlag, "idle-ttl-hours", 6, "Idle TTL in hours; releases LastDeployed before now - TTL are eligible.")
@@ -106,19 +81,15 @@ type cliReclaimDecision struct {
 	Reason       string
 }
 
-// systemNsPatterns is the static fallback used when the CLI cannot read the
-// backend's `injection.system.*` config. byte-cluster's current pool maps
-// 1:1 to these prefixes. Operators can override by passing --system <name>
-// against a name not in this table (we'll skip-with-warning).
+// Mirrors chaos-system registrations in dynamic config; update when a new system is registered.
 var systemNsPatterns = map[string]string{
-	"hs":         `^hs\d+$`,
-	"ts":         `^ts\d+$`,
-	"sn":         `^sn\d+$`,
-	"mm":         `^mm\d+$`,
-	"tea":        `^tea\d+$`,
-	"sockshop":   `^sockshop\d+$`,
-	"otel-demo":  `^otel-demo\d+$`,
-	"otel_demo":  `^otel-demo\d+$`,
+	"hs":        `^hs\d+$`,
+	"ts":        `^ts\d+$`,
+	"sn":        `^sn\d+$`,
+	"mm":        `^mm\d+$`,
+	"tea":       `^tea\d+$`,
+	"sockshop":  `^sockshop\d+$`,
+	"otel-demo": `^otel-demo\d+$`,
 }
 
 func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHours int, includeUnlabeled bool) error {
@@ -281,9 +252,10 @@ func listHelmReleases() ([]helmReleaseRecord, error) {
 	return rows, nil
 }
 
-// parseHelmTime tolerates the two formats helm emits: RFC3339Nano with
-// zone offset, and the older "2006-01-02 15:04:05.000000000 -0700 MST"
-// shape. The CLI's job is to surface whatever helm gives us.
+// parseHelmTime tolerates the shapes helm emits across versions. byte-cluster
+// `helm list -A -o json` on helm 3.13 emits the offset-duplicated form
+// "2026-05-03 10:42:07.422858648 +0800 +0800" where older versions / `helm
+// status` would put an MST-style zone abbreviation; both layouts are listed.
 func parseHelmTime(s string) (time.Time, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -292,6 +264,8 @@ func parseHelmTime(s string) (time.Time, error) {
 	layouts := []string{
 		time.RFC3339Nano,
 		time.RFC3339,
+		"2006-01-02 15:04:05.999999999 -0700 -0700",
+		"2006-01-02 15:04:05 -0700 -0700",
 		"2006-01-02 15:04:05.999999999 -0700 MST",
 		"2006-01-02 15:04:05 -0700 MST",
 	}

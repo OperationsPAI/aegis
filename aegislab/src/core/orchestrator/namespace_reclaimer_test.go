@@ -248,6 +248,13 @@ type fakeLocks struct {
 	mu     sync.Mutex
 	locked map[string]bool
 	err    error
+	// callsByNS lets a test assert how many times IsActive was probed per
+	// ns (snapshot vs. pre-uninstall recheck).
+	callsByNS map[string]int
+	// secondCallLocked, when set for a ns, flips IsActive's return value
+	// to true on the SECOND call onward for that ns — the race window
+	// fixture for the snapshot-then-acquire path.
+	secondCallLocked map[string]bool
 }
 
 func (f *fakeLocks) IsActive(ctx context.Context, namespace string, now time.Time) (bool, error) {
@@ -255,6 +262,13 @@ func (f *fakeLocks) IsActive(ctx context.Context, namespace string, now time.Tim
 	defer f.mu.Unlock()
 	if f.err != nil {
 		return false, f.err
+	}
+	if f.callsByNS == nil {
+		f.callsByNS = map[string]int{}
+	}
+	f.callsByNS[namespace]++
+	if f.secondCallLocked[namespace] && f.callsByNS[namespace] >= 2 {
+		return true, nil
 	}
 	return f.locked[namespace], nil
 }
@@ -267,14 +281,12 @@ func (f fakeSystems) GetAll() map[string]config.ChaosSystemConfig { return f.all
 
 func newTestReclaimer(now time.Time, helmF *fakeHelm, k8sF *fakeK8s, locks *fakeLocks, systems map[string]config.ChaosSystemConfig) *NamespaceReclaimer {
 	return &NamespaceReclaimer{
-		helm:        helmF,
-		helmDrop:    helmF,
-		k8s:         k8sF,
-		locks:       locks,
-		systems:     fakeSystems{all: systems},
-		now:         func() time.Time { return now },
-		uninstallTO: time.Second,
-		deleteTO:    time.Second,
+		helm:     helmF,
+		helmDrop: helmF,
+		k8s:      k8sF,
+		locks:    locks,
+		systems:  fakeSystems{all: systems},
+		now:      func() time.Time { return now },
 	}
 }
 
@@ -431,6 +443,40 @@ func TestReclaimer_TickRedisErrorTreatsAsLocked(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, processed)
 	require.Empty(t, k8sF.deleted)
+}
+
+// Allocator submits the ns AFTER snapshot but BEFORE uninstall: the
+// pre-uninstall re-probe must see the new lock and skip. Without the
+// recheck the reconciler would delete a ns that's now claimed by a live
+// inject.
+func TestReclaimer_TickLockAcquiredAfterSnapshotSkipsUninstall(t *testing.T) {
+	now := mustParse(t, "2026-05-17T12:00:00Z")
+	helmF := newFakeHelm()
+	helmF.releases["hs7/hs7"] = &helm.ReleaseInfo{LastDeployed: now.Add(-30 * time.Hour)}
+	k8sF := &fakeK8s{
+		namespaces: []string{"hs7"},
+		labels:     map[string]map[string]string{"hs7": {managedByAegisLabel: managedByAegisValue}},
+	}
+	systems := map[string]config.ChaosSystemConfig{"hs": {NsPattern: `^hs\d+$`}}
+	withReclaimConfig(t, map[string]any{
+		"helm.reclaim.enabled":               true,
+		"helm.reclaim.idle_ttl_hours":        6,
+		"helm.reclaim.max_deletes_per_tick":  5,
+		"helm.reclaim.require_managed_label": true,
+	})
+	locks := &fakeLocks{
+		locked:           map[string]bool{},
+		secondCallLocked: map[string]bool{"hs7": true},
+	}
+	r := newTestReclaimer(now, helmF, k8sF, locks, systems)
+
+	candidates, processed, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, candidates, "snapshot saw an eligible candidate")
+	require.Equal(t, 0, processed, "recheck before uninstall must veto")
+	require.Empty(t, helmF.uninstalled, "no helm uninstall must fire")
+	require.Empty(t, k8sF.deleted, "no namespace delete must fire")
+	require.GreaterOrEqual(t, locks.callsByNS["hs7"], 2, "expected snapshot + recheck calls")
 }
 
 func TestReclaimer_TickActiveChaosBlocks(t *testing.T) {

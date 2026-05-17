@@ -383,6 +383,62 @@ func TestAllocateBootstrapsWhenNoEmptySlotAvailable(t *testing.T) {
 	}
 }
 
+// TestAllocateHoleFillsEvenWithoutAllowBootstrap pins that Pass 1.5 fires
+// regardless of AllowBootstrap. Hole-fill at index < count reuses an
+// already-counted slot — it never extends the pool — so the bootstrap gate
+// (which only governs Pass 2's count bump) must NOT veto it. Without this,
+// the reclaimer's "pool can shrink to 0" promise is unreachable on the
+// default AllowBootstrap=false submit path.
+func TestAllocateHoleFillsEvenWithoutAllowBootstrap(t *testing.T) {
+	const system = "allocholenoboot"
+	cleanup := seedSockshopSystemInViper(t, system, 3)
+	defer cleanup()
+
+	// Slots 0..2 all probe-empty (reclaimer deleted them). Without the
+	// gate fix, emptySlotIdx would never be set on the AllowBootstrap=false
+	// path and Pass 2 would return ErrPoolExhausted.
+	withAllocSeams(t,
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string, ttl time.Duration) (bool, error) {
+			return true, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, key, val string) (int64, error) {
+			return 1, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, now time.Time) (bool, error) {
+			return false, nil
+		},
+		func(ctx context.Context, r *redisinfra.Gateway, ns string, endTime time.Time, traceID string, now time.Time) error {
+			return nil
+		},
+	)
+
+	probe := func(ctx context.Context, ns string) (bool, error) { return false, nil }
+
+	writer := &fakeCountWriter{}
+	res, err := AllocateNamespaceForRestart(
+		context.Background(),
+		&redisinfra.Gateway{},
+		system,
+		time.Now().Add(time.Hour),
+		"trace-holenoboot",
+		probe,
+		AllocateOptions{AllowBootstrap: false, CountWriter: writer},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := fmt.Sprintf("%s0", system)
+	if res.Namespace != want {
+		t.Fatalf("namespace = %q, want %q (lowest-index hole-fill must work without AllowBootstrap)", res.Namespace, want)
+	}
+	if !res.Fresh {
+		t.Fatalf("Fresh = false, want true (recycled empty slot needs RestartPedestal helm-install)")
+	}
+	if len(writer.calls) != 0 {
+		t.Fatalf("EnsureCountForNamespace called %v; hole-fill reuses budget, never bumps count", writer.calls)
+	}
+}
+
 // TestAllocLockTTLCoversWorstCase pins the TTL contract — bumped from 10s
 // to >=60s after the #167 review. The previous 10s value let real-world
 // allocations cross the TTL when etcd writes or k8s API hiccuped.

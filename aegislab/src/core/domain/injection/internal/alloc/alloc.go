@@ -212,8 +212,11 @@ func AllocateNamespaceForRestart(
 			if !hasWorkload {
 				// Remember the lowest-index empty hole; Pass 1.5
 				// will fill it (treated as Fresh) after the
-				// workload-bearing scan completes.
-				if opts.AllowBootstrap && emptySlotIdx == -1 {
+				// workload-bearing scan completes. Hole-fill is
+				// reuse of already-counted budget — it never
+				// extends the pool, so AllowBootstrap (which only
+				// gates Pass 2's count bump) must not gate it.
+				if emptySlotIdx == -1 {
 					emptySlotIdx = idx
 				}
 				continue
