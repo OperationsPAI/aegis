@@ -117,10 +117,15 @@ func buildSafeParquetSQL(ctx context.Context, db *sql.DB, filePath string) (stri
 
 	var columns []string
 	for rows.Next() {
-		var colName, colType, null, key, def, extra string
+		var colName, colType string
+		var null, key, def, extra sql.NullString
 		if err := rows.Scan(&colName, &colType, &null, &key, &def, &extra); err != nil {
 			return "", err
 		}
+		_ = null
+		_ = key
+		_ = def
+		_ = extra
 
 		quotedName := fmt.Sprintf("\"%s\"", strings.ReplaceAll(colName, "\"", "\"\""))
 		normalized := strings.ToUpper(strings.TrimSpace(colType))
@@ -283,7 +288,8 @@ func describeParquetColumns(ctx context.Context, db *sql.DB, parquetPath string)
 
 	var out []DatapackColumnSchema
 	for rows.Next() {
-		var name, typ, null, key, def, extra string
+		var name, typ string
+		var null, key, def, extra sql.NullString
 		if err := rows.Scan(&name, &typ, &null, &key, &def, &extra); err != nil {
 			return nil, err
 		}
