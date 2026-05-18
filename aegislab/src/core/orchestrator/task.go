@@ -260,10 +260,11 @@ func processTask(ctx context.Context, taskData string, deps RuntimeDeps) {
 	}
 
 	// Previously, ctx is an empty context.
-	// ExtractContext injects the context information into the context
-	traceCtx, taskCtx := extractContext(&task)
-	traceSpan := trace.SpanFromContext(traceCtx)
-	defer traceSpan.End()
+	// extractContext rebuilds the trace's root SpanContext (from carrier
+	// or DB) and opens a stage + task span underneath it.
+	stageCtx, taskCtx := extractContext(&task, deps.DB)
+	stageSpan := trace.SpanFromContext(stageCtx)
+	defer stageSpan.End()
 
 	taskSpan := trace.SpanFromContext(taskCtx)
 	defer taskSpan.End()
@@ -277,45 +278,110 @@ func processTask(ctx context.Context, taskData string, deps RuntimeDeps) {
 	taskDuration.WithLabelValues(consts.GetTaskTypeName(task.Type)).Observe(time.Since(startTime).Seconds())
 }
 
-// ExtractContext builds the trace and task contexts from a task
+// preInstrumentationWarnOnce ensures the "pre-instrumentation trace" warning
+// fires at most once per worker process for legacy traces missing the
+// persisted OTel root SpanContext (rows created before the 2026-05 schema
+// change). The warning is informational — the trace still executes, just
+// without the unified-TraceID coverage.
+var preInstrumentationWarnOnce sync.Once
+
+// extractContext builds the stage and task contexts from a task.
 //
-// Context hierarchy:
-// 1. Always have group context
-// 2.1 If there is no trace carrier, create a new trace span
-// 2.2 If there is a trace carrier, extract the trace context
-// 2.3 Always create a new task span
-func extractContext(task *dto.UnifiedTask) (context.Context, context.Context) {
-	var traceCtx context.Context
-	var traceSpan trace.Span
+// Context hierarchy (new):
+//  1. Reconstruct the trace's persisted root SpanContext (from
+//     task.RootTraceCarrier if present, else from the Trace row's
+//     OTelTraceID/OTelRootSpanID columns).
+//  2. Open a stage span as a child of the root SpanContext.
+//  3. Open a task ("consume <Type>") span as a child of the stage span.
+//
+// Graceful degradation: traces created before the OTel columns existed have
+// neither carrier nor persisted IDs. Fall back to per-pickup synthesis (one
+// TraceId per pickup) and emit a once-per-worker warning so partial
+// coverage is visible.
+func extractContext(task *dto.UnifiedTask, db *gorm.DB) (context.Context, context.Context) {
+	var stageCtx context.Context
 
-	if task.TraceCarrier != nil {
-		// Means it is a father span
-		traceCtx = task.GetTraceCtx()
-		logrus.WithField("task_id", task.TaskID).WithField("task_type", consts.GetTaskTypeName(task.Type)).Infof("Initial task group")
-	} else {
-		// Means it is a grand father span
+	rootCtx, ok := resolveRootContext(task, db)
+	if !ok {
+		preInstrumentationWarnOnce.Do(func() {
+			logrus.WithField("trace_id", task.TraceID).
+				Warn("trace pre-instrumentation; OTel coverage incomplete (no RootTraceCarrier and no persisted OTel columns)")
+		})
 		groupCtx := task.GetGroupCtx()
-
-		// Create father first
-		traceCtx, traceSpan = otel.Tracer("rcabench/trace").Start(groupCtx, fmt.Sprintf("start_task/%s", consts.GetTaskTypeName(task.Type)), trace.WithAttributes(
-			attribute.String("trace_id", task.TraceID),
-		))
-
-		// Inject father into the carrier
-		task.SetTraceCtx(traceCtx)
-
-		traceSpan.SetStatus(codes.Ok, fmt.Sprintf("Started processing task trace %s", task.TraceID))
-		logrus.WithField("task_id", task.TaskID).WithField("task_type", consts.GetTaskTypeName(task.Type)).Infof("Subsequent task")
+		var fallbackSpan trace.Span
+		stageCtx, fallbackSpan = otel.Tracer("rcabench/trace").Start(groupCtx,
+			fmt.Sprintf("stage/%s", consts.GetTaskTypeName(task.Type)),
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(
+				attribute.String("aegis.trace_id", task.TraceID),
+				attribute.Bool("aegis.pre_instrumentation", true),
+			),
+		)
+		fallbackSpan.SetStatus(codes.Ok, fmt.Sprintf("Started processing task trace %s", task.TraceID))
+	} else {
+		stageAttrs := []attribute.KeyValue{
+			attribute.String("aegis.trace_id", task.TraceID),
+			attribute.String("aegis.task_id", task.TaskID),
+			attribute.String("aegis.task_type", consts.GetTaskTypeName(task.Type)),
+		}
+		if task.StuckRecovered {
+			stageAttrs = append(stageAttrs, attribute.Bool("aegis.stuck_recovered", true))
+		}
+		stageCtx, _ = otel.Tracer("rcabench/trace").Start(rootCtx,
+			fmt.Sprintf("stage/%s", consts.GetTaskTypeName(task.Type)),
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(stageAttrs...),
+		)
 	}
 
-	taskCtx, _ := otel.Tracer("rcabench/task").Start(traceCtx,
+	// Keep the per-pickup TraceCarrier populated for K8s annotation paths
+	// that still propagate via the legacy carrier slot.
+	task.SetTraceCtx(stageCtx)
+
+	taskCtx, _ := otel.Tracer("rcabench/task").Start(stageCtx,
 		fmt.Sprintf("consume %s task", consts.GetTaskTypeName(task.Type)),
 		trace.WithAttributes(
 			attribute.String("task_id", task.TaskID),
 			attribute.String("task_type", consts.GetTaskTypeName(task.Type)),
 		))
 
-	return traceCtx, taskCtx
+	return stageCtx, taskCtx
+}
+
+// resolveRootContext reconstructs the trace's root SpanContext from the
+// task's RootTraceCarrier (preferred — no DB hit) or from the persisted
+// Trace row's OTel columns. Returns (ctx, true) when the root is available;
+// (background, false) for pre-instrumentation rows.
+func resolveRootContext(task *dto.UnifiedTask, db *gorm.DB) (context.Context, bool) {
+	if len(task.RootTraceCarrier) > 0 {
+		ctx := task.GetRootTraceCtx(context.Background())
+		sc := trace.SpanContextFromContext(ctx)
+		if sc.IsValid() {
+			return ctx, true
+		}
+	}
+
+	if db == nil || task.TraceID == "" {
+		return context.Background(), false
+	}
+
+	var row model.Trace
+	if err := db.Select("o_tel_trace_id", "o_tel_root_span_id", "o_tel_flags").
+		Where("id = ?", task.TraceID).
+		First(&row).Error; err != nil {
+		return context.Background(), false
+	}
+	if row.OTelTraceID == "" || row.OTelRootSpanID == "" {
+		return context.Background(), false
+	}
+
+	sc, err := tracing.NewRootSpanContext(row.OTelTraceID, row.OTelRootSpanID, row.OTelFlags)
+	if err != nil {
+		logrus.WithError(err).WithField("trace_id", task.TraceID).
+			Warn("failed to reconstruct OTel root SpanContext from DB row")
+		return context.Background(), false
+	}
+	return trace.ContextWithRemoteSpanContext(context.Background(), sc), true
 }
 
 // executeTaskWithRetry attempts to execute a task with retry logic

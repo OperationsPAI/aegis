@@ -550,9 +550,10 @@ func (e EventType) MarshalBinary() ([]byte, error) {
 }
 
 const (
-	TaskCarrier  = "task_carrier"
-	TraceCarrier = "trace_carrier"
-	GroupCarrier = "group_carrier"
+	TaskCarrier      = "task_carrier"
+	TraceCarrier     = "trace_carrier"
+	GroupCarrier     = "group_carrier"
+	RootTraceCarrier = "root_trace_carrier"
 )
 
 // K8s fields

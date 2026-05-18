@@ -18,6 +18,14 @@ type Trace struct {
 
 	LeafNum int `gorm:"not null;default:1"` // Number of leaf nodes in the trace DAG
 
+	// OTel root SpanContext persisted at trace creation. Workers and the
+	// reconciler reconstruct the root SpanContext from these columns so
+	// every per-pickup stage span parents at the same TraceID.
+	OTelTraceID     string `gorm:"size:32;index"` // 32-char hex OTel TraceID
+	OTelRootSpanID  string `gorm:"size:16"`       // 16-char hex SpanID of the synthetic root
+	OTelFlags       uint8  `gorm:"default:1"`     // TraceFlags (1 = sampled)
+	OTelRootEmitted bool   `gorm:"default:false"` // terminal-state emit CAS guard
+
 	State     consts.TraceState `gorm:"not null;default:0;index:idx_trace_type_state;index:idx_trace_project_state"` // Trace state (pending, running, completed, failed)
 	Status    consts.StatusType `gorm:"not null;default:1;index"`                                                    // Status: -1:deleted 0:disabled 1:enabled
 	CreatedAt time.Time         `gorm:"autoCreateTime"`                                                              // Creation time

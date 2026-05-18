@@ -101,9 +101,20 @@ type UnifiedTask struct {
 	ProjectID    int                      `json:"project_id"`                   // ID for the project (optional)
 	UserID       int                      `json:"user_id"`                      // ID of the user who created the task (optional)
 	State        consts.TaskState         `json:"state"`                        // Current state of the task
-	TraceCarrier propagation.MapCarrier   `json:"trace_carrier,omitempty"`      // Carrier for trace context
-	GroupCarrier propagation.MapCarrier   `json:"group_carrier,omitempty"`      // Carrier for group context
-	Extra        map[consts.TaskExtra]any `json:"extra,omitempty"`              // Additional metadata
+	TraceCarrier     propagation.MapCarrier   `json:"trace_carrier,omitempty"`      // Carrier for per-pickup span context (legacy)
+	GroupCarrier     propagation.MapCarrier   `json:"group_carrier,omitempty"`      // Carrier for group context
+	RootTraceCarrier propagation.MapCarrier   `json:"root_trace_carrier,omitempty"` // Carrier for the persisted root SpanContext; set once at trace creation and copied verbatim to every child task
+	Extra            map[consts.TaskExtra]any `json:"extra,omitempty"`              // Additional metadata
+
+	// EnqueuedAt is set at SubmitImmediateTask / SubmitDelayedTask time so
+	// processTask can emit a backdated queue.wait child span.
+	EnqueuedAt int64 `json:"enqueued_at,omitempty"`
+	// ExecuteAfter is set for delayed tasks so queue.wait spans can
+	// distinguish the intentional schedule delay from queue backlog.
+	ExecuteAfter int64 `json:"execute_after,omitempty"`
+	// StuckRecovered marks a task resubmitted by StuckTraceReconciler so
+	// extractContext can stamp a sentinel attribute on the stage span.
+	StuckRecovered bool `json:"stuck_recovered,omitempty"`
 }
 
 func (t *UnifiedTask) ConvertToTask() (*model.Task, error) {
@@ -174,10 +185,20 @@ func (t *UnifiedTask) GetAnnotations(ctx context.Context) (map[string]string, er
 		return nil, fmt.Errorf("failed to marshal mapcarrier of trace context: %w", err)
 	}
 
-	return map[string]string{
+	annotations := map[string]string{
 		consts.TaskCarrier:  string(taskCarrierBytes),
 		consts.TraceCarrier: string(traceCarrierBytes),
-	}, nil
+	}
+
+	if t.RootTraceCarrier != nil {
+		rootCarrierBytes, err := json.Marshal(t.RootTraceCarrier)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal mapcarrier of root trace context: %w", err)
+		}
+		annotations[consts.RootTraceCarrier] = string(rootCarrierBytes)
+	}
+
+	return annotations, nil
 }
 
 // GetLabels generates the labels for the task
@@ -246,4 +267,23 @@ func (t *UnifiedTask) SetGroupCtx(ctx context.Context) {
 	}
 
 	otel.GetTextMapPropagator().Inject(ctx, t.GroupCarrier)
+}
+
+// SetRootTraceCtx injects the root SpanContext into the root carrier. The
+// caller is expected to pass a context produced via
+// trace.ContextWithRemoteSpanContext(ctx, rootSC).
+func (t *UnifiedTask) SetRootTraceCtx(ctx context.Context) {
+	if t.RootTraceCarrier == nil {
+		t.RootTraceCarrier = make(propagation.MapCarrier)
+	}
+	otel.GetTextMapPropagator().Inject(ctx, t.RootTraceCarrier)
+}
+
+// GetRootTraceCtx extracts the root SpanContext from the root carrier on top
+// of the supplied parent context. Returns parent unchanged if no carrier set.
+func (t *UnifiedTask) GetRootTraceCtx(parent context.Context) context.Context {
+	if t.RootTraceCarrier == nil {
+		return parent
+	}
+	return otel.GetTextMapPropagator().Extract(parent, t.RootTraceCarrier)
 }

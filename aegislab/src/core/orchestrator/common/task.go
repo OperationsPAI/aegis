@@ -5,6 +5,7 @@ import (
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
+	"aegis/platform/tracing"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
+	otelpropagation "go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -100,6 +103,26 @@ func SubmitTaskWithDB(ctx context.Context, db *gorm.DB, redisGateway *redis.Gate
 		trace, err = t.ConvertToTrace(withAlgorithms, leafNum)
 		if err != nil {
 			return fmt.Errorf("failed to convert to trace: %w", err)
+		}
+
+		// Mint the root SpanContext NOW, persist it, and propagate via
+		// the new RootTraceCarrier slot. Downstream pickups reconstruct
+		// the same SpanContext via tracing.NewRootSpanContext so every
+		// stage span shares one OTel TraceId.
+		rootSC := tracing.MintRootSpanContext(ctx,
+			fmt.Sprintf("trace.root/%s", consts.GetTraceTypeName(trace.Type)),
+			trace.ID,
+			consts.GetTraceTypeName(trace.Type),
+		)
+		trace.OTelTraceID = rootSC.TraceID().String()
+		trace.OTelRootSpanID = rootSC.SpanID().String()
+		trace.OTelFlags = byte(rootSC.TraceFlags())
+		trace.OTelRootEmitted = false
+
+		if t.RootTraceCarrier == nil {
+			rootCtx := oteltrace.ContextWithRemoteSpanContext(ctx, rootSC)
+			t.RootTraceCarrier = make(otelpropagation.MapCarrier)
+			t.SetRootTraceCtx(rootCtx)
 		}
 	}
 
