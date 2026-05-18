@@ -9,6 +9,7 @@ import (
 	"aegis/platform/model"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	"github.com/spf13/viper"
 )
 
 // TestListInjectCandidatesReturnsFlatJSON pins the API contract for #181:
@@ -82,27 +83,97 @@ func TestListInjectCandidatesReturnsFlatJSON(t *testing.T) {
 	}
 }
 
-func TestListInjectCandidatesRejectsEmptyNamespace(t *testing.T) {
+// TestListInjectCandidatesAutoNamespaceFansOut pins the auto-namespace
+// behaviour: when the caller omits namespace, the service expands the
+// system's pool (Count=3 → bench-cand-auto0/1/2) and unions the per-namespace
+// enumerator output, deduping candidates whose identity matches across pool
+// slots.
+func TestListInjectCandidatesAutoNamespaceFansOut(t *testing.T) {
 	service, db, _ := newMetadataService(t)
-	const systemName = "bench-cand-empty"
+	const systemName = "bench-cand-auto"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
 
+	// Pool size = 3 so the auto-namespace fan-out has multiple slots to
+	// hit; the seed helper already wires ns_pattern=^bench-cand-auto\d+$.
+	viper.Set("injection.system."+systemName+".count", 3)
 	anchor := &model.DynamicConfig{
 		Key:          systemKey(systemName, fieldCount),
-		DefaultValue: "1",
+		DefaultValue: "3",
 		ValueType:    consts.ConfigValueTypeInt,
 	}
 	if err := db.Create(anchor).Error; err != nil {
 		t.Fatalf("seed anchor: %v", err)
 	}
 
-	_, err := service.ListInjectCandidates(context.Background(), systemName, "")
-	if err == nil {
-		t.Fatal("expected ListInjectCandidates to reject empty namespace")
+	calledNamespaces := make([]string, 0, 3)
+	prev := enumerateCandidatesFn
+	defer func() { enumerateCandidatesFn = prev }()
+	enumerateCandidatesFn = func(_ context.Context, _, namespace string) ([]guidedcli.GuidedConfig, error) {
+		calledNamespaces = append(calledNamespaces, namespace)
+		// Each pool slot exposes the same logical apps; dedup should
+		// collapse them into one row each.
+		return []guidedcli.GuidedConfig{
+			{System: systemName, SystemType: "ts", Namespace: namespace, App: "frontend", ChaosType: "PodKill"},
+			{System: systemName, SystemType: "ts", Namespace: namespace, App: "cart", ChaosType: "PodKill"},
+		}, nil
 	}
-	if !errors.Is(err, consts.ErrBadRequest) {
-		t.Errorf("error should wrap ErrBadRequest, got %v", err)
+
+	resp, err := service.ListInjectCandidates(context.Background(), systemName, "")
+	if err != nil {
+		t.Fatalf("ListInjectCandidates auto-namespace: %v", err)
+	}
+	if len(calledNamespaces) != 3 {
+		t.Fatalf("expected enumerator to be called once per pool slot (3), got %d: %v",
+			len(calledNamespaces), calledNamespaces)
+	}
+	if resp.Count != 2 || len(resp.Candidates) != 2 {
+		t.Fatalf("expected 2 deduplicated candidates, got count=%d candidates=%d",
+			resp.Count, len(resp.Candidates))
+	}
+	apps := map[string]bool{}
+	for _, c := range resp.Candidates {
+		apps[c.App] = true
+	}
+	if !apps["frontend"] || !apps["cart"] {
+		t.Errorf("expected dedup to keep both apps, got %v", apps)
+	}
+}
+
+func TestListInjectCandidatesAutoNamespaceEmptyPool(t *testing.T) {
+	service, db, _ := newMetadataService(t)
+	const systemName = "bench-cand-zero"
+	cleanup := seedSystemInViper(t, systemName, false)
+	defer cleanup()
+
+	// Count=0: no pool slots → empty response, no enumerator call.
+	viper.Set("injection.system."+systemName+".count", 0)
+	anchor := &model.DynamicConfig{
+		Key:          systemKey(systemName, fieldCount),
+		DefaultValue: "0",
+		ValueType:    consts.ConfigValueTypeInt,
+	}
+	if err := db.Create(anchor).Error; err != nil {
+		t.Fatalf("seed anchor: %v", err)
+	}
+
+	calls := 0
+	prev := enumerateCandidatesFn
+	defer func() { enumerateCandidatesFn = prev }()
+	enumerateCandidatesFn = func(_ context.Context, _, _ string) ([]guidedcli.GuidedConfig, error) {
+		calls++
+		return nil, errors.New("should not be called for empty pool")
+	}
+
+	resp, err := service.ListInjectCandidates(context.Background(), systemName, "")
+	if err != nil {
+		t.Fatalf("ListInjectCandidates auto-namespace empty pool: %v", err)
+	}
+	if calls != 0 {
+		t.Errorf("expected enumerator to be skipped for empty pool, got %d calls", calls)
+	}
+	if resp.Count != 0 || len(resp.Candidates) != 0 {
+		t.Errorf("expected empty candidates, got %+v", resp)
 	}
 }
 

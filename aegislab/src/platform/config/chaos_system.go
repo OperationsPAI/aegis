@@ -137,6 +137,26 @@ func (s *ChaosSystemConfig) IsEnabled() bool {
 	return s.Status == consts.CommonEnabled
 }
 
+// Namespaces enumerates the pool namespaces this system owns by expanding
+// NsPattern against the current Count (0..Count-1). Returns an empty slice
+// when the system is disabled, Count is non-positive, or NsPattern cannot be
+// converted to a sprintf template — callers that need a hard failure mode
+// should validate themselves.
+func (s *ChaosSystemConfig) Namespaces() []string {
+	if !s.IsEnabled() || s.Count <= 0 {
+		return nil
+	}
+	template := convertPatternToTemplate(s.NsPattern)
+	if template == "" {
+		return nil
+	}
+	out := make([]string, 0, s.Count)
+	for idx := 0; idx < s.Count; idx++ {
+		out = append(out, fmt.Sprintf(template, idx))
+	}
+	return out
+}
+
 // GetAllNamespaces generates a list of all namespaces based on the system count map
 func GetAllNamespaces() ([]string, error) {
 	systemConfigMap := GetChaosSystemConfigManager().GetAll()

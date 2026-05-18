@@ -328,16 +328,16 @@ func (h *Handler) MarkPrerequisite(c *gin.Context) {
 // N-round-trip walk through `aegisctl inject guided` for adversarial /
 // coverage-driven loops.
 //
-//	@Summary		List inject candidates for a system+namespace
-//	@Description	Bulk enumeration of every (app, chaos_type, target) tuple reachable for the given system short code and namespace. Numerical params (latency, cpu_load, ...) are NOT expanded — the caller fills those in before submitting. Replaces the previous N-round-trip walk through `aegisctl inject guided`.
+//	@Summary		List inject candidates for a system (optionally scoped to one namespace)
+//	@Description	Bulk enumeration of every (app, chaos_type, target) tuple reachable for the given system. When `namespace` is supplied results are scoped to that pool slot; when omitted the backend fans out across every namespace in the system's pool and returns the deduplicated union — used by InjectionCreate's auto-namespace mode where the concrete pool slot has not yet been allocated. Numerical params (latency, cpu_load, ...) are NOT expanded — the caller fills those in before submitting. Replaces the previous N-round-trip walk through `aegisctl inject guided`.
 //	@Tags			Systems
 //	@ID				list_system_inject_candidates
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			name		path		string										true	"System short code"
-//	@Param			namespace	query		string										true	"Target namespace (e.g. sockshop1)"
+//	@Param			namespace	query		string										false	"Target namespace (e.g. sockshop1). When omitted, returns the union across all pool namespaces."
 //	@Success		200			{object}	dto.GenericResponse[InjectCandidatesResp]	"Candidates retrieved"
-//	@Failure		400			{object}	dto.GenericResponse[any]					"Missing namespace or invalid system code"
+//	@Failure		400			{object}	dto.GenericResponse[any]					"Invalid system code"
 //	@Failure		404			{object}	dto.GenericResponse[any]					"System not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]					"k8s/resourcelookup failure"
 //	@Router			/api/v2/systems/by-name/{name}/inject-candidates [get]

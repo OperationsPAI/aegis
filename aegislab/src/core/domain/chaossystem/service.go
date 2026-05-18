@@ -609,43 +609,91 @@ func (s *Service) ListInjectCandidates(ctx context.Context, name, namespace stri
 		return nil, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
 	}
 	namespace = strings.TrimSpace(namespace)
-	if namespace == "" {
-		return nil, fmt.Errorf("namespace is required: %w", consts.ErrBadRequest)
-	}
-	if _, err := s.lookupByName(name); err != nil {
+	view, err := s.lookupByName(name)
+	if err != nil {
 		return nil, err
 	}
 
-	configs, err := enumerateCandidatesFn(ctx, name, namespace)
-	if err != nil {
-		// k8s/resourcelookup failures bubble up as 500. The CLI surfaces
-		// the wrapped error message so callers see "list pods in
-		// sockshop1: ..." rather than a bare "internal error".
-		return nil, fmt.Errorf("enumerate candidates for %s/%s: %w: %w", name, namespace, err, consts.ErrInternal)
+	// InjectionCreate's auto-namespace mode hits this endpoint before a
+	// concrete pool namespace has been allocated, so the request comes in
+	// with namespace="". Fan out across every namespace in the system's
+	// pool and union the results (dedup by candidate identity) so the
+	// wizard's app dropdown has a real list to show. The frontend already
+	// strips the per-namespace `Namespace` field from each candidate before
+	// rendering, so it's safe to return entries from arbitrary pool slots
+	// here.
+	namespaces := []string{namespace}
+	if namespace == "" {
+		namespaces = view.Cfg.Namespaces()
+		if len(namespaces) == 0 {
+			// No enumerable pool — return empty rather than fabricating.
+			return &InjectCandidatesResp{Count: 0, Candidates: []InjectCandidateResp{}}, nil
+		}
 	}
 
-	out := make([]InjectCandidateResp, 0, len(configs))
-	for _, c := range configs {
-		out = append(out, InjectCandidateResp{
-			System:        c.System,
-			SystemType:    c.SystemType,
-			Namespace:     c.Namespace,
-			App:           c.App,
-			ChaosType:     c.ChaosType,
-			Container:     c.Container,
-			TargetService: c.TargetService,
-			Domain:        c.Domain,
-			Class:         c.Class,
-			Method:        c.Method,
-			MutatorConfig: c.MutatorConfig,
-			Route:         c.Route,
-			HTTPMethod:    c.HTTPMethod,
-			Database:      c.Database,
-			Table:         c.Table,
-			Operation:     c.Operation,
-		})
+	seen := make(map[string]struct{})
+	out := make([]InjectCandidateResp, 0)
+	for _, ns := range namespaces {
+		configs, enumErr := enumerateCandidatesFn(ctx, name, ns)
+		if enumErr != nil {
+			// k8s/resourcelookup failures bubble up as 500. The CLI
+			// surfaces the wrapped error message so callers see "list
+			// pods in sockshop1: ..." rather than a bare "internal
+			// error". For the auto-namespace fan-out we still abort on
+			// the first failure: a partial union would silently hide
+			// misconfiguration in one pool slot, which is worse than a
+			// loud 500.
+			return nil, fmt.Errorf("enumerate candidates for %s/%s: %w: %w", name, ns, enumErr, consts.ErrInternal)
+		}
+		for _, c := range configs {
+			cand := InjectCandidateResp{
+				System:        c.System,
+				SystemType:    c.SystemType,
+				Namespace:     c.Namespace,
+				App:           c.App,
+				ChaosType:     c.ChaosType,
+				Container:     c.Container,
+				TargetService: c.TargetService,
+				Domain:        c.Domain,
+				Class:         c.Class,
+				Method:        c.Method,
+				MutatorConfig: c.MutatorConfig,
+				Route:         c.Route,
+				HTTPMethod:    c.HTTPMethod,
+				Database:      c.Database,
+				Table:         c.Table,
+				Operation:     c.Operation,
+			}
+			// In auto-namespace mode the same (app, chaos_type, target)
+			// tuple appears once per pool slot — dedup on the identity
+			// fields (Namespace deliberately excluded) so the wizard
+			// sees one entry per logical candidate.
+			key := candidateIdentityKey(cand, namespace == "")
+			if _, dup := seen[key]; dup {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, cand)
+		}
 	}
 	return &InjectCandidatesResp{Count: len(out), Candidates: out}, nil
+}
+
+// candidateIdentityKey produces a deterministic dedup key for one inject
+// candidate. When namespaceWildcard is true the Namespace field is dropped so
+// equivalent candidates across pool slots collapse to one row.
+func candidateIdentityKey(c InjectCandidateResp, namespaceWildcard bool) string {
+	parts := []string{
+		c.System, c.SystemType,
+		c.App, c.ChaosType, c.Container, c.TargetService,
+		c.Domain, c.Class, c.Method, c.MutatorConfig,
+		c.Route, c.HTTPMethod,
+		c.Database, c.Table, c.Operation,
+	}
+	if !namespaceWildcard {
+		parts = append(parts, c.Namespace)
+	}
+	return strings.Join(parts, "\x1f")
 }
 
 // MarkPrerequisite updates the status of one prerequisite. aegisctl is the
