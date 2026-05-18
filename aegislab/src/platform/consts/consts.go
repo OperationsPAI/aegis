@@ -583,6 +583,18 @@ const (
 	JobLabelDatasetID   = "dataset_id"
 	JobLabelExecutionID = "execution_id"
 	JobLabelTimestamp   = "timestamp"
+
+	// Pod metadata read by the node-local OTel collector's k8sattributes
+	// processor. The processor copies the trace-id annotation into log
+	// records as LogAttributes['trace_id'], joining pod stdout with the
+	// orchestrator's OTLP logs in ClickHouse. The DNS-style prefix avoids
+	// colliding with the bare-key labels above (which are already used as
+	// downward-API surfaces by some workloads).
+	AegisPodAnnotationTraceID = "aegis.io/trace-id"
+	AegisPodLabelComponent    = "aegis.io/component"
+
+	AegisComponentAlgorithm     = "algorithm"
+	AegisComponentBuildDatapack = "build-datapack"
 )
 
 type VolumeMountName string

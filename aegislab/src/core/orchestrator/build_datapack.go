@@ -161,6 +161,8 @@ func executeBuildDatapackWithDeps(ctx context.Context, task *dto.UnifiedTask, de
 			},
 		)
 
+		annotations, jobLabels = k8s.InjectAegisPodMetadata(annotations, jobLabels, task.TraceID, consts.AegisComponentBuildDatapack)
+
 		params := &datapackJobCreationParams{
 			jobName:     task.TaskID,
 			image:       payload.benchmark.ImageRef,

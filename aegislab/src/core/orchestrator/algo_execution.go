@@ -147,6 +147,8 @@ func executeAlgorithm(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDe
 			},
 		)
 
+		annotations, jobLabels = k8s.InjectAegisPodMetadata(annotations, jobLabels, task.TraceID, consts.AegisComponentAlgorithm)
+
 		params := &algoJobCreationParams{
 			jobName:     task.TaskID,
 			image:       payload.algorithm.ImageRef,

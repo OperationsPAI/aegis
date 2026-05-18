@@ -1,0 +1,99 @@
+{{- if and .Values.enabled .Values.daemonset.enabled }}
+# Node-local OTel Collector config — tails container stdout/stderr from
+# /var/log/pods, enriches each line with k8s.* attributes + the Aegis
+# trace-id annotation, and writes to the same ClickHouse `otel_logs`
+# table the centralized OTLP collector uses. The frontend filters by
+# LogAttributes['trace_id'], so pod stdout joins the orchestrator logs
+# under the same trace.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "otel-collector.fullname" . }}-daemonset-config
+data:
+  collector.yaml: |
+    receivers:
+      filelog:
+        include: [/var/log/pods/*_*/*/*.log]
+        # `end` avoids replaying everything that pre-dates the collector
+        # on a node — chosen on purpose: backfill is out of scope for
+        # the live-tail use case and would re-emit logs already in CH
+        # from the centralized OTLP path when both run side by side.
+        start_at: end
+        include_file_path: true
+        include_file_name: false
+        operators:
+          - type: container
+            format: containerd
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      k8sattributes:
+        auth_type: serviceAccount
+        passthrough: false
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.container.name
+            - k8s.node.name
+          annotations:
+            # tag_name becomes the LogAttributes key, which is what
+            # log_reader.QueryTraceLogs filters on (see
+            # src/platform/clickhouse/log_reader.go).
+            - tag_name: trace_id
+              key: {{ printf "%s" "aegis.io/trace-id" | quote }}
+              from: pod
+          labels:
+            - tag_name: aegis_component
+              key: {{ printf "%s" "aegis.io/component" | quote }}
+              from: pod
+            - tag_name: task_id
+              key: task_id
+              from: pod
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.name
+              - from: resource_attribute
+                name: k8s.namespace.name
+      resource:
+        attributes:
+          - key: deployment.scope
+            value: aegis
+            action: upsert
+          # Distinguishes node-local pod-stdout records from the
+          # centralized OTLP push pipeline if anyone wants to filter
+          # them apart in ClickHouse.
+          - key: source
+            value: pod-stdout
+            action: upsert
+      batch:
+        send_batch_size: 1000
+        timeout: 5s
+    exporters:
+      clickhouse:
+        endpoint: {{ .Values.clickhouse.endpoint | quote }}
+        database: {{ .Values.clickhouse.database | default "otel" | quote }}
+        logs_table_name: {{ .Values.clickhouse.logsTable | default "otel_logs" | quote }}
+        ttl: {{ .Values.clickhouse.ttl | default "72h" | quote }}
+        timeout: 5s
+        {{- if .Values.clickhouse.clusterName }}
+        cluster_name: {{ .Values.clickhouse.clusterName | quote }}
+        table_engine:
+          name: ReplicatedMergeTree
+        {{- end }}
+      debug:
+        verbosity: basic
+    service:
+      pipelines:
+        logs:
+          receivers: [filelog]
+          processors: [memory_limiter, k8sattributes, resource, batch]
+          exporters: [clickhouse, debug]
+{{- end }}

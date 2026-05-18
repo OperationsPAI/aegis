@@ -166,7 +166,8 @@ func createJob(ctx context.Context, jobConfig *JobConfig) error {
 				Completions: &jobConfig.Completions,
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: jobConfig.Labels,
+						Annotations: jobConfig.Annotations,
+						Labels:      jobConfig.Labels,
 					},
 					Spec: corev1.PodSpec{
 						ServiceAccountName: jobConfig.ServiceAccountName,
