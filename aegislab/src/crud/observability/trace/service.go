@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
@@ -22,10 +23,11 @@ type Service struct {
 	redis *redisinfra.Gateway
 	k8s   *k8sinfra.Gateway
 	spans SpanReader
+	logs  chinfra.LogReader
 }
 
-func NewService(repo *Repository, redis *redisinfra.Gateway, k8s *k8sinfra.Gateway, spans SpanReader) *Service {
-	return &Service{repo: repo, redis: redis, k8s: k8s, spans: spans}
+func NewService(repo *Repository, redis *redisinfra.Gateway, k8s *k8sinfra.Gateway, spans SpanReader, logs chinfra.LogReader) *Service {
+	return &Service{repo: repo, redis: redis, k8s: k8s, spans: spans, logs: logs}
 }
 
 // CancelTrace marks a trace as Cancelled and performs best-effort cleanup of

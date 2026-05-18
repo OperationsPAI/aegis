@@ -31,6 +31,21 @@ func (r *Repository) GetTraceByID(traceID string) (*model.Trace, error) {
 	return &trace, nil
 }
 
+// ListTasksByTraceID returns every (non-deleted) task row associated with the
+// trace. Used by the trace-logs endpoint to anchor the default log-window
+// start at the earliest task's CreatedAt. An empty slice (with no error) is a
+// valid result: the trace may exist with zero tasks recorded, or the trace
+// itself may not exist — both render the same empty-state UI on the frontend.
+func (r *Repository) ListTasksByTraceID(traceID string) ([]model.Task, error) {
+	var tasks []model.Task
+	if err := r.db.Model(&model.Task{}).
+		Where("trace_id = ? AND status != ?", traceID, consts.CommonDeleted).
+		Find(&tasks).Error; err != nil {
+		return nil, fmt.Errorf("list tasks for trace %s: %w", traceID, err)
+	}
+	return tasks, nil
+}
+
 // ListInFlightTaskIDsByTrace returns the IDs of Pending/Running/Rescheduled
 // tasks for the given trace, i.e. tasks that might still be sitting in redis
 // queues or executing in the cluster. Terminal tasks (Completed/Error/Cancelled)

@@ -13,6 +13,7 @@ import (
 type HandlerService interface {
 	GetTrace(context.Context, string) (*TraceDetailResp, error)
 	GetTraceSpans(context.Context, string) (*SpansResp, error)
+	GetTraceLogs(context.Context, string, *TraceLogQueryReq) (*TraceLogsResp, error)
 	ListTraces(context.Context, *ListTraceReq) (*dto.ListResp[TraceResp], error)
 	GetTraceStreamProcessor(context.Context, string) (*StreamProcessor, error)
 	ReadTraceStreamMessages(context.Context, string, string, int64, time.Duration) ([]redis.XStream, error)
