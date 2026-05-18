@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -16,6 +17,7 @@ import (
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
+	"aegis/platform/tracing"
 	container "aegis/core/domain/container"
 	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
@@ -432,11 +434,21 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 			consts.BuildDatapack:         *updatedItem,
 			consts.BuildDatasetVersionID: consts.DefaultInvalidID,
 		},
-		ParentTaskID: utils.StringPtr(taskID),
-		TraceID:      trace.ID,
-		GroupID:      trace.GroupID,
-		ProjectID:    trace.ProjectID,
-		State:        consts.TaskPending,
+		ParentTaskID:   utils.StringPtr(taskID),
+		TraceID:        trace.ID,
+		GroupID:        trace.GroupID,
+		ProjectID:      trace.ProjectID,
+		State:          consts.TaskPending,
+		StuckRecovered: true,
+	}
+
+	if trace.OTelTraceID != "" && trace.OTelRootSpanID != "" {
+		if sc, scErr := tracing.NewRootSpanContext(trace.OTelTraceID, trace.OTelRootSpanID, trace.OTelFlags); scErr == nil {
+			rootCtx := oteltrace.ContextWithRemoteSpanContext(ctx, sc)
+			buildTask.SetRootTraceCtx(rootCtx)
+		} else {
+			logEntry.WithError(scErr).Warn("reconciler: failed to reconstruct root SpanContext, skipping carrier injection")
+		}
 	}
 
 	if r.submitTask == nil {

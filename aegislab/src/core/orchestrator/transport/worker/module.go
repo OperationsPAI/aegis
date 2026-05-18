@@ -44,9 +44,10 @@ type Params struct {
 }
 
 type Lifecycle struct {
-	params    Params
-	StartFunc func(context.Context) error
-	StopFunc  func()
+	params        Params
+	StartFunc     func(context.Context) error
+	StopFunc      func()
+	rootLifecycle *consumer.RootSpanLifecycleManager
 }
 
 func newLifecycle(params Params) *Lifecycle {
@@ -78,6 +79,11 @@ func (r *Lifecycle) start(ctx context.Context) error {
 		return err
 	}
 
+	rootLifecycle := consumer.NewRootSpanLifecycleManager(params.DB, params.RedisGateway)
+	consumer.SetGlobalRootSpanLifecycleManager(rootLifecycle)
+	commonservice.SetOnTraceCreated(rootLifecycle.Spawn)
+	r.rootLifecycle = rootLifecycle
+
 	go consumer.StartScheduler(ctx, params.RedisGateway)
 	go consumer.ConsumeTasks(ctx, consumer.RuntimeDeps{
 		DB:                       params.DB,
@@ -101,6 +107,9 @@ func (r *Lifecycle) start(ctx context.Context) error {
 }
 
 func (r *Lifecycle) stop() {
+	if r.rootLifecycle != nil {
+		r.rootLifecycle.Shutdown(context.Background())
+	}
 	if r.StopFunc != nil {
 		r.StopFunc()
 	}

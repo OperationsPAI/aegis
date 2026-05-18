@@ -1,13 +1,27 @@
 package consumer
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
 	"aegis/platform/dto"
+	"aegis/platform/k8s"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 )
+
+// stubDatapackBackend lets the unit tests exercise getAlgoJobEnvVars without
+// pulling in the s3 / PVC backends.
+type stubDatapackBackend struct{}
+
+func (stubDatapackBackend) PathPrefix() string             { return "" }
+func (stubDatapackBackend) EnvVars() []corev1.EnvVar       { return nil }
+func (stubDatapackBackend) JoinPath(p, n string) string    { return filepath.Join(p, n) }
+func (stubDatapackBackend) VolumeMountConfigs(_ *k8s.Gateway) ([]k8s.VolumeMountConfig, error) {
+	return nil, nil
+}
 
 // TestGetAlgoJobEnvVars_PassesPedestalAsBenchmarkSystem locks in the contract
 // that the algo Job receives BENCHMARK_SYSTEM=<pedestal> when the datapack
@@ -32,7 +46,7 @@ func TestGetAlgoJobEnvVars_PassesPedestalAsBenchmarkSystem(t *testing.T) {
 		},
 	}
 
-	envVars, err := getAlgoJobEnvVars("task-1", 7, "/data", "/exp", payload)
+	envVars, err := getAlgoJobEnvVars("task-1", 7, "/data", "/exp", stubDatapackBackend{}, payload)
 	assert.NoError(t, err)
 
 	got := map[string]string{}
@@ -60,7 +74,7 @@ func TestGetAlgoJobEnvVars_OmitsBenchmarkSystemWhenPedestalUnknown(t *testing.T)
 		},
 	}
 
-	envVars, err := getAlgoJobEnvVars("task-2", 8, "/data", "/exp", payload)
+	envVars, err := getAlgoJobEnvVars("task-2", 8, "/data", "/exp", stubDatapackBackend{}, payload)
 	assert.NoError(t, err)
 
 	for _, e := range envVars {

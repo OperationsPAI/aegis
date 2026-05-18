@@ -187,17 +187,18 @@ func parseCollectPayload(payload map[string]any) (*collectionPayload, error) {
 // produceAlgorithmExeuctionTask produces an algorithm execution task into Redis
 func produceAlgorithmExeuctionTask(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, task *dto.UnifiedTask, payload map[string]any, index int) error {
 	newTask := &dto.UnifiedTask{
-		Type:         consts.TaskTypeRunAlgorithm,
-		Immediate:    true,
-		Payload:      payload,
-		Sequence:     index,
-		ParentTaskID: utils.StringPtr(task.TaskID),
-		TraceID:      task.TraceID,
-		GroupID:      task.GroupID,
-		ProjectID:    task.ProjectID,
-		UserID:       task.UserID,
-		State:        consts.TaskPending,
-		TraceCarrier: task.TraceCarrier,
+		Type:             consts.TaskTypeRunAlgorithm,
+		Immediate:        true,
+		Payload:          payload,
+		Sequence:         index,
+		ParentTaskID:     utils.StringPtr(task.TaskID),
+		TraceID:          task.TraceID,
+		GroupID:          task.GroupID,
+		ProjectID:        task.ProjectID,
+		UserID:           task.UserID,
+		State:            consts.TaskPending,
+		TraceCarrier:     task.TraceCarrier,
+		RootTraceCarrier: task.RootTraceCarrier,
 	}
 	err := common.SubmitTaskWithDB(ctx, db, redisGateway, newTask)
 	if err != nil {

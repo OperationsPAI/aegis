@@ -220,14 +220,15 @@ func handleBuildDatapackJobSucceeded(
 	}
 
 	task := &dto.UnifiedTask{
-		Type:         consts.TaskTypeRunAlgorithm,
-		Immediate:    true,
-		Payload:      payload,
-		ParentTaskID: utils.StringPtr(labels.taskID),
-		TraceID:      labels.traceID,
-		GroupID:      labels.groupID,
-		ProjectID:    labels.projectID,
-		UserID:       labels.userID,
+		Type:             consts.TaskTypeRunAlgorithm,
+		Immediate:        true,
+		Payload:          payload,
+		ParentTaskID:     utils.StringPtr(labels.taskID),
+		TraceID:          labels.traceID,
+		GroupID:          labels.groupID,
+		ProjectID:        labels.projectID,
+		UserID:           labels.userID,
+		RootTraceCarrier: annot.rootTraceCarrier,
 	}
 	task.SetTraceCtx(traceCtx)
 
@@ -378,14 +379,15 @@ func handleRunAlgorithmJobSucceeded(
 	}
 
 	task := &dto.UnifiedTask{
-		Type:         consts.TaskTypeCollectResult,
-		Immediate:    true,
-		Payload:      payload,
-		ParentTaskID: utils.StringPtr(labels.taskID),
-		TraceID:      labels.traceID,
-		GroupID:      labels.groupID,
-		ProjectID:    labels.projectID,
-		UserID:       labels.userID,
+		Type:             consts.TaskTypeCollectResult,
+		Immediate:        true,
+		Payload:          payload,
+		ParentTaskID:     utils.StringPtr(labels.taskID),
+		TraceID:          labels.traceID,
+		GroupID:          labels.groupID,
+		ProjectID:        labels.projectID,
+		UserID:           labels.userID,
+		RootTraceCarrier: annot.rootTraceCarrier,
 	}
 	task.SetTraceCtx(traceCtx)
 

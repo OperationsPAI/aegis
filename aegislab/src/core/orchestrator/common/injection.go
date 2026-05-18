@@ -14,18 +14,19 @@ import (
 
 func ProduceFaultInjectionTasksWithDB(ctx context.Context, db *gorm.DB, redisGateway *redis.Gateway, task *dto.UnifiedTask, injectTime time.Time, payload map[string]any) error {
 	newTask := &dto.UnifiedTask{
-		Type:         consts.TaskTypeFaultInjection,
-		Immediate:    false,
-		ExecuteTime:  injectTime.Unix(),
-		Payload:      payload,
-		ParentTaskID: utils.StringPtr(task.TaskID),
-		TraceID:      task.TraceID,
-		GroupID:      task.GroupID,
-		ProjectID:    task.ProjectID,
-		UserID:       task.UserID,
-		State:        consts.TaskPending,
-		TraceCarrier: task.TraceCarrier,
-		GroupCarrier: task.GroupCarrier,
+		Type:             consts.TaskTypeFaultInjection,
+		Immediate:        false,
+		ExecuteTime:      injectTime.Unix(),
+		Payload:          payload,
+		ParentTaskID:     utils.StringPtr(task.TaskID),
+		TraceID:          task.TraceID,
+		GroupID:          task.GroupID,
+		ProjectID:        task.ProjectID,
+		UserID:           task.UserID,
+		State:            consts.TaskPending,
+		TraceCarrier:     task.TraceCarrier,
+		GroupCarrier:     task.GroupCarrier,
+		RootTraceCarrier: task.RootTraceCarrier,
 	}
 	err := SubmitTaskWithDB(ctx, db, redisGateway, newTask)
 	if err != nil {

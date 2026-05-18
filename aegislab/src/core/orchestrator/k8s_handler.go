@@ -99,8 +99,9 @@ func (e *errorContext) Warn(logEntry *logrus.Entry, message string, err error) {
 }
 
 type k8sAnnotationData struct {
-	taskCarrier  propagation.MapCarrier
-	traceCarrier propagation.MapCarrier
+	taskCarrier      propagation.MapCarrier
+	traceCarrier     propagation.MapCarrier
+	rootTraceCarrier propagation.MapCarrier
 
 	algorithm *dto.ContainerVersionItem
 	benchmark *dto.ContainerVersionItem
@@ -371,15 +372,16 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 		}
 
 		task := &dto.UnifiedTask{
-			Type:         consts.TaskTypeBuildDatapack,
-			Immediate:    true,
-			Payload:      payload,
-			ParentTaskID: utils.StringPtr(parsedLabels.taskID),
-			TraceID:      parsedLabels.traceID,
-			GroupID:      parsedLabels.groupID,
-			ProjectID:    parsedLabels.projectID,
-			UserID:       parsedLabels.userID,
-			State:        consts.TaskPending,
+			Type:             consts.TaskTypeBuildDatapack,
+			Immediate:        true,
+			Payload:          payload,
+			ParentTaskID:     utils.StringPtr(parsedLabels.taskID),
+			TraceID:          parsedLabels.traceID,
+			GroupID:          parsedLabels.groupID,
+			ProjectID:        parsedLabels.projectID,
+			UserID:           parsedLabels.userID,
+			State:            consts.TaskPending,
+			RootTraceCarrier: parsedAnnotations.rootTraceCarrier,
 		}
 		task.SetTraceCtx(traceCtx)
 
@@ -651,6 +653,14 @@ func parseAnnotations(annotations map[string]string) (*k8sAnnotationData, error)
 	data := &k8sAnnotationData{
 		taskCarrier:  taskCarrier,
 		traceCarrier: traceCarrier,
+	}
+
+	if rootCarrierStr, ok := annotations[consts.RootTraceCarrier]; ok {
+		var rootCarrier propagation.MapCarrier
+		if err := json.Unmarshal([]byte(rootCarrierStr), &rootCarrier); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal '%s': %w", consts.RootTraceCarrier, err)
+		}
+		data.rootTraceCarrier = rootCarrier
 	}
 
 	if itemJson, exists := annotations[consts.CRDAnnotationBenchmark]; exists {

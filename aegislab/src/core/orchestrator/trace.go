@@ -229,9 +229,11 @@ func tryUpdateTraceStateCore(redisGateway *redis.Gateway, ctx context.Context, d
 	}
 
 	// Set end time for terminal states
+	terminal := false
 	if (inferredState == consts.TraceCompleted || inferredState == consts.TraceFailed) && trace.EndTime == nil {
 		now := time.Now()
 		updates["end_time"] = &now
+		terminal = true
 
 		// Publish to group-level stream for real-time group progress SSE
 		if trace.GroupID != "" {
@@ -256,6 +258,12 @@ func tryUpdateTraceStateCore(redisGateway *redis.Gateway, ctx context.Context, d
 		consts.GetTraceStateName(trace.State),
 		consts.GetTraceStateName(inferredState),
 		inferredEventType)
+
+	if terminal {
+		if mgr := GlobalRootSpanLifecycleManager(); mgr != nil {
+			mgr.SignalDone(ctx, traceID)
+		}
+	}
 
 	return nil
 }

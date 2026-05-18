@@ -20,6 +20,19 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// OnTraceCreated is invoked once per trace immediately after the DB insert
+// succeeds. The consumer package wires this to the rootSpanLifecycleManager
+// so the long-lived root span is spawned at the trace's actual StartTime.
+// Set via SetOnTraceCreated to avoid a cyclic import on consumer.
+var OnTraceCreated func(traceID, traceType, otelTraceID, otelRootSpanID string, flags uint8, startTime time.Time)
+
+// SetOnTraceCreated wires the trace-creation hook. Producer-side code calls
+// SubmitTaskWithDB before consumer-side fx wires the manager; callers must
+// tolerate a nil hook.
+func SetOnTraceCreated(fn func(traceID, traceType, otelTraceID, otelRootSpanID string, flags uint8, startTime time.Time)) {
+	OnTraceCreated = fn
+}
+
 // logEmitScheduledErr logs a failed task.scheduled event emission.
 func logEmitScheduledErr(taskID string, err error) {
 	logrus.WithField("task_id", taskID).
@@ -146,6 +159,17 @@ func SubmitTaskWithDB(ctx context.Context, db *gorm.DB, redisGateway *redis.Gate
 	})
 	if err != nil {
 		return err
+	}
+
+	if trace != nil && OnTraceCreated != nil {
+		OnTraceCreated(
+			trace.ID,
+			consts.GetTraceTypeName(trace.Type),
+			trace.OTelTraceID,
+			trace.OTelRootSpanID,
+			trace.OTelFlags,
+			trace.StartTime,
+		)
 	}
 
 	taskData, err := json.Marshal(t)
