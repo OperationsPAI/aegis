@@ -3,11 +3,13 @@ package preflight
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	chdriver "github.com/ClickHouse/clickhouse-go/v2"
@@ -27,17 +29,21 @@ import (
 )
 
 // LiveEnv is the production CheckEnv implementation. It reads config from a
-// viper-backed TOML file and lazily builds clients so that individual checks
-// can run without every dependency being present (e.g. running only
-// --check db.mysql should not require a kubeconfig).
+// viper-backed TOML file. Probe wrappers are constructed eagerly in
+// NewLiveEnv so the LiveEnv accessors are pure field reads with no
+// concurrent check-then-assign races. Each probe defers its own
+// expensive client open (kubeconfig parse, sql.DB pool, clickhouse
+// conn, redis client, etcd dial) to a sync.Once-guarded helper so that
+// running e.g. `aegisctl --check db.mysql` does not require a working
+// kubeconfig or etcd endpoint.
 type LiveEnv struct {
 	cfg         Config
-	k8s         K8sProbe
+	k8s         *liveK8s
 	net         NetProbe
-	clickhouse  ClickHouseProbe
-	mysql       MySQLProbe
-	redis       RedisProbe
-	etcd        EtcdProbe
+	clickhouse  *liveClickHouse
+	mysql       *liveMySQL
+	redis       *liveRedis
+	etcd        *liveEtcd
 	helm        HelmProbe
 	dialTimeout time.Duration
 }
@@ -68,7 +74,15 @@ func LoadConfig(explicitPath string) (Config, error) {
 		v.AddConfigPath(filepath.Join(cwd, "src"))
 		v.AddConfigPath(".")
 	}
-	_ = v.ReadInConfig()
+	if err := v.ReadInConfig(); err != nil {
+		// Missing file is fine — individual checks flag missing values
+		// themselves. Any other read error (malformed TOML, permission
+		// denied) is a real boot bug and must surface.
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) && !os.IsNotExist(err) {
+			return Config{}, fmt.Errorf("read preflight config: %w", err)
+		}
+	}
 
 	cfg := Config{
 		K8sNamespace:   v.GetString("k8s.namespace"),
@@ -94,59 +108,28 @@ func LoadConfig(explicitPath string) (Config, error) {
 }
 
 func NewLiveEnv(cfg Config) *LiveEnv {
-	return &LiveEnv{cfg: cfg, dialTimeout: 3 * time.Second}
-}
-
-func (e *LiveEnv) Config() Config { return e.cfg }
-
-func (e *LiveEnv) Net() NetProbe {
-	if e.net == nil {
-		e.net = &tcpProbe{timeout: e.dialTimeout}
+	dialTimeout := 3 * time.Second
+	return &LiveEnv{
+		cfg:         cfg,
+		dialTimeout: dialTimeout,
+		net:         &tcpProbe{timeout: dialTimeout},
+		k8s:         &liveK8s{},
+		clickhouse:  &liveClickHouse{cfg: cfg},
+		mysql:       &liveMySQL{cfg: cfg},
+		redis:       &liveRedis{cfg: cfg},
+		etcd:        &liveEtcd{cfg: cfg},
+		helm:        &liveHelm{timeout: 10 * time.Second},
 	}
-	return e.net
 }
 
-func (e *LiveEnv) K8s() K8sProbe {
-	if e.k8s == nil {
-		e.k8s = newLiveK8s()
-	}
-	return e.k8s
-}
-
-func (e *LiveEnv) ClickHouse() ClickHouseProbe {
-	if e.clickhouse == nil {
-		e.clickhouse = &liveClickHouse{cfg: e.cfg}
-	}
-	return e.clickhouse
-}
-
-func (e *LiveEnv) MySQL() MySQLProbe {
-	if e.mysql == nil {
-		e.mysql = &liveMySQL{cfg: e.cfg}
-	}
-	return e.mysql
-}
-
-func (e *LiveEnv) Redis() RedisProbe {
-	if e.redis == nil {
-		e.redis = &liveRedis{cfg: e.cfg}
-	}
-	return e.redis
-}
-
-func (e *LiveEnv) Etcd() EtcdProbe {
-	if e.etcd == nil {
-		e.etcd = &liveEtcd{cfg: e.cfg}
-	}
-	return e.etcd
-}
-
-func (e *LiveEnv) Helm() HelmProbe {
-	if e.helm == nil {
-		e.helm = &liveHelm{timeout: 10 * time.Second}
-	}
-	return e.helm
-}
+func (e *LiveEnv) Config() Config         { return e.cfg }
+func (e *LiveEnv) Net() NetProbe          { return e.net }
+func (e *LiveEnv) K8s() K8sProbe          { return e.k8s }
+func (e *LiveEnv) ClickHouse() ClickHouseProbe { return e.clickhouse }
+func (e *LiveEnv) MySQL() MySQLProbe      { return e.mysql }
+func (e *LiveEnv) Redis() RedisProbe      { return e.redis }
+func (e *LiveEnv) Etcd() EtcdProbe        { return e.etcd }
+func (e *LiveEnv) Helm() HelmProbe        { return e.helm }
 
 type tcpProbe struct{ timeout time.Duration }
 
@@ -161,31 +144,37 @@ func (t *tcpProbe) DialTimeout(ctx context.Context, address string) error {
 }
 
 type liveK8s struct {
+	once    sync.Once
 	cs      *kubernetes.Clientset
 	dyn     dynamic.Interface
 	loadErr error
 }
 
-func newLiveK8s() *liveK8s {
-	k := &liveK8s{}
-	cfg, err := inClusterOrKubeconfig()
-	if err != nil {
-		k.loadErr = err
-		return k
-	}
-	cs, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		k.loadErr = fmt.Errorf("build clientset: %w", err)
-		return k
-	}
-	dyn, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		k.loadErr = fmt.Errorf("build dynamic client: %w", err)
-		return k
-	}
-	k.cs = cs
-	k.dyn = dyn
-	return k
+// ensure loads the kubeconfig + builds clientset/dynamic exactly once.
+// Subsequent callers (including concurrent ones) observe the same
+// (cs, dyn, loadErr). Deferred from the constructor so that
+// `aegisctl --check db.mysql` does not require a working kubeconfig.
+func (k *liveK8s) ensure() error {
+	k.once.Do(func() {
+		cfg, err := inClusterOrKubeconfig()
+		if err != nil {
+			k.loadErr = err
+			return
+		}
+		cs, err := kubernetes.NewForConfig(cfg)
+		if err != nil {
+			k.loadErr = fmt.Errorf("build clientset: %w", err)
+			return
+		}
+		dyn, err := dynamic.NewForConfig(cfg)
+		if err != nil {
+			k.loadErr = fmt.Errorf("build dynamic client: %w", err)
+			return
+		}
+		k.cs = cs
+		k.dyn = dyn
+	})
+	return k.loadErr
 }
 
 func inClusterOrKubeconfig() (*rest.Config, error) {
@@ -198,8 +187,8 @@ func inClusterOrKubeconfig() (*rest.Config, error) {
 }
 
 func (k *liveK8s) NamespaceExists(ctx context.Context, name string) (bool, error) {
-	if k.loadErr != nil {
-		return false, k.loadErr
+	if err := k.ensure(); err != nil {
+		return false, err
 	}
 	_, err := k.cs.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -212,8 +201,8 @@ func (k *liveK8s) NamespaceExists(ctx context.Context, name string) (bool, error
 }
 
 func (k *liveK8s) CreateNamespace(ctx context.Context, name string) error {
-	if k.loadErr != nil {
-		return k.loadErr
+	if err := k.ensure(); err != nil {
+		return err
 	}
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	_, err := k.cs.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
@@ -224,8 +213,8 @@ func (k *liveK8s) CreateNamespace(ctx context.Context, name string) error {
 }
 
 func (k *liveK8s) ServiceAccountExists(ctx context.Context, namespace, name string) (bool, error) {
-	if k.loadErr != nil {
-		return false, k.loadErr
+	if err := k.ensure(); err != nil {
+		return false, err
 	}
 	_, err := k.cs.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -238,8 +227,8 @@ func (k *liveK8s) ServiceAccountExists(ctx context.Context, namespace, name stri
 }
 
 func (k *liveK8s) PVCBound(ctx context.Context, namespace, name string) (bool, bool, error) {
-	if k.loadErr != nil {
-		return false, false, k.loadErr
+	if err := k.ensure(); err != nil {
+		return false, false, err
 	}
 	pvc, err := k.cs.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -252,8 +241,8 @@ func (k *liveK8s) PVCBound(ctx context.Context, namespace, name string) (bool, b
 }
 
 func (k *liveK8s) HasCRDGroup(ctx context.Context, group string) (bool, error) {
-	if k.loadErr != nil {
-		return false, k.loadErr
+	if err := k.ensure(); err != nil {
+		return false, err
 	}
 	gvr := schema.GroupVersionResource{
 		Group:    "apiextensions.k8s.io",
@@ -273,8 +262,8 @@ func (k *liveK8s) HasCRDGroup(ctx context.Context, group string) (bool, error) {
 }
 
 func (k *liveK8s) CreateServiceAccount(ctx context.Context, namespace, name string) error {
-	if k.loadErr != nil {
-		return k.loadErr
+	if err := k.ensure(); err != nil {
+		return err
 	}
 	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
 	_, err := k.cs.CoreV1().ServiceAccounts(namespace).Create(ctx, sa, metav1.CreateOptions{})
@@ -285,8 +274,8 @@ func (k *liveK8s) CreateServiceAccount(ctx context.Context, namespace, name stri
 }
 
 func (k *liveK8s) CreatePVC(ctx context.Context, namespace, name string, spec PVCSpec) error {
-	if k.loadErr != nil {
-		return k.loadErr
+	if err := k.ensure(); err != nil {
+		return err
 	}
 	size := spec.Size
 	if size == "" {
@@ -328,9 +317,22 @@ func unstructuredString(obj map[string]any, path ...string) string {
 	return s
 }
 
-type liveClickHouse struct{ cfg Config }
+type liveClickHouse struct {
+	cfg  Config
+	mu   sync.Mutex
+	// conns is keyed by target database name because the ClickHouse driver
+	// binds Auth.Database at Open() time. The cluster status flow only
+	// touches a single database in practice, but keying by name keeps the
+	// pool reuseable if a future check queries a different one.
+	conns map[string]chdriver.Conn
+}
 
-func (c *liveClickHouse) TablesIn(ctx context.Context, database string) ([]string, error) {
+func (c *liveClickHouse) connFor(database string) (chdriver.Conn, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if conn, ok := c.conns[database]; ok {
+		return conn, nil
+	}
 	host := c.cfg.ClickHouseHost
 	port := c.cfg.ClickHousePort
 	if port == "" {
@@ -350,7 +352,18 @@ func (c *liveClickHouse) TablesIn(ctx context.Context, database string) ([]strin
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	if c.conns == nil {
+		c.conns = make(map[string]chdriver.Conn, 1)
+	}
+	c.conns[database] = conn
+	return conn, nil
+}
+
+func (c *liveClickHouse) TablesIn(ctx context.Context, database string) ([]string, error) {
+	conn, err := c.connFor(database)
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := conn.Query(ctx, "SELECT name FROM system.tables WHERE database = ?", database)
 	if err != nil {
@@ -369,7 +382,10 @@ func (c *liveClickHouse) TablesIn(ctx context.Context, database string) ([]strin
 }
 
 type liveMySQL struct {
-	cfg Config
+	cfg     Config
+	once    sync.Once
+	db      *sql.DB
+	openErr error
 }
 
 func (m *liveMySQL) dsn() string {
@@ -385,11 +401,10 @@ func (m *liveMySQL) dsn() string {
 }
 
 func (m *liveMySQL) TaskState(ctx context.Context, taskID string) (int, bool, error) {
-	conn, err := sql.Open("mysql", m.dsn())
+	conn, err := m.openDB()
 	if err != nil {
 		return 0, false, err
 	}
-	defer conn.Close()
 
 	row := conn.QueryRowContext(ctx, "SELECT state FROM tasks WHERE id = ? LIMIT 1", taskID)
 	var state int
@@ -404,21 +419,21 @@ func (m *liveMySQL) TaskState(ctx context.Context, taskID string) (int, bool, er
 
 type liveRedis struct {
 	cfg    Config
+	once   sync.Once
 	client *redis.Client
 }
 
 func (r *liveRedis) ensure() *redis.Client {
-	if r.client != nil {
-		return r.client
-	}
-	addr := r.cfg.RedisAddr
-	if addr != "" && !strings.Contains(addr, ":") {
-		addr += ":6379"
-	}
-	r.client = redis.NewClient(&redis.Options{
-		Addr:        addr,
-		DialTimeout: 3 * time.Second,
-		ReadTimeout: 3 * time.Second,
+	r.once.Do(func() {
+		addr := r.cfg.RedisAddr
+		if addr != "" && !strings.Contains(addr, ":") {
+			addr += ":6379"
+		}
+		r.client = redis.NewClient(&redis.Options{
+			Addr:        addr,
+			DialTimeout: 3 * time.Second,
+			ReadTimeout: 3 * time.Second,
+		})
 	})
 	return r.client
 }
@@ -436,29 +451,31 @@ func (r *liveRedis) SRem(ctx context.Context, key string, members ...string) (in
 }
 
 type liveEtcd struct {
-	cfg    Config
-	client *clientv3.Client
+	cfg     Config
+	once    sync.Once
+	client  *clientv3.Client
+	dialErr error
 }
 
 func (e *liveEtcd) ensure() (*clientv3.Client, error) {
-	if e.client != nil {
-		return e.client, nil
-	}
-	endpoints := e.cfg.EtcdEndpoints
-	if len(endpoints) == 0 {
-		endpoints = []string{"localhost:2379"}
-	}
-	client, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: 5 * time.Second,
-		Username:    e.cfg.EtcdUsername,
-		Password:    e.cfg.EtcdPassword,
+	e.once.Do(func() {
+		endpoints := e.cfg.EtcdEndpoints
+		if len(endpoints) == 0 {
+			endpoints = []string{"localhost:2379"}
+		}
+		client, err := clientv3.New(clientv3.Config{
+			Endpoints:   endpoints,
+			DialTimeout: 5 * time.Second,
+			Username:    e.cfg.EtcdUsername,
+			Password:    e.cfg.EtcdPassword,
+		})
+		if err != nil {
+			e.dialErr = err
+			return
+		}
+		e.client = client
 	})
-	if err != nil {
-		return nil, err
-	}
-	e.client = client
-	return client, nil
+	return e.client, e.dialErr
 }
 
 func (e *liveEtcd) Get(ctx context.Context, key string) (string, bool, error) {
@@ -489,9 +506,7 @@ func (e *liveEtcd) Close() error {
 	if e.client == nil {
 		return nil
 	}
-	err := e.client.Close()
-	e.client = nil
-	return err
+	return e.client.Close()
 }
 
 func (e *liveEtcd) ListPrefix(ctx context.Context, prefix string) (map[string]string, error) {
@@ -511,8 +526,8 @@ func (e *liveEtcd) ListPrefix(ctx context.Context, prefix string) (map[string]st
 }
 
 func (k *liveK8s) ConfigMapData(ctx context.Context, namespace, name string) (map[string]string, bool, error) {
-	if k.loadErr != nil {
-		return nil, false, k.loadErr
+	if err := k.ensure(); err != nil {
+		return nil, false, err
 	}
 	cm, err := k.cs.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -525,8 +540,8 @@ func (k *liveK8s) ConfigMapData(ctx context.Context, namespace, name string) (ma
 }
 
 func (k *liveK8s) ClusterRoleAllowsPodNamespaceRead(ctx context.Context) (bool, error) {
-	if k.loadErr != nil {
-		return false, k.loadErr
+	if err := k.ensure(); err != nil {
+		return false, err
 	}
 	roles, err := k.cs.RbacV1().ClusterRoles().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -580,8 +595,20 @@ type dynConfigRow struct {
 	DefaultValue string
 }
 
+// openDB returns a process-wide *sql.DB, opened on first call. *sql.DB
+// is designed to be long-lived — calling sql.Open per query thrashes
+// the internal connection pool. Subsequent callers, including
+// concurrent ones, observe the same handle.
 func (m *liveMySQL) openDB() (*sql.DB, error) {
-	return sql.Open("mysql", m.dsn())
+	m.once.Do(func() {
+		db, err := sql.Open("mysql", m.dsn())
+		if err != nil {
+			m.openErr = err
+			return
+		}
+		m.db = db
+	})
+	return m.db, m.openErr
 }
 
 func (m *liveMySQL) DynamicConfigsByPrefix(ctx context.Context, prefix string) (map[string]string, error) {
@@ -589,7 +616,6 @@ func (m *liveMySQL) DynamicConfigsByPrefix(ctx context.Context, prefix string) (
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 	rows, err := conn.QueryContext(ctx,
 		"SELECT config_key, default_value FROM dynamic_configs WHERE config_key LIKE ?",
 		prefix+"%")
@@ -614,7 +640,6 @@ func (m *liveMySQL) SystemFixtures(ctx context.Context, systemName string) (Syst
 	if err != nil {
 		return summary, err
 	}
-	defer conn.Close()
 
 	// Pedestals (type=2) for this system (pedestal container name == system name).
 	rows, err := conn.QueryContext(ctx,
@@ -720,7 +745,6 @@ func (m *liveMySQL) HelmSourceForSystem(ctx context.Context, systemName string) 
 	if err != nil {
 		return HelmChartSource{}, false, err
 	}
-	defer conn.Close()
 	row := conn.QueryRowContext(ctx, `
 		SELECT COALESCE(hc.chart_name,''), COALESCE(hc.version,''),
 		       COALESCE(hc.repo_url,''), COALESCE(hc.repo_name,''),

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,11 +15,18 @@ import (
 type fakeRunner struct {
 	results []preflight.Result
 	err     error
-	calls   int
+	calls   atomic.Int32
+	// gate, if non-nil, blocks Run until the channel is closed. Used by
+	// the coalescing test to hold the in-flight call open while a burst
+	// of concurrent callers piles into singleflight.
+	gate <-chan struct{}
 }
 
 func (f *fakeRunner) Run(_ context.Context) ([]preflight.Result, error) {
-	f.calls++
+	f.calls.Add(1)
+	if f.gate != nil {
+		<-f.gate
+	}
 	return f.results, f.err
 }
 
@@ -152,8 +161,8 @@ func TestGetClusterStatusCachesWithinTTL(t *testing.T) {
 	if _, err := svc.GetClusterStatus(context.Background()); err != nil {
 		t.Fatalf("second call: %v", err)
 	}
-	if runner.calls != 1 {
-		t.Fatalf("expected cache hit on second call, runner.calls = %d", runner.calls)
+	if got := runner.calls.Load(); got != 1 {
+		t.Fatalf("expected cache hit on second call, runner.calls = %d", got)
 	}
 
 	// After TTL elapses the next call must hit the runner again.
@@ -161,10 +170,89 @@ func TestGetClusterStatusCachesWithinTTL(t *testing.T) {
 	if _, err := svc.GetClusterStatus(context.Background()); err != nil {
 		t.Fatalf("third call: %v", err)
 	}
-	if runner.calls != 2 {
-		t.Fatalf("expected cache to expire after TTL, runner.calls = %d", runner.calls)
+	if got := runner.calls.Load(); got != 2 {
+		t.Fatalf("expected cache to expire after TTL, runner.calls = %d", got)
 	}
 }
+
+// TestGetClusterStatusCoalescesConcurrentCacheMisses pins the
+// singleflight wiring: a burst of N callers landing on a cold cache
+// must produce exactly one runner.Run, not N. Run with -race for the
+// extra confidence that the shared cache + sf.Group are sound.
+func TestGetClusterStatusCoalescesConcurrentCacheMisses(t *testing.T) {
+	gate := make(chan struct{})
+	runner := &fakeRunner{
+		results: []preflight.Result{
+			{ID: "k8s.exp-namespace", Status: preflight.StatusOK, Detail: "ok"},
+		},
+		gate: gate,
+	}
+	svc := NewService(runner)
+
+	const callers = 16
+	var wg sync.WaitGroup
+	wg.Add(callers)
+	errs := make([]error, callers)
+	for i := 0; i < callers; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			_, err := svc.GetClusterStatus(context.Background())
+			errs[idx] = err
+		}(i)
+	}
+
+	// Give every goroutine time to land inside singleflight before we
+	// release the in-flight call. A short sleep is acceptable here
+	// because the test asserts an upper bound on runner.calls; an
+	// over-aggressive scheduler would only further reduce the count.
+	time.Sleep(20 * time.Millisecond)
+	close(gate)
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("caller %d: %v", i, err)
+		}
+	}
+	if got := runner.calls.Load(); got != 1 {
+		t.Fatalf("expected singleflight to coalesce %d concurrent callers into 1 run, got %d", callers, got)
+	}
+}
+
+// TestGetClusterStatusDoesNotCacheRunnerErrors guards the documented
+// no-error-caching behavior: a failure surfaces to all in-flight
+// callers but the next call retries and succeeds.
+func TestGetClusterStatusDoesNotCacheRunnerErrors(t *testing.T) {
+	type stateful struct {
+		failNext bool
+		calls    int32
+	}
+	state := &stateful{failNext: true}
+	results := []preflight.Result{{ID: "k8s.exp-namespace", Status: preflight.StatusOK, Detail: "ok"}}
+	runner := runnerFunc(func(_ context.Context) ([]preflight.Result, error) {
+		atomic.AddInt32(&state.calls, 1)
+		if state.failNext {
+			state.failNext = false
+			return nil, errors.New("transient")
+		}
+		return results, nil
+	})
+	svc := NewService(runner)
+
+	if _, err := svc.GetClusterStatus(context.Background()); err == nil {
+		t.Fatal("expected first call to fail")
+	}
+	if _, err := svc.GetClusterStatus(context.Background()); err != nil {
+		t.Fatalf("expected retry after error to succeed, got %v", err)
+	}
+	if got := atomic.LoadInt32(&state.calls); got != 2 {
+		t.Fatalf("expected 2 runner invocations (no error caching), got %d", got)
+	}
+}
+
+type runnerFunc func(ctx context.Context) ([]preflight.Result, error)
+
+func (r runnerFunc) Run(ctx context.Context) ([]preflight.Result, error) { return r(ctx) }
 
 // TestPortalIDMappingReferencesRealCatalogChecks guards against catalog
 // drift: if a preflight check is renamed in

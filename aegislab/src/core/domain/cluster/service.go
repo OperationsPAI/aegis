@@ -12,6 +12,7 @@ import (
 	"time"
 
 	preflight "aegis/platform/cluster/preflight"
+	"golang.org/x/sync/singleflight"
 )
 
 // runStatusChecksTimeout caps a single status-endpoint invocation so a
@@ -41,22 +42,13 @@ type liveCheckRunner struct {
 
 // NewLiveCheckRunner builds a runner bound to a process-wide CheckEnv.
 // The fx wiring in module.go provides one *preflight.LiveEnv per
-// process; the underlying clients (Redis, MySQL, ClickHouse, etcd,
-// K8s) are constructed lazily on first use and then reused across
-// every subsequent request.
-//
-// TODO(option-b): replace preflight.LiveEnv with adapters that wrap the
-// existing aegis/platform/{redis,clickhouse,k8s} singleton gateways so
-// HTTP status checks share one pool with the rest of the backend
-// instead of LiveEnv keeping its own connections. Deferred because
-// adapting every probe method (MySQL queries, ClickHouse SHOW TABLES,
-// K8s ClusterRole introspection, etcd ListPrefix) duplicates SQL/RBAC
-// logic that already lives here.
+// process; underlying clients (Redis, MySQL, ClickHouse, etcd, K8s)
+// are opened once on first use and reused across every request.
 func NewLiveCheckRunner(env preflight.CheckEnv) CheckRunner {
-	return &liveCheckRunner{env: env, checks: preflight.DefaultChecks()}
+	return liveCheckRunner{env: env, checks: preflight.DefaultChecks()}
 }
 
-func (r *liveCheckRunner) Run(ctx context.Context) ([]preflight.Result, error) {
+func (r liveCheckRunner) Run(ctx context.Context) ([]preflight.Result, error) {
 	out := make([]preflight.Result, 0, len(r.checks))
 	for _, c := range r.checks {
 		res := c.Run(ctx, r.env)
@@ -115,7 +107,19 @@ type Service struct {
 	mu     sync.Mutex
 	cached cachedResp
 	now    func() time.Time
+
+	// sf coalesces concurrent cache-miss callers so a burst of N
+	// operators hitting the page within the same TTL window produces
+	// exactly one underlying runner.Run, not N. Errors are not cached:
+	// singleflight shares the failure with the in-flight cohort and the
+	// next call retries naturally.
+	sf singleflight.Group
 }
+
+// sfKey is the singleflight bucket. The response is global, so a single
+// constant key is correct — every concurrent caller wants the same
+// result.
+const sfKey = "cluster-status"
 
 func NewService(runner CheckRunner) *Service {
 	return &Service{runner: runner, now: func() time.Time { return time.Now() }}
@@ -130,23 +134,39 @@ func (s *Service) GetClusterStatus(ctx context.Context) (*ClusterStatusResp, err
 	}
 	s.mu.Unlock()
 
-	runCtx, cancel := context.WithTimeout(ctx, runStatusChecksTimeout)
-	defer cancel()
-	results, err := s.runner.Run(runCtx)
+	v, err, _ := s.sf.Do(sfKey, func() (any, error) {
+		// Re-check the cache under singleflight: an earlier cohort may
+		// have populated it while this caller was waiting on Do.
+		s.mu.Lock()
+		if s.cached.resp != nil && s.now().Before(s.cached.expiresAt) {
+			resp := s.cached.resp
+			s.mu.Unlock()
+			return resp, nil
+		}
+		s.mu.Unlock()
+
+		runCtx, cancel := context.WithTimeout(ctx, runStatusChecksTimeout)
+		defer cancel()
+		results, runErr := s.runner.Run(runCtx)
+		if runErr != nil {
+			return nil, runErr
+		}
+
+		now := s.now()
+		resp := s.assembleResponse(results, now)
+
+		s.mu.Lock()
+		s.cached = cachedResp{resp: resp, expiresAt: now.Add(statusCacheTTL)}
+		s.mu.Unlock()
+		return resp, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	resp := s.assembleResponse(results)
-
-	s.mu.Lock()
-	s.cached = cachedResp{resp: resp, expiresAt: s.now().Add(statusCacheTTL)}
-	s.mu.Unlock()
-
-	return resp, nil
+	return v.(*ClusterStatusResp), nil
 }
 
-func (s *Service) assembleResponse(results []preflight.Result) *ClusterStatusResp {
+func (s *Service) assembleResponse(results []preflight.Result, now time.Time) *ClusterStatusResp {
 	resultByID := make(map[string]preflight.Result, len(results))
 	for _, r := range results {
 		resultByID[r.ID] = r
@@ -199,7 +219,7 @@ func (s *Service) assembleResponse(results []preflight.Result) *ClusterStatusRes
 		Checks: checks,
 		// events deferred until source decided
 		Events:    []ClusterEvent{},
-		UpdatedAt: s.now().UTC(),
+		UpdatedAt: now.UTC(),
 	}
 }
 
