@@ -1,8 +1,10 @@
-// Package cluster implements the `aegisctl cluster preflight` dependency
-// checker. Each check is expressed as a small CheckFunc operating on a
-// CheckEnv abstraction so individual check functions can be exercised with
-// mocks from unit tests without a live cluster.
-package cluster
+// Package preflight is the neutral catalog of cluster dependency checks
+// shared between the `aegisctl cluster preflight` CLI driver and the
+// /api/v2/cluster/status HTTP endpoint. Each check is expressed as a
+// small CheckFunc operating on a CheckEnv abstraction so individual
+// check functions can be exercised with mocks from unit tests without a
+// live cluster.
+package preflight
 
 import (
 	"context"

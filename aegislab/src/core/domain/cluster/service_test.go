@@ -5,29 +5,31 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
-	clichecks "aegis/cli/cluster"
+	preflight "aegis/platform/cluster/preflight"
 )
 
 type fakeRunner struct {
-	results []clichecks.Result
+	results []preflight.Result
 	err     error
+	calls   int
 }
 
-func (f fakeRunner) Run(_ context.Context) ([]clichecks.Result, error) {
+func (f *fakeRunner) Run(_ context.Context) ([]preflight.Result, error) {
+	f.calls++
 	return f.results, f.err
 }
 
 func TestGetClusterStatusMapsKnownCheckIDsToPortalIDs(t *testing.T) {
-	svc := NewService(fakeRunner{
-		results: []clichecks.Result{
-			{ID: "k8s.exp-namespace", Status: clichecks.StatusOK, Detail: "namespace exp present"},
-			{ID: "db.redis", Status: clichecks.StatusOK, Detail: "dialed redis:6379"},
-			{ID: "db.mysql", Status: clichecks.StatusFail, Detail: "cannot dial 127.0.0.1:3306", Fix: "start mysql"},
-			{ID: "db.etcd", Status: clichecks.StatusOK, Detail: "dialed etcd"},
-			{ID: "db.clickhouse", Status: clichecks.StatusWarn, Detail: "slow handshake"},
-			{ID: "otel.pipeline-to-clickhouse", Status: clichecks.StatusOK, Detail: "otel pipeline healthy"},
-			{ID: "registry.parity", Status: clichecks.StatusOK, Detail: "registry matches"},
+	svc := NewService(&fakeRunner{
+		results: []preflight.Result{
+			{ID: "k8s.exp-namespace", Status: preflight.StatusOK, Detail: "namespace exp present"},
+			{ID: "db.redis", Status: preflight.StatusOK, Detail: "dialed redis:6379"},
+			{ID: "db.mysql", Status: preflight.StatusFail, Detail: "cannot dial 127.0.0.1:3306", Fix: "start mysql"},
+			{ID: "db.etcd", Status: preflight.StatusOK, Detail: "dialed etcd"},
+			{ID: "db.clickhouse", Status: preflight.StatusWarn, Detail: "slow handshake"},
+			{ID: "otel.pipeline-to-clickhouse", Status: preflight.StatusOK, Detail: "otel pipeline healthy"},
 		},
 	})
 
@@ -37,13 +39,12 @@ func TestGetClusterStatusMapsKnownCheckIDsToPortalIDs(t *testing.T) {
 	}
 
 	want := map[string]ClusterCheckStatus{
-		"chk-k8s":       ClusterCheckOK,
-		"chk-redis":     ClusterCheckOK,
-		"chk-mysql":     ClusterCheckFail,
-		"chk-etcd":      ClusterCheckOK,
-		"chk-ch":        ClusterCheckWarn,
-		"chk-otel":      ClusterCheckOK,
-		"chk-pedestals": ClusterCheckOK,
+		"chk-k8s":   ClusterCheckOK,
+		"chk-redis": ClusterCheckOK,
+		"chk-mysql": ClusterCheckFail,
+		"chk-etcd":  ClusterCheckOK,
+		"chk-ch":    ClusterCheckWarn,
+		"chk-otel":  ClusterCheckOK,
 	}
 	got := make(map[string]ClusterCheckStatus, len(resp.Checks))
 	for _, c := range resp.Checks {
@@ -55,8 +56,14 @@ func TestGetClusterStatusMapsKnownCheckIDsToPortalIDs(t *testing.T) {
 		}
 	}
 
-	// db.mysql is failing — its detail must carry the fix hint so the
-	// portal's Failing-Checks table can render a remediation string.
+	// chk-pedestals was removed from the mapping because no current
+	// preflight measures pod liveness. The portal renders Unknown for
+	// that card until a real probe lands; the endpoint must not fake
+	// it from registry.parity.
+	if _, present := got["chk-pedestals"]; present {
+		t.Errorf("chk-pedestals must not appear until a real pedestal-health check exists")
+	}
+
 	for _, c := range resp.Checks {
 		if c.ID == "chk-mysql" && !strings.Contains(c.Detail, "fix: start mysql") {
 			t.Errorf("expected mysql detail to include fix hint, got %q", c.Detail)
@@ -75,8 +82,8 @@ func TestGetClusterStatusMapsKnownCheckIDsToPortalIDs(t *testing.T) {
 }
 
 func TestGetClusterStatusEmitsUnknownForMissingMappedCheck(t *testing.T) {
-	svc := NewService(fakeRunner{results: []clichecks.Result{
-		{ID: "k8s.exp-namespace", Status: clichecks.StatusOK, Detail: "ok"},
+	svc := NewService(&fakeRunner{results: []preflight.Result{
+		{ID: "k8s.exp-namespace", Status: preflight.StatusOK, Detail: "ok"},
 	}})
 
 	resp, err := svc.GetClusterStatus(context.Background())
@@ -87,7 +94,7 @@ func TestGetClusterStatusEmitsUnknownForMissingMappedCheck(t *testing.T) {
 	for _, c := range resp.Checks {
 		byID[c.ID] = c
 	}
-	for _, id := range []string{"chk-redis", "chk-mysql", "chk-etcd", "chk-ch", "chk-otel", "chk-pedestals"} {
+	for _, id := range []string{"chk-redis", "chk-mysql", "chk-etcd", "chk-ch", "chk-otel"} {
 		c, ok := byID[id]
 		if !ok {
 			t.Errorf("expected %s to be present even when underlying check is missing", id)
@@ -100,9 +107,9 @@ func TestGetClusterStatusEmitsUnknownForMissingMappedCheck(t *testing.T) {
 }
 
 func TestGetClusterStatusSurfacesUnmappedChecks(t *testing.T) {
-	svc := NewService(fakeRunner{results: []clichecks.Result{
-		{ID: "k8s.exp-namespace", Status: clichecks.StatusOK, Detail: "ok"},
-		{ID: "redis.token-bucket-leaks", Status: clichecks.StatusFail, Detail: "3 leaked tokens"},
+	svc := NewService(&fakeRunner{results: []preflight.Result{
+		{ID: "k8s.exp-namespace", Status: preflight.StatusOK, Detail: "ok"},
+		{ID: "redis.token-bucket-leaks", Status: preflight.StatusFail, Detail: "3 leaked tokens"},
 	}})
 
 	resp, err := svc.GetClusterStatus(context.Background())
@@ -125,9 +132,54 @@ func TestGetClusterStatusSurfacesUnmappedChecks(t *testing.T) {
 
 func TestGetClusterStatusPropagatesRunnerError(t *testing.T) {
 	want := errors.New("boom")
-	svc := NewService(fakeRunner{err: want})
+	svc := NewService(&fakeRunner{err: want})
 	if _, err := svc.GetClusterStatus(context.Background()); !errors.Is(err, want) {
 		t.Errorf("expected runner error to propagate, got %v", err)
 	}
 }
 
+func TestGetClusterStatusCachesWithinTTL(t *testing.T) {
+	runner := &fakeRunner{results: []preflight.Result{
+		{ID: "k8s.exp-namespace", Status: preflight.StatusOK, Detail: "ok"},
+	}}
+	svc := NewService(runner)
+	now := time.Unix(1700000000, 0)
+	svc.now = func() time.Time { return now }
+
+	if _, err := svc.GetClusterStatus(context.Background()); err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	if _, err := svc.GetClusterStatus(context.Background()); err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if runner.calls != 1 {
+		t.Fatalf("expected cache hit on second call, runner.calls = %d", runner.calls)
+	}
+
+	// After TTL elapses the next call must hit the runner again.
+	now = now.Add(statusCacheTTL + time.Millisecond)
+	if _, err := svc.GetClusterStatus(context.Background()); err != nil {
+		t.Fatalf("third call: %v", err)
+	}
+	if runner.calls != 2 {
+		t.Fatalf("expected cache to expire after TTL, runner.calls = %d", runner.calls)
+	}
+}
+
+// TestPortalIDMappingReferencesRealCatalogChecks guards against catalog
+// drift: if a preflight check is renamed in
+// platform/cluster/preflight without updating portalIDMapping the
+// portal card silently goes Unknown forever. This test fails loudly
+// instead.
+func TestPortalIDMappingReferencesRealCatalogChecks(t *testing.T) {
+	catalog := make(map[string]struct{})
+	for _, c := range preflight.DefaultChecks() {
+		catalog[c.ID] = struct{}{}
+	}
+	for _, m := range portalIDMapping {
+		if _, ok := catalog[m.CheckID]; !ok {
+			t.Errorf("portalIDMapping references unknown check %q (portal id %q); rename in catalog?",
+				m.CheckID, m.PortalID)
+		}
+	}
+}

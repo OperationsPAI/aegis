@@ -1,4 +1,4 @@
-package cluster
+package preflight
 
 import (
 	"context"
@@ -39,13 +39,8 @@ type LiveEnv struct {
 	redis       RedisProbe
 	etcd        EtcdProbe
 	helm        HelmProbe
-	mysqlCreds  mysqlCreds
 	dialTimeout time.Duration
 }
-
-type mysqlCreds struct{ user, pass, db string }
-
-var loadedMySQLCreds mysqlCreds
 
 func firstNonEmpty(a, b string) string {
 	if a != "" {
@@ -84,6 +79,9 @@ func LoadConfig(explicitPath string) (Config, error) {
 		ClickHouseDB:   v.GetString("database.clickhouse.database"),
 		ClickHouseUser: v.GetString("database.clickhouse.user"),
 		ClickHousePass: v.GetString("database.clickhouse.password"),
+		MySQLUser:      firstNonEmpty(v.GetString("database.mysql.user"), "root"),
+		MySQLPassword:  v.GetString("database.mysql.password"),
+		MySQLDatabase:  firstNonEmpty(v.GetString("database.mysql.db"), "rcabench"),
 		RedisAddr:      v.GetString("redis.host"),
 		EtcdEndpoints:  v.GetStringSlice("etcd.endpoints"),
 		EtcdUsername:   v.GetString("etcd.username"),
@@ -92,16 +90,11 @@ func LoadConfig(explicitPath string) (Config, error) {
 		DatasetPVC:     v.GetString("k8s.job.volume_mount.dataset.claim_name"),
 		ExperimentPVC:  v.GetString("k8s.job.volume_mount.experiment_storage.claim_name"),
 	}
-	loadedMySQLCreds = mysqlCreds{
-		user: firstNonEmpty(v.GetString("database.mysql.user"), "root"),
-		pass: v.GetString("database.mysql.password"),
-		db:   firstNonEmpty(v.GetString("database.mysql.db"), "rcabench"),
-	}
 	return cfg, nil
 }
 
 func NewLiveEnv(cfg Config) *LiveEnv {
-	return &LiveEnv{cfg: cfg, dialTimeout: 3 * time.Second, mysqlCreds: loadedMySQLCreds}
+	return &LiveEnv{cfg: cfg, dialTimeout: 3 * time.Second}
 }
 
 func (e *LiveEnv) Config() Config { return e.cfg }
@@ -129,7 +122,7 @@ func (e *LiveEnv) ClickHouse() ClickHouseProbe {
 
 func (e *LiveEnv) MySQL() MySQLProbe {
 	if e.mysql == nil {
-		e.mysql = &liveMySQL{cfg: e.cfg, creds: e.mysqlCreds}
+		e.mysql = &liveMySQL{cfg: e.cfg}
 	}
 	return e.mysql
 }
@@ -376,19 +369,23 @@ func (c *liveClickHouse) TablesIn(ctx context.Context, database string) ([]strin
 }
 
 type liveMySQL struct {
-	cfg   Config
-	creds mysqlCreds
+	cfg Config
 }
 
-func (m *liveMySQL) TaskState(ctx context.Context, taskID string) (int, bool, error) {
+func (m *liveMySQL) dsn() string {
 	host := m.cfg.MySQLHost
 	port := m.cfg.MySQLPort
 	if port == "" {
 		port = "3306"
 	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=3s&readTimeout=3s",
-		m.creds.user, m.creds.pass, host, port, m.creds.db)
-	conn, err := sql.Open("mysql", dsn)
+	user := firstNonEmpty(m.cfg.MySQLUser, "root")
+	db := firstNonEmpty(m.cfg.MySQLDatabase, "rcabench")
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=3s&readTimeout=3s",
+		user, m.cfg.MySQLPassword, host, port, db)
+}
+
+func (m *liveMySQL) TaskState(ctx context.Context, taskID string) (int, bool, error) {
+	conn, err := sql.Open("mysql", m.dsn())
 	if err != nil {
 		return 0, false, err
 	}
@@ -584,14 +581,7 @@ type dynConfigRow struct {
 }
 
 func (m *liveMySQL) openDB() (*sql.DB, error) {
-	host := m.cfg.MySQLHost
-	port := m.cfg.MySQLPort
-	if port == "" {
-		port = "3306"
-	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=3s&readTimeout=3s",
-		m.creds.user, m.creds.pass, host, port, m.creds.db)
-	return sql.Open("mysql", dsn)
+	return sql.Open("mysql", m.dsn())
 }
 
 func (m *liveMySQL) DynamicConfigsByPrefix(ctx context.Context, prefix string) (map[string]string, error) {

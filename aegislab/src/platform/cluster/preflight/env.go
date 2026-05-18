@@ -1,4 +1,4 @@
-package cluster
+package preflight
 
 import "context"
 
@@ -19,6 +19,9 @@ type Config struct {
 	K8sNamespace   string
 	MySQLHost      string
 	MySQLPort      string
+	MySQLUser      string
+	MySQLPassword  string
+	MySQLDatabase  string
 	ClickHouseHost string
 	ClickHousePort string
 	ClickHouseDB   string

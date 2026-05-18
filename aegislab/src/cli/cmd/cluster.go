@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"aegis/cli/cluster"
+	cluster "aegis/platform/cluster/preflight"
 	"aegis/cli/output"
 
 	"github.com/spf13/cobra"
