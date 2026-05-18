@@ -19,16 +19,16 @@ func RoutesAdmin(handler *RuntimeHandler) framework.RouteRegistrar {
 		Register: func(v2 *gin.RouterGroup) {
 			pedestals := v2.Group("/pedestals", middleware.TrustedHeaderAuth())
 			{
-				read := pedestals.Group("", middleware.RequireSystemRead)
+				read := pedestals.Group("", middleware.RequirePedestalRead)
 				{
 					read.GET("", handler.ListPedestals)
 					read.GET("/:release", handler.GetPedestal)
 				}
-				configure := pedestals.Group("", middleware.RequireSystemConfigure)
+				manage := pedestals.Group("", middleware.RequirePedestalManage)
 				{
-					configure.POST("", handler.InstallPedestal)
-					configure.POST("/:release/restart", handler.RestartPedestal)
-					configure.DELETE("/:release", handler.UninstallPedestal)
+					manage.POST("", handler.InstallPedestal)
+					manage.POST("/:release/restart", handler.RestartPedestal)
+					manage.DELETE("/:release", handler.UninstallPedestal)
 				}
 			}
 		},

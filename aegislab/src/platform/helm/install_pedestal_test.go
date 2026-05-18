@@ -31,7 +31,7 @@ type updateRepoCall struct{ namespace, name string }
 type installCall struct {
 	namespace, releaseName, chartName, version string
 	values                                     map[string]any
-	installTimeout, uninstallTimeout           time.Duration
+	overallTimeout, waitTimeout                time.Duration
 }
 
 func (g *recordingGateway) AddRepo(namespace, name, url string) error {
@@ -44,8 +44,8 @@ func (g *recordingGateway) UpdateRepo(namespace, name string) error {
 	return g.updateRepoErr
 }
 
-func (g *recordingGateway) Install(_ context.Context, namespace, releaseName, chartName, version string, values map[string]any, installTimeout, uninstallTimeout time.Duration) error {
-	g.installCalls = append(g.installCalls, installCall{namespace, releaseName, chartName, version, values, installTimeout, uninstallTimeout})
+func (g *recordingGateway) Install(_ context.Context, namespace, releaseName, chartName, version string, values map[string]any, overallTimeout, waitTimeout time.Duration) error {
+	g.installCalls = append(g.installCalls, installCall{namespace, releaseName, chartName, version, values, overallTimeout, waitTimeout})
 	if len(g.installCalls) == 1 {
 		return g.remoteInstallErr
 	}
@@ -71,9 +71,9 @@ func TestInstallPedestal_RemoteSucceedsSkipsLocal(t *testing.T) {
 		RepoURL:          "https://charts.example.com",
 		RepoName:         "operations-pai",
 		LocalPath:        localChart,
-		Values:           map[string]any{"image": "foo"},
-		InstallTimeout:   30 * time.Second,
-		UninstallTimeout: 10 * time.Second,
+		Values:         map[string]any{"image": "foo"},
+		OverallTimeout: 30 * time.Second,
+		WaitTimeout:    10 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
@@ -85,8 +85,8 @@ func TestInstallPedestal_RemoteSucceedsSkipsLocal(t *testing.T) {
 	if got.chartName != "operations-pai/trainticket" {
 		t.Errorf("expected chart=operations-pai/trainticket; got %s", got.chartName)
 	}
-	if got.installTimeout != 30*time.Second || got.uninstallTimeout != 10*time.Second {
-		t.Errorf("timeouts not forwarded: install=%s uninstall=%s", got.installTimeout, got.uninstallTimeout)
+	if got.overallTimeout != 30*time.Second || got.waitTimeout != 10*time.Second {
+		t.Errorf("timeouts not forwarded: overall=%s wait=%s", got.overallTimeout, got.waitTimeout)
 	}
 }
 

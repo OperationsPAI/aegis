@@ -12,9 +12,10 @@ import (
 // refactor that accidentally swapped the registrar's audience (admin →
 // portal) would surface here rather than as a 404 in integration.
 func TestRoutesAdminReturnsAdminAudience(t *testing.T) {
-	// We pass nil because the registrar function itself does not deref
-	// the handler — Register is a closure that only runs when invoked
-	// against a router.
+	// The registrar function only captures the handler pointer into a
+	// closure; it does not deref it. Passing nil is safe here because we
+	// never invoke Register against a router in this test — we only assert
+	// the surface metadata (Audience, Name, non-nil Register).
 	reg := RoutesAdmin(nil)
 
 	if reg.Audience != framework.AudienceAdmin {

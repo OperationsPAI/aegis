@@ -1,8 +1,10 @@
 package pedestal
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"aegis/platform/consts"
@@ -14,7 +16,8 @@ import (
 
 // RuntimeHandler is the HTTP-facing entry point for the admin /pedestals
 // endpoints. It's a thin wrapper around RuntimeService — it just decodes
-// JSON, maps domain errors to status codes, and serializes the response.
+// JSON, maps domain errors to status codes, derives a request-envelope
+// timeout, and serializes the response.
 type RuntimeHandler struct {
 	service *RuntimeService
 }
@@ -35,22 +38,26 @@ type InstallPedestalReq struct {
 }
 
 // RestartPedestalReq is the body for POST /api/v2/pedestals/:release/restart.
-// All fields are optional — an empty body restarts using the
-// previously-applied values.
+// All fields are optional — an empty body redeploys the currently-deployed
+// chart version with the previously-applied values. Setting
+// ContainerVersionID opts into an upgrade (the named version is applied
+// instead of the currently-deployed one).
 type RestartPedestalReq struct {
-	Namespace  string         `json:"namespace,omitempty"`
-	HelmValues map[string]any `json:"helm_values,omitempty"`
+	Namespace          string         `json:"namespace,omitempty"`
+	ContainerVersionID int            `json:"container_version_id,omitempty"`
+	HelmValues         map[string]any `json:"helm_values,omitempty"`
 }
 
 // ListPedestals returns every helm release visible to the cluster, tagged
 // with its system classification.
 //
 //	@Summary		List pedestal releases
-//	@Description	Admin: enumerate every helm release across all namespaces, tagged with system classification.
+//	@Description	Admin: enumerate every helm release across all namespaces, tagged with system classification. Honors ?limit (default 200, cap 1000).
 //	@Tags			Pedestal
 //	@ID				list_pedestal_releases
 //	@Produce		json
 //	@Security		BearerAuth
+//	@Param			limit	query	int	false	"Max releases to return (default 200, cap 1000)"
 //	@Success		200	{object}	dto.GenericResponse[[]PedestalRelease]
 //	@Router			/api/v2/pedestals [get]
 //	@x-api-type		{"sdk":"true"}
@@ -59,7 +66,16 @@ func (h *RuntimeHandler) ListPedestals(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
-	releases, err := h.service.ListReleases(c.Request.Context())
+	limit := 0
+	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			dto.ErrorResponse(c, http.StatusBadRequest, "limit must be a non-negative integer")
+			return
+		}
+		limit = n
+	}
+	releases, err := h.service.ListReleases(c.Request.Context(), limit)
 	if err != nil {
 		dto.ErrorResponse(c, http.StatusInternalServerError, "Failed to list pedestal releases: "+err.Error())
 		return
@@ -104,7 +120,7 @@ func (h *RuntimeHandler) GetPedestal(c *gin.Context) {
 // InstallPedestal runs a synchronous helm install.
 //
 //	@Summary		Install pedestal release
-//	@Description	Admin: install a pedestal chart synchronously. Blocks until helm returns or the request context deadline fires.
+//	@Description	Admin: install a pedestal chart synchronously. The handler bounds the request at adminInstallTimeoutCeiling() (configured install timeout + 60s slack).
 //	@Tags			Pedestal
 //	@ID				install_pedestal_release
 //	@Accept			json
@@ -125,7 +141,9 @@ func (h *RuntimeHandler) InstallPedestal(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
 		return
 	}
-	result, err := h.service.Install(c.Request.Context(), InstallPedestalInput{
+	ctx, cancel := context.WithTimeout(c.Request.Context(), adminInstallTimeoutCeiling())
+	defer cancel()
+	result, err := h.service.Install(ctx, InstallPedestalInput{
 		SystemCode:         req.SystemCode,
 		ContainerVersionID: req.ContainerVersionID,
 		Namespace:          req.Namespace,
@@ -142,7 +160,7 @@ func (h *RuntimeHandler) InstallPedestal(c *gin.Context) {
 // RestartPedestal redeploys an existing release in place.
 //
 //	@Summary		Restart pedestal release
-//	@Description	Admin: redeploy a pedestal release in-place. Empty body reuses the previously-applied values.
+//	@Description	Admin: redeploy a pedestal release in-place. By default the currently-deployed chart version is reused (no silent upgrade). Pass container_version_id in the body to opt into an upgrade. Empty body reuses the previously-applied values. Bounded at adminInstallTimeoutCeiling().
 //	@Tags			Pedestal
 //	@ID				restart_pedestal_release
 //	@Accept			json
@@ -166,7 +184,9 @@ func (h *RuntimeHandler) RestartPedestal(c *gin.Context) {
 			return
 		}
 	}
-	result, err := h.service.Restart(c.Request.Context(), release, req.Namespace, req.HelmValues)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), adminInstallTimeoutCeiling())
+	defer cancel()
+	result, err := h.service.Restart(ctx, release, req.Namespace, req.ContainerVersionID, req.HelmValues)
 	if err != nil {
 		status, msg := mapPedestalError(err)
 		dto.ErrorResponse(c, status, msg)
@@ -178,7 +198,7 @@ func (h *RuntimeHandler) RestartPedestal(c *gin.Context) {
 // UninstallPedestal removes a release synchronously.
 //
 //	@Summary		Uninstall pedestal release
-//	@Description	Admin: uninstall a pedestal release. Returns 204 on success; not-found is treated as success.
+//	@Description	Admin: uninstall a pedestal release. Returns 204 on success; not-found is treated as success. Bounded at adminUninstallTimeoutCeiling().
 //	@Tags			Pedestal
 //	@ID				uninstall_pedestal_release
 //	@Produce		json
@@ -195,7 +215,9 @@ func (h *RuntimeHandler) UninstallPedestal(c *gin.Context) {
 	}
 	release := strings.TrimSpace(c.Param("release"))
 	namespace := strings.TrimSpace(c.Query("namespace"))
-	if err := h.service.Uninstall(c.Request.Context(), release, namespace, 0); err != nil {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), adminUninstallTimeoutCeiling())
+	defer cancel()
+	if err := h.service.Uninstall(ctx, release, namespace, 0); err != nil {
 		status, msg := mapPedestalError(err)
 		dto.ErrorResponse(c, status, msg)
 		return
@@ -211,6 +233,8 @@ func mapPedestalError(err error) (int, string) {
 		return http.StatusBadRequest, err.Error()
 	case errors.Is(err, consts.ErrNotFound):
 		return http.StatusNotFound, err.Error()
+	case errors.Is(err, consts.ErrConflict):
+		return http.StatusConflict, err.Error()
 	default:
 		return http.StatusInternalServerError, err.Error()
 	}

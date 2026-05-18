@@ -453,6 +453,10 @@ var (
 	RequireSystemRead      = RequireAnyPermission([]consts.PermissionRule{consts.PermSystemRead, consts.PermSystemConfigure, consts.PermSystemManage})
 	RequireSystemConfigure = RequireAnyPermission([]consts.PermissionRule{consts.PermSystemConfigure, consts.PermSystemManage})
 
+	// Pedestal runtime permissions — manage inherits read.
+	RequirePedestalRead   = RequireAnyPermission([]consts.PermissionRule{consts.PermPedestalRead, consts.PermPedestalManage})
+	RequirePedestalManage = RequirePermission(consts.PermPedestalManage)
+
 	// Audit permissions
 	RequireAuditRead  = RequireAnyPermission([]consts.PermissionRule{consts.PermAuditRead, consts.PermAuditAudit})
 	RequireAuditAudit = RequirePermission(consts.PermAuditAudit)

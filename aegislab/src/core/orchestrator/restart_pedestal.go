@@ -720,16 +720,16 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 
 		overallTO, waitTO := helmInstallTimeouts()
 		return helm.InstallPedestal(childCtx, gateway, helm.PedestalInstallSpec{
-			Namespace:        releaseName,
-			ReleaseName:      releaseName,
-			ChartName:        item.ChartName,
-			Version:          item.Version,
-			RepoURL:          item.RepoURL,
-			RepoName:         item.RepoName,
-			LocalPath:        item.LocalPath,
-			Values:           item.GetValuesMap(),
-			InstallTimeout:   overallTO,
-			UninstallTimeout: waitTO,
+			Namespace:      releaseName,
+			ReleaseName:    releaseName,
+			ChartName:      item.ChartName,
+			Version:        item.Version,
+			RepoURL:        item.RepoURL,
+			RepoName:       item.RepoName,
+			LocalPath:      item.LocalPath,
+			Values:         item.GetValuesMap(),
+			OverallTimeout: overallTO,
+			WaitTimeout:    waitTO,
 		})
 	})
 }

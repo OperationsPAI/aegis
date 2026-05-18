@@ -76,6 +76,7 @@ const (
 	ResourceInjection        ResourceName = "injection"         // fault injection resource
 	ResourceExecution        ResourceName = "execution"         // execution resource
 	ResourceAPIKey           ResourceName = "api_key"           // api key credential resource
+	ResourcePedestal         ResourceName = "pedestal"          // pedestal runtime (helm release) resource
 )
 
 func (r ResourceName) String() string {
@@ -258,6 +259,14 @@ var (
 	PermSystemRead      = PermissionRule{Resource: ResourceSystem, Action: ActionRead, Scope: ScopeAll}
 	PermSystemConfigure = PermissionRule{Resource: ResourceSystem, Action: ActionConfigure, Scope: ScopeAll}
 	PermSystemManage    = PermissionRule{Resource: ResourceSystem, Action: ActionManage, Scope: ScopeAll}
+
+	// Pedestal runtime permissions — gate the admin /pedestals helm
+	// install / restart / uninstall endpoints. Distinct from PermSystem*
+	// (which guards chaossystem row CRUD) because pedestal ops have
+	// cluster-wide blast radius (`helm uninstall` in any namespace the
+	// kubeconfig sees).
+	PermPedestalRead   = PermissionRule{Resource: ResourcePedestal, Action: ActionRead, Scope: ScopeAll}
+	PermPedestalManage = PermissionRule{Resource: ResourcePedestal, Action: ActionManage, Scope: ScopeAll}
 
 	// Audit permissions
 	PermAuditRead  = PermissionRule{Resource: ResourceAudit, Action: ActionRead, Scope: ScopeAll}

@@ -2,6 +2,7 @@ package pedestal
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -75,7 +76,7 @@ func TestListReleases_ClassifiesByNameAndNamespacePattern(t *testing.T) {
 		},
 	}
 
-	got, err := s.ListReleases(context.Background())
+	got, err := s.ListReleases(context.Background(), 0)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
@@ -168,8 +169,8 @@ func TestBuildInstallSpec_MergesValuesAndResolvesRepo(t *testing.T) {
 		t.Errorf("expected extra=value passthrough; got %v", spec.Values["extra"])
 	}
 
-	if spec.InstallTimeout <= 0 || spec.UninstallTimeout <= 0 {
-		t.Errorf("expected positive timeouts; got install=%s uninstall=%s", spec.InstallTimeout, spec.UninstallTimeout)
+	if spec.OverallTimeout <= 0 || spec.WaitTimeout <= 0 {
+		t.Errorf("expected positive timeouts; got overall=%s wait=%s", spec.OverallTimeout, spec.WaitTimeout)
 	}
 }
 
@@ -192,25 +193,9 @@ func TestInstall_RejectsBadInputsWithoutDBCalls(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error for %q; got nil", tc.name)
 			}
-			if !errorsIs(err, consts.ErrBadRequest) {
+			if !errors.Is(err, consts.ErrBadRequest) {
 				t.Errorf("expected ErrBadRequest; got %v", err)
 			}
 		})
 	}
-}
-
-// errorsIs is a tiny inline helper so the test file doesn't have to import
-// errors just for one Is call.
-func errorsIs(err, target error) bool {
-	for err != nil {
-		if err == target {
-			return true
-		}
-		u, ok := err.(interface{ Unwrap() error })
-		if !ok {
-			return false
-		}
-		err = u.Unwrap()
-	}
-	return false
 }

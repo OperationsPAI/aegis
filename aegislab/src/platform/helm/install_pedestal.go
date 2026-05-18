@@ -17,7 +17,13 @@ import (
 type installGateway interface {
 	AddRepo(namespace, name, url string) error
 	UpdateRepo(namespace, name string) error
-	Install(ctx context.Context, namespace, releaseName, chartName, version string, values map[string]any, installTimeout, uninstallTimeout time.Duration) error
+	// Install applies the chart. overallTimeout bounds the manifest apply;
+	// waitTimeout bounds the pre-install uninstall pass (when the release
+	// already exists). Named to match the orchestrator caller's (overall,
+	// wait) shape — the previous (installTimeout, uninstallTimeout) names
+	// were confusing because the second timeout doesn't actually gate a
+	// caller-issued uninstall.
+	Install(ctx context.Context, namespace, releaseName, chartName, version string, values map[string]any, overallTimeout, waitTimeout time.Duration) error
 }
 
 // PedestalInstallSpec is the fully-resolved input shape for InstallPedestal.
@@ -52,12 +58,13 @@ type PedestalInstallSpec struct {
 	// passes it through unchanged to gateway.Install.
 	Values map[string]any
 
-	// InstallTimeout is the helm-side timeout for the manifest apply
+	// OverallTimeout is the helm-side timeout for the manifest apply
 	// (Wait=false; cluster readiness is not gated by this).
-	InstallTimeout time.Duration
-	// UninstallTimeout is the timeout for the pre-install uninstall pass
-	// inside Install (used when the release already exists).
-	UninstallTimeout time.Duration
+	OverallTimeout time.Duration
+	// WaitTimeout is the timeout for the pre-install uninstall pass inside
+	// Install (used when the release already exists before the new chart
+	// can be applied on top).
+	WaitTimeout time.Duration
 }
 
 // InstallPedestal performs a pedestal helm install with the
@@ -127,8 +134,8 @@ func InstallPedestal(ctx context.Context, gw installGateway, spec PedestalInstal
 				fullChart,
 				spec.Version,
 				spec.Values,
-				spec.InstallTimeout,
-				spec.UninstallTimeout,
+				spec.OverallTimeout,
+				spec.WaitTimeout,
 			); err != nil {
 				logEntry.Warnf("Failed to install chart from remote: %v", err)
 				installErr = err
@@ -152,8 +159,8 @@ func InstallPedestal(ctx context.Context, gw installGateway, spec PedestalInstal
 			spec.LocalPath,
 			spec.Version,
 			spec.Values,
-			spec.InstallTimeout,
-			spec.UninstallTimeout,
+			spec.OverallTimeout,
+			spec.WaitTimeout,
 		); err != nil {
 			return fmt.Errorf("failed to install chart from local path %s: %w", spec.LocalPath, err)
 		}

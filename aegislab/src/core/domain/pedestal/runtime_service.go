@@ -14,12 +14,16 @@ import (
 	"aegis/platform/helm"
 	"aegis/platform/model"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-// helmGateway is the subset of *helm.Gateway that the runtime service uses.
-// Defined as an interface so the chart-resolution flow can be unit-tested
-// without a real Kubernetes cluster.
+// helmGateway is the subset of *helm.Gateway that the runtime service's
+// read paths use (list / status / values / uninstall). Defined as an
+// interface so the chart-resolution flow can be unit-tested without a real
+// Kubernetes cluster. The write paths (Install / Restart) need the concrete
+// *helm.Gateway because they call into helm.InstallPedestal which takes the
+// gateway directly — see RuntimeService.concrete.
 type helmGateway interface {
 	List(ctx context.Context, namespaces ...string) ([]helm.ReleaseInfo, error)
 	GetReleaseInfo(namespace, releaseName string) (*helm.ReleaseInfo, error)
@@ -63,9 +67,17 @@ func (chaosSystemConfigSource) AllSystems() map[string]string {
 // config source (system short_code allowlist) to install / restart /
 // uninstall pedestal releases synchronously.
 type RuntimeService struct {
-	repo    *Repository
+	repo *Repository
+	// gateway is the read-side view of the helm gateway. Tests inject a
+	// fake here. In production this is the same value as concrete, wrapped
+	// in the helmGateway interface so the read paths stay decoupled from
+	// the concrete type.
 	gateway helmGateway
-	systems systemConfigSource
+	// concrete is the typed *helm.Gateway used by the write paths
+	// (Install / Restart) that call helm.InstallPedestal directly. May be
+	// nil in tests that only exercise read paths.
+	concrete *helm.Gateway
+	systems  systemConfigSource
 }
 
 // NewRuntimeService wires the runtime service to its production
@@ -80,9 +92,10 @@ func NewRuntimeService(repo *Repository, gateway *helm.Gateway) *RuntimeService 
 		panic("pedestal.NewRuntimeService: helm gateway is required")
 	}
 	return &RuntimeService{
-		repo:    repo,
-		gateway: gateway,
-		systems: chaosSystemConfigSource{},
+		repo:     repo,
+		gateway:  gateway,
+		concrete: gateway,
+		systems:  chaosSystemConfigSource{},
 	}
 }
 
@@ -108,6 +121,11 @@ type PedestalRelease struct {
 type PedestalReleaseDetail struct {
 	PedestalRelease
 	Values map[string]any `json:"values,omitempty"`
+	// Namespaces is populated when the per-release GET found the release in
+	// multiple namespaces (pool-style systems like ts-1, ts-2, …) — caller
+	// should re-issue with an explicit ?namespace= to disambiguate. Only
+	// set in that ambiguity case; ignored otherwise.
+	Namespaces []string `json:"namespaces,omitempty"`
 }
 
 // InstallPedestalInput is the service-layer call shape for an admin install.
@@ -135,7 +153,24 @@ type InstallPedestalResult struct {
 	Version    string    `json:"version"`
 	Status     string    `json:"status"`
 	DeployedAt time.Time `json:"deployed_at"`
+	// PreviousVersion and NewVersion are populated by Restart so any
+	// version change is visible to operators. PreviousVersion is the chart
+	// version that was deployed before the restart; NewVersion is the
+	// version that was applied. When the caller does not pass
+	// container_version_id they should be equal (in-place redeploy).
+	PreviousVersion string `json:"previous_version,omitempty"`
+	NewVersion      string `json:"new_version,omitempty"`
 }
+
+// defaultListLimit is the default cap on the number of releases returned by
+// ListReleases when the caller doesn't pass ?limit. Picked to stay well
+// inside the gin/JSON response envelope on real clusters (~50 releases
+// today; cap headroom is ~4×).
+const defaultListLimit = 200
+
+// maxListLimit caps how high ?limit can go. Anything past this is rejected
+// — large clusters can blow up the response payload otherwise.
+const maxListLimit = 1000
 
 // ListReleases enumerates every helm release across all namespaces visible
 // to the configured kubeconfig and tags each one with its system
@@ -145,11 +180,21 @@ type InstallPedestalResult struct {
 // system ns_pattern"; releases whose name matches no system are simply
 // returned with Managed=false.
 //
+// limit caps the number of releases returned; zero / negative means use
+// the default (200). Values above maxListLimit are clamped.
+//
 // Listing is unfiltered cluster-wide because ns_pattern is a regex (not a
 // fixed namespace), so we cannot pre-enumerate the namespace set without
 // listing namespaces from k8s — which would double the round-trip count
 // for no operational gain over post-hoc filtering.
-func (s *RuntimeService) ListReleases(ctx context.Context) ([]PedestalRelease, error) {
+func (s *RuntimeService) ListReleases(ctx context.Context, limit int) ([]PedestalRelease, error) {
+	if limit <= 0 {
+		limit = defaultListLimit
+	}
+	if limit > maxListLimit {
+		limit = maxListLimit
+	}
+
 	releases, err := s.gateway.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list helm releases: %w", err)
@@ -172,6 +217,9 @@ func (s *RuntimeService) ListReleases(ctx context.Context) ([]PedestalRelease, e
 
 	out := make([]PedestalRelease, 0, len(releases))
 	for _, rel := range releases {
+		if len(out) >= limit {
+			break
+		}
 		entry := PedestalRelease{
 			Release:      rel.Name,
 			Namespace:    rel.Namespace,
@@ -203,11 +251,13 @@ func (s *RuntimeService) ListReleases(ctx context.Context) ([]PedestalRelease, e
 // GetRelease returns the helm release info plus its user-supplied values.
 // When the release exists in multiple namespaces (possible since ns_pattern
 // allows per-pool replicas like ts-1, ts-2, …) the caller must specify the
-// namespace; without it we walk every namespace that matches a system
-// short_code equal to release until we hit a deployed release.
+// namespace; without it we first try the conventional namespace (==release)
+// and, on miss, fall back to a cluster-wide List filtered by release name —
+// returning the first deployed match. If multiple deployed matches exist,
+// Namespaces is populated so the caller can re-issue with an explicit pin.
 //
-// Returns (nil, nil) when the release is not found in any namespace so the
-// HTTP layer can map that to 404.
+// Returns (nil, nil) when the release is not found anywhere so the HTTP
+// layer can map that to 404.
 func (s *RuntimeService) GetRelease(ctx context.Context, release, namespace string) (*PedestalReleaseDetail, error) {
 	release = strings.TrimSpace(release)
 	if release == "" {
@@ -218,10 +268,57 @@ func (s *RuntimeService) GetRelease(ctx context.Context, release, namespace stri
 		return s.getReleaseInNamespace(ctx, release, namespace)
 	}
 
-	// No namespace pin: assume the convention (namespace == release ==
-	// system short_code). For pool-style systems the caller should pass
-	// ?namespace=… explicitly.
-	return s.getReleaseInNamespace(ctx, release, release)
+	// No namespace pin: try the conventional layout (namespace == release)
+	// first. This is the common case and avoids a cluster-wide list.
+	detail, err := s.getReleaseInNamespace(ctx, release, release)
+	if err != nil {
+		return nil, err
+	}
+	if detail != nil {
+		return detail, nil
+	}
+
+	// Conventional lookup missed — fall back to a cluster-wide list and
+	// match by release name. Lets pool-style releases (ts-1, ts-2, …)
+	// resolve without the caller having to guess the namespace.
+	all, err := s.gateway.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list helm releases for fallback: %w", err)
+	}
+	var matches []helm.ReleaseInfo
+	for _, rel := range all {
+		if rel.Name == release {
+			matches = append(matches, rel)
+		}
+	}
+	if len(matches) == 0 {
+		return nil, nil
+	}
+	// Prefer a deployed release when multiple exist; ties broken by the
+	// gateway's listing order (helm returns most-recent first for the
+	// All=true list).
+	pick := matches[0]
+	for _, rel := range matches {
+		if rel.Status == "deployed" {
+			pick = rel
+			break
+		}
+	}
+	detail, err = s.getReleaseInNamespace(ctx, release, pick.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	if detail == nil {
+		return nil, nil
+	}
+	if len(matches) > 1 {
+		nss := make([]string, 0, len(matches))
+		for _, rel := range matches {
+			nss = append(nss, rel.Namespace)
+		}
+		detail.Namespaces = nss
+	}
+	return detail, nil
 }
 
 func (s *RuntimeService) getReleaseInNamespace(_ context.Context, release, namespace string) (*PedestalReleaseDetail, error) {
@@ -252,7 +349,9 @@ func (s *RuntimeService) getReleaseInNamespace(_ context.Context, release, names
 // Install runs a synchronous helm install for the given container_version.
 // The request is validated against the resolved ContainerVersion (must be
 // pedestal type, must belong to the named system, must have a HelmConfig
-// row). The caller's context deadline bounds the helm apply.
+// row, parent Container must be live). The caller's context deadline bounds
+// the helm apply; the handler wraps the gin context with an
+// adminInstallTimeoutCeiling() before calling.
 func (s *RuntimeService) Install(ctx context.Context, in InstallPedestalInput) (*InstallPedestalResult, error) {
 	systemCode := strings.TrimSpace(in.SystemCode)
 	if systemCode == "" {
@@ -271,6 +370,14 @@ func (s *RuntimeService) Install(ctx context.Context, in InstallPedestalInput) (
 	}
 	if version.Container == nil {
 		return nil, fmt.Errorf("container_version %d has no container row: %w", in.ContainerVersionID, consts.ErrBadRequest)
+	}
+	// GetContainerVersionByID filters status>=0 on the version row only;
+	// the parent Container preload is unfiltered, so a soft-deleted
+	// Container would still get here. Reject it explicitly to keep Install
+	// and findLatestVersionForSystem in lock-step on what counts as
+	// installable.
+	if version.Container.Status < 0 {
+		return nil, fmt.Errorf("container_version %d belongs to a soft-deleted container: %w", in.ContainerVersionID, consts.ErrBadRequest)
 	}
 	if version.Container.Type != consts.ContainerTypePedestal {
 		return nil, fmt.Errorf("container_version %d is not a pedestal (type=%v): %w", in.ContainerVersionID, version.Container.Type, consts.ErrBadRequest)
@@ -292,8 +399,11 @@ func (s *RuntimeService) Install(ctx context.Context, in InstallPedestalInput) (
 		return nil, err
 	}
 
-	if err := helm.InstallPedestal(ctx, s.helmGatewayConcrete(), spec); err != nil {
-		return nil, fmt.Errorf("install pedestal %s: %w", systemCode, err)
+	if s.concrete == nil {
+		return nil, fmt.Errorf("helm gateway is not wired for install (test surface?): %w", consts.ErrBadRequest)
+	}
+	if err := helm.InstallPedestal(ctx, s.concrete, spec); err != nil {
+		return nil, s.wrapInstallFailure(err, namespace, systemCode)
 	}
 
 	info, err := s.gateway.GetReleaseInfo(namespace, systemCode)
@@ -322,15 +432,46 @@ func (s *RuntimeService) Install(ctx context.Context, in InstallPedestalInput) (
 	}, nil
 }
 
-// Restart redeploys the given release in-place. When in.HelmValues is empty
-// we fetch the previously-applied values (`helm get values`) so the restart
-// is a true rolling-redeploy. When the release doesn't exist we fall back
-// to a fresh install using the latest active ContainerVersion for the
-// system named by release (admin-only convenience).
+// wrapInstallFailure enriches a helm-install error with the current
+// release status (when discoverable) so partial-install state — release
+// stuck in `pending-install` / `failed` — is visible from the failure
+// message rather than requiring an operator to manually run `helm status`.
+// Also emits a Warn log with the same fields for ops greppability.
 //
-// The release name is also the system short_code by convention; the caller
-// passes the release URL parameter and we resolve everything else.
-func (s *RuntimeService) Restart(ctx context.Context, release, namespace string, overrideValues map[string]any) (*InstallPedestalResult, error) {
+// Best-effort: any error inspecting the release is folded into the
+// returned message but not propagated as a primary failure.
+func (s *RuntimeService) wrapInstallFailure(origErr error, namespace, release string) error {
+	info, statusErr := s.gateway.GetReleaseInfo(namespace, release)
+	if statusErr != nil || info == nil {
+		// Either inspection failed or there is no release row at all —
+		// return the original error unchanged. Logging at info-level here
+		// would be noisy on the cluster-not-reachable path.
+		return fmt.Errorf("install pedestal %s: %w", release, origErr)
+	}
+	if info.Status != "" && info.Status != "deployed" {
+		logrus.WithFields(logrus.Fields{
+			"namespace": namespace,
+			"release":   release,
+			"status":    info.Status,
+		}).Warn("pedestal install left release in non-deployed state")
+		return fmt.Errorf("install pedestal %s failed (release left in status=%s): %w", release, info.Status, origErr)
+	}
+	return fmt.Errorf("install pedestal %s: %w", release, origErr)
+}
+
+// Restart redeploys the given release in-place. By default Restart pins to
+// the chart version that's currently deployed (read from `helm get release`)
+// — operators that just want "redeploy what's running" never accidentally
+// upgrade. If containerVersionID is non-zero the caller is explicitly
+// opting into an upgrade and the named version is used instead.
+//
+// When in.HelmValues is empty we fetch the previously-applied values
+// (`helm get values`) so the restart is a true rolling-redeploy.
+//
+// If the release doesn't exist (or its chart version is empty in helm's
+// view), we return 409 Conflict rather than silently falling back to "use
+// the latest active version".
+func (s *RuntimeService) Restart(ctx context.Context, release, namespace string, containerVersionID int, overrideValues map[string]any) (*InstallPedestalResult, error) {
 	release = strings.TrimSpace(release)
 	if release == "" {
 		return nil, fmt.Errorf("release is required: %w", consts.ErrBadRequest)
@@ -339,14 +480,48 @@ func (s *RuntimeService) Restart(ctx context.Context, release, namespace string,
 		namespace = release
 	}
 
-	// Resolve the ContainerVersion to use. For now we always pick the
-	// highest-versioned active pedestal version for the system — the
-	// release_name → system_short_code mapping makes that unambiguous.
-	// Admins that need a specific version should use POST /pedestals
-	// directly with a container_version_id.
-	version, err := s.findLatestVersionForSystem(ctx, release)
+	current, err := s.gateway.GetReleaseInfo(namespace, release)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read current release for restart: %w", err)
+	}
+	if current == nil {
+		return nil, fmt.Errorf("release %s/%s not found — restart requires an existing release: %w", namespace, release, consts.ErrConflict)
+	}
+
+	previousVersion := current.ChartVersion
+
+	// Resolve the ContainerVersion to use. Default = the currently-
+	// deployed chart version (in-place redeploy). Explicit override =
+	// caller-supplied container_version_id (upgrade opt-in).
+	var version *model.ContainerVersion
+	if containerVersionID > 0 {
+		version, err = s.repo.GetContainerVersionByID(ctx, containerVersionID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("container_version %d not found: %w", containerVersionID, consts.ErrNotFound)
+			}
+			return nil, fmt.Errorf("load container version: %w", err)
+		}
+		if version.Container == nil || version.Container.Status < 0 {
+			return nil, fmt.Errorf("container_version %d belongs to a soft-deleted container: %w", containerVersionID, consts.ErrBadRequest)
+		}
+		if version.Container.Type != consts.ContainerTypePedestal {
+			return nil, fmt.Errorf("container_version %d is not a pedestal (type=%v): %w", containerVersionID, version.Container.Type, consts.ErrBadRequest)
+		}
+		if version.Container.Name != release {
+			return nil, fmt.Errorf("container_version %d belongs to system %q, not %q: %w", containerVersionID, version.Container.Name, release, consts.ErrBadRequest)
+		}
+		if version.HelmConfig == nil {
+			return nil, fmt.Errorf("container_version %d has no helm_config row: %w", containerVersionID, consts.ErrBadRequest)
+		}
+	} else {
+		if previousVersion == "" {
+			return nil, fmt.Errorf("release %s/%s has no chart version recorded — cannot restart without an explicit container_version_id: %w", namespace, release, consts.ErrConflict)
+		}
+		version, err = s.findVersionForSystemAndChart(ctx, release, previousVersion)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	values := overrideValues
@@ -362,8 +537,21 @@ func (s *RuntimeService) Restart(ctx context.Context, release, namespace string,
 	if err != nil {
 		return nil, err
 	}
-	if err := helm.InstallPedestal(ctx, s.helmGatewayConcrete(), spec); err != nil {
-		return nil, fmt.Errorf("restart pedestal %s: %w", release, err)
+	if s.concrete == nil {
+		return nil, fmt.Errorf("helm gateway is not wired for restart (test surface?): %w", consts.ErrBadRequest)
+	}
+	if err := helm.InstallPedestal(ctx, s.concrete, spec); err != nil {
+		return nil, s.wrapInstallFailure(fmt.Errorf("restart pedestal %s: %w", release, err), namespace, release)
+	}
+
+	newVersion := spec.Version
+	if containerVersionID > 0 && newVersion != previousVersion {
+		logrus.WithFields(logrus.Fields{
+			"release":          release,
+			"namespace":        namespace,
+			"previous_version": previousVersion,
+			"new_version":      newVersion,
+		}).Info("pedestal upgrade via restart endpoint")
 	}
 
 	info, err := s.gateway.GetReleaseInfo(namespace, release)
@@ -372,21 +560,25 @@ func (s *RuntimeService) Restart(ctx context.Context, release, namespace string,
 	}
 	if info == nil {
 		return &InstallPedestalResult{
-			Release:    release,
-			Namespace:  namespace,
-			Chart:      spec.ChartName,
-			Version:    spec.Version,
-			Status:     "deployed",
-			DeployedAt: time.Now().UTC(),
+			Release:         release,
+			Namespace:       namespace,
+			Chart:           spec.ChartName,
+			Version:         spec.Version,
+			Status:          "deployed",
+			DeployedAt:      time.Now().UTC(),
+			PreviousVersion: previousVersion,
+			NewVersion:      newVersion,
 		}, nil
 	}
 	return &InstallPedestalResult{
-		Release:    info.Name,
-		Namespace:  info.Namespace,
-		Chart:      info.Chart,
-		Version:    info.ChartVersion,
-		Status:     info.Status,
-		DeployedAt: info.LastDeployed,
+		Release:         info.Name,
+		Namespace:       info.Namespace,
+		Chart:           info.Chart,
+		Version:         info.ChartVersion,
+		Status:          info.Status,
+		DeployedAt:      info.LastDeployed,
+		PreviousVersion: previousVersion,
+		NewVersion:      newVersion,
 	}, nil
 }
 
@@ -406,17 +598,6 @@ func (s *RuntimeService) Uninstall(ctx context.Context, release, namespace strin
 	}
 	if err := s.gateway.Uninstall(ctx, namespace, release, timeout); err != nil {
 		return fmt.Errorf("uninstall release %s: %w", release, err)
-	}
-	return nil
-}
-
-// helmGatewayConcrete returns the embedded *helm.Gateway when the field is
-// the production type. Tests that pass a fake helmGateway will not call
-// Install / Restart paths that require a real cluster, so the type
-// assertion below is safe for those test surfaces.
-func (s *RuntimeService) helmGatewayConcrete() *helm.Gateway {
-	if gw, ok := s.gateway.(*helm.Gateway); ok {
-		return gw
 	}
 	return nil
 }
@@ -446,16 +627,16 @@ func (s *RuntimeService) buildInstallSpec(version *model.ContainerVersion, relea
 
 	overall, wait := adminInstallTimeouts()
 	return helm.PedestalInstallSpec{
-		Namespace:        namespace,
-		ReleaseName:      releaseName,
-		ChartName:        cfg.ChartName,
-		Version:          cfg.Version,
-		RepoURL:          resolveRepoURL(cfg),
-		RepoName:         cfg.RepoName,
-		LocalPath:        cfg.LocalPath,
-		Values:           values,
-		InstallTimeout:   overall,
-		UninstallTimeout: wait,
+		Namespace:      namespace,
+		ReleaseName:    releaseName,
+		ChartName:      cfg.ChartName,
+		Version:        cfg.Version,
+		RepoURL:        resolveRepoURL(cfg),
+		RepoName:       cfg.RepoName,
+		LocalPath:      cfg.LocalPath,
+		Values:         values,
+		OverallTimeout: overall,
+		WaitTimeout:    wait,
 	}, nil
 }
 
@@ -477,7 +658,8 @@ func resolveRepoURL(cfg *model.HelmConfig) string {
 // admin endpoints. Defaults are tighter than the orchestrator's
 // (10 min install, 5 min uninstall) because the admin flow is interactive
 // and the caller's context deadline is the authoritative bound — these are
-// fallback values when the caller doesn't pass a deadline.
+// the helm-SDK-internal timeouts (manifest apply / pre-install uninstall)
+// passed through to PedestalInstallSpec.
 func adminInstallTimeouts() (time.Duration, time.Duration) {
 	install := 10 * time.Minute
 	uninstall := 5 * time.Minute
@@ -490,10 +672,32 @@ func adminInstallTimeouts() (time.Duration, time.Duration) {
 	return install, uninstall
 }
 
-// findLatestVersionForSystem returns the highest-versioned active pedestal
-// container_version for the given system short_code. Used by Restart when
-// the caller doesn't pin a container_version_id.
-func (s *RuntimeService) findLatestVersionForSystem(ctx context.Context, systemCode string) (*model.ContainerVersion, error) {
+// adminInstallTimeoutCeiling returns the request-envelope ceiling for
+// install / restart handlers. Sized at "configured install timeout + 60s
+// slack" so the helm-SDK-internal apply timeout fires first, leaving a
+// margin for post-install status check + JSON serialization before the
+// gin context is cancelled.
+func adminInstallTimeoutCeiling() time.Duration {
+	install, _ := adminInstallTimeouts()
+	return install + 60*time.Second
+}
+
+// adminUninstallTimeoutCeiling is the request-envelope ceiling for the
+// uninstall handler. Sized at "configured uninstall timeout + 60s slack".
+func adminUninstallTimeoutCeiling() time.Duration {
+	_, uninstall := adminInstallTimeouts()
+	return uninstall + 60*time.Second
+}
+
+// findVersionForSystemAndChart resolves the ContainerVersion whose
+// HelmConfig.Version matches the chart version currently deployed for the
+// named system. Used by Restart to redeploy "what's running" without
+// surprising operators with a silent upgrade.
+//
+// Returns ErrNotFound when no version row matches the chart version (likely
+// means the deployed release was installed out-of-band; caller must pass
+// an explicit container_version_id to restart it).
+func (s *RuntimeService) findVersionForSystemAndChart(ctx context.Context, systemCode, chartVersion string) (*model.ContainerVersion, error) {
 	var container model.Container
 	if err := s.repo.db.WithContext(ctx).
 		Where("name = ? AND type = ? AND status >= 0", systemCode, consts.ContainerTypePedestal).
@@ -508,17 +712,18 @@ func (s *RuntimeService) findLatestVersionForSystem(ctx context.Context, systemC
 		Preload("Container").
 		Preload("HelmConfig").
 		Preload("HelmConfig.DynamicValues").
-		Where("container_id = ? AND status >= 0", container.ID).
-		Order("name_major DESC, name_minor DESC, name_patch DESC, id DESC").
+		Joins("JOIN helm_configs ON helm_configs.container_version_id = container_versions.id").
+		Where("container_versions.container_id = ? AND container_versions.status >= 0 AND helm_configs.version = ?", container.ID, chartVersion).
+		Order("container_versions.name_major DESC, container_versions.name_minor DESC, container_versions.name_patch DESC, container_versions.id DESC").
 		First(&version).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("no active versions for pedestal system %s: %w", systemCode, consts.ErrNotFound)
+			return nil, fmt.Errorf("no container_version for system %s at chart version %s — pass container_version_id explicitly to restart this release: %w", systemCode, chartVersion, consts.ErrNotFound)
 		}
-		return nil, fmt.Errorf("load latest version: %w", err)
+		return nil, fmt.Errorf("load version for chart %s: %w", chartVersion, err)
 	}
 	if version.HelmConfig == nil {
-		return nil, fmt.Errorf("latest version %d for system %s has no helm_config: %w", version.ID, systemCode, consts.ErrBadRequest)
+		return nil, fmt.Errorf("version %d for system %s has no helm_config: %w", version.ID, systemCode, consts.ErrBadRequest)
 	}
 	return &version, nil
 }
