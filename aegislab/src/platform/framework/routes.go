@@ -17,19 +17,19 @@ const (
 
 // RouteRegistrar is what a module contributes for route self-registration.
 //
-// Use a single `group:"routes"` with an `Audience` tag (rather than four
-// separate groups keyed by audience) because:
-//   - A module often touches multiple audiences (e.g. injections has portal
-//     + sdk + admin endpoints). One registrar-per-audience means the module
-//     writes one small function per bucket, grouped in module/<name>/routes.go.
-//     Four groups would require four different fx.ResultTags on four
-//     different provide functions — more cognitive load for every new module.
-//   - The aggregator (router.New) iterates once over the flat slice and
-//     dispatches on `.Audience` — trivially readable.
-//
 // A module provides it from `fx.Provide(module.Routes, fx.ResultTags(`group:"routes"`))`.
+// Each domain provides exactly one Routes function — collisions between
+// audience-keyed registrars used to surface as gin panics at startup, so
+// we consolidate per domain and let `@x-api-type` annotations on each
+// handler drive swagger SDK bucketing instead.
 type RouteRegistrar struct {
-	// Audience chooses which sub-group of /api/v2 Register is mounted on.
+	// Audience is retained for backwards compatibility with module tests
+	// that pin a registrar's "primary" audience and for human readers
+	// skimming routes.go. The router does NOT dispatch on it — every
+	// registrar mounts on the same /api/v2 sub-group at runtime — and
+	// swagger SDK filtering is driven by per-handler @x-api-type
+	// annotations, not this field. Set it to the audience that best
+	// describes the registrar's center of mass; nothing branches on it.
 	// Ignored when BasePath is non-empty.
 	Audience Audience
 
