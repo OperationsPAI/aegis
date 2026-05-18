@@ -23,7 +23,7 @@ const orchestratorServiceName = "rcabench"
 // TraceId emitted under a single aegis trace gets this attribute on at least
 // the root span, so the two-stage IN query below can fan from one aegis
 // trace_id to N OTel traces and pull every descendant span.
-const orchestratorTraceAttr = "trace_id"
+const orchestratorTraceAttr = "aegis.trace_id"
 
 // SpanReader is the seam the trace service uses to fetch orchestrator OTel
 // spans from ClickHouse. Mirrors the FreshnessProbe pattern in
