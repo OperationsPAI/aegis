@@ -230,7 +230,12 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		)
 
 		// Batch create all fault injections in parallel
-		names, err := chaos.BatchCreate(childCtx, injectionConfs, chaos.SystemType(payload.system), payload.namespace, annotations, crdLabels)
+		var names []string
+		err = tracing.WithSpanNamed(childCtx, "chaos.batch_create", func(c context.Context) error {
+			var werr error
+			names, werr = chaos.BatchCreate(c, injectionConfs, chaos.SystemType(payload.system), payload.namespace, annotations, crdLabels)
+			return werr
+		})
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to inject faults", err)
 		}

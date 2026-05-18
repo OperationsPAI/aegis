@@ -172,6 +172,11 @@ func SubmitTaskWithDB(ctx context.Context, db *gorm.DB, redisGateway *redis.Gate
 		)
 	}
 
+	t.EnqueuedAt = time.Now().UnixNano()
+	if !t.Immediate {
+		t.ExecuteAfter = t.ExecuteTime
+	}
+
 	taskData, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("failed to marshal task data: %w", err)

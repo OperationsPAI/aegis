@@ -89,7 +89,11 @@ func executeAlgorithm(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDe
 			span.AddEvent("no token available, waiting")
 			logEntry.Info("No algorithm execution token available, waiting...")
 
-			acquired, err = rateLimiter.WaitForToken(childCtx, task.TaskID, task.TraceID)
+			err = tracing.WithSpanNamed(childCtx, "ratelimit.wait/algorithm", func(c context.Context) error {
+				var werr error
+				acquired, werr = rateLimiter.WaitForToken(c, task.TaskID, task.TraceID)
+				return werr
+			})
 			if err != nil {
 				return handleExecutionError(span, logEntry, "failed to wait for token", err)
 			}
@@ -107,7 +111,12 @@ func executeAlgorithm(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDe
 			return handleExecutionError(span, logEntry, "failed to parse execution payload", err)
 		}
 
-		executionID, err := createExecution(childCtx, deps, task.TaskID, payload.algorithm.ID, payload.datapack.ID, payload.datasetVersionID, payload.labels)
+		var executionID int
+		err = tracing.WithSpanNamed(childCtx, "db.create_execution", func(c context.Context) error {
+			var werr error
+			executionID, werr = createExecution(c, deps, task.TaskID, payload.algorithm.ID, payload.datapack.ID, payload.datasetVersionID, payload.labels)
+			return werr
+		})
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to create execution result", err)
 		}

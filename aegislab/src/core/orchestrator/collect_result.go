@@ -47,7 +47,12 @@ func executeCollectResult(ctx context.Context, task *dto.UnifiedTask, deps Runti
 		}
 
 		if collectPayload.algorithm.ContainerName == config.GetDetectorName() {
-			results, err := loadDetectorResults(childCtx, deps, db, collectPayload.executionID)
+			var results []execution.DetectorResultItem
+			err := tracing.WithSpanNamed(childCtx, "db.load_detector_results", func(c context.Context) error {
+				var werr error
+				results, werr = loadDetectorResults(c, deps, db, collectPayload.executionID)
+				return werr
+			})
 			if err != nil {
 				logEntry.Errorf("failed to get detector results by execution ID: %v", err)
 				span.AddEvent("failed to get detector results by execution ID")
@@ -115,7 +120,12 @@ func executeCollectResult(ctx context.Context, task *dto.UnifiedTask, deps Runti
 			return nil
 		}
 
-		results, err := loadGranularityResults(childCtx, deps, db, collectPayload.executionID)
+		var results []execution.GranularityResultItem
+		err = tracing.WithSpanNamed(childCtx, "db.load_granularity_results", func(c context.Context) error {
+			var werr error
+			results, werr = loadGranularityResults(c, deps, db, collectPayload.executionID)
+			return werr
+		})
 		if err != nil {
 			span.AddEvent("failed to get detector results by execution ID")
 			span.RecordError(err)

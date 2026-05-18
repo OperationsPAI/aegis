@@ -224,10 +224,11 @@ func ConsumeTasks(ctx context.Context, deps RuntimeDeps) {
 	logrus.Info("Starting consume tasks")
 
 	for {
-		if !deps.RedisGateway.AcquireConcurrencyLock(ctx) {
+		waitStart := time.Now()
+		for !deps.RedisGateway.AcquireConcurrencyLock(ctx) {
 			time.Sleep(100 * time.Millisecond)
-			continue
 		}
+		concurrencyWait := time.Since(waitStart)
 
 		taskData, err := deps.RedisGateway.GetTask(ctx, 30*time.Second)
 		if err != nil {
@@ -240,12 +241,12 @@ func ConsumeTasks(ctx context.Context, deps RuntimeDeps) {
 			continue
 		}
 
-		go processTask(ctx, taskData, deps)
+		go processTask(ctx, taskData, deps, concurrencyWait)
 	}
 }
 
 // processTask handles a task from the queue
-func processTask(ctx context.Context, taskData string, deps RuntimeDeps) {
+func processTask(ctx context.Context, taskData string, deps RuntimeDeps, concurrencyWait time.Duration) {
 	defer deps.RedisGateway.ReleaseConcurrencyLock(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -269,6 +270,9 @@ func processTask(ctx context.Context, taskData string, deps RuntimeDeps) {
 	taskSpan := trace.SpanFromContext(taskCtx)
 	defer taskSpan.End()
 
+	emitQueueWaitSpan(stageCtx, &task)
+	emitConcurrencyWaitEvent(stageSpan, &task, concurrencyWait)
+
 	startTime := time.Now()
 
 	tasksProcessed.WithLabelValues(consts.GetTaskTypeName(task.Type), "started").Inc()
@@ -276,6 +280,48 @@ func processTask(ctx context.Context, taskData string, deps RuntimeDeps) {
 	executeTaskWithRetry(taskCtx, &task, deps)
 
 	taskDuration.WithLabelValues(consts.GetTaskTypeName(task.Type)).Observe(time.Since(startTime).Seconds())
+}
+
+// emitConcurrencyWaitEvent records the time the worker spent blocked on
+// MaxConcurrency before picking up this task. Recorded as a single event on
+// the stage span (rather than a span) so 30-min waits don't dominate the
+// visual timeline. Skipped when the wait was negligible.
+func emitConcurrencyWaitEvent(stageSpan trace.Span, task *dto.UnifiedTask, wait time.Duration) {
+	if wait <= 0 || stageSpan == nil {
+		return
+	}
+	stageSpan.AddEvent("concurrency.wait", trace.WithAttributes(
+		attribute.String("task.id", task.TaskID),
+		attribute.String("task.type", consts.GetTaskTypeName(task.Type)),
+		attribute.Int64("duration_ms", wait.Milliseconds()),
+	))
+}
+
+// emitQueueWaitSpan emits a backdated child span covering the gap between
+// when the task was enqueued and when the worker picked it up. Skipped for
+// pre-instrumentation tasks (no EnqueuedAt). For delayed tasks, the
+// intended schedule delay (ExecuteAfter) is reflected as a span attribute
+// so anomaly-vs-intended-wait is distinguishable.
+func emitQueueWaitSpan(stageCtx context.Context, task *dto.UnifiedTask) {
+	if task.EnqueuedAt <= 0 {
+		return
+	}
+	enqueuedAt := time.Unix(0, task.EnqueuedAt)
+	attrs := []attribute.KeyValue{
+		attribute.String("queue.kind", "redis"),
+		attribute.String("task.id", task.TaskID),
+		attribute.String("task.type", consts.GetTaskTypeName(task.Type)),
+	}
+	if task.ExecuteAfter > 0 {
+		attrs = append(attrs, attribute.Int64("queue.execute_after_unix", task.ExecuteAfter))
+	}
+	_, qSpan := otel.Tracer("rcabench/task").Start(stageCtx,
+		"queue.wait/"+consts.GetTaskTypeName(task.Type),
+		trace.WithTimestamp(enqueuedAt),
+		trace.WithSpanKind(trace.SpanKindConsumer),
+		trace.WithAttributes(attrs...),
+	)
+	qSpan.End()
 }
 
 // preInstrumentationWarnOnce ensures the "pre-instrumentation trace" warning
@@ -397,12 +443,21 @@ func executeTaskWithRetry(ctx context.Context, task *dto.UnifiedTask, deps Runti
 	// Fixed-interval backoff using RetryPolicy.BackoffSec between attempts
 	for attempt := 0; attempt <= task.RetryPolicy.MaxAttempts; attempt++ {
 		if attempt > 0 {
+			backoffCtx, backoffSpan := otel.Tracer("rcabench/task").Start(retryCtx,
+				"task.retry_backoff",
+				trace.WithAttributes(
+					attribute.Int("attempt", attempt),
+					attribute.Int("backoff_sec", task.RetryPolicy.BackoffSec),
+				),
+			)
 			select {
-			case <-retryCtx.Done():
+			case <-backoffCtx.Done():
+				backoffSpan.End()
 				logrus.Infof("Task %s canceled during retry", task.TaskID)
 				return
 			case <-time.After(time.Duration(task.RetryPolicy.BackoffSec) * time.Second):
 			}
+			backoffSpan.End()
 		}
 
 		ctxWithCancel, cancel := context.WithCancel(ctx)

@@ -292,6 +292,7 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 	traceCtx := otel.GetTextMapPropagator().Extract(consumerDetachedContext(), parsedAnnotations.traceCarrier)
 
 	_ = tracing.WithSpanNamed(taskCtx, "k8s/callback/CRDSucceeded", func(taskCtx context.Context) error {
+	emitK8sDispatchGap(taskCtx, "CRD", name, startTime)
 	tracing.SetSpanAttribute(taskCtx, "task.id", parsedLabels.taskID)
 	tracing.SetSpanAttribute(taskCtx, "task.type", consts.GetTaskTypeName(parsedLabels.taskType))
 	tracing.SetSpanAttribute(taskCtx, "crd.name", name)
@@ -505,6 +506,7 @@ func (h *k8sHandler) HandleJobFailed(job *batchv1.Job, annotations map[string]st
 	})
 	taskCtx := otel.GetTextMapPropagator().Extract(consumerDetachedContext(), parsedAnnotations.taskCarrier)
 	_ = tracing.WithSpanNamed(taskCtx, "k8s/callback/JobFailed", func(taskCtx context.Context) error {
+	emitK8sDispatchGap(taskCtx, "Job", job.Name, job.CreationTimestamp.Time)
 	tracing.SetSpanAttribute(taskCtx, "task.id", parsedLabels.taskID)
 	tracing.SetSpanAttribute(taskCtx, "task.type", consts.GetTaskTypeName(parsedLabels.taskType))
 	tracing.SetSpanAttribute(taskCtx, "job.name", job.Name)
@@ -590,6 +592,7 @@ func (h *k8sHandler) HandleJobSucceeded(job *batchv1.Job, annotations map[string
 	traceCtx := otel.GetTextMapPropagator().Extract(consumerDetachedContext(), parsedAnnotations.traceCarrier)
 
 	_ = tracing.WithSpanNamed(taskCtx, "k8s/callback/JobSucceeded", func(taskCtx context.Context) error {
+	emitK8sDispatchGap(taskCtx, "Job", job.Name, job.CreationTimestamp.Time)
 	tracing.SetSpanAttribute(taskCtx, "task.id", parsedLabels.taskID)
 	tracing.SetSpanAttribute(taskCtx, "task.type", consts.GetTaskTypeName(parsedLabels.taskType))
 	tracing.SetSpanAttribute(taskCtx, "job.name", job.Name)
@@ -768,6 +771,26 @@ func parseCRDLabels(labels map[string]string) (*crdLabels, error) {
 		batchID:         batchID,
 		IsHybrid:        isHybrid,
 	}, nil
+}
+
+// emitK8sDispatchGap emits a backdated child span covering the wall-clock
+// gap between when the K8s object was created and when the callback fired.
+// Visualizes "we created a chaos CRD / Job and waited for it" — a stretch
+// of trace time the orchestrator otherwise has zero spans for.
+func emitK8sDispatchGap(ctx context.Context, kind, name string, creationTs time.Time) {
+	if creationTs.IsZero() {
+		return
+	}
+	_, span := otel.Tracer("rcabench/task").Start(ctx,
+		"k8s.dispatch_wait/"+kind,
+		trace.WithTimestamp(creationTs),
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("k8s.kind", kind),
+			attribute.String("k8s.name", name),
+		),
+	)
+	span.End()
 }
 
 func parseJobLabels(labels map[string]string) (*jobLabels, error) {

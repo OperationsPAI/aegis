@@ -81,7 +81,12 @@ func executeBuildDatapackWithDeps(ctx context.Context, task *dto.UnifiedTask, de
 		if rateLimiter == nil {
 			return handleExecutionError(span, logEntry, "build datapack rate limiter not initialized", fmt.Errorf("build datapack rate limiter not initialized"))
 		}
-		acquired, err := acquireBuildDatapackToken(childCtx, rateLimiter, task, logEntry)
+		var acquired bool
+		err := tracing.WithSpanNamed(childCtx, "ratelimit.wait/build_datapack", func(c context.Context) error {
+			var werr error
+			acquired, werr = acquireBuildDatapackToken(c, rateLimiter, task, logEntry)
+			return werr
+		})
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to acquire rate limit token", err)
 		}
@@ -124,7 +129,9 @@ func executeBuildDatapackWithDeps(ctx context.Context, task *dto.UnifiedTask, de
 		// hard-failing; persistent CH errors propagate as task errors.
 		watermark, maxWait := freshnessParamsFromConfig()
 		nsForFreshness := extractNamespaceFromBenchmarkEnv(payload.benchmark.EnvVars)
-		if err := waitForCHFreshness(childCtx, deps.FreshnessProbe, nsForFreshness, payload.datapack.EndTime, watermark, maxWait, logEntry); err != nil {
+		if err := tracing.WithSpanNamed(childCtx, "clickhouse.wait_freshness", func(c context.Context) error {
+			return waitForCHFreshness(c, deps.FreshnessProbe, nsForFreshness, payload.datapack.EndTime, watermark, maxWait, logEntry)
+		}); err != nil {
 			if errorsIsFreshnessTimeout(err) {
 				if rerr := rescheduleBuildDatapackTask(childCtx, deps.DB, redisGateway, task, "datapack-build deferred: ClickHouse not fresh enough yet (issue #210)"); rerr != nil {
 					return rerr

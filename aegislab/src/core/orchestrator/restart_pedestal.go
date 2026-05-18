@@ -167,15 +167,22 @@ func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, nam
 		return time.Now(), nil
 	}
 
-	timer := time.NewTimer(soak)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return time.Time{}, ctx.Err()
-	case <-timer.C:
-		return time.Now(), nil
+	var readyAt time.Time
+	err := tracing.WithSpanNamed(ctx, "helm.post_ready_soak", func(c context.Context) error {
+		timer := time.NewTimer(soak)
+		defer timer.Stop()
+		select {
+		case <-c.Done():
+			return c.Err()
+		case <-timer.C:
+			readyAt = time.Now()
+			return nil
+		}
+	})
+	if err != nil {
+		return time.Time{}, err
 	}
+	return readyAt, nil
 }
 
 func adjustInjectTimeAfterWarmup(injectTime, warmupReadyAt time.Time, injectPayload map[string]any) time.Time {
@@ -281,7 +288,11 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			span.AddEvent("no token available, waiting")
 			logEntry.Warn("No restart pedestal token available, waiting...")
 
-			acquired, err = restartLimiter.WaitForToken(childCtx, task.TaskID, task.TraceID)
+			err = tracing.WithSpanNamed(childCtx, "ratelimit.wait/restart", func(c context.Context) error {
+				var werr error
+				acquired, werr = restartLimiter.WaitForToken(c, task.TaskID, task.TraceID)
+				return werr
+			})
 			if err != nil {
 				return handleExecutionError(span, logEntry, "failed to wait for token", err)
 			}
@@ -358,7 +369,12 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 					fmt.Errorf("namespace/system mismatch"))
 			}
 
-			if lockErr := monitor.AcquireNamespaceForRestart(payload.requiredNamespace, lockEndTime, task.TraceID); lockErr != nil {
+			var lockErr error
+			_ = tracing.WithSpanNamed(childCtx, "monitor.acquire_namespace", func(_ context.Context) error {
+				lockErr = monitor.AcquireNamespaceForRestart(payload.requiredNamespace, lockEndTime, task.TraceID)
+				return nil
+			})
+			if lockErr != nil {
 				// Release the restart token immediately so we don't pin a
 				// scarce slot waiting for reschedule. tokens.release is a
 				// no-op for any token that was already released.
@@ -371,7 +387,10 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 			}
 			namespace = payload.requiredNamespace
 		} else {
-			namespace = monitor.GetNamespaceToRestart(lockEndTime, cfg.NsPattern, task.TraceID)
+			_ = tracing.WithSpanNamed(childCtx, "monitor.acquire_namespace", func(_ context.Context) error {
+				namespace = monitor.GetNamespaceToRestart(lockEndTime, cfg.NsPattern, task.TraceID)
+				return nil
+			})
 			if namespace == "" {
 				// Failed to acquire namespace lock, immediately release rate
 				// limit token so a stuck reschedule loop doesn't pin slots.
@@ -422,7 +441,10 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		// Stripping finalizers + force-delete here gives the next round a
 		// clean slate. Any failure is logged and ignored — chaos-CR cleanup
 		// MUST NOT block the helm restart.
-		reapNamespaceChaosResources(childCtx, deps.K8sGateway, namespace, logEntry)
+		_ = tracing.WithSpanNamed(childCtx, "chaos.reap_namespace", func(c context.Context) error {
+			reapNamespaceChaosResources(c, deps.K8sGateway, namespace, logEntry)
+			return nil
+		})
 
 		// Skip the helm install when the caller has pre-installed the chart
 		// out-of-band (e.g. `aegisctl pedestal chart install` +
@@ -486,7 +508,11 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		if !warmingAcquired {
 			span.AddEvent("no warming token available, waiting")
 			logEntry.Warn("No namespace warming token available, waiting...")
-			warmingAcquired, err = warmingLimiter.WaitForToken(childCtx, task.TaskID, task.TraceID)
+			err = tracing.WithSpanNamed(childCtx, "ratelimit.wait/ns_warming", func(c context.Context) error {
+				var werr error
+				warmingAcquired, werr = warmingLimiter.WaitForToken(c, task.TaskID, task.TraceID)
+				return werr
+			})
 			if err != nil {
 				toReleased = true
 				return handleExecutionError(span, logEntry, "failed to wait for namespace warming token", err)
@@ -506,7 +532,12 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		tokens.warming = true
 		logEntry.Infof("acquired warming token for ns %s", namespace)
 
-		warmupReadyAt, err := waitForPedestalWorkloadReady(childCtx, deps.K8sGateway, namespace, pedestalRestartTimeout())
+		var warmupReadyAt time.Time
+		err = tracing.WithSpanNamed(childCtx, "helm.wait_ready", func(c context.Context) error {
+			var werr error
+			warmupReadyAt, werr = waitForPedestalWorkloadReady(c, deps.K8sGateway, namespace, pedestalRestartTimeout())
+			return werr
+		})
 		if err != nil {
 			toReleased = true
 			// Surface the failure as a restart.pedestal.failed trace event so
