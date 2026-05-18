@@ -64,13 +64,13 @@ func TestInstallPedestal_RemoteSucceedsSkipsLocal(t *testing.T) {
 	gw := &recordingGateway{}
 
 	err := InstallPedestal(context.Background(), gw, PedestalInstallSpec{
-		Namespace:        "ts",
-		ReleaseName:      "ts",
-		ChartName:        "trainticket",
-		Version:          "0.3.1",
-		RepoURL:          "https://charts.example.com",
-		RepoName:         "operations-pai",
-		LocalPath:        localChart,
+		Namespace:      "ts",
+		ReleaseName:    "ts",
+		ChartName:      "trainticket",
+		Version:        "0.3.1",
+		RepoURL:        "https://charts.example.com",
+		RepoName:       "operations-pai",
+		LocalPath:      localChart,
 		Values:         map[string]any{"image": "foo"},
 		OverallTimeout: 30 * time.Second,
 		WaitTimeout:    10 * time.Second,

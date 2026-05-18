@@ -403,7 +403,7 @@ func (s *RuntimeService) Install(ctx context.Context, in InstallPedestalInput) (
 		return nil, fmt.Errorf("helm gateway is not wired for install (test surface?): %w", consts.ErrBadRequest)
 	}
 	if err := helm.InstallPedestal(ctx, s.concrete, spec); err != nil {
-		return nil, s.wrapInstallFailure(err, namespace, systemCode)
+		return nil, s.wrapInstallFailure("install", err, namespace, systemCode)
 	}
 
 	info, err := s.gateway.GetReleaseInfo(namespace, systemCode)
@@ -440,23 +440,24 @@ func (s *RuntimeService) Install(ctx context.Context, in InstallPedestalInput) (
 //
 // Best-effort: any error inspecting the release is folded into the
 // returned message but not propagated as a primary failure.
-func (s *RuntimeService) wrapInstallFailure(origErr error, namespace, release string) error {
+func (s *RuntimeService) wrapInstallFailure(verb string, origErr error, namespace, release string) error {
 	info, statusErr := s.gateway.GetReleaseInfo(namespace, release)
 	if statusErr != nil || info == nil {
 		// Either inspection failed or there is no release row at all —
 		// return the original error unchanged. Logging at info-level here
 		// would be noisy on the cluster-not-reachable path.
-		return fmt.Errorf("install pedestal %s: %w", release, origErr)
+		return fmt.Errorf("%s pedestal %s: %w", verb, release, origErr)
 	}
 	if info.Status != "" && info.Status != "deployed" {
 		logrus.WithFields(logrus.Fields{
+			"verb":      verb,
 			"namespace": namespace,
 			"release":   release,
 			"status":    info.Status,
-		}).Warn("pedestal install left release in non-deployed state")
-		return fmt.Errorf("install pedestal %s failed (release left in status=%s): %w", release, info.Status, origErr)
+		}).Warn("pedestal operation left release in non-deployed state")
+		return fmt.Errorf("%s pedestal %s failed (release left in status=%s): %w", verb, release, info.Status, origErr)
 	}
-	return fmt.Errorf("install pedestal %s: %w", release, origErr)
+	return fmt.Errorf("%s pedestal %s: %w", verb, release, origErr)
 }
 
 // Restart redeploys the given release in-place. By default Restart pins to
@@ -541,7 +542,7 @@ func (s *RuntimeService) Restart(ctx context.Context, release, namespace string,
 		return nil, fmt.Errorf("helm gateway is not wired for restart (test surface?): %w", consts.ErrBadRequest)
 	}
 	if err := helm.InstallPedestal(ctx, s.concrete, spec); err != nil {
-		return nil, s.wrapInstallFailure(fmt.Errorf("restart pedestal %s: %w", release, err), namespace, release)
+		return nil, s.wrapInstallFailure("restart", err, namespace, release)
 	}
 
 	newVersion := spec.Version
