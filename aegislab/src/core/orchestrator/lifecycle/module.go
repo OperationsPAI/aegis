@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	helm "aegis/platform/helm"
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	"aegis/core/orchestrator"
@@ -25,6 +26,7 @@ type Params struct {
 
 	Controller           *k8s.Controller
 	K8sGateway           *k8s.Gateway
+	HelmGateway          *helm.Gateway
 	RedisGateway         *redis.Gateway
 	DB                   *gorm.DB
 	Monitor              consumer.NamespaceMonitor
@@ -78,6 +80,14 @@ func (r *Lifecycle) start(ctx context.Context, cancel context.CancelFunc) error 
 			r.params.RedisGateway,
 			r.params.ExecutionOwner,
 			r.params.InjectionOwner,
+		),
+	)
+	consumer.StartNamespaceReclaimer(
+		ctx,
+		consumer.NewNamespaceReclaimer(
+			r.params.HelmGateway,
+			r.params.K8sGateway,
+			r.params.RedisGateway,
 		),
 	)
 	return nil
