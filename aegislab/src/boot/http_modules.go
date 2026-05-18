@@ -8,6 +8,7 @@ import (
 	gateway "aegis/clients/gateway"
 	notificationclient "aegis/clients/notification"
 	chaossystem "aegis/core/domain/chaossystem"
+	cluster "aegis/core/domain/cluster"
 	container "aegis/core/domain/container"
 	dashboard "aegis/core/domain/dashboard"
 	dataset "aegis/core/domain/dataset"
@@ -56,6 +57,7 @@ func apiHTTPModules() []fx.Option {
 	return []fx.Option{
 		// core/domain
 		chaossystem.Module,
+		cluster.Module,
 		container.Module,
 		dashboard.Module,
 		dataset.Module,
@@ -105,7 +107,7 @@ func apiHTTPModules() []fx.Option {
 // by smoke / registry tests. Kept in sync with apiHTTPModules above.
 func apiHTTPModuleNames() []string {
 	return []string{
-		"chaossystem", "container", "dashboard", "dataset", "execution", "group",
+		"chaossystem", "cluster", "container", "dashboard", "dataset", "execution", "group",
 		"injection", "pedestal", "task",
 		"label", "project", "team",
 		"evaluation", "metric", "observation", "sdk", "system",
