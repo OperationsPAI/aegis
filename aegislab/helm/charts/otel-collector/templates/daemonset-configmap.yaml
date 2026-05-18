@@ -73,6 +73,23 @@ data:
         logs:
           log_record:
             - 'resource.attributes["trace_id"] == nil or resource.attributes["trace_id"] == ""'
+      # k8sattributes writes extracted annotations/labels to resource
+      # attributes, which the ClickHouse exporter persists in the
+      # ResourceAttributes column. The backend's QueryTraceLogs reads
+      # LogAttributes['trace_id'] (see log_reader.queryLogsByAttr), so
+      # we copy the aegis tags onto each log record's attributes map to
+      # land them in the LogAttributes column. The `where ... == nil`
+      # guards keep this idempotent if a record already carries the tag
+      # (e.g. the orchestrator OTLP push pipeline already sets them at
+      # the log-record level).
+      transform/promote_aegis_attrs:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(attributes["trace_id"], resource.attributes["trace_id"]) where attributes["trace_id"] == nil
+              - set(attributes["aegis_component"], resource.attributes["aegis_component"]) where attributes["aegis_component"] == nil and resource.attributes["aegis_component"] != nil
+              - set(attributes["task_id"], resource.attributes["task_id"]) where attributes["task_id"] == nil and resource.attributes["task_id"] != nil
       resource:
         attributes:
           - key: deployment.scope
@@ -105,6 +122,6 @@ data:
       pipelines:
         logs:
           receivers: [filelog]
-          processors: [memory_limiter, k8sattributes, filter/aegis_only, resource, batch]
+          processors: [memory_limiter, k8sattributes, filter/aegis_only, transform/promote_aegis_attrs, resource, batch]
           exporters: [clickhouse, debug]
 {{- end }}
