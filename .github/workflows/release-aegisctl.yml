@@ -1,0 +1,124 @@
+name: Release aegisctl binaries
+
+# Tag-driven publish of aegisctl CLI binaries to a GitHub Release.
+# Matrix covers linux/amd64, linux/arm64, darwin/amd64, darwin/arm64 —
+# aegisctl is pure-Go (the duckdb-arrow dependency is behind a build
+# tag the CLI never enables), so CGO_ENABLED=0 cross-compile is enough.
+#
+# Triggers:
+#   - Tag `release-aegisctl/v<ver>` → build 4 binaries + SHA256SUMS,
+#                                     publish a Release for that tag.
+#   - workflow_dispatch             → build only (no release upload).
+#
+# Version metadata in the binary (`aegisctl version`) is sourced from
+# the tag for tag pushes, otherwise from `git describe`.
+
+on:
+  push:
+    tags:
+      - "release-aegisctl/v[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: aegislab/src/go.mod
+          cache-dependency-path: aegislab/src/go.sum
+
+      - name: Resolve version metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/release-aegisctl/* ]]; then
+            version="${GITHUB_REF#refs/tags/release-aegisctl/}"
+          else
+            version="$(git describe --tags --always --dirty)"
+          fi
+          commit="$(git rev-parse --short HEAD)"
+          build_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          asset="aegisctl-${version}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "commit=${commit}" >> "${GITHUB_OUTPUT}"
+          echo "build_time=${build_time}" >> "${GITHUB_OUTPUT}"
+          echo "asset=${asset}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build aegisctl
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        working-directory: aegislab/src
+        run: |
+          set -euo pipefail
+          out="../../${{ steps.meta.outputs.asset }}"
+          ldflags=(
+            "-s" "-w"
+            "-X" "aegis/cli/cmd.version=${{ steps.meta.outputs.version }}"
+            "-X" "aegis/cli/cmd.commit=${{ steps.meta.outputs.commit }}"
+            "-X" "aegis/cli/cmd.buildTime=${{ steps.meta.outputs.build_time }}"
+            "-X" "aegis/cli/cmd.minServerAPIVersion=2"
+          )
+          go build -trimpath -buildvcs=false -ldflags "${ldflags[*]}" -o "${out}" ./cli
+          (cd "$(dirname "${out}")" && sha256sum "$(basename "${out}")" > "$(basename "${out}").sha256")
+          ls -la "${out}" "${out}.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.asset }}
+          path: |
+            ${{ steps.meta.outputs.asset }}
+            ${{ steps.meta.outputs.asset }}.sha256
+          if-no-files-found: error
+
+  release:
+    name: publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/release-aegisctl/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Combine checksums
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          cat aegisctl-*.sha256 > SHA256SUMS
+          ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/aegisctl-*
+            dist/SHA256SUMS
+          generate_release_notes: true
+          name: aegisctl ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          fail_on_unmatched_files: true
