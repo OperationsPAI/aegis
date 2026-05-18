@@ -50,8 +50,7 @@ var Module = fx.Module("notification",
 	// HTTP surface
 	fx.Provide(NewInboxHandler),
 	fx.Provide(
-		fx.Annotate(RoutesPortalInbox, fx.ResultTags(`group:"routes"`)),
-		fx.Annotate(RoutesSDKIngestion, fx.ResultTags(`group:"routes"`)),
+		fx.Annotate(Routes, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
 	),
 )

@@ -8,27 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RoutesPortal(handler *Handler) framework.RouteRegistrar {
+// Routes registers every execution endpoint once. The shared
+// /executions/* paths gate API-key callers via
+// RequireAPIKeyScopesAny while letting session callers through —
+// matching the prior Portal + SDK contracts on each path.
+func Routes(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
-		Name:     "execution.portal",
-		Register: func(v2 *gin.RouterGroup) {
-			executions := v2.Group("/executions", middleware.TrustedHeaderAuth())
-			{
-				executions.GET("", handler.ListExecutions)
-				executions.GET("/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.ListAvailableExecutionLabels)
-				executions.GET("/:execution_id", handler.GetExecution)
-				executions.POST("/batch-delete", handler.BatchDeleteExecutions)
-				executions.POST("/compare", handler.CompareExecutions)
-			}
-		},
-	}
-}
-
-func RoutesSDK(handler *Handler) framework.RouteRegistrar {
-	return framework.RouteRegistrar{
-		Audience: framework.AudienceSDK,
-		Name:     "execution.sdk",
+		Name:     "execution",
 		Register: func(v2 *gin.RouterGroup) {
 			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
 			{
@@ -48,8 +35,12 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 
 			executions := v2.Group("/executions", middleware.TrustedHeaderAuth())
 			{
+				executions.GET("", handler.ListExecutions)
+				executions.GET("/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.ListAvailableExecutionLabels)
 				executions.GET("/:execution_id", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.GetExecution)
 				executions.PATCH("/:execution_id/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsWrite), handler.ManageExecutionCustomLabels)
+				executions.POST("/batch-delete", handler.BatchDeleteExecutions)
+				executions.POST("/compare", handler.CompareExecutions)
 			}
 
 			runtime := v2.Group("/executions", middleware.TrustedHeaderAuth(), middleware.RequireServiceTokenAuth())

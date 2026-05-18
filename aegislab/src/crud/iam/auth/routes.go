@@ -7,16 +7,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RoutesPublic(handler *Handler) framework.RouteRegistrar {
+// Routes registers every auth endpoint once. /auth/login,
+// /auth/register, /auth/refresh, and /auth/api-key/token stay
+// unauthenticated. /auth/logout, /auth/change-password, /auth/profile,
+// and /api-keys/* require an authenticated human session.
+func Routes(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePublic,
-		Name:     "auth.public",
+		Name:     "auth",
 		Register: func(v2 *gin.RouterGroup) {
 			auth := v2.Group("/auth")
 			{
 				auth.POST("/login", handler.Login)
 				auth.POST("/register", handler.Register)
 				auth.POST("/refresh", handler.RefreshToken)
+				auth.POST("/api-key/token", handler.ExchangeAPIKeyToken)
 
 				authProtected := auth.Group("", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 				{
@@ -25,28 +30,7 @@ func RoutesPublic(handler *Handler) framework.RouteRegistrar {
 					authProtected.GET("/profile", handler.GetProfile)
 				}
 			}
-		},
-	}
-}
 
-func RoutesSDK(handler *Handler) framework.RouteRegistrar {
-	return framework.RouteRegistrar{
-		Audience: framework.AudienceSDK,
-		Name:     "auth.sdk",
-		Register: func(v2 *gin.RouterGroup) {
-			auth := v2.Group("/auth")
-			{
-				auth.POST("/api-key/token", handler.ExchangeAPIKeyToken)
-			}
-		},
-	}
-}
-
-func RoutesPortal(handler *Handler) framework.RouteRegistrar {
-	return framework.RouteRegistrar{
-		Audience: framework.AudiencePortal,
-		Name:     "auth.portal",
-		Register: func(v2 *gin.RouterGroup) {
 			accessKeys := v2.Group("/api-keys", middleware.JWTAuth(), middleware.RequireHumanUserAuth())
 			{
 				accessKeys.GET("", handler.ListAPIKeys)

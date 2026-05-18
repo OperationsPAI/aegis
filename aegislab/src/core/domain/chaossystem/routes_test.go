@@ -8,24 +8,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestRoutesPortalReturnsPortalAudience(t *testing.T) {
+func TestRoutesMetadata(t *testing.T) {
 	handler := &Handler{}
-	reg := RoutesPortal(handler)
+	reg := Routes(handler)
 
 	if reg.Audience != framework.AudiencePortal {
 		t.Fatalf("expected AudiencePortal, got %q", reg.Audience)
 	}
-	if reg.Name != "chaossystem.portal" {
-		t.Fatalf("expected name %q, got %q", "chaossystem.portal", reg.Name)
+	if reg.Name != "chaossystem" {
+		t.Fatalf("expected name %q, got %q", "chaossystem", reg.Name)
 	}
 	if reg.Register == nil {
 		t.Fatal("expected Register to be non-nil")
 	}
 }
 
-func TestRoutesPortalRegistersReadOnlyEndpoints(t *testing.T) {
+func TestRoutesRegistersEverythingExactlyOnce(t *testing.T) {
 	handler := &Handler{}
-	reg := RoutesPortal(handler)
+	reg := Routes(handler)
 
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -36,49 +36,44 @@ func TestRoutesPortalRegistersReadOnlyEndpoints(t *testing.T) {
 		method string
 		path   string
 	}
-	expected := map[key]bool{
-		{"GET", "/api/v2/systems"}:                                 false,
-		{"GET", "/api/v2/systems/:id"}:                             false,
-		{"GET", "/api/v2/systems/by-name/:name/inject-candidates"}: false,
-	}
+	expected := map[key]int{
+		// Open reads (portal + admin)
+		{"GET", "/api/v2/systems"}:                                 0,
+		{"GET", "/api/v2/systems/:id"}:                             0,
+		{"GET", "/api/v2/systems/by-name/:name/inject-candidates"}: 0,
 
-	// Mutations withheld from Portal — write operations that belong to
-	// the Admin audience.
-	mutationsWithheld := map[key]struct{}{
-		{"POST", "/api/v2/systems"}:                                      {},
-		{"PUT", "/api/v2/systems/:id"}:                                   {},
-		{"DELETE", "/api/v2/systems/:id"}:                                {},
-		{"POST", "/api/v2/systems/reseed"}:                               {},
-		{"POST", "/api/v2/systems/:id/metadata"}:                         {},
-		{"POST", "/api/v2/systems/by-name/:name/prerequisites/:id/mark"}: {},
-	}
+		// Operator reads (system_read gated)
+		{"GET", "/api/v2/systems/:id/metadata"}:                0,
+		{"GET", "/api/v2/systems/by-name/:name/chart"}:         0,
+		{"GET", "/api/v2/systems/by-name/:name/prerequisites"}: 0,
 
-	// Admin-only reads withheld from Portal — these are GETs, but the
-	// data they expose (raw metadata, helm chart blobs, prerequisite
-	// status) is operator-facing and not needed by the InjectionCreate
-	// wizard. Being a GET is not the determining factor; audience scope is.
-	adminOnlyReadsWithheld := map[key]struct{}{
-		{"GET", "/api/v2/systems/:id/metadata"}:                {},
-		{"GET", "/api/v2/systems/by-name/:name/chart"}:         {},
-		{"GET", "/api/v2/systems/by-name/:name/prerequisites"}: {},
+		// Writes (system_configure gated)
+		{"POST", "/api/v2/systems"}:                                      0,
+		{"PUT", "/api/v2/systems/:id"}:                                   0,
+		{"POST", "/api/v2/systems/:id/metadata"}:                         0,
+		{"POST", "/api/v2/systems/reseed"}:                               0,
+		{"POST", "/api/v2/systems/by-name/:name/prerequisites/:id/mark"}: 0,
+
+		// Delete (system_manage gated)
+		{"DELETE", "/api/v2/systems/:id"}: 0,
 	}
 
 	for _, route := range engine.Routes() {
 		k := key{route.Method, route.Path}
-		if _, ok := expected[k]; ok {
-			expected[k] = true
+		count, ok := expected[k]
+		if !ok {
+			t.Errorf("unexpected route registered: %s %s", route.Method, route.Path)
+			continue
 		}
-		if _, ok := mutationsWithheld[k]; ok {
-			t.Errorf("portal routes must not expose mutation %s %s", route.Method, route.Path)
-		}
-		if _, ok := adminOnlyReadsWithheld[k]; ok {
-			t.Errorf("portal routes must not expose admin-only read %s %s", route.Method, route.Path)
-		}
+		expected[k] = count + 1
 	}
 
-	for k, found := range expected {
-		if !found {
-			t.Errorf("expected route %s %s to be registered", k.method, k.path)
+	for k, count := range expected {
+		if count == 0 {
+			t.Errorf("expected route %s %s to be registered, but it was not", k.method, k.path)
+		}
+		if count > 1 {
+			t.Errorf("route %s %s registered %d times — duplicate registration", k.method, k.path, count)
 		}
 	}
 }

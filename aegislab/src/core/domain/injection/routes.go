@@ -7,10 +7,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RoutesSDK(handler *Handler) framework.RouteRegistrar {
+// Routes registers every injection endpoint once. Project-scoped paths
+// gate via RequireProject* perms; the global /injections/* paths are
+// open to any authenticated caller, except cancel which needs
+// RequireTaskStop and observation reads which need RequireProjectRead.
+func Routes(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
-		Audience: framework.AudienceSDK,
-		Name:     "injection-sdk",
+		Audience: framework.AudiencePortal,
+		Name:     "injection",
 		Register: func(v2 *gin.RouterGroup) {
 			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
 			{
@@ -25,6 +29,7 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 						}
 
 						injectionRead.GET("", handler.ListProjectInjections)
+						injectionRead.POST("/search", handler.SearchProjectInjections)
 					}
 
 					injectionExecute := injections.Group("", middleware.RequireProjectInjectionExecute)
@@ -47,23 +52,6 @@ func RoutesSDK(handler *Handler) framework.RouteRegistrar {
 				injections.GET("/:id/datapack-schema", handler.GetDatapackSchema)
 				injections.POST("/:id/datapack-query", handler.QueryDatapack)
 				injections.PATCH("/:id/labels", handler.ManageInjectionCustomLabels)
-			}
-		},
-	}
-}
-
-func RoutesPortal(handler *Handler) framework.RouteRegistrar {
-	return framework.RouteRegistrar{
-		Audience: framework.AudiencePortal,
-		Name:     "injection-portal",
-		Register: func(v2 *gin.RouterGroup) {
-			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
-			{
-				projects.POST("/:project_id/injections/search", middleware.RequireProjectRead, handler.SearchProjectInjections)
-			}
-
-			injections := v2.Group("/injections", middleware.TrustedHeaderAuth())
-			{
 				injections.PATCH("/labels/batch", handler.BatchManageInjectionLabels)
 				injections.POST("/batch-delete", handler.BatchDeleteInjections)
 				injections.POST("/upload", handler.UploadDatapack)

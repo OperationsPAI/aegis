@@ -109,15 +109,11 @@ func TestMigrationsFlattenIntoFramework(t *testing.T) {
 	}
 }
 
-func TestRoutesPortalRegistrar(t *testing.T) {
-	// We can't call RoutesPortal without a *Handler, but we can verify
+func TestRoutesRegistrar(t *testing.T) {
+	// We can't call Routes without a *Handler, but we can verify
 	// the function signature is compatible with the framework contract
 	// by checking the type at compile time.
-	var _ func(*Handler) framework.RouteRegistrar = RoutesPortal
-}
-
-func TestRoutesSDKRegistrar(t *testing.T) {
-	var _ func(*Handler) framework.RouteRegistrar = RoutesSDK
+	var _ func(*Handler) framework.RouteRegistrar = Routes
 }
 
 func TestReaderInterfaceSatisfaction(t *testing.T) {

@@ -8,10 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RoutesPortal(handler *Handler) framework.RouteRegistrar {
+// Routes registers every dataset endpoint once. SDK-only paths (download,
+// inject-management) gate API-key callers via RequireAPIKeyScopesAny;
+// session callers pass through that helper unchanged.
+func Routes(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
-		Name:     "dataset.portal",
+		Name:     "dataset",
 		Register: func(v2 *gin.RouterGroup) {
 			datasets := v2.Group("/datasets", middleware.TrustedHeaderAuth())
 			{
@@ -38,21 +41,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 					datasetVersions.POST("", middleware.RequireDatasetVersionCreate, handler.CreateDatasetVersion)
 					datasetVersions.PATCH("/:version_id", middleware.RequireDatasetVersionUpdate, handler.UpdateDatasetVersion)
 					datasetVersions.DELETE("/:version_id", middleware.RequireDatasetVersionDelete, handler.DeleteDatasetVersion)
-				}
-			}
-		},
-	}
-}
 
-func RoutesSDK(handler *Handler) framework.RouteRegistrar {
-	return framework.RouteRegistrar{
-		Audience: framework.AudienceSDK,
-		Name:     "dataset.sdk",
-		Register: func(v2 *gin.RouterGroup) {
-			datasets := v2.Group("/datasets", middleware.TrustedHeaderAuth())
-			{
-				datasetVersions := datasets.Group("/:dataset_id/versions")
-				{
 					datasetVersions.GET(
 						"/:version_id/download",
 						middleware.RequireDatasetVersionDownload,

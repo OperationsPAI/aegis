@@ -10,16 +10,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRoutesPortalReturnsPortalAudience(t *testing.T) {
-	reg := RoutesPortal(nil)
+func TestRoutesReturnsPortalAudience(t *testing.T) {
+	reg := Routes(nil)
 
 	require.Equal(t, framework.AudiencePortal, reg.Audience)
 	require.NotEmpty(t, reg.Name)
 	require.NotNil(t, reg.Register)
 }
 
-func TestRoutesPortalRegistersGetExecution(t *testing.T) {
-	reg := RoutesPortal(&Handler{})
+func TestRoutesRegistersGetExecution(t *testing.T) {
+	reg := Routes(&Handler{})
 
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -36,16 +36,8 @@ func TestRoutesPortalRegistersGetExecution(t *testing.T) {
 		}
 	}
 	for key, found := range want {
-		require.True(t, found, "expected portal route %s to be registered", key)
+		require.True(t, found, "expected route %s to be registered", key)
 	}
-}
-
-func TestRoutesSDKReturnsSDKAudience(t *testing.T) {
-	reg := RoutesSDK(nil)
-
-	require.Equal(t, framework.AudienceSDK, reg.Audience)
-	require.NotEmpty(t, reg.Name)
-	require.NotNil(t, reg.Register)
 }
 
 func TestPermissionsReturnsCorrectModule(t *testing.T) {
