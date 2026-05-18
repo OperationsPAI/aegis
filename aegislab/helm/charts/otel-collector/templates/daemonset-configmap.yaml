@@ -14,6 +14,12 @@ data:
     receivers:
       filelog:
         include: [/var/log/pods/*_*/*/*.log]
+        # Exclude the DaemonSet's own log files so we don't tail
+        # otelcol output and create a feedback loop (the operator's
+        # error messages were re-ingested as malformed container lines).
+        exclude:
+          - /var/log/pods/*_rcabench-otel-collector-daemonset-*/*/*.log
+          - /var/log/pods/*_rcabench-otel-collector-*/*/*.log
         # `end` avoids replaying everything that pre-dates the collector
         # on a node — chosen on purpose: backfill is out of scope for
         # the live-tail use case and would re-emit logs already in CH
@@ -86,9 +92,9 @@ data:
         log_statements:
           - context: log
             statements:
-              - set(attributes["trace_id"], resource.attributes["trace_id"]) where attributes["trace_id"] == nil
-              - set(attributes["aegis_component"], resource.attributes["aegis_component"]) where attributes["aegis_component"] == nil and resource.attributes["aegis_component"] != nil
-              - set(attributes["task_id"], resource.attributes["task_id"]) where attributes["task_id"] == nil and resource.attributes["task_id"] != nil
+              - set(log.attributes["trace_id"], resource.attributes["trace_id"]) where log.attributes["trace_id"] == nil
+              - set(log.attributes["aegis_component"], resource.attributes["aegis_component"]) where log.attributes["aegis_component"] == nil and resource.attributes["aegis_component"] != nil
+              - set(log.attributes["task_id"], resource.attributes["task_id"]) where log.attributes["task_id"] == nil and resource.attributes["task_id"] != nil
       resource:
         attributes:
           - key: deployment.scope
