@@ -6,6 +6,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/framework"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,6 +16,28 @@ func TestRoutesPortalReturnsPortalAudience(t *testing.T) {
 	require.Equal(t, framework.AudiencePortal, reg.Audience)
 	require.NotEmpty(t, reg.Name)
 	require.NotNil(t, reg.Register)
+}
+
+func TestRoutesPortalRegistersGetExecution(t *testing.T) {
+	reg := RoutesPortal(&Handler{})
+
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	v2 := engine.Group("/api/v2")
+	reg.Register(v2)
+
+	want := map[string]bool{
+		"GET /api/v2/executions/:execution_id": false,
+	}
+	for _, route := range engine.Routes() {
+		key := route.Method + " " + route.Path
+		if _, ok := want[key]; ok {
+			want[key] = true
+		}
+	}
+	for key, found := range want {
+		require.True(t, found, "expected portal route %s to be registered", key)
+	}
 }
 
 func TestRoutesSDKReturnsSDKAudience(t *testing.T) {
