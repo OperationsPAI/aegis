@@ -23,7 +23,6 @@ data:
         include_file_name: false
         operators:
           - type: container
-            format: containerd
     processors:
       memory_limiter:
         check_interval: 1s
