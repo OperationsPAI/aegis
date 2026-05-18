@@ -240,6 +240,7 @@ type ExecutionResp struct {
 	State              consts.ExecutionState `json:"state" swaggertype:"string" enums:"Initial,Failed,Success"`
 	Status             string                `json:"status"`
 	TaskID             string                `json:"task_id"`
+	TraceID            string                `json:"trace_id,omitempty"`
 	AlgorithmID        int                   `json:"algorithm_id"`
 	AlgorithmName      string                `json:"algorithm_name"`
 	AlgorithmVersionID int                   `json:"algorithm_version_id"`
@@ -269,6 +270,9 @@ func NewExecutionResp(execution *model.Execution, labels []model.Label) *Executi
 
 	if execution.TaskID != nil {
 		resp.TaskID = *execution.TaskID
+	}
+	if execution.Task != nil {
+		resp.TraceID = execution.Task.TraceID
 	}
 
 	if len(labels) > 0 {

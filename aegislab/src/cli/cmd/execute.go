@@ -123,7 +123,12 @@ func runExecuteCreate(cmd *cobra.Command, args []string) error {
 	// backend handler exposes the same name/version shape via SDK.
 	c := newClient()
 	var resp client.APIResponse[any]
-	if err := c.Post(path, spec, &resp); err != nil {
+	payload := map[string]any{
+		"project_name": flagProject,
+		"specs":        spec.Specs,
+		"labels":       spec.Labels,
+	}
+	if err := c.Post(path, payload, &resp); err != nil {
 		return err
 	}
 
