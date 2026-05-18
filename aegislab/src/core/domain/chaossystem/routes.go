@@ -44,3 +44,21 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 		},
 	}
 }
+
+// RoutesPortal exposes the read-only system endpoints needed by the
+// portal's InjectionCreate wizard (system picker + inject-candidate
+// dropdown). Mutating operations remain Admin-only.
+func RoutesPortal(handler *Handler) framework.RouteRegistrar {
+	return framework.RouteRegistrar{
+		Audience: framework.AudiencePortal,
+		Name:     "chaossystem.portal",
+		Register: func(v2 *gin.RouterGroup) {
+			systems := v2.Group("/systems", middleware.TrustedHeaderAuth())
+			{
+				systems.GET("", handler.ListSystems)
+				systems.GET("/:id", handler.GetSystem)
+				systems.GET("/by-name/:name/inject-candidates", handler.ListInjectCandidates)
+			}
+		},
+	}
+}
