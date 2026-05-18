@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -675,8 +674,21 @@ func parseRestartPayload(payload map[string]any) (*restartPayload, error) {
 	}, nil
 }
 
-// installPedestal installs or upgrades the pedestal using Helm
-// Priority: Remote (if configured) -> Local fallback (if remote fails and LocalPath is set)
+// installPedestal installs or upgrades the pedestal using Helm.
+//
+// Two responsibilities live here (orchestrator-only — not in the shared
+// helm.InstallPedestal helper):
+//
+//  1. Template-string substitution on DynamicValues using namespaceIdx
+//     (the per-pool namespace index, e.g. "ts-1" → idx=1). The shared helper
+//     receives the already-resolved values.
+//  2. Etcd-backed `helm.repo.<repo_name>.url` fallback when
+//     helm_configs.repo_url is empty. The admin /pedestals install path
+//     resolves repo URL via its own service-layer hook so the helper stays
+//     dependency-light.
+//
+// After resolution, delegates to helm.InstallPedestal which encapsulates
+// the remote-with-local-fallback flow used by both call sites.
 func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName string, namespaceIdx int, item *dto.HelmConfigItem) error {
 	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
 		span := trace.SpanFromContext(childCtx)
@@ -696,20 +708,6 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 			}
 		}
 
-		helmValues := item.GetValuesMap()
-
-		// Determine chart source and installation strategy.
-		// local_path is only usable if the file actually exists — a missing
-		// pre-staged tgz (common after pod restart since /tmp is ephemeral)
-		// should fall through to a remote install instead of hard-failing.
-		hasLocal := item.LocalPath != ""
-		if hasLocal {
-			if _, err := os.Stat(item.LocalPath); err != nil {
-				logEntry.Warnf("local chart %q not accessible (%v); will try remote install", item.LocalPath, err)
-				hasLocal = false
-			}
-		}
-
 		// If the operator didn't record a repo_url, try the etcd-backed
 		// override `helm.repo.<repo_name>.url`. Lets ops swap defaults at
 		// runtime without a DB migration.
@@ -720,93 +718,19 @@ func installPedestal(ctx context.Context, gateway *helm.Gateway, releaseName str
 			}
 		}
 
-		hasRemote := item.RepoURL != "" && item.RepoName != ""
-
-		var installErr error
-
-		if hasRemote {
-			logEntry.Infof("Attempting to install chart from remote repository: %s/%s", item.RepoName, item.ChartName)
-
-			isOCI := strings.HasPrefix(item.RepoURL, "oci://")
-			var fullChart string
-			if isOCI {
-				// OCI registries don't expose an index.yaml; skip AddRepo/UpdateRepo
-				// and let installAction.LocateChart pull the OCI reference directly.
-				fullChart = strings.TrimRight(item.RepoURL, "/") + "/" + item.ChartName
-			} else if err := gateway.AddRepo(releaseName, item.RepoName, item.RepoURL); err != nil {
-				logEntry.Warnf("Failed to add repository: %v", err)
-				installErr = err
-			} else if err := gateway.UpdateRepo(releaseName, item.RepoName); err != nil {
-				logEntry.Warnf("Failed to update repository: %v", err)
-				installErr = err
-			} else {
-				fullChart = fmt.Sprintf("%s/%s", item.RepoName, item.ChartName)
-			}
-
-			if installErr == nil && fullChart != "" {
-				logrus.WithFields(logrus.Fields{
-					"release_name": releaseName,
-					"chart":        fullChart,
-					"version":      item.Version,
-					"namespace":    releaseName,
-				}).Infof("Installing Helm chart from remote with parameters: %+v", helmValues)
-
-				overallTO, waitTO := helmInstallTimeouts()
-				if err := gateway.Install(ctx,
-					releaseName,
-					releaseName,
-					fullChart,
-					item.Version,
-					helmValues,
-					overallTO,
-					waitTO,
-				); err != nil {
-					logEntry.Warnf("Failed to install chart from remote: %v", err)
-					installErr = err
-				} else {
-					logEntry.Info("Helm chart installed successfully from remote repository")
-					return nil
-				}
-			}
-		}
-
-		// Fallback to local chart if remote failed or not configured
-		if hasLocal {
-			if installErr != nil {
-				logEntry.Infof("Remote installation failed, falling back to local chart: %s", item.LocalPath)
-			} else {
-				logEntry.Infof("Installing chart from local path: %s", item.LocalPath)
-			}
-
-			logrus.WithFields(logrus.Fields{
-				"release_name": releaseName,
-				"chart":        item.LocalPath,
-				"namespace":    releaseName,
-			}).Infof("Installing Helm chart from local path with parameters: %+v", helmValues)
-
-			overallTO, waitTO := helmInstallTimeouts()
-			if err := gateway.Install(ctx,
-				releaseName,
-				releaseName,
-				item.LocalPath,
-				item.Version,
-				helmValues,
-				overallTO,
-				waitTO,
-			); err != nil {
-				return fmt.Errorf("failed to install chart from local path %s: %w", item.LocalPath, err)
-			}
-
-			logEntry.Info("Helm chart installed successfully from local path")
-			return nil
-		}
-
-		// No valid source available
-		if installErr != nil {
-			return fmt.Errorf("failed to install chart: remote installation failed and no local fallback available: %w", installErr)
-		}
-
-		return fmt.Errorf("no chart source configured (neither remote nor local)")
+		overallTO, waitTO := helmInstallTimeouts()
+		return helm.InstallPedestal(childCtx, gateway, helm.PedestalInstallSpec{
+			Namespace:        releaseName,
+			ReleaseName:      releaseName,
+			ChartName:        item.ChartName,
+			Version:          item.Version,
+			RepoURL:          item.RepoURL,
+			RepoName:         item.RepoName,
+			LocalPath:        item.LocalPath,
+			Values:           item.GetValuesMap(),
+			InstallTimeout:   overallTO,
+			UninstallTimeout: waitTO,
+		})
 	})
 }
 

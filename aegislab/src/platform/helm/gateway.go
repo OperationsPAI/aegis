@@ -18,6 +18,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/registry"
+	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/yaml"
@@ -255,11 +256,85 @@ func (g *Gateway) Uninstall(ctx context.Context, namespace, releaseName string, 
 // ReleaseInfo is the small slice of helm release metadata the namespace
 // reclaimer needs to decide whether a release is idle. Pulled out of the
 // helm SDK type so callers don't have to import release.Release.
+//
+// Chart / ChartVersion are populated by List/GetReleaseInfo when the helm
+// Info carries chart metadata so the admin /pedestals listing can render
+// "<chart>@<version>" without an extra round trip.
 type ReleaseInfo struct {
 	Name         string
 	Namespace    string
 	Status       string
+	Chart        string
+	ChartVersion string
 	LastDeployed time.Time
+}
+
+// GetReleaseValues returns the user-supplied values map for the named
+// release (`helm get values <release> --all=false`), or nil when the release
+// doesn't exist. Used by the admin restart endpoint to redeploy with the
+// previously-applied values when the caller doesn't override them.
+func (g *Gateway) GetReleaseValues(namespace, releaseName string) (map[string]any, error) {
+	_, actionConfig, err := newRuntime(namespace)
+	if err != nil {
+		return nil, err
+	}
+	getValues := action.NewGetValues(actionConfig)
+	values, err := getValues.Run(releaseName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get values for release %s: %w", releaseName, err)
+	}
+	return values, nil
+}
+
+// List returns release metadata for every helm release found in one of the
+// given namespaces. An empty namespace slice lists releases across all
+// namespaces visible to the configured kubeconfig (used by the pedestal
+// admin endpoint with a system-namespace allowlist).
+//
+// Status / LastDeployed are populated from the release Info struct so the
+// admin UI can render a "deployed N hours ago" cell without a second round
+// trip per release.
+func (g *Gateway) List(ctx context.Context, namespaces ...string) ([]ReleaseInfo, error) {
+	return listReleases(ctx, namespaces)
+}
+
+func listReleases(_ context.Context, namespaces []string) ([]ReleaseInfo, error) {
+	if len(namespaces) == 0 {
+		_, actionConfig, err := newRuntime("")
+		if err != nil {
+			return nil, err
+		}
+		listAction := action.NewList(actionConfig)
+		listAction.AllNamespaces = true
+		listAction.All = true
+		rels, err := listAction.Run()
+		if err != nil {
+			return nil, fmt.Errorf("failed to list helm releases: %w", err)
+		}
+		return releasesToInfos(rels), nil
+	}
+
+	out := make([]ReleaseInfo, 0)
+	for _, ns := range namespaces {
+		if ns == "" {
+			continue
+		}
+		_, actionConfig, err := newRuntime(ns)
+		if err != nil {
+			return nil, err
+		}
+		listAction := action.NewList(actionConfig)
+		listAction.All = true
+		rels, err := listAction.Run()
+		if err != nil {
+			return nil, fmt.Errorf("failed to list helm releases in namespace %s: %w", ns, err)
+		}
+		out = append(out, releasesToInfos(rels)...)
+	}
+	return out, nil
 }
 
 // GetReleaseInfo returns LastDeployed + status for a release in <namespace>.
@@ -281,12 +356,42 @@ func (g *Gateway) GetReleaseInfo(namespace, releaseName string) (*ReleaseInfo, e
 	if rel == nil || rel.Info == nil {
 		return nil, nil
 	}
-	return &ReleaseInfo{
+	info := &ReleaseInfo{
 		Name:         rel.Name,
 		Namespace:    rel.Namespace,
 		Status:       rel.Info.Status.String(),
 		LastDeployed: rel.Info.LastDeployed.Time,
-	}, nil
+	}
+	if rel.Chart != nil && rel.Chart.Metadata != nil {
+		info.Chart = rel.Chart.Metadata.Name
+		info.ChartVersion = rel.Chart.Metadata.Version
+	}
+	return info, nil
+}
+
+// releasesToInfos adapts the helm SDK release.Release slice produced by an
+// action.NewList run to the local ReleaseInfo shape. Releases with missing
+// Info are skipped (a release without status is unusable for the admin
+// listing).
+func releasesToInfos(rels []*release.Release) []ReleaseInfo {
+	out := make([]ReleaseInfo, 0, len(rels))
+	for _, rel := range rels {
+		if rel == nil || rel.Info == nil {
+			continue
+		}
+		info := ReleaseInfo{
+			Name:         rel.Name,
+			Namespace:    rel.Namespace,
+			Status:       rel.Info.Status.String(),
+			LastDeployed: rel.Info.LastDeployed.Time,
+		}
+		if rel.Chart != nil && rel.Chart.Metadata != nil {
+			info.Chart = rel.Chart.Metadata.Name
+			info.ChartVersion = rel.Chart.Metadata.Version
+		}
+		out = append(out, info)
+	}
+	return out
 }
 
 func newRuntime(namespace string) (*cli.EnvSettings, *action.Configuration, error) {
