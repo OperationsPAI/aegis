@@ -42,18 +42,25 @@ func TestRoutesPortalRegistersReadOnlyEndpoints(t *testing.T) {
 		{"GET", "/api/v2/systems/by-name/:name/inject-candidates"}: false,
 	}
 
-	// Routes that must NOT be exposed under Portal audience — these are
-	// governance / admin-only mutations.
-	forbidden := map[key]struct{}{
+	// Mutations withheld from Portal — write operations that belong to
+	// the Admin audience.
+	mutationsWithheld := map[key]struct{}{
 		{"POST", "/api/v2/systems"}:                                      {},
 		{"PUT", "/api/v2/systems/:id"}:                                   {},
 		{"DELETE", "/api/v2/systems/:id"}:                                {},
 		{"POST", "/api/v2/systems/reseed"}:                               {},
 		{"POST", "/api/v2/systems/:id/metadata"}:                         {},
-		{"GET", "/api/v2/systems/:id/metadata"}:                          {},
-		{"GET", "/api/v2/systems/by-name/:name/chart"}:                   {},
-		{"GET", "/api/v2/systems/by-name/:name/prerequisites"}:           {},
 		{"POST", "/api/v2/systems/by-name/:name/prerequisites/:id/mark"}: {},
+	}
+
+	// Admin-only reads withheld from Portal — these are GETs, but the
+	// data they expose (raw metadata, helm chart blobs, prerequisite
+	// status) is operator-facing and not needed by the InjectionCreate
+	// wizard. Being a GET is not the determining factor; audience scope is.
+	adminOnlyReadsWithheld := map[key]struct{}{
+		{"GET", "/api/v2/systems/:id/metadata"}:                {},
+		{"GET", "/api/v2/systems/by-name/:name/chart"}:         {},
+		{"GET", "/api/v2/systems/by-name/:name/prerequisites"}: {},
 	}
 
 	for _, route := range engine.Routes() {
@@ -61,8 +68,11 @@ func TestRoutesPortalRegistersReadOnlyEndpoints(t *testing.T) {
 		if _, ok := expected[k]; ok {
 			expected[k] = true
 		}
-		if _, ok := forbidden[k]; ok {
-			t.Errorf("portal routes must not expose %s %s", route.Method, route.Path)
+		if _, ok := mutationsWithheld[k]; ok {
+			t.Errorf("portal routes must not expose mutation %s %s", route.Method, route.Path)
+		}
+		if _, ok := adminOnlyReadsWithheld[k]; ok {
+			t.Errorf("portal routes must not expose admin-only read %s %s", route.Method, route.Path)
 		}
 	}
 

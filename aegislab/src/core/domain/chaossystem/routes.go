@@ -53,6 +53,14 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "chaossystem.portal",
 		Register: func(v2 *gin.RouterGroup) {
+			// Deliberately no permission gate on this group: the
+			// InjectionCreate wizard needs every authenticated portal
+			// user to enumerate systems + inject candidates to populate
+			// its dropdowns, and systems are a platform-wide catalog
+			// with no per-project ownership to key an RBAC check off of.
+			// The Admin audience gates the same handlers under
+			// RequireSystemRead because the admin surface has more
+			// granular RBAC; that asymmetry is intentional.
 			systems := v2.Group("/systems", middleware.TrustedHeaderAuth())
 			{
 				systems.GET("", handler.ListSystems)
