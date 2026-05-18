@@ -64,9 +64,20 @@ type HistogramBucket struct {
 // LogReader is the seam consumers depend on so we can stub the ClickHouse
 // connection in tests. Production implementation is *clickHouseLogReader,
 // returned by NewClickHouseLogReader.
+//
+// QueryJobLogs / QueryLogHistogram filter by `LogAttributes['task_id']`
+// — useful when streaming the logs of one specific worker pickup.
+//
+// QueryTraceLogs / QueryTraceLogHistogram filter by
+// `LogAttributes['trace_id']` — this is what the injection-detail UI
+// wants, because a single injection spans multiple tasks
+// (RestartPedestal → FaultInjection → BuildDatapack → AlgorithmRun →
+// CollectResult) and the user expects to see logs from all of them.
 type LogReader interface {
 	QueryJobLogs(ctx context.Context, taskID string, opts LogQueryOpts) ([]LogEntry, error)
 	QueryLogHistogram(ctx context.Context, taskID string, opts LogQueryOpts, buckets int) ([]HistogramBucket, error)
+	QueryTraceLogs(ctx context.Context, traceID string, opts LogQueryOpts) ([]LogEntry, error)
+	QueryTraceLogHistogram(ctx context.Context, traceID string, opts LogQueryOpts, buckets int) ([]HistogramBucket, error)
 }
 
 type clickHouseLogReader struct {
@@ -100,6 +111,17 @@ func (r *clickHouseLogReader) QueryJobLogs(ctx context.Context, taskID string, o
 	if taskID == "" {
 		return nil, fmt.Errorf("taskID is required")
 	}
+	return r.queryLogsByAttr(ctx, "task_id", taskID, opts)
+}
+
+func (r *clickHouseLogReader) QueryTraceLogs(ctx context.Context, traceID string, opts LogQueryOpts) ([]LogEntry, error) {
+	if traceID == "" {
+		return nil, fmt.Errorf("traceID is required")
+	}
+	return r.queryLogsByAttr(ctx, "trace_id", traceID, opts)
+}
+
+func (r *clickHouseLogReader) queryLogsByAttr(ctx context.Context, attrKey, attrValue string, opts LogQueryOpts) ([]LogEntry, error) {
 	if opts.Start.IsZero() {
 		opts.Start = time.Now().Add(-1 * time.Hour)
 	}
@@ -116,7 +138,7 @@ func (r *clickHouseLogReader) QueryJobLogs(ctx context.Context, taskID string, o
 	}
 	defer func() { _ = conn.Close() }()
 
-	stmt, args := buildJobLogsQuery(taskID, opts)
+	stmt, args := buildLogsQuery(attrKey, attrValue, opts)
 	rows, err := conn.Query(ctx, stmt, args...)
 	if err != nil {
 		return nil, fmt.Errorf("clickhouse query logs: %w", err)
@@ -154,6 +176,17 @@ func (r *clickHouseLogReader) QueryLogHistogram(ctx context.Context, taskID stri
 	if taskID == "" {
 		return nil, fmt.Errorf("taskID is required")
 	}
+	return r.histogramByAttr(ctx, "task_id", taskID, opts, buckets)
+}
+
+func (r *clickHouseLogReader) QueryTraceLogHistogram(ctx context.Context, traceID string, opts LogQueryOpts, buckets int) ([]HistogramBucket, error) {
+	if traceID == "" {
+		return nil, fmt.Errorf("traceID is required")
+	}
+	return r.histogramByAttr(ctx, "trace_id", traceID, opts, buckets)
+}
+
+func (r *clickHouseLogReader) histogramByAttr(ctx context.Context, attrKey, attrValue string, opts LogQueryOpts, buckets int) ([]HistogramBucket, error) {
 	if opts.Start.IsZero() || opts.End.IsZero() {
 		return nil, fmt.Errorf("start and end are required for histogram")
 	}
@@ -177,7 +210,7 @@ func (r *clickHouseLogReader) QueryLogHistogram(ctx context.Context, taskID stri
 	}
 	defer func() { _ = conn.Close() }()
 
-	stmt, args := buildHistogramQuery(taskID, opts, stepSec)
+	stmt, args := buildHistogramQuery(attrKey, attrValue, opts, stepSec)
 	rows, err := conn.Query(ctx, stmt, args...)
 	if err != nil {
 		return nil, fmt.Errorf("clickhouse query log histogram: %w", err)
@@ -220,19 +253,20 @@ func (r *clickHouseLogReader) QueryLogHistogram(ctx context.Context, taskID stri
 	return out, nil
 }
 
-// buildJobLogsQuery assembles the SELECT for QueryJobLogs together with
-// its positional arguments. Split out for unit-testability — exposing
-// the SQL shape lets us assert filter pushdown without standing up
-// ClickHouse.
-func buildJobLogsQuery(taskID string, opts LogQueryOpts) (string, []any) {
+// buildLogsQuery assembles the SELECT used by both QueryJobLogs and
+// QueryTraceLogs. The two differ only in which LogAttributes key they
+// scope on (`task_id` vs `trace_id`); everything else — level pushdown,
+// substring pushdown, time bounds, limit — is identical. Exposing
+// attrKey lets the same SQL shape serve both callers without copy-paste.
+func buildLogsQuery(attrKey, attrValue string, opts LogQueryOpts) (string, []any) {
 	var (
 		preds []string
 		args  []any
 	)
 	preds = append(preds, "ServiceName = ?")
 	args = append(args, orchestratorServiceName)
-	preds = append(preds, "LogAttributes['task_id'] = ?")
-	args = append(args, taskID)
+	preds = append(preds, fmt.Sprintf("LogAttributes[%s] = ?", quoteAttrKey(attrKey)))
+	args = append(args, attrValue)
 	preds = append(preds, "Timestamp >= ?")
 	args = append(args, opts.Start)
 	preds = append(preds, "Timestamp <= ?")
@@ -262,20 +296,20 @@ func buildJobLogsQuery(taskID string, opts LogQueryOpts) (string, []any) {
 	return stmt, args
 }
 
-// buildHistogramQuery is the histogram sibling of buildJobLogsQuery. The
+// buildHistogramQuery is the histogram sibling of buildLogsQuery. The
 // bucket width is interpolated into the SQL (not passed as a parameter)
 // because ClickHouse's INTERVAL syntax doesn't accept positional ints in
 // the duration position — we sanitize stepSec to a small positive int up
 // the call chain so this is safe.
-func buildHistogramQuery(taskID string, opts LogQueryOpts, stepSec int64) (string, []any) {
+func buildHistogramQuery(attrKey, attrValue string, opts LogQueryOpts, stepSec int64) (string, []any) {
 	var (
 		preds []string
 		args  []any
 	)
 	preds = append(preds, "ServiceName = ?")
 	args = append(args, orchestratorServiceName)
-	preds = append(preds, "LogAttributes['task_id'] = ?")
-	args = append(args, taskID)
+	preds = append(preds, fmt.Sprintf("LogAttributes[%s] = ?", quoteAttrKey(attrKey)))
+	args = append(args, attrValue)
 	preds = append(preds, "Timestamp >= ?")
 	args = append(args, opts.Start)
 	preds = append(preds, "Timestamp <= ?")
@@ -299,6 +333,21 @@ func buildHistogramQuery(taskID string, opts LogQueryOpts, stepSec int64) (strin
 		GROUP BY bucket, SeverityText
 		ORDER BY bucket ASC`, stepSec, strings.Join(preds, "\n\t\t  AND "))
 	return stmt, args
+}
+
+// quoteAttrKey hardens against an SQLi vector that would otherwise open
+// if a caller passed an attacker-influenced key (callers today use
+// constant string literals, but defense in depth). ClickHouse identifier
+// quoting uses backticks; LogAttributes[...] indexing wants the key as a
+// quoted string. Reject anything outside the lowercase-letter / digit /
+// underscore alphabet — every legitimate OTel attribute key respects it.
+func quoteAttrKey(k string) string {
+	for _, r := range k {
+		if !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') && r != '_' && r != '.' {
+			panic(fmt.Sprintf("invalid log attribute key: %q", k))
+		}
+	}
+	return "'" + k + "'"
 }
 
 func sortBuckets(buckets []HistogramBucket) {

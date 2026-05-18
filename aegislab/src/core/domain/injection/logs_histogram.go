@@ -83,6 +83,9 @@ func (s *Service) GetLogsHistogram(ctx context.Context, id int, req *InjectionLo
 	if taskErr != nil {
 		return resp, nil
 	}
+	if task.TraceID == "" {
+		return resp, nil
+	}
 
 	start, end, err := resolveLogWindow(req.Start, req.End, task.CreatedAt)
 	if err != nil {
@@ -99,7 +102,9 @@ func (s *Service) GetLogsHistogram(ctx context.Context, id int, req *InjectionLo
 	// it relied on Loki returning a level-broken-down series. The
 	// ClickHouse path groups by SeverityText inside the same scan, so we
 	// pass Level="" and let the reader populate ByLevel for the UI.
-	histogram, chErr := s.chLogReader.QueryLogHistogram(chCtx, *injection.TaskID, chinfra.LogQueryOpts{
+	// Scope by trace_id so all stages roll up into a single histogram;
+	// task_id alone misses everything outside FaultInjection.
+	histogram, chErr := s.chLogReader.QueryTraceLogHistogram(chCtx, task.TraceID, chinfra.LogQueryOpts{
 		Start:     start,
 		End:       end,
 		Substring: substringFromQuery(req.Q),

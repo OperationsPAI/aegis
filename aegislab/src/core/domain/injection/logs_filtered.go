@@ -104,6 +104,9 @@ func (s *Service) GetLogsFiltered(ctx context.Context, id int, req *InjectionLog
 	if taskErr != nil {
 		return resp, nil
 	}
+	if task.TraceID == "" {
+		return resp, nil
+	}
 
 	start, end, err := resolveLogWindow(req.Start, req.End, task.CreatedAt)
 	if err != nil {
@@ -116,7 +119,11 @@ func (s *Service) GetLogsFiltered(ctx context.Context, id int, req *InjectionLog
 
 	chCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	entries, chErr := s.chLogReader.QueryJobLogs(chCtx, *injection.TaskID, chinfra.LogQueryOpts{
+	// Filter by trace_id so the panel sees ALL stage logs
+	// (RestartPedestal / FaultInjection / BuildDatapack / RunAlgorithm /
+	// CollectResult), not just the FaultInjection task injection.TaskID
+	// happens to point at.
+	entries, chErr := s.chLogReader.QueryTraceLogs(chCtx, task.TraceID, chinfra.LogQueryOpts{
 		Start:     start,
 		End:       end,
 		Level:     strings.ToLower(strings.TrimSpace(req.Level)),
@@ -132,7 +139,14 @@ func (s *Service) GetLogsFiltered(ctx context.Context, id int, req *InjectionLog
 
 	filtered := make([]InjectionLogEntry, 0, len(entries))
 	for _, entry := range entries {
-		filtered = append(filtered, toInjectionLogEntry(entry, *injection.TaskID))
+		// Prefer the entry's own task_id attribute over the injection's
+		// owning TaskID so individual rows can be traced back to the
+		// specific stage they came from.
+		taskID := entry.Attributes["task_id"]
+		if taskID == "" {
+			taskID = *injection.TaskID
+		}
+		filtered = append(filtered, toInjectionLogEntry(entry, taskID))
 	}
 
 	offset, err := decodeCursor(req.Cursor)

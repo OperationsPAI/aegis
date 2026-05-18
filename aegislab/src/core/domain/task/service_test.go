@@ -32,6 +32,14 @@ func (f *fakeLogReader) QueryLogHistogram(_ context.Context, _ string, _ chinfra
 	return nil, nil
 }
 
+func (f *fakeLogReader) QueryTraceLogs(_ context.Context, _ string, _ chinfra.LogQueryOpts) ([]chinfra.LogEntry, error) {
+	return f.entries, f.err
+}
+
+func (f *fakeLogReader) QueryTraceLogHistogram(_ context.Context, _ string, _ chinfra.LogQueryOpts, _ int) ([]chinfra.HistogramBucket, error) {
+	return nil, nil
+}
+
 func newTaskService(t *testing.T, gateway *ClickHouseLogGateway) (*Service, sqlmock.Sqlmock, func()) {
 	t.Helper()
 
