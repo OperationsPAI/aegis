@@ -20,16 +20,16 @@ import (
 type Service struct {
 	repository *Repository
 	logService *TaskLogService
-	loki       *LokiGateway
+	logs       *ClickHouseLogGateway
 	redis      *redisinfra.Gateway
 	k8s        *k8sinfra.Gateway
 }
 
-func NewService(repository *Repository, logService *TaskLogService, loki *LokiGateway, redis *redisinfra.Gateway, k8s *k8sinfra.Gateway) *Service {
+func NewService(repository *Repository, logService *TaskLogService, logs *ClickHouseLogGateway, redis *redisinfra.Gateway, k8s *k8sinfra.Gateway) *Service {
 	return &Service{
 		repository: repository,
 		logService: logService,
-		loki:       loki,
+		logs:       logs,
 		redis:      redis,
 		k8s:        k8s,
 	}
@@ -250,10 +250,10 @@ func (s *Service) PollLogs(ctx context.Context, taskID string, after time.Time) 
 		start = after.Add(time.Nanosecond)
 	}
 
-	lokiCtx, lokiCancel := context.WithTimeout(ctx, 10*time.Second)
-	defer lokiCancel()
+	logsCtx, logsCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer logsCancel()
 
-	logEntries, err := s.loki.QueryJobLogs(lokiCtx, task.ID, start)
+	logEntries, err := s.logs.QueryJobLogs(logsCtx, task.ID, start)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query task logs: %w", err)
 	}
@@ -267,12 +267,12 @@ func (s *Service) PollLogs(ctx context.Context, taskID string, after time.Time) 
 }
 
 func (s *Service) queryHistoricalLogs(ctx context.Context, task *model.Task) []string {
-	lokiCtx, lokiCancel := context.WithTimeout(ctx, 10*time.Second)
-	defer lokiCancel()
+	logsCtx, logsCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer logsCancel()
 
-	logEntries, err := s.loki.QueryJobLogs(lokiCtx, task.ID, task.CreatedAt)
+	logEntries, err := s.logs.QueryJobLogs(logsCtx, task.ID, task.CreatedAt)
 	if err != nil {
-		logrus.Warnf("Failed to query Loki for task %s logs: %v", task.ID, err)
+		logrus.Warnf("Failed to query ClickHouse for task %s logs: %v", task.ID, err)
 		return []string{}
 	}
 

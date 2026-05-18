@@ -2,6 +2,7 @@ package app
 
 import (
 	buildkit "aegis/platform/buildkit"
+	chinfra "aegis/platform/clickhouse"
 	config "aegis/platform/configfx"
 	db "aegis/platform/db"
 	etcd "aegis/platform/etcd"
@@ -9,7 +10,6 @@ import (
 	helm "aegis/platform/helm"
 	jwtkeys "aegis/platform/jwtkeys"
 	logger "aegis/platform/logger"
-	loki "aegis/platform/loki"
 	redis "aegis/platform/redis"
 	tracing "aegis/platform/tracing"
 
@@ -48,7 +48,7 @@ func WithRemoteVerifier() fx.Option {
 
 func ObserveOptions() fx.Option {
 	return fx.Options(
-		loki.Module,
+		chinfra.Module,
 		tracing.Module,
 	)
 }

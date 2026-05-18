@@ -6,7 +6,7 @@
 //
 //   - module/gateway       — route matching, proxy, middleware chain
 //   - module/ssoclient     — JWT verifier for pre-auth
-//   - infra (config, logger, tracing, loki, jwtkeys)
+//   - infra (config, logger, tracing, clickhouse, jwtkeys)
 //   - http server          — root handler is the gateway dispatcher
 //
 // What's NOT in this binary: DB, redis, k8s, chaos, any business

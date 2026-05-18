@@ -87,11 +87,6 @@ addr = ":9094"
 [api_gateway.intake.grpc]
 addr = ":9096"
 
-[loki]
-address = "http://10.10.10.161:3101"
-timeout = "10s"
-max_entries = 5000
-
 [otlp_receiver]
 port = 4319
 max_request_size = 5242880

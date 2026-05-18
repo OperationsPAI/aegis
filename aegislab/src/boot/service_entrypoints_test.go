@@ -12,11 +12,11 @@ import (
 	apiboot "aegis/boot/api"
 	runtimeapp "aegis/boot/runtime"
 	buildkit "aegis/platform/buildkit"
+	chinfra "aegis/platform/clickhouse"
 	etcd "aegis/platform/etcd"
 	harbor "aegis/platform/harbor"
 	helm "aegis/platform/helm"
 	k8s "aegis/platform/k8s"
-	loki "aegis/platform/loki"
 	redisinfra "aegis/platform/redis"
 	controllerapi "aegis/core/orchestrator/lifecycle"
 	httpapi "aegis/boot/wiring/http"
@@ -71,24 +71,26 @@ func newDedicatedServiceReplacements(t *testing.T) (fx.Option, func()) {
 	controller := &k8s.Controller{}
 	k8sGateway := k8s.NewGateway(controller)
 
-	return fx.Replace(
-			db,
-			redisGateway,
-			redisClient,
-			etcdGateway,
-			etcdClient,
-			&loki.Client{},
-			traceProvider,
-			&rest.Config{},
-			controller,
-			k8sGateway,
-			harbor.NewGateway(),
-			helm.NewGateway(),
-			buildkit.NewGateway(),
-			&app.ProducerInitializer{StartFunc: func(context.Context) error { return nil }},
-			&workerapi.Lifecycle{StartFunc: func(context.Context) error { return nil }},
-			&controllerapi.Lifecycle{RunFunc: func(context.Context, context.CancelFunc) error { return nil }},
-			&receiverapi.Lifecycle{StartFunc: func(context.Context) error { return nil }},
+	return fx.Options(
+			fx.Replace(
+				db,
+				redisGateway,
+				redisClient,
+				etcdGateway,
+				etcdClient,
+				traceProvider,
+				&rest.Config{},
+				controller,
+				k8sGateway,
+				harbor.NewGateway(),
+				helm.NewGateway(),
+				buildkit.NewGateway(),
+				&app.ProducerInitializer{StartFunc: func(context.Context) error { return nil }},
+				&workerapi.Lifecycle{StartFunc: func(context.Context) error { return nil }},
+				&controllerapi.Lifecycle{RunFunc: func(context.Context, context.CancelFunc) error { return nil }},
+				&receiverapi.Lifecycle{StartFunc: func(context.Context) error { return nil }},
+			),
+			fx.Decorate(func(chinfra.LogReader) chinfra.LogReader { return chinfra.NoopLogReader{} }),
 		), func() {
 			_ = redisClient.Close()
 			_ = traceProvider.Shutdown(context.Background())

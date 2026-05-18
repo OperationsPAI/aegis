@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/httpx"
-	loki "aegis/platform/loki"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,8 +58,13 @@ type InjectionLogHistogramResp struct {
 }
 
 // GetLogsHistogram returns time-bucketed log counts for an injection's
-// primary task. Empty windows return an empty bucket list rather than an
-// error so the histogram component can render zero state.
+// primary task. Backed by a single ClickHouse aggregation; the
+// per-severity breakdown comes from one GROUP BY (SeverityText) scan
+// instead of N range queries the Loki path required.
+//
+// Empty windows still return an empty bucket list so the chart can render
+// its zero-state, but ClickHouse errors are now surfaced rather than
+// silently swallowed.
 func (s *Service) GetLogsHistogram(ctx context.Context, id int, req *InjectionLogHistogramReq) (*InjectionLogHistogramResp, error) {
 	injection, err := s.repo.loadInjection(id)
 	if err != nil {
@@ -88,17 +93,19 @@ func (s *Service) GetLogsHistogram(ctx context.Context, id int, req *InjectionLo
 		buckets = 60
 	}
 
-	lokiCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	chCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	rawQ, substr := splitLogQuery(req.Q)
-	histogram, lokiErr := s.lokiClient.QueryJobLogHistogram(lokiCtx, *injection.TaskID, loki.QueryOpts{
+	// The endpoint historically didn't accept a separate `level` filter —
+	// it relied on Loki returning a level-broken-down series. The
+	// ClickHouse path groups by SeverityText inside the same scan, so we
+	// pass Level="" and let the reader populate ByLevel for the UI.
+	histogram, chErr := s.chLogReader.QueryLogHistogram(chCtx, *injection.TaskID, chinfra.LogQueryOpts{
 		Start:     start,
 		End:       end,
-		Substring: substr,
-		RawLogQL:  rawQ,
+		Substring: substringFromQuery(req.Q),
 	}, buckets)
-	if lokiErr != nil {
-		return resp, nil
+	if chErr != nil {
+		return nil, fmt.Errorf("clickhouse log histogram query failed: %w", chErr)
 	}
 
 	out := make([]InjectionLogHistogramBucket, 0, len(histogram))
@@ -126,7 +133,7 @@ func (s *Service) GetLogsHistogram(ctx context.Context, id int, req *InjectionLo
 //	@Param			start	query		string															false	"RFC3339 start time"
 //	@Param			end		query		string															false	"RFC3339 end time"
 //	@Param			buckets	query		int																false	"Number of buckets"	default(60)
-//	@Param			q		query		string															false	"Substring or LogQL fragment"
+//	@Param			q		query		string															false	"Substring filter on log body"
 //	@Success		200		{object}	dto.GenericResponse[InjectionLogHistogramResp]	"Histogram returned"
 //	@Failure		400		{object}	dto.GenericResponse[any]										"Invalid request"
 //	@Failure		401		{object}	dto.GenericResponse[any]										"Authentication required"

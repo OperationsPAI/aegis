@@ -10,9 +10,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 func NewProvider() (*sdktrace.TracerProvider, error) {
@@ -28,17 +26,7 @@ func NewProvider() (*sdktrace.TracerProvider, error) {
 		return nil, err
 	}
 
-	// Pass the empty SchemaURL so Merge() doesn't reject our overrides
-	// when `resource.Default()` ships a newer schema URL than the version
-	// of semconv we import.
-	res, err := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			"",
-			semconv.ServiceName(config.GetString("name")),
-			semconv.ServiceVersion(config.GetString("version")),
-		),
-	)
+	res, err := rcabenchResource()
 	if err != nil {
 		return nil, err
 	}

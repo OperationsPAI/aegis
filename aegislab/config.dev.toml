@@ -103,11 +103,6 @@ addr = ":9094"
 [system.grpc]
 addr = ":9095"
 
-[loki]
-address = "http://10.10.10.161:3100"
-timeout = "10s"
-max_entries = 5000
-
 [otlp_receiver]
 port = 4319
 max_request_size = 5242880

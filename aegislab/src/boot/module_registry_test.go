@@ -16,12 +16,12 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/framework"
 	buildkit "aegis/platform/buildkit"
+	chinfra "aegis/platform/clickhouse"
 	etcd "aegis/platform/etcd"
 	harbor "aegis/platform/harbor"
 	helm "aegis/platform/helm"
 	"aegis/platform/jwtkeys"
 	k8s "aegis/platform/k8s"
-	loki "aegis/platform/loki"
 	redisinfra "aegis/platform/redis"
 	"aegis/clients/sso"
 	"aegis/platform/testutil"
@@ -103,7 +103,6 @@ func buildModuleRegistrySnapshot(t *testing.T) moduleRegistrySnapshot {
 			redisClient,
 			etcdGateway,
 			etcdClient,
-			&loki.Client{},
 			controller,
 			k8sGateway,
 			harbor.NewGateway(),
@@ -118,6 +117,7 @@ func buildModuleRegistrySnapshot(t *testing.T) moduleRegistrySnapshot {
 		fx.Supply((*ssoclient.Client)(nil)),
 		fx.Supply((*jwtkeys.Verifier)(nil)),
 		fx.Supply((*jwtkeys.Signer)(nil)),
+		fx.Provide(func() chinfra.LogReader { return chinfra.NoopLogReader{} }),
 		fx.Provide(chaosSystemWriterAdapter),
 		fx.Invoke(func(p moduleRegistryParams) {
 			snapshot.Routes = p.Routes

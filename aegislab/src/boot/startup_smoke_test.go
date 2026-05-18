@@ -10,11 +10,11 @@ import (
 	"time"
 
 	buildkit "aegis/platform/buildkit"
+	chinfra "aegis/platform/clickhouse"
 	etcd "aegis/platform/etcd"
 	harbor "aegis/platform/harbor"
 	helm "aegis/platform/helm"
 	k8s "aegis/platform/k8s"
-	loki "aegis/platform/loki"
 	redisinfra "aegis/platform/redis"
 	controllerapi "aegis/core/orchestrator/lifecycle"
 	httpapi "aegis/boot/wiring/http"
@@ -121,24 +121,26 @@ func newSmokeReplacements(t *testing.T, spies *smokeLifecycleSpies) (fx.Option, 
 		},
 	}
 
-	return fx.Replace(
-			db,
-			redisGateway,
-			redisClient,
-			etcdGateway,
-			etcdClient,
-			&loki.Client{},
-			traceProvider,
-			&rest.Config{},
-			controller,
-			k8sGateway,
-			harbor.NewGateway(),
-			helm.NewGateway(),
-			buildkit.NewGateway(),
-			producerInitializer,
-			workerLifecycle,
-			controllerLifecycle,
-			receiverLifecycle,
+	return fx.Options(
+			fx.Replace(
+				db,
+				redisGateway,
+				redisClient,
+				etcdGateway,
+				etcdClient,
+				traceProvider,
+				&rest.Config{},
+				controller,
+				k8sGateway,
+				harbor.NewGateway(),
+				helm.NewGateway(),
+				buildkit.NewGateway(),
+				producerInitializer,
+				workerLifecycle,
+				controllerLifecycle,
+				receiverLifecycle,
+			),
+			fx.Decorate(func(chinfra.LogReader) chinfra.LogReader { return chinfra.NoopLogReader{} }),
 		), func() {
 			_ = redisClient.Close()
 			_ = traceProvider.Shutdown(context.Background())

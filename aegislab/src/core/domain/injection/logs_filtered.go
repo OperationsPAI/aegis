@@ -11,18 +11,19 @@ import (
 	"strings"
 	"time"
 
+	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/httpx"
-	loki "aegis/platform/loki"
 
 	"github.com/gin-gonic/gin"
 )
 
 // InjectionLogQueryReq captures the query parameters for the filtered logs
-// endpoint. Both `q` (substring) and `level` are applied client-side after
-// the Loki range query so they remain consistent regardless of how the
-// underlying ingestion pipeline labels entries.
+// endpoint. Substring + level filters push down into the ClickHouse query
+// where possible (see platform/clickhouse/log_reader.buildJobLogsQuery);
+// pagination still happens in-process after the scan because the cursor
+// must remain stable across repeated calls.
 type InjectionLogQueryReq struct {
 	Start  string `form:"start" binding:"omitempty"`
 	End    string `form:"end" binding:"omitempty"`
@@ -55,9 +56,10 @@ func (req *InjectionLogQueryReq) Validate() error {
 }
 
 // InjectionLogEntry is the per-row payload returned by the filtered logs
-// endpoint. `attrs` carries any Loki stream labels worth surfacing
+// endpoint. `attrs` carries any OTel LogAttributes worth surfacing
 // (job_id, trace_id, etc.) and `service` is sourced from the same labels
-// when available.
+// when available. Shape is byte-identical to the previous Loki-backed
+// version so the frontend DTO does not change.
 type InjectionLogEntry struct {
 	TS      time.Time         `json:"ts"`
 	Level   string            `json:"level,omitempty"`
@@ -74,10 +76,16 @@ type InjectionLogsFilteredResp struct {
 	TotalEstimate int                 `json:"total_estimate"`
 }
 
-// GetLogsFiltered returns paginated, filterable Loki entries for an
-// injection's primary task. Filtering and pagination are applied in-process
-// after the Loki range query because the cursor must be stable across
-// repeated calls and Loki itself does not expose offset-based cursors.
+// GetLogsFiltered returns paginated, filterable ClickHouse log entries for
+// an injection's primary task. Pagination is applied in-process after the
+// scan because the cursor must be stable across repeated calls — the SQL
+// query already prunes by task / time / level / substring.
+//
+// ClickHouse errors are surfaced (no longer swallowed into an empty
+// response): a Loki-not-deployed environment used to silently return an
+// empty entries list, which made the frontend Logs panel render blank
+// with no indication of misconfiguration. Returning the error lets the
+// UI render an error state on react-query failure.
 func (s *Service) GetLogsFiltered(ctx context.Context, id int, req *InjectionLogQueryReq) (*InjectionLogsFilteredResp, error) {
 	injection, err := s.repo.loadInjection(id)
 	if err != nil {
@@ -106,32 +114,25 @@ func (s *Service) GetLogsFiltered(ctx context.Context, id int, req *InjectionLog
 		limit = 200
 	}
 
-	lokiCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	chCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	rawQ, substr := splitLogQuery(req.Q)
-	entries, lokiErr := s.lokiClient.QueryJobLogs(lokiCtx, *injection.TaskID, loki.QueryOpts{
+	entries, chErr := s.chLogReader.QueryJobLogs(chCtx, *injection.TaskID, chinfra.LogQueryOpts{
 		Start:     start,
 		End:       end,
-		Direction: "forward",
-		Substring: substr,
-		RawLogQL:  rawQ,
+		Level:     strings.ToLower(strings.TrimSpace(req.Level)),
+		Substring: substringFromQuery(req.Q),
 	})
-	if lokiErr != nil {
-		return resp, nil
+	if chErr != nil {
+		return nil, fmt.Errorf("clickhouse logs query failed: %w", chErr)
 	}
 
 	sort.SliceStable(entries, func(i, j int) bool {
 		return entries[i].Timestamp.Before(entries[j].Timestamp)
 	})
 
-	level := strings.ToLower(req.Level)
 	filtered := make([]InjectionLogEntry, 0, len(entries))
 	for _, entry := range entries {
-		row := toInjectionLogEntry(entry)
-		if level != "" && row.Level != level {
-			continue
-		}
-		filtered = append(filtered, row)
+		filtered = append(filtered, toInjectionLogEntry(entry, *injection.TaskID))
 	}
 
 	offset, err := decodeCursor(req.Cursor)
@@ -167,7 +168,7 @@ func (s *Service) GetLogsFiltered(ctx context.Context, id int, req *InjectionLog
 //	@Param			id		path		int																true	"Injection ID"
 //	@Param			start	query		string															false	"RFC3339 start time"
 //	@Param			end		query		string															false	"RFC3339 end time"
-//	@Param			q		query		string															false	"Substring or LogQL pipeline fragment"
+//	@Param			q		query		string															false	"Substring filter on log body"
 //	@Param			level	query		string															false	"Filter by level: error|warn|info"
 //	@Param			limit	query		int																false	"Maximum entries per page"	default(200)
 //	@Param			cursor	query		string															false	"Pagination cursor"
@@ -225,37 +226,45 @@ func resolveLogWindow(startStr, endStr string, taskCreatedAt time.Time) (time.Ti
 	return start, end, nil
 }
 
-func splitLogQuery(q string) (raw, substr string) {
+// substringFromQuery extracts the user-supplied substring filter. The
+// previous Loki path also accepted raw LogQL fragments starting with `|`
+// — that escape hatch is intentionally dropped: ClickHouse has no
+// equivalent and exposing raw SQL would be a SQLi gift. Callers passing a
+// LogQL-style fragment now get treated as a literal substring (which
+// matches nothing useful) — that's acceptable because the only frontend
+// caller supplies plain text from the search input.
+func substringFromQuery(q string) string {
 	q = strings.TrimSpace(q)
-	if q == "" {
-		return "", ""
-	}
 	if strings.HasPrefix(q, "|") {
-		return q, ""
+		return ""
 	}
-	return "", q
+	return q
 }
 
 var levelKeywords = []string{"error", "warn", "info", "debug"}
 
-func toInjectionLogEntry(entry dto.LogEntry) InjectionLogEntry {
+func toInjectionLogEntry(entry chinfra.LogEntry, taskID string) InjectionLogEntry {
 	row := InjectionLogEntry{
 		TS:    entry.Timestamp,
-		Msg:   entry.Line,
-		Level: string(entry.Level),
+		Msg:   entry.Body,
+		Level: strings.ToLower(entry.SeverityText),
 	}
 	if row.Level == "" {
-		row.Level = detectLevel(entry.Line)
+		row.Level = detectLevel(entry.Body)
 	}
 	attrs := map[string]string{}
-	if entry.JobID != "" {
-		attrs["job_id"] = entry.JobID
+	if jobID := entry.Attributes["job_id"]; jobID != "" {
+		attrs["job_id"] = jobID
 	}
-	if entry.TraceID != "" {
-		attrs["trace_id"] = entry.TraceID
+	traceID := entry.Attributes["trace_id"]
+	if traceID == "" {
+		traceID = entry.TraceID
 	}
-	if entry.TaskID != "" {
-		attrs["task_id"] = entry.TaskID
+	if traceID != "" {
+		attrs["trace_id"] = traceID
+	}
+	if taskID != "" {
+		attrs["task_id"] = taskID
 	}
 	if len(attrs) > 0 {
 		row.Attrs = attrs

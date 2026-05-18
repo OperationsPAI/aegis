@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
+	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/k8s"
-	loki "aegis/platform/loki"
 	redis "aegis/platform/redis"
 	"aegis/platform/model"
 	container "aegis/core/domain/container"
@@ -95,7 +95,7 @@ type CancelInjectionTaskResult struct {
 type Service struct {
 	repo          *Repository
 	store         DatapackStorage
-	lokiClient    *loki.Client
+	chLogReader   chinfra.LogReader
 	containers    container.Reader
 	datasets      dataset.Reader
 	labels        label.Writer
@@ -104,11 +104,11 @@ type Service struct {
 	taskCanceller TaskCanceller
 }
 
-func NewService(repo *Repository, store DatapackStorage, lokiClient *loki.Client, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter, taskCanceller TaskCanceller) *Service {
+func NewService(repo *Repository, store DatapackStorage, chLogReader chinfra.LogReader, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter, taskCanceller TaskCanceller) *Service {
 	return &Service{
 		repo:          repo,
 		store:         store,
-		lokiClient:    lokiClient,
+		chLogReader:   chLogReader,
 		containers:    containers,
 		datasets:      datasets,
 		labels:        labels,
@@ -902,17 +902,17 @@ func (s *Service) GetLogs(ctx context.Context, id int) (*InjectionLogsResp, erro
 		return resp, nil
 	}
 
-	lokiCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	chCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	logEntries, lokiErr := s.lokiClient.QueryJobLogs(lokiCtx, *injection.TaskID, loki.QueryOpts{
-		Start:     task.CreatedAt,
-		Direction: "forward",
+	logEntries, chErr := s.chLogReader.QueryJobLogs(chCtx, *injection.TaskID, chinfra.LogQueryOpts{
+		Start: task.CreatedAt,
+		End:   time.Now(),
 	})
-	if lokiErr != nil {
-		return resp, nil
+	if chErr != nil {
+		return nil, fmt.Errorf("clickhouse logs query failed: %w", chErr)
 	}
 	for _, entry := range logEntries {
-		resp.Logs = append(resp.Logs, entry.Line)
+		resp.Logs = append(resp.Logs, entry.Body)
 	}
 	return resp, nil
 }

@@ -2,25 +2,37 @@ package task
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
+	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/consts"
-	lokiinfra "aegis/platform/loki"
-	"aegis/platform/model"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
-func newTaskService(t *testing.T, gateway *LokiGateway) (*Service, sqlmock.Sqlmock, func()) {
+// fakeLogReader is a deterministic stand-in for the ClickHouse log reader
+// the task domain depends on. Tests inject canned entries instead of
+// running ClickHouse — the gateway-level translation (otel.LogEntry →
+// dto.LogEntry) is the only behaviour we want to exercise here.
+type fakeLogReader struct {
+	entries []chinfra.LogEntry
+	err     error
+}
+
+func (f *fakeLogReader) QueryJobLogs(_ context.Context, _ string, _ chinfra.LogQueryOpts) ([]chinfra.LogEntry, error) {
+	return f.entries, f.err
+}
+
+func (f *fakeLogReader) QueryLogHistogram(_ context.Context, _ string, _ chinfra.LogQueryOpts, _ int) ([]chinfra.HistogramBucket, error) {
+	return nil, nil
+}
+
+func newTaskService(t *testing.T, gateway *ClickHouseLogGateway) (*Service, sqlmock.Sqlmock, func()) {
 	t.Helper()
 
 	sqlDB, mock, err := sqlmock.New()
@@ -33,7 +45,7 @@ func newTaskService(t *testing.T, gateway *LokiGateway) (*Service, sqlmock.Sqlmo
 	require.NoError(t, err)
 
 	if gateway == nil {
-		gateway = NewLokiGateway(&lokiinfra.Client{})
+		gateway = NewClickHouseLogGateway(&fakeLogReader{})
 	}
 
 	service := NewService(NewRepository(db), NewTaskLogService(NewRepository(db), nil, gateway), gateway, nil, nil)
@@ -49,10 +61,10 @@ func TestTaskServiceListSuccess(t *testing.T) {
 	now := time.Now()
 	req := &ListTaskReq{State: "Pending"}
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `tasks` WHERE state = ?")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `tasks` WHERE tasks.state = ?")).
 		WithArgs(consts.TaskPending).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `tasks` WHERE state = ? ORDER BY created_at DESC LIMIT ?")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `tasks` WHERE tasks.state = ? ORDER BY tasks.created_at DESC LIMIT ?")).
 		WithArgs(consts.TaskPending, 20).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "type", "immediate", "execute_time", "cron_expr", "payload", "trace_id", "parent_task_id",
@@ -69,36 +81,34 @@ func TestTaskServiceListSuccess(t *testing.T) {
 }
 
 func TestTaskServiceQueryHistoricalLogsSuccess(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/loki/api/v1/query_range", r.URL.Path)
-		require.True(t, strings.Contains(r.URL.Query().Get("query"), `task_id="task-1"`))
-		_, _ = w.Write([]byte(`{
-			"status":"success",
-			"data":{
-				"resultType":"streams",
-				"result":[{
-					"stream":{"trace_id":"trace-1","job_id":"job-1"},
-					"values":[
-						["1710000000000000000","first log"],
-						["1710000001000000000","second log"]
-					]
-				}]
-			}
-		}`))
-	}))
-	defer server.Close()
+	ts1 := time.Unix(1710000000, 0).UTC()
+	ts2 := time.Unix(1710000001, 0).UTC()
+	fake := &fakeLogReader{
+		entries: []chinfra.LogEntry{
+			{
+				Timestamp:    ts1,
+				SeverityText: "INFO",
+				Body:         "first log",
+				TraceID:      "trace-1",
+				Attributes:   map[string]string{"task_id": "task-1", "job_id": "job-1"},
+			},
+			{
+				Timestamp:    ts2,
+				SeverityText: "INFO",
+				Body:         "second log",
+				TraceID:      "trace-1",
+				Attributes:   map[string]string{"task_id": "task-1", "job_id": "job-1"},
+			},
+		},
+	}
+	gateway := NewClickHouseLogGateway(fake)
 
-	viper.Set("loki.address", server.URL)
-	viper.Set("loki.max_entries", 100)
-
-	gateway := NewLokiGateway(lokiinfra.NewClient())
-	service, _, cleanup := newTaskService(t, gateway)
-	defer cleanup()
-
-	logs := service.queryHistoricalLogs(context.Background(), &model.Task{
-		ID:        "task-1",
-		CreatedAt: time.Unix(1710000000, 0),
-	})
-
-	require.Equal(t, []string{"first log", "second log"}, logs)
+	logs, err := gateway.QueryJobLogs(context.Background(), "task-1", time.Unix(1710000000, 0))
+	require.NoError(t, err)
+	require.Len(t, logs, 2)
+	require.Equal(t, "first log", logs[0].Line)
+	require.Equal(t, "second log", logs[1].Line)
+	require.Equal(t, "trace-1", logs[0].TraceID)
+	require.Equal(t, "job-1", logs[0].JobID)
+	require.Equal(t, consts.LogLevel("info"), logs[0].Level)
 }

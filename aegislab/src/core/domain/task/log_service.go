@@ -27,14 +27,14 @@ const (
 type TaskLogService struct {
 	repository *Repository
 	queueStore *TaskQueueStore
-	loki       *LokiGateway
+	logs       *ClickHouseLogGateway
 }
 
-func NewTaskLogService(repository *Repository, queueStore *TaskQueueStore, loki *LokiGateway) *TaskLogService {
+func NewTaskLogService(repository *Repository, queueStore *TaskQueueStore, logs *ClickHouseLogGateway) *TaskLogService {
 	return &TaskLogService{
 		repository: repository,
 		queueStore: queueStore,
-		loki:       loki,
+		logs:       logs,
 	}
 }
 
@@ -162,12 +162,12 @@ func (s *taskLogStreamer) runPingLoop(ctx context.Context, cancel context.Cancel
 }
 
 func (s *taskLogStreamer) sendHistoricalLogs() time.Time {
-	lokiCtx, lokiCancel := context.WithTimeout(s.ctx, 15*time.Second)
-	defer lokiCancel()
+	logsCtx, logsCancel := context.WithTimeout(s.ctx, 15*time.Second)
+	defer logsCancel()
 
-	historicalLogs, err := s.service.loki.QueryJobLogs(lokiCtx, s.taskID, s.task.CreatedAt)
+	historicalLogs, err := s.service.logs.QueryJobLogs(logsCtx, s.taskID, s.task.CreatedAt)
 	if err != nil {
-		s.log.Warnf("Failed to query Loki for historical logs: %v", err)
+		s.log.Warnf("Failed to query ClickHouse for historical logs: %v", err)
 		return time.Time{}
 	}
 
