@@ -263,8 +263,11 @@ func buildLogsQuery(attrKey, attrValue string, opts LogQueryOpts) (string, []any
 		preds []string
 		args  []any
 	)
-	preds = append(preds, "ServiceName = ?")
-	args = append(args, orchestratorServiceName)
+	// trace_id / task_id is already the safety predicate — only aegis-
+	// stamped records (orchestrator OTLP push + DaemonSet-filtered pod
+	// stdout) carry it. Filtering on ServiceName here used to exclude
+	// pod-stdout lines whose ServiceName is empty, dropping the algorithm
+	// pod's actual output from the LOGs panel.
 	preds = append(preds, fmt.Sprintf("LogAttributes[%s] = ?", quoteAttrKey(attrKey)))
 	args = append(args, attrValue)
 	preds = append(preds, "Timestamp >= ?")
@@ -306,8 +309,6 @@ func buildHistogramQuery(attrKey, attrValue string, opts LogQueryOpts, stepSec i
 		preds []string
 		args  []any
 	)
-	preds = append(preds, "ServiceName = ?")
-	args = append(args, orchestratorServiceName)
 	preds = append(preds, fmt.Sprintf("LogAttributes[%s] = ?", quoteAttrKey(attrKey)))
 	args = append(args, attrValue)
 	preds = append(preds, "Timestamp >= ?")

@@ -20,7 +20,7 @@ func TestBuildLogsQueryBaseShape(t *testing.T) {
 
 	require.Contains(t, stmt, "FROM otel.otel_logs")
 	require.Contains(t, stmt, "ORDER BY Timestamp ASC")
-	require.Contains(t, stmt, "ServiceName = ?")
+	require.NotContains(t, stmt, "ServiceName = ?") // dropped — trace_id/task_id is the only scoping needed; ServiceName predicate excluded pod-stdout
 	require.Contains(t, stmt, "LogAttributes['task_id'] = ?")
 	require.Contains(t, stmt, "Timestamp >= ?")
 	require.Contains(t, stmt, "Timestamp <= ?")
@@ -28,8 +28,8 @@ func TestBuildLogsQueryBaseShape(t *testing.T) {
 	require.NotContains(t, stmt, "lower(SeverityText)")     // level filter off
 	require.NotContains(t, stmt, "positionCaseInsensitive") // substring filter off
 
-	// Args order: service, task, start, end, limit.
-	require.Equal(t, []any{orchestratorServiceName, "task-1", start, end, 200}, args)
+	// Args order: task, start, end, limit.
+	require.Equal(t, []any{"task-1", start, end, 200}, args)
 }
 
 func TestBuildLogsQueryByTraceAttribute(t *testing.T) {
@@ -44,7 +44,7 @@ func TestBuildLogsQueryByTraceAttribute(t *testing.T) {
 
 	require.Contains(t, stmt, "LogAttributes['trace_id'] = ?")
 	require.NotContains(t, stmt, "LogAttributes['task_id']")
-	require.Equal(t, []any{orchestratorServiceName, "trace-abc", start, end, 1000}, args)
+	require.Equal(t, []any{"trace-abc", start, end, 1000}, args)
 }
 
 func TestBuildLogsQueryWithLevelAndSubstring(t *testing.T) {
@@ -62,9 +62,9 @@ func TestBuildLogsQueryWithLevelAndSubstring(t *testing.T) {
 	require.Contains(t, stmt, "lower(SeverityText) = ?")
 	require.Contains(t, stmt, "positionCaseInsensitive(Body, ?) > 0")
 
-	// Args order: service, task, start, end, level (lowercased), substring, limit.
+	// Args order: task, start, end, level (lowercased), substring, limit.
 	require.Equal(t, []any{
-		orchestratorServiceName, "task-2", start, end, "error", "panic", 50,
+		"task-2", start, end, "error", "panic", 50,
 	}, args)
 }
 
@@ -76,7 +76,7 @@ func TestBuildHistogramQueryInterpolatesBucketWidth(t *testing.T) {
 	require.Contains(t, stmt, "toStartOfInterval(Timestamp, INTERVAL 30 SECOND)")
 	require.Contains(t, stmt, "GROUP BY bucket, SeverityText")
 	require.Contains(t, stmt, "LogAttributes['task_id'] = ?")
-	require.Equal(t, []any{orchestratorServiceName, "task-3", start, end}, args)
+	require.Equal(t, []any{"task-3", start, end}, args)
 }
 
 func TestBuildHistogramQueryByTraceAttribute(t *testing.T) {
