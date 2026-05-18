@@ -44,7 +44,13 @@ func NewProvider() (*sdktrace.TracerProvider, error) {
 	}
 
 	provider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithBatcher(exporter,
+			// 5s batch timeout so backdated terminal-state emits (root
+			// span ending at trace.EndTime, K8s dispatch_wait spans
+			// ending hours after creationTimestamp) reliably flush
+			// without piling up under spiky load.
+			sdktrace.WithBatchTimeout(5*time.Second),
+		),
 		sdktrace.WithResource(res),
 	)
 	otel.SetTracerProvider(provider)

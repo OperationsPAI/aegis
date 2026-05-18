@@ -4,6 +4,7 @@ import (
 	"context"
 	"path"
 	"runtime"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -28,6 +29,20 @@ func WithSpan(ctx context.Context, f func(context.Context) error) error {
 // WithSpanNamed wraps a function with OpenTelemetry tracing using a custom span name.
 func WithSpanNamed(ctx context.Context, name string, f func(context.Context) error) error {
 	childCtx, span := otel.Tracer("rcabench/task").Start(ctx, name)
+	defer span.End()
+
+	return f(childCtx)
+}
+
+// WithSpanBackdated emits a child span whose StartTimestamp is backdated to
+// the supplied startTime. The span ends at time.Now() when f returns. Used
+// for queue.wait / k8s.dispatch_wait style spans where the work began
+// before the orchestrator regained observability.
+func WithSpanBackdated(ctx context.Context, name string, startTime time.Time, f func(context.Context) error) error {
+	childCtx, span := otel.Tracer("rcabench/task").Start(ctx, name,
+		trace.WithTimestamp(startTime),
+		trace.WithSpanKind(trace.SpanKindInternal),
+	)
 	defer span.End()
 
 	return f(childCtx)

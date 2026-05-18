@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -156,6 +158,10 @@ func (r *StuckTraceReconciler) Run(ctx context.Context) {
 // runTickSafely wraps tick() so a panic during recovery doesn't kill the
 // reconciler goroutine for the rest of the worker's lifetime (issue #305:
 // a silent reconciler is a worse failure than a noisy one).
+//
+// The tick body runs under a "reconciler.tick" span on the
+// aegis/observability tracer. This is a process-level observability
+// span — it intentionally lives outside any user-facing trace tree.
 func (r *StuckTraceReconciler) runTickSafely(ctx context.Context) (processed, candidates int, err error) {
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -163,7 +169,15 @@ func (r *StuckTraceReconciler) runTickSafely(ctx context.Context) (processed, ca
 			err = fmt.Errorf("tick panic: %v", rec)
 		}
 	}()
-	processed, candidates, err = r.tick(ctx)
+	tickCtx, span := otel.Tracer("aegis/observability").Start(ctx, "reconciler.tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+	)
+	defer span.End()
+	processed, candidates, err = r.tick(tickCtx)
+	span.SetAttributes(
+		attribute.Int("reconciler.candidates", candidates),
+		attribute.Int("reconciler.processed", processed),
+	)
 	return
 }
 
