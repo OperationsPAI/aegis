@@ -62,6 +62,17 @@ data:
                 name: k8s.pod.name
               - from: resource_attribute
                 name: k8s.namespace.name
+      # Drop any log whose pod doesn't carry the aegis.io/trace-id
+      # annotation — i.e. anything not minted by aegislab (system pods,
+      # chaos-mesh, monitoring sidecars, pedestal/SUT). k8sattributes
+      # writes extracted annotations onto resource attributes, so the
+      # predicate targets resource.attributes["trace_id"]. Must run
+      # after k8sattributes and before the exporter.
+      filter/aegis_only:
+        error_mode: ignore
+        logs:
+          log_record:
+            - 'resource.attributes["trace_id"] == nil or resource.attributes["trace_id"] == ""'
       resource:
         attributes:
           - key: deployment.scope
@@ -94,6 +105,6 @@ data:
       pipelines:
         logs:
           receivers: [filelog]
-          processors: [memory_limiter, k8sattributes, resource, batch]
+          processors: [memory_limiter, k8sattributes, filter/aegis_only, resource, batch]
           exporters: [clickhouse, debug]
 {{- end }}
