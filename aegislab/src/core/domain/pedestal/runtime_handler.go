@@ -60,7 +60,7 @@ type RestartPedestalReq struct {
 //	@Param			limit	query	int	false	"Max releases to return (default 200, cap 1000)"
 //	@Success		200	{object}	dto.GenericResponse[[]PedestalRelease]
 //	@Router			/api/v2/pedestals [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"admin":"true","portal":"true"}
 func (h *RuntimeHandler) ListPedestals(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -96,7 +96,7 @@ func (h *RuntimeHandler) ListPedestals(c *gin.Context) {
 //	@Success		200	{object}	dto.GenericResponse[PedestalReleaseDetail]
 //	@Failure		404	{object}	dto.GenericResponse[any]
 //	@Router			/api/v2/pedestals/{release} [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"admin":"true","portal":"true"}
 func (h *RuntimeHandler) GetPedestal(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -130,7 +130,7 @@ func (h *RuntimeHandler) GetPedestal(c *gin.Context) {
 //	@Success		200	{object}	dto.GenericResponse[InstallPedestalResult]
 //	@Failure		400	{object}	dto.GenericResponse[any]
 //	@Router			/api/v2/pedestals [post]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"admin":"true","portal":"true"}
 func (h *RuntimeHandler) InstallPedestal(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -170,7 +170,7 @@ func (h *RuntimeHandler) InstallPedestal(c *gin.Context) {
 //	@Param			request	body	RestartPedestalReq	false	"Restart request"
 //	@Success		200	{object}	dto.GenericResponse[InstallPedestalResult]
 //	@Router			/api/v2/pedestals/{release}/restart [post]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"admin":"true","portal":"true"}
 func (h *RuntimeHandler) RestartPedestal(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -207,7 +207,7 @@ func (h *RuntimeHandler) RestartPedestal(c *gin.Context) {
 //	@Param			namespace	query	string	false	"Namespace (defaults to release name)"
 //	@Success		204	"No Content"
 //	@Router			/api/v2/pedestals/{release} [delete]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"admin":"true","portal":"true"}
 func (h *RuntimeHandler) UninstallPedestal(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")

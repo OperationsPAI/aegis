@@ -33,7 +33,7 @@ func NewHandler(service HandlerService) *Handler {
 //	@Failure		401		{object}	dto.GenericResponse[any]							"Authentication required"
 //	@Failure		500		{object}	dto.GenericResponse[any]							"Internal server error"
 //	@Router			/api/v2/systems [get]
-//	@x-api-type		{"admin":"true"}
+//	@x-api-type		{"admin":"true","portal":"true"}
 func (h *Handler) ListSystems(c *gin.Context) {
 	var req ListChaosSystemReq
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -65,7 +65,7 @@ func (h *Handler) ListSystems(c *gin.Context) {
 //	@Failure		404	{object}	dto.GenericResponse[any]				"System not found"
 //	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/systems/{id} [get]
-//	@x-api-type		{"admin":"true"}
+//	@x-api-type		{"admin":"true","portal":"true"}
 func (h *Handler) GetSystem(c *gin.Context) {
 	id, ok := httpx.ParsePositiveID(c, c.Param(consts.URLPathID), "system ID")
 	if !ok {
@@ -341,7 +341,7 @@ func (h *Handler) MarkPrerequisite(c *gin.Context) {
 //	@Failure		404			{object}	dto.GenericResponse[any]					"System not found"
 //	@Failure		500			{object}	dto.GenericResponse[any]					"k8s/resourcelookup failure"
 //	@Router			/api/v2/systems/by-name/{name}/inject-candidates [get]
-//	@x-api-type		{"admin":"true","sdk":"true"}
+//	@x-api-type		{"admin":"true","sdk":"true","portal":"true"}
 func (h *Handler) ListInjectCandidates(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Query("namespace")

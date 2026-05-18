@@ -36,7 +36,7 @@ func NewHandler(service HandlerService) *Handler {
 //	@Failure		401						{object}	dto.GenericResponse[any]
 //	@Failure		404						{object}	dto.GenericResponse[any]
 //	@Router			/api/v2/pedestal/helm/{container_version_id} [get]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) GetPedestalHelmConfig(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -73,7 +73,7 @@ func (h *Handler) GetPedestalHelmConfig(c *gin.Context) {
 //	@Param			request					body	UpsertPedestalHelmConfigReq	true	"Helm config fields"
 //	@Success		200	{object}	dto.GenericResponse[PedestalHelmConfigResp]
 //	@Router			/api/v2/pedestal/helm/{container_version_id} [put]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) UpsertPedestalHelmConfig(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -117,7 +117,7 @@ func (h *Handler) UpsertPedestalHelmConfig(c *gin.Context) {
 //	@Param			container_version_id	path	int	true	"Container version ID"
 //	@Success		200	{object}	dto.GenericResponse[PedestalHelmVerifyResp]
 //	@Router			/api/v2/pedestal/helm/{container_version_id}/verify [post]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) VerifyPedestalHelmConfig(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
@@ -162,7 +162,7 @@ func (h *Handler) VerifyPedestalHelmConfig(c *gin.Context) {
 //	@Param			request					body	ReseedHelmConfigReq		false	"Reseed request"
 //	@Success		200	{object}	dto.GenericResponse[ReseedHelmConfigResp]
 //	@Router			/api/v2/pedestal/helm/{container_version_id}/reseed [post]
-//	@x-api-type		{"sdk":"true"}
+//	@x-api-type		{"portal":"true"}
 func (h *Handler) ReseedPedestalHelmConfig(c *gin.Context) {
 	if _, ok := middleware.GetCurrentUserID(c); !ok {
 		dto.ErrorResponse(c, http.StatusUnauthorized, "Authentication required")
