@@ -58,4 +58,8 @@ data:
           receivers: [otlp]
           processors: [memory_limiter, resource, batch]
           exporters: [clickhouse, debug]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [clickhouse, debug]
 {{- end }}
