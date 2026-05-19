@@ -68,6 +68,22 @@ opentelemetry-demo:
       imageOverride:
         repository: pair-cn-shanghai.cr.volces.com/opspai/flagd
         tag: "v0.12.9"
+      # Chart default (75Mi) OOMKills the flagd container on byte-cluster —
+      # GOMEMLIMIT=60MiB leaves no headroom for the runtime's own metadata,
+      # so flagd flips into CrashLoopBackOff during the very first `helm
+      # install` and the RestartPedestal task waits forever for Ready pods.
+      # Bumped to 256Mi (matches flagd-ui sidecar's 250Mi).
+      resources:
+        limits:
+          memory: 256Mi
+      # Drop the flagd-ui sidecar (Phoenix admin UI). It is OOMKilled at the
+      # chart default 250Mi on byte-cluster — bumping its memory in lockstep
+      # would require replacing the entire chart sidecarContainers array
+      # (helm replaces, not merges, on list keys) and coupling this seed to
+      # upstream chart internals. The benchmark loop never talks to the UI
+      # (RP queries flagd's gRPC service directly), so the cleanest fix is
+      # to ship the Deployment with the sidecar disabled.
+      sidecarContainers: []
       initContainers:
         - name: init-config
           image: pair-cn-shanghai.cr.volces.com/opspai/busybox:latest
