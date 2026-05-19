@@ -1,8 +1,8 @@
 import datetime
 from typing import Any, ClassVar
 
-from sqlalchemy import UniqueConstraint
-from sqlmodel import JSON, Column, Field, SQLModel
+from sqlalchemy import JSON, UniqueConstraint
+from sqlmodel import Column, Field, SQLModel
 
 from .base_model import EvalBaseModel
 
@@ -23,8 +23,8 @@ class DatasetSample(SQLModel, table=True):
     level: int | None = 0  # hardness level of the question, if applicable
     file_name: str | None = ""  # for file attachments if applicable
 
-    meta: Any | None = Field(default=None, sa_column=Column(JSON))  # additional metadata for the dataset
-    tags: list[str] | None = Field(default=None, sa_column=Column(JSON))  # tags for filtering samples
+    meta: Any | None = Field(default=None, sa_column=Column(JSON(none_as_null=True)))
+    tags: list[str] | None = Field(default=None, sa_column=Column(JSON(none_as_null=True)))
 
 
 class EvaluationSample(EvalBaseModel, SQLModel, table=True):
@@ -43,13 +43,13 @@ class EvaluationSample(EvalBaseModel, SQLModel, table=True):
     augmented_question: str | None = ""
     correct_answer: str | None = ""
     file_name: str | None = ""  # for file attachments if applicable
-    meta: Any | None = Field(default=None, sa_column=Column(JSON))
+    meta: Any | None = Field(default=None, sa_column=Column(JSON(none_as_null=True)))
     # 2) rollout
     trace_id: str | None = Field(default=None)
     trace_url: str | None = Field(default=None)
     response: str | None = Field(default=None)
     time_cost: float | None = Field(default=None)  # time cost in seconds
-    trajectories: Any | None = Field(default=None, sa_column=Column(JSON))
+    trajectories: Any | None = Field(default=None, sa_column=Column(JSON(none_as_null=True)))
     # 3) judgement
     extracted_final_answer: str | None = Field(default=None)
     judged_response: str | None = Field(default=None)
@@ -57,7 +57,7 @@ class EvaluationSample(EvalBaseModel, SQLModel, table=True):
     correct: bool | None = Field(default=None)
     confidence: float | None = Field(default=None)
     # v2 metrics namespace; v1 path leaves NULL. correct/confidence above retain v1 semantics.
-    eval_metrics: Any | None = Field(default=None, sa_column=Column(JSON))
+    eval_metrics: Any | None = Field(default=None, sa_column=Column(JSON(none_as_null=True)))
     # id
     exp_id: str = Field(default="default", index=True)
     agent_type: str | None = Field(default=None, index=True)  # agent type: simple, orchestra, orchestrator, etc.
