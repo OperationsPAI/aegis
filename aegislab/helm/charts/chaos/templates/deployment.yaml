@@ -45,6 +45,8 @@ spec:
               value: {{ .Values.env.GOPRIVATE | quote }}
             - name: ENV
               value: {{ .Values.env.ENV | quote }}
+            - name: CHAOS_BACKEND_URL
+              value: {{ .Values.backendURL | quote }}
             - name: AEGIS_JWT_SECRET
               valueFrom:
                 secretKeyRef:

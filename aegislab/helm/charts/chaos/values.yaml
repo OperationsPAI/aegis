@@ -35,3 +35,8 @@ ssoClient:
 extraEnv: []
 extraEnvFrom: []
 resources: {}
+
+# Backend hook receiver URL. Empty disables webhook delivery; the
+# reconciler still updates row status but skips POST /api/v1/hooks/chaos.
+# Umbrella values.yaml fills this in by default (release-aegis-api).
+backendURL: ""

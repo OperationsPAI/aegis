@@ -624,6 +624,11 @@ notify:
 # ---------------------------------------------------------------------------
 chaos:
   enabled: false
+  # Hook receiver — backend's POST /api/v1/hooks/chaos endpoint. Default
+  # points at the in-cluster aegis-api Service rendered by this umbrella
+  # chart. Override per-environment if aegis-chaos sits in a separate
+  # release. Empty disables webhook delivery (reconciler still runs).
+  backendURL: "http://rcabench-aegis-api:8082"
 
 # ---------------------------------------------------------------------------
 # gateway subchart values (forwarded into `charts/gateway/`).

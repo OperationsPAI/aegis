@@ -3,7 +3,11 @@ package chaos
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 	"k8s.io/client-go/dynamic"
@@ -16,12 +20,37 @@ var Module = fx.Module("chaos",
 	fx.Provide(NewExecutor),
 	fx.Provide(NewManager),
 	fx.Provide(NewHandler),
+	fx.Provide(NewWebhookSenderFromEnv),
+	fx.Provide(NewReconcilerDefault),
 	fx.Provide(
 		fx.Annotate(Routes, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
 	),
 	fx.Invoke(seedCapabilitiesOnStart),
+	fx.Invoke(runReconciler),
 )
+
+func NewWebhookSenderFromEnv(db *gorm.DB) *WebhookSender {
+	return NewWebhookSender(&http.Client{Timeout: 60 * time.Second}, os.Getenv("CHAOS_BACKEND_URL"), db, logrus.StandardLogger())
+}
+
+func NewReconcilerDefault(db *gorm.DB, exec Executor, webhook *WebhookSender) *Reconciler {
+	return NewReconciler(db, exec, webhook, 5*time.Second, logrus.StandardLogger())
+}
+
+func runReconciler(lc fx.Lifecycle, r *Reconciler) {
+	ctx, cancel := context.WithCancel(context.Background())
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			go r.Run(ctx)
+			return nil
+		},
+		OnStop: func(_ context.Context) error {
+			cancel()
+			return nil
+		},
+	})
+}
 
 func NewExecutor(dyn dynamic.Interface) Executor {
 	return NewChaosMeshExecutor(dyn)
