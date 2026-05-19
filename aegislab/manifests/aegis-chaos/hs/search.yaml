@@ -1,0 +1,80 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "search"
+  system: "hs"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "search"
+        container: "search"
+        namespace: "hotel-reservation"
+    - capability: "cpu_stress"
+      target:
+        app: "search"
+        container: "search"
+        namespace: "hotel-reservation"
+    - capability: "http_request_abort"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/geo.Geo/Nearby"
+        port: 8083
+    - capability: "http_request_abort"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/rate.Rate/GetRates"
+        port: 8084
+    - capability: "http_request_abort"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/search.Search/Nearby"
+        port: 8082
+    - capability: "http_request_delay"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/geo.Geo/Nearby"
+        port: 8083
+    - capability: "http_request_delay"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/rate.Rate/GetRates"
+        port: 8084
+    - capability: "http_request_delay"
+      target:
+        app: "search"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/search.Search/Nearby"
+        port: 8082
+    - capability: "memory_stress"
+      target:
+        app: "search"
+        container: "search"
+        namespace: "hotel-reservation"
+    - capability: "pod_failure"
+      target:
+        app: "search"
+        namespace: "hotel-reservation"
+    - capability: "pod_kill"
+      target:
+        app: "search"
+        namespace: "hotel-reservation"
+    - capability: "time_skew"
+      target:
+        app: "search"
+        container: "search"
+        namespace: "hotel-reservation"

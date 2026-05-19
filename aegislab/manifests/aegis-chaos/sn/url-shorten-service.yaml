@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "url-shorten-service"
+  system: "sn"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "url-shorten-service"
+        container: "url-shorten-service"
+        namespace: "social-network"
+    - capability: "cpu_stress"
+      target:
+        app: "url-shorten-service"
+        container: "url-shorten-service"
+        namespace: "social-network"
+    - capability: "http_request_abort"
+      target:
+        app: "url-shorten-service"
+        method: "POST"
+        namespace: "social-network"
+        path: "/UrlShortenService/ComposeUrls"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "url-shorten-service"
+        method: "POST"
+        namespace: "social-network"
+        path: "/UrlShortenService/ComposeUrls"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "url-shorten-service"
+        container: "url-shorten-service"
+        namespace: "social-network"
+    - capability: "pod_failure"
+      target:
+        app: "url-shorten-service"
+        namespace: "social-network"
+    - capability: "pod_kill"
+      target:
+        app: "url-shorten-service"
+        namespace: "social-network"
+    - capability: "time_skew"
+      target:
+        app: "url-shorten-service"
+        container: "url-shorten-service"
+        namespace: "social-network"

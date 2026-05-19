@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "emailservice"
+  system: "ob"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "emailservice"
+        container: "emailservice"
+        namespace: "online-boutique"
+    - capability: "cpu_stress"
+      target:
+        app: "emailservice"
+        container: "emailservice"
+        namespace: "online-boutique"
+    - capability: "http_request_abort"
+      target:
+        app: "emailservice"
+        method: "POST"
+        namespace: "online-boutique"
+        path: "/hipstershop.EmailService/SendOrderConfirmation"
+        port: 5000
+    - capability: "http_request_delay"
+      target:
+        app: "emailservice"
+        method: "POST"
+        namespace: "online-boutique"
+        path: "/hipstershop.EmailService/SendOrderConfirmation"
+        port: 5000
+    - capability: "memory_stress"
+      target:
+        app: "emailservice"
+        container: "emailservice"
+        namespace: "online-boutique"
+    - capability: "pod_failure"
+      target:
+        app: "emailservice"
+        namespace: "online-boutique"
+    - capability: "pod_kill"
+      target:
+        app: "emailservice"
+        namespace: "online-boutique"
+    - capability: "time_skew"
+      target:
+        app: "emailservice"
+        container: "emailservice"
+        namespace: "online-boutique"

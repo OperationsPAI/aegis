@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "currency"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "currency"
+        container: "currency"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "currency"
+        container: "currency"
+        namespace: "otel-demo"
+    - capability: "http_request_abort"
+      target:
+        app: "currency"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CurrencyService/Convert"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "currency"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CurrencyService/Convert"
+        port: 8080
+    - capability: "memory_stress"
+      target:
+        app: "currency"
+        container: "currency"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "currency"
+        namespace: "otel-demo"
+    - capability: "pod_kill"
+      target:
+        app: "currency"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "currency"
+        container: "currency"
+        namespace: "otel-demo"

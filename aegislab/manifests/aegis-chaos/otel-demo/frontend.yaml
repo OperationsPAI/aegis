@@ -1,0 +1,122 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "frontend"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "frontend"
+        container: "frontend"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "frontend"
+        container: "frontend"
+        namespace: "otel-demo"
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.AdService/GetAds"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CartService/AddItem"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CartService/GetCart"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CheckoutService/PlaceOrder"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.ProductCatalogService/GetProduct"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.RecommendationService/ListRecommendations"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.AdService/GetAds"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CartService/AddItem"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CartService/GetCart"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.CheckoutService/PlaceOrder"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.ProductCatalogService/GetProduct"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "frontend"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.RecommendationService/ListRecommendations"
+        port: 8080
+    - capability: "memory_stress"
+      target:
+        app: "frontend"
+        container: "frontend"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "frontend"
+        namespace: "otel-demo"
+    - capability: "pod_kill"
+      target:
+        app: "frontend"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "frontend"
+        container: "frontend"
+        namespace: "otel-demo"

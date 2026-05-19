@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "profile"
+  system: "hs"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "profile"
+        container: "profile"
+        namespace: "hotel-reservation"
+    - capability: "cpu_stress"
+      target:
+        app: "profile"
+        container: "profile"
+        namespace: "hotel-reservation"
+    - capability: "http_request_abort"
+      target:
+        app: "profile"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/profile.Profile/GetProfiles"
+        port: 8081
+    - capability: "http_request_delay"
+      target:
+        app: "profile"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/profile.Profile/GetProfiles"
+        port: 8081
+    - capability: "memory_stress"
+      target:
+        app: "profile"
+        container: "profile"
+        namespace: "hotel-reservation"
+    - capability: "pod_failure"
+      target:
+        app: "profile"
+        namespace: "hotel-reservation"
+    - capability: "pod_kill"
+      target:
+        app: "profile"
+        namespace: "hotel-reservation"
+    - capability: "time_skew"
+      target:
+        app: "profile"
+        container: "profile"
+        namespace: "hotel-reservation"

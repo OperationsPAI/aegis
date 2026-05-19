@@ -1,0 +1,150 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "nginx-web-server"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "nginx-web-server"
+        container: "nginx-web-server"
+        namespace: "media-microsvc"
+    - capability: "cpu_stress"
+      target:
+        app: "nginx-web-server"
+        container: "nginx-web-server"
+        namespace: "media-microsvc"
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "GET"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie/read-info"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "GET"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie/read-page"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/cast-info/write"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie-info/write"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie/register"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/plot/write"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/review/compose"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/user/register"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "GET"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie/read-info"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "GET"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie/read-page"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/cast-info/write"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie-info/write"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/movie/register"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/plot/write"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/review/compose"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "nginx-web-server"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/wrk2-api/user/register"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "nginx-web-server"
+        container: "nginx-web-server"
+        namespace: "media-microsvc"
+    - capability: "pod_failure"
+      target:
+        app: "nginx-web-server"
+        namespace: "media-microsvc"
+    - capability: "pod_kill"
+      target:
+        app: "nginx-web-server"
+        namespace: "media-microsvc"
+    - capability: "time_skew"
+      target:
+        app: "nginx-web-server"
+        container: "nginx-web-server"
+        namespace: "media-microsvc"

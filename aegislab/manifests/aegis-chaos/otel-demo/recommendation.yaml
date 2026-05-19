@@ -1,0 +1,94 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "recommendation"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "recommendation"
+        container: "recommendation"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "recommendation"
+        container: "recommendation"
+        namespace: "otel-demo"
+    - capability: "http_request_abort"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/EventStream"
+        port: 8013
+    - capability: "http_request_abort"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/ResolveBoolean"
+        port: 8013
+    - capability: "http_request_abort"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.ProductCatalogService/ListProducts"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.RecommendationService/ListRecommendations"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/EventStream"
+        port: 8013
+    - capability: "http_request_delay"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/ResolveBoolean"
+        port: 8013
+    - capability: "http_request_delay"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.ProductCatalogService/ListProducts"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "recommendation"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.RecommendationService/ListRecommendations"
+        port: 8080
+    - capability: "memory_stress"
+      target:
+        app: "recommendation"
+        container: "recommendation"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "recommendation"
+        namespace: "otel-demo"
+    - capability: "pod_kill"
+      target:
+        app: "recommendation"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "recommendation"
+        container: "recommendation"
+        namespace: "otel-demo"

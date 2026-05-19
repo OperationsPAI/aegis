@@ -1,0 +1,140 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "adservice"
+  system: "ob"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "adservice"
+        container: "adservice"
+        namespace: "online-boutique"
+    - capability: "cpu_stress"
+      target:
+        app: "adservice"
+        container: "adservice"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService.AdServiceImpl"
+        method: "getAds"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "blockUntilShutdown"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "createAdsMap"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "getAdsByCategory"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "getInstance"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "getRandomAds"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "initStats"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "initTracing"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "main"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "start"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdService"
+        method: "stop"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "AdServiceClient"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "getAds"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "getPortOrDefaultFromArgs"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "getStringOrDefaultFromArgs"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "main"
+        namespace: "online-boutique"
+    - capability: "jvm_method_latency"
+      target:
+        app: "adservice"
+        class: "hipstershop.AdServiceClient"
+        method: "shutdown"
+        namespace: "online-boutique"
+    - capability: "memory_stress"
+      target:
+        app: "adservice"
+        container: "adservice"
+        namespace: "online-boutique"
+    - capability: "pod_failure"
+      target:
+        app: "adservice"
+        namespace: "online-boutique"
+    - capability: "pod_kill"
+      target:
+        app: "adservice"
+        namespace: "online-boutique"
+    - capability: "time_skew"
+      target:
+        app: "adservice"
+        container: "adservice"
+        namespace: "online-boutique"

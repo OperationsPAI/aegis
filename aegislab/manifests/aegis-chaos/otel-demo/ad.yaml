@@ -1,0 +1,126 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ad"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ad"
+        container: "ad"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "ad"
+        container: "ad"
+        namespace: "otel-demo"
+    - capability: "http_request_abort"
+      target:
+        app: "ad"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/EventStream"
+        port: 8013
+    - capability: "http_request_abort"
+      target:
+        app: "ad"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.AdService/GetAds"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ad"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/EventStream"
+        port: 8013
+    - capability: "http_request_delay"
+      target:
+        app: "ad"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/oteldemo.AdService/GetAds"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService.AdServiceImpl"
+        method: "AdServiceImpl"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService.AdServiceImpl"
+        method: "getAds"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "blockUntilShutdown"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "createAdsMap"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "getAdsByCategory"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "getInstance"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "getRandomAds"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "main"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "start"
+        namespace: "otel-demo"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ad"
+        class: "oteldemo.AdService"
+        method: "stop"
+        namespace: "otel-demo"
+    - capability: "memory_stress"
+      target:
+        app: "ad"
+        container: "ad"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "ad"
+        namespace: "otel-demo"
+    - capability: "pod_kill"
+      target:
+        app: "ad"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "ad"
+        container: "ad"
+        namespace: "otel-demo"

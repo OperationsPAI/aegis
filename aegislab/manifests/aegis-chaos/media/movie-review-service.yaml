@@ -1,0 +1,66 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "movie-review-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "movie-review-service"
+        container: "movie-review-service"
+        namespace: "media-microsvc"
+    - capability: "cpu_stress"
+      target:
+        app: "movie-review-service"
+        container: "movie-review-service"
+        namespace: "media-microsvc"
+    - capability: "http_request_abort"
+      target:
+        app: "movie-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieReviewService/ReadMovieReviews"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "movie-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieReviewService/UploadMovieReview"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "movie-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieReviewService/ReadMovieReviews"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "movie-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieReviewService/UploadMovieReview"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "movie-review-service"
+        container: "movie-review-service"
+        namespace: "media-microsvc"
+    - capability: "pod_failure"
+      target:
+        app: "movie-review-service"
+        namespace: "media-microsvc"
+    - capability: "pod_kill"
+      target:
+        app: "movie-review-service"
+        namespace: "media-microsvc"
+    - capability: "time_skew"
+      target:
+        app: "movie-review-service"
+        container: "movie-review-service"
+        namespace: "media-microsvc"
