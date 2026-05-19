@@ -74,16 +74,17 @@ func (r *Repository) ListExpired(ctx context.Context, now time.Time, limit int) 
 	return rows, err
 }
 
-// ListSoftDeleted returns rows that have been soft-deleted but whose
-// driver-side bytes may still exist. Lifecycle worker drives the
-// driver delete + hard delete from this set.
-func (r *Repository) ListSoftDeleted(ctx context.Context, limit int) ([]ObjectRecord, error) {
+// ListSoftDeleted returns rows whose deleted_at is non-null and older
+// than `before` — the grace cutoff. Rows soft-deleted within the grace
+// window are intentionally left alone so an operator (or a misfiring
+// lifecycle rule) has time to notice before the metadata is gone.
+func (r *Repository) ListSoftDeleted(ctx context.Context, before time.Time, limit int) ([]ObjectRecord, error) {
 	if limit <= 0 {
 		limit = 100
 	}
 	var rows []ObjectRecord
 	err := r.DB.WithContext(ctx).
-		Where("deleted_at IS NOT NULL").
+		Where("deleted_at IS NOT NULL AND deleted_at < ?", before).
 		Order("id asc").
 		Limit(limit).
 		Find(&rows).Error

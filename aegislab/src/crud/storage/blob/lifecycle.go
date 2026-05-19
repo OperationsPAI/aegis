@@ -30,6 +30,7 @@ type DeletionWorker struct {
 	interval   time.Duration
 	batch      int
 	orphanAge  time.Duration
+	grace      time.Duration
 	disabled   bool
 	cancelTick context.CancelFunc
 }
@@ -40,6 +41,7 @@ type DeletionWorkerConfig struct {
 	Interval  time.Duration
 	Batch     int
 	OrphanAge time.Duration
+	Grace     time.Duration
 	Disabled  bool
 }
 
@@ -59,6 +61,7 @@ func loadDeletionWorkerConfig() DeletionWorkerConfig {
 		Interval:  parseDurationOrZero(config.GetString("blob.lifecycle.interval")),
 		Batch:     config.GetInt("blob.lifecycle.batch"),
 		OrphanAge: parseDurationOrZero(config.GetString("blob.lifecycle.orphan_age")),
+		Grace:     parseDurationOrZero(config.GetString("blob.lifecycle.grace_period")),
 		Disabled:  config.GetBool("blob.lifecycle.disabled"),
 	}
 	if cfg.Interval <= 0 {
@@ -69,6 +72,9 @@ func loadDeletionWorkerConfig() DeletionWorkerConfig {
 	}
 	if cfg.OrphanAge <= 0 {
 		cfg.OrphanAge = time.Hour
+	}
+	if cfg.Grace <= 0 {
+		cfg.Grace = 24 * time.Hour
 	}
 	return cfg
 }
@@ -83,6 +89,7 @@ func NewDeletionWorker(svc *Service, repo *Repository, reg *Registry, clock Cloc
 		interval:  cfg.Interval,
 		batch:     cfg.Batch,
 		orphanAge: cfg.OrphanAge,
+		grace:     cfg.Grace,
 		disabled:  cfg.Disabled,
 	}
 }
@@ -94,7 +101,7 @@ func (w *DeletionWorker) Run(ctx context.Context) error {
 	now := w.clock.Now()
 	w.expirePass(ctx, now)
 	w.reconcilePass(ctx, now)
-	w.deletePass(ctx)
+	w.deletePass(ctx, now)
 	return nil
 }
 
@@ -115,8 +122,16 @@ func (w *DeletionWorker) expirePass(ctx context.Context, now time.Time) {
 	}
 }
 
-func (w *DeletionWorker) deletePass(ctx context.Context) {
-	rows, err := w.repo.ListSoftDeleted(ctx, w.batch)
+// deletePass hard-deletes rows whose soft-delete is older than the
+// grace window. The cushion protects against both mis-configured
+// BucketLifecycle rules (which soft-delete via lifecycle_worker) and
+// explicit user deletes (Service.Delete, which soft-deletes the row
+// inline). Driver-side bytes for explicit deletes are already gone by
+// the time the row lands here — the grace only keeps the metadata
+// breadcrumb around long enough for an operator to notice.
+func (w *DeletionWorker) deletePass(ctx context.Context, now time.Time) {
+	cutoff := now.Add(-w.grace)
+	rows, err := w.repo.ListSoftDeleted(ctx, cutoff, w.batch)
 	if err != nil {
 		logrus.WithError(err).Warn("blob: lifecycle list-soft-deleted failed")
 		return

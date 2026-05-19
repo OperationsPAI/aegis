@@ -29,6 +29,7 @@ func newLifecycleHarness(t *testing.T) (*DeletionWorker, *Service, *Repository, 
 	w := &DeletionWorker{
 		svc: svc, repo: repo, registry: reg, clock: clk,
 		interval: time.Hour, batch: 100, orphanAge: time.Hour,
+		grace: 24 * time.Hour,
 	}
 	return w, svc, repo, mock, closeSrv
 }
@@ -89,12 +90,68 @@ func TestDeletionWorker_OrphanReconcile_Abandon(t *testing.T) {
 		t.Fatalf("sweep: %v", err)
 	}
 
+	// After reconcile the orphan is soft-deleted; the grace window
+	// keeps the metadata row until the next sweep past `grace`.
+	var got ObjectRecord
+	if err := repo.DB.Unscoped().Where("id = ?", rec.ID).First(&got).Error; err != nil {
+		t.Fatalf("lookup after reconcile: %v", err)
+	}
+	if got.DeletedAt == nil {
+		t.Fatalf("orphan should be soft-deleted, DeletedAt is nil")
+	}
+
+	w.clock = fixedClock{t: w.clock.Now().Add(w.grace + time.Minute)}
+	w.deletePass(ctx, w.clock.Now())
+
 	var count int64
 	if err := repo.DB.Model(&ObjectRecord{}).Where("id = ?", rec.ID).
 		Count(&count).Error; err != nil {
 		t.Fatalf("count: %v", err)
 	}
 	if count != 0 {
-		t.Fatalf("abandoned orphan still present: count=%d", count)
+		t.Fatalf("abandoned orphan still present after grace: count=%d", count)
+	}
+}
+
+// TestDeletionWorker_GracePeriod pins the soft-delete cushion: a row
+// soft-deleted "just now" must survive the sweep, while one whose
+// deleted_at predates the grace window must be hard-deleted. Without
+// the grace filter on deletePass, BucketLifecycleWorker's 24h cushion
+// is effectively zero whenever both workers run.
+func TestDeletionWorker_GracePeriod(t *testing.T) {
+	w, _, repo, _, done := newLifecycleHarness(t)
+	defer done()
+	ctx := context.Background()
+
+	fresh := &ObjectRecord{Bucket: "test", StorageKey: "fresh.bin", EntityKind: "blob"}
+	if err := repo.Create(ctx, fresh); err != nil {
+		t.Fatalf("seed fresh: %v", err)
+	}
+	if err := repo.MarkExpired(ctx, fresh.ID, w.clock.Now()); err != nil {
+		t.Fatalf("mark fresh: %v", err)
+	}
+
+	stale := &ObjectRecord{Bucket: "test", StorageKey: "stale.bin", EntityKind: "blob"}
+	if err := repo.Create(ctx, stale); err != nil {
+		t.Fatalf("seed stale: %v", err)
+	}
+	if err := repo.MarkExpired(ctx, stale.ID, w.clock.Now().Add(-25*time.Hour)); err != nil {
+		t.Fatalf("mark stale: %v", err)
+	}
+
+	w.deletePass(ctx, w.clock.Now())
+
+	var freshCount, staleCount int64
+	if err := repo.DB.Model(&ObjectRecord{}).Where("id = ?", fresh.ID).Count(&freshCount).Error; err != nil {
+		t.Fatalf("count fresh: %v", err)
+	}
+	if err := repo.DB.Model(&ObjectRecord{}).Where("id = ?", stale.ID).Count(&staleCount).Error; err != nil {
+		t.Fatalf("count stale: %v", err)
+	}
+	if freshCount != 1 {
+		t.Fatalf("fresh row swept inside grace window: count=%d (want 1)", freshCount)
+	}
+	if staleCount != 0 {
+		t.Fatalf("stale row past grace not swept: count=%d (want 0)", staleCount)
 	}
 }
