@@ -33,6 +33,7 @@ type ExecutionExecutionResp struct {
 	State                *string        `json:"state,omitempty"`
 	Status               *string        `json:"status,omitempty"`
 	TaskId               *string        `json:"task_id,omitempty"`
+	TraceId              *string        `json:"trace_id,omitempty"`
 	UpdatedAt            *string        `json:"updated_at,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
@@ -472,6 +473,38 @@ func (o *ExecutionExecutionResp) SetTaskId(v string) {
 	o.TaskId = &v
 }
 
+// GetTraceId returns the TraceId field value if set, zero value otherwise.
+func (o *ExecutionExecutionResp) GetTraceId() string {
+	if o == nil || IsNil(o.TraceId) {
+		var ret string
+		return ret
+	}
+	return *o.TraceId
+}
+
+// GetTraceIdOk returns a tuple with the TraceId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ExecutionExecutionResp) GetTraceIdOk() (*string, bool) {
+	if o == nil || IsNil(o.TraceId) {
+		return nil, false
+	}
+	return o.TraceId, true
+}
+
+// HasTraceId returns a boolean if a field has been set.
+func (o *ExecutionExecutionResp) HasTraceId() bool {
+	if o != nil && !IsNil(o.TraceId) {
+		return true
+	}
+
+	return false
+}
+
+// SetTraceId gets a reference to the given string and assigns it to the TraceId field.
+func (o *ExecutionExecutionResp) SetTraceId(v string) {
+	o.TraceId = &v
+}
+
 // GetUpdatedAt returns the UpdatedAt field value if set, zero value otherwise.
 func (o *ExecutionExecutionResp) GetUpdatedAt() string {
 	if o == nil || IsNil(o.UpdatedAt) {
@@ -553,6 +586,9 @@ func (o ExecutionExecutionResp) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.TaskId) {
 		toSerialize["task_id"] = o.TaskId
 	}
+	if !IsNil(o.TraceId) {
+		toSerialize["trace_id"] = o.TraceId
+	}
 	if !IsNil(o.UpdatedAt) {
 		toSerialize["updated_at"] = o.UpdatedAt
 	}
@@ -591,6 +627,7 @@ func (o *ExecutionExecutionResp) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "state")
 		delete(additionalProperties, "status")
 		delete(additionalProperties, "task_id")
+		delete(additionalProperties, "trace_id")
 		delete(additionalProperties, "updated_at")
 		o.AdditionalProperties = additionalProperties
 	}

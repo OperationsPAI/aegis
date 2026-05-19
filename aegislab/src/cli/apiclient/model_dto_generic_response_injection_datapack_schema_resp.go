@@ -15,15 +15,15 @@ import (
 	"encoding/json"
 )
 
-// checks if the DtoGenericResponseObservationSpanTreeResp type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &DtoGenericResponseObservationSpanTreeResp{}
+// checks if the DtoGenericResponseInjectionDatapackSchemaResp type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &DtoGenericResponseInjectionDatapackSchemaResp{}
 
-// DtoGenericResponseObservationSpanTreeResp struct for DtoGenericResponseObservationSpanTreeResp
-type DtoGenericResponseObservationSpanTreeResp struct {
+// DtoGenericResponseInjectionDatapackSchemaResp struct for DtoGenericResponseInjectionDatapackSchemaResp
+type DtoGenericResponseInjectionDatapackSchemaResp struct {
 	// Status code
 	Code *int32 `json:"code,omitempty"`
 	// Generic type data
-	Data *ObservationSpanTreeResp `json:"data,omitempty"`
+	Data *InjectionDatapackSchemaResp `json:"data,omitempty"`
 	// Response message
 	Message *string `json:"message,omitempty"`
 	// Response generation time
@@ -31,27 +31,27 @@ type DtoGenericResponseObservationSpanTreeResp struct {
 	AdditionalProperties map[string]interface{}
 }
 
-type _DtoGenericResponseObservationSpanTreeResp DtoGenericResponseObservationSpanTreeResp
+type _DtoGenericResponseInjectionDatapackSchemaResp DtoGenericResponseInjectionDatapackSchemaResp
 
-// NewDtoGenericResponseObservationSpanTreeResp instantiates a new DtoGenericResponseObservationSpanTreeResp object
+// NewDtoGenericResponseInjectionDatapackSchemaResp instantiates a new DtoGenericResponseInjectionDatapackSchemaResp object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDtoGenericResponseObservationSpanTreeResp() *DtoGenericResponseObservationSpanTreeResp {
-	this := DtoGenericResponseObservationSpanTreeResp{}
+func NewDtoGenericResponseInjectionDatapackSchemaResp() *DtoGenericResponseInjectionDatapackSchemaResp {
+	this := DtoGenericResponseInjectionDatapackSchemaResp{}
 	return &this
 }
 
-// NewDtoGenericResponseObservationSpanTreeRespWithDefaults instantiates a new DtoGenericResponseObservationSpanTreeResp object
+// NewDtoGenericResponseInjectionDatapackSchemaRespWithDefaults instantiates a new DtoGenericResponseInjectionDatapackSchemaResp object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewDtoGenericResponseObservationSpanTreeRespWithDefaults() *DtoGenericResponseObservationSpanTreeResp {
-	this := DtoGenericResponseObservationSpanTreeResp{}
+func NewDtoGenericResponseInjectionDatapackSchemaRespWithDefaults() *DtoGenericResponseInjectionDatapackSchemaResp {
+	this := DtoGenericResponseInjectionDatapackSchemaResp{}
 	return &this
 }
 
 // GetCode returns the Code field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetCode() int32 {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetCode() int32 {
 	if o == nil || IsNil(o.Code) {
 		var ret int32
 		return ret
@@ -61,7 +61,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetCode() int32 {
 
 // GetCodeOk returns a tuple with the Code field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetCodeOk() (*int32, bool) {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetCodeOk() (*int32, bool) {
 	if o == nil || IsNil(o.Code) {
 		return nil, false
 	}
@@ -69,7 +69,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetCodeOk() (*int32, bool) {
 }
 
 // HasCode returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) HasCode() bool {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) HasCode() bool {
 	if o != nil && !IsNil(o.Code) {
 		return true
 	}
@@ -78,14 +78,14 @@ func (o *DtoGenericResponseObservationSpanTreeResp) HasCode() bool {
 }
 
 // SetCode gets a reference to the given int32 and assigns it to the Code field.
-func (o *DtoGenericResponseObservationSpanTreeResp) SetCode(v int32) {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) SetCode(v int32) {
 	o.Code = &v
 }
 
 // GetData returns the Data field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetData() ObservationSpanTreeResp {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetData() InjectionDatapackSchemaResp {
 	if o == nil || IsNil(o.Data) {
-		var ret ObservationSpanTreeResp
+		var ret InjectionDatapackSchemaResp
 		return ret
 	}
 	return *o.Data
@@ -93,7 +93,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetData() ObservationSpanTre
 
 // GetDataOk returns a tuple with the Data field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetDataOk() (*ObservationSpanTreeResp, bool) {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetDataOk() (*InjectionDatapackSchemaResp, bool) {
 	if o == nil || IsNil(o.Data) {
 		return nil, false
 	}
@@ -101,7 +101,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetDataOk() (*ObservationSpa
 }
 
 // HasData returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) HasData() bool {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) HasData() bool {
 	if o != nil && !IsNil(o.Data) {
 		return true
 	}
@@ -109,13 +109,13 @@ func (o *DtoGenericResponseObservationSpanTreeResp) HasData() bool {
 	return false
 }
 
-// SetData gets a reference to the given ObservationSpanTreeResp and assigns it to the Data field.
-func (o *DtoGenericResponseObservationSpanTreeResp) SetData(v ObservationSpanTreeResp) {
+// SetData gets a reference to the given InjectionDatapackSchemaResp and assigns it to the Data field.
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) SetData(v InjectionDatapackSchemaResp) {
 	o.Data = &v
 }
 
 // GetMessage returns the Message field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetMessage() string {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetMessage() string {
 	if o == nil || IsNil(o.Message) {
 		var ret string
 		return ret
@@ -125,7 +125,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetMessage() string {
 
 // GetMessageOk returns a tuple with the Message field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetMessageOk() (*string, bool) {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetMessageOk() (*string, bool) {
 	if o == nil || IsNil(o.Message) {
 		return nil, false
 	}
@@ -133,7 +133,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetMessageOk() (*string, boo
 }
 
 // HasMessage returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) HasMessage() bool {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) HasMessage() bool {
 	if o != nil && !IsNil(o.Message) {
 		return true
 	}
@@ -142,12 +142,12 @@ func (o *DtoGenericResponseObservationSpanTreeResp) HasMessage() bool {
 }
 
 // SetMessage gets a reference to the given string and assigns it to the Message field.
-func (o *DtoGenericResponseObservationSpanTreeResp) SetMessage(v string) {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) SetMessage(v string) {
 	o.Message = &v
 }
 
 // GetTimestamp returns the Timestamp field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetTimestamp() int32 {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetTimestamp() int32 {
 	if o == nil || IsNil(o.Timestamp) {
 		var ret int32
 		return ret
@@ -157,7 +157,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetTimestamp() int32 {
 
 // GetTimestampOk returns a tuple with the Timestamp field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) GetTimestampOk() (*int32, bool) {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) GetTimestampOk() (*int32, bool) {
 	if o == nil || IsNil(o.Timestamp) {
 		return nil, false
 	}
@@ -165,7 +165,7 @@ func (o *DtoGenericResponseObservationSpanTreeResp) GetTimestampOk() (*int32, bo
 }
 
 // HasTimestamp returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationSpanTreeResp) HasTimestamp() bool {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) HasTimestamp() bool {
 	if o != nil && !IsNil(o.Timestamp) {
 		return true
 	}
@@ -174,11 +174,11 @@ func (o *DtoGenericResponseObservationSpanTreeResp) HasTimestamp() bool {
 }
 
 // SetTimestamp gets a reference to the given int32 and assigns it to the Timestamp field.
-func (o *DtoGenericResponseObservationSpanTreeResp) SetTimestamp(v int32) {
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) SetTimestamp(v int32) {
 	o.Timestamp = &v
 }
 
-func (o DtoGenericResponseObservationSpanTreeResp) MarshalJSON() ([]byte, error) {
+func (o DtoGenericResponseInjectionDatapackSchemaResp) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -186,7 +186,7 @@ func (o DtoGenericResponseObservationSpanTreeResp) MarshalJSON() ([]byte, error)
 	return json.Marshal(toSerialize)
 }
 
-func (o DtoGenericResponseObservationSpanTreeResp) ToMap() (map[string]interface{}, error) {
+func (o DtoGenericResponseInjectionDatapackSchemaResp) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Code) {
 		toSerialize["code"] = o.Code
@@ -208,16 +208,16 @@ func (o DtoGenericResponseObservationSpanTreeResp) ToMap() (map[string]interface
 	return toSerialize, nil
 }
 
-func (o *DtoGenericResponseObservationSpanTreeResp) UnmarshalJSON(data []byte) (err error) {
-	varDtoGenericResponseObservationSpanTreeResp := _DtoGenericResponseObservationSpanTreeResp{}
+func (o *DtoGenericResponseInjectionDatapackSchemaResp) UnmarshalJSON(data []byte) (err error) {
+	varDtoGenericResponseInjectionDatapackSchemaResp := _DtoGenericResponseInjectionDatapackSchemaResp{}
 
-	err = json.Unmarshal(data, &varDtoGenericResponseObservationSpanTreeResp)
+	err = json.Unmarshal(data, &varDtoGenericResponseInjectionDatapackSchemaResp)
 
 	if err != nil {
 		return err
 	}
 
-	*o = DtoGenericResponseObservationSpanTreeResp(varDtoGenericResponseObservationSpanTreeResp)
+	*o = DtoGenericResponseInjectionDatapackSchemaResp(varDtoGenericResponseInjectionDatapackSchemaResp)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -232,38 +232,38 @@ func (o *DtoGenericResponseObservationSpanTreeResp) UnmarshalJSON(data []byte) (
 	return err
 }
 
-type NullableDtoGenericResponseObservationSpanTreeResp struct {
-	value *DtoGenericResponseObservationSpanTreeResp
+type NullableDtoGenericResponseInjectionDatapackSchemaResp struct {
+	value *DtoGenericResponseInjectionDatapackSchemaResp
 	isSet bool
 }
 
-func (v NullableDtoGenericResponseObservationSpanTreeResp) Get() *DtoGenericResponseObservationSpanTreeResp {
+func (v NullableDtoGenericResponseInjectionDatapackSchemaResp) Get() *DtoGenericResponseInjectionDatapackSchemaResp {
 	return v.value
 }
 
-func (v *NullableDtoGenericResponseObservationSpanTreeResp) Set(val *DtoGenericResponseObservationSpanTreeResp) {
+func (v *NullableDtoGenericResponseInjectionDatapackSchemaResp) Set(val *DtoGenericResponseInjectionDatapackSchemaResp) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableDtoGenericResponseObservationSpanTreeResp) IsSet() bool {
+func (v NullableDtoGenericResponseInjectionDatapackSchemaResp) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableDtoGenericResponseObservationSpanTreeResp) Unset() {
+func (v *NullableDtoGenericResponseInjectionDatapackSchemaResp) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableDtoGenericResponseObservationSpanTreeResp(val *DtoGenericResponseObservationSpanTreeResp) *NullableDtoGenericResponseObservationSpanTreeResp {
-	return &NullableDtoGenericResponseObservationSpanTreeResp{value: val, isSet: true}
+func NewNullableDtoGenericResponseInjectionDatapackSchemaResp(val *DtoGenericResponseInjectionDatapackSchemaResp) *NullableDtoGenericResponseInjectionDatapackSchemaResp {
+	return &NullableDtoGenericResponseInjectionDatapackSchemaResp{value: val, isSet: true}
 }
 
-func (v NullableDtoGenericResponseObservationSpanTreeResp) MarshalJSON() ([]byte, error) {
+func (v NullableDtoGenericResponseInjectionDatapackSchemaResp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableDtoGenericResponseObservationSpanTreeResp) UnmarshalJSON(src []byte) error {
+func (v *NullableDtoGenericResponseInjectionDatapackSchemaResp) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

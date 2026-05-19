@@ -38,6 +38,49 @@ type PedestalAPI interface {
 	GetPedestalHelmConfigExecute(r ApiGetPedestalHelmConfigRequest) (*DtoGenericResponsePedestalPedestalHelmConfigResp, *http.Response, error)
 
 	/*
+		GetPedestalRelease Get pedestal release
+
+		Admin: fetch one helm release plus its user-supplied values map.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param release Release name
+		@return ApiGetPedestalReleaseRequest
+	*/
+	GetPedestalRelease(ctx context.Context, release string) ApiGetPedestalReleaseRequest
+
+	// GetPedestalReleaseExecute executes the request
+	//  @return DtoGenericResponsePedestalPedestalReleaseDetail
+	GetPedestalReleaseExecute(r ApiGetPedestalReleaseRequest) (*DtoGenericResponsePedestalPedestalReleaseDetail, *http.Response, error)
+
+	/*
+		InstallPedestalRelease Install pedestal release
+
+		Admin: install a pedestal chart synchronously. The handler bounds the request at adminInstallTimeoutCeiling() (configured install timeout + 60s slack).
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@return ApiInstallPedestalReleaseRequest
+	*/
+	InstallPedestalRelease(ctx context.Context) ApiInstallPedestalReleaseRequest
+
+	// InstallPedestalReleaseExecute executes the request
+	//  @return DtoGenericResponsePedestalInstallPedestalResult
+	InstallPedestalReleaseExecute(r ApiInstallPedestalReleaseRequest) (*DtoGenericResponsePedestalInstallPedestalResult, *http.Response, error)
+
+	/*
+		ListPedestalReleases List pedestal releases
+
+		Admin: enumerate every helm release across all namespaces, tagged with system classification. Honors ?limit (default 200, cap 1000).
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@return ApiListPedestalReleasesRequest
+	*/
+	ListPedestalReleases(ctx context.Context) ApiListPedestalReleasesRequest
+
+	// ListPedestalReleasesExecute executes the request
+	//  @return DtoGenericResponseArrayPedestalPedestalRelease
+	ListPedestalReleasesExecute(r ApiListPedestalReleasesRequest) (*DtoGenericResponseArrayPedestalPedestalRelease, *http.Response, error)
+
+	/*
 		ReseedPedestalHelmConfig Reseed pedestal helm config from data.yaml
 
 		Reconcile the helm_configs row and its linked parameter_configs / helm_config_values for a pedestal container version against the seed YAML. Defaults to dry-run unless apply=true. Idempotent: a re-run with no upstream change yields zero applied actions.
@@ -51,6 +94,35 @@ type PedestalAPI interface {
 	// ReseedPedestalHelmConfigExecute executes the request
 	//  @return DtoGenericResponsePedestalReseedHelmConfigResp
 	ReseedPedestalHelmConfigExecute(r ApiReseedPedestalHelmConfigRequest) (*DtoGenericResponsePedestalReseedHelmConfigResp, *http.Response, error)
+
+	/*
+		RestartPedestalRelease Restart pedestal release
+
+		Admin: redeploy a pedestal release in-place. By default the currently-deployed chart version is reused (no silent upgrade). Pass container_version_id in the body to opt into an upgrade. Empty body reuses the previously-applied values. Bounded at adminInstallTimeoutCeiling().
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param release Release name
+		@return ApiRestartPedestalReleaseRequest
+	*/
+	RestartPedestalRelease(ctx context.Context, release string) ApiRestartPedestalReleaseRequest
+
+	// RestartPedestalReleaseExecute executes the request
+	//  @return DtoGenericResponsePedestalInstallPedestalResult
+	RestartPedestalReleaseExecute(r ApiRestartPedestalReleaseRequest) (*DtoGenericResponsePedestalInstallPedestalResult, *http.Response, error)
+
+	/*
+		UninstallPedestalRelease Uninstall pedestal release
+
+		Admin: uninstall a pedestal release. Returns 204 on success; not-found is treated as success. Bounded at adminUninstallTimeoutCeiling().
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param release Release name
+		@return ApiUninstallPedestalReleaseRequest
+	*/
+	UninstallPedestalRelease(ctx context.Context, release string) ApiUninstallPedestalReleaseRequest
+
+	// UninstallPedestalReleaseExecute executes the request
+	UninstallPedestalReleaseExecute(r ApiUninstallPedestalReleaseRequest) (*http.Response, error)
 
 	/*
 		UpsertPedestalHelmConfig Upsert pedestal helm config
@@ -236,6 +308,404 @@ func (a *PedestalAPIService) GetPedestalHelmConfigExecute(r ApiGetPedestalHelmCo
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiGetPedestalReleaseRequest struct {
+	ctx        context.Context
+	ApiService PedestalAPI
+	release    string
+	namespace  *string
+}
+
+// Namespace (defaults to release name)
+func (r ApiGetPedestalReleaseRequest) Namespace(namespace string) ApiGetPedestalReleaseRequest {
+	r.namespace = &namespace
+	return r
+}
+
+func (r ApiGetPedestalReleaseRequest) Execute() (*DtoGenericResponsePedestalPedestalReleaseDetail, *http.Response, error) {
+	return r.ApiService.GetPedestalReleaseExecute(r)
+}
+
+/*
+GetPedestalRelease Get pedestal release
+
+Admin: fetch one helm release plus its user-supplied values map.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param release Release name
+	@return ApiGetPedestalReleaseRequest
+*/
+func (a *PedestalAPIService) GetPedestalRelease(ctx context.Context, release string) ApiGetPedestalReleaseRequest {
+	return ApiGetPedestalReleaseRequest{
+		ApiService: a,
+		ctx:        ctx,
+		release:    release,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponsePedestalPedestalReleaseDetail
+func (a *PedestalAPIService) GetPedestalReleaseExecute(r ApiGetPedestalReleaseRequest) (*DtoGenericResponsePedestalPedestalReleaseDetail, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponsePedestalPedestalReleaseDetail
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "PedestalAPIService.GetPedestalRelease")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/pedestals/{release}"
+	localVarPath = strings.Replace(localVarPath, "{"+"release"+"}", url.PathEscape(parameterValueToString(r.release, "release")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.namespace != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "namespace", r.namespace, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiInstallPedestalReleaseRequest struct {
+	ctx                        context.Context
+	ApiService                 PedestalAPI
+	pedestalInstallPedestalReq *PedestalInstallPedestalReq
+}
+
+// Install request
+func (r ApiInstallPedestalReleaseRequest) PedestalInstallPedestalReq(pedestalInstallPedestalReq PedestalInstallPedestalReq) ApiInstallPedestalReleaseRequest {
+	r.pedestalInstallPedestalReq = &pedestalInstallPedestalReq
+	return r
+}
+
+func (r ApiInstallPedestalReleaseRequest) Execute() (*DtoGenericResponsePedestalInstallPedestalResult, *http.Response, error) {
+	return r.ApiService.InstallPedestalReleaseExecute(r)
+}
+
+/*
+InstallPedestalRelease Install pedestal release
+
+Admin: install a pedestal chart synchronously. The handler bounds the request at adminInstallTimeoutCeiling() (configured install timeout + 60s slack).
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiInstallPedestalReleaseRequest
+*/
+func (a *PedestalAPIService) InstallPedestalRelease(ctx context.Context) ApiInstallPedestalReleaseRequest {
+	return ApiInstallPedestalReleaseRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponsePedestalInstallPedestalResult
+func (a *PedestalAPIService) InstallPedestalReleaseExecute(r ApiInstallPedestalReleaseRequest) (*DtoGenericResponsePedestalInstallPedestalResult, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponsePedestalInstallPedestalResult
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "PedestalAPIService.InstallPedestalRelease")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/pedestals"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.pedestalInstallPedestalReq == nil {
+		return localVarReturnValue, nil, reportError("pedestalInstallPedestalReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.pedestalInstallPedestalReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiListPedestalReleasesRequest struct {
+	ctx        context.Context
+	ApiService PedestalAPI
+	limit      *int32
+}
+
+// Max releases to return (default 200, cap 1000)
+func (r ApiListPedestalReleasesRequest) Limit(limit int32) ApiListPedestalReleasesRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiListPedestalReleasesRequest) Execute() (*DtoGenericResponseArrayPedestalPedestalRelease, *http.Response, error) {
+	return r.ApiService.ListPedestalReleasesExecute(r)
+}
+
+/*
+ListPedestalReleases List pedestal releases
+
+Admin: enumerate every helm release across all namespaces, tagged with system classification. Honors ?limit (default 200, cap 1000).
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiListPedestalReleasesRequest
+*/
+func (a *PedestalAPIService) ListPedestalReleases(ctx context.Context) ApiListPedestalReleasesRequest {
+	return ApiListPedestalReleasesRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseArrayPedestalPedestalRelease
+func (a *PedestalAPIService) ListPedestalReleasesExecute(r ApiListPedestalReleasesRequest) (*DtoGenericResponseArrayPedestalPedestalRelease, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseArrayPedestalPedestalRelease
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "PedestalAPIService.ListPedestalReleases")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/pedestals"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiReseedPedestalHelmConfigRequest struct {
 	ctx                         context.Context
 	ApiService                  PedestalAPI
@@ -361,6 +831,249 @@ func (a *PedestalAPIService) ReseedPedestalHelmConfigExecute(r ApiReseedPedestal
 	}
 
 	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiRestartPedestalReleaseRequest struct {
+	ctx                        context.Context
+	ApiService                 PedestalAPI
+	release                    string
+	pedestalRestartPedestalReq *PedestalRestartPedestalReq
+}
+
+// Restart request
+func (r ApiRestartPedestalReleaseRequest) PedestalRestartPedestalReq(pedestalRestartPedestalReq PedestalRestartPedestalReq) ApiRestartPedestalReleaseRequest {
+	r.pedestalRestartPedestalReq = &pedestalRestartPedestalReq
+	return r
+}
+
+func (r ApiRestartPedestalReleaseRequest) Execute() (*DtoGenericResponsePedestalInstallPedestalResult, *http.Response, error) {
+	return r.ApiService.RestartPedestalReleaseExecute(r)
+}
+
+/*
+RestartPedestalRelease Restart pedestal release
+
+Admin: redeploy a pedestal release in-place. By default the currently-deployed chart version is reused (no silent upgrade). Pass container_version_id in the body to opt into an upgrade. Empty body reuses the previously-applied values. Bounded at adminInstallTimeoutCeiling().
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param release Release name
+	@return ApiRestartPedestalReleaseRequest
+*/
+func (a *PedestalAPIService) RestartPedestalRelease(ctx context.Context, release string) ApiRestartPedestalReleaseRequest {
+	return ApiRestartPedestalReleaseRequest{
+		ApiService: a,
+		ctx:        ctx,
+		release:    release,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponsePedestalInstallPedestalResult
+func (a *PedestalAPIService) RestartPedestalReleaseExecute(r ApiRestartPedestalReleaseRequest) (*DtoGenericResponsePedestalInstallPedestalResult, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponsePedestalInstallPedestalResult
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "PedestalAPIService.RestartPedestalRelease")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/pedestals/{release}/restart"
+	localVarPath = strings.Replace(localVarPath, "{"+"release"+"}", url.PathEscape(parameterValueToString(r.release, "release")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.pedestalRestartPedestalReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiUninstallPedestalReleaseRequest struct {
+	ctx        context.Context
+	ApiService PedestalAPI
+	release    string
+	namespace  *string
+}
+
+// Namespace (defaults to release name)
+func (r ApiUninstallPedestalReleaseRequest) Namespace(namespace string) ApiUninstallPedestalReleaseRequest {
+	r.namespace = &namespace
+	return r
+}
+
+func (r ApiUninstallPedestalReleaseRequest) Execute() (*http.Response, error) {
+	return r.ApiService.UninstallPedestalReleaseExecute(r)
+}
+
+/*
+UninstallPedestalRelease Uninstall pedestal release
+
+Admin: uninstall a pedestal release. Returns 204 on success; not-found is treated as success. Bounded at adminUninstallTimeoutCeiling().
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param release Release name
+	@return ApiUninstallPedestalReleaseRequest
+*/
+func (a *PedestalAPIService) UninstallPedestalRelease(ctx context.Context, release string) ApiUninstallPedestalReleaseRequest {
+	return ApiUninstallPedestalReleaseRequest{
+		ApiService: a,
+		ctx:        ctx,
+		release:    release,
+	}
+}
+
+// Execute executes the request
+func (a *PedestalAPIService) UninstallPedestalReleaseExecute(r ApiUninstallPedestalReleaseRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "PedestalAPIService.UninstallPedestalRelease")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/pedestals/{release}"
+	localVarPath = strings.Replace(localVarPath, "{"+"release"+"}", url.PathEscape(parameterValueToString(r.release, "release")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.namespace != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "namespace", r.namespace, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
 }
 
 type ApiUpsertPedestalHelmConfigRequest struct {

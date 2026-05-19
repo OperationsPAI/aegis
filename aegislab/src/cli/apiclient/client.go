@@ -53,6 +53,8 @@ type APIClient struct {
 
 	BlobAPI BlobAPI
 
+	ClusterAPI ClusterAPI
+
 	ConfigCenterAPI ConfigCenterAPI
 
 	ConfigurationsAPI ConfigurationsAPI
@@ -76,8 +78,6 @@ type APIClient struct {
 	NotificationAPI NotificationAPI
 
 	OIDCAPI OIDCAPI
-
-	ObservationAPI ObservationAPI
 
 	PagesAPI PagesAPI
 
@@ -134,6 +134,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	// API Services
 	c.AuthenticationAPI = (*AuthenticationAPIService)(&c.common)
 	c.BlobAPI = (*BlobAPIService)(&c.common)
+	c.ClusterAPI = (*ClusterAPIService)(&c.common)
 	c.ConfigCenterAPI = (*ConfigCenterAPIService)(&c.common)
 	c.ConfigurationsAPI = (*ConfigurationsAPIService)(&c.common)
 	c.ContainersAPI = (*ContainersAPIService)(&c.common)
@@ -146,7 +147,6 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.MetricsAPI = (*MetricsAPIService)(&c.common)
 	c.NotificationAPI = (*NotificationAPIService)(&c.common)
 	c.OIDCAPI = (*OIDCAPIService)(&c.common)
-	c.ObservationAPI = (*ObservationAPIService)(&c.common)
 	c.PagesAPI = (*PagesAPIService)(&c.common)
 	c.PedestalAPI = (*PedestalAPIService)(&c.common)
 	c.PermissionsAPI = (*PermissionsAPIService)(&c.common)

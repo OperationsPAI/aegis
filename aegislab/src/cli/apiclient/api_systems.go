@@ -111,9 +111,9 @@ type SystemsAPI interface {
 	ListChaosSystemsExecute(r ApiListChaosSystemsRequest) (*DtoGenericResponseDtoListRespChaossystemChaosSystemResp, *http.Response, error)
 
 	/*
-		ListSystemInjectCandidates List inject candidates for a system+namespace
+		ListSystemInjectCandidates List inject candidates for a system (optionally scoped to one namespace)
 
-		Bulk enumeration of every (app, chaos_type, target) tuple reachable for the given system short code and namespace. Numerical params (latency, cpu_load, ...) are NOT expanded — the caller fills those in before submitting. Replaces the previous N-round-trip walk through `aegisctl inject guided`.
+		Bulk enumeration of every (app, chaos_type, target) tuple reachable for the given system. When `namespace` is supplied results are scoped to that pool slot; when omitted the backend fans out across every namespace in the system's pool and returns the deduplicated union — used by InjectionCreate's auto-namespace mode where the concrete pool slot has not yet been allocated. Numerical params (latency, cpu_load, ...) are NOT expanded — the caller fills those in before submitting. Replaces the previous N-round-trip walk through `aegisctl inject guided`.
 
 		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 		@param name System short code
@@ -1161,7 +1161,7 @@ type ApiListSystemInjectCandidatesRequest struct {
 	namespace  *string
 }
 
-// Target namespace (e.g. sockshop1)
+// Target namespace (e.g. sockshop1). When omitted, returns the union across all pool namespaces.
 func (r ApiListSystemInjectCandidatesRequest) Namespace(namespace string) ApiListSystemInjectCandidatesRequest {
 	r.namespace = &namespace
 	return r
@@ -1172,9 +1172,9 @@ func (r ApiListSystemInjectCandidatesRequest) Execute() (*DtoGenericResponseChao
 }
 
 /*
-ListSystemInjectCandidates List inject candidates for a system+namespace
+ListSystemInjectCandidates List inject candidates for a system (optionally scoped to one namespace)
 
-Bulk enumeration of every (app, chaos_type, target) tuple reachable for the given system short code and namespace. Numerical params (latency, cpu_load, ...) are NOT expanded — the caller fills those in before submitting. Replaces the previous N-round-trip walk through `aegisctl inject guided`.
+Bulk enumeration of every (app, chaos_type, target) tuple reachable for the given system. When `namespace` is supplied results are scoped to that pool slot; when omitted the backend fans out across every namespace in the system's pool and returns the deduplicated union — used by InjectionCreate's auto-namespace mode where the concrete pool slot has not yet been allocated. Numerical params (latency, cpu_load, ...) are NOT expanded — the caller fills those in before submitting. Replaces the previous N-round-trip walk through `aegisctl inject guided`.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param name System short code
@@ -1210,11 +1210,10 @@ func (a *SystemsAPIService) ListSystemInjectCandidatesExecute(r ApiListSystemInj
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
-	if r.namespace == nil {
-		return localVarReturnValue, nil, reportError("namespace is required and must be specified")
-	}
 
-	parameterAddToHeaderOrQuery(localVarQueryParams, "namespace", r.namespace, "form", "")
+	if r.namespace != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "namespace", r.namespace, "form", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 

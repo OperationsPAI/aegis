@@ -162,7 +162,7 @@ func (h *Handler) ListBuckets(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Param			bucket	path		string									true	"Bucket name"
 //	@Param			request	body		presignPutReq							true	"Presign PUT request"
-//	@Success		200		{object}	dto.GenericResponse[PresignedRequest]	"Presigned URL issued"
+//	@Success		200		{object}	dto.GenericResponse[PresignPutResult]	"Presigned URL + object metadata"
 //	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid request"
 //	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
 //	@Failure		403		{object}	dto.GenericResponse[any]				"Forbidden"

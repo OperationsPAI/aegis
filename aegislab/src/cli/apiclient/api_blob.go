@@ -200,8 +200,8 @@ type BlobAPI interface {
 	BlobPresignPut(ctx context.Context, bucket string) ApiBlobPresignPutRequest
 
 	// BlobPresignPutExecute executes the request
-	//  @return DtoGenericResponseBlobPresignedRequest
-	BlobPresignPutExecute(r ApiBlobPresignPutRequest) (*DtoGenericResponseBlobPresignedRequest, *http.Response, error)
+	//  @return DtoGenericResponseBlobPresignPutResult
+	BlobPresignPutExecute(r ApiBlobPresignPutRequest) (*DtoGenericResponseBlobPresignPutResult, *http.Response, error)
 
 	/*
 		BlobPutBucketLifecycle Replace bucket lifecycle policy
@@ -2195,7 +2195,7 @@ func (r ApiBlobPresignPutRequest) BlobPresignPutReq(blobPresignPutReq BlobPresig
 	return r
 }
 
-func (r ApiBlobPresignPutRequest) Execute() (*DtoGenericResponseBlobPresignedRequest, *http.Response, error) {
+func (r ApiBlobPresignPutRequest) Execute() (*DtoGenericResponseBlobPresignPutResult, *http.Response, error) {
 	return r.ApiService.BlobPresignPutExecute(r)
 }
 
@@ -2218,13 +2218,13 @@ func (a *BlobAPIService) BlobPresignPut(ctx context.Context, bucket string) ApiB
 
 // Execute executes the request
 //
-//	@return DtoGenericResponseBlobPresignedRequest
-func (a *BlobAPIService) BlobPresignPutExecute(r ApiBlobPresignPutRequest) (*DtoGenericResponseBlobPresignedRequest, *http.Response, error) {
+//	@return DtoGenericResponseBlobPresignPutResult
+func (a *BlobAPIService) BlobPresignPutExecute(r ApiBlobPresignPutRequest) (*DtoGenericResponseBlobPresignPutResult, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodPost
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *DtoGenericResponseBlobPresignedRequest
+		localVarReturnValue *DtoGenericResponseBlobPresignPutResult
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BlobAPIService.BlobPresignPut")

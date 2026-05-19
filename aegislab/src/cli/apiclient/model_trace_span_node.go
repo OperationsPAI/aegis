@@ -15,62 +15,62 @@ import (
 	"encoding/json"
 )
 
-// checks if the ObservationSpanNode type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &ObservationSpanNode{}
+// checks if the TraceSpanNode type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &TraceSpanNode{}
 
-// ObservationSpanNode struct for ObservationSpanNode
-type ObservationSpanNode struct {
-	Attrs                map[string]interface{} `json:"attrs,omitempty"`
-	EndTs                *string                `json:"end_ts,omitempty"`
-	Events               []ObservationSpanEvent `json:"events,omitempty"`
-	Op                   *string                `json:"op,omitempty"`
-	ParentId             *string                `json:"parent_id,omitempty"`
-	Service              *string                `json:"service,omitempty"`
-	SpanId               *string                `json:"span_id,omitempty"`
-	StartTs              *string                `json:"start_ts,omitempty"`
-	Status               *string                `json:"status,omitempty"`
+// TraceSpanNode struct for TraceSpanNode
+type TraceSpanNode struct {
+	Attrs                *map[string]string `json:"attrs,omitempty"`
+	EndTs                *string            `json:"end_ts,omitempty"`
+	Op                   *string            `json:"op,omitempty"`
+	OtelTraceId          *string            `json:"otel_trace_id,omitempty"`
+	ParentId             *string            `json:"parent_id,omitempty"`
+	Service              *string            `json:"service,omitempty"`
+	SpanId               *string            `json:"span_id,omitempty"`
+	StartTs              *string            `json:"start_ts,omitempty"`
+	Status               *string            `json:"status,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
-type _ObservationSpanNode ObservationSpanNode
+type _TraceSpanNode TraceSpanNode
 
-// NewObservationSpanNode instantiates a new ObservationSpanNode object
+// NewTraceSpanNode instantiates a new TraceSpanNode object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewObservationSpanNode() *ObservationSpanNode {
-	this := ObservationSpanNode{}
+func NewTraceSpanNode() *TraceSpanNode {
+	this := TraceSpanNode{}
 	return &this
 }
 
-// NewObservationSpanNodeWithDefaults instantiates a new ObservationSpanNode object
+// NewTraceSpanNodeWithDefaults instantiates a new TraceSpanNode object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewObservationSpanNodeWithDefaults() *ObservationSpanNode {
-	this := ObservationSpanNode{}
+func NewTraceSpanNodeWithDefaults() *TraceSpanNode {
+	this := TraceSpanNode{}
 	return &this
 }
 
 // GetAttrs returns the Attrs field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetAttrs() map[string]interface{} {
+func (o *TraceSpanNode) GetAttrs() map[string]string {
 	if o == nil || IsNil(o.Attrs) {
-		var ret map[string]interface{}
+		var ret map[string]string
 		return ret
 	}
-	return o.Attrs
+	return *o.Attrs
 }
 
 // GetAttrsOk returns a tuple with the Attrs field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetAttrsOk() (map[string]interface{}, bool) {
+func (o *TraceSpanNode) GetAttrsOk() (*map[string]string, bool) {
 	if o == nil || IsNil(o.Attrs) {
-		return map[string]interface{}{}, false
+		return nil, false
 	}
 	return o.Attrs, true
 }
 
 // HasAttrs returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasAttrs() bool {
+func (o *TraceSpanNode) HasAttrs() bool {
 	if o != nil && !IsNil(o.Attrs) {
 		return true
 	}
@@ -78,13 +78,13 @@ func (o *ObservationSpanNode) HasAttrs() bool {
 	return false
 }
 
-// SetAttrs gets a reference to the given map[string]interface{} and assigns it to the Attrs field.
-func (o *ObservationSpanNode) SetAttrs(v map[string]interface{}) {
-	o.Attrs = v
+// SetAttrs gets a reference to the given map[string]string and assigns it to the Attrs field.
+func (o *TraceSpanNode) SetAttrs(v map[string]string) {
+	o.Attrs = &v
 }
 
 // GetEndTs returns the EndTs field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetEndTs() string {
+func (o *TraceSpanNode) GetEndTs() string {
 	if o == nil || IsNil(o.EndTs) {
 		var ret string
 		return ret
@@ -94,7 +94,7 @@ func (o *ObservationSpanNode) GetEndTs() string {
 
 // GetEndTsOk returns a tuple with the EndTs field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetEndTsOk() (*string, bool) {
+func (o *TraceSpanNode) GetEndTsOk() (*string, bool) {
 	if o == nil || IsNil(o.EndTs) {
 		return nil, false
 	}
@@ -102,7 +102,7 @@ func (o *ObservationSpanNode) GetEndTsOk() (*string, bool) {
 }
 
 // HasEndTs returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasEndTs() bool {
+func (o *TraceSpanNode) HasEndTs() bool {
 	if o != nil && !IsNil(o.EndTs) {
 		return true
 	}
@@ -111,44 +111,12 @@ func (o *ObservationSpanNode) HasEndTs() bool {
 }
 
 // SetEndTs gets a reference to the given string and assigns it to the EndTs field.
-func (o *ObservationSpanNode) SetEndTs(v string) {
+func (o *TraceSpanNode) SetEndTs(v string) {
 	o.EndTs = &v
 }
 
-// GetEvents returns the Events field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetEvents() []ObservationSpanEvent {
-	if o == nil || IsNil(o.Events) {
-		var ret []ObservationSpanEvent
-		return ret
-	}
-	return o.Events
-}
-
-// GetEventsOk returns a tuple with the Events field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetEventsOk() ([]ObservationSpanEvent, bool) {
-	if o == nil || IsNil(o.Events) {
-		return nil, false
-	}
-	return o.Events, true
-}
-
-// HasEvents returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasEvents() bool {
-	if o != nil && !IsNil(o.Events) {
-		return true
-	}
-
-	return false
-}
-
-// SetEvents gets a reference to the given []ObservationSpanEvent and assigns it to the Events field.
-func (o *ObservationSpanNode) SetEvents(v []ObservationSpanEvent) {
-	o.Events = v
-}
-
 // GetOp returns the Op field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetOp() string {
+func (o *TraceSpanNode) GetOp() string {
 	if o == nil || IsNil(o.Op) {
 		var ret string
 		return ret
@@ -158,7 +126,7 @@ func (o *ObservationSpanNode) GetOp() string {
 
 // GetOpOk returns a tuple with the Op field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetOpOk() (*string, bool) {
+func (o *TraceSpanNode) GetOpOk() (*string, bool) {
 	if o == nil || IsNil(o.Op) {
 		return nil, false
 	}
@@ -166,7 +134,7 @@ func (o *ObservationSpanNode) GetOpOk() (*string, bool) {
 }
 
 // HasOp returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasOp() bool {
+func (o *TraceSpanNode) HasOp() bool {
 	if o != nil && !IsNil(o.Op) {
 		return true
 	}
@@ -175,12 +143,44 @@ func (o *ObservationSpanNode) HasOp() bool {
 }
 
 // SetOp gets a reference to the given string and assigns it to the Op field.
-func (o *ObservationSpanNode) SetOp(v string) {
+func (o *TraceSpanNode) SetOp(v string) {
 	o.Op = &v
 }
 
+// GetOtelTraceId returns the OtelTraceId field value if set, zero value otherwise.
+func (o *TraceSpanNode) GetOtelTraceId() string {
+	if o == nil || IsNil(o.OtelTraceId) {
+		var ret string
+		return ret
+	}
+	return *o.OtelTraceId
+}
+
+// GetOtelTraceIdOk returns a tuple with the OtelTraceId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TraceSpanNode) GetOtelTraceIdOk() (*string, bool) {
+	if o == nil || IsNil(o.OtelTraceId) {
+		return nil, false
+	}
+	return o.OtelTraceId, true
+}
+
+// HasOtelTraceId returns a boolean if a field has been set.
+func (o *TraceSpanNode) HasOtelTraceId() bool {
+	if o != nil && !IsNil(o.OtelTraceId) {
+		return true
+	}
+
+	return false
+}
+
+// SetOtelTraceId gets a reference to the given string and assigns it to the OtelTraceId field.
+func (o *TraceSpanNode) SetOtelTraceId(v string) {
+	o.OtelTraceId = &v
+}
+
 // GetParentId returns the ParentId field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetParentId() string {
+func (o *TraceSpanNode) GetParentId() string {
 	if o == nil || IsNil(o.ParentId) {
 		var ret string
 		return ret
@@ -190,7 +190,7 @@ func (o *ObservationSpanNode) GetParentId() string {
 
 // GetParentIdOk returns a tuple with the ParentId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetParentIdOk() (*string, bool) {
+func (o *TraceSpanNode) GetParentIdOk() (*string, bool) {
 	if o == nil || IsNil(o.ParentId) {
 		return nil, false
 	}
@@ -198,7 +198,7 @@ func (o *ObservationSpanNode) GetParentIdOk() (*string, bool) {
 }
 
 // HasParentId returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasParentId() bool {
+func (o *TraceSpanNode) HasParentId() bool {
 	if o != nil && !IsNil(o.ParentId) {
 		return true
 	}
@@ -207,12 +207,12 @@ func (o *ObservationSpanNode) HasParentId() bool {
 }
 
 // SetParentId gets a reference to the given string and assigns it to the ParentId field.
-func (o *ObservationSpanNode) SetParentId(v string) {
+func (o *TraceSpanNode) SetParentId(v string) {
 	o.ParentId = &v
 }
 
 // GetService returns the Service field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetService() string {
+func (o *TraceSpanNode) GetService() string {
 	if o == nil || IsNil(o.Service) {
 		var ret string
 		return ret
@@ -222,7 +222,7 @@ func (o *ObservationSpanNode) GetService() string {
 
 // GetServiceOk returns a tuple with the Service field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetServiceOk() (*string, bool) {
+func (o *TraceSpanNode) GetServiceOk() (*string, bool) {
 	if o == nil || IsNil(o.Service) {
 		return nil, false
 	}
@@ -230,7 +230,7 @@ func (o *ObservationSpanNode) GetServiceOk() (*string, bool) {
 }
 
 // HasService returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasService() bool {
+func (o *TraceSpanNode) HasService() bool {
 	if o != nil && !IsNil(o.Service) {
 		return true
 	}
@@ -239,12 +239,12 @@ func (o *ObservationSpanNode) HasService() bool {
 }
 
 // SetService gets a reference to the given string and assigns it to the Service field.
-func (o *ObservationSpanNode) SetService(v string) {
+func (o *TraceSpanNode) SetService(v string) {
 	o.Service = &v
 }
 
 // GetSpanId returns the SpanId field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetSpanId() string {
+func (o *TraceSpanNode) GetSpanId() string {
 	if o == nil || IsNil(o.SpanId) {
 		var ret string
 		return ret
@@ -254,7 +254,7 @@ func (o *ObservationSpanNode) GetSpanId() string {
 
 // GetSpanIdOk returns a tuple with the SpanId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetSpanIdOk() (*string, bool) {
+func (o *TraceSpanNode) GetSpanIdOk() (*string, bool) {
 	if o == nil || IsNil(o.SpanId) {
 		return nil, false
 	}
@@ -262,7 +262,7 @@ func (o *ObservationSpanNode) GetSpanIdOk() (*string, bool) {
 }
 
 // HasSpanId returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasSpanId() bool {
+func (o *TraceSpanNode) HasSpanId() bool {
 	if o != nil && !IsNil(o.SpanId) {
 		return true
 	}
@@ -271,12 +271,12 @@ func (o *ObservationSpanNode) HasSpanId() bool {
 }
 
 // SetSpanId gets a reference to the given string and assigns it to the SpanId field.
-func (o *ObservationSpanNode) SetSpanId(v string) {
+func (o *TraceSpanNode) SetSpanId(v string) {
 	o.SpanId = &v
 }
 
 // GetStartTs returns the StartTs field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetStartTs() string {
+func (o *TraceSpanNode) GetStartTs() string {
 	if o == nil || IsNil(o.StartTs) {
 		var ret string
 		return ret
@@ -286,7 +286,7 @@ func (o *ObservationSpanNode) GetStartTs() string {
 
 // GetStartTsOk returns a tuple with the StartTs field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetStartTsOk() (*string, bool) {
+func (o *TraceSpanNode) GetStartTsOk() (*string, bool) {
 	if o == nil || IsNil(o.StartTs) {
 		return nil, false
 	}
@@ -294,7 +294,7 @@ func (o *ObservationSpanNode) GetStartTsOk() (*string, bool) {
 }
 
 // HasStartTs returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasStartTs() bool {
+func (o *TraceSpanNode) HasStartTs() bool {
 	if o != nil && !IsNil(o.StartTs) {
 		return true
 	}
@@ -303,12 +303,12 @@ func (o *ObservationSpanNode) HasStartTs() bool {
 }
 
 // SetStartTs gets a reference to the given string and assigns it to the StartTs field.
-func (o *ObservationSpanNode) SetStartTs(v string) {
+func (o *TraceSpanNode) SetStartTs(v string) {
 	o.StartTs = &v
 }
 
 // GetStatus returns the Status field value if set, zero value otherwise.
-func (o *ObservationSpanNode) GetStatus() string {
+func (o *TraceSpanNode) GetStatus() string {
 	if o == nil || IsNil(o.Status) {
 		var ret string
 		return ret
@@ -318,7 +318,7 @@ func (o *ObservationSpanNode) GetStatus() string {
 
 // GetStatusOk returns a tuple with the Status field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ObservationSpanNode) GetStatusOk() (*string, bool) {
+func (o *TraceSpanNode) GetStatusOk() (*string, bool) {
 	if o == nil || IsNil(o.Status) {
 		return nil, false
 	}
@@ -326,7 +326,7 @@ func (o *ObservationSpanNode) GetStatusOk() (*string, bool) {
 }
 
 // HasStatus returns a boolean if a field has been set.
-func (o *ObservationSpanNode) HasStatus() bool {
+func (o *TraceSpanNode) HasStatus() bool {
 	if o != nil && !IsNil(o.Status) {
 		return true
 	}
@@ -335,11 +335,11 @@ func (o *ObservationSpanNode) HasStatus() bool {
 }
 
 // SetStatus gets a reference to the given string and assigns it to the Status field.
-func (o *ObservationSpanNode) SetStatus(v string) {
+func (o *TraceSpanNode) SetStatus(v string) {
 	o.Status = &v
 }
 
-func (o ObservationSpanNode) MarshalJSON() ([]byte, error) {
+func (o TraceSpanNode) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -347,7 +347,7 @@ func (o ObservationSpanNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o ObservationSpanNode) ToMap() (map[string]interface{}, error) {
+func (o TraceSpanNode) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Attrs) {
 		toSerialize["attrs"] = o.Attrs
@@ -355,11 +355,11 @@ func (o ObservationSpanNode) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.EndTs) {
 		toSerialize["end_ts"] = o.EndTs
 	}
-	if !IsNil(o.Events) {
-		toSerialize["events"] = o.Events
-	}
 	if !IsNil(o.Op) {
 		toSerialize["op"] = o.Op
+	}
+	if !IsNil(o.OtelTraceId) {
+		toSerialize["otel_trace_id"] = o.OtelTraceId
 	}
 	if !IsNil(o.ParentId) {
 		toSerialize["parent_id"] = o.ParentId
@@ -384,24 +384,24 @@ func (o ObservationSpanNode) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *ObservationSpanNode) UnmarshalJSON(data []byte) (err error) {
-	varObservationSpanNode := _ObservationSpanNode{}
+func (o *TraceSpanNode) UnmarshalJSON(data []byte) (err error) {
+	varTraceSpanNode := _TraceSpanNode{}
 
-	err = json.Unmarshal(data, &varObservationSpanNode)
+	err = json.Unmarshal(data, &varTraceSpanNode)
 
 	if err != nil {
 		return err
 	}
 
-	*o = ObservationSpanNode(varObservationSpanNode)
+	*o = TraceSpanNode(varTraceSpanNode)
 
 	additionalProperties := make(map[string]interface{})
 
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
 		delete(additionalProperties, "attrs")
 		delete(additionalProperties, "end_ts")
-		delete(additionalProperties, "events")
 		delete(additionalProperties, "op")
+		delete(additionalProperties, "otel_trace_id")
 		delete(additionalProperties, "parent_id")
 		delete(additionalProperties, "service")
 		delete(additionalProperties, "span_id")
@@ -413,38 +413,38 @@ func (o *ObservationSpanNode) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-type NullableObservationSpanNode struct {
-	value *ObservationSpanNode
+type NullableTraceSpanNode struct {
+	value *TraceSpanNode
 	isSet bool
 }
 
-func (v NullableObservationSpanNode) Get() *ObservationSpanNode {
+func (v NullableTraceSpanNode) Get() *TraceSpanNode {
 	return v.value
 }
 
-func (v *NullableObservationSpanNode) Set(val *ObservationSpanNode) {
+func (v *NullableTraceSpanNode) Set(val *TraceSpanNode) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableObservationSpanNode) IsSet() bool {
+func (v NullableTraceSpanNode) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableObservationSpanNode) Unset() {
+func (v *NullableTraceSpanNode) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableObservationSpanNode(val *ObservationSpanNode) *NullableObservationSpanNode {
-	return &NullableObservationSpanNode{value: val, isSet: true}
+func NewNullableTraceSpanNode(val *TraceSpanNode) *NullableTraceSpanNode {
+	return &NullableTraceSpanNode{value: val, isSet: true}
 }
 
-func (v NullableObservationSpanNode) MarshalJSON() ([]byte, error) {
+func (v NullableTraceSpanNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableObservationSpanNode) UnmarshalJSON(src []byte) error {
+func (v *NullableTraceSpanNode) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

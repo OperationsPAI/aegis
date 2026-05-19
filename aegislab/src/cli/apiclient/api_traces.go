@@ -68,6 +68,36 @@ type TracesAPI interface {
 	GetTraceEventsExecute(r ApiGetTraceEventsRequest) (string, *http.Response, error)
 
 	/*
+		GetTraceLogs Query trace logs
+
+		Return paginated, filterable log entries for every task under an aegis trace. Mirrors /injections/{id}/logs but pivots directly on trace_id so ExecutionDetail callers do not need to round-trip through injection metadata. Returns an empty entries list when the trace has no rows in the task table.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param traceId Trace ID
+		@return ApiGetTraceLogsRequest
+	*/
+	GetTraceLogs(ctx context.Context, traceId string) ApiGetTraceLogsRequest
+
+	// GetTraceLogsExecute executes the request
+	//  @return DtoGenericResponseTraceTraceLogsResp
+	GetTraceLogsExecute(r ApiGetTraceLogsRequest) (*DtoGenericResponseTraceTraceLogsResp, *http.Response, error)
+
+	/*
+		GetTraceSpans Get orchestrator OTel spans for a trace
+
+		Returns the full flat list of OTel spans emitted by aegislab while this trace was running. The frontend rebuilds the parent/child tree client-side. Multiple OTel TraceIds may be returned interleaved (one per task dispatch); group by otel_trace_id when rendering.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param traceId Trace ID
+		@return ApiGetTraceSpansRequest
+	*/
+	GetTraceSpans(ctx context.Context, traceId string) ApiGetTraceSpansRequest
+
+	// GetTraceSpansExecute executes the request
+	//  @return DtoGenericResponseTraceSpansResp
+	GetTraceSpansExecute(r ApiGetTraceSpansRequest) (*DtoGenericResponseTraceSpansResp, *http.Response, error)
+
+	/*
 		ListTraces List traces
 
 		Get a list of traces with filtering via query parameters
@@ -568,6 +598,402 @@ func (a *TracesAPIService) GetTraceEventsExecute(r ApiGetTraceEventsRequest) (st
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiGetTraceLogsRequest struct {
+	ctx        context.Context
+	ApiService TracesAPI
+	traceId    string
+	start      *string
+	end        *string
+	q          *string
+	level      *string
+	limit      *int32
+	cursor     *string
+}
+
+// RFC3339 start time
+func (r ApiGetTraceLogsRequest) Start(start string) ApiGetTraceLogsRequest {
+	r.start = &start
+	return r
+}
+
+// RFC3339 end time
+func (r ApiGetTraceLogsRequest) End(end string) ApiGetTraceLogsRequest {
+	r.end = &end
+	return r
+}
+
+// Substring filter on log body
+func (r ApiGetTraceLogsRequest) Q(q string) ApiGetTraceLogsRequest {
+	r.q = &q
+	return r
+}
+
+// Filter by level: error|warn|info
+func (r ApiGetTraceLogsRequest) Level(level string) ApiGetTraceLogsRequest {
+	r.level = &level
+	return r
+}
+
+// Maximum entries per page
+func (r ApiGetTraceLogsRequest) Limit(limit int32) ApiGetTraceLogsRequest {
+	r.limit = &limit
+	return r
+}
+
+// Pagination cursor
+func (r ApiGetTraceLogsRequest) Cursor(cursor string) ApiGetTraceLogsRequest {
+	r.cursor = &cursor
+	return r
+}
+
+func (r ApiGetTraceLogsRequest) Execute() (*DtoGenericResponseTraceTraceLogsResp, *http.Response, error) {
+	return r.ApiService.GetTraceLogsExecute(r)
+}
+
+/*
+GetTraceLogs Query trace logs
+
+Return paginated, filterable log entries for every task under an aegis trace. Mirrors /injections/{id}/logs but pivots directly on trace_id so ExecutionDetail callers do not need to round-trip through injection metadata. Returns an empty entries list when the trace has no rows in the task table.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param traceId Trace ID
+	@return ApiGetTraceLogsRequest
+*/
+func (a *TracesAPIService) GetTraceLogs(ctx context.Context, traceId string) ApiGetTraceLogsRequest {
+	return ApiGetTraceLogsRequest{
+		ApiService: a,
+		ctx:        ctx,
+		traceId:    traceId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseTraceTraceLogsResp
+func (a *TracesAPIService) GetTraceLogsExecute(r ApiGetTraceLogsRequest) (*DtoGenericResponseTraceTraceLogsResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseTraceTraceLogsResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TracesAPIService.GetTraceLogs")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/traces/{trace_id}/logs"
+	localVarPath = strings.Replace(localVarPath, "{"+"trace_id"+"}", url.PathEscape(parameterValueToString(r.traceId, "traceId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.start != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "start", r.start, "form", "")
+	}
+	if r.end != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "end", r.end, "form", "")
+	}
+	if r.q != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "q", r.q, "form", "")
+	}
+	if r.level != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "level", r.level, "form", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "form", "")
+	} else {
+		var defaultValue int32 = 200
+		r.limit = &defaultValue
+	}
+	if r.cursor != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "cursor", r.cursor, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiGetTraceSpansRequest struct {
+	ctx        context.Context
+	ApiService TracesAPI
+	traceId    string
+}
+
+func (r ApiGetTraceSpansRequest) Execute() (*DtoGenericResponseTraceSpansResp, *http.Response, error) {
+	return r.ApiService.GetTraceSpansExecute(r)
+}
+
+/*
+GetTraceSpans Get orchestrator OTel spans for a trace
+
+Returns the full flat list of OTel spans emitted by aegislab while this trace was running. The frontend rebuilds the parent/child tree client-side. Multiple OTel TraceIds may be returned interleaved (one per task dispatch); group by otel_trace_id when rendering.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param traceId Trace ID
+	@return ApiGetTraceSpansRequest
+*/
+func (a *TracesAPIService) GetTraceSpans(ctx context.Context, traceId string) ApiGetTraceSpansRequest {
+	return ApiGetTraceSpansRequest{
+		ApiService: a,
+		ctx:        ctx,
+		traceId:    traceId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseTraceSpansResp
+func (a *TracesAPIService) GetTraceSpansExecute(r ApiGetTraceSpansRequest) (*DtoGenericResponseTraceSpansResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseTraceSpansResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TracesAPIService.GetTraceSpans")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/traces/{trace_id}/spans"
+	localVarPath = strings.Replace(localVarPath, "{"+"trace_id"+"}", url.PathEscape(parameterValueToString(r.traceId, "traceId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
 			var v DtoGenericResponseAny
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {

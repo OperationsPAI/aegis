@@ -15,15 +15,15 @@ import (
 	"encoding/json"
 )
 
-// checks if the DtoGenericResponseObservationMetricsCatalogResp type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &DtoGenericResponseObservationMetricsCatalogResp{}
+// checks if the DtoGenericResponsePedestalInstallPedestalResult type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &DtoGenericResponsePedestalInstallPedestalResult{}
 
-// DtoGenericResponseObservationMetricsCatalogResp struct for DtoGenericResponseObservationMetricsCatalogResp
-type DtoGenericResponseObservationMetricsCatalogResp struct {
+// DtoGenericResponsePedestalInstallPedestalResult struct for DtoGenericResponsePedestalInstallPedestalResult
+type DtoGenericResponsePedestalInstallPedestalResult struct {
 	// Status code
 	Code *int32 `json:"code,omitempty"`
 	// Generic type data
-	Data *ObservationMetricsCatalogResp `json:"data,omitempty"`
+	Data *PedestalInstallPedestalResult `json:"data,omitempty"`
 	// Response message
 	Message *string `json:"message,omitempty"`
 	// Response generation time
@@ -31,27 +31,27 @@ type DtoGenericResponseObservationMetricsCatalogResp struct {
 	AdditionalProperties map[string]interface{}
 }
 
-type _DtoGenericResponseObservationMetricsCatalogResp DtoGenericResponseObservationMetricsCatalogResp
+type _DtoGenericResponsePedestalInstallPedestalResult DtoGenericResponsePedestalInstallPedestalResult
 
-// NewDtoGenericResponseObservationMetricsCatalogResp instantiates a new DtoGenericResponseObservationMetricsCatalogResp object
+// NewDtoGenericResponsePedestalInstallPedestalResult instantiates a new DtoGenericResponsePedestalInstallPedestalResult object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDtoGenericResponseObservationMetricsCatalogResp() *DtoGenericResponseObservationMetricsCatalogResp {
-	this := DtoGenericResponseObservationMetricsCatalogResp{}
+func NewDtoGenericResponsePedestalInstallPedestalResult() *DtoGenericResponsePedestalInstallPedestalResult {
+	this := DtoGenericResponsePedestalInstallPedestalResult{}
 	return &this
 }
 
-// NewDtoGenericResponseObservationMetricsCatalogRespWithDefaults instantiates a new DtoGenericResponseObservationMetricsCatalogResp object
+// NewDtoGenericResponsePedestalInstallPedestalResultWithDefaults instantiates a new DtoGenericResponsePedestalInstallPedestalResult object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewDtoGenericResponseObservationMetricsCatalogRespWithDefaults() *DtoGenericResponseObservationMetricsCatalogResp {
-	this := DtoGenericResponseObservationMetricsCatalogResp{}
+func NewDtoGenericResponsePedestalInstallPedestalResultWithDefaults() *DtoGenericResponsePedestalInstallPedestalResult {
+	this := DtoGenericResponsePedestalInstallPedestalResult{}
 	return &this
 }
 
 // GetCode returns the Code field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetCode() int32 {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetCode() int32 {
 	if o == nil || IsNil(o.Code) {
 		var ret int32
 		return ret
@@ -61,7 +61,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetCode() int32 {
 
 // GetCodeOk returns a tuple with the Code field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetCodeOk() (*int32, bool) {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetCodeOk() (*int32, bool) {
 	if o == nil || IsNil(o.Code) {
 		return nil, false
 	}
@@ -69,7 +69,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetCodeOk() (*int32, b
 }
 
 // HasCode returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) HasCode() bool {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) HasCode() bool {
 	if o != nil && !IsNil(o.Code) {
 		return true
 	}
@@ -78,14 +78,14 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) HasCode() bool {
 }
 
 // SetCode gets a reference to the given int32 and assigns it to the Code field.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) SetCode(v int32) {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) SetCode(v int32) {
 	o.Code = &v
 }
 
 // GetData returns the Data field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetData() ObservationMetricsCatalogResp {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetData() PedestalInstallPedestalResult {
 	if o == nil || IsNil(o.Data) {
-		var ret ObservationMetricsCatalogResp
+		var ret PedestalInstallPedestalResult
 		return ret
 	}
 	return *o.Data
@@ -93,7 +93,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetData() ObservationM
 
 // GetDataOk returns a tuple with the Data field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetDataOk() (*ObservationMetricsCatalogResp, bool) {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetDataOk() (*PedestalInstallPedestalResult, bool) {
 	if o == nil || IsNil(o.Data) {
 		return nil, false
 	}
@@ -101,7 +101,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetDataOk() (*Observat
 }
 
 // HasData returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) HasData() bool {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) HasData() bool {
 	if o != nil && !IsNil(o.Data) {
 		return true
 	}
@@ -109,13 +109,13 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) HasData() bool {
 	return false
 }
 
-// SetData gets a reference to the given ObservationMetricsCatalogResp and assigns it to the Data field.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) SetData(v ObservationMetricsCatalogResp) {
+// SetData gets a reference to the given PedestalInstallPedestalResult and assigns it to the Data field.
+func (o *DtoGenericResponsePedestalInstallPedestalResult) SetData(v PedestalInstallPedestalResult) {
 	o.Data = &v
 }
 
 // GetMessage returns the Message field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetMessage() string {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetMessage() string {
 	if o == nil || IsNil(o.Message) {
 		var ret string
 		return ret
@@ -125,7 +125,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetMessage() string {
 
 // GetMessageOk returns a tuple with the Message field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetMessageOk() (*string, bool) {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetMessageOk() (*string, bool) {
 	if o == nil || IsNil(o.Message) {
 		return nil, false
 	}
@@ -133,7 +133,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetMessageOk() (*strin
 }
 
 // HasMessage returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) HasMessage() bool {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) HasMessage() bool {
 	if o != nil && !IsNil(o.Message) {
 		return true
 	}
@@ -142,12 +142,12 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) HasMessage() bool {
 }
 
 // SetMessage gets a reference to the given string and assigns it to the Message field.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) SetMessage(v string) {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) SetMessage(v string) {
 	o.Message = &v
 }
 
 // GetTimestamp returns the Timestamp field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetTimestamp() int32 {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetTimestamp() int32 {
 	if o == nil || IsNil(o.Timestamp) {
 		var ret int32
 		return ret
@@ -157,7 +157,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetTimestamp() int32 {
 
 // GetTimestampOk returns a tuple with the Timestamp field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) GetTimestampOk() (*int32, bool) {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) GetTimestampOk() (*int32, bool) {
 	if o == nil || IsNil(o.Timestamp) {
 		return nil, false
 	}
@@ -165,7 +165,7 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) GetTimestampOk() (*int
 }
 
 // HasTimestamp returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) HasTimestamp() bool {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) HasTimestamp() bool {
 	if o != nil && !IsNil(o.Timestamp) {
 		return true
 	}
@@ -174,11 +174,11 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) HasTimestamp() bool {
 }
 
 // SetTimestamp gets a reference to the given int32 and assigns it to the Timestamp field.
-func (o *DtoGenericResponseObservationMetricsCatalogResp) SetTimestamp(v int32) {
+func (o *DtoGenericResponsePedestalInstallPedestalResult) SetTimestamp(v int32) {
 	o.Timestamp = &v
 }
 
-func (o DtoGenericResponseObservationMetricsCatalogResp) MarshalJSON() ([]byte, error) {
+func (o DtoGenericResponsePedestalInstallPedestalResult) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -186,7 +186,7 @@ func (o DtoGenericResponseObservationMetricsCatalogResp) MarshalJSON() ([]byte, 
 	return json.Marshal(toSerialize)
 }
 
-func (o DtoGenericResponseObservationMetricsCatalogResp) ToMap() (map[string]interface{}, error) {
+func (o DtoGenericResponsePedestalInstallPedestalResult) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Code) {
 		toSerialize["code"] = o.Code
@@ -208,16 +208,16 @@ func (o DtoGenericResponseObservationMetricsCatalogResp) ToMap() (map[string]int
 	return toSerialize, nil
 }
 
-func (o *DtoGenericResponseObservationMetricsCatalogResp) UnmarshalJSON(data []byte) (err error) {
-	varDtoGenericResponseObservationMetricsCatalogResp := _DtoGenericResponseObservationMetricsCatalogResp{}
+func (o *DtoGenericResponsePedestalInstallPedestalResult) UnmarshalJSON(data []byte) (err error) {
+	varDtoGenericResponsePedestalInstallPedestalResult := _DtoGenericResponsePedestalInstallPedestalResult{}
 
-	err = json.Unmarshal(data, &varDtoGenericResponseObservationMetricsCatalogResp)
+	err = json.Unmarshal(data, &varDtoGenericResponsePedestalInstallPedestalResult)
 
 	if err != nil {
 		return err
 	}
 
-	*o = DtoGenericResponseObservationMetricsCatalogResp(varDtoGenericResponseObservationMetricsCatalogResp)
+	*o = DtoGenericResponsePedestalInstallPedestalResult(varDtoGenericResponsePedestalInstallPedestalResult)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -232,38 +232,38 @@ func (o *DtoGenericResponseObservationMetricsCatalogResp) UnmarshalJSON(data []b
 	return err
 }
 
-type NullableDtoGenericResponseObservationMetricsCatalogResp struct {
-	value *DtoGenericResponseObservationMetricsCatalogResp
+type NullableDtoGenericResponsePedestalInstallPedestalResult struct {
+	value *DtoGenericResponsePedestalInstallPedestalResult
 	isSet bool
 }
 
-func (v NullableDtoGenericResponseObservationMetricsCatalogResp) Get() *DtoGenericResponseObservationMetricsCatalogResp {
+func (v NullableDtoGenericResponsePedestalInstallPedestalResult) Get() *DtoGenericResponsePedestalInstallPedestalResult {
 	return v.value
 }
 
-func (v *NullableDtoGenericResponseObservationMetricsCatalogResp) Set(val *DtoGenericResponseObservationMetricsCatalogResp) {
+func (v *NullableDtoGenericResponsePedestalInstallPedestalResult) Set(val *DtoGenericResponsePedestalInstallPedestalResult) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableDtoGenericResponseObservationMetricsCatalogResp) IsSet() bool {
+func (v NullableDtoGenericResponsePedestalInstallPedestalResult) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableDtoGenericResponseObservationMetricsCatalogResp) Unset() {
+func (v *NullableDtoGenericResponsePedestalInstallPedestalResult) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableDtoGenericResponseObservationMetricsCatalogResp(val *DtoGenericResponseObservationMetricsCatalogResp) *NullableDtoGenericResponseObservationMetricsCatalogResp {
-	return &NullableDtoGenericResponseObservationMetricsCatalogResp{value: val, isSet: true}
+func NewNullableDtoGenericResponsePedestalInstallPedestalResult(val *DtoGenericResponsePedestalInstallPedestalResult) *NullableDtoGenericResponsePedestalInstallPedestalResult {
+	return &NullableDtoGenericResponsePedestalInstallPedestalResult{value: val, isSet: true}
 }
 
-func (v NullableDtoGenericResponseObservationMetricsCatalogResp) MarshalJSON() ([]byte, error) {
+func (v NullableDtoGenericResponsePedestalInstallPedestalResult) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableDtoGenericResponseObservationMetricsCatalogResp) UnmarshalJSON(src []byte) error {
+func (v *NullableDtoGenericResponsePedestalInstallPedestalResult) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

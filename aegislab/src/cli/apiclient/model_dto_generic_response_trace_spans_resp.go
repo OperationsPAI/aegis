@@ -15,15 +15,15 @@ import (
 	"encoding/json"
 )
 
-// checks if the DtoGenericResponseObservationServiceMapResp type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &DtoGenericResponseObservationServiceMapResp{}
+// checks if the DtoGenericResponseTraceSpansResp type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &DtoGenericResponseTraceSpansResp{}
 
-// DtoGenericResponseObservationServiceMapResp struct for DtoGenericResponseObservationServiceMapResp
-type DtoGenericResponseObservationServiceMapResp struct {
+// DtoGenericResponseTraceSpansResp struct for DtoGenericResponseTraceSpansResp
+type DtoGenericResponseTraceSpansResp struct {
 	// Status code
 	Code *int32 `json:"code,omitempty"`
 	// Generic type data
-	Data *ObservationServiceMapResp `json:"data,omitempty"`
+	Data *TraceSpansResp `json:"data,omitempty"`
 	// Response message
 	Message *string `json:"message,omitempty"`
 	// Response generation time
@@ -31,27 +31,27 @@ type DtoGenericResponseObservationServiceMapResp struct {
 	AdditionalProperties map[string]interface{}
 }
 
-type _DtoGenericResponseObservationServiceMapResp DtoGenericResponseObservationServiceMapResp
+type _DtoGenericResponseTraceSpansResp DtoGenericResponseTraceSpansResp
 
-// NewDtoGenericResponseObservationServiceMapResp instantiates a new DtoGenericResponseObservationServiceMapResp object
+// NewDtoGenericResponseTraceSpansResp instantiates a new DtoGenericResponseTraceSpansResp object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDtoGenericResponseObservationServiceMapResp() *DtoGenericResponseObservationServiceMapResp {
-	this := DtoGenericResponseObservationServiceMapResp{}
+func NewDtoGenericResponseTraceSpansResp() *DtoGenericResponseTraceSpansResp {
+	this := DtoGenericResponseTraceSpansResp{}
 	return &this
 }
 
-// NewDtoGenericResponseObservationServiceMapRespWithDefaults instantiates a new DtoGenericResponseObservationServiceMapResp object
+// NewDtoGenericResponseTraceSpansRespWithDefaults instantiates a new DtoGenericResponseTraceSpansResp object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewDtoGenericResponseObservationServiceMapRespWithDefaults() *DtoGenericResponseObservationServiceMapResp {
-	this := DtoGenericResponseObservationServiceMapResp{}
+func NewDtoGenericResponseTraceSpansRespWithDefaults() *DtoGenericResponseTraceSpansResp {
+	this := DtoGenericResponseTraceSpansResp{}
 	return &this
 }
 
 // GetCode returns the Code field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationServiceMapResp) GetCode() int32 {
+func (o *DtoGenericResponseTraceSpansResp) GetCode() int32 {
 	if o == nil || IsNil(o.Code) {
 		var ret int32
 		return ret
@@ -61,7 +61,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetCode() int32 {
 
 // GetCodeOk returns a tuple with the Code field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) GetCodeOk() (*int32, bool) {
+func (o *DtoGenericResponseTraceSpansResp) GetCodeOk() (*int32, bool) {
 	if o == nil || IsNil(o.Code) {
 		return nil, false
 	}
@@ -69,7 +69,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetCodeOk() (*int32, bool)
 }
 
 // HasCode returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) HasCode() bool {
+func (o *DtoGenericResponseTraceSpansResp) HasCode() bool {
 	if o != nil && !IsNil(o.Code) {
 		return true
 	}
@@ -78,14 +78,14 @@ func (o *DtoGenericResponseObservationServiceMapResp) HasCode() bool {
 }
 
 // SetCode gets a reference to the given int32 and assigns it to the Code field.
-func (o *DtoGenericResponseObservationServiceMapResp) SetCode(v int32) {
+func (o *DtoGenericResponseTraceSpansResp) SetCode(v int32) {
 	o.Code = &v
 }
 
 // GetData returns the Data field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationServiceMapResp) GetData() ObservationServiceMapResp {
+func (o *DtoGenericResponseTraceSpansResp) GetData() TraceSpansResp {
 	if o == nil || IsNil(o.Data) {
-		var ret ObservationServiceMapResp
+		var ret TraceSpansResp
 		return ret
 	}
 	return *o.Data
@@ -93,7 +93,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetData() ObservationServi
 
 // GetDataOk returns a tuple with the Data field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) GetDataOk() (*ObservationServiceMapResp, bool) {
+func (o *DtoGenericResponseTraceSpansResp) GetDataOk() (*TraceSpansResp, bool) {
 	if o == nil || IsNil(o.Data) {
 		return nil, false
 	}
@@ -101,7 +101,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetDataOk() (*ObservationS
 }
 
 // HasData returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) HasData() bool {
+func (o *DtoGenericResponseTraceSpansResp) HasData() bool {
 	if o != nil && !IsNil(o.Data) {
 		return true
 	}
@@ -109,13 +109,13 @@ func (o *DtoGenericResponseObservationServiceMapResp) HasData() bool {
 	return false
 }
 
-// SetData gets a reference to the given ObservationServiceMapResp and assigns it to the Data field.
-func (o *DtoGenericResponseObservationServiceMapResp) SetData(v ObservationServiceMapResp) {
+// SetData gets a reference to the given TraceSpansResp and assigns it to the Data field.
+func (o *DtoGenericResponseTraceSpansResp) SetData(v TraceSpansResp) {
 	o.Data = &v
 }
 
 // GetMessage returns the Message field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationServiceMapResp) GetMessage() string {
+func (o *DtoGenericResponseTraceSpansResp) GetMessage() string {
 	if o == nil || IsNil(o.Message) {
 		var ret string
 		return ret
@@ -125,7 +125,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetMessage() string {
 
 // GetMessageOk returns a tuple with the Message field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) GetMessageOk() (*string, bool) {
+func (o *DtoGenericResponseTraceSpansResp) GetMessageOk() (*string, bool) {
 	if o == nil || IsNil(o.Message) {
 		return nil, false
 	}
@@ -133,7 +133,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetMessageOk() (*string, b
 }
 
 // HasMessage returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) HasMessage() bool {
+func (o *DtoGenericResponseTraceSpansResp) HasMessage() bool {
 	if o != nil && !IsNil(o.Message) {
 		return true
 	}
@@ -142,12 +142,12 @@ func (o *DtoGenericResponseObservationServiceMapResp) HasMessage() bool {
 }
 
 // SetMessage gets a reference to the given string and assigns it to the Message field.
-func (o *DtoGenericResponseObservationServiceMapResp) SetMessage(v string) {
+func (o *DtoGenericResponseTraceSpansResp) SetMessage(v string) {
 	o.Message = &v
 }
 
 // GetTimestamp returns the Timestamp field value if set, zero value otherwise.
-func (o *DtoGenericResponseObservationServiceMapResp) GetTimestamp() int32 {
+func (o *DtoGenericResponseTraceSpansResp) GetTimestamp() int32 {
 	if o == nil || IsNil(o.Timestamp) {
 		var ret int32
 		return ret
@@ -157,7 +157,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetTimestamp() int32 {
 
 // GetTimestampOk returns a tuple with the Timestamp field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) GetTimestampOk() (*int32, bool) {
+func (o *DtoGenericResponseTraceSpansResp) GetTimestampOk() (*int32, bool) {
 	if o == nil || IsNil(o.Timestamp) {
 		return nil, false
 	}
@@ -165,7 +165,7 @@ func (o *DtoGenericResponseObservationServiceMapResp) GetTimestampOk() (*int32, 
 }
 
 // HasTimestamp returns a boolean if a field has been set.
-func (o *DtoGenericResponseObservationServiceMapResp) HasTimestamp() bool {
+func (o *DtoGenericResponseTraceSpansResp) HasTimestamp() bool {
 	if o != nil && !IsNil(o.Timestamp) {
 		return true
 	}
@@ -174,11 +174,11 @@ func (o *DtoGenericResponseObservationServiceMapResp) HasTimestamp() bool {
 }
 
 // SetTimestamp gets a reference to the given int32 and assigns it to the Timestamp field.
-func (o *DtoGenericResponseObservationServiceMapResp) SetTimestamp(v int32) {
+func (o *DtoGenericResponseTraceSpansResp) SetTimestamp(v int32) {
 	o.Timestamp = &v
 }
 
-func (o DtoGenericResponseObservationServiceMapResp) MarshalJSON() ([]byte, error) {
+func (o DtoGenericResponseTraceSpansResp) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -186,7 +186,7 @@ func (o DtoGenericResponseObservationServiceMapResp) MarshalJSON() ([]byte, erro
 	return json.Marshal(toSerialize)
 }
 
-func (o DtoGenericResponseObservationServiceMapResp) ToMap() (map[string]interface{}, error) {
+func (o DtoGenericResponseTraceSpansResp) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Code) {
 		toSerialize["code"] = o.Code
@@ -208,16 +208,16 @@ func (o DtoGenericResponseObservationServiceMapResp) ToMap() (map[string]interfa
 	return toSerialize, nil
 }
 
-func (o *DtoGenericResponseObservationServiceMapResp) UnmarshalJSON(data []byte) (err error) {
-	varDtoGenericResponseObservationServiceMapResp := _DtoGenericResponseObservationServiceMapResp{}
+func (o *DtoGenericResponseTraceSpansResp) UnmarshalJSON(data []byte) (err error) {
+	varDtoGenericResponseTraceSpansResp := _DtoGenericResponseTraceSpansResp{}
 
-	err = json.Unmarshal(data, &varDtoGenericResponseObservationServiceMapResp)
+	err = json.Unmarshal(data, &varDtoGenericResponseTraceSpansResp)
 
 	if err != nil {
 		return err
 	}
 
-	*o = DtoGenericResponseObservationServiceMapResp(varDtoGenericResponseObservationServiceMapResp)
+	*o = DtoGenericResponseTraceSpansResp(varDtoGenericResponseTraceSpansResp)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -232,38 +232,38 @@ func (o *DtoGenericResponseObservationServiceMapResp) UnmarshalJSON(data []byte)
 	return err
 }
 
-type NullableDtoGenericResponseObservationServiceMapResp struct {
-	value *DtoGenericResponseObservationServiceMapResp
+type NullableDtoGenericResponseTraceSpansResp struct {
+	value *DtoGenericResponseTraceSpansResp
 	isSet bool
 }
 
-func (v NullableDtoGenericResponseObservationServiceMapResp) Get() *DtoGenericResponseObservationServiceMapResp {
+func (v NullableDtoGenericResponseTraceSpansResp) Get() *DtoGenericResponseTraceSpansResp {
 	return v.value
 }
 
-func (v *NullableDtoGenericResponseObservationServiceMapResp) Set(val *DtoGenericResponseObservationServiceMapResp) {
+func (v *NullableDtoGenericResponseTraceSpansResp) Set(val *DtoGenericResponseTraceSpansResp) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableDtoGenericResponseObservationServiceMapResp) IsSet() bool {
+func (v NullableDtoGenericResponseTraceSpansResp) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableDtoGenericResponseObservationServiceMapResp) Unset() {
+func (v *NullableDtoGenericResponseTraceSpansResp) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableDtoGenericResponseObservationServiceMapResp(val *DtoGenericResponseObservationServiceMapResp) *NullableDtoGenericResponseObservationServiceMapResp {
-	return &NullableDtoGenericResponseObservationServiceMapResp{value: val, isSet: true}
+func NewNullableDtoGenericResponseTraceSpansResp(val *DtoGenericResponseTraceSpansResp) *NullableDtoGenericResponseTraceSpansResp {
+	return &NullableDtoGenericResponseTraceSpansResp{value: val, isSet: true}
 }
 
-func (v NullableDtoGenericResponseObservationServiceMapResp) MarshalJSON() ([]byte, error) {
+func (v NullableDtoGenericResponseTraceSpansResp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableDtoGenericResponseObservationServiceMapResp) UnmarshalJSON(src []byte) error {
+func (v *NullableDtoGenericResponseTraceSpansResp) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

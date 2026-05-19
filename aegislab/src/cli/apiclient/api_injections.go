@@ -112,6 +112,21 @@ type InjectionsAPI interface {
 	DownloadDatapackFileExecute(r ApiDownloadDatapackFileRequest) (*os.File, *http.Response, error)
 
 	/*
+		GetDatapackSchema Get datapack SQL schema
+
+		List logical tables exposed over the datapack's parquet files (one VIEW per parquet that actually exists). Used by the in-portal SQL editor for autocomplete.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param id Injection ID
+		@return ApiGetDatapackSchemaRequest
+	*/
+	GetDatapackSchema(ctx context.Context, id int32) ApiGetDatapackSchemaRequest
+
+	// GetDatapackSchemaExecute executes the request
+	//  @return DtoGenericResponseInjectionDatapackSchemaResp
+	GetDatapackSchemaExecute(r ApiGetDatapackSchemaRequest) (*DtoGenericResponseInjectionDatapackSchemaResp, *http.Response, error)
+
+	/*
 		GetInjectionById Get injection by ID
 
 		Get detailed information about a specific injection
@@ -214,6 +229,21 @@ type InjectionsAPI interface {
 	// ManageInjectionLabelsExecute executes the request
 	//  @return DtoGenericResponseInjectionInjectionResp
 	ManageInjectionLabelsExecute(r ApiManageInjectionLabelsRequest) (*DtoGenericResponseInjectionInjectionResp, *http.Response, error)
+
+	/*
+		QueryDatapack Run SQL on datapack
+
+		Execute a read-only SELECT/WITH query over VIEWs exposed by GetDatapackSchema. Result is streamed as Arrow IPC.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param id Injection ID
+		@return ApiQueryDatapackRequest
+	*/
+	QueryDatapack(ctx context.Context, id int32) ApiQueryDatapackRequest
+
+	// QueryDatapackExecute executes the request
+	//  @return *os.File
+	QueryDatapackExecute(r ApiQueryDatapackRequest) (*os.File, *http.Response, error)
 
 	/*
 		QueryDatapackFile Query datapack file content
@@ -1301,6 +1331,178 @@ func (a *InjectionsAPIService) DownloadDatapackFileExecute(r ApiDownloadDatapack
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiGetDatapackSchemaRequest struct {
+	ctx        context.Context
+	ApiService InjectionsAPI
+	id         int32
+}
+
+func (r ApiGetDatapackSchemaRequest) Execute() (*DtoGenericResponseInjectionDatapackSchemaResp, *http.Response, error) {
+	return r.ApiService.GetDatapackSchemaExecute(r)
+}
+
+/*
+GetDatapackSchema Get datapack SQL schema
+
+List logical tables exposed over the datapack's parquet files (one VIEW per parquet that actually exists). Used by the in-portal SQL editor for autocomplete.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param id Injection ID
+	@return ApiGetDatapackSchemaRequest
+*/
+func (a *InjectionsAPIService) GetDatapackSchema(ctx context.Context, id int32) ApiGetDatapackSchemaRequest {
+	return ApiGetDatapackSchemaRequest{
+		ApiService: a,
+		ctx:        ctx,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseInjectionDatapackSchemaResp
+func (a *InjectionsAPIService) GetDatapackSchemaExecute(r ApiGetDatapackSchemaRequest) (*DtoGenericResponseInjectionDatapackSchemaResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseInjectionDatapackSchemaResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InjectionsAPIService.GetDatapackSchema")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/injections/{id}/datapack-schema"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiGetInjectionByIdRequest struct {
 	ctx        context.Context
 	ApiService InjectionsAPI
@@ -1497,7 +1699,7 @@ func (r ApiGetInjectionLogsRequest) End(end string) ApiGetInjectionLogsRequest {
 	return r
 }
 
-// Substring or LogQL pipeline fragment
+// Substring filter on log body
 func (r ApiGetInjectionLogsRequest) Q(q string) ApiGetInjectionLogsRequest {
 	r.q = &q
 	return r
@@ -1736,7 +1938,7 @@ func (r ApiGetInjectionLogsHistogramRequest) Buckets(buckets int32) ApiGetInject
 	return r
 }
 
-// Substring or LogQL fragment
+// Substring filter on log body
 func (r ApiGetInjectionLogsHistogramRequest) Q(q string) ApiGetInjectionLogsHistogramRequest {
 	r.q = &q
 	return r
@@ -2470,6 +2672,190 @@ func (a *InjectionsAPIService) ManageInjectionLabelsExecute(r ApiManageInjection
 	}
 	// body params
 	localVarPostBody = r.injectionManageInjectionLabelReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiQueryDatapackRequest struct {
+	ctx                       context.Context
+	ApiService                InjectionsAPI
+	id                        int32
+	injectionDatapackQueryReq *InjectionDatapackQueryReq
+}
+
+// SQL query body
+func (r ApiQueryDatapackRequest) InjectionDatapackQueryReq(injectionDatapackQueryReq InjectionDatapackQueryReq) ApiQueryDatapackRequest {
+	r.injectionDatapackQueryReq = &injectionDatapackQueryReq
+	return r
+}
+
+func (r ApiQueryDatapackRequest) Execute() (*os.File, *http.Response, error) {
+	return r.ApiService.QueryDatapackExecute(r)
+}
+
+/*
+QueryDatapack Run SQL on datapack
+
+Execute a read-only SELECT/WITH query over VIEWs exposed by GetDatapackSchema. Result is streamed as Arrow IPC.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param id Injection ID
+	@return ApiQueryDatapackRequest
+*/
+func (a *InjectionsAPIService) QueryDatapack(ctx context.Context, id int32) ApiQueryDatapackRequest {
+	return ApiQueryDatapackRequest{
+		ApiService: a,
+		ctx:        ctx,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return *os.File
+func (a *InjectionsAPIService) QueryDatapackExecute(r ApiQueryDatapackRequest) (*os.File, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *os.File
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InjectionsAPIService.QueryDatapack")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/injections/{id}/datapack-query"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.injectionDatapackQueryReq == nil {
+		return localVarReturnValue, nil, reportError("injectionDatapackQueryReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/vnd.apache.arrow.stream"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.injectionDatapackQueryReq
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {

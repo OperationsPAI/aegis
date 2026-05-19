@@ -39,6 +39,7 @@ const (
 	CONSTSRESOURCENAME_ResourceInjection        ConstsResourceName = "injection"
 	CONSTSRESOURCENAME_ResourceExecution        ConstsResourceName = "execution"
 	CONSTSRESOURCENAME_ResourceAPIKey           ConstsResourceName = "api_key"
+	CONSTSRESOURCENAME_ResourcePedestal         ConstsResourceName = "pedestal"
 )
 
 // All allowed values of ConstsResourceName enum
@@ -61,6 +62,7 @@ var AllowedConstsResourceNameEnumValues = []ConstsResourceName{
 	"injection",
 	"execution",
 	"api_key",
+	"pedestal",
 }
 
 func (v *ConstsResourceName) UnmarshalJSON(src []byte) error {

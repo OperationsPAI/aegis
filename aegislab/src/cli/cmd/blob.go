@@ -430,10 +430,21 @@ func presignPut(bucket, key, contentType string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if resp.Data == nil {
+	if resp.Data == nil || resp.Data.Presigned == nil {
 		return "", fmt.Errorf("presign-put: empty response")
 	}
-	return resp.Data.GetUrl(), nil
+	return resolvePresignedURL(resp.Data.Presigned.GetUrl()), nil
+}
+
+// resolvePresignedURL turns a relative proxy URL (e.g. /api/v2/blob/raw/<tok>
+// emitted by the same-origin proxyPresign rewrite) into an absolute URL by
+// joining it with the configured server base. Absolute URLs (s3 presigns)
+// are returned unchanged.
+func resolvePresignedURL(raw string) string {
+	if raw == "" || !strings.HasPrefix(raw, "/") {
+		return raw
+	}
+	return strings.TrimRight(flagServer, "/") + raw
 }
 
 // objectExists returns whether the remote object is present.
@@ -1271,7 +1282,7 @@ See also: aegisctl share upload for short public links.`,
 			if resp.Data == nil {
 				return fmt.Errorf("presign-get: empty response")
 			}
-			urlOut = resp.Data.GetUrl()
+			urlOut = resolvePresignedURL(resp.Data.GetUrl())
 			expires = resp.Data.GetExpiresAt()
 			methodOut = resp.Data.GetMethod()
 		} else {
@@ -1284,12 +1295,12 @@ See also: aegisctl share upload for short public links.`,
 			if err != nil {
 				return err
 			}
-			if resp.Data == nil {
+			if resp.Data == nil || resp.Data.Presigned == nil {
 				return fmt.Errorf("presign-put: empty response")
 			}
-			urlOut = resp.Data.GetUrl()
-			expires = resp.Data.GetExpiresAt()
-			methodOut = resp.Data.GetMethod()
+			urlOut = resolvePresignedURL(resp.Data.Presigned.GetUrl())
+			expires = resp.Data.Presigned.GetExpiresAt()
+			methodOut = resp.Data.Presigned.GetMethod()
 		}
 		if methodOut == "" {
 			methodOut = strings.ToUpper(method)
