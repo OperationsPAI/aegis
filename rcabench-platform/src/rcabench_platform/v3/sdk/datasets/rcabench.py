@@ -75,22 +75,11 @@ REQUIRED_FILES = [
 ]
 
 
-def _get_optional_empty_parquets() -> set[str]:
-    """Parquet files that may be empty without failing validation.
-
-    Driven by the `RCABENCH_OPTIONAL_EMPTY_PARQUETS` env var: a
-    comma-separated list of filenames (e.g. `"abnormal_metrics_histogram.parquet,
-    normal_metrics_histogram.parquet"`). File must still exist and be
-    readable as a valid Parquet; only the zero-row check is relaxed.
-
-    Typical use case: benchmark systems whose applications don't emit OTel
-    histogram metrics (onlineboutique, sockshop, etc.). Opting them out
-    here lets the full datapack still be marked `.valid` so downstream RCA
-    algorithms can run — they already handle missing histogram columns
-    gracefully.
-    """
-    raw = os.environ.get("RCABENCH_OPTIONAL_EMPTY_PARQUETS", "")
-    return {name.strip() for name in raw.split(",") if name.strip()}
+class EmptyParquetError(Exception):
+    def __init__(self, file: str, rows: int = 0):
+        self.file = file
+        self.rows = rows
+        super().__init__(f"Parquet file has no data rows: {file}")
 
 
 def get_service_names(injection: dict[str, Any]) -> list[str]:
@@ -265,7 +254,7 @@ def rcabench_split_train_test(
     return train_datapacks, test_datapacks
 
 
-def valid(path: Path, force_refresh: bool = False) -> tuple[Path, bool]:
+def valid(path: Path, force_refresh: bool = False, allow_empty: bool = False) -> tuple[Path, bool]:
     path_obj = path
 
     if not path_obj.exists() or not path_obj.is_dir():
@@ -288,8 +277,6 @@ def valid(path: Path, force_refresh: bool = False) -> tuple[Path, bool]:
         valid_cache.unlink()
     if invalid_cache.exists():
         invalid_cache.unlink()
-
-    optional_empty = _get_optional_empty_parquets()
 
     for filename in REQUIRED_FILES:
         file_path = path_obj / filename
@@ -325,13 +312,14 @@ def valid(path: Path, force_refresh: bool = False) -> tuple[Path, bool]:
                 row_count = df.height
 
                 if row_count == 0:
-                    if filename in optional_empty:
+                    if allow_empty:
                         logger.warning(
-                            "Parquet file has no data rows but is opted out via RCABENCH_OPTIONAL_EMPTY_PARQUETS: {}",
+                            "Parquet file has no data rows but allow_empty=True: {}",
                             filename,
                         )
                     else:
-                        reason = f"Parquet file has no data rows: {filename}"
+                        err = EmptyParquetError(file=filename, rows=0)
+                        reason = str(err)
                         logger.warning("Validation failed: {}", reason)
                         invalid_f = path_obj / ".invalid"
                         invalid_f.write_text(reason)
