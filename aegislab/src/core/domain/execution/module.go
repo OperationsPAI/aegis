@@ -4,6 +4,7 @@ import "go.uber.org/fx"
 
 var Module = fx.Module("execution",
 	fx.Provide(NewRepository),
+	fx.Provide(NewCascader),
 	fx.Provide(NewService),
 	fx.Provide(
 		fx.Annotate(AsReader, fx.As(new(Reader))),

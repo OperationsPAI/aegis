@@ -75,6 +75,15 @@ type ChaosSystemWriter interface {
 	EnsureCountForNamespace(ctx context.Context, systemName, namespace string) (bool, error)
 }
 
+// ExecutionCascader is the narrow contract injection.Service needs to
+// cascade-delete executions when injections are batch-deleted. Implemented
+// structurally by *execution.cascader; declared here to avoid the
+// execution→injection→execution import cycle (execution already depends on
+// injection.Reader).
+type ExecutionCascader interface {
+	CascadeDeleteByInjectionIDs(ctx context.Context, scope authz.CallerScope, injectionIDs []int) error
+}
+
 // TaskCanceller is the narrow contract injection.Service needs to cancel
 // the task backing an injection. Implemented by *task.Service via an
 // app-level adapter so this package owns its own DTO shape and avoids
@@ -94,28 +103,30 @@ type CancelInjectionTaskResult struct {
 }
 
 type Service struct {
-	repo          *Repository
-	store         DatapackStorage
-	chLogReader   chinfra.LogReader
-	containers    container.Reader
-	datasets      dataset.Reader
-	labels        label.Writer
-	redis         *redis.Gateway
-	chaosSystems  ChaosSystemWriter
-	taskCanceller TaskCanceller
+	repo             *Repository
+	store            DatapackStorage
+	chLogReader      chinfra.LogReader
+	containers       container.Reader
+	datasets         dataset.Reader
+	labels           label.Writer
+	redis            *redis.Gateway
+	chaosSystems     ChaosSystemWriter
+	taskCanceller    TaskCanceller
+	executionCascade ExecutionCascader
 }
 
-func NewService(repo *Repository, store DatapackStorage, chLogReader chinfra.LogReader, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter, taskCanceller TaskCanceller) *Service {
+func NewService(repo *Repository, store DatapackStorage, chLogReader chinfra.LogReader, containers container.Reader, datasets dataset.Reader, labels label.Writer, redis *redis.Gateway, chaosSystems ChaosSystemWriter, taskCanceller TaskCanceller, executionCascade ExecutionCascader) *Service {
 	return &Service{
-		repo:          repo,
-		store:         store,
-		chLogReader:   chLogReader,
-		containers:    containers,
-		datasets:      datasets,
-		labels:        labels,
-		redis:         redis,
-		chaosSystems:  chaosSystems,
-		taskCanceller: taskCanceller,
+		repo:             repo,
+		store:            store,
+		chLogReader:      chLogReader,
+		containers:       containers,
+		datasets:         datasets,
+		labels:           labels,
+		redis:            redis,
+		chaosSystems:     chaosSystems,
+		taskCanceller:    taskCanceller,
+		executionCascade: executionCascade,
 	}
 }
 
@@ -821,11 +832,11 @@ func (s *Service) BatchManageLabels(_ context.Context, req *BatchManageInjection
 	})
 }
 
-func (s *Service) BatchDelete(ctx context.Context, req *BatchDeleteInjectionReq) error {
+func (s *Service) BatchDelete(ctx context.Context, scope authz.CallerScope, req *BatchDeleteInjectionReq) error {
 	if len(req.IDs) > 0 {
-		return s.batchDeleteByIDs(req.IDs)
+		return s.batchDeleteByIDs(ctx, scope, req.IDs)
 	}
-	return s.batchDeleteByLabels(req.Labels)
+	return s.batchDeleteByLabels(ctx, scope, req.Labels)
 }
 
 func (s *Service) Clone(_ context.Context, id int, req *CloneInjectionReq) (*InjectionDetailResp, error) {
@@ -1247,17 +1258,47 @@ func (s *Service) GetReadyDatapackName(_ context.Context, id int) (string, error
 	return injection.Name, nil
 }
 
-func (s *Service) batchDeleteByIDs(injectionIDs []int) error {
+func (s *Service) batchDeleteByIDs(ctx context.Context, scope authz.CallerScope, injectionIDs []int) error {
 	if len(injectionIDs) == 0 {
 		return nil
 	}
+
+	if !scope.IsAdmin {
+		injections, err := s.repo.listFaultInjectionsByIDWithLabels(injectionIDs)
+		if err != nil {
+			return fmt.Errorf("failed to load injections for scope check: %w", err)
+		}
+		// Hide existence on cross-tenant ids: any id whose injection wasn't
+		// loaded (deleted, or in a project the caller can't see) is treated
+		// the same as a project mismatch — rejection over the whole batch.
+		// The caller is responsible for asking only for ids they own.
+		if len(injections) != len(injectionIDs) {
+			return fmt.Errorf("%w: one or more injection ids are outside caller scope", consts.ErrNotFound)
+		}
+		for i := range injections {
+			inj := &injections[i]
+			if inj.Task == nil || inj.Task.Trace == nil {
+				return fmt.Errorf("%w: injection %d has no project linkage", consts.ErrNotFound, inj.ID)
+			}
+			if err := scope.MustHaveProject(int64(inj.Task.Trace.ProjectID)); err != nil {
+				return fmt.Errorf("%w: one or more injection ids are outside caller scope", consts.ErrNotFound)
+			}
+		}
+	}
+
+	if s.executionCascade != nil {
+		if err := s.executionCascade.CascadeDeleteByInjectionIDs(ctx, scope, injectionIDs); err != nil {
+			return fmt.Errorf("failed to cascade-delete executions: %w", err)
+		}
+	}
+
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
-		return repo.deleteInjectionsCascade(injectionIDs)
+		return repo.deleteInjectionsLocal(injectionIDs)
 	})
 }
 
-func (s *Service) batchDeleteByLabels(labelItems []dto.LabelItem) error {
+func (s *Service) batchDeleteByLabels(ctx context.Context, scope authz.CallerScope, labelItems []dto.LabelItem) error {
 	if len(labelItems) == 0 {
 		return nil
 	}
@@ -1269,7 +1310,7 @@ func (s *Service) batchDeleteByLabels(labelItems []dto.LabelItem) error {
 	if err != nil {
 		return fmt.Errorf("failed to list injection ids by labels: %w", err)
 	}
-	return s.batchDeleteByIDs(injectionIDs)
+	return s.batchDeleteByIDs(ctx, scope, injectionIDs)
 }
 
 // CancelInjection cascades cancellation through to the task that backs the

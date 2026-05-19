@@ -200,6 +200,10 @@ func (r *Repository) batchDecreaseLabelUsages(labelIDs []int, decrement int) err
 	return nil
 }
 
+// listExecutionsByDatapackIDs is a read of the executions table kept in this
+// package because BuildDatapack / RunAlgorithm consumers still query it via
+// injection.Service. The matching writes were carved out to
+// execution.Cascader (see PR 2 of the CallerScope rollout).
 func (r *Repository) listExecutionsByDatapackIDs(datapackIDs []int) ([]model.Execution, error) {
 	if len(datapackIDs) == 0 {
 		return []model.Execution{}, nil
@@ -219,29 +223,6 @@ func (r *Repository) listExecutionsByDatapackIDs(datapackIDs []int) ([]model.Exe
 	return executions, nil
 }
 
-func (r *Repository) removeLabelsFromExecutions(executionIDs []int) error {
-	if len(executionIDs) == 0 {
-		return nil
-	}
-	if err := r.db.Where("execution_id IN (?)", executionIDs).
-		Delete(&model.ExecutionInjectionLabel{}).Error; err != nil {
-		return fmt.Errorf("failed to remove all labels from executions %v: %w", executionIDs, err)
-	}
-	return nil
-}
-
-func (r *Repository) batchDeleteExecutions(executionIDs []int) error {
-	if len(executionIDs) == 0 {
-		return nil
-	}
-	if err := r.db.Model(&model.Execution{}).
-		Where("id IN (?) AND status != ?", executionIDs, consts.CommonDeleted).
-		Update("status", consts.CommonDeleted).Error; err != nil {
-		return fmt.Errorf("failed to batch delete executions: %w", err)
-	}
-	return nil
-}
-
 func (r *Repository) batchDeleteInjections(injectionIDs []int) error {
 	if len(injectionIDs) == 0 {
 		return nil
@@ -254,26 +235,10 @@ func (r *Repository) batchDeleteInjections(injectionIDs []int) error {
 	return nil
 }
 
-func (r *Repository) deleteInjectionsCascade(injectionIDs []int) error {
-	executions, err := r.listExecutionsByDatapackIDs(injectionIDs)
-	if err != nil {
-		return fmt.Errorf("failed to list executions by datapack ids: %w", err)
-	}
-
-	executionIDs := make([]int, 0, len(executions))
-	for _, execution := range executions {
-		executionIDs = append(executionIDs, execution.ID)
-	}
-
-	if len(executionIDs) > 0 {
-		if err := r.removeLabelsFromExecutions(executionIDs); err != nil {
-			return fmt.Errorf("failed to remove execution labels: %w", err)
-		}
-		if err := r.batchDeleteExecutions(executionIDs); err != nil {
-			return fmt.Errorf("failed to delete executions: %w", err)
-		}
-	}
-
+// deleteInjectionsLocal cleans up only injection-side rows (labels +
+// injections). The caller is responsible for cascading executions via
+// execution.Cascader BEFORE invoking this within the same transaction.
+func (r *Repository) deleteInjectionsLocal(injectionIDs []int) error {
 	if err := r.clearInjectionLabels(injectionIDs, nil); err != nil {
 		return fmt.Errorf("failed to clear injection labels: %w", err)
 	}
