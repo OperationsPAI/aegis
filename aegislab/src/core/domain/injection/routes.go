@@ -16,7 +16,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "injection",
 		Register: func(v2 *gin.RouterGroup) {
-			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
+			projects := v2.Group("/projects")
 			{
 				injections := projects.Group("/:project_id/injections")
 				{
@@ -40,7 +40,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 				}
 			}
 
-			injections := v2.Group("/injections", middleware.TrustedHeaderAuth())
+			injections := v2.Group("/injections")
 			{
 				injections.GET("/systems", handler.GetSystemMapping)
 				injections.GET("/:id", handler.GetInjection)

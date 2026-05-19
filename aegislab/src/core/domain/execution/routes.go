@@ -17,7 +17,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "execution",
 		Register: func(v2 *gin.RouterGroup) {
-			projects := v2.Group("/projects", middleware.TrustedHeaderAuth())
+			projects := v2.Group("/projects")
 			{
 				executions := projects.Group("/:project_id/executions")
 				{
@@ -33,7 +33,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 				}
 			}
 
-			executions := v2.Group("/executions", middleware.TrustedHeaderAuth())
+			executions := v2.Group("/executions")
 			{
 				executions.GET("", handler.ListExecutions)
 				executions.GET("/labels", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKExecutionsAll, consts.ScopeSDKExecutionsRead), handler.ListAvailableExecutionLabels)
@@ -43,7 +43,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 				executions.POST("/compare", handler.CompareExecutions)
 			}
 
-			runtime := v2.Group("/executions", middleware.TrustedHeaderAuth(), middleware.RequireServiceTokenAuth())
+			runtime := v2.Group("/executions", middleware.RequireServiceTokenAuth())
 			{
 				runtime.POST("/:execution_id/detector_results", handler.UploadDetectorResults)
 				runtime.POST("/:execution_id/granularity_results", handler.UploadGranularityResults)

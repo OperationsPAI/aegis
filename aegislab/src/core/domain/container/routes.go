@@ -12,7 +12,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "container.portal",
 		Register: func(v2 *gin.RouterGroup) {
-			containers := v2.Group("/containers", middleware.TrustedHeaderAuth())
+			containers := v2.Group("/containers")
 			{
 				containerRead := containers.Group("", middleware.RequireContainerRead)
 				{
@@ -46,7 +46,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				}
 			}
 
-			flatContainerVersions := v2.Group("/container-versions", middleware.TrustedHeaderAuth())
+			flatContainerVersions := v2.Group("/container-versions")
 			{
 				flatContainerVersions.PATCH("/:id/image", middleware.RequireContainerVersionUpdate, handler.SetContainerVersionImage)
 			}

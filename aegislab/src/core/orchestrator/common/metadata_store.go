@@ -296,7 +296,7 @@ func (s *DBMetadataStore) InvalidateCache() {
 func (s *DBMetadataStore) getSystemMetadata(systemName, metadataType, serviceName string) (*model.SystemMetadata, error) {
 	var meta model.SystemMetadata
 	if err := s.db.Where("system_name = ? AND metadata_type IN ? AND service_name = ?", systemName, metadataTypeCandidates(metadataType), serviceName).
-		Order("updated_at DESC").
+		Order("system_metadata.updated_at DESC").
 		First(&meta).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil

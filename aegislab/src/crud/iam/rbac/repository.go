@@ -95,7 +95,7 @@ func (r *Repository) listRoleViews(limit, offset int, isSystem *bool, status *co
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count roles: %v", err)
 	}
-	if err := query.Limit(limit).Offset(offset).Order("updated_at DESC").Find(&roles).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Order("roles.updated_at DESC").Find(&roles).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list roles: %v", err)
 	}
 	return roles, total, nil
@@ -224,7 +224,7 @@ func (r *Repository) listPermissionViews(limit, offset int, action consts.Action
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count permissions: %v", err)
 	}
-	if err := query.Limit(limit).Offset(offset).Order("updated_at DESC").Find(&permissions).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Order("permissions.updated_at DESC").Find(&permissions).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list permissions: %v", err)
 	}
 	return permissions, total, nil

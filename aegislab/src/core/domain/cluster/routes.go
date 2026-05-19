@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"aegis/platform/framework"
-	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +15,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "cluster",
 		Register: func(v2 *gin.RouterGroup) {
-			cluster := v2.Group("/cluster", middleware.TrustedHeaderAuth())
+			cluster := v2.Group("/cluster")
 			cluster.GET("/status", handler.GetClusterStatus)
 		},
 	}

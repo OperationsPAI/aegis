@@ -19,7 +19,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "chaossystem",
 		Register: func(v2 *gin.RouterGroup) {
-			systems := v2.Group("/systems", middleware.TrustedHeaderAuth())
+			systems := v2.Group("/systems")
 			{
 				// Open reads — needed by the portal injection wizard.
 				systems.GET("", handler.ListSystems)

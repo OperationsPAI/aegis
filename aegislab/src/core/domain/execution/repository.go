@@ -115,7 +115,7 @@ func (r *Repository) listExecutionsView(limit, offset int, scope authz.CallerSco
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count executions: %w", err)
 	}
-	if err := query.Limit(limit).Offset(offset).Order("updated_at DESC").Find(&executions).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Order("executions.updated_at DESC").Find(&executions).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list executions: %w", err)
 	}
 	return r.attachExecutionLabels(executions, total)
