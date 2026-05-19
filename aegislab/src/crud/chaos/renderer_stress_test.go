@@ -49,7 +49,7 @@ func TestStressRenderers(t *testing.T) {
 				t.Errorf("ValidateParams should reject missing %s", tc.missing)
 			}
 
-			cr, err := r.RenderCR("x", "ts", target, tc.params)
+			cr, err := r.RenderCR(SystemContext{}, "x", "ts", target, tc.params)
 			if err != nil {
 				t.Fatalf("RenderCR: %v", err)
 			}
@@ -79,7 +79,7 @@ func TestStressRenderers(t *testing.T) {
 func TestMemoryStressSizeFormat(t *testing.T) {
 	r, _ := lookupRenderer("memory_stress")
 	target := map[string]any{"namespace": "ts", "app": "ts-order", "container": "order"}
-	cr, err := r.RenderCR("x", "ts", target, map[string]any{"size_mib": 512})
+	cr, err := r.RenderCR(SystemContext{}, "x", "ts", target, map[string]any{"size_mib": 512})
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}

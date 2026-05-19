@@ -37,7 +37,7 @@ func (r podKillRenderer) ValidateTarget(target map[string]any) error {
 
 func (podKillRenderer) ValidateParams(_ map[string]any) error { return nil }
 
-func (podKillRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (podKillRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	app, _ := target["app"].(string)
 	spec := map[string]any{
 		"action": "pod-kill",
@@ -45,7 +45,7 @@ func (podKillRenderer) RenderCR(name, namespace string, target, params map[strin
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": app,
+				sysCtx.LabelKey(): app,
 			},
 		},
 	}

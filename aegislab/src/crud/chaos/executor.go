@@ -48,6 +48,7 @@ type Executor interface {
 	// MUST be a no-op on the cluster. Chaos-Mesh treats AlreadyExists as
 	// success per ADR-0004.
 	Apply(ctx context.Context,
+		sysCtx SystemContext,
 		capability, handle string,
 		target, params map[string]any,
 	) error

@@ -73,7 +73,7 @@ func TestNetworkDelayRender(t *testing.T) {
 		t.Fatalf("ValidateParams: %v", err)
 	}
 
-	cr, err := r.RenderCR("aegis-netdelay-abc123", "ts", target, params)
+	cr, err := r.RenderCR(SystemContext{}, "aegis-netdelay-abc123", "ts", target, params)
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestNetworkRenderersActionMapping(t *testing.T) {
 			if err := r.ValidateParams(tc.validParams); err != nil {
 				t.Fatalf("ValidateParams(valid): %v", err)
 			}
-			cr, err := r.RenderCR("aegis-x", "ts", target, tc.validParams)
+			cr, err := r.RenderCR(SystemContext{}, "aegis-x", "ts", target, tc.validParams)
 			if err != nil {
 				t.Fatalf("RenderCR: %v", err)
 			}

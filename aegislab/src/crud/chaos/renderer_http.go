@@ -143,7 +143,7 @@ func (r httpRenderer) ValidateParams(params map[string]any) error {
 	return nil
 }
 
-func (r httpRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (r httpRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	app, _ := target["app"].(string)
 	method, _ := target["method"].(string)
 	path, _ := target["path"].(string)
@@ -154,7 +154,7 @@ func (r httpRenderer) RenderCR(name, namespace string, target, params map[string
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": app,
+				sysCtx.LabelKey(): app,
 			},
 		},
 		"target": r.specTarget(),

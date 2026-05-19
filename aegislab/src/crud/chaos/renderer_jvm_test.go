@@ -63,7 +63,7 @@ func TestJVMMethodLatencyRender(t *testing.T) {
 	if err := r.ValidateParams(params); err != nil {
 		t.Fatalf("ValidateParams: %v", err)
 	}
-	cr, err := r.RenderCR("aegis-jvmlat-abc", "ts", target, params)
+	cr, err := r.RenderCR(SystemContext{}, "aegis-jvmlat-abc", "ts", target, params)
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestJVMMySQLExceptionRender(t *testing.T) {
 	if err := r.ValidateParams(params); err != nil {
 		t.Fatalf("ValidateParams: %v", err)
 	}
-	cr, err := r.RenderCR("aegis-jvmmysqlexc-abc", "ts", target, params)
+	cr, err := r.RenderCR(SystemContext{}, "aegis-jvmmysqlexc-abc", "ts", target, params)
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestJVMRenderersActionMapping(t *testing.T) {
 			if err := r.ValidateParams(tc.params); err != nil {
 				t.Fatalf("ValidateParams: %v", err)
 			}
-			cr, err := r.RenderCR("aegis-x", "ts", tc.target, tc.params)
+			cr, err := r.RenderCR(SystemContext{}, "aegis-x", "ts", tc.target, tc.params)
 			if err != nil {
 				t.Fatalf("RenderCR: %v", err)
 			}

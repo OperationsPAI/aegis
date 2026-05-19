@@ -9,6 +9,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// SystemContext carries the per-system knobs a Renderer needs at apply
+// time. Today only AppLabelKey — chaos-mesh selector labels must use the
+// real key in the target cluster (commonly app.kubernetes.io/name)
+// rather than a hardcoded "app".
+type SystemContext struct {
+	Name        string
+	AppLabelKey string
+}
+
+// LabelKey returns AppLabelKey or the historical "app" default.
+func (s SystemContext) LabelKey() string {
+	if s.AppLabelKey != "" {
+		return s.AppLabelKey
+	}
+	return "app"
+}
+
 // Renderer turns one Capability into a Chaos-Mesh CR. Lives behind a
 // registry so executor_chaosmesh.go can dispatch by capability name
 // without growing a switch for every new family.
@@ -25,7 +42,7 @@ type Renderer interface {
 	ValidateForHandle(target map[string]any) error
 	ValidateTarget(target map[string]any) error
 	ValidateParams(params map[string]any) error
-	RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error)
+	RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error)
 }
 
 var (

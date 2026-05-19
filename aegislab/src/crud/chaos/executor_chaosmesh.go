@@ -129,6 +129,7 @@ func (e *ChaosMeshExecutor) DeriveHandle(
 
 func (e *ChaosMeshExecutor) Apply(
 	ctx context.Context,
+	sysCtx SystemContext,
 	capability, handle string,
 	target, params map[string]any,
 ) error {
@@ -146,7 +147,7 @@ func (e *ChaosMeshExecutor) Apply(
 	if err != nil {
 		return err
 	}
-	cr, err := r.RenderCR(h.Name, h.Namespace, target, params)
+	cr, err := r.RenderCR(sysCtx, h.Name, h.Namespace, target, params)
 	if err != nil {
 		return fmt.Errorf("chaos-mesh %s: render CR: %w", capability, err)
 	}

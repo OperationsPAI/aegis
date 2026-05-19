@@ -46,7 +46,7 @@ func (timeSkewRenderer) ValidateParams(params map[string]any) error {
 	return nil
 }
 
-func (timeSkewRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (timeSkewRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	app, _ := target["app"].(string)
 	container, _ := target["container"].(string)
 	offset, _ := getInt(params, "offset_s")
@@ -56,7 +56,7 @@ func (timeSkewRenderer) RenderCR(name, namespace string, target, params map[stri
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": app,
+				sysCtx.LabelKey(): app,
 			},
 		},
 		"containerNames": []any{container},

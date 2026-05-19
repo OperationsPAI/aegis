@@ -28,7 +28,7 @@ func TestContainerKillRender(t *testing.T) {
 	if err := r.ValidateTarget(map[string]any{"namespace": "ts", "app": "ts-order"}); err == nil {
 		t.Error("ValidateTarget must reject missing container for container_kill")
 	}
-	cr, err := r.RenderCR("x", "ts", target, map[string]any{"duration_s": 30})
+	cr, err := r.RenderCR(SystemContext{}, "x", "ts", target, map[string]any{"duration_s": 30})
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestPodFailureRender(t *testing.T) {
 	if err := r.ValidateTarget(target); err != nil {
 		t.Fatalf("ValidateTarget: %v", err)
 	}
-	cr, err := r.RenderCR("x", "ts", target, map[string]any{})
+	cr, err := r.RenderCR(SystemContext{}, "x", "ts", target, map[string]any{})
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}
@@ -61,5 +61,33 @@ func TestPodFailureRender(t *testing.T) {
 	}
 	if _, present := spec["containerNames"]; present {
 		t.Error("pod-failure must not set containerNames")
+	}
+}
+
+// TestRendererSystemContextLabelKey asserts the AppLabelKey thread —
+// when the system declares `app.kubernetes.io/name`, the selector
+// labelSelectors key changes accordingly. Regression-guards the
+// step-5a fix that closes the "CR created but matches 0 pods" trap.
+func TestRendererSystemContextLabelKey(t *testing.T) {
+	r, _ := lookupRenderer("pod_kill")
+	target := map[string]any{"namespace": "otel-demo0", "app": "cart"}
+	cr, err := r.RenderCR(
+		SystemContext{Name: "otel-demo", AppLabelKey: "app.kubernetes.io/name"},
+		"x", "otel-demo0", target, nil)
+	if err != nil {
+		t.Fatalf("RenderCR: %v", err)
+	}
+	labels := cr.Object["spec"].(map[string]any)["selector"].(map[string]any)["labelSelectors"].(map[string]any)
+	if _, dirty := labels["app"]; dirty {
+		t.Errorf("legacy 'app' key must not be stamped when AppLabelKey override present")
+	}
+	if labels["app.kubernetes.io/name"] != "cart" {
+		t.Errorf("expected app.kubernetes.io/name=cart, got %v", labels)
+	}
+
+	cr2, _ := r.RenderCR(SystemContext{}, "x", "ns", target, nil)
+	labels2 := cr2.Object["spec"].(map[string]any)["selector"].(map[string]any)["labelSelectors"].(map[string]any)
+	if labels2["app"] != "cart" {
+		t.Errorf("empty SystemContext should default to 'app' key, got %v", labels2)
 	}
 }
