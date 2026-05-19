@@ -31,9 +31,12 @@ var Module = fx.Module("blob",
 	fx.Provide(NewHandler),
 	fx.Provide(NewDeletionWorker),
 	fx.Invoke(registerLifecycle),
+	fx.Provide(NewBucketLifecycleWorker),
+	fx.Invoke(registerBucketLifecycle),
 
 	fx.Provide(
 		fx.Annotate(RoutesPortal, fx.ResultTags(`group:"routes"`)),
+		fx.Annotate(RoutesLifecycle, fx.ResultTags(`group:"routes"`)),
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
 	),
 )
