@@ -170,12 +170,12 @@ func leakedRateLimiterBuckets(items []apiclient.RatelimiterRateLimiterItem) []ap
 
 func printRateLimiterGCPlan(leaks []apiclient.RatelimiterRateLimiterItem) {
 	if len(leaks) == 0 {
-		fmt.Println("No terminal-state buckets to clean")
+		output.PrintInfo("No terminal-state buckets to clean")
 		output.PrintInfo("Use --force to execute cleanup")
 		return
 	}
 
-	fmt.Println("The following buckets have terminal-state holders and would be cleaned:")
+	output.PrintInfo("The following buckets have terminal-state holders and would be cleaned:")
 	headers := []string{"BUCKET", "HELD/CAP", "TERMINAL HOLDERS"}
 	rows := make([][]string, 0, len(leaks))
 	for _, item := range leaks {

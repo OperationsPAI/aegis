@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"aegis/cli/apiclient"
 	"aegis/cli/client"
@@ -158,11 +157,10 @@ var datasetDeleteCmd = &cobra.Command{
 		}
 
 		if flagDryRun {
-			fmt.Fprintf(os.Stderr, "Dry run — would DELETE /api/v2/datasets/%d (%s)\n", id, name)
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
 				output.PrintJSON(map[string]any{"dry_run": true, "id": id, "name": name})
 			} else {
-				fmt.Printf("Would delete dataset %s (id %d)\n", name, id)
+				output.PrintInfo(fmt.Sprintf("Dry run — would delete dataset %s (id %d)", name, id))
 			}
 			return nil
 		}

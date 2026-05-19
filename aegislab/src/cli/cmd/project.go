@@ -349,11 +349,10 @@ var projectDeleteCmd = &cobra.Command{
 		}
 
 		if flagDryRun {
-			fmt.Fprintf(os.Stderr, "Dry run — would DELETE /api/v2/projects/%d (%s)\n", id, name)
 			if output.OutputFormat(flagOutput) == output.FormatJSON {
 				output.PrintJSON(map[string]any{"dry_run": true, "id": id, "name": name})
 			} else {
-				fmt.Printf("Would delete project %s (id %d)\n", name, id)
+				output.PrintInfo(fmt.Sprintf("Dry run — would delete project %s (id %d)", name, id))
 			}
 			return nil
 		}
