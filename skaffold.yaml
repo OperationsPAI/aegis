@@ -17,9 +17,9 @@ metadata:
 #                             not based on rcabench-platform — independent)
 #   opspai/rcabench           aegislab backend (Go + duckdb_arrow)
 #
-# Build dependencies: clickhouse_dataset + reason `require` rcabench-platform
-# and receive its built tag as the BASE_IMAGE build-arg. detector + rcabench
-# stand alone.
+# Build dependencies: every image is self-contained (multi-stage from
+# python:3.13-slim or golang). rcabench-platform stays as an interactive
+# `--all-extras` venv image for ad-hoc shells but no other image FROMs it.
 #
 # Usage:
 #   skaffold build -p local           # local kind dev
@@ -36,21 +36,15 @@ profiles:
             dockerfile: Dockerfile
             network: host
         - image: opspai/clickhouse_dataset
-          context: rcabench-platform/docker/clickhouse_dataset
+          context: rcabench-platform
           docker:
-            dockerfile: Dockerfile
+            dockerfile: docker/clickhouse_dataset/Dockerfile
             network: host
-          requires:
-            - image: opspai/rcabench-platform
-              alias: BASE_IMAGE
         - image: opspai/reason
-          context: rcabench-platform/docker/reason
+          context: rcabench-platform
           docker:
-            dockerfile: Dockerfile
+            dockerfile: docker/reason/Dockerfile
             network: host
-          requires:
-            - image: opspai/rcabench-platform
-              alias: BASE_IMAGE
         - image: opspai/detector
           context: rcabench-platform
           docker:
@@ -110,21 +104,15 @@ profiles:
             dockerfile: Dockerfile
             network: host
         - image: 10.10.10.240/library/clickhouse_dataset
-          context: rcabench-platform/docker/clickhouse_dataset
+          context: rcabench-platform
           docker:
-            dockerfile: Dockerfile
+            dockerfile: docker/clickhouse_dataset/Dockerfile
             network: host
-          requires:
-            - image: 10.10.10.240/library/rcabench-platform
-              alias: BASE_IMAGE
         - image: 10.10.10.240/library/reason
-          context: rcabench-platform/docker/reason
+          context: rcabench-platform
           docker:
-            dockerfile: Dockerfile
+            dockerfile: docker/reason/Dockerfile
             network: host
-          requires:
-            - image: 10.10.10.240/library/rcabench-platform
-              alias: BASE_IMAGE
         - image: 10.10.10.240/library/detector
           context: rcabench-platform
           docker:
@@ -214,21 +202,15 @@ profiles:
             dockerfile: Dockerfile
             network: host
         - image: docker.io/opspai/clickhouse_dataset
-          context: rcabench-platform/docker/clickhouse_dataset
+          context: rcabench-platform
           docker:
-            dockerfile: Dockerfile
+            dockerfile: docker/clickhouse_dataset/Dockerfile
             network: host
-          requires:
-            - image: docker.io/opspai/rcabench-platform
-              alias: BASE_IMAGE
         - image: docker.io/opspai/reason
-          context: rcabench-platform/docker/reason
+          context: rcabench-platform
           docker:
-            dockerfile: Dockerfile
+            dockerfile: docker/reason/Dockerfile
             network: host
-          requires:
-            - image: docker.io/opspai/rcabench-platform
-              alias: BASE_IMAGE
         - image: docker.io/opspai/detector
           context: rcabench-platform
           docker:
