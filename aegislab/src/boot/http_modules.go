@@ -17,6 +17,7 @@ import (
 	injection "aegis/core/domain/injection"
 	pedestal "aegis/core/domain/pedestal"
 	task "aegis/core/domain/task"
+	chaosprune "aegis/crud/admin/chaosprune"
 	configcenter "aegis/crud/admin/configcenter"
 	ratelimiter "aegis/crud/admin/ratelimiter"
 	widget "aegis/crud/admin/widget"
@@ -88,6 +89,7 @@ func apiHTTPModules() []fx.Option {
 		notification.Module,
 
 		// crud/admin
+		chaosprune.Module,
 		configcenter.Module,
 		ratelimiter.Module,
 		widget.Module,
@@ -115,7 +117,7 @@ func apiHTTPModuleNames() []string {
 		"blob",
 		"pages",
 		"notification",
-		"configcenter", "ratelimiter", "widget",
+		"chaosprune", "configcenter", "ratelimiter", "widget",
 		"blobclient", "configcenterclient", "gateway", "notificationclient",
 	}
 }
