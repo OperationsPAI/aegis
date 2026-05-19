@@ -65,12 +65,14 @@ func TestChaosTypeTranslation(t *testing.T) {
 	}
 }
 
-// TestGuidedToChaosPointID_OtelDemoCart asserts that a guided YAML config
-// matching the seed catalog manifest (manifests/aegis-chaos/otel-demo/cart.yaml)
-// for `pod_kill` derives the same Point ID the chaos service computed at
-// import time. This is non-tautological: it tests the YAML→target derivation
-// in guidedToChaosTarget, then asserts the derived target hashes to the
-// expected service-bound id.
+// TestGuidedToChaosPointID_OtelDemoCart pins the derived Point ID to the
+// literal hash the chaos service recorded when it imported
+// manifests/aegis-chaos/otel-demo/cart.yaml for pod_kill. Drifts here mean
+// EITHER the seed catalog moved (re-import flagged a real change) OR the
+// YAML→target derivation broke — both warrant human review, not a silent
+// auto-pass. Recomputing via chaoscrud here would be tautological.
+const expectCartPodKillPointID = "86db3bb27a46fedf"
+
 func TestGuidedToChaosPointID_OtelDemoCart(t *testing.T) {
 	cfg := guidedcli.GuidedConfig{
 		System:    "otel-demo",
@@ -89,22 +91,8 @@ func TestGuidedToChaosPointID_OtelDemoCart(t *testing.T) {
 	if !reflect.DeepEqual(target, wantTarget) {
 		t.Errorf("target: got %v, want %v", target, wantTarget)
 	}
-	// Independently recompute via the crud package to confirm the wiring
-	// (system, service, instance, chart_version, capability, target) is
-	// passed through unchanged.
-	wantID, err := chaoscrud.ServiceBoundPointID(chaoscrud.PointIdentity{
-		System:       "otel-demo",
-		Service:      "cart",
-		Instance:     "seed",
-		ChartVersion: "seed-genesis",
-		Capability:   "pod_kill",
-		Target:       wantTarget,
-	})
-	if err != nil {
-		t.Fatalf("recompute: %v", err)
-	}
-	if pid != wantID {
-		t.Errorf("point_id: got %s, want %s", pid, wantID)
+	if pid != expectCartPodKillPointID {
+		t.Fatalf("point_id drift: got %q want %q (seed catalog out of sync OR target derivation broke)", pid, expectCartPodKillPointID)
 	}
 }
 

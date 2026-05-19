@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 	"aegis/cli/output"
 	"aegis/platform/consts"
 
+	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
 
 type regressionCase struct {
 	Name        string               `yaml:"name"`
@@ -65,6 +68,12 @@ var (
 	regressionPodListerHook     PodLister // test injection seam; nil => real k8s client
 	regressionInstallerHook     chartInstaller
 	regressionSystemsHook       SystemsFetcher // test injection seam; nil => real HTTP client
+
+	// §11 step 4 Round 3: cutover flag — when set, regression submit routes
+	// through aegis-chaos /v1beta/injections{,/batches} via submitGuidedViaChaos
+	// instead of the legacy backend POST. Off by default; AEGIS_INJECT_VIA_CHAOS
+	// is the shared env knob.
+	regressionViaChaos bool
 )
 
 // SystemsFetcher is the minimal /api/v2/systems surface
@@ -308,6 +317,30 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 			rc.Submit = map[string]any{}
 		}
 		rc.Submit["skip_restart_pedestal"] = true
+	}
+	// §11 step 4 Round 3 — when --via-chaos is on, route this submit through
+	// aegis-chaos instead of the backend's freeform POST. The trace_id /
+	// observed-events chain currently depends on the backend's response (see
+	// the SSE reader below), which the chaos service does not yet emit; for
+	// now the via-chaos path returns after the chaos POST without observing
+	// trace events. Treat that as expected and surface a partial summary.
+	if regressionViaChaos {
+		if flagChaosServer == "" {
+			return regressionSummary{}, usageErrorf("regression --via-chaos requires --chaos-server (or AEGIS_CHAOS_SERVER)")
+		}
+		cfgs, opts, err := regressionSubmitToGuidedConfigs(rc)
+		if err != nil {
+			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: %w", rc.Name, err)
+		}
+		if err := submitGuidedViaChaos(cfgs, opts); err != nil {
+			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: %w", rc.Name, err)
+		}
+		return regressionSummary{
+			CaseName:    rc.Name,
+			CaseFile:    casePath,
+			ProjectName: projectName,
+			Status:      "via_chaos_submitted",
+		}, nil
 	}
 	// TODO: missing swag annotation — generated SubmitProjectFaultInjection
 	// requires a typed InjectionSubmitInjectionReq, but rc.Submit is a
@@ -848,6 +881,61 @@ func (l *livePodLister) CountReadyPods(ctx context.Context, namespace, labelSele
 	return len(pods.Items), ready, nil
 }
 
+// regressionSubmitToGuidedConfigs flattens rc.Submit.specs (shape:
+// [[{system, namespace, app, chaos_type, ...}, ...], ...]) into the flat
+// []guidedcli.GuidedConfig submitGuidedViaChaos expects, plus the
+// pedestal/benchmark envelope it needs for caller_metadata. JSON tags on
+// GuidedConfig already match the YAML keys so a round-trip unmarshal works.
+func regressionSubmitToGuidedConfigs(rc regressionCase) ([]guidedcli.GuidedConfig, guidedApplyOptions, error) {
+	specsRaw, ok := rc.Submit["specs"]
+	if !ok {
+		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.specs missing")
+	}
+	groups, ok := specsRaw.([]any)
+	if !ok {
+		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.specs is not a list")
+	}
+	var cfgs []guidedcli.GuidedConfig
+	for _, g := range groups {
+		inner, ok := g.([]any)
+		if !ok {
+			continue
+		}
+		for _, s := range inner {
+			spec, ok := s.(map[string]any)
+			if !ok {
+				continue
+			}
+			raw, err := json.Marshal(spec)
+			if err != nil {
+				return nil, guidedApplyOptions{}, err
+			}
+			var cfg guidedcli.GuidedConfig
+			if err := json.Unmarshal(raw, &cfg); err != nil {
+				return nil, guidedApplyOptions{}, err
+			}
+			cfgs = append(cfgs, cfg)
+		}
+	}
+	if len(cfgs) == 0 {
+		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.specs contained no usable spec entries")
+	}
+
+	var opts guidedApplyOptions
+	if ped, ok := rc.Submit["pedestal"].(map[string]any); ok {
+		opts.PedestalName, _ = ped["name"].(string)
+		opts.PedestalTag, _ = ped["version"].(string)
+	}
+	if ben, ok := rc.Submit["benchmark"].(map[string]any); ok {
+		opts.BenchmarkName, _ = ben["name"].(string)
+		opts.BenchmarkTag, _ = ben["version"].(string)
+	}
+	if opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
+		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.benchmark requires name + version (for caller_metadata)")
+	}
+	return cfgs, opts, nil
+}
+
 func init() {
 	regressionRunCmd.Flags().StringVar(&regressionCasesDir, "cases-dir", "regression", "Directory containing repo-tracked regression case YAML files")
 	regressionRunCmd.Flags().StringVar(&regressionCaseFile, "file", "", "Path to a regression case YAML file")
@@ -856,6 +944,14 @@ func init() {
 	regressionRunCmd.Flags().BoolVar(&regressionSkipRestartPedestal, "skip-restart-pedestal", false, "Hint the backend to skip the RestartPedestal helm install when the chart is already deployed (useful after --auto-install + wait-for-ready)")
 	regressionRunCmd.Flags().IntVar(&regressionReadyTimeoutSeconds, "ready-timeout", 600, "Seconds --auto-install waits for all preflight targets to become Ready before submit")
 	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight")
+
+	// §11 step 4 Round 3 cutover flags. flagChaosServer is shared with `chaos`
+	// + `inject guided`; re-bind so users can pass --chaos-server on
+	// `regression run` directly.
+	regressionRunCmd.Flags().BoolVar(&regressionViaChaos, "via-chaos", envBool("AEGIS_INJECT_VIA_CHAOS"),
+		"Route the case submit through aegis-chaos /v1beta/injections instead of the legacy backend (env: AEGIS_INJECT_VIA_CHAOS)")
+	regressionRunCmd.Flags().StringVar(&flagChaosServer, "chaos-server", flagChaosServer,
+		"aegis-chaos service URL when --via-chaos is set (env: AEGIS_CHAOS_SERVER)")
 
 	regressionCmd.AddCommand(regressionRunCmd)
 }

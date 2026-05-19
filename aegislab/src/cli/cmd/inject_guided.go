@@ -492,10 +492,10 @@ func init() {
 	f.IntVar(&guidedCPUCount, "cpu-count", 0, "JVM CPU core count")
 	f.IntVar(&guidedStatusCode, "status-code", 0, "HTTP status code")
 
-	// §11 step 4 Round 3 cutover flags. --chaos-server reuses the persistent
-	// flag registered on `chaos` cobra parent (flagChaosServer) — declaring it
-	// again on `inject guided` lets the user pass it positionally without
-	// rebuilding the command tree.
+	// `inject` is NOT a child of `chaos`, so the persistent --chaos-server
+	// on chaosCmd doesn't reach here. Re-bind against the shared
+	// flagChaosServer var so users can pass it on inject guided directly;
+	// `regression run` does the same. Functional duplicate, not a leak.
 	f.BoolVar(&guidedViaChaos, "via-chaos", envBool("AEGIS_INJECT_VIA_CHAOS"),
 		"Route the finalized guided submit through aegis-chaos /v1beta/injections instead of the legacy backend (env: AEGIS_INJECT_VIA_CHAOS)")
 	f.StringVar(&flagChaosServer, "chaos-server", flagChaosServer,

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,21 +8,13 @@ import (
 	"aegis/cli/output"
 	chaoscrud "aegis/crud/chaos"
 	"aegis/platform/consts"
-	"aegis/platform/dto"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/google/uuid"
 )
 
-// chaosTypeToCapability maps the legacy guided `chaos_type` enum
-// (camel-case, chaos-experiment CRD action names) onto the lane-A capability
-// `name` registered in tools/capgen/output/capabilities.json. Hand-written
-// rather than generated because (a) capgen is a one-shot dev-time tool whose
-// output is committed JSON, not a Go package, and (b) reading the JSON at
-// process start would couple aegisctl to a runtime asset path we'd then need
-// to ship alongside the binary. The 32 entries are stable — adding a 33rd
-// capability also requires a code change downstream, so the lookup table
-// staying in lockstep is not a forgotten-update risk.
+// chaosTypeToCapability mirrors tools/capgen/output/capabilities.json's
+// `chaos_type` -> `name` columns. Hand-maintained: capgen emits JSON, not Go.
 var chaosTypeToCapability = map[string]string{
 	"ContainerKill":            "container_kill",
 	"CPUStress":                "cpu_stress",
@@ -250,61 +241,67 @@ func guidedChaosPointID(cfg guidedcli.GuidedConfig, instance, chartVersion strin
 }
 
 // submitGuidedViaChaos routes finalized guided configs through the chaos
-// service. Singleton specs go to /v1beta/injections; multi-spec batches go to
-// /v1beta/injection-batches. caller_metadata carries the campaign-side
+// service. Singleton specs go to /v1beta/injections; multi-spec batches go
+// to /v1beta/injection-batches. caller_metadata carries the campaign-side
 // linkage the backend hook receiver needs to rejoin the state machine.
 func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions) error {
 	if len(cfgs) == 0 {
 		return usageErrorf("no guided config to apply")
 	}
-	cli, ctx, err := newChaosAPIClient()
-	if err != nil {
-		return err
-	}
 
 	traceID := uuid.NewString()
 	taskID := uuid.NewString()
-	benchmark := &dto.ContainerVersionItem{
-		Name: opts.BenchmarkName,
-		// dto.ContainerVersionItem has no Tag/Version field directly — the
-		// version-tag travels in ImageRef as `name:tag` after backend resolve.
-		// At submit-time we only know the user's tag input; encode it there
-		// so the receiver can re-parse without a DB round-trip.
-		ImageRef: opts.BenchmarkName + ":" + opts.BenchmarkTag,
-	}
-	datapack := &dto.InjectionItem{
-		// Datapack name is the campaign step's identity; until guided emits it
-		// the trace id is the best-stable correlator.
-		Name: taskID,
+	makeMeta := func() map[string]any {
+		// CallerMetadata.Benchmark is *dto.ContainerVersionItem (no Tag
+		// field — version travels in ImageRef as "name:tag"); Datapack is
+		// stubbed with just `name` so the receiver's name-key resolve works.
+		return map[string]any{
+			"task_id":  taskID,
+			"trace_id": traceID,
+			"benchmark": map[string]any{
+				"name":      opts.BenchmarkName,
+				"image_ref": opts.BenchmarkName + ":" + opts.BenchmarkTag,
+			},
+			"datapack": map[string]any{
+				"name": taskID,
+			},
+		}
 	}
 
-	makeMeta := func() map[string]any {
-		// Marshal via JSON round-trip so the receiver decodes against the live
-		// CallerMetadata struct (single source of truth for tag names).
-		m := struct {
-			TaskID    string                     `json:"task_id"`
-			TraceID   string                     `json:"trace_id"`
-			Benchmark *dto.ContainerVersionItem  `json:"benchmark,omitempty"`
-			Datapack  *dto.InjectionItem         `json:"datapack,omitempty"`
-		}{
-			TaskID:    taskID,
-			TraceID:   traceID,
-			Benchmark: benchmark,
-			Datapack:  datapack,
-		}
-		raw, _ := json.Marshal(m)
-		var out map[string]any
-		_ = json.Unmarshal(raw, &out)
-		return out
-	}
+	chaosURL := flagChaosServer
 
 	if len(cfgs) == 1 {
-		pid, cap, _, err := guidedChaosPointID(cfgs[0], guidedChaosInstance, guidedChaosChartVersion)
+		pid, cap, target, err := guidedChaosPointID(cfgs[0], guidedChaosInstance, guidedChaosChartVersion)
 		if err != nil {
 			return err
 		}
 		params := guidedToChaosParams(cap, cfgs[0])
 		idemKey := traceID + ":" + pid
+		if flagDryRun {
+			output.PrintJSON(map[string]any{
+				"dry_run":   true,
+				"via_chaos": true,
+				"method":    "POST",
+				"url":       strings.TrimRight(chaosURL, "/") + "/v1beta/injections",
+				"body": map[string]any{
+					"point_id":        pid,
+					"idempotency_key": idemKey,
+					"params":          params,
+					"caller_metadata": makeMeta(),
+				},
+				"derived": map[string]any{
+					"capability": cap,
+					"target":     target,
+					"trace_id":   traceID,
+					"task_id":    taskID,
+				},
+			})
+			return nil
+		}
+		cli, ctx, err := newChaosAPIClient()
+		if err != nil {
+			return err
+		}
 		body := *apiclient.NewChaosChaosCreateInjectionReq()
 		body.PointId = &pid
 		body.IdempotencyKey = &idemKey
@@ -316,13 +313,13 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 			return fmt.Errorf("via-chaos: POST /v1beta/injections: %w", err)
 		}
 		output.PrintJSON(map[string]any{
-			"via_chaos":     true,
-			"trace_id":      traceID,
-			"task_id":       taskID,
-			"injection_id":  strDeref(resp.Data.Id),
-			"point_id":      pid,
-			"capability":    cap,
-			"status":        strDeref(resp.Data.Status),
+			"via_chaos":    true,
+			"trace_id":     traceID,
+			"task_id":      taskID,
+			"injection_id": strDeref(resp.Data.Id),
+			"point_id":     pid,
+			"capability":   cap,
+			"status":       strDeref(resp.Data.Status),
 		})
 		return nil
 	}
@@ -330,8 +327,9 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 	batchKey := traceID + ":batch"
 	children := make([]apiclient.ChaosChaosCreateBatchChildReq, 0, len(cfgs))
 	pointIDs := make([]string, 0, len(cfgs))
+	dryChildren := make([]map[string]any, 0, len(cfgs))
 	for i := range cfgs {
-		pid, cap, _, err := guidedChaosPointID(cfgs[i], guidedChaosInstance, guidedChaosChartVersion)
+		pid, cap, target, err := guidedChaosPointID(cfgs[i], guidedChaosInstance, guidedChaosChartVersion)
 		if err != nil {
 			return fmt.Errorf("via-chaos: spec[%d]: %w", i, err)
 		}
@@ -345,6 +343,35 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		}
 		children = append(children, entry)
 		pointIDs = append(pointIDs, pid)
+		dryChildren = append(dryChildren, map[string]any{
+			"point_id":        pid,
+			"capability":      cap,
+			"target":          target,
+			"params":          params,
+			"idempotency_key": childKey,
+		})
+	}
+	if flagDryRun {
+		output.PrintJSON(map[string]any{
+			"dry_run":   true,
+			"via_chaos": true,
+			"method":    "POST",
+			"url":       strings.TrimRight(chaosURL, "/") + "/v1beta/injection-batches",
+			"body": map[string]any{
+				"idempotency_key":       batchKey,
+				"batch_caller_metadata": makeMeta(),
+				"children":              dryChildren,
+			},
+			"derived": map[string]any{
+				"trace_id": traceID,
+				"task_id":  taskID,
+			},
+		})
+		return nil
+	}
+	cli, ctx, err := newChaosAPIClient()
+	if err != nil {
+		return err
 	}
 	body := *apiclient.NewChaosChaosCreateInjectionBatchReq(batchKey, children)
 	body.BatchCallerMetadata = makeMeta()
