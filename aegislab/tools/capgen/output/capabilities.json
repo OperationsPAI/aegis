@@ -1,0 +1,2315 @@
+[
+  {
+    "name": "container_kill",
+    "chaos_type": "ContainerKill",
+    "crd_kind": "PodChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "container": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "container"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "k8s_assertions": [
+          {
+            "assertion": "target_pod.container[name=target.container].restart_count increases by \u003e= 1 within injection_window_s"
+          }
+        ],
+        "tolerance": {
+          "false_positive_rate": 0.05
+        }
+      },
+      "name": "container_kill"
+    }
+  },
+  {
+    "name": "cpu_stress",
+    "chaos_type": "CPUStress",
+    "crd_kind": "StressChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "container": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "container"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "load_pct": {
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "workers": {
+          "default": 1,
+          "maximum": 8,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "load_pct"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "baseline_window_s": 60,
+        "injection_window_s": 60,
+        "metric_assertions": [
+          {
+            "assertion": "container_cpu_usage_seconds_total rate increases by \u003e= load_pct * 0.5 over baseline"
+          }
+        ],
+        "tolerance": {
+          "false_positive_rate": 0.1
+        }
+      },
+      "name": "cpu_stress"
+    }
+  },
+  {
+    "name": "dns_error",
+    "chaos_type": "DNSError",
+    "crd_kind": "DNSChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "domain_patterns": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "domain_patterns"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.error_rate on egress to matched domain \u003e baseline + 0.5 (DNS lookup failure)"
+          }
+        ]
+      },
+      "name": "dns_error",
+      "note": "TODO: gRPC-only callers are filtered upstream; DNS resolver caches can mask the effect for \u003e= TTL"
+    }
+  },
+  {
+    "name": "dns_random",
+    "chaos_type": "DNSRandom",
+    "crd_kind": "DNSChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "domain_patterns": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "domain_patterns"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": "TODO: random-IP effect manifests as connection timeouts or wrong-host TLS errors; depends entirely on caller's retry/timeout config and TLS settings",
+      "name": "dns_random"
+    }
+  },
+  {
+    "name": "http_request_abort",
+    "chaos_type": "HTTPRequestAbort",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "baseline_window_s": 60,
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.error_rate on target endpoint \u003e 0.9 during injection_window_s"
+          }
+        ]
+      },
+      "name": "http_request_abort"
+    }
+  },
+  {
+    "name": "http_request_delay",
+    "chaos_type": "HTTPRequestDelay",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "delay_ms": {
+          "maximum": 60000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "delay_ms"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "baseline_window_s": 60,
+        "injection_window_s": 60,
+        "tolerance": {
+          "false_positive_rate": 0.05
+        },
+        "trace_assertions": [
+          {
+            "assertion": "span.duration on target endpoint \u003e= delay_ms * 0.9"
+          },
+          {
+            "assertion": "span.status_code unchanged from baseline distribution"
+          }
+        ]
+      },
+      "name": "http_request_delay"
+    }
+  },
+  {
+    "name": "http_request_replace_method",
+    "chaos_type": "HTTPRequestReplaceMethod",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "new_method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "new_method"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.http.method on target endpoint == new_method OR error_rate \u003e baseline + 0.5 (method not allowed)"
+          }
+        ]
+      },
+      "name": "http_request_replace_method"
+    }
+  },
+  {
+    "name": "http_request_replace_path",
+    "chaos_type": "HTTPRequestReplacePath",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "new_path": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "new_path"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.http.route on target endpoint changes to new_path OR error_rate \u003e baseline + 0.5 (handler not found)"
+          }
+        ]
+      },
+      "name": "http_request_replace_path"
+    }
+  },
+  {
+    "name": "http_response_abort",
+    "chaos_type": "HTTPResponseAbort",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "baseline_window_s": 60,
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.error_rate on target endpoint \u003e 0.9 during injection_window_s"
+          }
+        ]
+      },
+      "name": "http_response_abort"
+    }
+  },
+  {
+    "name": "http_response_delay",
+    "chaos_type": "HTTPResponseDelay",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "delay_ms": {
+          "maximum": 60000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "delay_ms"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "baseline_window_s": 60,
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.duration on target endpoint \u003e= delay_ms * 0.9"
+          }
+        ]
+      },
+      "name": "http_response_delay"
+    }
+  },
+  {
+    "name": "http_response_patch_body",
+    "chaos_type": "HTTPResponsePatchBody",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "patch_json": {
+          "default": "{\"foo\":\"bar\"}",
+          "minLength": 2,
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": "TODO: body-patch effect on traces depends on client behaviour; manifestation typically client-side schema error, not directly observable in server spans",
+      "name": "http_response_patch_body"
+    }
+  },
+  {
+    "name": "http_response_replace_body",
+    "chaos_type": "HTTPResponseReplaceBody",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "body_type": {
+          "default": "empty",
+          "enum": [
+            "empty",
+            "random"
+          ],
+          "type": "string"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "client_side parse_error_rate on target endpoint \u003e baseline + 0.5"
+          }
+        ]
+      },
+      "name": "http_response_replace_body",
+      "note": "TODO: contract is heuristic — parse-error visibility depends on client instrumentation; some clients accept empty body silently"
+    }
+  },
+  {
+    "name": "http_response_replace_code",
+    "chaos_type": "HTTPResponseReplaceCode",
+    "crd_kind": "HTTPChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS",
+            "CONNECT",
+            "TRACE"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "port",
+        "method",
+        "path"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "status_code": {
+          "maximum": 599,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status_code"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.http.status_code on target endpoint == status_code for \u003e= 90% of spans during injection_window_s"
+          }
+        ]
+      },
+      "name": "http_response_replace_code"
+    }
+  },
+  {
+    "name": "jvm_cpu_stress",
+    "chaos_type": "JVMCPUStress",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "cpu_count": {
+          "default": 1,
+          "maximum": 16,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cpu_count"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "metric_assertions": [
+          {
+            "assertion": "container_cpu_usage_seconds_total rate increases by \u003e= cpu_count * 0.5 cores"
+          }
+        ]
+      },
+      "name": "jvm_cpu_stress"
+    }
+  },
+  {
+    "name": "jvm_gc",
+    "chaos_type": "JVMGarbageCollector",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "metric_assertions": [
+          {
+            "assertion": "jvm_gc_collection_seconds_count increases by \u003e= 1 within injection_window_s"
+          }
+        ]
+      },
+      "name": "jvm_gc",
+      "note": "TODO: requires JVM metrics exporter (Micrometer/JMX); without it, fall back to latency spike on co-located spans"
+    }
+  },
+  {
+    "name": "jvm_memory_stress",
+    "chaos_type": "JVMMemoryStress",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "memory_type": {
+          "default": "heap",
+          "enum": [
+            "heap",
+            "stack"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "metric_assertions": [
+          {
+            "assertion": "jvm_memory_used_bytes{area=heap|nonheap} increases substantially over baseline"
+          }
+        ]
+      },
+      "name": "jvm_memory_stress",
+      "note": "TODO: stack-memory case typically surfaces as StackOverflowError; covered by span error_rate, not memory metric"
+    }
+  },
+  {
+    "name": "jvm_method_exception",
+    "chaos_type": "JVMException",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "exception_mode": {
+          "default": "default",
+          "enum": [
+            "default",
+            "random"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span(class.method) error_rate \u003e baseline + 0.5 during injection_window_s"
+          }
+        ]
+      },
+      "name": "jvm_method_exception"
+    }
+  },
+  {
+    "name": "jvm_method_latency",
+    "chaos_type": "JVMLatency",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "delay_ms": {
+          "maximum": 60000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "delay_ms"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span representing method invocation has duration \u003e= delay_ms * 0.9"
+          }
+        ]
+      },
+      "name": "jvm_method_latency",
+      "note": "TODO: only methods that produce or are wrapped by an OTel/Jaeger span are observable; many internal helpers won't surface"
+    }
+  },
+  {
+    "name": "jvm_method_return",
+    "chaos_type": "JVMReturn",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "return_type": {
+          "enum": [
+            "string",
+            "int"
+          ],
+          "type": "string"
+        },
+        "value_mode": {
+          "default": "default",
+          "enum": [
+            "default",
+            "random"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "return_type"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": "TODO: return-value override has no universal signature; downstream effect depends on whether callers validate the value (NPE, business error, silent corruption)",
+      "name": "jvm_method_return"
+    }
+  },
+  {
+    "name": "jvm_mysql_exception",
+    "chaos_type": "JVMMySQLException",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "db_name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sql_type": {
+          "default": "all",
+          "enum": [
+            "all",
+            "select",
+            "insert",
+            "update",
+            "delete",
+            "replace"
+          ],
+          "type": "string"
+        },
+        "table": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "mysql_connector": {
+          "default": "8",
+          "enum": [
+            "5",
+            "8"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "db span on (db_name, table, sql_type) error_rate \u003e baseline + 0.8"
+          }
+        ]
+      },
+      "name": "jvm_mysql_exception"
+    }
+  },
+  {
+    "name": "jvm_mysql_latency",
+    "chaos_type": "JVMMySQLLatency",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "db_name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sql_type": {
+          "default": "all",
+          "enum": [
+            "all",
+            "select",
+            "insert",
+            "update",
+            "delete",
+            "replace"
+          ],
+          "type": "string"
+        },
+        "table": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "delay_ms": {
+          "maximum": 60000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "mysql_connector": {
+          "default": "8",
+          "enum": [
+            "5",
+            "8"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "delay_ms"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "db span on (db_name, table, sql_type) duration \u003e= delay_ms * 0.9"
+          }
+        ]
+      },
+      "name": "jvm_mysql_latency",
+      "note": "TODO: only effective on Connector/J-instrumented apps; depends on db.statement attribute coverage in traces"
+    }
+  },
+  {
+    "name": "jvm_runtime_mutator",
+    "chaos_type": "JVMRuntimeMutator",
+    "crd_kind": "JVMChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "class": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "mutation_type": {
+          "enum": [
+            "constant",
+            "operator",
+            "string"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "class",
+        "method"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "mutation_from": {
+          "type": "string"
+        },
+        "mutation_strategy": {
+          "type": "string"
+        },
+        "mutation_to": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": "TODO: mutator effect is by definition app-semantic (changed constant, flipped operator, swapped string); no generic trace assertion holds. Use sn/ts/teastore-specific functional checks.",
+      "name": "jvm_runtime_mutator"
+    }
+  },
+  {
+    "name": "memory_stress",
+    "chaos_type": "MemoryStress",
+    "crd_kind": "StressChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "container": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "container"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "size_mib": {
+          "maximum": 65536,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "workers": {
+          "default": 1,
+          "maximum": 8,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "size_mib"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "baseline_window_s": 60,
+        "injection_window_s": 60,
+        "metric_assertions": [
+          {
+            "assertion": "container_memory_working_set_bytes increases by \u003e= size_mib * 0.7 * MiB over baseline"
+          }
+        ]
+      },
+      "name": "memory_stress"
+    }
+  },
+  {
+    "name": "network_bandwidth",
+    "chaos_type": "NetworkBandwidth",
+    "crd_kind": "NetworkChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "default": "to",
+          "enum": [
+            "to",
+            "from",
+            "both"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "target_service": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "source_app",
+        "target_service"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "buffer": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "limit": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "rate_kbps": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rate_kbps"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.duration on cross-service call increases proportional to payload_bytes / rate_kbps"
+          }
+        ]
+      },
+      "name": "network_bandwidth",
+      "note": "TODO: only payloads larger than buffer size will exhibit the cap; small RPC bodies pass through unaffected"
+    }
+  },
+  {
+    "name": "network_corrupt",
+    "chaos_type": "NetworkCorrupt",
+    "crd_kind": "NetworkChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "default": "to",
+          "enum": [
+            "to",
+            "from",
+            "both"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "target_service": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "source_app",
+        "target_service"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "correlation_pct": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "corrupt_pct": {
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "corrupt_pct"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.error_rate on edge(source_app -\u003e target_service) \u003e baseline + corrupt_pct/300 (TCP checksum-fail retransmits)"
+          }
+        ]
+      },
+      "name": "network_corrupt",
+      "note": "TODO: TLS-wrapped flows treat corruption as connection reset; raw-TCP flows surface as application-level retry"
+    }
+  },
+  {
+    "name": "network_delay",
+    "chaos_type": "NetworkDelay",
+    "crd_kind": "NetworkChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "default": "to",
+          "enum": [
+            "to",
+            "from",
+            "both"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "target_service": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "source_app",
+        "target_service"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "correlation_pct": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "jitter_ms": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "latency_ms": {
+          "maximum": 60000,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "latency_ms"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "baseline_window_s": 60,
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.duration on cross-service call from source_app to target_service \u003e= latency_ms * 0.5"
+          }
+        ]
+      },
+      "name": "network_delay"
+    }
+  },
+  {
+    "name": "network_duplicate",
+    "chaos_type": "NetworkDuplicate",
+    "crd_kind": "NetworkChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "default": "to",
+          "enum": [
+            "to",
+            "from",
+            "both"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "target_service": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "source_app",
+        "target_service"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "correlation_pct": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "duplicate_pct": {
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "duplicate_pct"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": "TODO: TCP duplicate-ACK handling absorbs most duplicates without symptoms; UDP-heavy traffic shows reorder/dup but spans rarely encode it",
+      "name": "network_duplicate"
+    }
+  },
+  {
+    "name": "network_loss",
+    "chaos_type": "NetworkLoss",
+    "crd_kind": "NetworkChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "default": "to",
+          "enum": [
+            "to",
+            "from",
+            "both"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "target_service": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "source_app",
+        "target_service"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "correlation_pct": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "loss_pct": {
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "loss_pct"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.error_rate or retry_count on edge(source_app -\u003e target_service) \u003e baseline + min(loss_pct/200, 0.3)"
+          }
+        ]
+      },
+      "name": "network_loss"
+    }
+  },
+  {
+    "name": "network_partition",
+    "chaos_type": "NetworkPartition",
+    "crd_kind": "NetworkChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "default": "to",
+          "enum": [
+            "to",
+            "from",
+            "both"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "target_service": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "source_app",
+        "target_service"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "trace_assertions": [
+          {
+            "assertion": "span.error_rate on edge(source_app -\u003e target_service) \u003e 0.9 during injection_window_s"
+          }
+        ]
+      },
+      "name": "network_partition"
+    }
+  },
+  {
+    "name": "pod_failure",
+    "chaos_type": "PodFailure",
+    "crd_kind": "PodChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "k8s_assertions": [
+          {
+            "assertion": "target_pod.ready_condition == false for \u003e= duration_s * 0.9"
+          }
+        ],
+        "tolerance": {
+          "false_positive_rate": 0.05
+        }
+      },
+      "name": "pod_failure"
+    }
+  },
+  {
+    "name": "pod_kill",
+    "chaos_type": "PodKill",
+    "crd_kind": "PodChaos",
+    "status": "stable",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": {
+        "injection_window_s": 60,
+        "k8s_assertions": [
+          {
+            "assertion": "target_pod.restart_count increases by \u003e= 1 within injection_window_s"
+          }
+        ],
+        "tolerance": {
+          "false_positive_rate": 0.05
+        }
+      },
+      "name": "pod_kill"
+    }
+  },
+  {
+    "name": "time_skew",
+    "chaos_type": "TimeSkew",
+    "crd_kind": "TimeChaos",
+    "status": "experimental",
+    "target_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "container": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "app",
+        "container"
+      ],
+      "type": "object"
+    },
+    "param_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset_s": {
+          "maximum": 3600,
+          "minimum": -3600,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "offset_s"
+      ],
+      "type": "object"
+    },
+    "observable_contract": {
+      "contract": "TODO: time-skew has no universal trace signature; manifestation depends on app's timestamp use (JWT expiry, log skew, scheduled jobs). Best probe is process-level clock comparison via debug exec, not telemetry.",
+      "name": "time_skew"
+    }
+  }
+]

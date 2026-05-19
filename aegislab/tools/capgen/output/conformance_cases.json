@@ -1,0 +1,274 @@
+[
+  {
+    "name": "container_kill",
+    "chaos_type": "ContainerKill",
+    "conformance_probe": {
+      "expect": "delta \u003e= 1",
+      "probe": "k8s.container.restart_count",
+      "scope": "target.container"
+    }
+  },
+  {
+    "name": "cpu_stress",
+    "chaos_type": "CPUStress",
+    "conformance_probe": {
+      "expect": "rate \u003e= baseline + load_pct * 0.5",
+      "probe": "container.cpu.utilization"
+    }
+  },
+  {
+    "name": "dns_error",
+    "chaos_type": "DNSError",
+    "conformance_probe": {
+      "expect": "\u003e baseline + 0.5",
+      "note": "TODO: resolver TTL caveat",
+      "probe": "trace.egress.error_rate"
+    }
+  },
+  {
+    "name": "dns_random",
+    "chaos_type": "DNSRandom",
+    "conformance_probe": {
+      "note": "manifestation depends on caller retry/timeout; no single observable holds across stacks",
+      "probe": "TODO"
+    }
+  },
+  {
+    "name": "http_request_abort",
+    "chaos_type": "HTTPRequestAbort",
+    "conformance_probe": {
+      "expect": "\u003e 0.9",
+      "probe": "trace.error_rate",
+      "scope": "target.endpoint"
+    }
+  },
+  {
+    "name": "http_request_delay",
+    "chaos_type": "HTTPRequestDelay",
+    "conformance_probe": {
+      "expect": "\u003e= delay_ms * 0.9",
+      "probe": "trace.span.duration_ms"
+    }
+  },
+  {
+    "name": "http_request_replace_method",
+    "chaos_type": "HTTPRequestReplaceMethod",
+    "conformance_probe": {
+      "expect": "== new_method OR span.status_code in {405, 404}",
+      "probe": "trace.span.http.method"
+    }
+  },
+  {
+    "name": "http_request_replace_path",
+    "chaos_type": "HTTPRequestReplacePath",
+    "conformance_probe": {
+      "expect": "== new_path OR span.error_rate \u003e baseline + 0.5",
+      "probe": "trace.span.http.route"
+    }
+  },
+  {
+    "name": "http_response_abort",
+    "chaos_type": "HTTPResponseAbort",
+    "conformance_probe": {
+      "expect": "\u003e 0.9",
+      "probe": "trace.error_rate",
+      "scope": "target.endpoint"
+    }
+  },
+  {
+    "name": "http_response_delay",
+    "chaos_type": "HTTPResponseDelay",
+    "conformance_probe": {
+      "expect": "\u003e= delay_ms * 0.9",
+      "probe": "trace.span.duration_ms"
+    }
+  },
+  {
+    "name": "http_response_patch_body",
+    "chaos_type": "HTTPResponsePatchBody",
+    "conformance_probe": {
+      "note": "body diff is not visible in spans by default; needs response-body capture or downstream error correlation",
+      "probe": "TODO"
+    }
+  },
+  {
+    "name": "http_response_replace_body",
+    "chaos_type": "HTTPResponseReplaceBody",
+    "conformance_probe": {
+      "expect": "\u003e baseline + 0.5",
+      "note": "TODO: requires client instrumentation",
+      "probe": "client.parse_error_rate"
+    }
+  },
+  {
+    "name": "http_response_replace_code",
+    "chaos_type": "HTTPResponseReplaceCode",
+    "conformance_probe": {
+      "expect": "== status_code for \u003e= 0.9 of target-endpoint spans",
+      "probe": "trace.span.http.status_code"
+    }
+  },
+  {
+    "name": "jvm_cpu_stress",
+    "chaos_type": "JVMCPUStress",
+    "conformance_probe": {
+      "expect": "delta \u003e= cpu_count * 0.5 cores",
+      "probe": "container.cpu.utilization"
+    }
+  },
+  {
+    "name": "jvm_gc",
+    "chaos_type": "JVMGarbageCollector",
+    "conformance_probe": {
+      "expect": "delta \u003e= 1",
+      "note": "TODO: needs JVM metrics exporter",
+      "probe": "jvm.gc.collection_count"
+    }
+  },
+  {
+    "name": "jvm_memory_stress",
+    "chaos_type": "JVMMemoryStress",
+    "conformance_probe": {
+      "expect": "delta \u003e 0.5 * baseline",
+      "note": "TODO: stack mode → span error_rate instead",
+      "probe": "jvm.memory.used_bytes"
+    }
+  },
+  {
+    "name": "jvm_method_exception",
+    "chaos_type": "JVMException",
+    "conformance_probe": {
+      "expect": "\u003e baseline + 0.5",
+      "probe": "trace.span.error_rate",
+      "scope": "span(class.method)"
+    }
+  },
+  {
+    "name": "jvm_method_latency",
+    "chaos_type": "JVMLatency",
+    "conformance_probe": {
+      "expect": "\u003e= delay_ms * 0.9",
+      "note": "TODO: needs span coverage on target method",
+      "probe": "trace.span.duration_ms",
+      "scope": "span(class.method)"
+    }
+  },
+  {
+    "name": "jvm_method_return",
+    "chaos_type": "JVMReturn",
+    "conformance_probe": {
+      "note": "no universal signal; needs app-specific assertion (e.g. order_status downstream change)",
+      "probe": "TODO"
+    }
+  },
+  {
+    "name": "jvm_mysql_exception",
+    "chaos_type": "JVMMySQLException",
+    "conformance_probe": {
+      "expect": "\u003e baseline + 0.8",
+      "probe": "trace.db.span.error_rate"
+    }
+  },
+  {
+    "name": "jvm_mysql_latency",
+    "chaos_type": "JVMMySQLLatency",
+    "conformance_probe": {
+      "expect": "\u003e= delay_ms * 0.9",
+      "probe": "trace.db.span.duration_ms",
+      "scope": "db.statement matches sql_type"
+    }
+  },
+  {
+    "name": "jvm_runtime_mutator",
+    "chaos_type": "JVMRuntimeMutator",
+    "conformance_probe": {
+      "note": "app-semantic mutation; no universal probe — needs per-mutation contract",
+      "probe": "TODO"
+    }
+  },
+  {
+    "name": "memory_stress",
+    "chaos_type": "MemoryStress",
+    "conformance_probe": {
+      "expect": "delta \u003e= size_mib * 0.7 MiB",
+      "probe": "container.memory.working_set"
+    }
+  },
+  {
+    "name": "network_bandwidth",
+    "chaos_type": "NetworkBandwidth",
+    "conformance_probe": {
+      "expect": "\u003e= 8 * payload_bytes / rate_kbps",
+      "note": "TODO: large-payload-only",
+      "probe": "trace.span.duration_ms"
+    }
+  },
+  {
+    "name": "network_corrupt",
+    "chaos_type": "NetworkCorrupt",
+    "conformance_probe": {
+      "expect": "\u003e baseline + corrupt_pct/300",
+      "note": "TODO: TLS vs plain TCP",
+      "probe": "trace.edge.error_or_retry_rate"
+    }
+  },
+  {
+    "name": "network_delay",
+    "chaos_type": "NetworkDelay",
+    "conformance_probe": {
+      "expect": "\u003e= latency_ms * 0.5",
+      "probe": "trace.span.duration_ms",
+      "scope": "edge(source_app -\u003e target_service)"
+    }
+  },
+  {
+    "name": "network_duplicate",
+    "chaos_type": "NetworkDuplicate",
+    "conformance_probe": {
+      "note": "no robust trace signal; consider node netdev_tx counters as out-of-band probe",
+      "probe": "TODO"
+    }
+  },
+  {
+    "name": "network_loss",
+    "chaos_type": "NetworkLoss",
+    "conformance_probe": {
+      "expect": "\u003e baseline + loss_pct/200",
+      "probe": "trace.edge.error_or_retry_rate"
+    }
+  },
+  {
+    "name": "network_partition",
+    "chaos_type": "NetworkPartition",
+    "conformance_probe": {
+      "expect": "\u003e 0.9",
+      "probe": "trace.edge.error_rate"
+    }
+  },
+  {
+    "name": "pod_failure",
+    "chaos_type": "PodFailure",
+    "conformance_probe": {
+      "expect": "false for \u003e= duration_s * 0.9",
+      "probe": "k8s.pod.ready_condition"
+    }
+  },
+  {
+    "name": "pod_kill",
+    "chaos_type": "PodKill",
+    "conformance_probe": {
+      "baseline_needed": false,
+      "expect": "delta \u003e= 1",
+      "probe": "k8s.pod.restart_count",
+      "window_s": 60
+    }
+  },
+  {
+    "name": "time_skew",
+    "chaos_type": "TimeSkew",
+    "conformance_probe": {
+      "note": "no universal telemetry signal; consider in-container `date` probe or app-specific assertion",
+      "probe": "TODO"
+    }
+  }
+]

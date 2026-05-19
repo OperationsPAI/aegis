@@ -167,6 +167,7 @@ log
 input
 output
 !src/cmd/aegisctl/output/
+!tools/capgen/output/
 *.db
 .idea
 scripts/gen/dataset/output/

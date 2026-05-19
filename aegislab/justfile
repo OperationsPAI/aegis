@@ -330,6 +330,14 @@ changelog:
     eval "$(devbox shellenv)" && git-cliff -o CHANGELOG.md
     printf "{{green}}✅ CHANGELOG.md generated successfully{{reset}}\n"
 
+# 🧬 Regenerate aegis-chaos Capability seed list + JSON schemas
+# Source of truth: chaos-experiment/handler/handler.go ChaosTypeMap.
+# Outputs: tools/capgen/output/{capabilities.json,capabilities.md,conformance_cases.json}
+capgen:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd tools/capgen && go run . output
+
 # 👁️ Preview unreleased changes
 changelog-preview:
     #!/usr/bin/env bash
