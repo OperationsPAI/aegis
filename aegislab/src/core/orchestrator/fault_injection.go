@@ -147,6 +147,13 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		displayMaps := make([]map[string]any, 0, batchLen)
 		groundtruths := make([]model.Groundtruth, 0, batchLen)
 
+		// §11 step 4.5 — observable cutover: when etcd flag
+		// aegis.injection.catalog_source=chaos_service, validate each Point
+		// against the chaos service catalog before in-process resolution.
+		// Failures fall back silently — the real source of truth remains
+		// in-process until step 5b moves the executor.
+		runCatalogPreflight(childCtx, payload.system, payload.guidedConfigs, logEntry, nil)
+
 		for i, cfg := range payload.guidedConfigs {
 			conf, _, err := guidedcli.BuildInjection(childCtx, cfg)
 			if err != nil {
