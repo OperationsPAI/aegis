@@ -2,6 +2,7 @@ package helm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/yaml"
 )
@@ -193,7 +195,7 @@ func (g *Gateway) isReleaseInstalled(actionConfig *action.Configuration, release
 	statusAction := action.NewStatus(actionConfig)
 	_, err := statusAction.Run(releaseName)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, driver.ErrReleaseNotFound) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to get release status: %w", err)
@@ -214,7 +216,7 @@ func (g *Gateway) IsReleaseDeployed(namespace, releaseName string) (bool, error)
 	statusAction := action.NewStatus(actionConfig)
 	rel, err := statusAction.Run(releaseName)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, driver.ErrReleaseNotFound) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to get release status: %w", err)
@@ -232,7 +234,7 @@ func (g *Gateway) uninstallRelease(actionConfig *action.Configuration, releaseNa
 
 	_, err := uninstallAction.Run(releaseName)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "release: not found") {
+		if errors.Is(err, driver.ErrReleaseNotFound) {
 			logrus.Infof("Release %s is not installed, nothing to uninstall", releaseName)
 			return nil
 		}
@@ -281,7 +283,7 @@ func (g *Gateway) GetReleaseValues(namespace, releaseName string) (map[string]an
 	getValues := action.NewGetValues(actionConfig)
 	values, err := getValues.Run(releaseName)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, driver.ErrReleaseNotFound) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get values for release %s: %w", releaseName, err)
@@ -348,7 +350,7 @@ func (g *Gateway) GetReleaseInfo(namespace, releaseName string) (*ReleaseInfo, e
 	statusAction := action.NewStatus(actionConfig)
 	rel, err := statusAction.Run(releaseName)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, driver.ErrReleaseNotFound) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get release status: %w", err)
