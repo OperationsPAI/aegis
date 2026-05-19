@@ -218,6 +218,9 @@ func chaosPruneDoJSON(method, path string, body []byte) ([]byte, int, error) {
 }
 
 func init() {
+	chaosCmd.PersistentFlags().StringVar(&flagChaosServer, "chaos-server", "",
+		"aegis-chaos service URL (env: AEGIS_CHAOS_SERVER; required for system / inject / capability subcommands)")
+
 	chaosPruneCmd.Flags().StringVar(&chaosPruneNamespace, "namespace", "", "Limit to a single namespace (default: all)")
 	chaosPruneCmd.Flags().StringVar(&chaosPruneOlderThan, "older-than", "", "Minimum age of terminal-task CRs before reaping, e.g. 1h, 30m, 300s. Default: 5m server-side.")
 	chaosPruneCmd.Flags().BoolVar(&chaosPruneApply, "apply", false, "Actually delete (default: dry-run)")
