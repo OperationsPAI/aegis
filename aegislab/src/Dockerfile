@@ -28,6 +28,7 @@ RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aeg
 RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-blob ./cmd/aegis-blob
 RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-gateway ./cmd/aegis-gateway
 RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-configcenter ./cmd/aegis-configcenter
+RUN CGO_ENABLED=1 go build -tags="${GO_BUILD_TAGS}" -ldflags="-s -w" -o /app/aegis-chaos ./cmd/aegis-chaos
 FROM debian:bookworm AS runner
 
 ARG INSTALL_CERTS=false
@@ -58,6 +59,7 @@ COPY --from=builder /app/aegis-notify /app/aegis-notify
 COPY --from=builder /app/aegis-blob /app/aegis-blob
 COPY --from=builder /app/aegis-gateway /app/aegis-gateway
 COPY --from=builder /app/aegis-configcenter /app/aegis-configcenter
+COPY --from=builder /app/aegis-chaos /app/aegis-chaos
 COPY aegislab/src/entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh

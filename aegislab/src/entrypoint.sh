@@ -55,6 +55,11 @@ case "${1:-}" in
         echo "Executing /app/aegis-configcenter with command: $@"
         exec /app/aegis-configcenter "$@"
         ;;
+    aegis-chaos)
+        shift
+        echo "Executing /app/aegis-chaos with command: $@"
+        exec /app/aegis-chaos "$@"
+        ;;
 esac
 
 echo "Executing /app/exp with command: $@"
