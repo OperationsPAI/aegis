@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime/multipart"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
@@ -62,9 +63,15 @@ func (s *Service) CreateContainer(_ context.Context, req *CreateContainerReq, us
 	return NewContainerResp(container), nil
 }
 
-func (s *Service) DeleteContainer(_ context.Context, containerID int) error {
+func (s *Service) DeleteContainer(_ context.Context, scope authz.CallerScope, containerID int) error {
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
+		if _, err := repo.getContainerByIDScoped(containerID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: container id %d not found", consts.ErrNotFound, containerID)
+			}
+			return fmt.Errorf("failed to get container: %w", err)
+		}
 		if _, err := repo.batchDeleteContainerVersions(containerID); err != nil {
 			return fmt.Errorf("failed to delete container versions: %w", err)
 		}
@@ -85,8 +92,8 @@ func (s *Service) DeleteContainer(_ context.Context, containerID int) error {
 	})
 }
 
-func (s *Service) GetContainer(_ context.Context, containerID int) (*ContainerDetailResp, error) {
-	container, err := s.repo.getContainerByID(containerID)
+func (s *Service) GetContainer(_ context.Context, scope authz.CallerScope, containerID int) (*ContainerDetailResp, error) {
+	container, err := s.repo.getContainerByIDScoped(containerID, scope)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: container id: %d", consts.ErrNotFound, containerID)
@@ -107,10 +114,10 @@ func (s *Service) GetContainer(_ context.Context, containerID int) (*ContainerDe
 	return resp, nil
 }
 
-func (s *Service) ListContainers(_ context.Context, req *ListContainerReq) (*dto.ListResp[ContainerResp], error) {
+func (s *Service) ListContainers(_ context.Context, scope authz.CallerScope, req *ListContainerReq) (*dto.ListResp[ContainerResp], error) {
 	limit, offset := req.ToGormParams()
 
-	containers, total, err := s.repo.listContainers(limit, offset, req.Type, req.IsPublic, req.Status)
+	containers, total, err := s.repo.listContainers(scope, limit, offset, req.Type, req.IsPublic, req.Status)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
@@ -139,12 +146,12 @@ func (s *Service) ListContainers(_ context.Context, req *ListContainerReq) (*dto
 	}, nil
 }
 
-func (s *Service) UpdateContainer(_ context.Context, req *UpdateContainerReq, containerID int) (*ContainerResp, error) {
+func (s *Service) UpdateContainer(_ context.Context, scope authz.CallerScope, req *UpdateContainerReq, containerID int) (*ContainerResp, error) {
 	var updatedContainer *model.Container
 
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
-		container, err := repo.getContainerByID(containerID)
+		container, err := repo.getContainerByIDScoped(containerID, scope)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("%w: container with id %d not found", consts.ErrNotFound, containerID)
@@ -166,7 +173,7 @@ func (s *Service) UpdateContainer(_ context.Context, req *UpdateContainerReq, co
 	return NewContainerResp(updatedContainer), nil
 }
 
-func (s *Service) ManageContainerLabels(_ context.Context, req *ManageContainerLabelReq, containerID int) (*ContainerResp, error) {
+func (s *Service) ManageContainerLabels(_ context.Context, scope authz.CallerScope, req *ManageContainerLabelReq, containerID int) (*ContainerResp, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request cannot be nil")
 	}
@@ -174,7 +181,7 @@ func (s *Service) ManageContainerLabels(_ context.Context, req *ManageContainerL
 	var managedContainer *model.Container
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
-		container, err := repo.getContainerByID(containerID)
+		container, err := repo.getContainerByIDScoped(containerID, scope)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("%w: container not found", consts.ErrNotFound)
@@ -233,7 +240,7 @@ func (s *Service) ManageContainerLabels(_ context.Context, req *ManageContainerL
 	return NewContainerResp(managedContainer), nil
 }
 
-func (s *Service) CreateContainerVersion(_ context.Context, req *CreateContainerVersionReq, containerID, userID int) (*ContainerVersionResp, error) {
+func (s *Service) CreateContainerVersion(_ context.Context, scope authz.CallerScope, req *CreateContainerVersionReq, containerID, userID int) (*ContainerVersionResp, error) {
 	if req == nil {
 		return nil, fmt.Errorf("create container version request is nil")
 	}
@@ -245,6 +252,12 @@ func (s *Service) CreateContainerVersion(_ context.Context, req *CreateContainer
 	var createdVersion *model.ContainerVersion
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
+		if _, err := repo.getContainerByIDScoped(containerID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: container id: %d", consts.ErrNotFound, containerID)
+			}
+			return fmt.Errorf("failed to get container: %w", err)
+		}
 		versions, err := s.createContainerVersionsCore(repo, []model.ContainerVersion{*version}, &containerID)
 		if err != nil {
 			return fmt.Errorf("failed to create container version: %w", err)
@@ -259,7 +272,20 @@ func (s *Service) CreateContainerVersion(_ context.Context, req *CreateContainer
 	return NewContainerVersionResp(createdVersion), nil
 }
 
-func (s *Service) DeleteContainerVersion(_ context.Context, versionID int) error {
+func (s *Service) DeleteContainerVersion(_ context.Context, scope authz.CallerScope, versionID int) error {
+	version, err := s.repo.getContainerVersionByID(versionID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: container version id %d not found", consts.ErrNotFound, versionID)
+		}
+		return fmt.Errorf("failed to get container version: %w", err)
+	}
+	if _, err := s.repo.getContainerByIDScoped(version.ContainerID, scope); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: container version id %d not found", consts.ErrNotFound, versionID)
+		}
+		return fmt.Errorf("failed to get container: %w", err)
+	}
 	rows, err := s.repo.deleteContainerVersion(versionID)
 	if err != nil {
 		return fmt.Errorf("failed to delete container version: %w", err)
@@ -270,8 +296,8 @@ func (s *Service) DeleteContainerVersion(_ context.Context, versionID int) error
 	return nil
 }
 
-func (s *Service) GetContainerVersion(_ context.Context, containerID, versionID int) (*ContainerVersionDetailResp, error) {
-	if _, err := s.repo.getContainerByID(containerID); err != nil {
+func (s *Service) GetContainerVersion(_ context.Context, scope authz.CallerScope, containerID, versionID int) (*ContainerVersionDetailResp, error) {
+	if _, err := s.repo.getContainerByIDScoped(containerID, scope); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: container id: %d", consts.ErrNotFound, containerID)
 		}
@@ -303,7 +329,13 @@ func (s *Service) GetContainerVersion(_ context.Context, containerID, versionID 
 	return resp, nil
 }
 
-func (s *Service) ListContainerVersions(_ context.Context, req *ListContainerVersionReq, containerID int) (*dto.ListResp[ContainerVersionResp], error) {
+func (s *Service) ListContainerVersions(_ context.Context, scope authz.CallerScope, req *ListContainerVersionReq, containerID int) (*dto.ListResp[ContainerVersionResp], error) {
+	if _, err := s.repo.getContainerByIDScoped(containerID, scope); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: container id: %d", consts.ErrNotFound, containerID)
+		}
+		return nil, fmt.Errorf("failed to get container: %w", err)
+	}
 	limit, offset := req.ToGormParams()
 
 	versions, total, err := s.repo.listContainerVersions(limit, offset, containerID, req.Status)
@@ -322,12 +354,18 @@ func (s *Service) ListContainerVersions(_ context.Context, req *ListContainerVer
 	}, nil
 }
 
-func (s *Service) UpdateContainerVersion(_ context.Context, req *UpdateContainerVersionReq, containerID, versionID int) (*ContainerVersionResp, error) {
+func (s *Service) UpdateContainerVersion(_ context.Context, scope authz.CallerScope, req *UpdateContainerVersionReq, containerID, versionID int) (*ContainerVersionResp, error) {
 	_ = containerID
 
 	var updatedVersion *model.ContainerVersion
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
+		if _, err := repo.getContainerByIDScoped(containerID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: container id: %d", consts.ErrNotFound, containerID)
+			}
+			return fmt.Errorf("failed to get container: %w", err)
+		}
 		version, err := repo.getContainerVersionByID(versionID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -370,15 +408,22 @@ func (s *Service) UpdateContainerVersion(_ context.Context, req *UpdateContainer
 
 // SetContainerVersionImage atomically rewrites the four image reference
 // columns (registry, namespace, repository, tag) on a container_versions row.
-func (s *Service) SetContainerVersionImage(_ context.Context, req *SetContainerVersionImageReq, versionID int) (*SetContainerVersionImageResp, error) {
+func (s *Service) SetContainerVersionImage(_ context.Context, scope authz.CallerScope, req *SetContainerVersionImageReq, versionID int) (*SetContainerVersionImageResp, error) {
 	var updated *model.ContainerVersion
 	err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
-		if _, err := repo.getContainerVersionByID(versionID); err != nil {
+		version, err := repo.getContainerVersionByID(versionID)
+		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("%w: version id: %d", consts.ErrNotFound, versionID)
 			}
 			return fmt.Errorf("failed to get container version: %w", err)
+		}
+		if _, err := repo.getContainerByIDScoped(version.ContainerID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: version id: %d", consts.ErrNotFound, versionID)
+			}
+			return fmt.Errorf("failed to get container: %w", err)
 		}
 
 		rows, err := repo.updateContainerVersionImageColumns(versionID, req.Registry, req.Namespace, req.Repository, req.Tag)
@@ -449,8 +494,15 @@ func (s *Service) SubmitContainerBuilding(ctx context.Context, req *SubmitBuildC
 	}, nil
 }
 
-func (s *Service) UploadHelmChart(_ context.Context, file *multipart.FileHeader, containerID, versionID, userID int) (*UploadHelmChartResp, error) {
+func (s *Service) UploadHelmChart(_ context.Context, scope authz.CallerScope, file *multipart.FileHeader, containerID, versionID, userID int) (*UploadHelmChartResp, error) {
 	_ = userID
+
+	if _, err := s.repo.getContainerByIDScoped(containerID, scope); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: container id: %d", consts.ErrNotFound, containerID)
+		}
+		return nil, fmt.Errorf("failed to get container: %w", err)
+	}
 
 	containerVersion, err := s.validateHelmConfigVersion(containerID, versionID)
 	if err != nil {
@@ -475,8 +527,15 @@ func (s *Service) UploadHelmChart(_ context.Context, file *multipart.FileHeader,
 	}, nil
 }
 
-func (s *Service) UploadHelmValueFile(_ context.Context, file *multipart.FileHeader, containerID, versionID, userID int) (*UploadHelmValueFileResp, error) {
+func (s *Service) UploadHelmValueFile(_ context.Context, scope authz.CallerScope, file *multipart.FileHeader, containerID, versionID, userID int) (*UploadHelmValueFileResp, error) {
 	_ = userID
+
+	if _, err := s.repo.getContainerByIDScoped(containerID, scope); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: container id: %d", consts.ErrNotFound, containerID)
+		}
+		return nil, fmt.Errorf("failed to get container: %w", err)
+	}
 
 	containerVersion, err := s.validateHelmConfigVersion(containerID, versionID)
 	if err != nil {

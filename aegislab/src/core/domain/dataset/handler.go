@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
@@ -16,11 +17,25 @@ import (
 )
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	resolver authz.ProjectMembershipResolver
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, resolver authz.ProjectMembershipResolver) *Handler {
+	return &Handler{service: service, resolver: resolver}
+}
+
+func (h *Handler) scope(c *gin.Context) (authz.CallerScope, bool) {
+	s, err := authz.ScopeFromGinContext(c, h.resolver)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == authz.ErrMissingAuth {
+			status = http.StatusUnauthorized
+		}
+		dto.ErrorResponse(c, status, err.Error())
+		return authz.CallerScope{}, false
+	}
+	return s, true
 }
 
 // CreateDataset handles dataset creation
@@ -90,7 +105,11 @@ func (h *Handler) DeleteDataset(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.DeleteDataset(c.Request.Context(), datasetID)) {
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	if httpx.HandleServiceError(c, h.service.DeleteDataset(c.Request.Context(), scope, datasetID)) {
 		return
 	}
 
@@ -120,7 +139,11 @@ func (h *Handler) GetDataset(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetDataset(c.Request.Context(), datasetID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetDataset(c.Request.Context(), scope, datasetID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -160,7 +183,11 @@ func (h *Handler) ListDatasets(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListDatasets(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ListDatasets(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -197,7 +224,11 @@ func (h *Handler) SearchDataset(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.SearchDatasets(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.SearchDatasets(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -241,7 +272,11 @@ func (h *Handler) UpdateDataset(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.UpdateDataset(c.Request.Context(), &req, datasetID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.UpdateDataset(c.Request.Context(), scope, &req, datasetID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -285,7 +320,11 @@ func (h *Handler) ManageDatasetCustomLabels(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ManageDatasetLabels(c.Request.Context(), &req, datasetID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ManageDatasetLabels(c.Request.Context(), scope, &req, datasetID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -335,7 +374,11 @@ func (h *Handler) CreateDatasetVersion(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.CreateDatasetVersion(c.Request.Context(), &req, datasetID, userID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.CreateDatasetVersion(c.Request.Context(), scope, &req, datasetID, userID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -367,7 +410,11 @@ func (h *Handler) DeleteDatasetVersion(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.DeleteDatasetVersion(c.Request.Context(), versionID)) {
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	if httpx.HandleServiceError(c, h.service.DeleteDatasetVersion(c.Request.Context(), scope, versionID)) {
 		return
 	}
 
@@ -402,7 +449,11 @@ func (h *Handler) GetDatasetVersion(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetDatasetVersion(c.Request.Context(), datasetID, versionID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetDatasetVersion(c.Request.Context(), scope, datasetID, versionID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -446,7 +497,11 @@ func (h *Handler) ListDatasetVersions(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListDatasetVersions(c.Request.Context(), &req, datasetID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ListDatasetVersions(c.Request.Context(), scope, &req, datasetID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -495,7 +550,11 @@ func (h *Handler) UpdateDatasetVersion(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.UpdateDatasetVersion(c.Request.Context(), &req, datasetID, versionID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.UpdateDatasetVersion(c.Request.Context(), scope, &req, datasetID, versionID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -530,7 +589,11 @@ func (h *Handler) DownloadDatasetVersion(c *gin.Context) {
 		return
 	}
 
-	filename, err := h.service.GetDatasetVersionFilename(c.Request.Context(), datasetID, versionID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	filename, err := h.service.GetDatasetVersionFilename(c.Request.Context(), scope, datasetID, versionID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -541,7 +604,7 @@ func (h *Handler) DownloadDatasetVersion(c *gin.Context) {
 	zipWriter := zip.NewWriter(c.Writer)
 	defer func() { _ = zipWriter.Close() }()
 
-	if err := h.service.DownloadDatasetVersion(c.Request.Context(), zipWriter, []utils.ExculdeRule{}, versionID); err != nil {
+	if err := h.service.DownloadDatasetVersion(c.Request.Context(), scope, zipWriter, []utils.ExculdeRule{}, versionID); err != nil {
 		delete(c.Writer.Header(), "Content-Disposition")
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		httpx.HandleServiceError(c, err)
@@ -589,7 +652,11 @@ func (h *Handler) ManageDatasetVersionInjections(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ManageDatasetVersionInjections(c.Request.Context(), &req, versionID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ManageDatasetVersionInjections(c.Request.Context(), scope, &req, versionID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

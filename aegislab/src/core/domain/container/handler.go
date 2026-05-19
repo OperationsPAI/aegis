@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
@@ -15,11 +16,25 @@ import (
 )
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	resolver authz.ProjectMembershipResolver
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, resolver authz.ProjectMembershipResolver) *Handler {
+	return &Handler{service: service, resolver: resolver}
+}
+
+func (h *Handler) scope(c *gin.Context) (authz.CallerScope, bool) {
+	s, err := authz.ScopeFromGinContext(c, h.resolver)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == authz.ErrMissingAuth {
+			status = http.StatusUnauthorized
+		}
+		dto.ErrorResponse(c, status, err.Error())
+		return authz.CallerScope{}, false
+	}
+	return s, true
 }
 
 // CreateContainer handles container creation for v2 API
@@ -89,7 +104,11 @@ func (h *Handler) DeleteContainer(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.DeleteContainer(c.Request.Context(), containerID)) {
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	if httpx.HandleServiceError(c, h.service.DeleteContainer(c.Request.Context(), scope, containerID)) {
 		return
 	}
 
@@ -119,7 +138,11 @@ func (h *Handler) GetContainer(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetContainer(c.Request.Context(), containerID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetContainer(c.Request.Context(), scope, containerID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -159,7 +182,11 @@ func (h *Handler) ListContainers(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListContainers(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ListContainers(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -198,7 +225,11 @@ func (h *Handler) UpdateContainer(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.UpdateContainer(c.Request.Context(), &req, containerID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.UpdateContainer(c.Request.Context(), scope, &req, containerID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -242,7 +273,11 @@ func (h *Handler) ManageContainerCustomLabels(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ManageContainerLabels(c.Request.Context(), &req, containerID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ManageContainerLabels(c.Request.Context(), scope, &req, containerID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -292,7 +327,11 @@ func (h *Handler) CreateContainerVersion(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.CreateContainerVersion(c.Request.Context(), &req, containerID, userID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.CreateContainerVersion(c.Request.Context(), scope, &req, containerID, userID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -324,7 +363,11 @@ func (h *Handler) DeleteContainerVersion(c *gin.Context) {
 		return
 	}
 
-	if httpx.HandleServiceError(c, h.service.DeleteContainerVersion(c.Request.Context(), versionID)) {
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	if httpx.HandleServiceError(c, h.service.DeleteContainerVersion(c.Request.Context(), scope, versionID)) {
 		return
 	}
 
@@ -359,7 +402,11 @@ func (h *Handler) GetContainerVersion(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetContainerVersion(c.Request.Context(), containerID, versionID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetContainerVersion(c.Request.Context(), scope, containerID, versionID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -403,7 +450,11 @@ func (h *Handler) ListContainerVersions(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListContainerVersions(c.Request.Context(), &req, containerID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ListContainerVersions(c.Request.Context(), scope, &req, containerID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -447,7 +498,11 @@ func (h *Handler) UpdateContainerVersion(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.UpdateContainerVersion(c.Request.Context(), &req, containerID, versionID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.UpdateContainerVersion(c.Request.Context(), scope, &req, containerID, versionID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -493,7 +548,11 @@ func (h *Handler) SetContainerVersionImage(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.SetContainerVersionImage(c.Request.Context(), &req, versionID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.SetContainerVersionImage(c.Request.Context(), scope, &req, versionID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -594,7 +653,11 @@ func (h *Handler) UploadHelmChart(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.UploadHelmChart(c.Request.Context(), file, containerID, versionID, userID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.UploadHelmChart(c.Request.Context(), scope, file, containerID, versionID, userID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -650,7 +713,11 @@ func (h *Handler) UploadHelmValueFile(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.UploadHelmValueFile(c.Request.Context(), file, containerID, versionID, userID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.UploadHelmValueFile(c.Request.Context(), scope, file, containerID, versionID, userID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
