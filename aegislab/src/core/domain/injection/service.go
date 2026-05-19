@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/platform/authz"
 	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
@@ -612,13 +613,18 @@ func (s *Service) ListInjections(_ context.Context, req *ListInjectionReq) (*dto
 	}, nil
 }
 
-func (s *Service) GetInjection(_ context.Context, id int) (*InjectionDetailResp, error) {
+func (s *Service) GetInjection(_ context.Context, scope authz.CallerScope, id int) (*InjectionDetailResp, error) {
 	injection, err := s.repo.getInjectionWithLabels(id)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) {
 			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get injection: %w", err)
+	}
+	if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
+		}
 	}
 	return NewInjectionDetailResp(injection), nil
 }

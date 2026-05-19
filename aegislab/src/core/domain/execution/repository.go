@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
@@ -57,7 +58,7 @@ func (r *Repository) listProjectExecutionsView(projectID, limit, offset int) ([]
 	return r.attachExecutionLabels(executions, total)
 }
 
-func (r *Repository) listExecutionsView(limit, offset int, req *ListExecutionReq) ([]model.Execution, int64, error) {
+func (r *Repository) listExecutionsView(limit, offset int, scope authz.CallerScope, req *ListExecutionReq) ([]model.Execution, int64, error) {
 	labelConditions := make([]map[string]string, 0, len(req.Labels))
 	for _, item := range req.Labels {
 		parts := strings.SplitN(item, ":", 2)
@@ -85,11 +86,23 @@ func (r *Repository) listExecutionsView(limit, offset int, req *ListExecutionReq
 	if req.Status != nil {
 		query = query.Where("status = ?", *req.Status)
 	}
-	if req.ProjectID != nil {
+	scopedByProjectFilter := req.ProjectID != nil
+	if scopedByProjectFilter {
 		query = query.
 			Joins("JOIN tasks ON tasks.id = executions.task_id").
 			Joins("JOIN traces ON traces.id = tasks.trace_id").
 			Where("traces.project_id = ?", *req.ProjectID)
+	}
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return nil, 0, nil
+		}
+		if !scopedByProjectFilter {
+			query = query.
+				Joins("JOIN tasks ON tasks.id = executions.task_id").
+				Joins("JOIN traces ON traces.id = tasks.trace_id")
+		}
+		query = query.Where("traces.project_id IN ?", scope.VisibleProjects)
 	}
 	for _, condition := range labelConditions {
 		subQuery := r.db.Table("execution_injection_labels eil").

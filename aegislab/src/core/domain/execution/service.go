@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
@@ -151,9 +152,9 @@ func (s *Service) SubmitAlgorithmExecution(ctx context.Context, req *SubmitExecu
 	}, nil
 }
 
-func (s *Service) ListExecutions(_ context.Context, req *ListExecutionReq) (*dto.ListResp[ExecutionResp], error) {
+func (s *Service) ListExecutions(_ context.Context, scope authz.CallerScope, req *ListExecutionReq) (*dto.ListResp[ExecutionResp], error) {
 	limit, offset := req.ToGormParams()
-	executions, total, err := s.repo.listExecutionsView(limit, offset, req)
+	executions, total, err := s.repo.listExecutionsView(limit, offset, scope, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list executions: %w", err)
 	}
@@ -169,13 +170,18 @@ func (s *Service) ListExecutions(_ context.Context, req *ListExecutionReq) (*dto
 	}, nil
 }
 
-func (s *Service) GetExecution(_ context.Context, id int) (*ExecutionDetailResp, error) {
+func (s *Service) GetExecution(_ context.Context, scope authz.CallerScope, id int) (*ExecutionDetailResp, error) {
 	execution, labels, detectorResults, granularityResults, err := s.repo.getExecutionResultView(id)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: execution id: %d", consts.ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get execution: %w", err)
+	}
+	if execution != nil && execution.Task != nil && execution.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(execution.Task.Trace.ProjectID)); err != nil {
+			return nil, fmt.Errorf("%w: execution id: %d", consts.ErrNotFound, id)
+		}
 	}
 
 	resp := NewExecutionDetailResp(execution, labels)
@@ -196,7 +202,7 @@ func (s *Service) GetExecution(_ context.Context, id int) (*ExecutionDetailResp,
 	return resp, nil
 }
 
-func (s *Service) CompareExecutions(ctx context.Context, req *CompareExecutionsRequest) (*CompareExecutionsResponse, error) {
+func (s *Service) CompareExecutions(ctx context.Context, scope authz.CallerScope, req *CompareExecutionsRequest) (*CompareExecutionsResponse, error) {
 	results := make(map[string]CompareExecutionItem, len(req.ExecutionIDs))
 	includeDetector := false
 	includeGranularity := false
@@ -209,7 +215,7 @@ func (s *Service) CompareExecutions(ctx context.Context, req *CompareExecutionsR
 		}
 	}
 	for _, id := range req.ExecutionIDs {
-		detail, err := s.GetExecution(ctx, id)
+		detail, err := s.GetExecution(ctx, scope, id)
 		if err != nil {
 			return nil, err
 		}
