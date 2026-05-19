@@ -74,7 +74,26 @@ func NewHandler(svc *Service, auth *Authorizer, deps RegistryDeps) *Handler {
 
 func subjectFromContext(c *gin.Context) Subject {
 	uid, _ := middleware.GetCurrentUserID(c)
-	return Subject{UserID: uid}
+	roles, _ := middleware.GetCurrentUserRoles(c)
+	return Subject{
+		UserID:    uid,
+		Roles:     roles,
+		IsService: middleware.IsServiceToken(c),
+	}
+}
+
+// driverOnlyReadDenied returns true when the read target is a driver-only
+// object (no metadata row) in a role-restricted bucket and the caller is
+// neither admin nor a trusted service token. Without this gate, role-only
+// buckets would still leak legacy objects to any role-bearing reader.
+func (h *Handler) driverOnlyReadDenied(c *gin.Context, cfg *BucketConfig, recordExists bool) bool {
+	if recordExists || len(cfg.ReadRoles) == 0 {
+		return false
+	}
+	if middleware.IsCurrentUserAdmin(c) || middleware.IsServiceToken(c) {
+		return false
+	}
+	return true
 }
 
 // ---- Request / response shapes ----
@@ -248,11 +267,12 @@ func (h *Handler) PresignGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, req.Key)
+	uploadedBy, recordExists, err := h.lookupUploaderForACL(c, bucket, req.Key)
 	if err != nil {
 		return // helper already wrote the response
 	}
-	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
+	if h.driverOnlyReadDenied(c, &b.Config, recordExists) ||
+		!h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -301,11 +321,12 @@ func (h *Handler) InlineGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, key)
+	uploadedBy, recordExists, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
 		return
 	}
-	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
+	if h.driverOnlyReadDenied(c, &b.Config, recordExists) ||
+		!h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -346,11 +367,12 @@ func (h *Handler) Stat(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, key)
+	uploadedBy, recordExists, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
 		return
 	}
-	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
+	if h.driverOnlyReadDenied(c, &b.Config, recordExists) ||
+		!h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -487,11 +509,12 @@ func (h *Handler) StreamGet(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
 	}
-	uploadedBy, _, err := h.lookupUploaderForACL(c, bucket, key)
+	uploadedBy, recordExists, err := h.lookupUploaderForACL(c, bucket, key)
 	if err != nil {
 		return
 	}
-	if !h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
+	if h.driverOnlyReadDenied(c, &b.Config, recordExists) ||
+		!h.auth.CanRead(&b.Config, subjectFromContext(c), uploadedBy) {
 		dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 		return
 	}
@@ -978,11 +1001,12 @@ func (h *Handler) ZipObjects(c *gin.Context) {
 		return
 	}
 	for _, key := range req.Keys {
-		uploadedBy, _, recErr := h.lookupUploaderForACL(c, bucket, key)
+		uploadedBy, recordExists, recErr := h.lookupUploaderForACL(c, bucket, key)
 		if recErr != nil {
 			return
 		}
-		if !h.auth.CanRead(&b.Config, sub, uploadedBy) {
+		if h.driverOnlyReadDenied(c, &b.Config, recordExists) ||
+			!h.auth.CanRead(&b.Config, sub, uploadedBy) {
 			dto.ErrorResponse(c, http.StatusForbidden, ErrUnauthorized.Error())
 			return
 		}

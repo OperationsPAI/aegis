@@ -112,6 +112,20 @@ func TestHandler_Stat_AllowedForObjectOwner(t *testing.T) {
 	}
 }
 
+// TestAuthorizer_CanRead_EmptyRolesDeniedOnRoleRestrictedBucket guards the
+// silent-ACL-bypass regression: before subjectFromContext was fixed to read
+// roles off the gin context, every caller saw Subject.Roles == nil and this
+// check returned the wrong answer in two directions (over-grant + under-grant).
+// Keep this test on the real Authorizer so it survives handler refactors.
+func TestAuthorizer_CanRead_EmptyRolesDeniedOnRoleRestrictedBucket(t *testing.T) {
+	auth := NewAuthorizer()
+	cfg := &BucketConfig{Name: "restricted", ReadRoles: []string{"admin-role"}}
+	sub := Subject{UserID: 42, Roles: nil}
+	if auth.CanRead(cfg, sub, nil) {
+		t.Fatalf("CanRead: expected false for empty-roles subject on role-restricted bucket")
+	}
+}
+
 // ---- S2: Delete legacy-data admin gate ----
 
 func TestHandler_Delete_LegacyObject_RequiresAdmin(t *testing.T) {
