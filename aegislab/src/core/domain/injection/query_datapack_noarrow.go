@@ -27,3 +27,10 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 	_ = userSQL
 	return nil, fmt.Errorf("QueryDatapack requires building with -tags duckdb_arrow")
 }
+
+func (s *Service) countParquetRows(ctx context.Context, datapackName, file string) (int64, bool) {
+	_ = ctx
+	_ = datapackName
+	_ = file
+	return 0, false
+}

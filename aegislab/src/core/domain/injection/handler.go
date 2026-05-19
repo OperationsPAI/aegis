@@ -1018,6 +1018,35 @@ func serveRangeRequest(c *gin.Context, reader io.ReadSeeker, fileSize int64, ran
 	}
 }
 
+// DiagnoseDatapack reports datapack health (missing files, zero-row required
+// parquets, DB-state vs storage inconsistency) for an injection. Read-only.
+//
+//	@Summary		Diagnose datapack health
+//	@Description	Report which required datapack artifacts are missing, which required parquets have zero rows, and whether the DB state agrees with on-disk content. Works for any injection regardless of build state.
+//	@Tags			Injections
+//	@ID				diagnose_datapack
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int											true	"Injection ID"
+//	@Success		200	{object}	dto.GenericResponse[DatapackDiagnoseResp]	"Datapack health report"
+//	@Failure		400	{object}	dto.GenericResponse[any]					"Invalid injection ID"
+//	@Failure		401	{object}	dto.GenericResponse[any]					"Authentication required"
+//	@Failure		404	{object}	dto.GenericResponse[any]					"Injection not found"
+//	@Failure		500	{object}	dto.GenericResponse[any]					"Internal server error"
+//	@Router			/api/v2/injections/{id}/diagnose [get]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) DiagnoseDatapack(c *gin.Context) {
+	id, ok := parsePositiveID(c, consts.URLPathID, "injection ID")
+	if !ok {
+		return
+	}
+	resp, err := h.service.DiagnoseDatapack(c.Request.Context(), id)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 func parseProjectID(c *gin.Context) (int, bool) {
 	projectIDStr := c.Param(consts.URLPathProjectID)
 	projectID, err := strconv.Atoi(projectIDStr)
