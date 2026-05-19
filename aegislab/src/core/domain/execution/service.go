@@ -39,7 +39,10 @@ func NewService(repo *Repository, redis *redis.Gateway, containers container.Rea
 	}
 }
 
-func (s *Service) ListProjectExecutions(_ context.Context, req *ListExecutionReq, projectID int) (*dto.ListResp[ExecutionResp], error) {
+func (s *Service) ListProjectExecutions(_ context.Context, scope authz.CallerScope, req *ListExecutionReq, projectID int) (*dto.ListResp[ExecutionResp], error) {
+	if err := scope.MustHaveProject(int64(projectID)); err != nil {
+		return nil, err
+	}
 	var project model.Project
 	if err := s.repo.db.Where("id = ?", projectID).First(&project).Error; err != nil {
 		if errors.Is(err, consts.ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {

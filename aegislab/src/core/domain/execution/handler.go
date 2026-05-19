@@ -75,7 +75,12 @@ func (h *Handler) ListProjectExecutions(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListProjectExecutions(c.Request.Context(), &req, projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.ListProjectExecutions(c.Request.Context(), scope, &req, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

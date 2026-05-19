@@ -30,7 +30,7 @@ type injectionLister interface {
 }
 
 type executionLister interface {
-	ListProjectExecutions(context.Context, *execution.ListExecutionReq, int) (*dto.ListResp[execution.ExecutionResp], error)
+	ListProjectExecutions(context.Context, authz.CallerScope, *execution.ListExecutionReq, int) (*dto.ListResp[execution.ExecutionResp], error)
 }
 
 type traceLister interface {
@@ -65,21 +65,22 @@ func NewService(
 	}
 }
 
-func (s *Service) GetProjectDashboard(ctx context.Context, projectID int) (*DashboardResp, error) {
+func (s *Service) GetProjectDashboard(ctx context.Context, scope authz.CallerScope, projectID int) (*DashboardResp, error) {
+	if err := scope.MustHaveProject(int64(projectID)); err != nil {
+		return nil, err
+	}
+
 	proj, err := s.projects.GetProjectDetail(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO(authz): thread per-request CallerScope through dashboard once the
-	// handler resolves it; for now SystemScope keeps dashboard aggregates
-	// admin-visible (the project URL is gated upstream by membership checks).
-	injectionPage, err := s.injections.ListProjectInjections(ctx, authz.SystemScope(), newPaginatedInjectionReq(), projectID)
+	injectionPage, err := s.injections.ListProjectInjections(ctx, scope, newPaginatedInjectionReq(), projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list project injections: %w", err)
 	}
 
-	executionPage, err := s.executions.ListProjectExecutions(ctx, newPaginatedExecutionReq(), projectID)
+	executionPage, err := s.executions.ListProjectExecutions(ctx, scope, newPaginatedExecutionReq(), projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list project executions: %w", err)
 	}

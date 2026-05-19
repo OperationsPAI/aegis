@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/httpx"
@@ -12,11 +13,12 @@ import (
 )
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	resolver authz.ProjectMembershipResolver
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, resolver authz.ProjectMembershipResolver) *Handler {
+	return &Handler{service: service, resolver: resolver}
 }
 
 // GetProjectDashboard returns a fan-in aggregate for the portal dashboard page.
@@ -44,7 +46,17 @@ func (h *Handler) GetProjectDashboard(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetProjectDashboard(c.Request.Context(), projectID)
+	scope, err := authz.ScopeFromGinContext(c, h.resolver)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == authz.ErrMissingAuth {
+			status = http.StatusUnauthorized
+		}
+		dto.ErrorResponse(c, status, err.Error())
+		return
+	}
+
+	resp, err := h.service.GetProjectDashboard(c.Request.Context(), scope, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
