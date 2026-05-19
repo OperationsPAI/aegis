@@ -17,9 +17,11 @@ var (
 	ErrPointNotFound         = errors.New("chaos: point not found")
 	ErrPointNotActive        = errors.New("chaos: point not active")
 	ErrInjectionNotFound     = errors.New("chaos: injection not found")
+	ErrBatchNotFound         = errors.New("chaos: injection batch not found")
 	ErrCapabilityNotFound    = errors.New("chaos: capability not found")
 	ErrCapabilityUnsupported = errors.New("chaos: capability not supported by executor")
 	ErrIdempotencyMismatch   = errors.New("chaos: idempotency_key reused with different request body")
+	ErrBatchEmpty            = errors.New("chaos: injection batch requires at least one child")
 )
 
 // Manager is named after the role rather than "Service" so it doesn't

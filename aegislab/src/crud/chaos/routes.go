@@ -38,9 +38,8 @@ func Routes(h *Handler) framework.RouteRegistrar {
 			auth.GET("/systems/:sys/services/:svc", notImplemented)
 			auth.GET("/systems/:sys/services/:svc/versions", notImplemented)
 
-			auth.GET("/systems/:sys/points", notImplemented)
+			auth.GET("/systems/:sys/points", h.ListSystemPoints)
 			auth.GET("/systems/:sys/services/:svc/points", notImplemented)
-			auth.POST("/systems/:sys/services/:svc/points", notImplemented)
 			auth.GET("/points/:id", notImplemented)
 			auth.DELETE("/points/:id", notImplemented)
 			auth.POST("/systems/:sys/points/import", h.ImportPoints)
@@ -57,9 +56,9 @@ func Routes(h *Handler) framework.RouteRegistrar {
 			auth.DELETE("/injections/:id", h.DeleteInjection)
 			auth.POST("/injections/preview", notImplemented)
 
-			auth.POST("/injection-batches", notImplemented)
-			auth.GET("/injection-batches/:id", notImplemented)
-			auth.DELETE("/injection-batches/:id", notImplemented)
+			auth.POST("/injection-batches", h.CreateInjectionBatch)
+			auth.GET("/injection-batches/:id", h.GetInjectionBatch)
+			auth.DELETE("/injection-batches/:id", h.DeleteInjectionBatch)
 
 			auth.POST("/guided-sessions", notImplemented)
 			auth.POST("/guided-sessions/:tok/step", notImplemented)

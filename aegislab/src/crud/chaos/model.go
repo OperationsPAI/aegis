@@ -120,6 +120,8 @@ type InjectionBatch struct {
 	Ts                  time.Time  `gorm:"not null;index:idx_batch_agg_ts,priority:2"               json:"ts"`
 	StartedAt           *time.Time `                                                                 json:"started_at,omitempty"`
 	FinishedAt          *time.Time `                                                                 json:"finished_at,omitempty"`
+	WebhookAttemptedAt  *time.Time `                                                                 json:"webhook_attempted_at,omitempty"`
+	WebhookError        string     `gorm:"type:text"                                                json:"webhook_error,omitempty"`
 }
 
 func (InjectionBatch) TableName() string { return "chaos_injection_batches" }

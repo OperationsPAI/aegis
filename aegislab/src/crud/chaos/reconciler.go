@@ -118,4 +118,80 @@ func (r *Reconciler) reconcileOne(ctx context.Context, inj *Injection) {
 	if err := r.webhook.Fire(ctx, &fresh); err != nil && !errors.Is(err, errWebhookDisabled) {
 		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: webhook fire")
 	}
+
+	if fresh.BatchID != nil && *fresh.BatchID != "" {
+		r.reconcileBatch(ctx, *fresh.BatchID)
+	}
+}
+
+// reconcileBatch recomputes aggregated_status from all children. The
+// SELECT … FOR UPDATE acts as the stickiness gate per ADR-0006: only the
+// first observer that sees all-children-terminal writes the terminal row,
+// subsequent reconciler ticks see a terminal aggregated_status and bail.
+func (r *Reconciler) reconcileBatch(ctx context.Context, batchID string) {
+	tx := r.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		r.logger.WithError(tx.Error).WithField("batch_id", batchID).Warn("chaos reconciler: batch tx begin")
+		return
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		}
+	}()
+
+	var batch InjectionBatch
+	q := tx.Where("id = ?", batchID)
+	if tx.Dialector.Name() == "mysql" {
+		q = q.Set("gorm:query_option", "FOR UPDATE")
+	}
+	if err := q.Take(&batch).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			r.logger.WithError(err).WithField("batch_id", batchID).Warn("chaos reconciler: load batch")
+		}
+		return
+	}
+	if isAggTerminal(batch.AggregatedStatus) {
+		return
+	}
+
+	var children []Injection
+	if err := tx.Where("batch_id = ?", batchID).Find(&children).Error; err != nil {
+		r.logger.WithError(err).WithField("batch_id", batchID).Warn("chaos reconciler: load children")
+		return
+	}
+	statuses := make([]string, 0, len(children))
+	for _, c := range children {
+		statuses = append(statuses, c.Status)
+	}
+	agg := ComputeAggregatedStatus(statuses)
+	if agg == batch.AggregatedStatus && !isAggTerminal(agg) {
+		return
+	}
+
+	updates := map[string]any{"aggregated_status": agg}
+	now := time.Now().UTC()
+	if isAggTerminal(agg) && batch.FinishedAt == nil {
+		updates["finished_at"] = &now
+		batch.FinishedAt = &now
+	}
+	if err := tx.Model(&InjectionBatch{}).Where("id = ? AND aggregated_status = ?", batchID, batch.AggregatedStatus).
+		Updates(updates).Error; err != nil {
+		r.logger.WithError(err).WithField("batch_id", batchID).Warn("chaos reconciler: batch update")
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		r.logger.WithError(err).WithField("batch_id", batchID).Warn("chaos reconciler: batch commit")
+		return
+	}
+	committed = true
+	batch.AggregatedStatus = agg
+
+	if !isAggTerminal(agg) || r.webhook == nil {
+		return
+	}
+	if err := r.webhook.FireBatch(ctx, &batch, children); err != nil && !errors.Is(err, errWebhookDisabled) {
+		r.logger.WithError(err).WithField("batch_id", batchID).Warn("chaos reconciler: batch webhook fire")
+	}
 }
