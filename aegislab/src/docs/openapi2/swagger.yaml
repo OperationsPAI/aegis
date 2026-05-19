@@ -351,6 +351,45 @@ definitions:
           type: string
         type: array
     type: object
+  blob.LifecycleSweepBucket:
+    properties:
+      bucket:
+        type: string
+      examples:
+        items:
+          type: string
+        type: array
+      rules:
+        items:
+          $ref: '#/definitions/blob.LifecycleSweepRule'
+        type: array
+      total_keys:
+        type: integer
+    type: object
+  blob.LifecycleSweepResult:
+    properties:
+      buckets:
+        items:
+          $ref: '#/definitions/blob.LifecycleSweepBucket'
+        type: array
+      grace_period:
+        type: string
+      lock_held:
+        type: boolean
+      swept_at:
+        type: string
+    type: object
+  blob.LifecycleSweepRule:
+    properties:
+      expire_after_days:
+        type: integer
+      match_prefix:
+        type: string
+      matched:
+        type: integer
+      name:
+        type: string
+    type: object
   blob.ListResult:
     properties:
       common_prefixes:
@@ -515,6 +554,249 @@ definitions:
         type: array
     required:
     - keys
+    type: object
+  chaos.ChaosCapabilityResp:
+    properties:
+      created_at:
+        type: string
+      name:
+        type: string
+      observable_contract:
+        additionalProperties: {}
+        type: object
+      param_schema:
+        additionalProperties: {}
+        type: object
+      status:
+        type: string
+      target_schema:
+        additionalProperties: {}
+        type: object
+    type: object
+  chaos.ChaosCreateInjectionReq:
+    properties:
+      caller_metadata:
+        additionalProperties: {}
+        type: object
+      executor_pin:
+        type: string
+      idempotency_key:
+        example: client-1700000000
+        type: string
+      params:
+        additionalProperties: {}
+        type: object
+      point_id:
+        example: step5acart11111
+        type: string
+    type: object
+  chaos.ChaosImportPointsReq:
+    properties:
+      apiVersion:
+        example: aegis-chaos/v1beta
+        type: string
+      kind:
+        example: PointManifest
+        type: string
+      metadata:
+        $ref: '#/definitions/chaos.ChaosImportPointsReqMetadata'
+      spec:
+        $ref: '#/definitions/chaos.ChaosImportPointsReqSpec'
+    type: object
+  chaos.ChaosImportPointsReqEntry:
+    properties:
+      capability:
+        type: string
+      param_overrides:
+        additionalProperties: {}
+        type: object
+      target:
+        additionalProperties: {}
+        type: object
+    type: object
+  chaos.ChaosImportPointsReqMetadata:
+    properties:
+      chart_version:
+        type: string
+      instance:
+        type: string
+      service:
+        type: string
+      system:
+        type: string
+    type: object
+  chaos.ChaosImportPointsReqSpec:
+    properties:
+      points:
+        items:
+          $ref: '#/definitions/chaos.ChaosImportPointsReqEntry'
+        type: array
+      replace_scope:
+        example: service
+        type: string
+    type: object
+  chaos.ChaosImportPointsResp:
+    properties:
+      dry_run:
+        type: boolean
+      point_ids:
+        items:
+          type: string
+        type: array
+      superseded:
+        type: integer
+      upserted:
+        type: integer
+    type: object
+  chaos.ChaosInjectionResp:
+    properties:
+      batch_id:
+        type: string
+      caller_metadata:
+        additionalProperties: {}
+        type: object
+      destroy_error:
+        type: string
+      destroyed_at:
+        type: string
+      diagnostics:
+        additionalProperties: {}
+        type: object
+      executor_handle:
+        type: string
+      executor_name:
+        type: string
+      finished_at:
+        type: string
+      groundtruth:
+        additionalProperties: {}
+        type: object
+      id:
+        type: string
+      idempotency_key:
+        type: string
+      params:
+        additionalProperties: {}
+        type: object
+      point_id:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      ts:
+        type: string
+      webhook_attempted_at:
+        type: string
+      webhook_error:
+        type: string
+    type: object
+  chaos.ChaosSystemResp:
+    properties:
+      app_label_key:
+        type: string
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      max_concurrent_injections:
+        type: integer
+      name:
+        type: string
+      ns_pattern:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  chaos.ChaosSystemUpsertReq:
+    properties:
+      app_label_key:
+        example: app.kubernetes.io/name
+        type: string
+      enabled:
+        type: boolean
+      max_concurrent_injections:
+        example: 5
+        type: integer
+      ns_pattern:
+        example: otel-demo
+        type: string
+    type: object
+  chaosprune.PruneCandidate:
+    properties:
+      age_seconds:
+        type: number
+      delete_error:
+        description: |-
+          DeleteError carries the per-CR delete failure (if any) when the
+          orphan sweep tried to reap it. Stays empty in dry-run mode.
+        type: string
+      deleted:
+        description: Deleted is true when DryRun=false and the delete succeeded.
+        type: boolean
+      kind:
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      reason:
+        type: string
+      resource:
+        type: string
+      task_id:
+        type: string
+      task_state:
+        type: string
+    type: object
+  chaosprune.PruneReq:
+    properties:
+      age_seconds:
+        description: |-
+          AgeSeconds is the minimum age (in seconds) a terminal-task CR must
+          reach before it's eligible for reaping. Defaults to 300 (5 min) so
+          the chaos-mesh callback always has a grace window. CRs with no
+          task_id label or a missing task row are reaped regardless of age.
+        type: integer
+      dry_run:
+        description: |-
+          DryRun, when true, returns the candidate set without deleting.
+          Defaults to true if omitted — explicit opt-in is required to mutate.
+        type: boolean
+      include_kinds:
+        description: |-
+          IncludeKinds restricts the sweep to specific chaos resource plurals,
+          e.g. ["podchaos","networkchaos"]. Empty = every namespaced
+          chaos-mesh.org resource discovered in the cluster.
+        items:
+          type: string
+        type: array
+      namespace:
+        description: |-
+          Namespace, when non-empty, scopes the sweep to a single namespace.
+          Empty = all namespaces. Use this to target one benchmark cluster slot.
+        type: string
+    type: object
+  chaosprune.PruneResp:
+    properties:
+      age_seconds:
+        type: integer
+      candidates:
+        items:
+          $ref: '#/definitions/chaosprune.PruneCandidate'
+        type: array
+      dry_run:
+        type: boolean
+      namespace:
+        type: string
+      warnings:
+        description: |-
+          Warnings collects non-fatal list/lookup errors (transient apiserver
+          hiccups, partial discovery, etc.). The candidate set still reflects
+          whatever could be enumerated.
+        items:
+          type: string
+        type: array
     type: object
   chaossystem.BulkUpsertSystemMetadataReq:
     properties:
@@ -1941,6 +2223,23 @@ definitions:
         description: Response generation time
         type: integer
     type: object
+  dto.GenericResponse-array_chaos_ChaosCapabilityResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        description: Generic type data
+        items:
+          $ref: '#/definitions/chaos.ChaosCapabilityResp'
+        type: array
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
   dto.GenericResponse-array_chaossystem_SystemMetadataResp:
     properties:
       code:
@@ -2371,6 +2670,22 @@ definitions:
         description: Response generation time
         type: integer
     type: object
+  dto.GenericResponse-blob_LifecycleSweepResult:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/blob.LifecycleSweepResult'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
   dto.GenericResponse-blob_ListResult:
     properties:
       code:
@@ -2459,6 +2774,86 @@ definitions:
       data:
         allOf:
         - $ref: '#/definitions/blob.listResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosCapabilityResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosCapabilityResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosImportPointsResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosImportPointsResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosInjectionResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosInjectionResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosSystemResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosSystemResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaosprune_PruneResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaosprune.PruneResp'
         description: Generic type data
       message:
         description: Response message
@@ -3355,6 +3750,22 @@ definitions:
       data:
         allOf:
         - $ref: '#/definitions/injection.CancelInjectionResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-injection_DatapackDiagnoseResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/injection.DatapackDiagnoseResp'
         description: Generic type data
       message:
         description: Response message
@@ -5580,6 +5991,54 @@ definitions:
       name:
         type: string
       type:
+        type: string
+    type: object
+  injection.DatapackDiagnoseResp:
+    properties:
+      empty_parquets:
+        items:
+          type: string
+        type: array
+      health:
+        type: string
+      injection_id:
+        type: integer
+      injection_name:
+        type: string
+      json:
+        items:
+          $ref: '#/definitions/injection.DatapackFileHealth'
+        type: array
+      marker:
+        $ref: '#/definitions/injection.DatapackFileHealth'
+      missing_files:
+        items:
+          type: string
+        type: array
+      notes:
+        items:
+          type: string
+        type: array
+      parquets:
+        items:
+          $ref: '#/definitions/injection.DatapackFileHealth'
+        type: array
+      state:
+        type: string
+      unexpected_extras:
+        items:
+          type: string
+        type: array
+    type: object
+  injection.DatapackFileHealth:
+    properties:
+      name:
+        type: string
+      present:
+        type: boolean
+      rows:
+        type: integer
+      size:
         type: string
     type: object
   injection.DatapackFileItem:
@@ -8461,6 +8920,35 @@ paths:
       summary: OIDC discovery document
       tags:
       - OIDC
+  /api/v2/admin/chaos/prune:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Find and (optionally) delete chaos-mesh CRs whose backing
+        injection task is in a terminal state or no longer exists.
+        Defaults to dry-run; pass `"dry_run": false` to actually
+        delete. Admin-only.
+      operationId: prune_chaos
+      parameters:
+      - description: Prune parameters
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/chaosprune.PruneReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaosprune_PruneResp'
+      security:
+      - BearerAuth: []
+      summary: Prune orphaned chaos-mesh CRs
+      tags:
+      - ChaosPrune
   /api/v2/api-keys:
     get:
       description: List Key ID / Key Secret credentials owned by the current authenticated
@@ -9803,6 +10291,45 @@ paths:
       - Blob
       x-api-type:
         portal: "true"
+  /api/v2/blob/lifecycle/dry-run:
+    get:
+      description: Return the set of objects the next bucket-lifecycle sweep would
+        soft-delete, without acting. Used by operators to validate a policy before
+        flipping blob.lifecycle.enabled.
+      operationId: blob_lifecycle_dry_run
+      parameters:
+      - description: Limit preview to a single bucket
+        in: query
+        name: bucket
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Preview
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-blob_LifecycleSweepResult'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Preview the next bucket-lifecycle sweep
+      tags:
+      - Blob
+      x-api-type:
+        admin: "true"
+        portal: "true"
+        sdk: "true"
   /api/v2/blob/raw/{token}:
     get:
       description: Auth-free endpoint that verifies an HMAC-signed token and either
@@ -12919,6 +13446,48 @@ paths:
       - Injections
       x-api-type:
         portal: "true"
+  /api/v2/injections/{id}/diagnose:
+    get:
+      description: Report which required datapack artifacts are missing, which required
+        parquets have zero rows, and whether the DB state agrees with on-disk content.
+        Works for any injection regardless of build state.
+      operationId: diagnose_datapack
+      parameters:
+      - description: Injection ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Datapack health report
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-injection_DatapackDiagnoseResp'
+        "400":
+          description: Invalid injection ID
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Injection not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Diagnose datapack health
+      tags:
+      - Injections
+      x-api-type:
+        sdk: "true"
   /api/v2/injections/{id}/download:
     get:
       description: Download datapack file by injection ID
@@ -20711,6 +21280,318 @@ paths:
       x-api-type:
         admin: "true"
         portal: "true"
+  /v1beta/capabilities:
+    get:
+      description: Return all registered Capabilities ordered by name.
+      operationId: chaos_list_capabilities
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Capability catalog
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-array_chaos_ChaosCapabilityResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: List chaos capabilities
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/capabilities/{name}:
+    get:
+      description: Fetch one Capability entry including target/param/observable schemas.
+      operationId: chaos_get_capability
+      parameters:
+      - description: Capability name (e.g. pod_kill)
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Capability found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosCapabilityResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Capability not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Get a chaos capability
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/injections:
+    post:
+      consumes:
+      - application/json
+      description: Create (or return the existing row for the same idempotency_key)
+        a chaos Injection.
+      operationId: chaos_create_injection
+      parameters:
+      - description: Create-injection request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaos.ChaosCreateInjectionReq'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Injection accepted
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosInjectionResp'
+        "400":
+          description: Invalid request / disabled system / idempotency mismatch
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Point, system or capability not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Submit a chaos injection
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/injections/{id}:
+    delete:
+      description: Run executor Destroy and cancel a non-terminal Injection.
+      operationId: chaos_delete_injection
+      parameters:
+      - description: Injection id (ULID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Injection destroyed / cancelled
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosInjectionResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Injection not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Destroy a chaos injection
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+    get:
+      description: Fetch the persisted Injection row by id.
+      operationId: chaos_get_injection
+      parameters:
+      - description: Injection id (ULID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Injection found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosInjectionResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Injection not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Get a chaos injection
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/manifest-schema.json:
+    get:
+      description: Public endpoint returning the live JSON Schema for Point Manifests
+        (ADR-0010). Unauthenticated.
+      operationId: chaos_manifest_schema
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON Schema document
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Fetch the manifest envelope JSON Schema
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/systems/{sys}:
+    get:
+      description: Fetch the registered chaos System by name.
+      operationId: chaos_get_system
+      parameters:
+      - description: System name
+        in: path
+        name: sys
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosSystemResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: System not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Get a chaos system
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+    put:
+      consumes:
+      - application/json
+      description: Upsert a chaos System binding (ns_pattern + app_label_key) under
+        the given name.
+      operationId: chaos_put_system
+      parameters:
+      - description: System name
+        in: path
+        name: sys
+        required: true
+        type: string
+      - description: System upsert request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaos.ChaosSystemUpsertReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System registered
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosSystemResp'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Register or update a chaos system
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/systems/{sys}/points/import:
+    post:
+      consumes:
+      - application/json
+      description: POST a Point Manifest envelope to register / supersede chaos Points
+        for a system.
+      operationId: chaos_import_points
+      parameters:
+      - description: System name
+        in: path
+        name: sys
+        required: true
+        type: string
+      - description: Run validation only, rollback the transaction
+        in: query
+        name: dry_run
+        type: boolean
+      - description: Point manifest envelope
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaos.ChaosImportPointsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Import accepted (or dry-run summary)
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosImportPointsResp'
+        "400":
+          description: Invalid manifest
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Import chaos Points from a manifest
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

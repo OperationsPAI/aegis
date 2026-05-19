@@ -53,6 +53,10 @@ type APIClient struct {
 
 	BlobAPI BlobAPI
 
+	ChaosAPI ChaosAPI
+
+	ChaosPruneAPI ChaosPruneAPI
+
 	ClusterAPI ClusterAPI
 
 	ConfigCenterAPI ConfigCenterAPI
@@ -134,6 +138,8 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	// API Services
 	c.AuthenticationAPI = (*AuthenticationAPIService)(&c.common)
 	c.BlobAPI = (*BlobAPIService)(&c.common)
+	c.ChaosAPI = (*ChaosAPIService)(&c.common)
+	c.ChaosPruneAPI = (*ChaosPruneAPIService)(&c.common)
 	c.ClusterAPI = (*ClusterAPIService)(&c.common)
 	c.ConfigCenterAPI = (*ConfigCenterAPIService)(&c.common)
 	c.ConfigurationsAPI = (*ConfigurationsAPIService)(&c.common)
