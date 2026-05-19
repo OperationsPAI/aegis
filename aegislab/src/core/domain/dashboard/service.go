@@ -10,6 +10,7 @@ import (
 	task "aegis/core/domain/task"
 	project "aegis/crud/iam/project"
 	trace "aegis/crud/observability/trace"
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 )
@@ -25,7 +26,7 @@ type projectReader interface {
 }
 
 type injectionLister interface {
-	ListProjectInjections(context.Context, *injection.ListInjectionReq, int) (*dto.ListResp[injection.InjectionResp], error)
+	ListProjectInjections(context.Context, authz.CallerScope, *injection.ListInjectionReq, int) (*dto.ListResp[injection.InjectionResp], error)
 }
 
 type executionLister interface {
@@ -70,7 +71,10 @@ func (s *Service) GetProjectDashboard(ctx context.Context, projectID int) (*Dash
 		return nil, err
 	}
 
-	injectionPage, err := s.injections.ListProjectInjections(ctx, newPaginatedInjectionReq(), projectID)
+	// TODO(authz): thread per-request CallerScope through dashboard once the
+	// handler resolves it; for now SystemScope keeps dashboard aggregates
+	// admin-visible (the project URL is gated upstream by membership checks).
+	injectionPage, err := s.injections.ListProjectInjections(ctx, authz.SystemScope(), newPaginatedInjectionReq(), projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list project injections: %w", err)
 	}

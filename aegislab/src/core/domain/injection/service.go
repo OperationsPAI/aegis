@@ -119,7 +119,10 @@ func NewService(repo *Repository, store DatapackStorage, chLogReader chinfra.Log
 	}
 }
 
-func (s *Service) ListProjectInjections(ctx context.Context, req *ListInjectionReq, projectID int) (*dto.ListResp[InjectionResp], error) {
+func (s *Service) ListProjectInjections(ctx context.Context, scope authz.CallerScope, req *ListInjectionReq, projectID int) (*dto.ListResp[InjectionResp], error) {
+	if err := scope.MustHaveProject(int64(projectID)); err != nil {
+		return nil, fmt.Errorf("%w: project id %d", consts.ErrNotFound, projectID)
+	}
 	var project model.Project
 	if err := s.repo.db.Where("id = ?", projectID).First(&project).Error; err != nil {
 		if errors.Is(err, consts.ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
@@ -145,11 +148,19 @@ func (s *Service) ListProjectInjections(ctx context.Context, req *ListInjectionR
 	}, nil
 }
 
-func (s *Service) Search(ctx context.Context, req *SearchInjectionReq, projectID *int) (*dto.SearchResp[InjectionDetailResp], error) {
+func (s *Service) Search(ctx context.Context, scope authz.CallerScope, req *SearchInjectionReq, projectID *int) (*dto.SearchResp[InjectionDetailResp], error) {
 	if req == nil {
 		return nil, fmt.Errorf("search injection request is nil")
 	}
-	injections, total, err := s.repo.searchInjections(req, projectID)
+	if projectID != nil {
+		if err := scope.MustHaveProject(int64(*projectID)); err != nil {
+			return nil, fmt.Errorf("%w: project id %d", consts.ErrNotFound, *projectID)
+		}
+	}
+	if !scope.IsAdmin && len(scope.VisibleProjects) == 0 {
+		return &dto.SearchResp[InjectionDetailResp]{Pagination: req.ConvertToPaginationInfo(0)}, nil
+	}
+	injections, total, err := s.repo.searchInjections(scope, req, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search injections: %w", err)
 	}
@@ -169,9 +180,17 @@ func (s *Service) Search(ctx context.Context, req *SearchInjectionReq, projectID
 	return resp, nil
 }
 
-func (s *Service) ListNoIssues(ctx context.Context, req *ListInjectionNoIssuesReq, projectID *int) ([]InjectionNoIssuesResp, error) {
+func (s *Service) ListNoIssues(ctx context.Context, scope authz.CallerScope, req *ListInjectionNoIssuesReq, projectID *int) ([]InjectionNoIssuesResp, error) {
 	if len(req.Labels) == 0 {
 		return nil, nil
+	}
+	if projectID != nil {
+		if err := scope.MustHaveProject(int64(*projectID)); err != nil {
+			return nil, fmt.Errorf("%w: project id %d", consts.ErrNotFound, *projectID)
+		}
+	}
+	if !scope.IsAdmin && len(scope.VisibleProjects) == 0 {
+		return []InjectionNoIssuesResp{}, nil
 	}
 
 	labelConditions := make([]map[string]string, 0, len(req.Labels))
@@ -185,7 +204,7 @@ func (s *Service) ListNoIssues(ctx context.Context, req *ListInjectionNoIssuesRe
 		return nil, fmt.Errorf("invalid time range: %w", err)
 	}
 
-	records, err := s.repo.listIssuesFreeInjections(labelConditions, &opts.CustomStartTime, &opts.CustomEndTime, projectID)
+	records, err := s.repo.listIssuesFreeInjections(scope, labelConditions, &opts.CustomStartTime, &opts.CustomEndTime, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list fault injections without issues: %w", err)
 	}
@@ -201,9 +220,17 @@ func (s *Service) ListNoIssues(ctx context.Context, req *ListInjectionNoIssuesRe
 	return items, nil
 }
 
-func (s *Service) ListWithIssues(ctx context.Context, req *ListInjectionWithIssuesReq, projectID *int) ([]InjectionWithIssuesResp, error) {
+func (s *Service) ListWithIssues(ctx context.Context, scope authz.CallerScope, req *ListInjectionWithIssuesReq, projectID *int) ([]InjectionWithIssuesResp, error) {
 	if len(req.Labels) == 0 {
 		return nil, nil
+	}
+	if projectID != nil {
+		if err := scope.MustHaveProject(int64(*projectID)); err != nil {
+			return nil, fmt.Errorf("%w: project id %d", consts.ErrNotFound, *projectID)
+		}
+	}
+	if !scope.IsAdmin && len(scope.VisibleProjects) == 0 {
+		return []InjectionWithIssuesResp{}, nil
 	}
 
 	labelConditions := make([]map[string]string, 0, len(req.Labels))
@@ -217,7 +244,7 @@ func (s *Service) ListWithIssues(ctx context.Context, req *ListInjectionWithIssu
 		return nil, fmt.Errorf("invalid time range: %w", err)
 	}
 
-	records, err := s.repo.listIssueInjections(labelConditions, &opts.CustomStartTime, &opts.CustomEndTime, projectID)
+	records, err := s.repo.listIssueInjections(scope, labelConditions, &opts.CustomStartTime, &opts.CustomEndTime, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list fault injections without issues: %w", err)
 	}
@@ -595,9 +622,15 @@ func (s *Service) SubmitDatapackBuilding(ctx context.Context, req *SubmitDatapac
 	}, nil
 }
 
-func (s *Service) ListInjections(_ context.Context, req *ListInjectionReq) (*dto.ListResp[InjectionResp], error) {
+func (s *Service) ListInjections(_ context.Context, scope authz.CallerScope, req *ListInjectionReq) (*dto.ListResp[InjectionResp], error) {
+	if !scope.IsAdmin && len(scope.VisibleProjects) == 0 {
+		return &dto.ListResp[InjectionResp]{
+			Items:      []InjectionResp{},
+			Pagination: req.ConvertToPaginationInfo(0),
+		}, nil
+	}
 	limit, offset := req.ToGormParams()
-	injections, total, err := s.repo.listInjectionsView(limit, offset, req.ToFilterOptions())
+	injections, total, err := s.repo.listInjectionsView(scope, limit, offset, req.ToFilterOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list injections: %w", err)
 	}
@@ -629,7 +662,7 @@ func (s *Service) GetInjection(_ context.Context, scope authz.CallerScope, id in
 	return NewInjectionDetailResp(injection), nil
 }
 
-func (s *Service) ManageLabels(_ context.Context, req *ManageInjectionLabelReq, id int) (*InjectionResp, error) {
+func (s *Service) ManageLabels(_ context.Context, scope authz.CallerScope, req *ManageInjectionLabelReq, id int) (*InjectionResp, error) {
 	var managedInjection *model.FaultInjection
 	err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
@@ -639,6 +672,11 @@ func (s *Service) ManageLabels(_ context.Context, req *ManageInjectionLabelReq, 
 				return fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
 			}
 			return fmt.Errorf("failed to get injection: %w", err)
+		}
+		if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+			if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+				return fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
+			}
 		}
 
 		if len(req.AddLabels) > 0 {
@@ -682,7 +720,7 @@ func (s *Service) ManageLabels(_ context.Context, req *ManageInjectionLabelReq, 
 	return NewInjectionResp(managedInjection), nil
 }
 
-func (s *Service) BatchManageLabels(_ context.Context, req *BatchManageInjectionLabelReq) (*BatchManageInjectionLabelResp, error) {
+func (s *Service) BatchManageLabels(_ context.Context, scope authz.CallerScope, req *BatchManageInjectionLabelReq) (*BatchManageInjectionLabelResp, error) {
 	resp := &BatchManageInjectionLabelResp{
 		FailedItems:  []string{},
 		SuccessItems: []InjectionResp{},
@@ -708,13 +746,23 @@ func (s *Service) BatchManageLabels(_ context.Context, req *BatchManageInjection
 
 		validIDs := make([]int, 0, len(foundIDMap))
 		for _, id := range allInjectionIDs {
-			if _, found := foundIDMap[id]; !found {
+			injection, found := foundIDMap[id]
+			if !found {
 				resp.FailedItems = append(resp.FailedItems, fmt.Sprintf("Injection ID %d not found", id))
 				resp.FailedCount++
 				delete(operationMap, id)
-			} else {
-				validIDs = append(validIDs, id)
+				continue
 			}
+			if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+				if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+					resp.FailedItems = append(resp.FailedItems, fmt.Sprintf("Injection ID %d not found", id))
+					resp.FailedCount++
+					delete(operationMap, id)
+					delete(foundIDMap, id)
+					continue
+				}
+			}
+			validIDs = append(validIDs, id)
 		}
 		if len(validIDs) == 0 {
 			return fmt.Errorf("no valid injection IDs found")
@@ -828,13 +876,18 @@ func (s *Service) BatchDelete(ctx context.Context, req *BatchDeleteInjectionReq)
 	return s.batchDeleteByLabels(req.Labels)
 }
 
-func (s *Service) Clone(_ context.Context, id int, req *CloneInjectionReq) (*InjectionDetailResp, error) {
+func (s *Service) Clone(_ context.Context, scope authz.CallerScope, id int, req *CloneInjectionReq) (*InjectionDetailResp, error) {
 	original, err := s.repo.loadInjection(id)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) {
 			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get injection: %w", err)
+	}
+	if original != nil && original.Task != nil && original.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(original.Task.Trace.ProjectID)); err != nil {
+			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
+		}
 	}
 
 	cloned := &model.FaultInjection{
@@ -888,13 +941,18 @@ func (s *Service) Clone(_ context.Context, id int, req *CloneInjectionReq) (*Inj
 	return NewInjectionDetailResp(cloned), nil
 }
 
-func (s *Service) GetLogs(ctx context.Context, id int) (*InjectionLogsResp, error) {
+func (s *Service) GetLogs(ctx context.Context, scope authz.CallerScope, id int) (*InjectionLogsResp, error) {
 	injection, err := s.repo.loadInjection(id)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) {
 			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get injection: %w", err)
+	}
+	if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
+		}
 	}
 
 	resp := &InjectionLogsResp{InjectionID: id, Logs: []string{}}
@@ -923,7 +981,7 @@ func (s *Service) GetLogs(ctx context.Context, id int) (*InjectionLogsResp, erro
 	return resp, nil
 }
 
-func (s *Service) GetDatapackFilename(_ context.Context, id int) (string, error) {
+func (s *Service) GetDatapackFilename(_ context.Context, scope authz.CallerScope, id int) (string, error) {
 	injection, err := s.repo.loadInjection(id)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
@@ -931,17 +989,22 @@ func (s *Service) GetDatapackFilename(_ context.Context, id int) (string, error)
 		}
 		return "", fmt.Errorf("failed to get injection: %w", err)
 	}
+	if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+			return "", fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
+		}
+	}
 	if injection.State < consts.DatapackBuildSuccess {
 		return "", fmt.Errorf("datapack for injection id %d is not ready for download", id)
 	}
 	return injection.Name, nil
 }
 
-func (s *Service) DownloadDatapack(_ context.Context, zipWriter *zip.Writer, excludeRules []utils.ExculdeRule, id int) error {
+func (s *Service) DownloadDatapack(_ context.Context, scope authz.CallerScope, zipWriter *zip.Writer, excludeRules []utils.ExculdeRule, id int) error {
 	if zipWriter == nil {
 		return fmt.Errorf("zip writer cannot be nil")
 	}
-	injection, err := s.getReadyDatapack(id)
+	injection, err := s.getReadyDatapack(scope, id)
 	if err != nil {
 		return err
 	}
@@ -951,8 +1014,8 @@ func (s *Service) DownloadDatapack(_ context.Context, zipWriter *zip.Writer, exc
 	return nil
 }
 
-func (s *Service) GetDatapackFiles(_ context.Context, id int, baseURL string) (*DatapackFilesResp, error) {
-	injection, err := s.getReadyDatapack(id)
+func (s *Service) GetDatapackFiles(_ context.Context, scope authz.CallerScope, id int, baseURL string) (*DatapackFilesResp, error) {
+	injection, err := s.getReadyDatapack(scope, id)
 	if err != nil {
 		return nil, err
 	}
@@ -963,29 +1026,35 @@ func (s *Service) GetDatapackFiles(_ context.Context, id int, baseURL string) (*
 	return resp, nil
 }
 
-func (s *Service) DownloadDatapackFile(_ context.Context, id int, filePath string) (string, string, int64, io.ReadSeekCloser, error) {
-	injection, err := s.getReadyDatapack(id)
+func (s *Service) DownloadDatapackFile(_ context.Context, scope authz.CallerScope, id int, filePath string) (string, string, int64, io.ReadSeekCloser, error) {
+	injection, err := s.getReadyDatapack(scope, id)
 	if err != nil {
 		return "", "", 0, nil, err
 	}
 	return s.store.OpenFile(injection.Name, filePath)
 }
 
-func (s *Service) QueryDatapackFile(ctx context.Context, id int, filePath string) (string, int64, io.ReadCloser, error) {
-	return s.queryDatapackFileContent(ctx, id, filePath)
+func (s *Service) QueryDatapackFile(ctx context.Context, scope authz.CallerScope, id int, filePath string) (string, int64, io.ReadCloser, error) {
+	return s.queryDatapackFileContent(ctx, scope, id, filePath)
 }
 
-func (s *Service) GetDatapackSchema(ctx context.Context, id int) (*DatapackSchemaResp, error) {
-	return s.getDatapackSchema(ctx, id)
+func (s *Service) GetDatapackSchema(ctx context.Context, scope authz.CallerScope, id int) (*DatapackSchemaResp, error) {
+	return s.getDatapackSchema(ctx, scope, id)
 }
 
-func (s *Service) QueryDatapack(ctx context.Context, id int, userSQL string) (io.ReadCloser, error) {
-	return s.runDatapackQuery(ctx, id, userSQL)
+func (s *Service) QueryDatapack(ctx context.Context, scope authz.CallerScope, id int, userSQL string) (io.ReadCloser, error) {
+	return s.runDatapackQuery(ctx, scope, id, userSQL)
 }
 
-func (s *Service) UpdateGroundtruth(_ context.Context, id int, req *UpdateGroundtruthReq) error {
-	if _, err := s.repo.loadInjection(id); err != nil {
+func (s *Service) UpdateGroundtruth(_ context.Context, scope authz.CallerScope, id int, req *UpdateGroundtruthReq) error {
+	injection, err := s.repo.loadInjection(id)
+	if err != nil {
 		return err
+	}
+	if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+			return fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
+		}
 	}
 	return s.repo.updateGroundtruth(id, req.Groundtruths, consts.GroundtruthSourceManual)
 }
@@ -1053,7 +1122,7 @@ func (s *Service) CreateInjectionRecord(_ context.Context, req *RuntimeCreateInj
 	return &item, nil
 }
 
-func (s *Service) UpdateInjectionState(_ context.Context, req *RuntimeUpdateInjectionStateReq) error {
+func (s *Service) UpdateInjectionState(_ context.Context, scope authz.CallerScope, req *RuntimeUpdateInjectionStateReq) error {
 	if req == nil {
 		return fmt.Errorf("runtime update injection state request is nil")
 	}
@@ -1070,11 +1139,19 @@ func (s *Service) UpdateInjectionState(_ context.Context, req *RuntimeUpdateInje
 			}
 			return err
 		}
+		if !scope.IsAdmin {
+			loaded, loadErr := repo.loadInjection(injection.ID)
+			if loadErr == nil && loaded != nil && loaded.Task != nil && loaded.Task.Trace != nil {
+				if err := scope.MustHaveProject(int64(loaded.Task.Trace.ProjectID)); err != nil {
+					return fmt.Errorf("%w: injection %s not found", consts.ErrNotFound, req.Name)
+				}
+			}
+		}
 		return repo.updateInjectionFields(injection.ID, map[string]any{"state": req.State})
 	})
 }
 
-func (s *Service) UpdateInjectionTimestamps(_ context.Context, req *RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error) {
+func (s *Service) UpdateInjectionTimestamps(_ context.Context, scope authz.CallerScope, req *RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error) {
 	if req == nil {
 		return nil, fmt.Errorf("runtime update injection timestamp request is nil")
 	}
@@ -1091,6 +1168,14 @@ func (s *Service) UpdateInjectionTimestamps(_ context.Context, req *RuntimeUpdat
 				return fmt.Errorf("%w: injection %s not found", consts.ErrNotFound, req.Name)
 			}
 			return err
+		}
+		if !scope.IsAdmin {
+			loaded, loadErr := repo.loadInjection(injection.ID)
+			if loadErr == nil && loaded != nil && loaded.Task != nil && loaded.Task.Trace != nil {
+				if err := scope.MustHaveProject(int64(loaded.Task.Trace.ProjectID)); err != nil {
+					return fmt.Errorf("%w: injection %s not found", consts.ErrNotFound, req.Name)
+				}
+			}
 		}
 		if err := repo.updateInjectionFields(injection.ID, map[string]any{
 			"start_time": req.StartTime,
@@ -1114,7 +1199,8 @@ func (s *Service) UpdateInjectionTimestamps(_ context.Context, req *RuntimeUpdat
 	return &item, nil
 }
 
-func (s *Service) UploadDatapack(_ context.Context, req *UploadDatapackReq, file io.Reader, fileSize int64) (*UploadDatapackResp, error) {
+func (s *Service) UploadDatapack(_ context.Context, scope authz.CallerScope, req *UploadDatapackReq, file io.Reader, fileSize int64) (*UploadDatapackResp, error) {
+	_ = scope
 	_ = fileSize
 
 	labels, err := req.ParseLabels()
@@ -1225,13 +1311,18 @@ func (s *Service) UploadDatapack(_ context.Context, req *UploadDatapackReq, file
 	}, nil
 }
 
-func (s *Service) getReadyDatapack(id int) (*model.FaultInjection, error) {
+func (s *Service) getReadyDatapack(scope authz.CallerScope, id int) (*model.FaultInjection, error) {
 	injection, err := s.repo.loadInjection(id)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get injection: %w", err)
+	}
+	if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
+		}
 	}
 	if injection.State < consts.DatapackBuildSuccess {
 		return nil, fmt.Errorf("%w: datapack %d is not ready", consts.ErrNotFound, id)
@@ -1240,7 +1331,7 @@ func (s *Service) getReadyDatapack(id int) (*model.FaultInjection, error) {
 }
 
 func (s *Service) GetReadyDatapackName(_ context.Context, id int) (string, error) {
-	injection, err := s.getReadyDatapack(id)
+	injection, err := s.getReadyDatapack(authz.SystemScope(), id)
 	if err != nil {
 		return "", err
 	}
@@ -1282,13 +1373,18 @@ func (s *Service) batchDeleteByLabels(labelItems []dto.LabelItem) error {
 //   - injection has no associated task (already detached / never submitted) →
 //     wrapped consts.ErrBadRequest
 //   - task already terminal → response carries the terminal state with no error
-func (s *Service) CancelInjection(ctx context.Context, injectionID int) (*CancelInjectionResp, error) {
+func (s *Service) CancelInjection(ctx context.Context, scope authz.CallerScope, injectionID int) (*CancelInjectionResp, error) {
 	injection, err := s.repo.loadInjection(injectionID)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) {
 			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, injectionID)
 		}
 		return nil, fmt.Errorf("failed to load injection: %w", err)
+	}
+	if injection != nil && injection.Task != nil && injection.Task.Trace != nil {
+		if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, injectionID)
+		}
 	}
 	if injection.TaskID == nil || *injection.TaskID == "" {
 		return nil, fmt.Errorf("%w: injection %d has no associated task to cancel", consts.ErrBadRequest, injectionID)

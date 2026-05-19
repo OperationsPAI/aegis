@@ -27,6 +27,10 @@ type InjectionOwner interface {
 	UpdateInjectionTimestamps(context.Context, *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error)
 }
 
+// InjectionOwner is the orchestrator-side adapter contract; it wraps each
+// call with SystemScope before reaching injection.Writer (runtime-internal
+// updates are not project-scoped).
+
 // localExecutionOwner delegates directly to the in-process execution.Service.
 type localExecutionOwner struct {
 	svc *execution.Service
@@ -66,11 +70,11 @@ func (a localInjectionOwner) CreateInjection(ctx context.Context, req *injection
 }
 
 func (a localInjectionOwner) UpdateInjectionState(ctx context.Context, req *injection.RuntimeUpdateInjectionStateReq) error {
-	return a.svc.UpdateInjectionState(ctx, req)
+	return a.svc.UpdateInjectionState(ctx, authz.SystemScope(), req)
 }
 
 func (a localInjectionOwner) UpdateInjectionTimestamps(ctx context.Context, req *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error) {
-	return a.svc.UpdateInjectionTimestamps(ctx, req)
+	return a.svc.UpdateInjectionTimestamps(ctx, authz.SystemScope(), req)
 }
 
 // remoteExecutionOwner proxies to the api-gateway via the runtime intake

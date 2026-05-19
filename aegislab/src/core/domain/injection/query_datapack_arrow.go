@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 
 	"github.com/apache/arrow-go/v18/arrow/ipc"
@@ -21,8 +22,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Service) queryDatapackFileContent(ctx context.Context, id int, filePath string) (string, int64, io.ReadCloser, error) {
-	injection, err := s.getReadyDatapack(id)
+func (s *Service) queryDatapackFileContent(ctx context.Context, scope authz.CallerScope, id int, filePath string) (string, int64, io.ReadCloser, error) {
+	injection, err := s.getReadyDatapack(scope, id)
 	if err != nil {
 		return "", 0, nil, err
 	}
@@ -223,8 +224,8 @@ func sanitizeViewName(raw string) string {
 	return cleaned
 }
 
-func (s *Service) getDatapackSchema(ctx context.Context, id int) (*DatapackSchemaResp, error) {
-	injection, err := s.getReadyDatapack(id)
+func (s *Service) getDatapackSchema(ctx context.Context, scope authz.CallerScope, id int) (*DatapackSchemaResp, error) {
+	injection, err := s.getReadyDatapack(scope, id)
 	if err != nil {
 		// Not-ready datapack is a normal pre-data state for the SQL editor;
 		// return an empty schema instead of bubbling 404 so the page can
@@ -352,12 +353,12 @@ func stripSQLComments(in string) string {
 	return out
 }
 
-func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) (io.ReadCloser, error) {
+func (s *Service) runDatapackQuery(ctx context.Context, scope authz.CallerScope, id int, userSQL string) (io.ReadCloser, error) {
 	cleanSQL, err := validateDatapackSQL(userSQL)
 	if err != nil {
 		return nil, err
 	}
-	injection, err := s.getReadyDatapack(id)
+	injection, err := s.getReadyDatapack(scope, id)
 	if err != nil {
 		return nil, err
 	}

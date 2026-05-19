@@ -15,8 +15,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-var _ = authz.SystemScope
-
 type Repository struct {
 	db *gorm.DB
 }
@@ -349,12 +347,21 @@ func (r *Repository) loadExistingInjectionsByID(injectionIDs []int) (map[int]*mo
 	return result, nil
 }
 
-func (r *Repository) listInjectionsView(limit, offset int, filterOptions *ListInjectionFilters) ([]model.FaultInjection, int64, error) {
+func (r *Repository) listInjectionsView(scope authz.CallerScope, limit, offset int, filterOptions *ListInjectionFilters) ([]model.FaultInjection, int64, error) {
 	query := r.db.Model(&model.FaultInjection{}).
 		Preload("Benchmark.Container").
 		Preload("Pedestal.Container").
 		Preload("Task.Trace.Project").
 		Preload("Labels")
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return nil, 0, nil
+		}
+		query = query.
+			Joins("JOIN tasks ON tasks.id = fault_injections.task_id").
+			Joins("JOIN traces ON traces.id = tasks.trace_id").
+			Where("traces.project_id IN ?", scope.VisibleProjects)
+	}
 	if filterOptions.FaultType != nil {
 		query = query.Where("fault_type = ?", *filterOptions.FaultType)
 	}
@@ -475,7 +482,7 @@ func (r *Repository) listProjectInjectionsView(projectID, limit, offset int, fil
 	return injections, total, nil
 }
 
-func (r *Repository) searchInjections(req *SearchInjectionReq, projectID *int) ([]model.FaultInjection, int64, error) {
+func (r *Repository) searchInjections(scope authz.CallerScope, req *SearchInjectionReq, projectID *int) ([]model.FaultInjection, int64, error) {
 	searchReq := req.ConvertToSearchReq()
 	if projectID != nil {
 		searchReq.AddFilter("project_id", dto.OpEqual, *projectID)
@@ -486,6 +493,18 @@ func (r *Repository) searchInjections(req *SearchInjectionReq, projectID *int) (
 	qb.ApplyIncludes(searchReq.Includes)
 	qb.ApplyIncludeFields(searchReq.IncludeFields)
 	qb.ApplyExcludeFields(searchReq.ExcludeFields, model.FaultInjection{})
+
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return nil, 0, nil
+		}
+		qb.Apply(func(db *gorm.DB) *gorm.DB {
+			return db.
+				Joins("JOIN tasks ON tasks.id = fault_injections.task_id").
+				Joins("JOIN traces ON traces.id = tasks.trace_id").
+				Where("traces.project_id IN ?", scope.VisibleProjects)
+		})
+	}
 
 	total, err := qb.GetCount()
 	if err != nil {
@@ -531,7 +550,7 @@ func (r *Repository) searchInjections(req *SearchInjectionReq, projectID *int) (
 	return filtered, total, nil
 }
 
-func (r *Repository) listIssuesFreeInjections(labelConditions []map[string]string, startTime, endTime *time.Time, projectID *int) ([]model.FaultInjectionNoIssues, error) {
+func (r *Repository) listIssuesFreeInjections(scope authz.CallerScope, labelConditions []map[string]string, startTime, endTime *time.Time, projectID *int) ([]model.FaultInjectionNoIssues, error) {
 	var injections []model.FaultInjectionNoIssues
 	query := r.db.Model(&model.FaultInjectionNoIssues{}).
 		Joins("JOIN fault_injections fi ON fi.id = fault_injection_no_issues.datapack_id").
@@ -540,6 +559,12 @@ func (r *Repository) listIssuesFreeInjections(labelConditions []map[string]strin
 		Where("fi.status != ?", consts.CommonDeleted)
 	if projectID != nil {
 		query = query.Where("tr.project_id = ?", *projectID)
+	}
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return []model.FaultInjectionNoIssues{}, nil
+		}
+		query = query.Where("tr.project_id IN ?", scope.VisibleProjects)
 	}
 	if startTime != nil {
 		query = query.Where("fi.created_at >= ?", *startTime)
@@ -565,7 +590,7 @@ func (r *Repository) listIssuesFreeInjections(labelConditions []map[string]strin
 	return injections, nil
 }
 
-func (r *Repository) listIssueInjections(labelConditions []map[string]string, startTime, endTime *time.Time, projectID *int) ([]model.FaultInjectionWithIssues, error) {
+func (r *Repository) listIssueInjections(scope authz.CallerScope, labelConditions []map[string]string, startTime, endTime *time.Time, projectID *int) ([]model.FaultInjectionWithIssues, error) {
 	var injections []model.FaultInjectionWithIssues
 	query := r.db.Model(&model.FaultInjectionWithIssues{}).
 		Joins("JOIN fault_injections fi ON fi.id = fault_injection_with_issues.datapack_id").
@@ -574,6 +599,12 @@ func (r *Repository) listIssueInjections(labelConditions []map[string]string, st
 		Where("fi.status != ?", consts.CommonDeleted)
 	if projectID != nil {
 		query = query.Where("tr.project_id = ?", *projectID)
+	}
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return []model.FaultInjectionWithIssues{}, nil
+		}
+		query = query.Where("tr.project_id IN ?", scope.VisibleProjects)
 	}
 	if startTime != nil {
 		query = query.Where("fi.created_at >= ?", *startTime)

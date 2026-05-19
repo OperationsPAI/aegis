@@ -91,6 +91,13 @@ func (qb *QueryBuilder[F]) Query() *gorm.DB {
 	return qb.query
 }
 
+func (qb *QueryBuilder[F]) Apply(modifier func(*gorm.DB) *gorm.DB) *QueryBuilder[F] {
+	if modifier != nil {
+		qb.query = modifier(qb.query)
+	}
+	return qb
+}
+
 func (qb *QueryBuilder[F]) applyFilters(filters []dto.SearchFilter) {
 	for _, filter := range filters {
 		qb.applySingleFilter(filter)

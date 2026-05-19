@@ -83,7 +83,11 @@ func (h *Handler) ListProjectInjections(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListProjectInjections(c.Request.Context(), &req, projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ListProjectInjections(c.Request.Context(), scope, &req, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -127,7 +131,11 @@ func (h *Handler) SearchProjectInjections(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.Search(c.Request.Context(), &req, &projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.Search(c.Request.Context(), scope, &req, &projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -356,7 +364,11 @@ func (h *Handler) ManageInjectionCustomLabels(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	resp, err := h.service.ManageLabels(c.Request.Context(), &req, id)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ManageLabels(c.Request.Context(), scope, &req, id)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -390,7 +402,11 @@ func (h *Handler) BatchManageInjectionLabels(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	resp, err := h.service.BatchManageLabels(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.BatchManageLabels(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -458,7 +474,11 @@ func (h *Handler) CloneInjection(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
 		return
 	}
-	resp, err := h.service.Clone(c.Request.Context(), id, &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.Clone(c.Request.Context(), scope, id, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -486,7 +506,11 @@ func (h *Handler) DownloadDatapack(c *gin.Context) {
 	if !ok {
 		return
 	}
-	filename, err := h.service.GetDatapackFilename(c.Request.Context(), id)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	filename, err := h.service.GetDatapackFilename(c.Request.Context(), scope, id)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -494,7 +518,7 @@ func (h *Handler) DownloadDatapack(c *gin.Context) {
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s.zip", filename))
 	zipWriter := zip.NewWriter(c.Writer)
 	defer func() { _ = zipWriter.Close() }()
-	if err := h.service.DownloadDatapack(c.Request.Context(), zipWriter, []utils.ExculdeRule{}, id); err != nil {
+	if err := h.service.DownloadDatapack(c.Request.Context(), scope, zipWriter, []utils.ExculdeRule{}, id); err != nil {
 		delete(c.Writer.Header(), "Content-Disposition")
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		httpx.HandleServiceError(c, err)
@@ -527,7 +551,11 @@ func (h *Handler) ListDatapackFiles(c *gin.Context) {
 		scheme = "https"
 	}
 	baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
-	resp, err := h.service.GetDatapackFiles(c.Request.Context(), id, baseURL)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetDatapackFiles(c.Request.Context(), scope, id, baseURL)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -565,7 +593,11 @@ func (h *Handler) DownloadDatapackFile(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "File path is required")
 		return
 	}
-	fileName, contentType, fileSize, fileReader, err := h.service.DownloadDatapackFile(c.Request.Context(), id, filePath)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	fileName, contentType, fileSize, fileReader, err := h.service.DownloadDatapackFile(c.Request.Context(), scope, id, filePath)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -619,7 +651,11 @@ func (h *Handler) QueryDatapackFile(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "File path is required")
 		return
 	}
-	fileName, totalRows, reader, err := h.service.QueryDatapackFile(c.Request.Context(), id, filePath)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	fileName, totalRows, reader, err := h.service.QueryDatapackFile(c.Request.Context(), scope, id, filePath)
 	if err != nil && httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -659,7 +695,11 @@ func (h *Handler) GetDatapackSchema(c *gin.Context) {
 	if !ok {
 		return
 	}
-	resp, err := h.service.GetDatapackSchema(c.Request.Context(), id)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetDatapackSchema(c.Request.Context(), scope, id)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -698,7 +738,11 @@ func (h *Handler) QueryDatapack(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request: "+err.Error())
 		return
 	}
-	reader, err := h.service.QueryDatapack(c.Request.Context(), id, req.SQL)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	reader, err := h.service.QueryDatapack(c.Request.Context(), scope, id, req.SQL)
 	if err != nil && httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -742,7 +786,11 @@ func (h *Handler) UpdateGroundtruth(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.UpdateGroundtruth(c.Request.Context(), id, &req)) {
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	if httpx.HandleServiceError(c, h.service.UpdateGroundtruth(c.Request.Context(), scope, id, &req)) {
 		return
 	}
 	dto.JSONResponse[any](c, http.StatusOK, "Groundtruth updated successfully", nil)
@@ -793,7 +841,11 @@ func (h *Handler) UploadDatapack(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	resp, err := h.service.UploadDatapack(c.Request.Context(), req, file, fileHeader.Size)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.UploadDatapack(c.Request.Context(), scope, req, file, fileHeader.Size)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -814,7 +866,11 @@ func (h *Handler) listFaultInjectionNoIssues(c *gin.Context, projectID *int) {
 		return
 	}
 
-	items, err := h.service.ListNoIssues(c.Request.Context(), &req, projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	items, err := h.service.ListNoIssues(c.Request.Context(), scope, &req, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -836,7 +892,11 @@ func (h *Handler) listFaultInjectionWithIssues(c *gin.Context, projectID *int) {
 		return
 	}
 
-	items, err := h.service.ListWithIssues(c.Request.Context(), &req, projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	items, err := h.service.ListWithIssues(c.Request.Context(), scope, &req, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -966,7 +1026,11 @@ func (h *Handler) CancelInjection(c *gin.Context) {
 	if !ok {
 		return
 	}
-	resp, err := h.service.CancelInjection(c.Request.Context(), id)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.CancelInjection(c.Request.Context(), scope, id)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
