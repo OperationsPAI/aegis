@@ -55,22 +55,21 @@ def run(
 ):
     assert algorithm in global_algorithm_registry(), f"Unknown algorithm: {algorithm}"
 
-    if "://" in input_path:
-        input_path = _stage_s3_input_locally(input_path)
-    else:
-        input_path = Path(input_path)
+    local_input_path: Path = (
+        _stage_s3_input_locally(input_path) if "://" in input_path else Path(input_path)
+    )
 
-    assert input_path.is_dir(), f"input_path: {input_path}"
+    assert local_input_path.is_dir(), f"input_path: {local_input_path}"
     assert output_path.is_dir(), f"output_path: {output_path}"
 
-    injection = load_json(path=input_path / "injection.json")
+    injection = load_json(path=local_input_path / "injection.json")
     injection_name = injection.get("injection_name") or injection.get("name")
     assert isinstance(injection_name, str) and injection_name
 
-    converted_input_path = input_path / "converted"
+    converted_input_path = local_input_path / "converted"
 
     convert_datapack(
-        loader=RCABenchDatapackLoader(src_folder=input_path, datapack=injection_name),
+        loader=RCABenchDatapackLoader(src_folder=local_input_path, datapack=injection_name),
         dst_folder=converted_input_path,
         skip_finished=True,
     )
