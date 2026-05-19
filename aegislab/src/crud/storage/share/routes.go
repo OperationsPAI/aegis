@@ -12,7 +12,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "share.portal",
 		Register: func(v2 *gin.RouterGroup) {
-			g := v2.Group("/share", middleware.TrustedHeaderAuth())
+			g := v2.Group("/share")
 			{
 				g.POST("/upload", handler.Upload)
 				g.GET("", handler.List)
@@ -24,7 +24,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 			// finalises the share row after the client uploads directly
 			// to the object store. Human-only — service tokens shouldn't
 			// be shotgun-uploading.
-			humanOnly := v2.Group("/share", middleware.TrustedHeaderAuth(), middleware.RequireHumanUserAuth())
+			humanOnly := v2.Group("/share", middleware.RequireHumanUserAuth())
 			{
 				humanOnly.POST("/init", handler.InitUpload)
 				humanOnly.POST("/:code/commit", handler.CommitUpload)

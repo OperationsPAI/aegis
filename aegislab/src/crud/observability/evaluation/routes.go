@@ -16,7 +16,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "evaluation",
 		Register: func(v2 *gin.RouterGroup) {
-			evaluations := v2.Group("/evaluations", middleware.TrustedHeaderAuth())
+			evaluations := v2.Group("/evaluations")
 			{
 				evaluations.DELETE("/:id", handler.DeleteEvaluation)
 				evaluations.POST("/datapacks", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListDatapackEvaluationResults)

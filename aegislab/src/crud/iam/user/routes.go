@@ -12,7 +12,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceAdmin,
 		Name:     "user.admin",
 		Register: func(v2 *gin.RouterGroup) {
-			users := v2.Group("/users", middleware.TrustedHeaderAuth())
+			users := v2.Group("/users")
 			{
 				roles := users.Group("/:user_id/roles")
 				{

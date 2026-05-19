@@ -16,7 +16,7 @@ func Routes(handler *InboxHandler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "notification",
 		Register: func(v2 *gin.RouterGroup) {
-			inbox := v2.Group("/inbox", middleware.TrustedHeaderAuth(), middleware.RequireHumanUserAuth())
+			inbox := v2.Group("/inbox", middleware.RequireHumanUserAuth())
 			{
 				inbox.GET("", handler.List)
 				inbox.GET("/unread-count", handler.UnreadCount)
@@ -28,7 +28,7 @@ func Routes(handler *InboxHandler) framework.RouteRegistrar {
 				inbox.PUT("/subscriptions", handler.SetSubscription)
 			}
 
-			events := v2.Group("/events", middleware.TrustedHeaderAuth())
+			events := v2.Group("/events")
 			{
 				events.POST(":publish", handler.PublishEvent)
 			}
