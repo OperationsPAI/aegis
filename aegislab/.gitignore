@@ -182,7 +182,6 @@ sdk/python-gen/
 sdk/python/src/rcabench/openapi/
 sdk/typescript/
 src/docs/converted/
-src/docs/openapi2/
 src/docs/openapi3/
 
 # Ignore vendored chart archives (.tgz produced by `helm dependency update`
