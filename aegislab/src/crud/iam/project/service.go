@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -55,7 +56,10 @@ func (s *Service) CreateProject(ctx context.Context, req *CreateProjectReq, user
 	return NewProjectResp(createdProject, nil), nil
 }
 
-func (s *Service) DeleteProject(ctx context.Context, projectID int) error {
+func (s *Service) DeleteProject(ctx context.Context, scope authz.CallerScope, projectID int) error {
+	if err := scope.MustHaveProject(int64(projectID)); err != nil {
+		return fmt.Errorf("%w: project id %d not found", consts.ErrNotFound, projectID)
+	}
 	return s.repository.db.Transaction(func(tx *gorm.DB) error {
 		rows, err := NewRepository(tx).deleteProjectCascade(projectID)
 		if err != nil {
@@ -69,7 +73,10 @@ func (s *Service) DeleteProject(ctx context.Context, projectID int) error {
 	})
 }
 
-func (s *Service) GetProjectDetail(ctx context.Context, projectID int) (*ProjectDetailResp, error) {
+func (s *Service) GetProjectDetail(ctx context.Context, scope authz.CallerScope, projectID int) (*ProjectDetailResp, error) {
+	if err := scope.MustHaveProject(int64(projectID)); err != nil {
+		return nil, fmt.Errorf("%w: project with ID %d not found", consts.ErrNotFound, projectID)
+	}
 	project, userCount, err := s.repository.loadProjectDetailBase(projectID)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) {
@@ -91,7 +98,7 @@ func (s *Service) GetProjectDetail(ctx context.Context, projectID int) (*Project
 	return resp, nil
 }
 
-func (s *Service) ListProjects(ctx context.Context, req *ListProjectReq) (*dto.ListResp[ProjectResp], error) {
+func (s *Service) ListProjects(ctx context.Context, scope authz.CallerScope, req *ListProjectReq) (*dto.ListResp[ProjectResp], error) {
 	if req == nil {
 		return nil, fmt.Errorf("list project request is nil")
 	}
@@ -99,7 +106,7 @@ func (s *Service) ListProjects(ctx context.Context, req *ListProjectReq) (*dto.L
 	limit, offset := req.ToGormParams()
 	includeStatistics := req.IncludeStatistics == nil || *req.IncludeStatistics
 
-	projects, total, err := s.repository.listProjectViews(limit, offset, req.IsPublic, req.Status, req.TeamID)
+	projects, total, err := s.repository.listProjectViews(scope, limit, offset, req.IsPublic, req.Status, req.TeamID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -146,9 +153,12 @@ func (s *Service) ListProjects(ctx context.Context, req *ListProjectReq) (*dto.L
 	return &resp, nil
 }
 
-func (s *Service) UpdateProject(ctx context.Context, req *UpdateProjectReq, projectID int) (*ProjectResp, error) {
+func (s *Service) UpdateProject(ctx context.Context, scope authz.CallerScope, req *UpdateProjectReq, projectID int) (*ProjectResp, error) {
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+	if err := scope.MustHaveProject(int64(projectID)); err != nil {
+		return nil, fmt.Errorf("%w: project id %d not found", consts.ErrNotFound, projectID)
 	}
 
 	var updatedProject *model.Project
@@ -170,9 +180,12 @@ func (s *Service) UpdateProject(ctx context.Context, req *UpdateProjectReq, proj
 	return NewProjectResp(updatedProject, nil), nil
 }
 
-func (s *Service) ManageProjectLabels(ctx context.Context, req *ManageProjectLabelReq, projectID int) (*ProjectResp, error) {
+func (s *Service) ManageProjectLabels(ctx context.Context, scope authz.CallerScope, req *ManageProjectLabelReq, projectID int) (*ProjectResp, error) {
 	if req == nil {
 		return nil, fmt.Errorf("manage project labels request is nil")
+	}
+	if err := scope.MustHaveProject(int64(projectID)); err != nil {
+		return nil, fmt.Errorf("%w: project id %d not found", consts.ErrNotFound, projectID)
 	}
 
 	var managedProject *model.Project

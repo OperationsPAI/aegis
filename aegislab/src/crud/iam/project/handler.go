@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
@@ -13,11 +14,25 @@ import (
 )
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	resolver authz.ProjectMembershipResolver
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, resolver authz.ProjectMembershipResolver) *Handler {
+	return &Handler{service: service, resolver: resolver}
+}
+
+func (h *Handler) scope(c *gin.Context) (authz.CallerScope, bool) {
+	s, err := authz.ScopeFromGinContext(c, h.resolver)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == authz.ErrMissingAuth {
+			status = http.StatusUnauthorized
+		}
+		dto.ErrorResponse(c, status, err.Error())
+		return authz.CallerScope{}, false
+	}
+	return s, true
 }
 
 // CreateProject handles project creation
@@ -87,7 +102,12 @@ func (h *Handler) DeleteProject(c *gin.Context) {
 		return
 	}
 
-	err := h.service.DeleteProject(c.Request.Context(), projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	err := h.service.DeleteProject(c.Request.Context(), scope, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -118,7 +138,12 @@ func (h *Handler) GetProjectDetail(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetProjectDetail(c.Request.Context(), projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.GetProjectDetail(c.Request.Context(), scope, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -157,7 +182,12 @@ func (h *Handler) ListProjects(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListProjects(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.ListProjects(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -201,7 +231,12 @@ func (h *Handler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.UpdateProject(c.Request.Context(), &req, projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.UpdateProject(c.Request.Context(), scope, &req, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -245,7 +280,12 @@ func (h *Handler) ManageProjectCustomLabels(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ManageProjectLabels(c.Request.Context(), &req, projectID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.ManageProjectLabels(c.Request.Context(), scope, &req, projectID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

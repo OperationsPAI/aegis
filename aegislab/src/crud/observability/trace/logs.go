@@ -3,6 +3,7 @@ package trace
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"aegis/platform/authz"
 	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
@@ -17,6 +19,7 @@ import (
 	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // TraceLogQueryReq is the portal-side filter set for the trace-logs endpoint.
@@ -86,8 +89,19 @@ type TraceLogsResp struct {
 // response): a Loki-not-deployed environment used to silently return an
 // empty entries list which made the panel render blank with no indication
 // of misconfiguration.
-func (s *Service) GetTraceLogs(ctx context.Context, traceID string, req *TraceLogQueryReq) (*TraceLogsResp, error) {
+func (s *Service) GetTraceLogs(ctx context.Context, scope authz.CallerScope, traceID string, req *TraceLogQueryReq) (*TraceLogsResp, error) {
 	resp := &TraceLogsResp{Entries: []TraceLogEntry{}}
+
+	trace, err := s.repo.GetTraceByID(traceID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
+		}
+		return nil, fmt.Errorf("load trace: %w", err)
+	}
+	if err := scope.MustHaveProject(int64(trace.ProjectID)); err != nil {
+		return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
+	}
 
 	tasks, err := s.repo.ListTasksByTraceID(traceID)
 	if err != nil {
@@ -200,7 +214,11 @@ func (h *Handler) GetTraceLogs(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	resp, err := h.service.GetTraceLogs(c.Request.Context(), traceID, &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetTraceLogs(c.Request.Context(), scope, traceID, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

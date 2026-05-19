@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -233,9 +234,9 @@ func (s *Service) ListDatasetEvaluationResults(ctx context.Context, req *BatchEv
 	}, nil
 }
 
-func (s *Service) ListEvaluations(_ context.Context, req *ListEvaluationReq) (*dto.ListResp[EvaluationResp], error) {
+func (s *Service) ListEvaluations(_ context.Context, scope authz.CallerScope, req *ListEvaluationReq) (*dto.ListResp[EvaluationResp], error) {
 	limit, offset := req.ToGormParams()
-	evaluations, total, err := s.repo.ListEvaluations(limit, offset)
+	evaluations, total, err := s.repo.ListEvaluations(scope, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list evaluations: %w", err)
 	}
@@ -251,16 +252,42 @@ func (s *Service) ListEvaluations(_ context.Context, req *ListEvaluationReq) (*d
 	}, nil
 }
 
-func (s *Service) GetEvaluation(_ context.Context, id int) (*EvaluationResp, error) {
+func (s *Service) GetEvaluation(_ context.Context, scope authz.CallerScope, id int) (*EvaluationResp, error) {
 	evaluation, err := s.repo.GetEvaluationByID(id)
 	if err != nil {
+		return nil, err
+	}
+	if err := evaluationScopeCheck(scope, evaluation, id); err != nil {
 		return nil, err
 	}
 	return NewEvaluationResp(evaluation), nil
 }
 
-func (s *Service) DeleteEvaluation(_ context.Context, id int) error {
+func (s *Service) DeleteEvaluation(_ context.Context, scope authz.CallerScope, id int) error {
+	evaluation, err := s.repo.GetEvaluationByID(id)
+	if err != nil {
+		return err
+	}
+	if err := evaluationScopeCheck(scope, evaluation, id); err != nil {
+		return err
+	}
 	return s.repo.DeleteEvaluation(id)
+}
+
+// evaluationScopeCheck enforces 404-style cross-tenant existence-hiding. Rows
+// with NULL project_id (legacy / global) are visible only to admins; everyone
+// else sees the same not-found surface as for a foreign project_id.
+func evaluationScopeCheck(scope authz.CallerScope, eval *model.Evaluation, id int) error {
+	if scope.IsAdmin {
+		return nil
+	}
+	if eval.ProjectID == nil {
+		return fmt.Errorf("evaluation with id %d: %w", id, consts.ErrNotFound)
+	}
+	if err := scope.MustHaveProject(int64(*eval.ProjectID)); err != nil {
+		return fmt.Errorf("evaluation with id %d: %w", id, consts.ErrNotFound)
+	}
+	return nil
 }
 
 func (s *Service) listEvaluationExecutionsByDatapack(ctx context.Context, req *execution.EvaluationExecutionsByDatapackReq) ([]execution.EvaluationExecutionItem, error) {

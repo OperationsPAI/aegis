@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -57,7 +58,7 @@ func TestCancelTrace_NotFound(t *testing.T) {
 		WithArgs("missing", consts.CommonDeleted, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
-	_, err := svc.CancelTrace(t.Context(), "missing")
+	_, err := svc.CancelTrace(t.Context(), authz.SystemScope(),"missing")
 	require.Error(t, err)
 	require.ErrorIs(t, err, consts.ErrNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -70,12 +71,28 @@ func TestCancelTrace_AlreadyTerminal(t *testing.T) {
 	const traceID = "trace-1"
 	expectGetTrace(mock, traceID, consts.TraceCompleted)
 
-	resp, err := svc.CancelTrace(t.Context(), traceID)
+	resp, err := svc.CancelTrace(t.Context(), authz.SystemScope(),traceID)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Equal(t, "Completed", resp.State)
 	require.Contains(t, resp.Message, "already terminal")
 	require.Empty(t, resp.CancelledTasks)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestGetTrace_CrossTenantHidden verifies a non-admin caller without the
+// trace's project in scope sees 404, not the trace row.
+func TestGetTrace_CrossTenantHidden(t *testing.T) {
+	svc, mock, cleanup := newCancelService(t)
+	defer cleanup()
+
+	const traceID = "trace-foreign"
+	expectGetTrace(mock, traceID, consts.TraceRunning)
+
+	scope := authz.CallerScope{UserID: 7, IsAdmin: false, VisibleProjects: []int64{99}}
+	_, err := svc.GetTrace(t.Context(), scope, traceID)
+	require.Error(t, err)
+	require.ErrorIs(t, err, consts.ErrNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -103,7 +120,7 @@ func TestCancelTrace_RunningMarksCancelled(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectCommit()
 
-	resp, err := svc.CancelTrace(t.Context(), traceID)
+	resp, err := svc.CancelTrace(t.Context(), authz.SystemScope(),traceID)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Equal(t, "Cancelled", resp.State)

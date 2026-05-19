@@ -22,7 +22,7 @@ const recentLimit = consts.PageSizeSmall
 // out of the import-cycle danger zone and makes test doubles trivial.
 
 type projectReader interface {
-	GetProjectDetail(context.Context, int) (*project.ProjectDetailResp, error)
+	GetProjectDetail(context.Context, authz.CallerScope, int) (*project.ProjectDetailResp, error)
 }
 
 type injectionLister interface {
@@ -34,7 +34,7 @@ type executionLister interface {
 }
 
 type traceLister interface {
-	ListTraces(context.Context, *trace.ListTraceReq) (*dto.ListResp[trace.TraceResp], error)
+	ListTraces(context.Context, authz.CallerScope, *trace.ListTraceReq) (*dto.ListResp[trace.TraceResp], error)
 }
 
 type taskLister interface {
@@ -66,7 +66,7 @@ func NewService(
 }
 
 func (s *Service) GetProjectDashboard(ctx context.Context, projectID int) (*DashboardResp, error) {
-	proj, err := s.projects.GetProjectDetail(ctx, projectID)
+	proj, err := s.projects.GetProjectDetail(ctx, authz.SystemScope(), projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (s *Service) GetProjectDashboard(ctx context.Context, projectID int) (*Dash
 		return nil, fmt.Errorf("failed to list project executions: %w", err)
 	}
 
-	tracePage, err := s.traces.ListTraces(ctx, newPaginatedTraceReq(projectID))
+	tracePage, err := s.traces.ListTraces(ctx, authz.SystemScope(), newPaginatedTraceReq(projectID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list project traces: %w", err)
 	}
