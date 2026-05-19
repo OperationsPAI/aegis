@@ -17,6 +17,9 @@ const (
 	ChaosMeshVersion      = "v1alpha1"
 	PodChaosResource      = "podchaos"
 	NetworkChaosResource  = "networkchaos"
+	StressChaosResource   = "stresschaos"
+	TimeChaosResource     = "timechaos"
+	DNSChaosResource      = "dnschaos"
 	ExecutorNameChaosMesh = "chaos-mesh"
 )
 
@@ -26,6 +29,30 @@ var podChaosGVR = schema.GroupVersionResource{
 
 var networkChaosGVR = schema.GroupVersionResource{
 	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: NetworkChaosResource,
+}
+
+var stressChaosGVR = schema.GroupVersionResource{
+	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: StressChaosResource,
+}
+
+var timeChaosGVR = schema.GroupVersionResource{
+	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: TimeChaosResource,
+}
+
+var dnsChaosGVR = schema.GroupVersionResource{
+	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: DNSChaosResource,
+}
+
+func ChaosMeshGroupVersionResourceForStressChaos() schema.GroupVersionResource {
+	return stressChaosGVR
+}
+
+func ChaosMeshGroupVersionResourceForTimeChaos() schema.GroupVersionResource {
+	return timeChaosGVR
+}
+
+func ChaosMeshGroupVersionResourceForDNSChaos() schema.GroupVersionResource {
+	return dnsChaosGVR
 }
 
 // ChaosMeshGroupVersionResourceForPodChaos exposes the PodChaos GVR for
