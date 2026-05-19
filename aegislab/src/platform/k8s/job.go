@@ -154,6 +154,7 @@ func createJob(ctx context.Context, jobConfig *JobConfig) error {
 			}
 		}
 
+		ttl := jobTTLSecondsAfterFinished()
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: jobConfig.Annotations,
@@ -162,8 +163,9 @@ func createJob(ctx context.Context, jobConfig *JobConfig) error {
 				Namespace:   jobConfig.Namespace,
 			},
 			Spec: batchv1.JobSpec{
-				Parallelism: &jobConfig.Parallelism,
-				Completions: &jobConfig.Completions,
+				TTLSecondsAfterFinished: &ttl,
+				Parallelism:             &jobConfig.Parallelism,
+				Completions:             &jobConfig.Completions,
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: jobConfig.Annotations,
@@ -206,6 +208,14 @@ func createJob(ctx context.Context, jobConfig *JobConfig) error {
 
 		return nil
 	})
+}
+
+func jobTTLSecondsAfterFinished() int32 {
+	v := config.GetInt("k8s.job.ttl_seconds_after_finished")
+	if v <= 0 {
+		return 3600
+	}
+	return int32(v)
 }
 
 func getImagePullPolicy(image string) corev1.PullPolicy {

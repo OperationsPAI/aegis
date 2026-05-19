@@ -2,10 +2,91 @@ package k8s
 
 import (
 	"testing"
+	"time"
 
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 )
+
+// TestJobUpdateFunc_FailedConditionTransitionEnqueuesDelete covers the
+// orchestrator Job cleanup gap: a Job transitioning from "no terminal
+// condition" to "JobFailed=True" must trigger HandleJobFailed AND enqueue a
+// DeleteJob item so leaked Failed pods don't accumulate in the exp ns.
+// Pre-fix the Failed branch only invoked the callback and never enqueued.
+func TestJobUpdateFunc_FailedConditionTransitionEnqueuesDelete(t *testing.T) {
+	cb := &failedCountingCallback{}
+	c := &Controller{
+		callback: cb,
+		queue: workqueue.NewTypedRateLimitingQueue(
+			workqueue.DefaultTypedControllerRateLimiter[QueueItem](),
+		),
+	}
+	defer c.queue.ShutDown()
+
+	handlers := c.genJobEventHandlerFuncs()
+
+	oldJob := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{Name: "j1", Namespace: "exp"},
+		Status:     batchv1.JobStatus{},
+	}
+	newJob := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{Name: "j1", Namespace: "exp"},
+		Status: batchv1.JobStatus{
+			Conditions: []batchv1.JobCondition{
+				{Type: batchv1.JobFailed, Status: corev1.ConditionTrue},
+			},
+		},
+	}
+
+	handlers.UpdateFunc(oldJob, newJob)
+
+	if cb.failed != 1 {
+		t.Fatalf("HandleJobFailed call count = %d, want 1", cb.failed)
+	}
+	if c.queue.Len() != 1 {
+		t.Fatalf("queue length = %d, want 1 DeleteJob enqueued", c.queue.Len())
+	}
+	item, _ := c.queue.Get()
+	if item.Type != DeleteJob || item.Namespace != "exp" || item.Name != "j1" {
+		t.Fatalf("got queue item %+v, want DeleteJob exp/j1", item)
+	}
+
+	// Resync replay: same terminal condition on both sides — must NOT re-fire.
+	handlers.UpdateFunc(newJob, newJob)
+	if cb.failed != 1 {
+		t.Fatalf("resync re-fired HandleJobFailed, count = %d, want 1", cb.failed)
+	}
+	if c.queue.Len() != 0 {
+		t.Fatalf("resync enqueued duplicate DeleteJob, queue len = %d", c.queue.Len())
+	}
+}
+
+type failedCountingCallback struct {
+	failed    int
+	succeeded int
+	added     int
+}
+
+func (f *failedCountingCallback) HandleCRDAdd(string, map[string]string, map[string]string) {}
+func (f *failedCountingCallback) HandleCRDDelete(string, map[string]string, map[string]string) {
+}
+func (f *failedCountingCallback) HandleCRDFailed(string, map[string]string, map[string]string, string) {
+}
+func (f *failedCountingCallback) HandleCRDSucceeded(string, string, string, time.Time, time.Time, map[string]string, map[string]string) {
+}
+func (f *failedCountingCallback) HandleJobAdd(string, map[string]string, map[string]string) {
+	f.added++
+}
+func (f *failedCountingCallback) HandleJobFailed(*batchv1.Job, map[string]string, map[string]string) {
+	f.failed++
+}
+func (f *failedCountingCallback) HandleJobSucceeded(*batchv1.Job, map[string]string, map[string]string) {
+	f.succeeded++
+}
 
 // TestController_EnsureNamespaceActive covers issue #194: the controller's
 // in-memory activeNamespaces set was diverging from the lock store, silently
