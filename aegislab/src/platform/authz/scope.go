@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"aegis/platform/consts"
+
 	"github.com/gin-gonic/gin"
 )
 
-// CallerScope describes the authorization boundary for a request. It is the
-// single source of truth for "which projects may this caller act on?" and is
-// passed explicitly through domain services rather than being re-derived from
-// request context downstream.
 type CallerScope struct {
 	UserID          int64
 	IsAdmin         bool
@@ -20,20 +18,17 @@ type CallerScope struct {
 	VisibleProjects []int64
 }
 
-// SystemScope returns a scope for in-process trusted callers (orchestrator,
-// gRPC intake). External HTTP handlers MUST NOT use this; they go through
-// ScopeFromGinContext so the per-user membership is honored.
+// SystemScope is for in-process trusted callers (orchestrator, gRPC intake).
+// External handlers MUST go through ScopeFromGinContext.
 func SystemScope() CallerScope { return CallerScope{IsAdmin: true} }
 
-// ErrProjectOutsideScope is returned when the caller attempts to act on a
-// project that is not in their visible set (and they are not admin).
-var ErrProjectOutsideScope = errors.New("project outside caller scope")
+var (
+	ErrProjectOutsideScope = errors.New("project outside caller scope")
+	ErrMissingAuth         = errors.New("authz: missing authenticated user on request")
+)
 
-// AllowsAllProjects reports whether the scope grants visibility to every
-// project (admin or system).
 func (s CallerScope) AllowsAllProjects() bool { return s.IsAdmin }
 
-// MustHaveProject returns nil iff the scope permits acting on projectID.
 func (s CallerScope) MustHaveProject(projectID int64) error {
 	if s.IsAdmin {
 		return nil
@@ -46,14 +41,78 @@ func (s CallerScope) MustHaveProject(projectID int64) error {
 	return fmt.Errorf("%w: project_id=%d", ErrProjectOutsideScope, projectID)
 }
 
-// ProjectMembershipResolver loads the set of projects a user can see. Backed
-// by user_scope_assignments where scope_type="project" AND status=enabled.
+// ProjectMembershipResolver loads visible projects for a user. Backed by
+// user_scoped_roles where scope_type="aegis.project" AND status=enabled.
 type ProjectMembershipResolver interface {
 	VisibleProjects(ctx context.Context, userID int64) ([]int64, error)
 }
 
-// ScopeFromGinContext is the skeleton entry-point for HTTP handlers. Wiring
-// to the existing middleware context keys is filled in by a later commit.
-func ScopeFromGinContext(_ *gin.Context, _ ProjectMembershipResolver) (CallerScope, error) {
-	return CallerScope{}, errors.New("authz.ScopeFromGinContext: not yet wired")
+const cachedScopeKey = "authz.caller_scope"
+
+// ScopeFromGinContext reads the per-request CallerScope using context keys set
+// by platform/middleware/auth.go and resolves project membership via resolver.
+// Result is cached on the *gin.Context for the duration of the request.
+func ScopeFromGinContext(c *gin.Context, resolver ProjectMembershipResolver) (CallerScope, error) {
+	if cached, ok := c.Get(cachedScopeKey); ok {
+		if s, ok := cached.(CallerScope); ok {
+			return s, nil
+		}
+	}
+
+	uidRaw, ok := c.Get(consts.CtxKeyUserID)
+	if !ok {
+		return CallerScope{}, ErrMissingAuth
+	}
+	uid, err := toInt64(uidRaw)
+	if err != nil {
+		return CallerScope{}, fmt.Errorf("authz: bad user_id type: %w", err)
+	}
+
+	scope := CallerScope{UserID: uid}
+
+	if v, ok := c.Get(consts.CtxKeyIsAdmin); ok {
+		if b, ok := v.(bool); ok {
+			scope.IsAdmin = b
+		}
+	}
+	if v, ok := c.Get(consts.CtxKeyIsServiceToken); ok {
+		if b, ok := v.(bool); ok {
+			scope.IsService = b
+		}
+	}
+	if v, ok := c.Get(consts.CtxKeyTaskID); ok {
+		if s, ok := v.(string); ok {
+			scope.TaskID = s
+		}
+	}
+
+	if !scope.IsAdmin {
+		projects, err := resolver.VisibleProjects(c.Request.Context(), uid)
+		if err != nil {
+			return CallerScope{}, fmt.Errorf("authz: resolve visible projects: %w", err)
+		}
+		scope.VisibleProjects = projects
+	}
+
+	c.Set(cachedScopeKey, scope)
+	return scope, nil
+}
+
+func toInt64(v any) (int64, error) {
+	switch x := v.(type) {
+	case int:
+		return int64(x), nil
+	case int32:
+		return int64(x), nil
+	case int64:
+		return x, nil
+	case uint:
+		return int64(x), nil
+	case uint32:
+		return int64(x), nil
+	case uint64:
+		return int64(x), nil
+	default:
+		return 0, fmt.Errorf("unsupported numeric type %T", v)
+	}
 }
