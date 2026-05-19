@@ -146,7 +146,7 @@ func (h *Handler) ListBuckets(c *gin.Context) {
 			PublicRead:     b.Config.PublicRead,
 		})
 	}
-	c.JSON(http.StatusOK, listBucketsResp{Items: out})
+	dto.SuccessResponse(c, listBucketsResp{Items: out})
 }
 
 // ---- Endpoints ----
@@ -214,7 +214,7 @@ func (h *Handler) PresignPut(c *gin.Context) {
 		}
 		res.Presigned = pr
 	}
-	c.JSON(http.StatusOK, res)
+	dto.SuccessResponse(c, res)
 }
 
 // PresignGet returns a presigned GET URL for downloading an object.
@@ -272,7 +272,7 @@ func (h *Handler) PresignGet(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK, pr)
+	dto.SuccessResponse(c, pr)
 }
 
 // InlineGet streams an object inline through the API. Accepts keys with
@@ -359,7 +359,7 @@ func (h *Handler) Stat(c *gin.Context) {
 		h.writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, meta)
+	dto.SuccessResponse(c, meta)
 }
 
 // Delete removes an object from the bucket.
@@ -456,7 +456,7 @@ func (h *Handler) List(c *gin.Context) {
 	if len(rows) > 0 && len(rows) == f.Limit {
 		resp.NextCursor = strconv.FormatInt(rows[len(rows)-1].ID, 10)
 	}
-	c.JSON(http.StatusOK, resp)
+	dto.SuccessResponse(c, resp)
 }
 
 // StreamGet is the wildcard-key counterpart of InlineGet. It streams
@@ -547,7 +547,7 @@ func (h *Handler) ListObjects(c *gin.Context) {
 		h.writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, res)
+	dto.SuccessResponse(c, res)
 }
 
 // Raw serves the localfs driver's signed token URLs. Verifies the
