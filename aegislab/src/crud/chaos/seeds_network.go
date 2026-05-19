@@ -68,9 +68,13 @@ func networkTargetSchema() JSONMap {
 			"namespace":      map[string]any{"type": "string", "minLength": 1},
 			"source_app":     map[string]any{"type": "string", "minLength": 1},
 			"target_service": map[string]any{"type": "string", "minLength": 1},
+			// `from` / `both` would require swapping selector ↔ target in
+			// the rendered CR (chaos-mesh interprets `selector` as the
+			// destination when direction=from). Step 2 ships `to` only —
+			// expand once a benchmark needs the inverse direction.
 			"direction": map[string]any{
 				"type":    "string",
-				"enum":    []any{"to", "from", "both"},
+				"enum":    []any{"to"},
 				"default": "to",
 			},
 		},
@@ -151,7 +155,10 @@ func networkBandwidthParamSchema() JSONMap {
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",
 		"type":                 "object",
 		"additionalProperties": false,
-		"required":             []any{"rate_kbps"},
+		// chaos-mesh BandwidthSpec marks limit + buffer non-optional (no
+		// omitempty + Minimum=1); leaving them off makes the apiserver
+		// webhook reject the CR. They're workload-sensitive so no default.
+		"required": []any{"rate_kbps", "limit", "buffer"},
 		"properties": map[string]any{
 			"rate_kbps":  map[string]any{"type": "integer", "minimum": 1, "maximum": 1000000},
 			"limit":      map[string]any{"type": "integer", "minimum": 1},
@@ -199,16 +206,21 @@ func networkLossObservableContract() JSONMap {
 }
 
 func networkDuplicateObservableContract() JSONMap {
+	// No robust trace signal for duplicate — TCP absorbs dup-ACKs and
+	// spans rarely encode UDP reorder. Contract hardens in step 3
+	// (capability catalog migration) once we wire node netdev_tx counters.
 	return JSONMap{
-		"name":     "network_duplicate",
-		"contract": "TODO: TCP duplicate-ACK handling absorbs most duplicates without symptoms; UDP-heavy traffic shows reorder/dup but spans rarely encode it",
+		"name": "network_duplicate",
+		"contract": map[string]any{
+			"injection_window_s": 60,
+			"trace_assertions":   []any{},
+		},
 	}
 }
 
 func networkCorruptObservableContract() JSONMap {
 	return JSONMap{
 		"name": "network_corrupt",
-		"note": "TODO: TLS-wrapped flows treat corruption as connection reset; raw-TCP flows surface as application-level retry",
 		"contract": map[string]any{
 			"injection_window_s": 60,
 			"trace_assertions": []any{
@@ -219,9 +231,11 @@ func networkCorruptObservableContract() JSONMap {
 }
 
 func networkBandwidthObservableContract() JSONMap {
+	// Assertion is sensitive to payload size — only payloads above the
+	// `buffer` threshold exhibit the cap. Step 3 will gate the assertion
+	// on observed payload_bytes.
 	return JSONMap{
 		"name": "network_bandwidth",
-		"note": "TODO: only payloads larger than buffer size will exhibit the cap; small RPC bodies pass through unaffected",
 		"contract": map[string]any{
 			"injection_window_s": 60,
 			"trace_assertions": []any{

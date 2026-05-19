@@ -146,7 +146,7 @@ func TestNetworkRenderersActionMapping(t *testing.T) {
 		{"network_loss", "loss", "loss", map[string]any{"loss_pct": 10}, "loss_pct"},
 		{"network_duplicate", "duplicate", "duplicate", map[string]any{"duplicate_pct": 10}, "duplicate_pct"},
 		{"network_corrupt", "corrupt", "corrupt", map[string]any{"corrupt_pct": 10}, "corrupt_pct"},
-		{"network_bandwidth", "bandwidth", "bandwidth", map[string]any{"rate_kbps": 1024}, "rate_kbps"},
+		{"network_bandwidth", "bandwidth", "bandwidth", map[string]any{"rate_kbps": 1024, "limit": 20480, "buffer": 10240}, "rate_kbps"},
 		{"network_partition", "partition", "", map[string]any{}, ""},
 	}
 	for _, tc := range cases {
@@ -202,14 +202,36 @@ func TestNetworkRenderersActionMapping(t *testing.T) {
 func TestNetworkTargetValidation(t *testing.T) {
 	r, _ := lookupRenderer("network_delay")
 	bad := []map[string]any{
-		{"source_app": "a", "target_service": "b"},                                       // no namespace
-		{"namespace": "ns", "target_service": "b"},                                       // no source_app
-		{"namespace": "ns", "source_app": "a"},                                           // no target_service
-		{"namespace": "ns", "source_app": "a", "target_service": "b", "direction": "x"}, // bad direction
+		{"source_app": "a", "target_service": "b"},                                          // no namespace
+		{"namespace": "ns", "target_service": "b"},                                          // no source_app
+		{"namespace": "ns", "source_app": "a"},                                              // no target_service
+		{"namespace": "ns", "source_app": "a", "target_service": "b", "direction": "x"},    // unknown direction
+		{"namespace": "ns", "source_app": "a", "target_service": "b", "direction": "from"}, // not supported in step 2
+		{"namespace": "ns", "source_app": "a", "target_service": "b", "direction": "both"}, // not supported in step 2
 	}
 	for i, tgt := range bad {
 		if err := r.ValidateTarget(tgt); err == nil {
 			t.Errorf("case %d should error: %v", i, tgt)
+		}
+	}
+}
+
+// TestDeriveHandleNamespaceOnly asserts the §8 contract that DeriveHandle
+// requires only the fields the CR name depends on (namespace). Full
+// target shape is enforced at Apply. Regression-guard against silently
+// tightening the contract during a registry refactor.
+func TestDeriveHandleNamespaceOnly(t *testing.T) {
+	e := &ChaosMeshExecutor{}
+	target := map[string]any{"namespace": "ts"} // no `app`, no `source_app`/`target_service`
+	for _, capability := range []string{"pod_kill", "network_delay", "network_partition"} {
+		if _, err := e.DeriveHandle(capability, "key-"+capability, target); err != nil {
+			t.Errorf("%s DeriveHandle with namespace-only target: %v", capability, err)
+		}
+	}
+	// Missing namespace must still be rejected.
+	for _, capability := range []string{"pod_kill", "network_delay"} {
+		if _, err := e.DeriveHandle(capability, "key", map[string]any{}); err == nil {
+			t.Errorf("%s DeriveHandle should reject empty target", capability)
 		}
 	}
 }

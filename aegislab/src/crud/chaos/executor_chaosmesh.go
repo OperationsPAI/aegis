@@ -89,7 +89,7 @@ func (e *ChaosMeshExecutor) DeriveHandle(
 	if err != nil {
 		return "", err
 	}
-	if err := r.ValidateTarget(target); err != nil {
+	if err := r.ValidateForHandle(target); err != nil {
 		return "", err
 	}
 	ns, _ := target["namespace"].(string)

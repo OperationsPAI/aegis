@@ -13,8 +13,6 @@ func init() {
 	}
 }
 
-// networkActions enumerates the NetworkChaos actions aegis-chaos surfaces
-// as Capabilities. Order is fixed for deterministic capability listings.
 var networkActions = []string{
 	"delay", "loss", "duplicate", "corrupt", "bandwidth", "partition",
 }
@@ -49,6 +47,13 @@ func (r networkRenderer) HandlePrefix() string {
 
 func (r networkRenderer) GVR() schema.GroupVersionResource { return networkChaosGVR }
 
+func (r networkRenderer) ValidateForHandle(target map[string]any) error {
+	if ns, _ := target["namespace"].(string); ns == "" {
+		return fmt.Errorf("chaos-mesh %s: target.namespace is required", r.Capability())
+	}
+	return nil
+}
+
 func (r networkRenderer) ValidateTarget(target map[string]any) error {
 	cap := r.Capability()
 	for _, k := range []string{"namespace", "source_app", "target_service"} {
@@ -59,10 +64,12 @@ func (r networkRenderer) ValidateTarget(target map[string]any) error {
 	}
 	if dir, ok := target["direction"]; ok {
 		ds, _ := dir.(string)
+		// Step 2 ships `to` only; `from` / `both` need selector↔target
+		// swap that hasn't been validated end-to-end.
 		switch ds {
-		case "", "to", "from", "both":
+		case "", "to":
 		default:
-			return fmt.Errorf("chaos-mesh %s: target.direction must be one of to|from|both", cap)
+			return fmt.Errorf("chaos-mesh %s: target.direction must be \"to\" (step 2)", cap)
 		}
 	}
 	return nil
@@ -88,8 +95,12 @@ func (r networkRenderer) ValidateParams(params map[string]any) error {
 			return fmt.Errorf("chaos-mesh %s: params.corrupt_pct is required: %w", cap, err)
 		}
 	case "bandwidth":
-		if _, err := getInt(params, "rate_kbps"); err != nil {
-			return fmt.Errorf("chaos-mesh %s: params.rate_kbps is required: %w", cap, err)
+		// chaos-mesh BandwidthSpec marks all three non-optional with
+		// Minimum=1; the webhook rejects CRs missing any of them.
+		for _, k := range []string{"rate_kbps", "limit", "buffer"} {
+			if _, err := getInt(params, k); err != nil {
+				return fmt.Errorf("chaos-mesh %s: params.%s is required: %w", cap, k, err)
+			}
 		}
 	case "partition":
 		// no required params
@@ -154,7 +165,7 @@ func (r networkRenderer) RenderCR(name, namespace string, target, params map[str
 // and shapes mirror chaos-mesh v1alpha1.NetworkChaosSpec TcParameter
 // (see chaos-experiment/chaos/network_chaos.go for the live wiring).
 func (r networkRenderer) attachActionParams(spec map[string]any, params map[string]any) error {
-	corr := pctString(params, "correlation_pct")
+	corr := pctStringOrZero(params, "correlation_pct")
 	switch r.action {
 	case "delay":
 		latency, _ := getInt(params, "latency_ms")
@@ -218,7 +229,7 @@ func getInt(m map[string]any, key string) (int, error) {
 	return 0, fmt.Errorf("param %q must be a number, got %T", key, v)
 }
 
-func pctString(m map[string]any, key string) string {
+func pctStringOrZero(m map[string]any, key string) string {
 	v, err := getInt(m, key)
 	if err != nil {
 		return "0"

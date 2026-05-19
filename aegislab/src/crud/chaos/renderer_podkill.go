@@ -18,13 +18,18 @@ func (podKillRenderer) Maturity() string                    { return CapStable }
 func (podKillRenderer) HandlePrefix() string                { return "pod-kill" }
 func (podKillRenderer) GVR() schema.GroupVersionResource    { return podChaosGVR }
 
-func (podKillRenderer) ValidateTarget(target map[string]any) error {
-	ns, _ := target["namespace"].(string)
-	if ns == "" {
+func (podKillRenderer) ValidateForHandle(target map[string]any) error {
+	if ns, _ := target["namespace"].(string); ns == "" {
 		return fmt.Errorf("chaos-mesh pod_kill: target.namespace is required")
 	}
-	app, _ := target["app"].(string)
-	if app == "" {
+	return nil
+}
+
+func (r podKillRenderer) ValidateTarget(target map[string]any) error {
+	if err := r.ValidateForHandle(target); err != nil {
+		return err
+	}
+	if app, _ := target["app"].(string); app == "" {
 		return fmt.Errorf("chaos-mesh pod_kill: target.app is required")
 	}
 	return nil

@@ -121,11 +121,6 @@ func TestNetworkConformance(t *testing.T) {
 	}
 }
 
-// networkHandlePrefixFor mirrors the renderer's HandlePrefix so the
-// conformance Observe / PostDestroy can rederive the CR name without
-// reaching into renderer internals. Kept in lockstep with
-// renderer_network.go HandlePrefix() — if you add a network capability,
-// update both places.
 func networkHandlePrefixFor(capability string) string {
 	switch capability {
 	case "network_delay":

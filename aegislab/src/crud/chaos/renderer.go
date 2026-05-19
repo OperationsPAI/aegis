@@ -17,6 +17,12 @@ type Renderer interface {
 	Maturity() string
 	HandlePrefix() string
 	GVR() schema.GroupVersionResource
+	// ValidateForHandle checks only the target fields DeriveHandle needs
+	// (namespace — the CR name encodes nothing else). Kept distinct from
+	// ValidateTarget so the service can derive + persist the handle
+	// BEFORE the full Apply-time validation runs (ADR-0004's
+	// "handle exists ⇒ row is recoverable" guarantee).
+	ValidateForHandle(target map[string]any) error
 	ValidateTarget(target map[string]any) error
 	ValidateParams(params map[string]any) error
 	RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error)
