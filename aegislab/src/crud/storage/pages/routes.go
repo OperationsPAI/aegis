@@ -16,6 +16,10 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
 		Name:     "pages.portal",
+		// /pages/public and /pages/:id are deliberately anonymous (see
+		// the OptionalJWTAuth handlers below), so opt out of the
+		// portal-default TrustedHeaderAuth chain.
+		SkipDefaultChain: true,
 		Register: func(v2 *gin.RouterGroup) {
 			g := v2.Group("/pages")
 			{

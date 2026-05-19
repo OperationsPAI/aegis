@@ -23,15 +23,20 @@ const (
 // we consolidate per domain and let `@x-api-type` annotations on each
 // handler drive swagger SDK bucketing instead.
 type RouteRegistrar struct {
-	// Audience is retained for backwards compatibility with module tests
-	// that pin a registrar's "primary" audience and for human readers
-	// skimming routes.go. The router does NOT dispatch on it — every
-	// registrar mounts on the same /api/v2 sub-group at runtime — and
-	// swagger SDK filtering is driven by per-handler @x-api-type
-	// annotations, not this field. Set it to the audience that best
-	// describes the registrar's center of mass; nothing branches on it.
-	// Ignored when BasePath is non-empty.
+	// Audience selects the canonical auth/middleware chain the router
+	// prepends to this registrar's group at boot. AudiencePublic gets no
+	// chain; AudiencePortal / AudienceSDK / AudienceAdmin currently all
+	// prepend TrustedHeaderAuth. The chain table lives in
+	// platform/router/audience_chain.go. Ignored when BasePath is
+	// non-empty or when SkipDefaultChain is true.
 	Audience Audience
+
+	// SkipDefaultChain opts this registrar out of the audience-driven
+	// default middleware chain. Set true for registrars that deliberately
+	// mix authenticated and unauthenticated sub-routes (e.g. a /blob/raw
+	// HMAC-token escape under an otherwise TrustedHeaderAuth group) and
+	// take full responsibility for attaching their own auth.
+	SkipDefaultChain bool
 
 	// Name is a short human-readable label used only for tracing /
 	// debugging (e.g. "label", "injection.portal").
