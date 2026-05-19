@@ -24,10 +24,7 @@ import (
 //go:embed manifest_schema.json
 var bundledManifestSchema []byte
 
-const (
-	chaosServerEnv     = "AEGIS_CHAOS_SERVER"
-	defaultChaosServer = "http://aegislab-chaos.aegislab.svc:8086"
-)
+const chaosServerEnv = "AEGIS_CHAOS_SERVER"
 
 var (
 	flagChaosServer  string
@@ -46,8 +43,14 @@ var manifestCmd = &cobra.Command{
 Used from helm post-install hooks shipped with benchmark charts and from
 chart-author workflows. See 'aegisctl manifest <subcommand> --help' for details.
 
-The chaos service URL is resolved from --chaos-server, env AEGIS_CHAOS_SERVER,
-or the default in-cluster service address (` + defaultChaosServer + `).`,
+The chaos service URL must be supplied via --chaos-server or env
+AEGIS_CHAOS_SERVER. helm chart hooks should template it as
+http://{{ include "chaos.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.httpPort }}
+so the value tracks the actual Release.Name/Namespace (the chaos Service
+is named {Release}-chaos per charts/chaos/templates/_helpers.tpl).
+
+Note: 'manifest validate' without --fetch-schema runs entirely offline and
+does NOT require a server.`,
 }
 
 var manifestValidateCmd = &cobra.Command{
@@ -350,18 +353,23 @@ func loadManifestSchema() ([]byte, string, error) {
 	return body, "live", nil
 }
 
-func resolveChaosServer() string {
+func resolveChaosServer() (string, error) {
 	if flagChaosServer != "" {
-		return flagChaosServer
+		return flagChaosServer, nil
 	}
 	if v := os.Getenv(chaosServerEnv); v != "" {
-		return v
+		return v, nil
 	}
-	return defaultChaosServer
+	return "", usageErrorf("aegis-chaos URL required: pass --chaos-server or set %s "+
+		"(helm hooks: http://{{ include \"chaos.fullname\" . }}.{{ .Release.Namespace }}.svc:{{ .Values.httpPort }})",
+		chaosServerEnv)
 }
 
 func chaosDoJSON(method, path string, body []byte) ([]byte, int, error) {
-	server := resolveChaosServer()
+	server, err := resolveChaosServer()
+	if err != nil {
+		return nil, 0, err
+	}
 	var reader io.Reader
 	if body != nil {
 		reader = bytes.NewReader(body)
@@ -375,9 +383,9 @@ func chaosDoJSON(method, path string, body []byte) ([]byte, int, error) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
-	// aegis-chaos auths via TrustedHeaderAuth, same Bearer scheme as backend
-	// (boot/chaos/options.go B5 fix in 15b3d21e). manifest-schema.json is
-	// the only unauthenticated endpoint; sending a bearer there is harmless.
+	// aegis-chaos auths via TrustedHeaderAuth, same Bearer scheme as the
+	// backend. manifest-schema.json is the only unauthenticated endpoint;
+	// sending a bearer there is harmless.
 	if flagToken != "" {
 		req.Header.Set("Authorization", "Bearer "+flagToken)
 	}
@@ -396,7 +404,7 @@ func chaosDoJSON(method, path string, body []byte) ([]byte, int, error) {
 
 func init() {
 	manifestCmd.PersistentFlags().StringVar(&flagChaosServer, "chaos-server", "",
-		"aegis-chaos service URL (env: AEGIS_CHAOS_SERVER; default: "+defaultChaosServer+")")
+		"aegis-chaos service URL (env: AEGIS_CHAOS_SERVER; required for import / list-points / --fetch-schema)")
 
 	manifestValidateCmd.Flags().BoolVar(&flagFetchSchema, "fetch-schema", false,
 		"Fetch the live JSON Schema from GET /v1beta/manifest-schema.json instead of the bundled copy (ADR-0010)")
