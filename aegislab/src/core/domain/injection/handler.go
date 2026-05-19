@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
@@ -25,11 +26,25 @@ import (
 )
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	resolver authz.ProjectMembershipResolver
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, resolver authz.ProjectMembershipResolver) *Handler {
+	return &Handler{service: service, resolver: resolver}
+}
+
+func (h *Handler) scope(c *gin.Context) (authz.CallerScope, bool) {
+	s, err := authz.ScopeFromGinContext(c, h.resolver)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == authz.ErrMissingAuth {
+			status = http.StatusUnauthorized
+		}
+		dto.ErrorResponse(c, status, err.Error())
+		return authz.CallerScope{}, false
+	}
+	return s, true
 }
 
 // ListProjectInjections lists all fault injections for a project
@@ -258,7 +273,11 @@ func (h *Handler) GetInjection(c *gin.Context) {
 	if !ok {
 		return
 	}
-	resp, err := h.service.GetInjection(c.Request.Context(), id)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetInjection(c.Request.Context(), scope, id)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

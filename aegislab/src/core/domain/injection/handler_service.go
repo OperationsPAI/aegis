@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 
+	"aegis/platform/authz"
 	"aegis/platform/dto"
 	"aegis/platform/utils"
 )
@@ -18,7 +19,7 @@ type HandlerService interface {
 	SubmitFaultInjection(context.Context, *SubmitInjectionReq, string, int, *int) (*SubmitInjectionResp, error)
 	SubmitDatapackBuilding(context.Context, *SubmitDatapackBuildingReq, string, int, *int) (*SubmitDatapackBuildingResp, error)
 	ListInjections(context.Context, *ListInjectionReq) (*dto.ListResp[InjectionResp], error)
-	GetInjection(context.Context, int) (*InjectionDetailResp, error)
+	GetInjection(context.Context, authz.CallerScope, int) (*InjectionDetailResp, error)
 	ManageLabels(context.Context, *ManageInjectionLabelReq, int) (*InjectionResp, error)
 	BatchManageLabels(context.Context, *BatchManageInjectionLabelReq) (*BatchManageInjectionLabelResp, error)
 	BatchDelete(context.Context, *BatchDeleteInjectionReq) error
