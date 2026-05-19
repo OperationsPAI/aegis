@@ -29,5 +29,8 @@ dependencies:
 - name: etcd
   repository: ""
   version: 0.1.0
-digest: sha256:e341df46689019b9bc1ea91b8d71a12d1c470660cea5e70d06c1183d99cb04b3
-generated: "2026-05-13T12:38:32.08517239+01:00"
+- name: chaos
+  repository: ""
+  version: 0.1.0
+digest: sha256:ff41bce8ec84f51a39463445e233f49762162598e3ec87fab16aaf8a5abe84d7
+generated: "2026-05-19T12:54:24.083022112+01:00"

@@ -5,16 +5,19 @@ package chaoshooks
 
 import "time"
 
-// HookSubmission is the receiver-side uniqueness gate. Per ADR-0007 +
-// design §10.2 the downstream submission must be idempotent on
-// `(id, kind, terminal_status)` so that duplicate webhook deliveries
-// (retry, polling, shadowed CRD watcher) become no-ops. `Kind` is
-// "singleton" or "batch"; `TerminalStatus` is the sticky terminal value
-// the webhook arrived with (ADR-0006).
+// HookSubmission is the receiver-side uniqueness gate. Per design §11
+// step 4 the downstream submission must be idempotent on
+// `(injection_id, task_type)` so that the legacy CRD watcher and the
+// new aegis-chaos webhook cannot both fire BuildDatapack for the same
+// fault. Since each `Kind` ("singleton"/"batch") maps to exactly one
+// downstream task type (BuildDatapack), the PK `(id, kind)` is the
+// concrete encoding of that constraint. `TerminalStatus` stays as a
+// non-key column for audit — but a different terminal arriving later
+// for the same (id, kind) is a no-op, not a second fire.
 type HookSubmission struct {
 	ID             string    `gorm:"primaryKey;size:64"`
 	Kind           string    `gorm:"primaryKey;size:16"`
-	TerminalStatus string    `gorm:"primaryKey;size:16"`
+	TerminalStatus string    `gorm:"size:16;not null"`
 	SubmittedAt    time.Time `gorm:"not null"`
 }
 

@@ -200,8 +200,9 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 }
 
 // claimGate INSERTs the dedup row; returns true on win, false on conflict.
-// (injection_or_batch_id, kind, terminal_status) — design §10.2 +
-// ADRs 0006/0007.
+// PK is (injection_or_batch_id, kind) — design §11 step 4 prereq: only
+// one downstream BuildDatapack per fault, regardless of which terminal
+// status (succeeded/partial/failed/cancelled) arrives first.
 func (h *Handler) claimGate(ctx context.Context, id, kind, terminal string) (bool, error) {
 	row := HookSubmission{ID: id, Kind: kind, TerminalStatus: terminal, SubmittedAt: time.Now().UTC()}
 	res := h.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&row)

@@ -1,6 +1,12 @@
 # chaos subchart defaults — aegis-chaos microservice.
+#
+# Default OFF: the §11 migration cut-over to chaos-service runs in
+# stages and the umbrella must keep the system behaving exactly as it
+# does today (legacy CRD watcher in aegis-backend still owns inject).
+# Flip via umbrella `chaos.enabled=true` once chaos-service is deployed
+# on the target cluster.
 
-enabled: true
+enabled: false
 replicaCount: 1
 httpPort: 8086
 binaryName: "aegis-chaos"

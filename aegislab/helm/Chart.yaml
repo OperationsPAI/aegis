@@ -69,3 +69,7 @@ dependencies:
     version: "0.1.0"
     repository: ""
     condition: etcd.enabled
+  - name: chaos
+    version: "0.1.0"
+    repository: ""
+    condition: chaos.enabled

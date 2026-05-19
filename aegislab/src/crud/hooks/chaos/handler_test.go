@@ -271,6 +271,33 @@ func TestBatchCancelledNoFire(t *testing.T) {
 	}
 }
 
+// TestBatchSucceededThenPartialIsNoOp pins the design §11 step 4 prereq:
+// downstream submission is idempotent on (injection_id, task_type). The
+// gate's PK is (id, kind), so once a terminal claims the gate any later
+// terminal (including a different one) for the same (id, kind) is a
+// no-op — the receiver MUST NOT fire a second BuildDatapack.
+func TestBatchSucceededThenPartialIsNoOp(t *testing.T) {
+	_, rec, r := setupRig(t)
+	first := BatchWebhook{
+		BatchID:             "batch-dual",
+		IdempotencyKey:      "bk-dual-1",
+		AggregatedStatus:    statusSucceeded,
+		BatchCallerMetadata: sampleMeta(),
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos-batch", first, nil)
+	if got := rec.count(); got != 1 {
+		t.Fatalf("first (succeeded): want 1 submit got %d", got)
+	}
+
+	second := first
+	second.IdempotencyKey = "bk-dual-2"
+	second.AggregatedStatus = statusPartial
+	postJSON(t, r, "/api/v1/hooks/chaos-batch", second, nil)
+	if got := rec.count(); got != 1 {
+		t.Fatalf("second (partial) for same batch_id: want still 1 submit got %d", got)
+	}
+}
+
 func TestW3CTraceparentBecomesParent(t *testing.T) {
 	_, rec, r := setupRig(t)
 	traceID := "11111111111111111111111111111111"
