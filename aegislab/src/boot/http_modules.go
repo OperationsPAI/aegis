@@ -21,6 +21,7 @@ import (
 	configcenter "aegis/crud/admin/configcenter"
 	ratelimiter "aegis/crud/admin/ratelimiter"
 	widget "aegis/crud/admin/widget"
+	chaoshooks "aegis/crud/hooks/chaos"
 	label "aegis/crud/iam/label"
 	project "aegis/crud/iam/project"
 	team "aegis/crud/iam/team"
@@ -88,6 +89,10 @@ func apiHTTPModules() []fx.Option {
 		// crud/messaging
 		notification.Module,
 
+		// crud/hooks — aegis-chaos webhook receivers (migration step 5a;
+		// dead code until step 5b flips the per-system etcd flag).
+		chaoshooks.Module,
+
 		// crud/admin
 		chaosprune.Module,
 		configcenter.Module,
@@ -117,6 +122,7 @@ func apiHTTPModuleNames() []string {
 		"blob",
 		"pages",
 		"notification",
+		"hooks.chaos",
 		"chaosprune", "configcenter", "ratelimiter", "widget",
 		"blobclient", "configcenterclient", "gateway", "notificationclient",
 	}
