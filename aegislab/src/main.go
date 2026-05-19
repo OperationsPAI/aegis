@@ -15,6 +15,8 @@
 //	@name						Authorization
 //	@description				Type "Bearer" followed by a space and JWT token.
 
+//go:generate go run github.com/swaggo/swag/cmd/swag@latest init --parseDependency --parseDepth 1 -d . --output ./docs/openapi2
+
 package main
 
 import (
