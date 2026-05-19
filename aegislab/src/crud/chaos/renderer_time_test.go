@@ -19,7 +19,7 @@ func TestTimeSkewRender(t *testing.T) {
 	if err := r.ValidateParams(params); err != nil {
 		t.Fatalf("ValidateParams: %v", err)
 	}
-	cr, err := r.RenderCR("x", "ts", target, params)
+	cr, err := r.RenderCR(SystemContext{}, "x", "ts", target, params)
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}

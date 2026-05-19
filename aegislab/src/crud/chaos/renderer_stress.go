@@ -73,7 +73,7 @@ func (r stressRenderer) ValidateParams(params map[string]any) error {
 	return nil
 }
 
-func (r stressRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (r stressRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	app, _ := target["app"].(string)
 	container, _ := target["container"].(string)
 
@@ -107,7 +107,7 @@ func (r stressRenderer) RenderCR(name, namespace string, target, params map[stri
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": app,
+				sysCtx.LabelKey(): app,
 			},
 		},
 		"containerNames": []any{container},

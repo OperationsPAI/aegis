@@ -128,7 +128,7 @@ func (r jvmRenderer) ValidateParams(params map[string]any) error {
 	return nil
 }
 
-func (r jvmRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (r jvmRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	app, _ := target["app"].(string)
 
 	action, err := r.action()
@@ -142,7 +142,7 @@ func (r jvmRenderer) RenderCR(name, namespace string, target, params map[string]
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": app,
+				sysCtx.LabelKey(): app,
 			},
 		},
 		"port": int64(jvmAgentDefaultPort),

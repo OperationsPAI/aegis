@@ -40,7 +40,34 @@ func (s *Manager) UpsertSystem(ctx context.Context, sys *System) error {
 	if sys.MaxConcurrentInjections == 0 {
 		sys.MaxConcurrentInjections = 5
 	}
-	return s.DB.WithContext(ctx).Save(sys).Error
+
+	// Split insert vs. update paths: gorm's Save() leaves CreatedAt at
+	// zero on the UPDATE branch when the input struct has the time-zero
+	// value, and MySQL strict mode rejects '0000-00-00 00:00:00' with
+	// Error 1292. The on-conflict UPDATE here explicitly preserves the
+	// existing created_at and only writes the mutable fields.
+	db := s.DB.WithContext(ctx)
+	var existing System
+	err := db.Where("name = ?", sys.Name).Take(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		now := time.Now().UTC()
+		sys.CreatedAt = now
+		sys.UpdatedAt = now
+		return db.Create(sys).Error
+	}
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	sys.CreatedAt = existing.CreatedAt
+	sys.UpdatedAt = now
+	return db.Model(&System{}).Where("name = ?", sys.Name).Updates(map[string]any{
+		"ns_pattern":                sys.NsPattern,
+		"app_label_key":             sys.AppLabelKey,
+		"enabled":                   sys.Enabled,
+		"max_concurrent_injections": sys.MaxConcurrentInjections,
+		"updated_at":                now,
+	}).Error
 }
 
 func (s *Manager) GetSystem(ctx context.Context, name string) (*System, error) {
@@ -117,6 +144,7 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 	if !sys.Enabled {
 		return nil, ErrSystemDisabled
 	}
+	sysCtx := SystemContext{Name: sys.Name, AppLabelKey: sys.AppLabelKey}
 
 	// ADR-0004: derive the executor_handle BEFORE Apply so a crash mid-Apply
 	// leaves a recoverable row — the persisted handle is valid regardless of
@@ -149,7 +177,7 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 	}
 
 	applyAt := time.Now().UTC()
-	if applyErr := s.Executor.Apply(ctx, capRow.Name, handle, target, in.Params); applyErr != nil {
+	if applyErr := s.Executor.Apply(ctx, sysCtx, capRow.Name, handle, target, in.Params); applyErr != nil {
 		fin := applyAt
 		updates := map[string]any{
 			"status":      StatusFailed,

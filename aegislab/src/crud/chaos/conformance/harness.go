@@ -37,6 +37,7 @@ func (r Result) Passed() bool {
 type Case struct {
 	Capability     string
 	IdempotencyKey string
+	SystemContext  chaos.SystemContext
 	Target         map[string]any
 	Params         map[string]any
 	// Observe asserts the Capability's observable contract (§9) is met
@@ -69,7 +70,7 @@ func (h *Harness) Run(ctx context.Context, c Case) Result {
 		r.FailureReason = fmt.Sprintf("derive-handle: %v", err)
 		return r
 	}
-	if err := h.Executor.Apply(ctx, c.Capability, handle, c.Target, c.Params); err != nil {
+	if err := h.Executor.Apply(ctx, c.SystemContext, c.Capability, handle, c.Target, c.Params); err != nil {
 		r.FailureReason = fmt.Sprintf("apply: %v", err)
 		return r
 	}

@@ -62,7 +62,7 @@ func (r dnsRenderer) ValidateTarget(target map[string]any) error {
 
 func (dnsRenderer) ValidateParams(_ map[string]any) error { return nil }
 
-func (r dnsRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (r dnsRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	app, _ := target["app"].(string)
 	pats, err := patternList(target["domain_patterns"])
 	if err != nil {
@@ -79,7 +79,7 @@ func (r dnsRenderer) RenderCR(name, namespace string, target, params map[string]
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": app,
+				sysCtx.LabelKey(): app,
 			},
 		},
 		"patterns": patternsAny,

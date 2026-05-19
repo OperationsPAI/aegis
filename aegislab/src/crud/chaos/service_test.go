@@ -37,7 +37,7 @@ func (e *fakeExecutor) DeriveHandle(capability, key string, target map[string]an
 	ns, _ := target["namespace"].(string)
 	return string(mustJSON(map[string]any{"name": name, "namespace": ns, "gvr": "fake"})), nil
 }
-func (e *fakeExecutor) Apply(ctx context.Context, capability, handle string, target, params map[string]any) error {
+func (e *fakeExecutor) Apply(ctx context.Context, sysCtx SystemContext, capability, handle string, target, params map[string]any) error {
 	e.applyCount.Add(1)
 	return e.applyErr
 }

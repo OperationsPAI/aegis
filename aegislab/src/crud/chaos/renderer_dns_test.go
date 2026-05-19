@@ -31,7 +31,7 @@ func TestDNSRenderers(t *testing.T) {
 			if err := r.ValidateTarget(bad); err == nil {
 				t.Error("ValidateTarget must reject empty domain_patterns")
 			}
-			cr, err := r.RenderCR("x", "ts", target, map[string]any{"duration_s": 30})
+			cr, err := r.RenderCR(SystemContext{}, "x", "ts", target, map[string]any{"duration_s": 30})
 			if err != nil {
 				t.Fatalf("RenderCR: %v", err)
 			}

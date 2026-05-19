@@ -108,7 +108,7 @@ func (r networkRenderer) ValidateParams(params map[string]any) error {
 	return nil
 }
 
-func (r networkRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (r networkRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	sourceApp, _ := target["source_app"].(string)
 	targetService, _ := target["target_service"].(string)
 	direction, _ := target["direction"].(string)
@@ -116,6 +116,7 @@ func (r networkRenderer) RenderCR(name, namespace string, target, params map[str
 		direction = "to"
 	}
 
+	labelKey := sysCtx.LabelKey()
 	spec := map[string]any{
 		"action":    r.action,
 		"mode":      "all",
@@ -123,7 +124,7 @@ func (r networkRenderer) RenderCR(name, namespace string, target, params map[str
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": sourceApp,
+				labelKey: sourceApp,
 			},
 		},
 		"target": map[string]any{
@@ -131,7 +132,7 @@ func (r networkRenderer) RenderCR(name, namespace string, target, params map[str
 			"selector": map[string]any{
 				"namespaces": []any{namespace},
 				"labelSelectors": map[string]any{
-					"app": targetService,
+					labelKey: targetService,
 				},
 			},
 		},

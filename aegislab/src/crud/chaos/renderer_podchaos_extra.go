@@ -73,7 +73,7 @@ func (r podChaosExtraRenderer) ValidateTarget(target map[string]any) error {
 
 func (podChaosExtraRenderer) ValidateParams(_ map[string]any) error { return nil }
 
-func (r podChaosExtraRenderer) RenderCR(name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
+func (r podChaosExtraRenderer) RenderCR(sysCtx SystemContext, name, namespace string, target, params map[string]any) (*unstructured.Unstructured, error) {
 	app, _ := target["app"].(string)
 	spec := map[string]any{
 		"action": r.action,
@@ -81,7 +81,7 @@ func (r podChaosExtraRenderer) RenderCR(name, namespace string, target, params m
 		"selector": map[string]any{
 			"namespaces": []any{namespace},
 			"labelSelectors": map[string]any{
-				"app": app,
+				sysCtx.LabelKey(): app,
 			},
 		},
 	}

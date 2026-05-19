@@ -60,7 +60,7 @@ func TestHTTPRequestDelayRender(t *testing.T) {
 		t.Fatalf("ValidateParams: %v", err)
 	}
 
-	cr, err := r.RenderCR("aegis-httpreqdelay-abc", "ts", target, params)
+	cr, err := r.RenderCR(SystemContext{}, "aegis-httpreqdelay-abc", "ts", target, params)
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestHTTPResponseReplaceCodeRender(t *testing.T) {
 	if err := r.ValidateParams(params); err != nil {
 		t.Fatalf("ValidateParams: %v", err)
 	}
-	cr, err := r.RenderCR("aegis-x", "ts", target, params)
+	cr, err := r.RenderCR(SystemContext{}, "aegis-x", "ts", target, params)
 	if err != nil {
 		t.Fatalf("RenderCR: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestHTTPRenderersTargetMapping(t *testing.T) {
 			if err := r.ValidateParams(tc.validParams); err != nil {
 				t.Fatalf("ValidateParams(valid): %v", err)
 			}
-			cr, err := r.RenderCR("aegis-x", "ts", target, tc.validParams)
+			cr, err := r.RenderCR(SystemContext{}, "aegis-x", "ts", target, tc.validParams)
 			if err != nil {
 				t.Fatalf("RenderCR: %v", err)
 			}
