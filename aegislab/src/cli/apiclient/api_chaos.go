@@ -37,6 +37,20 @@ type ChaosAPI interface {
 	ChaosCreateInjectionExecute(r ApiChaosCreateInjectionRequest) (*DtoGenericResponseChaosChaosInjectionResp, *http.Response, error)
 
 	/*
+		ChaosCreateInjectionBatch Submit a chaos injection batch
+
+		Create (or return the existing batch for the same batch_idempotency_key) an InjectionBatch and its children.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@return ApiChaosCreateInjectionBatchRequest
+	*/
+	ChaosCreateInjectionBatch(ctx context.Context) ApiChaosCreateInjectionBatchRequest
+
+	// ChaosCreateInjectionBatchExecute executes the request
+	//  @return DtoGenericResponseChaosChaosInjectionBatchResp
+	ChaosCreateInjectionBatchExecute(r ApiChaosCreateInjectionBatchRequest) (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error)
+
+	/*
 		ChaosDeleteInjection Destroy a chaos injection
 
 		Run executor Destroy and cancel a non-terminal Injection.
@@ -50,6 +64,21 @@ type ChaosAPI interface {
 	// ChaosDeleteInjectionExecute executes the request
 	//  @return DtoGenericResponseChaosChaosInjectionResp
 	ChaosDeleteInjectionExecute(r ApiChaosDeleteInjectionRequest) (*DtoGenericResponseChaosChaosInjectionResp, *http.Response, error)
+
+	/*
+		ChaosDeleteInjectionBatch Destroy a chaos injection batch
+
+		Cancel a batch and all non-terminal children.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param id Batch id (ULID)
+		@return ApiChaosDeleteInjectionBatchRequest
+	*/
+	ChaosDeleteInjectionBatch(ctx context.Context, id string) ApiChaosDeleteInjectionBatchRequest
+
+	// ChaosDeleteInjectionBatchExecute executes the request
+	//  @return DtoGenericResponseChaosChaosInjectionBatchResp
+	ChaosDeleteInjectionBatchExecute(r ApiChaosDeleteInjectionBatchRequest) (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error)
 
 	/*
 		ChaosGetCapability Get a chaos capability
@@ -80,6 +109,21 @@ type ChaosAPI interface {
 	// ChaosGetInjectionExecute executes the request
 	//  @return DtoGenericResponseChaosChaosInjectionResp
 	ChaosGetInjectionExecute(r ApiChaosGetInjectionRequest) (*DtoGenericResponseChaosChaosInjectionResp, *http.Response, error)
+
+	/*
+		ChaosGetInjectionBatch Get a chaos injection batch
+
+		Fetch the persisted InjectionBatch row and its children.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param id Batch id (ULID)
+		@return ApiChaosGetInjectionBatchRequest
+	*/
+	ChaosGetInjectionBatch(ctx context.Context, id string) ApiChaosGetInjectionBatchRequest
+
+	// ChaosGetInjectionBatchExecute executes the request
+	//  @return DtoGenericResponseChaosChaosInjectionBatchResp
+	ChaosGetInjectionBatchExecute(r ApiChaosGetInjectionBatchRequest) (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error)
 
 	/*
 		ChaosGetSystem Get a chaos system
@@ -124,6 +168,21 @@ type ChaosAPI interface {
 	// ChaosListCapabilitiesExecute executes the request
 	//  @return DtoGenericResponseArrayChaosChaosCapabilityResp
 	ChaosListCapabilitiesExecute(r ApiChaosListCapabilitiesRequest) (*DtoGenericResponseArrayChaosChaosCapabilityResp, *http.Response, error)
+
+	/*
+		ChaosListSystemPoints List chaos Points for a system
+
+		List Points filtered by service / capability / status with limit/offset paging.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param sys System name
+		@return ApiChaosListSystemPointsRequest
+	*/
+	ChaosListSystemPoints(ctx context.Context, sys string) ApiChaosListSystemPointsRequest
+
+	// ChaosListSystemPointsExecute executes the request
+	//  @return DtoGenericResponseChaosChaosListPointsResp
+	ChaosListSystemPointsExecute(r ApiChaosListSystemPointsRequest) (*DtoGenericResponseChaosChaosListPointsResp, *http.Response, error)
 
 	/*
 		ChaosManifestSchema Fetch the manifest envelope JSON Schema
@@ -327,6 +386,164 @@ func (a *ChaosAPIService) ChaosCreateInjectionExecute(r ApiChaosCreateInjectionR
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiChaosCreateInjectionBatchRequest struct {
+	ctx                               context.Context
+	ApiService                        ChaosAPI
+	chaosChaosCreateInjectionBatchReq *ChaosChaosCreateInjectionBatchReq
+}
+
+// Create-batch request
+func (r ApiChaosCreateInjectionBatchRequest) ChaosChaosCreateInjectionBatchReq(chaosChaosCreateInjectionBatchReq ChaosChaosCreateInjectionBatchReq) ApiChaosCreateInjectionBatchRequest {
+	r.chaosChaosCreateInjectionBatchReq = &chaosChaosCreateInjectionBatchReq
+	return r
+}
+
+func (r ApiChaosCreateInjectionBatchRequest) Execute() (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error) {
+	return r.ApiService.ChaosCreateInjectionBatchExecute(r)
+}
+
+/*
+ChaosCreateInjectionBatch Submit a chaos injection batch
+
+Create (or return the existing batch for the same batch_idempotency_key) an InjectionBatch and its children.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiChaosCreateInjectionBatchRequest
+*/
+func (a *ChaosAPIService) ChaosCreateInjectionBatch(ctx context.Context) ApiChaosCreateInjectionBatchRequest {
+	return ApiChaosCreateInjectionBatchRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseChaosChaosInjectionBatchResp
+func (a *ChaosAPIService) ChaosCreateInjectionBatchExecute(r ApiChaosCreateInjectionBatchRequest) (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseChaosChaosInjectionBatchResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChaosAPIService.ChaosCreateInjectionBatch")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta/injection-batches"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.chaosChaosCreateInjectionBatchReq == nil {
+		return localVarReturnValue, nil, reportError("chaosChaosCreateInjectionBatchReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.chaosChaosCreateInjectionBatchReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiChaosDeleteInjectionRequest struct {
 	ctx        context.Context
 	ApiService ChaosAPI
@@ -371,6 +588,145 @@ func (a *ChaosAPIService) ChaosDeleteInjectionExecute(r ApiChaosDeleteInjectionR
 	}
 
 	localVarPath := localBasePath + "/v1beta/injections/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiChaosDeleteInjectionBatchRequest struct {
+	ctx        context.Context
+	ApiService ChaosAPI
+	id         string
+}
+
+func (r ApiChaosDeleteInjectionBatchRequest) Execute() (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error) {
+	return r.ApiService.ChaosDeleteInjectionBatchExecute(r)
+}
+
+/*
+ChaosDeleteInjectionBatch Destroy a chaos injection batch
+
+Cancel a batch and all non-terminal children.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param id Batch id (ULID)
+	@return ApiChaosDeleteInjectionBatchRequest
+*/
+func (a *ChaosAPIService) ChaosDeleteInjectionBatch(ctx context.Context, id string) ApiChaosDeleteInjectionBatchRequest {
+	return ApiChaosDeleteInjectionBatchRequest{
+		ApiService: a,
+		ctx:        ctx,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseChaosChaosInjectionBatchResp
+func (a *ChaosAPIService) ChaosDeleteInjectionBatchExecute(r ApiChaosDeleteInjectionBatchRequest) (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodDelete
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseChaosChaosInjectionBatchResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChaosAPIService.ChaosDeleteInjectionBatch")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta/injection-batches/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -649,6 +1005,145 @@ func (a *ChaosAPIService) ChaosGetInjectionExecute(r ApiChaosGetInjectionRequest
 	}
 
 	localVarPath := localBasePath + "/v1beta/injections/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiChaosGetInjectionBatchRequest struct {
+	ctx        context.Context
+	ApiService ChaosAPI
+	id         string
+}
+
+func (r ApiChaosGetInjectionBatchRequest) Execute() (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error) {
+	return r.ApiService.ChaosGetInjectionBatchExecute(r)
+}
+
+/*
+ChaosGetInjectionBatch Get a chaos injection batch
+
+Fetch the persisted InjectionBatch row and its children.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param id Batch id (ULID)
+	@return ApiChaosGetInjectionBatchRequest
+*/
+func (a *ChaosAPIService) ChaosGetInjectionBatch(ctx context.Context, id string) ApiChaosGetInjectionBatchRequest {
+	return ApiChaosGetInjectionBatchRequest{
+		ApiService: a,
+		ctx:        ctx,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseChaosChaosInjectionBatchResp
+func (a *ChaosAPIService) ChaosGetInjectionBatchExecute(r ApiChaosGetInjectionBatchRequest) (*DtoGenericResponseChaosChaosInjectionBatchResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseChaosChaosInjectionBatchResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChaosAPIService.ChaosGetInjectionBatch")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta/injection-batches/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1164,6 +1659,206 @@ func (a *ChaosAPIService) ChaosListCapabilitiesExecute(r ApiChaosListCapabilitie
 		newErr := &GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiChaosListSystemPointsRequest struct {
+	ctx        context.Context
+	ApiService ChaosAPI
+	sys        string
+	service    *string
+	capability *string
+	status     *string
+	limit      *int32
+	offset     *int32
+}
+
+// Filter by service name
+func (r ApiChaosListSystemPointsRequest) Service(service string) ApiChaosListSystemPointsRequest {
+	r.service = &service
+	return r
+}
+
+// Filter by capability name
+func (r ApiChaosListSystemPointsRequest) Capability(capability string) ApiChaosListSystemPointsRequest {
+	r.capability = &capability
+	return r
+}
+
+// Filter by Point status (active / superseded / deprecated)
+func (r ApiChaosListSystemPointsRequest) Status(status string) ApiChaosListSystemPointsRequest {
+	r.status = &status
+	return r
+}
+
+// Page size (default 100, max 500)
+func (r ApiChaosListSystemPointsRequest) Limit(limit int32) ApiChaosListSystemPointsRequest {
+	r.limit = &limit
+	return r
+}
+
+// Page offset (default 0)
+func (r ApiChaosListSystemPointsRequest) Offset(offset int32) ApiChaosListSystemPointsRequest {
+	r.offset = &offset
+	return r
+}
+
+func (r ApiChaosListSystemPointsRequest) Execute() (*DtoGenericResponseChaosChaosListPointsResp, *http.Response, error) {
+	return r.ApiService.ChaosListSystemPointsExecute(r)
+}
+
+/*
+ChaosListSystemPoints List chaos Points for a system
+
+List Points filtered by service / capability / status with limit/offset paging.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param sys System name
+	@return ApiChaosListSystemPointsRequest
+*/
+func (a *ChaosAPIService) ChaosListSystemPoints(ctx context.Context, sys string) ApiChaosListSystemPointsRequest {
+	return ApiChaosListSystemPointsRequest{
+		ApiService: a,
+		ctx:        ctx,
+		sys:        sys,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseChaosChaosListPointsResp
+func (a *ChaosAPIService) ChaosListSystemPointsExecute(r ApiChaosListSystemPointsRequest) (*DtoGenericResponseChaosChaosListPointsResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseChaosChaosListPointsResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChaosAPIService.ChaosListSystemPoints")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta/systems/{sys}/points"
+	localVarPath = strings.Replace(localVarPath, "{"+"sys"+"}", url.PathEscape(parameterValueToString(r.sys, "sys")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.service != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "service", r.service, "form", "")
+	}
+	if r.capability != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "capability", r.capability, "form", "")
+	}
+	if r.status != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "status", r.status, "form", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "form", "")
+	}
+	if r.offset != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "offset", r.offset, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 401 {
 			var v DtoGenericResponseAny
