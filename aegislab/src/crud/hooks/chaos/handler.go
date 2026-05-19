@@ -10,13 +10,14 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	redis "aegis/platform/redis"
-	"aegis/platform/tracing"
 	"aegis/platform/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -175,23 +176,27 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 	}
 
 	task := &dto.UnifiedTask{
-		Type:      consts.TaskTypeBuildDatapack,
-		Immediate: true,
-		Payload:   payload,
-		TraceID:   meta.TraceID,
-		GroupID:   meta.GroupID,
-		ProjectID: meta.ProjectID,
-		UserID:    meta.UserID,
-		State:     consts.TaskPending,
-	}
-	if meta.TaskID != "" {
-		task.ParentTaskID = utils.StringPtr(meta.TaskID)
+		Type:             consts.TaskTypeBuildDatapack,
+		Immediate:        true,
+		Payload:          payload,
+		ParentTaskID:     utils.StringPtr(meta.TaskID),
+		TraceID:          meta.TraceID,
+		GroupID:          meta.GroupID,
+		ProjectID:        meta.ProjectID,
+		UserID:           meta.UserID,
+		State:            consts.TaskPending,
+		RootTraceCarrier: meta.RootTraceCarrier,
 	}
 
-	return true, tracing.WithSpanNamed(parentCtx, "hooks/chaos/"+kind, func(ctx context.Context) error {
+	tracer := otel.Tracer("rcabench/task")
+	return true, func() error {
+		ctx, span := tracer.Start(parentCtx, "hooks/chaos",
+			oteltrace.WithAttributes(attribute.String("hook.kind", kind)),
+		)
+		defer span.End()
 		task.SetTraceCtx(ctx)
 		return h.submit(ctx, task)
-	})
+	}()
 }
 
 // claimGate INSERTs the dedup row; returns true on win, false on conflict.

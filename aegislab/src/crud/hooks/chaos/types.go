@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"aegis/platform/dto"
+
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // CallerMetadata is the opaque-JSON envelope aegis-chaos round-trips
@@ -19,7 +21,6 @@ import (
 // ParentTaskID chain intact.
 type CallerMetadata struct {
 	TaskID       string `json:"task_id"`
-	TaskType     string `json:"task_type"`
 	TraceID      string `json:"trace_id"`
 	GroupID      string `json:"group_id"`
 	ProjectID    int    `json:"project_id"`
@@ -28,6 +29,13 @@ type CallerMetadata struct {
 
 	Benchmark *dto.ContainerVersionItem `json:"benchmark,omitempty"`
 	Datapack  *dto.InjectionItem        `json:"datapack,omitempty"`
+
+	// RootTraceCarrier preserves the grandparent-span linkage the CRD path
+	// reads back from K8s annotations (parseAnnotations → rootTraceCarrier
+	// → UnifiedTask.RootTraceCarrier). Without it, BuildDatapack tasks
+	// submitted via the webhook path detach from the root span and oncall
+	// can't trace incidents end-to-end.
+	RootTraceCarrier propagation.MapCarrier `json:"root_trace_carrier,omitempty"`
 }
 
 // SingletonWebhook is the §10.2 singleton payload posted to `/api/v1/hooks/chaos`.

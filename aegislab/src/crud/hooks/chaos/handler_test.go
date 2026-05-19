@@ -70,7 +70,6 @@ func setupRig(t *testing.T) (*gorm.DB, *recorder, *gin.Engine) {
 func sampleMeta() CallerMetadata {
 	return CallerMetadata{
 		TaskID:    "task-A",
-		TaskType:  "FaultInjection",
 		TraceID:   "trace-A",
 		GroupID:   "group-A",
 		ProjectID: 7,
@@ -153,6 +152,62 @@ func TestSingletonFailedDoesNotFire(t *testing.T) {
 	}
 	if got := rec.count(); got != 0 {
 		t.Fatalf("want 0 submissions got %d", got)
+	}
+}
+
+func TestSingletonCancelledNoFire(t *testing.T) {
+	_, rec, r := setupRig(t)
+	body := SingletonWebhook{
+		InjectionID:    "inj-c",
+		IdempotencyKey: "kc",
+		Status:         statusCancelled,
+		CallerMetadata: sampleMeta(),
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if got := rec.count(); got != 0 {
+		t.Fatalf("cancelled: want 0 got %d", got)
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if got := rec.count(); got != 0 {
+		t.Fatalf("cancelled replay: want 0 got %d", got)
+	}
+}
+
+func TestBatchFailedNoFire(t *testing.T) {
+	_, rec, r := setupRig(t)
+	body := BatchWebhook{
+		BatchID:             "batch-f",
+		IdempotencyKey:      "bkf",
+		AggregatedStatus:    statusFailed,
+		BatchCallerMetadata: sampleMeta(),
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos-batch", body, nil)
+	if got := rec.count(); got != 0 {
+		t.Fatalf("failed: want 0 got %d", got)
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos-batch", body, nil)
+	if got := rec.count(); got != 0 {
+		t.Fatalf("failed replay: want 0 got %d", got)
+	}
+}
+
+func TestRootTraceCarrierPropagated(t *testing.T) {
+	_, rec, r := setupRig(t)
+	meta := sampleMeta()
+	meta.RootTraceCarrier = propagation.MapCarrier{"traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01"}
+	body := SingletonWebhook{
+		InjectionID:    "inj-root",
+		IdempotencyKey: "kroot",
+		Status:         statusSucceeded,
+		CallerMetadata: meta,
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if rec.count() != 1 {
+		t.Fatalf("want 1 submit")
+	}
+	got := rec.tasks[0].task.RootTraceCarrier
+	if got["traceparent"] != meta.RootTraceCarrier["traceparent"] {
+		t.Fatalf("RootTraceCarrier not propagated: %+v", got)
 	}
 }
 

@@ -89,8 +89,7 @@ func apiHTTPModules() []fx.Option {
 		// crud/messaging
 		notification.Module,
 
-		// crud/hooks — aegis-chaos webhook receivers (migration step 5a;
-		// dead code until step 5b flips the per-system etcd flag).
+		// crud/hooks
 		chaoshooks.Module,
 
 		// crud/admin
