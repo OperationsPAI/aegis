@@ -102,6 +102,33 @@ func TestScopeFromGinContextAdminSkipsResolver(t *testing.T) {
 	}
 }
 
+func TestMustOwnTask(t *testing.T) {
+	cases := []struct {
+		name    string
+		scope   CallerScope
+		task    string
+		wantErr bool
+	}{
+		{"service matching taskID", CallerScope{IsService: true, TaskID: "task-A"}, "task-A", false},
+		{"service mismatching taskID", CallerScope{IsService: true, TaskID: "task-A"}, "task-B", true},
+		{"service with empty claim TaskID", CallerScope{IsService: true, TaskID: ""}, "task-A", true},
+		{"non-service user is no-op", CallerScope{UserID: 7}, "task-A", false},
+		{"admin bypasses task check", CallerScope{IsAdmin: true, IsService: true, TaskID: "x"}, "task-Y", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.scope.MustOwnTask(tc.task)
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Fatalf("err=%v, wantErr=%v", err, tc.wantErr)
+			}
+			if tc.wantErr && !errors.Is(err, ErrServiceTaskMismatch) {
+				t.Fatalf("want ErrServiceTaskMismatch, got %v", err)
+			}
+		})
+	}
+}
+
 func TestScopeFromGinContextMissingAuth(t *testing.T) {
 	c := newGinCtx()
 	_, err := ScopeFromGinContext(c, stubResolver{})

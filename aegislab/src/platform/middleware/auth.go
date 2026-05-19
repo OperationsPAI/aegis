@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/crypto"
 	"aegis/platform/dto"
@@ -225,6 +226,21 @@ func AssertTrustedHeaderKeyConfigured() {
 	if strings.TrimSpace(viper.GetString("gateway.trusted_header_key")) == "" {
 		logrus.Fatal("gateway.trusted_header_key must be set; service refuses to start without a signing key")
 	}
+	AssertNoDevJWTBypassInProd()
+}
+
+// AssertNoDevJWTBypassInProd refuses to boot when AEGIS_DEV_JWT_BYPASS is set
+// in a production environment. The flag is a dev escape hatch that lets
+// engineers port-forward straight to a service and skip the gateway's
+// trusted-header signing; shipping it to prod silently disables authz.
+func AssertNoDevJWTBypassInProd() {
+	if !config.IsProduction() {
+		return
+	}
+	if os.Getenv("AEGIS_DEV_JWT_BYPASS") == "" {
+		return
+	}
+	logrus.Fatal("AEGIS_DEV_JWT_BYPASS must not be set in production; refusing to boot")
 }
 
 // OptionalJWTAuth is an optional JWT authentication middleware
