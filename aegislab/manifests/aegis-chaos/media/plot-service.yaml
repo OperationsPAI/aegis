@@ -1,0 +1,66 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "plot-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "plot-service"
+        container: "plot-service"
+        namespace: "media-microsvc"
+    - capability: "cpu_stress"
+      target:
+        app: "plot-service"
+        container: "plot-service"
+        namespace: "media-microsvc"
+    - capability: "http_request_abort"
+      target:
+        app: "plot-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/PlotService/ReadPlot"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "plot-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/PlotService/WritePlot"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "plot-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/PlotService/ReadPlot"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "plot-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/PlotService/WritePlot"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "plot-service"
+        container: "plot-service"
+        namespace: "media-microsvc"
+    - capability: "pod_failure"
+      target:
+        app: "plot-service"
+        namespace: "media-microsvc"
+    - capability: "pod_kill"
+      target:
+        app: "plot-service"
+        namespace: "media-microsvc"
+    - capability: "time_skew"
+      target:
+        app: "plot-service"
+        container: "plot-service"
+        namespace: "media-microsvc"

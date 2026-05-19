@@ -1,0 +1,108 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "compose-review-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "compose-review-service"
+        container: "compose-review-service"
+        namespace: "media-microsvc"
+    - capability: "cpu_stress"
+      target:
+        app: "compose-review-service"
+        container: "compose-review-service"
+        namespace: "media-microsvc"
+    - capability: "http_request_abort"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadMovieId"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadRating"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadText"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadUniqueId"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadUserId"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadMovieId"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadRating"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadText"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadUniqueId"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "compose-review-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ComposeReviewService/UploadUserId"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "compose-review-service"
+        container: "compose-review-service"
+        namespace: "media-microsvc"
+    - capability: "pod_failure"
+      target:
+        app: "compose-review-service"
+        namespace: "media-microsvc"
+    - capability: "pod_kill"
+      target:
+        app: "compose-review-service"
+        namespace: "media-microsvc"
+    - capability: "time_skew"
+      target:
+        app: "compose-review-service"
+        container: "compose-review-service"
+        namespace: "media-microsvc"

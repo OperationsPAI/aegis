@@ -1,0 +1,256 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-route-plan-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-route-plan-service"
+        container: "ts-route-plan-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-route-plan-service"
+        container: "ts-route-plan-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travelservice/routes/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trips/left"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trips/routes"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travel2service/routes/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/travelservice/routes/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trip_detail"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/left"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travel2service/trips/routes"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trips/left"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-route-plan-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trips/routes"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.RoutePlanApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getCheapestRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "getQuickestRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.controller.RoutePlanController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getStationList"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromHighSpeedTravelServive"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "getTripFromNormalTrainTravelService"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchCheapestResult"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchMinStopStations"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-plan-service"
+        class: "plan.service.RoutePlanServiceImpl"
+        method: "searchQuickestResult"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-route-plan-service"
+        container: "ts-route-plan-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-route-plan-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-route-plan-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-route-plan-service"
+        container: "ts-route-plan-service"
+        namespace: "ts"

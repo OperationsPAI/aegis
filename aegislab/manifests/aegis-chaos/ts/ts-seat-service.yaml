@@ -1,0 +1,134 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-seat-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-seat-service"
+        container: "ts-seat-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-seat-service"
+        container: "ts-seat-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-seat-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/DirectTicketAllocationProportion"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-seat-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-seat-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-seat-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/configservice/configs/DirectTicketAllocationProportion"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-seat-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-seat-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.SeatApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.controller.SeatController"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.controller.SeatController"
+        method: "getLeftTicketOfInterval"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.controller.SeatController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.service.SeatServiceImpl"
+        method: "distributeSeat"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.service.SeatServiceImpl"
+        method: "getDirectProportion"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.service.SeatServiceImpl"
+        method: "getLeftTicketOfInterval"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.service.SeatServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-seat-service"
+        class: "seat.service.SeatServiceImpl"
+        method: "isContained"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-seat-service"
+        container: "ts-seat-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-seat-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-seat-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-seat-service"
+        container: "ts-seat-service"
+        namespace: "ts"

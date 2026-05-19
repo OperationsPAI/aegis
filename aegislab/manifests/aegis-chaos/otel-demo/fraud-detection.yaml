@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "fraud-detection"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "fraud-detection"
+        container: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "fraud-detection"
+        container: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "http_request_abort"
+      target:
+        app: "fraud-detection"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/EventStream"
+        port: 8013
+    - capability: "http_request_delay"
+      target:
+        app: "fraud-detection"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/flagd.evaluation.v1.Service/EventStream"
+        port: 8013
+    - capability: "memory_stress"
+      target:
+        app: "fraud-detection"
+        container: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "pod_kill"
+      target:
+        app: "fraud-detection"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "fraud-detection"
+        container: "fraud-detection"
+        namespace: "otel-demo"

@@ -1,0 +1,272 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-preserve-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-preserve-service"
+        container: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-preserve-service"
+        container: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/1/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/assuranceservice/assurances/1/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/contactservice/contacts/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/securityservice/securityConfigs/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/foodservice/orders"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-preserve-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/travelservice/trip_detail"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.PreserveApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.config.Queues"
+        method: "emailQueue"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.controller.PreserveController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.controller.PreserveController"
+        method: "preserve"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.mq.RabbitSend"
+        method: "send"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "addAssuranceForOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "checkSecurity"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "createConsign"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "createFoodOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "createOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "dipatchSeat"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "getAccount"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "getContactsById"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "getTripAllDetailInformation"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "preserve"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "queryForStationId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-preserve-service"
+        class: "preserve.service.PreserveServiceImpl"
+        method: "sendEmail"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-preserve-service"
+        container: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-preserve-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-preserve-service"
+        container: "ts-preserve-service"
+        namespace: "ts"

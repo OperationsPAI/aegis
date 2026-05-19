@@ -1,0 +1,66 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "review-storage-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "review-storage-service"
+        container: "review-storage-service"
+        namespace: "media-microsvc"
+    - capability: "cpu_stress"
+      target:
+        app: "review-storage-service"
+        container: "review-storage-service"
+        namespace: "media-microsvc"
+    - capability: "http_request_abort"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ReviewStorageService/ReadReviews"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ReviewStorageService/StoreReview"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ReviewStorageService/ReadReviews"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "review-storage-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/ReviewStorageService/StoreReview"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "review-storage-service"
+        container: "review-storage-service"
+        namespace: "media-microsvc"
+    - capability: "pod_failure"
+      target:
+        app: "review-storage-service"
+        namespace: "media-microsvc"
+    - capability: "pod_kill"
+      target:
+        app: "review-storage-service"
+        namespace: "media-microsvc"
+    - capability: "time_skew"
+      target:
+        app: "review-storage-service"
+        container: "review-storage-service"
+        namespace: "media-microsvc"

@@ -1,0 +1,80 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "attractions"
+  system: "hs"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "attractions"
+        container: "attractions"
+        namespace: "hotel-reservation"
+    - capability: "cpu_stress"
+      target:
+        app: "attractions"
+        container: "attractions"
+        namespace: "hotel-reservation"
+    - capability: "http_request_abort"
+      target:
+        app: "attractions"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/attractions.Attractions/NearbyCinema"
+        port: 8089
+    - capability: "http_request_abort"
+      target:
+        app: "attractions"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/attractions.Attractions/NearbyMus"
+        port: 8089
+    - capability: "http_request_abort"
+      target:
+        app: "attractions"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/attractions.Attractions/NearbyRest"
+        port: 8089
+    - capability: "http_request_delay"
+      target:
+        app: "attractions"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/attractions.Attractions/NearbyCinema"
+        port: 8089
+    - capability: "http_request_delay"
+      target:
+        app: "attractions"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/attractions.Attractions/NearbyMus"
+        port: 8089
+    - capability: "http_request_delay"
+      target:
+        app: "attractions"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/attractions.Attractions/NearbyRest"
+        port: 8089
+    - capability: "memory_stress"
+      target:
+        app: "attractions"
+        container: "attractions"
+        namespace: "hotel-reservation"
+    - capability: "pod_failure"
+      target:
+        app: "attractions"
+        namespace: "hotel-reservation"
+    - capability: "pod_kill"
+      target:
+        app: "attractions"
+        namespace: "hotel-reservation"
+    - capability: "time_skew"
+      target:
+        app: "attractions"
+        container: "attractions"
+        namespace: "hotel-reservation"

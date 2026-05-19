@@ -1,0 +1,110 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-consign-price-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-consign-price-service"
+        container: "ts-consign-price-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-consign-price-service"
+        container: "ts-consign-price-service"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.ConsignPriceApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.controller.ConsignPriceController"
+        method: "getPriceByWeightAndRegion"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.controller.ConsignPriceController"
+        method: "getPriceConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.controller.ConsignPriceController"
+        method: "getPriceInfo"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.controller.ConsignPriceController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.controller.ConsignPriceController"
+        method: "modifyPriceConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.entity.ConsignPrice"
+        method: "ConsignPrice"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.service.ConsignPriceServiceImpl"
+        method: "createAndModifyPrice"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.service.ConsignPriceServiceImpl"
+        method: "getPriceByWeightAndRegion"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.service.ConsignPriceServiceImpl"
+        method: "getPriceConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-consign-price-service"
+        class: "consignprice.service.ConsignPriceServiceImpl"
+        method: "queryPriceInformation"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-consign-price-service"
+        container: "ts-consign-price-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-consign-price-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-consign-price-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-consign-price-service"
+        container: "ts-consign-price-service"
+        namespace: "ts"

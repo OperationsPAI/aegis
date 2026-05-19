@@ -1,0 +1,98 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-train-food-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-train-food-service"
+        container: "ts-train-food-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-train-food-service"
+        container: "ts-train-food-service"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.TrainFoodApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        method: "getAllTrainFood"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        method: "getTrainFoodOfTrip"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.controller.TrainFoodController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.entity.TrainFood"
+        method: "TrainFood"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.init.InitData"
+        method: "toFoodList"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.service.TrainFoodServiceImpl"
+        method: "createTrainFood"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.service.TrainFoodServiceImpl"
+        method: "listTrainFood"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-train-food-service"
+        class: "trainFood.service.TrainFoodServiceImpl"
+        method: "listTrainFoodByTripId"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-train-food-service"
+        container: "ts-train-food-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-train-food-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-train-food-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-train-food-service"
+        container: "ts-train-food-service"
+        namespace: "ts"

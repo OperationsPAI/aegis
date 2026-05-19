@@ -338,6 +338,14 @@ capgen:
     set -euo pipefail
     cd tools/capgen && go run . output
 
+# 📜 Regenerate aegis-chaos Point Manifests from chaos-experiment per-system data
+# Source of truth: chaos-experiment/internal/<sys>/{serviceendpoints,grpcoperations,databaseoperations,javaclassmethods}
+# Outputs: manifests/aegis-chaos/<system>/<service>.yaml
+manifestgen:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd tools/manifestgen && go run .
+
 # 👁️ Preview unreleased changes
 changelog-preview:
     #!/usr/bin/env bash

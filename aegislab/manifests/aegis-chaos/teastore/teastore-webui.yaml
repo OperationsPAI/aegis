@@ -1,0 +1,468 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "teastore-webui"
+  system: "teastore"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "teastore-webui"
+        container: "teastore-webui"
+        namespace: "teastore"
+    - capability: "cpu_stress"
+      target:
+        app: "teastore-webui"
+        container: "teastore-webui"
+        namespace: "teastore"
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/cart"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/category"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/index"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/product"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/cartAction"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/loginAction"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "teastore-webui"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/cart"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/category"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/index"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "GET"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/product"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/cartAction"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "POST"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.webui/loginAction"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "teastore-webui"
+        method: "PUT"
+        namespace: "teastore"
+        path: "/tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.rest.ReadyRest"
+        method: "isReady"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
+        method: "AboutUsServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.AboutUsServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
+        method: "CartActionServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
+        method: "confirmOrder"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
+        method: "extractOrderInformation"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CartActionServlet"
+        method: "updateOrder"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CartServlet"
+        method: "CartServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CartServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
+        method: "CategoryServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
+        method: "createNavigation"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.CategoryServlet"
+        method: "handlePOSTRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
+        method: "DataBaseActionServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
+        method: "extractOrderInformation"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.DataBaseActionServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
+        method: "DataBaseServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.DataBaseServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
+        method: "ErrorServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.ErrorServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.IndexServlet"
+        method: "IndexServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.IndexServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
+        method: "LoginActionServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.LoginActionServlet"
+        method: "handlePOSTRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.LoginServlet"
+        method: "LoginServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.LoginServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.OrderServlet"
+        method: "OrderServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.OrderServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.OrderServlet"
+        method: "handlePOSTRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.ProductServlet"
+        method: "ProductServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.ProductServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
+        method: "ProfileServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.ProfileServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.StatusServlet"
+        method: "StatusServlet"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.StatusServlet"
+        method: "handleGETRequest"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.StatusServlet"
+        method: "isDatabaseFinished"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.StatusServlet"
+        method: "isImageFinished"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.StatusServlet"
+        method: "isRecommenderFinished"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
+        method: "ELHelperUtils"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
+        method: "formatPriceInCents"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.servlet.elhelper.ELHelperUtils"
+        method: "formatToPrettyDate"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.startup.WebuiStartup"
+        method: "WebuiStartup"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.startup.WebuiStartup"
+        method: "contextDestroyed"
+        namespace: "teastore"
+    - capability: "jvm_method_latency"
+      target:
+        app: "teastore-webui"
+        class: "tools.descartes.teastore.webui.startup.WebuiStartup"
+        method: "contextInitialized"
+        namespace: "teastore"
+    - capability: "memory_stress"
+      target:
+        app: "teastore-webui"
+        container: "teastore-webui"
+        namespace: "teastore"
+    - capability: "pod_failure"
+      target:
+        app: "teastore-webui"
+        namespace: "teastore"
+    - capability: "pod_kill"
+      target:
+        app: "teastore-webui"
+        namespace: "teastore"
+    - capability: "time_skew"
+      target:
+        app: "teastore-webui"
+        container: "teastore-webui"
+        namespace: "teastore"

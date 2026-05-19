@@ -1,0 +1,202 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-cancel-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-cancel-service"
+        container: "ts-cancel-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-cancel-service"
+        container: "ts-cancel-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-cancel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/*/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-cancel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-cancel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-cancel-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-cancel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/inside_pay_service/inside_payment/drawback/*/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-cancel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-cancel-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/userservice/users/id/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-cancel-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.CancelApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.controller.CancelController"
+        method: "calculate"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.controller.CancelController"
+        method: "cancelTicket"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.controller.CancelController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.entity.GetAccountByIdInfo"
+        method: "GetAccountByIdInfo"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.entity.GetAccountByIdResult"
+        method: "GetAccountByIdResult"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.entity.GetOrderByIdInfo"
+        method: "GetOrderByIdInfo"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "calculateRefund"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "cancelFromOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "cancelFromOtherOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "cancelOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "drawbackMoney"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "getAccount"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "getAuthorizationHeadersFrom"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "getOrderByIdFromOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "getOrderByIdFromOrderOther"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-cancel-service"
+        class: "cancel.service.CancelServiceImpl"
+        method: "sendEmail"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-cancel-service"
+        container: "ts-cancel-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-cancel-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-cancel-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-cancel-service"
+        container: "ts-cancel-service"
+        namespace: "ts"

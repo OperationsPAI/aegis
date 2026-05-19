@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "post-storage-service"
+  system: "sn"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "post-storage-service"
+        container: "post-storage-service"
+        namespace: "social-network"
+    - capability: "cpu_stress"
+      target:
+        app: "post-storage-service"
+        container: "post-storage-service"
+        namespace: "social-network"
+    - capability: "http_request_abort"
+      target:
+        app: "post-storage-service"
+        method: "POST"
+        namespace: "social-network"
+        path: "/PostStorageService/ReadPosts"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "post-storage-service"
+        method: "POST"
+        namespace: "social-network"
+        path: "/PostStorageService/ReadPosts"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "post-storage-service"
+        container: "post-storage-service"
+        namespace: "social-network"
+    - capability: "pod_failure"
+      target:
+        app: "post-storage-service"
+        namespace: "social-network"
+    - capability: "pod_kill"
+      target:
+        app: "post-storage-service"
+        namespace: "social-network"
+    - capability: "time_skew"
+      target:
+        app: "post-storage-service"
+        container: "post-storage-service"
+        namespace: "social-network"

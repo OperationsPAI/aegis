@@ -1,0 +1,66 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "movie-info-service"
+  system: "media"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "movie-info-service"
+        container: "movie-info-service"
+        namespace: "media-microsvc"
+    - capability: "cpu_stress"
+      target:
+        app: "movie-info-service"
+        container: "movie-info-service"
+        namespace: "media-microsvc"
+    - capability: "http_request_abort"
+      target:
+        app: "movie-info-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieInfoService/ReadMovieInfo"
+        port: 9090
+    - capability: "http_request_abort"
+      target:
+        app: "movie-info-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieInfoService/WriteMovieInfo"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "movie-info-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieInfoService/ReadMovieInfo"
+        port: 9090
+    - capability: "http_request_delay"
+      target:
+        app: "movie-info-service"
+        method: "POST"
+        namespace: "media-microsvc"
+        path: "/MovieInfoService/WriteMovieInfo"
+        port: 9090
+    - capability: "memory_stress"
+      target:
+        app: "movie-info-service"
+        container: "movie-info-service"
+        namespace: "media-microsvc"
+    - capability: "pod_failure"
+      target:
+        app: "movie-info-service"
+        namespace: "media-microsvc"
+    - capability: "pod_kill"
+      target:
+        app: "movie-info-service"
+        namespace: "media-microsvc"
+    - capability: "time_skew"
+      target:
+        app: "movie-info-service"
+        container: "movie-info-service"
+        namespace: "media-microsvc"

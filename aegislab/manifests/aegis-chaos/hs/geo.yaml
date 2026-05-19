@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "geo"
+  system: "hs"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "geo"
+        container: "geo"
+        namespace: "hotel-reservation"
+    - capability: "cpu_stress"
+      target:
+        app: "geo"
+        container: "geo"
+        namespace: "hotel-reservation"
+    - capability: "http_request_abort"
+      target:
+        app: "geo"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/geo.Geo/Nearby"
+        port: 8083
+    - capability: "http_request_delay"
+      target:
+        app: "geo"
+        method: "POST"
+        namespace: "hotel-reservation"
+        path: "/geo.Geo/Nearby"
+        port: 8083
+    - capability: "memory_stress"
+      target:
+        app: "geo"
+        container: "geo"
+        namespace: "hotel-reservation"
+    - capability: "pod_failure"
+      target:
+        app: "geo"
+        namespace: "hotel-reservation"
+    - capability: "pod_kill"
+      target:
+        app: "geo"
+        namespace: "hotel-reservation"
+    - capability: "time_skew"
+      target:
+        app: "geo"
+        container: "geo"
+        namespace: "hotel-reservation"

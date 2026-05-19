@@ -1,0 +1,226 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-auth-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-auth-service"
+        container: "ts-auth-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-auth-service"
+        container: "ts-auth-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-auth-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-auth-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/verifycode/verify/*"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.AuthApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.constant.AuthConstant"
+        method: "AuthConstant"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.constant.InfoConstant"
+        method: "InfoConstant"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.controller.AuthController"
+        method: "createDefaultUser"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.controller.AuthController"
+        method: "getHello"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.controller.UserController"
+        method: "deleteUserById"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.controller.UserController"
+        method: "getAllUser"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.controller.UserController"
+        method: "getHello"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.controller.UserController"
+        method: "getToken"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.entity.User"
+        method: "getAuthorities"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.entity.User"
+        method: "getPassword"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.entity.User"
+        method: "getUsername"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.entity.User"
+        method: "isAccountNonExpired"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.entity.User"
+        method: "isAccountNonLocked"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.entity.User"
+        method: "isCredentialsNonExpired"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.entity.User"
+        method: "isEnabled"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.exception.UserOperationException"
+        method: "UserOperationException"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.exception.handler.GlobalExceptionHandler"
+        method: "handleUserNotFoundException"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.init.InitUser"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.security.UserDetailsServiceImpl"
+        method: "loadUserByUsername"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.security.jwt.JWTProvider"
+        method: "createToken"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.security.jwt.JWTProvider"
+        method: "init"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.service.impl.TokenServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.service.impl.TokenServiceImpl"
+        method: "getToken"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.service.impl.UserServiceImpl"
+        method: "checkUserCreateInfo"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.service.impl.UserServiceImpl"
+        method: "createDefaultAuthUser"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.service.impl.UserServiceImpl"
+        method: "deleteByUserId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.service.impl.UserServiceImpl"
+        method: "getAllUser"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-auth-service"
+        class: "auth.service.impl.UserServiceImpl"
+        method: "saveUser"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-auth-service"
+        container: "ts-auth-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-auth-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-auth-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-auth-service"
+        container: "ts-auth-service"
+        namespace: "ts"

@@ -1,0 +1,80 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "shipping"
+  system: "otel-demo"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "shipping"
+        container: "shipping"
+        namespace: "otel-demo"
+    - capability: "cpu_stress"
+      target:
+        app: "shipping"
+        container: "shipping"
+        namespace: "otel-demo"
+    - capability: "http_request_abort"
+      target:
+        app: "shipping"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/get-quote"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "shipping"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/getquote"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "shipping"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/ship-order"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "shipping"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/get-quote"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "shipping"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/getquote"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "shipping"
+        method: "POST"
+        namespace: "otel-demo"
+        path: "/ship-order"
+        port: 8080
+    - capability: "memory_stress"
+      target:
+        app: "shipping"
+        container: "shipping"
+        namespace: "otel-demo"
+    - capability: "pod_failure"
+      target:
+        app: "shipping"
+        namespace: "otel-demo"
+    - capability: "pod_kill"
+      target:
+        app: "shipping"
+        namespace: "otel-demo"
+    - capability: "time_skew"
+      target:
+        app: "shipping"
+        container: "shipping"
+        namespace: "otel-demo"

@@ -1,0 +1,134 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-route-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-route-service"
+        container: "ts-route-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-route-service"
+        container: "ts-route-service"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.RouteApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.controller.RouteController"
+        method: "createAndModifyRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.controller.RouteController"
+        method: "deleteRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.controller.RouteController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.controller.RouteController"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.controller.RouteController"
+        method: "queryById"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.controller.RouteController"
+        method: "queryByIds"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.controller.RouteController"
+        method: "queryByStartAndTerminal"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.entity.Route"
+        method: "Route"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.service.RouteServiceImpl"
+        method: "createAndModify"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.service.RouteServiceImpl"
+        method: "deleteRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.service.RouteServiceImpl"
+        method: "getAllRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.service.RouteServiceImpl"
+        method: "getRouteById"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.service.RouteServiceImpl"
+        method: "getRouteByIds"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-route-service"
+        class: "route.service.RouteServiceImpl"
+        method: "getRouteByStartAndEnd"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-route-service"
+        container: "ts-route-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-route-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-route-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-route-service"
+        container: "ts-route-service"
+        namespace: "ts"
