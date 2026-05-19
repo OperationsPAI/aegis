@@ -401,7 +401,7 @@ func runTraceWatch(traceID string) error {
 	// returns the body as a single string and cannot deliver an event channel,
 	// so keep the manual SSE reader path here.
 	ssePath := consts.APIPathTraceStream(traceID)
-	reader := client.NewSSEReader(flagServer, ssePath, flagToken)
+	reader := client.NewSSEReaderWithTLS(flagServer, ssePath, flagToken, resolveTLSOptions())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

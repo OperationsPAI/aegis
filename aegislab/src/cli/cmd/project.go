@@ -36,7 +36,7 @@ type projectListItem struct {
 }
 
 func newClient() *client.Client {
-	return client.NewClient(flagServer, flagToken, time.Duration(flagRequestTimeout)*time.Second)
+	return client.NewClientWithTLS(flagServer, flagToken, time.Duration(flagRequestTimeout)*time.Second, resolveTLSOptions())
 }
 
 func newResolver() *client.Resolver {

@@ -371,7 +371,7 @@ func collectRegressionEvents(parentCtx context.Context, traceID string, timeoutS
 	ctx, cancel := context.WithTimeout(parentCtx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
-	reader := client.NewSSEReader(flagServer, consts.APIPathTraceStream(traceID), flagToken)
+	reader := client.NewSSEReaderWithTLS(flagServer, consts.APIPathTraceStream(traceID), flagToken, resolveTLSOptions())
 	events, errs := reader.Stream(ctx)
 
 	var observed []string
