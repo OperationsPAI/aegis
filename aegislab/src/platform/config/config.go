@@ -50,11 +50,8 @@ func GetDetectorName() string {
 	return ""
 }
 
-// GetChaosServiceURL returns the base URL of the aegis-chaos service
-// (design §11 step 4). Empty when the §11 cut-over hasn't run on this
-// deploy; callers MUST treat "" as "fall back to the legacy in-process
-// CRD watcher" rather than emitting it as a malformed URL. Bound to
-// TOML `chaos.service_url` and env CHAOS_SERVICE_URL.
+// GetChaosServiceURL returns "" when unset; callers must treat that as
+// "use the legacy in-process CRD watcher" rather than a malformed URL.
 func GetChaosServiceURL() string {
 	return strings.TrimSpace(GetString("chaos.service_url"))
 }

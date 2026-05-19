@@ -223,12 +223,5 @@ prefix   = "/"
 upstream = "aegis-api:8080"
 auth     = "jwt"
 
-# ---------------------------------------------------------------------
-# [chaos] — aegis-chaos microservice locator (design §11 step 4).
-# Plumbed but unused: the runtime cut-over from the in-process CRD
-# watcher to the chaos-service HTTP API lands in step 4(i). Until then
-# this stays empty and no code reads it. Override per deploy with env
-# CHAOS_SERVICE_URL (viper auto-binds dotted keys to upper-snake).
-# ---------------------------------------------------------------------
 [chaos]
 service_url = ""

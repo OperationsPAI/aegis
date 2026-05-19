@@ -1,6 +1,8 @@
 package chaoshooks
 
 import (
+	"fmt"
+
 	"aegis/platform/framework"
 
 	"gorm.io/gorm"
@@ -15,12 +17,11 @@ func Migrations() framework.MigrationRegistrar {
 }
 
 // tightenHookSubmissionPK narrows chaos_hook_submissions PK from
-// (id, kind, terminal_status) to (id, kind) per design §11 step 4. The
-// older 3-column PK let a `succeeded` and a later `partial` (or any
-// pair of distinct terminals) for the same injection both claim the
-// gate — violating the "one downstream per (injection_id, task_type)"
-// invariant the upcoming aegis-chaos cutover relies on. Idempotent: it
-// is a no-op if the table is absent or already has the 2-column PK.
+// (id, kind, terminal_status) to (id, kind) per design §11 step 4.
+// Idempotent if no stickiness breaches exist; pre-flight rejects if
+// they do — the operator must reconcile manually before the schema
+// can be tightened, because a blind ALTER would hit Duplicate entry
+// and leave the table in an undefined state.
 func tightenHookSubmissionPK(db *gorm.DB) error {
 	if db.Dialector.Name() != "mysql" {
 		return nil
@@ -39,6 +40,30 @@ func tightenHookSubmissionPK(db *gorm.DB) error {
 	if pkCols <= 2 {
 		return nil
 	}
+
+	type dup struct {
+		ID   string
+		Kind string
+		N    int64
+	}
+	var dups []dup
+	if err := db.Raw(`
+		SELECT id, kind, COUNT(*) AS n
+		FROM chaos_hook_submissions
+		GROUP BY id, kind
+		HAVING COUNT(*) > 1
+	`).Scan(&dups).Error; err != nil {
+		return fmt.Errorf("chaos_hook_submissions: pre-flight check failed: %w", err)
+	}
+	if len(dups) > 0 {
+		return fmt.Errorf(
+			"chaos_hook_submissions: %d (id, kind) groups have multiple terminal_status rows; "+
+				"ADR-0006 stickiness was breached. Manually reconcile before redeploying "+
+				"(keep one row per (id, kind), e.g. earliest submitted_at)",
+			len(dups),
+		)
+	}
+
 	return db.Exec(
 		"ALTER TABLE chaos_hook_submissions DROP PRIMARY KEY, ADD PRIMARY KEY (id, kind)",
 	).Error
