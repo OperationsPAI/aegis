@@ -1,6 +1,7 @@
 package injection
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -13,6 +14,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+var _ = authz.SystemScope
 
 type Repository struct {
 	db *gorm.DB
