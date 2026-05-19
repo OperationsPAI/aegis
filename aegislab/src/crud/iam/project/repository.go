@@ -1,6 +1,7 @@
 package project
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -9,6 +10,7 @@ import (
 
 	"gorm.io/gorm"
 )
+
 
 type Repository struct {
 	db *gorm.DB
@@ -73,13 +75,19 @@ func (r *Repository) loadProjectDetailBase(projectID int) (*model.Project, int, 
 	return project, int(userCount), nil
 }
 
-func (r *Repository) listProjectViews(limit, offset int, isPublic *bool, status *consts.StatusType, teamID *int) ([]model.Project, int64, error) {
+func (r *Repository) listProjectViews(scope authz.CallerScope, limit, offset int, isPublic *bool, status *consts.StatusType, teamID *int) ([]model.Project, int64, error) {
 	var (
 		projects []model.Project
 		total    int64
 	)
 
 	query := r.db.Model(&model.Project{})
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return []model.Project{}, 0, nil
+		}
+		query = query.Where("id IN ?", scope.VisibleProjects)
+	}
 	if teamID != nil {
 		query = query.Where("team_id = ?", *teamID)
 	}

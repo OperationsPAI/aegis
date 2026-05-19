@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/model"
 	"fmt"
@@ -92,13 +93,19 @@ func (r *Repository) MarkTraceCancelled(traceID string) error {
 	})
 }
 
-func (r *Repository) ListTraces(limit, offset int, filterOptions *ListTraceFilters) ([]model.Trace, int64, error) {
+func (r *Repository) ListTraces(scope authz.CallerScope, limit, offset int, filterOptions *ListTraceFilters) ([]model.Trace, int64, error) {
 	var (
 		traces []model.Trace
 		total  int64
 	)
 
 	query := r.db.Model(&model.Trace{}).Preload("Project")
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return []model.Trace{}, 0, nil
+		}
+		query = query.Where("project_id IN ?", scope.VisibleProjects)
+	}
 	if filterOptions.TraceType != nil {
 		query = query.Where("type = ?", *filterOptions.TraceType)
 	}

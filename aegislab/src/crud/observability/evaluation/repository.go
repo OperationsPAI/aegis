@@ -1,6 +1,7 @@
 package evaluation
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/model"
 	"fmt"
@@ -16,7 +17,7 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) ListEvaluations(limit, offset int) ([]model.Evaluation, int64, error) {
+func (r *Repository) ListEvaluations(scope authz.CallerScope, limit, offset int) ([]model.Evaluation, int64, error) {
 	var (
 		evaluations []model.Evaluation
 		total       int64
@@ -24,6 +25,12 @@ func (r *Repository) ListEvaluations(limit, offset int) ([]model.Evaluation, int
 
 	query := r.db.Model(&model.Evaluation{}).
 		Where("status != ?", consts.CommonDeleted)
+	if !scope.IsAdmin {
+		if len(scope.VisibleProjects) == 0 {
+			return []model.Evaluation{}, 0, nil
+		}
+		query = query.Where("project_id IN ?", scope.VisibleProjects)
+	}
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count evaluations: %w", err)
 	}

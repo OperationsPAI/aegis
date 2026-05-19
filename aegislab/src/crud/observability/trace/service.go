@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"aegis/platform/authz"
 	chinfra "aegis/platform/clickhouse"
 	"aegis/platform/config"
 	"aegis/platform/consts"
@@ -42,13 +43,16 @@ func NewService(repo *Repository, redis *redisinfra.Gateway, k8s *k8sinfra.Gatew
 //     with state set to the current terminal state
 //   - otherwise: DB state transitions atomically to Cancelled, redis queue
 //     entries are best-effort evicted, and PodChaos deletion is issued.
-func (s *Service) CancelTrace(ctx context.Context, traceID string) (*CancelTraceResp, error) {
+func (s *Service) CancelTrace(ctx context.Context, scope authz.CallerScope, traceID string) (*CancelTraceResp, error) {
 	trace, err := s.repo.GetTraceByID(traceID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
 		}
 		return nil, fmt.Errorf("failed to load trace: %w", err)
+	}
+	if err := scope.MustHaveProject(int64(trace.ProjectID)); err != nil {
+		return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
 	}
 
 	logEntry := logrus.WithField("trace_id", traceID)
@@ -142,21 +146,27 @@ func (s *Service) emitCancelledEvent(ctx context.Context, traceID string) {
 	}
 }
 
-func (s *Service) GetTrace(_ context.Context, traceID string) (*TraceDetailResp, error) {
+func (s *Service) GetTrace(_ context.Context, scope authz.CallerScope, traceID string) (*TraceDetailResp, error) {
 	trace, err := s.repo.GetTraceByID(traceID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
+		}
 		return nil, fmt.Errorf("failed to get trace: %w", err)
+	}
+	if err := scope.MustHaveProject(int64(trace.ProjectID)); err != nil {
+		return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
 	}
 	return NewTraceDetailResp(trace), nil
 }
 
-func (s *Service) ListTraces(_ context.Context, req *ListTraceReq) (*dto.ListResp[TraceResp], error) {
+func (s *Service) ListTraces(_ context.Context, scope authz.CallerScope, req *ListTraceReq) (*dto.ListResp[TraceResp], error) {
 	if req == nil {
 		return nil, fmt.Errorf("list traces request is nil")
 	}
 	limit, offset := req.ToGormParams()
 	filterOptions := req.ToFilterOptions()
-	traces, total, err := s.repo.ListTraces(limit, offset, filterOptions)
+	traces, total, err := s.repo.ListTraces(scope, limit, offset, filterOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list traces: %w", err)
 	}
@@ -170,18 +180,24 @@ func (s *Service) ListTraces(_ context.Context, req *ListTraceReq) (*dto.ListRes
 	}, nil
 }
 
-func (s *Service) GetTraceStreamProcessor(ctx context.Context, traceID string) (*StreamProcessor, error) {
-	algorithms, err := s.GetTraceStreamAlgorithms(ctx, traceID)
+func (s *Service) GetTraceStreamProcessor(ctx context.Context, scope authz.CallerScope, traceID string) (*StreamProcessor, error) {
+	algorithms, err := s.GetTraceStreamAlgorithms(ctx, scope, traceID)
 	if err != nil {
 		return nil, err
 	}
 	return NewStreamProcessor(algorithms), nil
 }
 
-func (s *Service) GetTraceStreamAlgorithms(ctx context.Context, traceID string) ([]dto.ContainerVersionItem, error) {
+func (s *Service) GetTraceStreamAlgorithms(ctx context.Context, scope authz.CallerScope, traceID string) ([]dto.ContainerVersionItem, error) {
 	trace, err := s.repo.GetTraceByID(traceID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
+		}
 		return nil, fmt.Errorf("failed to fetch trace: %w", err)
+	}
+	if err := scope.MustHaveProject(int64(trace.ProjectID)); err != nil {
+		return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
 	}
 
 	var algorithms []dto.ContainerVersionItem
@@ -210,12 +226,16 @@ func (s *Service) GetTraceStreamAlgorithms(ctx context.Context, traceID string) 
 // 404 still distinguishes "no such aegis trace" from "trace exists but the
 // OTel collector hasn't ingested anything yet". An empty list is a valid
 // 200 response in the latter case.
-func (s *Service) GetTraceSpans(ctx context.Context, traceID string) (*SpansResp, error) {
-	if _, err := s.repo.GetTraceByID(traceID); err != nil {
+func (s *Service) GetTraceSpans(ctx context.Context, scope authz.CallerScope, traceID string) (*SpansResp, error) {
+	trace, err := s.repo.GetTraceByID(traceID)
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
 		}
 		return nil, fmt.Errorf("failed to load trace: %w", err)
+	}
+	if err := scope.MustHaveProject(int64(trace.ProjectID)); err != nil {
+		return nil, fmt.Errorf("%w: trace id: %s", consts.ErrNotFound, traceID)
 	}
 	if s.spans == nil {
 		return nil, fmt.Errorf("clickhouse span reader not configured")

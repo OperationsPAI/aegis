@@ -18,7 +18,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Register: func(v2 *gin.RouterGroup) {
 			evaluations := v2.Group("/evaluations")
 			{
-				evaluations.DELETE("/:id", handler.DeleteEvaluation)
+				evaluations.DELETE("/:id", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll), handler.DeleteEvaluation)
 				evaluations.POST("/datapacks", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListDatapackEvaluationResults)
 				evaluations.POST("/datasets", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListDatasetEvaluationResults)
 				evaluations.GET("", middleware.RequireAPIKeyScopesAny(consts.ScopeSDKAll, consts.ScopeSDKEvaluationsAll, consts.ScopeSDKEvaluationsRead), handler.ListEvaluations)

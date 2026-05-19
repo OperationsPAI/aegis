@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/utils"
@@ -19,11 +20,25 @@ import (
 )
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	resolver authz.ProjectMembershipResolver
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, resolver authz.ProjectMembershipResolver) *Handler {
+	return &Handler{service: service, resolver: resolver}
+}
+
+func (h *Handler) scope(c *gin.Context) (authz.CallerScope, bool) {
+	s, err := authz.ScopeFromGinContext(c, h.resolver)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == authz.ErrMissingAuth {
+			status = http.StatusUnauthorized
+		}
+		dto.ErrorResponse(c, status, err.Error())
+		return authz.CallerScope{}, false
+	}
+	return s, true
 }
 
 // GetTrace handles getting a single trace by ID
@@ -50,7 +65,12 @@ func (h *Handler) GetTrace(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetTrace(c.Request.Context(), traceID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.GetTrace(c.Request.Context(), scope, traceID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -86,7 +106,12 @@ func (h *Handler) GetTraceSpans(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.GetTraceSpans(c.Request.Context(), traceID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.GetTraceSpans(c.Request.Context(), scope, traceID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -118,7 +143,12 @@ func (h *Handler) CancelTrace(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.CancelTrace(c.Request.Context(), traceID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.CancelTrace(c.Request.Context(), scope, traceID)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -160,7 +190,12 @@ func (h *Handler) ListTraces(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.ListTraces(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.service.ListTraces(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -217,8 +252,17 @@ func (h *Handler) GetTraceStream(c *gin.Context) {
 		"stream_key": streamKey,
 	})
 
-	processor, err := h.service.GetTraceStreamProcessor(ctx, traceID)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+
+	processor, err := h.service.GetTraceStreamProcessor(ctx, scope, traceID)
 	if err != nil {
+		if errors.Is(err, consts.ErrNotFound) {
+			dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+			return
+		}
 		logEntry.Errorf("Failed to initialize stream processor: %v", err)
 		dto.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to initialize trace stream: %v", err))
 		return
