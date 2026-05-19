@@ -55,9 +55,7 @@ def run(
 ):
     assert algorithm in global_algorithm_registry(), f"Unknown algorithm: {algorithm}"
 
-    local_input_path: Path = (
-        _stage_s3_input_locally(input_path) if "://" in input_path else Path(input_path)
-    )
+    local_input_path: Path = _stage_s3_input_locally(input_path) if "://" in input_path else Path(input_path)
 
     assert local_input_path.is_dir(), f"input_path: {local_input_path}"
     assert output_path.is_dir(), f"output_path: {output_path}"
