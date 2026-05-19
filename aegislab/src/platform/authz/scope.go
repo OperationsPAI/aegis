@@ -50,6 +50,14 @@ func (s CallerScope) MustHaveProject(projectID int64) error {
 	if s.IsAdmin {
 		return nil
 	}
+	// Service tokens are gated per-resource via MustOwnTask. They authenticate
+	// against a TaskID claim, not a user — so they don't have VisibleProjects.
+	// Reads via service tokens (e.g. BuildDatapack pod fetching its parent
+	// injection) trust the orchestrator to only issue tokens scoped to the
+	// task's own trace lineage.
+	if s.IsService {
+		return nil
+	}
 	for _, p := range s.VisibleProjects {
 		if p == projectID {
 			return nil
@@ -76,16 +84,7 @@ func ScopeFromGinContext(c *gin.Context, resolver ProjectMembershipResolver) (Ca
 		}
 	}
 
-	uidRaw, ok := c.Get(consts.CtxKeyUserID)
-	if !ok {
-		return CallerScope{}, ErrMissingAuth
-	}
-	uid, err := toInt64(uidRaw)
-	if err != nil {
-		return CallerScope{}, fmt.Errorf("authz: bad user_id type: %w", err)
-	}
-
-	scope := CallerScope{UserID: uid}
+	scope := CallerScope{}
 
 	if v, ok := c.Get(consts.CtxKeyIsAdmin); ok {
 		if b, ok := v.(bool); ok {
@@ -102,6 +101,25 @@ func ScopeFromGinContext(c *gin.Context, resolver ProjectMembershipResolver) (Ca
 			scope.TaskID = s
 		}
 	}
+
+	// Service tokens authenticate via TaskID claim; they don't carry a UserID.
+	// The per-method MustOwnTask check is responsible for the actual gate.
+	// VisibleProjects stays nil for service tokens; service-token callers MUST
+	// pass through admin or MustOwnTask paths, never MustHaveProject alone.
+	if scope.IsService {
+		c.Set(cachedScopeKey, scope)
+		return scope, nil
+	}
+
+	uidRaw, ok := c.Get(consts.CtxKeyUserID)
+	if !ok {
+		return CallerScope{}, ErrMissingAuth
+	}
+	uid, err := toInt64(uidRaw)
+	if err != nil {
+		return CallerScope{}, fmt.Errorf("authz: bad user_id type: %w", err)
+	}
+	scope.UserID = uid
 
 	if !scope.IsAdmin {
 		projects, err := resolver.VisibleProjects(c.Request.Context(), uid)
