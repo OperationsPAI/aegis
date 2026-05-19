@@ -1152,9 +1152,14 @@ func (s *Service) UpdateInjectionState(_ context.Context, scope authz.CallerScop
 		}
 		if !scope.IsAdmin {
 			loaded, loadErr := repo.loadInjection(injection.ID)
-			if loadErr == nil && loaded != nil && loaded.Task != nil && loaded.Task.Trace != nil {
-				if err := scope.MustHaveProject(int64(loaded.Task.Trace.ProjectID)); err != nil {
+			if loadErr == nil && loaded != nil && loaded.Task != nil {
+				if err := scope.MustOwnTask(loaded.Task.ID); err != nil {
 					return fmt.Errorf("%w: injection %s not found", consts.ErrNotFound, req.Name)
+				}
+				if loaded.Task.Trace != nil {
+					if err := scope.MustHaveProject(int64(loaded.Task.Trace.ProjectID)); err != nil {
+						return fmt.Errorf("%w: injection %s not found", consts.ErrNotFound, req.Name)
+					}
 				}
 			}
 		}
@@ -1182,9 +1187,14 @@ func (s *Service) UpdateInjectionTimestamps(_ context.Context, scope authz.Calle
 		}
 		if !scope.IsAdmin {
 			loaded, loadErr := repo.loadInjection(injection.ID)
-			if loadErr == nil && loaded != nil && loaded.Task != nil && loaded.Task.Trace != nil {
-				if err := scope.MustHaveProject(int64(loaded.Task.Trace.ProjectID)); err != nil {
+			if loadErr == nil && loaded != nil && loaded.Task != nil {
+				if err := scope.MustOwnTask(loaded.Task.ID); err != nil {
 					return fmt.Errorf("%w: injection %s not found", consts.ErrNotFound, req.Name)
+				}
+				if loaded.Task.Trace != nil {
+					if err := scope.MustHaveProject(int64(loaded.Task.Trace.ProjectID)); err != nil {
+						return fmt.Errorf("%w: injection %s not found", consts.ErrNotFound, req.Name)
+					}
 				}
 			}
 		}

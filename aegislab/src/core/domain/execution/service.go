@@ -363,6 +363,10 @@ func collectGroundtruths(datapack *model.FaultInjection) []chaos.Groundtruth {
 	return items
 }
 
+// TODO(service-scope): service-token callers reach this method via
+// orchestrator owner_adapter + gRPC intake, neither of which propagates
+// CallerScope today. Widen the signature once that adapter chain takes a
+// scope; for now the gRPC intake layer is trusted to gate by TaskID.
 func (s *Service) UploadDetectorResults(_ context.Context, req *UploadDetectorResultReq, executionID int) (*UploadExecutionResultResp, error) {
 	err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
@@ -470,6 +474,9 @@ func (s *Service) CreateExecutionRecord(_ context.Context, req *RuntimeCreateExe
 	return createdExecutionID, nil
 }
 
+// TODO(service-scope): same as UploadDetectorResults — orchestrator owner_adapter
+// + gRPC intake chain doesn't carry CallerScope. Bind to claim TaskID once that
+// is plumbed through; today gRPC intake is the gatekeeper.
 func (s *Service) UpdateExecutionState(_ context.Context, req *RuntimeUpdateExecutionStateReq) error {
 	if req == nil {
 		return fmt.Errorf("runtime update execution state request is nil")
