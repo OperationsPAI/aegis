@@ -240,21 +240,34 @@ Consequences:
 
 ### Lifecycle rules
 
-**On Service discovery:**
-- `(system, name, version)` unknown → INSERT Service + INSERT discovered
-  Points.
-- `(system, name, version)` known → UPSERT Points by content hash. Points
-  present in DB but missing from this discovery batch are marked `superseded`,
-  not deleted.
-- `(system, name, v=1)` exists and discovery now sees `v=2` → both rows live
-  in parallel; v1's Points untouched, v2 gets its own Points discovered.
+Service identity is the 4-tuple
+`(system, name, instance, chart_version)` (ADR-0011). All rules
+below use that tuple — `instance` and `chart_version` are first-class.
 
-**On Service redeployment without version change:** same as "known version"
-above. Rare but supported.
+**On Point Manifest import (`:import replace_scope=service`):**
+- `(system, name, instance, chart_version)` unknown → INSERT Service
+  + INSERT manifest Points.
+- `(system, name, instance, chart_version)` known → UPSERT Points
+  by content hash. Points present in DB but missing from the
+  payload transition to `superseded`.
+- `(system, name, instance, chart_version=v1)` exists and a new
+  manifest arrives with `chart_version=v2` → both rows live in
+  parallel; v1's Points untouched, v2 gets its own Point set.
+- Two manifests racing on the same `(system, name, instance)`
+  (e.g. `helm upgrade` post-delete of v1 vs post-install of v2)
+  serialise via `import_locks` (§7); they never interleave.
 
-**On Service removal:** Service marked `retired`. Its `active` Points stay
-queryable; new Injections on them rejected. Historical Injection rows keep
-`point_id` reference indefinitely (`ON DELETE RESTRICT`).
+**On Service redeployment with no `chart_version` change:** same as
+"known tuple" above — the import is idempotent at content hash.
+
+**On Service removal:** Service marked `retired`. Its `active` Points
+stay queryable for historical reference; new Injections on them are
+rejected. Historical Injection rows keep `point_id` reference
+indefinitely (`ON DELETE RESTRICT`). Two retire triggers:
+(i) chart's helm `post-delete` hook posts an empty `:import
+replace_scope=service`; (ii) the liveness reporter (§12.4) retires
+rows whose tuple is missing from K consecutive cluster-side helm
+listings.
 
 **On Capability deprecation:** Capability marked `deprecated`. Existing Points
 using it stay queryable but cannot be the basis of new Injections. After grace
@@ -735,9 +748,19 @@ parallel kind / VKE / nuke-and-redeploy cadence is operationally
 expensive without commensurate benefit. Revisit if a real cross-tenant
 deployment appears.
 
+Scopes are **catalog-wide** in v1beta: a token with `write:catalog`
+can mutate any System's catalog, not just one. Per-System ACLs are
+explicitly deferred until tenant separation appears. Single-tenant
+research workload makes this acceptable today; revisit before any
+multi-team / multi-tenant deployment.
+
 The webhook direction (aegis-chaos → backend) uses a separately
 provisioned service token; backend's `/hooks/chaos` handler validates
-it and is idempotent on `(injection_id, new_status)`.
+it and is idempotent on `(injection_id, new_status)`. Webhook delivery
+is **cluster-internal only** in v1beta — backend's hook endpoint MUST
+NOT be exposed beyond the cluster (no ingress, no public LB). HMAC
+signing of the webhook body is deferred; the single Bearer token plus
+network isolation is the v1beta threat-model.
 
 ### 10.2 Typical injection flow
 
@@ -856,38 +879,47 @@ Each step is independently mergeable. Reversibility holds through 5b;
    `param_schema`, `observable_contract`, and a Chaos-Mesh executor
    renderer; marked `stable` only after passing conformance.
 3. **Port catalog data.** Dump `chaos-experiment/internal/<sys>/*` +
-   aegislab `system_metadata` rows into Point Manifests (one per
-   Service version) and import via `:import replace_scope=service`.
-   This is a one-shot historical seed; ongoing manifests will come
-   from chart hooks (ADR-0009).
-4. **Cut over Guided.** aegisctl `inject_guided*.go` becomes thin HTTP
-   client for `/guided-sessions`. chaos-experiment still imported for
-   the direct `BatchCreate` path used by backend.
+   aegislab `system_metadata` rows into Point Manifests and import
+   via `:import replace_scope=service`. Seed manifests use
+   `instance=seed` and `chart_version=seed-<timestamp>` sentinels.
+   These sentinel rows are *not* superseded by future real chart
+   hooks (different `(instance, chart_version)` key); they coexist
+   harmlessly until the real chart's first install posts the
+   authoritative manifest, after which campaigns naturally select
+   the live Service row over the seed. The seed can be retired by
+   a one-shot `aegisctl service retire --instance=seed` once all
+   benchmarks have at least one real chart-hook run.
+4. **Cut over Guided + add webhook receivers.** Two parallel things:
+   (i) aegisctl `inject_guided*.go` becomes a thin HTTP client for
+   `/guided-sessions`; (ii) backend adds `/hooks/chaos` +
+   `/hooks/chaos-batch` receivers replicating today's
+   `HandleCRDSucceeded` post-processing (ParentTaskID linkage,
+   BuildDatapack submission, W3C OTel context continuation).
+   Receivers are dead code at this point; lands them before backend
+   takes any runtime dependency on aegis-chaos. CI unit tests cover
+   the receiver against canned webhook payloads. **Prerequisite for
+   this step**: backend's downstream submission path (BuildDatapack
+   and friends) MUST be idempotent on `(injection_id, task_type)`.
 4.5. **Catalog read cutover.** Backend's `BatchCreate` path reads the
-   catalog from aegis-chaos over HTTP (resolving a guided selection to a
-   `point_id`) but still creates CRDs locally via
-   chaos-experiment's controllers. This isolates "who owns catalog"
-   from "who creates CRDs", and means step 5 only has to worry about
-   the second cutover.
-5. **Cut over execution.** Split into three sub-steps so the
-   BuildDatapack callback chain is always covered by a fallback path
-   (ADR-0007). Prerequisite for 5a: backend's downstream submission
-   path (BuildDatapack and friends) MUST be idempotent on
-   `(injection_id, task_type)`.
-   - **5a.** Backend adds `/hooks/chaos` + `/hooks/chaos-batch`
-     receivers replicating today's `HandleCRDSucceeded`
-     post-processing (ParentTaskID linkage, BuildDatapack submission,
-     W3C OTel context continuation). Dead code until 5b. CI unit tests
-     cover the receiver against canned webhook payloads.
+   catalog from aegis-chaos over HTTP but still creates CRDs locally
+   via chaos-experiment's controllers. By the time backend takes
+   this dependency, the webhook receiver of step 4 already exists
+   as a safety net for step 5 — the dependency order is the easier
+   one. Catalog read failure short-circuits to today's in-process
+   read for a brief grace period (gated by an etcd flag) so a
+   transient aegis-chaos outage doesn't halt all injections.
+5. **Cut over execution.** Split into two sub-steps (the
+   receiver-add part of original 5a now lives in step 4). ADR-0007.
    - **5b.** Add per-system etcd flag
      `injection.system.<sys>.executor_authoritative =
      chaos-mesh-direct | aegis-chaos` (default `chaos-mesh-direct`).
      Flipping a system to `aegis-chaos` routes `BatchCreate` through
      `POST /injection-batches`; aegis-chaos creates the CR, webhooks
-     back, and the receiver triggers BuildDatapack. The CRD watcher
-     remains live; its `HandleCRDSucceeded` call hits the
-     `(injection_id, task_type)` uniqueness gate and no-ops. Soak
-     each system (ts → otel-demo → … → teastore) before advancing.
+     back, and the receiver from step 4 triggers BuildDatapack. The
+     CRD watcher remains live; its `HandleCRDSucceeded` call hits
+     the `(injection_id, task_type)` uniqueness gate and no-ops.
+     Soak each system (ts → otel-demo → … → teastore) before
+     advancing.
    - **5c.** Once every system has soaked, delete chaos GVRs from
      `platform/k8s/controller.go:109` and the chaos branches of
      `HandleCRDSucceeded`. This is the only irreversible step in the
@@ -954,8 +986,20 @@ rejecting it.
   affect in-flight ones.
 - **I5.** `capabilities.status = deprecated` rejects new Injections; allows
   Status/Destroy on existing ones.
-- **I6.** A `point_id` is content-addressed; the (system, service, version,
-  capability, target) tuple uniquely determines it.
+- **I6.** A `point_id` is content-addressed; the
+  `(system, service, instance, chart_version, capability, target)`
+  tuple uniquely determines it for service-bound Points, and
+  `(system, capability, target)` for cross-service Points (§4).
+- **I7. Idempotency key is burned after terminal.** Once an
+  Injection (or Batch) reaches a terminal `aggregated_status`,
+  future POSTs to `/injections` or `/injection-batches` with the
+  same `idempotency_key` return the historical record and **never**
+  re-invoke Executor.Apply. Callers that want a fresh run MUST mint
+  a fresh key.
+- **I8. Terminal `aggregated_status` is sticky** (ADR-0006). Once
+  written to a terminal value, child status transitions do not
+  recompute it or fire a second batch webhook. Per-child outcomes
+  remain accurate via the children's own status columns.
 
 ### 12.4 Failure modes
 
@@ -986,6 +1030,17 @@ aegis-chaos side:
   but does not block the terminal status transition (ADR-0003).
   Periodic cleanup job sweeps `destroyed_at IS NULL AND status IN
   terminal` rows and retries Destroy.
+- **`helm uninstall --no-hooks` leaks Service rows.** The post-delete
+  hook (ADR-0009) is the only signal aegis-chaos has for retiring
+  a Service. Operators using `--no-hooks` (common in
+  `seed-update-cycle` nuke flows) bypass that signal entirely. A
+  per-cluster reconciler — `aegisctl orchestrator-side reporter` —
+  periodically lists live helm releases via the cluster's helm CLI
+  and POSTs the live `(instance, chart_version)` set to aegis-chaos
+  (`POST /v1beta/systems/{sys}/services:liveness`). Service rows
+  whose tuple is absent from this set for K consecutive reports
+  transition to `retired`. K and the reporter cadence settle in
+  step 3 of migration.
 
 Backend side:
 - **Backend crash with in-flight injections.** Today the chaos CRD
@@ -1016,6 +1071,9 @@ Backend side:
 | Discovery responsibility           | Outside aegis-chaos; helm chart version binds Point Manifest; `:discover` endpoint removed                            | 0008 | §2, §5, §6     |
 | Manifest delivery                  | Helm post-install / post-delete Job hook calls aegisctl manifest validate + dry-run + import                          | 0009 | §6             |
 | Manifest validation                | Offline (aegisctl + bundled JSON Schema) + online (`:import?dry_run=true`); `GET /manifest-schema.json` for fetch     | 0010 | §6             |
+| Service identity                   | 4-tuple `(system, name, instance, chart_version)`; `import_locks` table serialises per-instance imports; liveness reporter retires orphaned rows | 0011 | §3, §4, §6, §7, §12.4 |
+| Batch terminal stickiness          | Terminal `aggregated_status` is sticky; late child terminal updates child row only, no recompute, no second webhook | 0006 (amended) | §12.3 I8 |
+| Idempotency key burn               | After terminal, same key returns history and never re-runs Apply                                                      | — | §12.3 I7       |
 | Multi-cluster                      | per-cluster aegis-chaos; backend `chaos_endpoints` registry; no central catalog                                        | —   | §2, §10.3      |
 | Workflow API                       | Not exposed; sequencing belongs to caller                                                                              | —   | §2             |
 | Authentication                     | Bearer tokens with scope claims; no mTLS in v1beta; webhook uses separate token                                       | —   | §10.1, §5 matrix |
