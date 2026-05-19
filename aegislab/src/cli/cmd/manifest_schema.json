@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aegis-chaos PointManifest",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "aegis-chaos/v1beta" },
+    "kind": { "const": "PointManifest" },
+    "metadata": {
+      "type": "object",
+      "required": ["system", "service", "chart_version"],
+      "properties": {
+        "system": { "type": "string", "minLength": 1 },
+        "service": { "type": "string", "minLength": 1 },
+        "instance": { "type": "string", "default": "default" },
+        "chart_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["points"],
+      "properties": {
+        "replace_scope": { "enum": ["service", "system", "none"] },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["capability", "target"],
+            "properties": {
+              "capability": { "type": "string" },
+              "target": { "type": "object" },
+              "param_overrides": { "type": "object" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
