@@ -135,7 +135,7 @@ func runPedestalChartPush(name, tgz, producerPod, namespace string) error {
 		return fmt.Errorf("verify ls failed: %w\n%s", err, string(out))
 	}
 	output.PrintInfo(fmt.Sprintf("chart pushed to %s:%s", producerPod, remotePath))
-	fmt.Print(string(out))
+	output.PrintInfo(strings.TrimRight(string(out), "\n"))
 	return nil
 }
 
@@ -301,7 +301,7 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 	output.PrintInfo(fmt.Sprintf("+ helm %s", strings.Join(helmArgs, " ")))
 	out, err := chartRunner.Run("helm", helmArgs...)
 	if len(out) > 0 {
-		fmt.Print(string(out))
+		output.PrintInfo(strings.TrimRight(string(out), "\n"))
 	}
 	if err != nil {
 		return fmt.Errorf("helm install failed: %w", err)
