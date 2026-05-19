@@ -19,6 +19,7 @@ var (
 	reclaimMax              int
 	reclaimIdleTTLHoursFlag int
 	reclaimIncludeUnlabeled bool
+	reclaimAutoNs           bool
 )
 
 var pedestalReclaimCmd = &cobra.Command{
@@ -48,9 +49,14 @@ running, prefer running this CLI from outside the active window.`,
   aegisctl pedestal reclaim --apply --include-unlabeled  # catch legacy sockshop0..9`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		apply := reclaimApply && !flagDryRun
-		return runPedestalReclaim(apply, reclaimSystem, reclaimMax, reclaimIdleTTLHoursFlag, reclaimIncludeUnlabeled)
+		return runPedestalReclaim(apply, reclaimSystem, reclaimMax, reclaimIdleTTLHoursFlag, reclaimIncludeUnlabeled, reclaimAutoNs)
 	},
 }
+
+// nsPatternSource fetches the {system -> ns_pattern} map used by the reclaim
+// predicates. Indirected via a package var so tests can stub the backend call
+// without spinning up the apiclient HTTP plumbing.
+var nsPatternSource = fetchSystemNsPatterns
 
 func init() {
 	pedestalReclaimCmd.Flags().BoolVar(&reclaimApply, "apply", false, "Actually perform helm uninstall + namespace delete (default: dry-run via root --dry-run=true)")
@@ -58,6 +64,7 @@ func init() {
 	pedestalReclaimCmd.Flags().IntVar(&reclaimMax, "max", 0, "Maximum reclaims per invocation. 0 = no limit (manual-mode default).")
 	pedestalReclaimCmd.Flags().IntVar(&reclaimIdleTTLHoursFlag, "idle-ttl-hours", 6, "Idle TTL in hours; releases LastDeployed before now - TTL are eligible.")
 	pedestalReclaimCmd.Flags().BoolVar(&reclaimIncludeUnlabeled, "include-unlabeled", false, "Reclaim namespaces missing app.kubernetes.io/managed-by=aegis (legacy ns pre-label-convention)")
+	pedestalReclaimCmd.Flags().BoolVar(&reclaimAutoNs, "auto-ns", false, "Fetch ns_patterns from backend (GET /api/v2/systems) instead of using the built-in map. Use when onboarding a new system whose pattern isn't yet shipped in this binary.")
 
 	pedestalCmd.AddCommand(pedestalReclaimCmd)
 }
@@ -92,7 +99,7 @@ var systemNsPatterns = map[string]string{
 	"otel-demo": `^otel-demo\d+$`,
 }
 
-func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHours int, includeUnlabeled bool) error {
+func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHours int, includeUnlabeled, autoNs bool) error {
 	if idleTTLHours <= 0 {
 		idleTTLHours = 6
 	}
@@ -104,12 +111,24 @@ func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHour
 		return fmt.Errorf("kubectl binary not found on PATH: %w", err)
 	}
 
-	patterns, err := compileSystemPatterns(systemFilter)
+	source := systemNsPatterns
+	if autoNs {
+		fetched, err := nsPatternSource()
+		if err != nil {
+			return fmt.Errorf("fetch ns patterns from backend (--auto-ns): %w", err)
+		}
+		if len(fetched) == 0 {
+			return fmt.Errorf("backend returned no chaos systems via GET /api/v2/systems")
+		}
+		source = fetched
+	}
+
+	patterns, err := compileSystemPatterns(source, systemFilter)
 	if err != nil {
 		return err
 	}
 	if len(patterns) == 0 {
-		return fmt.Errorf("no systems matched filter %q (known: %s)", systemFilter, strings.Join(sortedKeys(systemNsPatterns), ", "))
+		return fmt.Errorf("no systems matched filter %q (known: %s)", systemFilter, strings.Join(sortedKeys(source), ", "))
 	}
 
 	releases, err := listHelmReleases()
@@ -216,9 +235,9 @@ func runPedestalReclaim(apply bool, systemFilter string, maxDeletes, idleTTLHour
 	return nil
 }
 
-func compileSystemPatterns(filter string) (map[string]*regexp.Regexp, error) {
+func compileSystemPatterns(src map[string]string, filter string) (map[string]*regexp.Regexp, error) {
 	out := map[string]*regexp.Regexp{}
-	for name, pat := range systemNsPatterns {
+	for name, pat := range src {
 		if filter != "" && filter != name {
 			continue
 		}
@@ -227,6 +246,30 @@ func compileSystemPatterns(filter string) (map[string]*regexp.Regexp, error) {
 			return nil, fmt.Errorf("compile pattern for %s: %w", name, err)
 		}
 		out[name] = rx
+	}
+	return out, nil
+}
+
+// fetchSystemNsPatterns calls GET /api/v2/systems and projects the response
+// down to {name -> ns_pattern}. Systems with an empty ns_pattern are dropped
+// (the backend can mark a system inactive without removing the row).
+func fetchSystemNsPatterns() (map[string]string, error) {
+	cli, ctx := newAPIClient()
+	resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(1).Size(200).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("list systems: %w", err)
+	}
+	if resp.Data == nil {
+		return nil, fmt.Errorf("backend returned empty data for GET /api/v2/systems")
+	}
+	out := map[string]string{}
+	for _, s := range resp.Data.GetItems() {
+		name := strings.TrimSpace(s.GetName())
+		pat := strings.TrimSpace(s.GetNsPattern())
+		if name == "" || pat == "" {
+			continue
+		}
+		out[name] = pat
 	}
 	return out, nil
 }
