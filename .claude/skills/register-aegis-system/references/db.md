@@ -58,8 +58,8 @@ runtime `command`. Required fields:
 - `registry`, `namespace`, `repository`, `tag`
 - `command` — non-empty. Empty produces
   `runc exec: "": executable file not found`.
-- `env_vars` — optional; used for per-benchmark overrides like
-  `RCABENCH_OPTIONAL_EMPTY_PARQUETS`.
+- `env_vars` — optional; per-benchmark env overrides propagated to the
+  BuildDatapack Job container.
 
 ## helm_configs
 

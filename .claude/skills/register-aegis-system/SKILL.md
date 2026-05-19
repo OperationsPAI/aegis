@@ -270,7 +270,7 @@ re-build if on an older binary.
 Fixed in `infra/helm/gateway.go` by the kind-cold-start PR.
 
 **"BuildDatapack job env vars only include NAMESPACE; seeded env vars
-(e.g. RCABENCH_OPTIONAL_EMPTY_PARQUETS) aren't propagated"**
+aren't propagated"**
 → Layer 3 / consumer glue. `HandleCRDSucceeded` used to hardcode the
 benchmark env list to just NAMESPACE. Fixed by reading
 `container_version_env_vars` and merging. Also note: env var rows must
@@ -302,8 +302,10 @@ BuildDatapack filters on `service.namespace` only. Transform in
 
 **"abnormal_metrics_histogram empty — ob/sockshop"**
 → Those stacks don't emit histograms (OpenCensus / Prometheus-only).
-Set `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the benchmark container. See
-`references/otel.md`.
+BuildDatapack is fail-fast and there is no production bypass — the
+stack needs a real metrics path (sidecar / bridge / scrape) before it
+can run in production. For local triage only, see
+`references/otel.md` and the `--allow-empty` CLI flag.
 
 **"ServiceName blank in otel_logs for an app without OTel SDK"**
 → k8sattributes `service.name` extraction needs
