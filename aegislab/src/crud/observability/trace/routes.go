@@ -12,7 +12,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "trace",
 		Register: func(v2 *gin.RouterGroup) {
-			traces := v2.Group("/traces", middleware.TrustedHeaderAuth(), middleware.RequireTraceRead)
+			traces := v2.Group("/traces", middleware.RequireTraceRead)
 			{
 				traces.GET("", handler.ListTraces)
 				traces.GET("/:trace_id", handler.GetTrace)
@@ -20,7 +20,7 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 				traces.GET("/:trace_id/logs", handler.GetTraceLogs)
 				traces.GET("/:trace_id/stream", handler.GetTraceStream)
 			}
-			tracesWrite := v2.Group("/traces", middleware.TrustedHeaderAuth(), middleware.RequireTraceWrite)
+			tracesWrite := v2.Group("/traces", middleware.RequireTraceWrite)
 			{
 				tracesWrite.POST("/:trace_id/cancel", handler.CancelTrace)
 			}

@@ -15,7 +15,7 @@ func RoutesAdmin(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudienceAdmin,
 		Name:     "configcenter.admin",
 		Register: func(v2 *gin.RouterGroup) {
-			cfg := v2.Group("/config", middleware.TrustedHeaderAuth())
+			cfg := v2.Group("/config")
 			{
 				cfg.GET("/:namespace", handler.List)
 				cfg.GET("/:namespace/watch", handler.Watch)
