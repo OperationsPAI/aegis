@@ -182,6 +182,11 @@ func (e *ChaosMeshExecutor) Status(ctx context.Context, handle string) (ExecStat
 // interpretChaosMeshStatus reads AllInjected / AllRecovered conditions,
 // shared across PodChaos / NetworkChaos / HTTPChaos / etc. All Chaos-Mesh
 // CRDs publish the same condition shape under status.conditions[].
+//
+// Destructive PodChaos actions (pod-kill, container-kill) never flip
+// AllRecovered to True — the pod is gone, there's nothing to recover.
+// Treat AllInjected=True as terminal-succeeded for those actions.
+// Other actions recover via duration expiry → AllRecovered.
 func interpretChaosMeshStatus(u *unstructured.Unstructured) ExecState {
 	conds, found, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
 	if !found {
@@ -210,9 +215,20 @@ func interpretChaosMeshStatus(u *unstructured.Unstructured) ExecState {
 		return ExecStateSucceeded
 	}
 	if allInjected {
+		if isDestructivePodChaos(u) {
+			return ExecStateSucceeded
+		}
 		return ExecStateRunning
 	}
 	return ExecStatePending
+}
+
+func isDestructivePodChaos(u *unstructured.Unstructured) bool {
+	if u.GetKind() != "PodChaos" {
+		return false
+	}
+	action, _, _ := unstructured.NestedString(u.Object, "spec", "action")
+	return action == "pod-kill" || action == "container-kill"
 }
 
 func readStatusDiagnostics(u *unstructured.Unstructured) map[string]any {
