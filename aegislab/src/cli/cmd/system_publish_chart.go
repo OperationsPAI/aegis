@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"aegis/cli/apiclient"
+	"aegis/platform/consts"
 
 	"github.com/spf13/cobra"
 )
@@ -342,14 +343,21 @@ func resolveSystemContainerVersionID(cli *apiclient.APIClient, ctx context.Conte
 	if err != nil {
 		return 0, fmt.Errorf("resolve container id for system %q: %w", systemName, err)
 	}
-	vResp, _, err := cli.ContainersAPI.ListContainerVersions(ctx, int32(containerID)).Page(1).Size(1000).Execute()
-	if err != nil {
-		return 0, fmt.Errorf("list versions for container %q: %w", systemName, err)
-	}
-	vData := vResp.GetData()
-	for _, v := range vData.GetItems() {
-		if v.GetName() == pedestalTag {
-			return int(v.GetId()), nil
+	pageSize := int32(consts.PageSizeXLarge)
+	for page := int32(1); ; page++ {
+		vResp, _, err := cli.ContainersAPI.ListContainerVersions(ctx, int32(containerID)).Page(page).Size(pageSize).Execute()
+		if err != nil {
+			return 0, fmt.Errorf("list versions for container %q: %w", systemName, err)
+		}
+		vData := vResp.GetData()
+		items := vData.GetItems()
+		for _, v := range items {
+			if v.GetName() == pedestalTag {
+				return int(v.GetId()), nil
+			}
+		}
+		if int32(len(items)) < pageSize {
+			break
 		}
 	}
 	return 0, notFoundErrorf("container version with name %q not found under container %q; cannot bump helm_configs.version",

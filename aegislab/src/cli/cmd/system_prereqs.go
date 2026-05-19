@@ -214,14 +214,21 @@ func targetSystemsForReconcile(c *client.Client, nameFilter string) ([]string, e
 		return []string{nameFilter}, nil
 	}
 	cli, ctx := newAPIClient()
-	resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(1).Size(200).Execute()
-	if err != nil {
-		return nil, err
-	}
-	data := resp.GetData()
-	names := make([]string, 0, len(data.GetItems()))
-	for _, s := range data.GetItems() {
-		names = append(names, s.GetName())
+	pageSize := int32(consts.PageSizeXLarge)
+	var names []string
+	for page := int32(1); ; page++ {
+		resp, _, err := cli.SystemsAPI.ListChaosSystems(ctx).Page(page).Size(pageSize).Execute()
+		if err != nil {
+			return nil, err
+		}
+		data := resp.GetData()
+		items := data.GetItems()
+		for _, s := range items {
+			names = append(names, s.GetName())
+		}
+		if int32(len(items)) < pageSize {
+			break
+		}
 	}
 	sort.Strings(names)
 	return names, nil
