@@ -13,9 +13,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// chaosTypeToCapability is an alias to the canonical mapping in crud/chaos so
-// that the backend pre-flight catalog validator and aegisctl agree on the
-// chaos_type -> capability projection used to address Points.
+// Alias to the canonical chaos_type -> capability map in crud/chaos so the
+// backend preflight and aegisctl address the same Point. Do not mutate from
+// the CLI side: the backing map is shared by reference.
 var chaosTypeToCapability = chaoscrud.ChaosTypeToCapability
 
 // crossServiceCapabilities is the set of capabilities whose Point row carries

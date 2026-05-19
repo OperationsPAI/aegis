@@ -3,7 +3,6 @@ package consumer
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -15,17 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// §11 step 4.5 — pre-flight catalog validator. The actual GuidedConfig ->
-// InjectionConf resolution stays in-process via guidedcli.BuildInjection. This
-// adds an observable cutover: when the etcd flag `aegis.injection.catalog_source`
-// is `chaos_service` and `chaos.service_url` is configured, we issue a
-// GET /v1beta/systems/{sys}/points?service=&capability= for each spec and log
-// the result. Failures (timeout, 5xx) fall back silently to in-process
-// resolution; 404 (Point missing) logs WARN but does not block the inject —
-// catalog drift between chaos service and in-process metadata is expected
-// during cutover. Real catalog source replacement is deferred to step 5b
-// where the executor moves to chaos service and the in-process catalog becomes
-// moot.
+// Logging-only preflight; the result is not consulted by BuildInjection. Real
+// catalog cutover deferred to step 5b when the executor moves to chaos service.
 
 const (
 	catalogSourceFlagKey = "aegis.injection.catalog_source"
@@ -134,11 +124,6 @@ func newSDKPointsLister(baseURL string) pointsListerFunc {
 			if p.Id != nil && *p.Id != "" {
 				return *p.Id, status, nil
 			}
-		}
-		// Treat empty-result as "not found"; status is 200 here. Encode as a
-		// 404 to the caller so its WARN branch fires.
-		if status == http.StatusOK {
-			status = http.StatusNotFound
 		}
 		return "", status, nil
 	}

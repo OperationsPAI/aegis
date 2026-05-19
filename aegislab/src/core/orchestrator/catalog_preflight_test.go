@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -26,6 +27,15 @@ func resetCatalogFlags(t *testing.T) {
 func testLogger() *logrus.Entry {
 	l := logrus.New()
 	l.SetOutput(&strings.Builder{})
+	return logrus.NewEntry(l)
+}
+
+// capturingLogger returns a logger whose output is appended to buf so tests
+// can assert on the emitted WARN / INFO substrings.
+func capturingLogger(buf *bytes.Buffer) *logrus.Entry {
+	l := logrus.New()
+	l.SetOutput(buf)
+	l.SetLevel(logrus.InfoLevel)
 	return logrus.NewEntry(l)
 }
 
@@ -89,9 +99,9 @@ func TestCatalogPreflight_FlagChaosService_PointFound(t *testing.T) {
 	}
 }
 
-// flag=chaos_service + lister returns 5xx → does not panic, no error
-// propagation (informational only).
-func TestCatalogPreflight_FlagChaosService_FiveXX_DoesNotBlock(t *testing.T) {
+// flag=chaos_service + lister returns 5xx → WARN log emitted with the
+// fallback substring and inject continues (no error propagation).
+func TestCatalogPreflight_FlagChaosService_FiveXX_LogsFallback(t *testing.T) {
 	resetCatalogFlags(t)
 	viper.Set(catalogSourceFlagKey, catalogSourceChaos)
 	viper.Set("chaos.service_url", "http://example.invalid")
@@ -99,13 +109,16 @@ func TestCatalogPreflight_FlagChaosService_FiveXX_DoesNotBlock(t *testing.T) {
 	lister := func(ctx context.Context, system, service, capability string) (string, int, error) {
 		return "", http.StatusServiceUnavailable, errors.New("chaos service returned 503")
 	}
-	// Must not panic.
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), testLogger(), lister)
+	var buf bytes.Buffer
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), capturingLogger(&buf), lister)
+	if !strings.Contains(buf.String(), "falling back to in-process") {
+		t.Fatalf("expected fallback WARN, got: %s", buf.String())
+	}
 }
 
-// flag=chaos_service + lister returns no points → WARN branch (still no
-// blocking error).
-func TestCatalogPreflight_FlagChaosService_PointNotFound(t *testing.T) {
+// flag=chaos_service + lister returns no points → WARN log emitted with the
+// point-not-found substring; inject continues via in-process resolution.
+func TestCatalogPreflight_FlagChaosService_PointNotFound_LogsWarn(t *testing.T) {
 	resetCatalogFlags(t)
 	viper.Set(catalogSourceFlagKey, catalogSourceChaos)
 	viper.Set("chaos.service_url", "http://example.invalid")
@@ -113,7 +126,11 @@ func TestCatalogPreflight_FlagChaosService_PointNotFound(t *testing.T) {
 	lister := func(ctx context.Context, system, service, capability string) (string, int, error) {
 		return "", http.StatusNotFound, nil
 	}
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), testLogger(), lister)
+	var buf bytes.Buffer
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), capturingLogger(&buf), lister)
+	if !strings.Contains(buf.String(), "point not found in chaos service catalog") {
+		t.Fatalf("expected point-not-found WARN, got: %s", buf.String())
+	}
 }
 
 // lister gets a context with deadline ≤ catalogPreflightTimeout.
