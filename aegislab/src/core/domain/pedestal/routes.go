@@ -17,7 +17,7 @@ func Routes(handler *Handler, runtime *RuntimeHandler) framework.RouteRegistrar 
 		Audience: framework.AudiencePortal,
 		Name:     "pedestal",
 		Register: func(v2 *gin.RouterGroup) {
-			pedestals := v2.Group("/pedestals", middleware.TrustedHeaderAuth())
+			pedestals := v2.Group("/pedestals")
 			{
 				read := pedestals.Group("", middleware.RequirePedestalRead)
 				{
@@ -32,7 +32,7 @@ func Routes(handler *Handler, runtime *RuntimeHandler) framework.RouteRegistrar 
 				}
 			}
 
-			pedestal := v2.Group("/pedestal", middleware.TrustedHeaderAuth())
+			pedestal := v2.Group("/pedestal")
 			{
 				helm := pedestal.Group("/helm")
 				{

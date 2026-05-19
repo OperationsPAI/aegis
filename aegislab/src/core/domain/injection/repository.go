@@ -359,7 +359,7 @@ func (r *Repository) listInjectionsView(scope authz.CallerScope, limit, offset i
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count injections: %w", err)
 	}
-	if err := query.Limit(limit).Offset(offset).Order("updated_at DESC").Find(&injections).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Order("fault_injections.updated_at DESC").Find(&injections).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list injections: %w", err)
 	}
 

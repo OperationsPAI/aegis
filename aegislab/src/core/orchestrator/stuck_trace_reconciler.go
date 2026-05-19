@@ -231,7 +231,7 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 					consts.CommonDeleted,
 				),
 		).
-		Order("updated_at ASC").
+		Order("traces.updated_at ASC").
 		Order("id ASC").
 		Limit(r.maxBatchPerTick).
 		Find(&traces).Error

@@ -16,7 +16,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 		Audience: framework.AudiencePortal,
 		Name:     "dataset",
 		Register: func(v2 *gin.RouterGroup) {
-			datasets := v2.Group("/datasets", middleware.TrustedHeaderAuth())
+			datasets := v2.Group("/datasets")
 			{
 				datasetRead := datasets.Group("", middleware.RequireDatasetRead)
 				{
