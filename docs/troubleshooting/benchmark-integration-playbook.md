@@ -209,9 +209,15 @@ future RPC-only-instrumented stack.
    sockshop, `otel-kube-stack` for trace ingestion. No per-system
    `prerequisites:` reconciler yet.
 7. **Datapack metrics validation often fails** on stacks that don't
-   emit OTel sum/histogram metrics. Set
-   `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the bench container's
-   `container_versions.env_vars`.
+   emit OTel sum/histogram metrics. BuildDatapack is fail-fast by
+   design — there is no production bypass. If a required parquet
+   comes back empty, run `aegisctl datapack diagnose --injection
+   <id>` to see which file and why; almost always the inject hit a
+   service with no traffic. Fix the targeting, or pre-screen with
+   `aegisctl reason filter-clean`. The CLI flag `python
+   cli/prepare_inputs.py run --allow-empty` exists for local /
+   offline investigation only and is deliberately NOT wired into the
+   in-cluster Job entrypoint.
 
 ---
 
@@ -269,7 +275,10 @@ items are covered above.
   `aegisctl system reconcile-prereqs --name sockshop` applies them
   automatically.
 - **No tracing bridge** — Coherence MP emits Prometheus metrics only.
-  Needs `RCABENCH_OPTIONAL_EMPTY_PARQUETS` on the bench container.
+  This means trace-derived parquets will be empty, and BuildDatapack
+  will fail-fast (intentionally). Production runs against sockshop
+  require fixing the trace path; for one-off local investigation,
+  invoke `python cli/prepare_inputs.py run --allow-empty`.
 - **Frontend is Node.js**, vendored into the fork at `frontend/` from
   `YifanYang6/front-end@64dff7d` so the fork builds a single `ss-frontend`
   image in its own CI. Provenance + re-sync in `frontend/PROVENANCE.md`.

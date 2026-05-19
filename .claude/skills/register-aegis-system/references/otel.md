@@ -142,16 +142,23 @@ to write the pod-facing labels field in addition to `metadata.labels`.
 different owners may use different keys; standardize on `app` and patch
 the chart to reach it.
 
-## Per-system optional parquets
+## Empty required parquets
 
 `rcabench_platform.v3.sdk.datasets.rcabench.valid()` requires all 12
-parquets non-empty. onlineboutique/sockshop never emit OTel histograms;
-train-ticket has no filelog entries if stdout capture is off.
+parquets non-empty and is **fail-fast in production by design**.
+There is no env-var or container-level bypass — the previous
+process-wide opt-out env var has been retired.
 
-Relax per-system via `RCABENCH_OPTIONAL_EMPTY_PARQUETS` env on the
-benchmark container (comma-separated filenames). The
-`opspai/clickhouse_dataset:e2e-kind-20260421` image bakes the histograms
-in as a default; override per benchmark via `container_versions.env_vars`.
+If BuildDatapack reports an empty required parquet, run
+`aegisctl datapack diagnose --injection <id>` to identify which file
+and why. The usual cause is an inject that ran against a service
+with no traffic during the fault window; fix the inject targeting,
+or pre-screen candidates with `aegisctl reason filter-clean`.
+
+For local / offline investigation only, the CLI exposes
+`python cli/prepare_inputs.py run --allow-empty`. This is deliberately
+NOT wired into the in-cluster Job entrypoint — production datapacks
+must contain real data.
 
 ## Legacy Service selector fix
 
