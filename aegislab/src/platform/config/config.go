@@ -50,6 +50,12 @@ func GetDetectorName() string {
 	return ""
 }
 
+// GetChaosServiceURL returns "" when unset; callers must treat that as
+// "use the legacy in-process CRD watcher" rather than a malformed URL.
+func GetChaosServiceURL() string {
+	return strings.TrimSpace(GetString("chaos.service_url"))
+}
+
 // SetDetectorName updates the global detector algorithm name.
 // Called once during initialization and again on every config change.
 func SetDetectorName(name string) {

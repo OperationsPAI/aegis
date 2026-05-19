@@ -1,6 +1,6 @@
 # chaos subchart defaults — aegis-chaos microservice.
+# Rendering is gated by umbrella `chaos.enabled` (see helm/Chart.yaml).
 
-enabled: true
 replicaCount: 1
 httpPort: 8086
 binaryName: "aegis-chaos"

@@ -615,6 +615,17 @@ notify:
   resources: {}
 
 # ---------------------------------------------------------------------------
+# chaos subchart values (forwarded into `charts/chaos/`).
+#
+# DEFAULT OFF — design §11 migration step 4 prereq. Enabling this on an
+# existing deploy switches the inject pipeline to talk to aegis-chaos
+# via webhook, which depends on chaos-service being deployed. Keep
+# `enabled: false` until that runtime cut-over (step 4(i)) lands.
+# ---------------------------------------------------------------------------
+chaos:
+  enabled: false
+
+# ---------------------------------------------------------------------------
 # gateway subchart values (forwarded into `charts/gateway/`).
 # Parent configmap reads `trustedHeaderKey` / `rateLimit` / `cors` from
 # this block to render the shared `[gateway]` ConfigMap section consumed

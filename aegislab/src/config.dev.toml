@@ -222,3 +222,6 @@ auth     = "jwt"
 prefix   = "/"
 upstream = "aegis-api:8080"
 auth     = "jwt"
+
+[chaos]
+service_url = ""
