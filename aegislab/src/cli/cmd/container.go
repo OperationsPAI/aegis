@@ -341,26 +341,39 @@ var containerVersionListVersionsCmd = &cobra.Command{
 // Returns the version item and its parent container name.
 func fetchContainerVersionByID(versionID int) (*containerVersionItem, error) {
 	c, ctx := newAPIClient()
-	listResp, _, err := c.ContainersAPI.ListContainers(ctx).Page(1).Size(1000).Execute()
-	if err != nil {
-		return nil, err
-	}
+	pageSize := int32(consts.PageSizeXLarge)
 	r := newResolver()
-	listData := listResp.GetData()
-	for _, ctr := range listData.GetItems() {
-		id, err := r.ContainerID(ctr.GetName())
+	for page := int32(1); ; page++ {
+		listResp, _, err := c.ContainersAPI.ListContainers(ctx).Page(page).Size(pageSize).Execute()
 		if err != nil {
-			continue
+			return nil, err
 		}
-		vResp, _, err := c.ContainersAPI.ListContainerVersions(ctx, int32(id)).Page(1).Size(1000).Execute()
-		if err != nil {
-			continue
-		}
-		vData := vResp.GetData()
-		for _, v := range apiVersionsToLocal(vData.GetItems()) {
-			if v.ID == versionID {
-				return &v, nil
+		listData := listResp.GetData()
+		items := listData.GetItems()
+		for _, ctr := range items {
+			id, err := r.ContainerID(ctr.GetName())
+			if err != nil {
+				continue
 			}
+			for vPage := int32(1); ; vPage++ {
+				vResp, _, err := c.ContainersAPI.ListContainerVersions(ctx, int32(id)).Page(vPage).Size(pageSize).Execute()
+				if err != nil {
+					break
+				}
+				vData := vResp.GetData()
+				vItems := vData.GetItems()
+				for _, v := range apiVersionsToLocal(vItems) {
+					if v.ID == versionID {
+						return &v, nil
+					}
+				}
+				if int32(len(vItems)) < pageSize {
+					break
+				}
+			}
+		}
+		if int32(len(items)) < pageSize {
+			break
 		}
 	}
 	return nil, fmt.Errorf("container version %d not found", versionID)
