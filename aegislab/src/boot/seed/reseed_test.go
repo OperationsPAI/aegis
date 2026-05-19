@@ -426,7 +426,7 @@ containers:
             default_value: ts0
             required: true
             overridable: true
-          - key: RCABENCH_OPTIONAL_EMPTY_PARQUETS
+          - key: LEGACY_FIXTURE_ENV_VAR
             type: 0
             category: 0
             value_type: 0
@@ -456,16 +456,16 @@ containers:
 	if len(linked) != 2 {
 		t.Fatalf("expected 2 linked env vars, got %d (%+v)", len(linked), linked)
 	}
-	if linked[0].Key != "NAMESPACE" || linked[1].Key != "RCABENCH_OPTIONAL_EMPTY_PARQUETS" {
+	if linked[0].Key != "LEGACY_FIXTURE_ENV_VAR" || linked[1].Key != "NAMESPACE" {
 		t.Fatalf("unexpected env vars linked: %+v", linked)
 	}
-	if linked[1].DefaultValue == nil || *linked[1].DefaultValue != optional {
-		t.Fatalf("optional env default = %v, want %q", linked[1].DefaultValue, optional)
+	if linked[0].DefaultValue == nil || *linked[0].DefaultValue != optional {
+		t.Fatalf("optional env default = %v, want %q", linked[0].DefaultValue, optional)
 	}
 
 	found := false
 	for _, a := range report.Actions {
-		if a.Layer == "container_version_env_vars" && a.Key == "clickhouse@1.0.0:RCABENCH_OPTIONAL_EMPTY_PARQUETS" && a.Applied {
+		if a.Layer == "container_version_env_vars" && a.Key == "clickhouse@1.0.0:LEGACY_FIXTURE_ENV_VAR" && a.Applied {
 			found = true
 		}
 	}
