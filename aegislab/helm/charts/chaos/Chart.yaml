@@ -1,0 +1,6 @@
+apiVersion: v2
+name: chaos
+description: Aegis pluggable fault-injection microservice (aegis-chaos)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

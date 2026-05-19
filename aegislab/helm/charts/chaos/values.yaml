@@ -1,0 +1,37 @@
+# chaos subchart defaults — aegis-chaos microservice.
+
+enabled: true
+replicaCount: 1
+httpPort: 8086
+binaryName: "aegis-chaos"
+
+service:
+  type: ClusterIP
+
+serviceAccount:
+  name: ""
+
+# Step-1 RBAC: aegis-chaos owns the chaos-mesh.org CRD verbs. §11 step 5c
+# removes the same verbs from aegis-backend; until then the two roles
+# coexist (each scoped to its own SA).
+rbac:
+  create: true
+
+auth:
+  jwtSecretRef:
+    name: ""
+    key: "jwt_secret"
+
+configMap:
+  name: ""
+
+env:
+  ENV: "prod"
+  GOPRIVATE: ""
+
+ssoClient:
+  secretFilePath: "/etc/aegis/sso/client-secret"
+
+extraEnv: []
+extraEnvFrom: []
+resources: {}
