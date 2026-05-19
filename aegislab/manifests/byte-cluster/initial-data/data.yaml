@@ -881,6 +881,16 @@ dynamic_configs:
     category: database.clickhouse
     description: ClickHouse timezone
     is_secret: false
+  - key: aegis.injection.catalog_source
+    default_value: in_process
+    value_type: 0
+    scope: 2
+    category: aegis.injection
+    description: §11 step 4.5 observable-cutover flag — when set to `chaos_service`,
+      the backend pre-flights each guided Point against GET /v1beta/systems/{sys}/points
+      before in-process resolution. Failures fall back silently to in-process.
+      Accepted values - `in_process` (default), `chaos_service`.
+    is_secret: false
   - key: injection.system.ts.count
     default_value: '5'
     value_type: 2
