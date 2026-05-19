@@ -499,6 +499,15 @@ func (c *Controller) genCRDEventHandlerFuncs(gvr schema.GroupVersionResource) ca
 	}
 }
 
+func jobHasTerminalCondition(job *batchv1.Job, want batchv1.JobConditionType) bool {
+	for _, c := range job.Status.Conditions {
+		if c.Type == want && c.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
 // genJobEventHandlerFuncs generates event handler functions for Job informer
 func (c *Controller) genJobEventHandlerFuncs() cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
@@ -522,20 +531,33 @@ func (c *Controller) genJobEventHandlerFuncs() cache.ResourceEventHandlerFuncs {
 			oldJob := oldObj.(*batchv1.Job)
 			newJob := newObj.(*batchv1.Job)
 
-			if oldJob.Name == newJob.Name {
-				if oldJob.Status.Failed == *oldJob.Spec.BackoffLimit && newJob.Status.Failed == *newJob.Spec.BackoffLimit+1 {
-					c.callback.HandleJobFailed(newJob, newJob.Annotations, newJob.Labels)
-				}
+			if oldJob.Name != newJob.Name {
+				return
+			}
 
-				if oldJob.Status.Succeeded == 0 && newJob.Status.Succeeded > 0 {
-					c.callback.HandleJobSucceeded(newJob, newJob.Annotations, newJob.Labels)
-					if !config.GetBool("debugging.enabled") {
-						c.queue.Add(QueueItem{
-							Type:      DeleteJob,
-							Namespace: newJob.Namespace,
-							Name:      newJob.Name,
-						})
-					}
+			// Use terminal-state conditions instead of Failed/Succeeded counter
+			// edges: the counter-based predicate only fires on the exact
+			// transition tick and is missed across informer resyncs, leaving
+			// Failed Jobs un-reaped (24+ leaked pods in exp ns, up to 5d3h old).
+			if !jobHasTerminalCondition(oldJob, batchv1.JobFailed) && jobHasTerminalCondition(newJob, batchv1.JobFailed) {
+				c.callback.HandleJobFailed(newJob, newJob.Annotations, newJob.Labels)
+				if !config.GetBool("debugging.enabled") {
+					c.queue.Add(QueueItem{
+						Type:      DeleteJob,
+						Namespace: newJob.Namespace,
+						Name:      newJob.Name,
+					})
+				}
+			}
+
+			if !jobHasTerminalCondition(oldJob, batchv1.JobComplete) && jobHasTerminalCondition(newJob, batchv1.JobComplete) {
+				c.callback.HandleJobSucceeded(newJob, newJob.Annotations, newJob.Labels)
+				if !config.GetBool("debugging.enabled") {
+					c.queue.Add(QueueItem{
+						Type:      DeleteJob,
+						Namespace: newJob.Namespace,
+						Name:      newJob.Name,
+					})
 				}
 			}
 		},
