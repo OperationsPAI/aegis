@@ -25,9 +25,26 @@ func SystemScope() CallerScope { return CallerScope{IsAdmin: true} }
 var (
 	ErrProjectOutsideScope = errors.New("project outside caller scope")
 	ErrMissingAuth         = errors.New("authz: missing authenticated user on request")
+	ErrServiceTaskMismatch = errors.New("authz: service token task mismatch")
 )
 
 func (s CallerScope) AllowsAllProjects() bool { return s.IsAdmin }
+
+// MustOwnTask asserts that a service-token caller may only touch resources
+// owned by the TaskID baked into its claim. Admin and non-service callers
+// are no-ops (their authority is established elsewhere — project scope,
+// permission rules, ownership checks). Service tokens with an empty claim
+// TaskID are rejected outright: they predate the claim and should not be
+// used to mutate per-task resources.
+func (s CallerScope) MustOwnTask(taskID string) error {
+	if !s.IsService || s.IsAdmin {
+		return nil
+	}
+	if s.TaskID == "" || s.TaskID != taskID {
+		return fmt.Errorf("%w: claim=%q resource=%q", ErrServiceTaskMismatch, s.TaskID, taskID)
+	}
+	return nil
+}
 
 func (s CallerScope) MustHaveProject(projectID int64) error {
 	if s.IsAdmin {
