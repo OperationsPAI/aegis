@@ -868,22 +868,12 @@ def init(
     Initialize Swagger documentation by generating OpenAPI 2.0 and converting to OpenAPI 3.0.
     """
     console.print("[bold blue]📝 Initializing Swagger documentation...[/bold blue]")
-    # 1. Swag Init
+    # 1. Regenerate openapi2 via the //go:generate directive in src/main.go.
+    # Keeping the swag flags in exactly one place (main.go) means CI's
+    # go-generate freshness check and this wrapper can never drift.
     src_dir = SWAGGER_ROOT.parent
 
-    run_command(
-        [
-            "swag",
-            "init",
-            "-d",
-            src_dir.as_posix(),
-            "--parseDependency",
-            "--parseDepth",
-            "1",
-            "--output",
-            OPENAPI2_DIR.as_posix(),
-        ]
-    )
+    run_command(["go", "generate", "./..."], cwd=src_dir)
 
     # 2. Convert Swagger 2.0 into a full OpenAPI 3 document locally.
     swagger2_file = OPENAPI2_DIR / "swagger.json"
