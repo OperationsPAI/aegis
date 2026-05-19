@@ -40,3 +40,14 @@ resources: {}
 # reconciler still updates row status but skips POST /api/v1/hooks/chaos.
 # Umbrella values.yaml fills this in by default (release-aegis-api).
 backendURL: ""
+
+# Bearer token sent with each webhook. The receiver's TrustedHeaderAuth
+# middleware falls through to JWTAuth for inter-service calls without an
+# X-Aegis-Signature, so a valid service-token JWT (or admin token in dev)
+# authenticates the chaos service to aegis-api. Empty disables Bearer.
+# Production deployments should wire `webhookBearerSecretRef` instead so
+# the token isn't baked into rendered manifests.
+webhookBearer: ""
+webhookBearerSecretRef: {}
+  # name: chaos-service-token
+  # key: token

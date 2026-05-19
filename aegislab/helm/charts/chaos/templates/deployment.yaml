@@ -47,6 +47,17 @@ spec:
               value: {{ .Values.env.ENV | quote }}
             - name: CHAOS_BACKEND_URL
               value: {{ .Values.backendURL | quote }}
+            {{- if .Values.webhookBearer }}
+            - name: CHAOS_WEBHOOK_BEARER
+              value: {{ .Values.webhookBearer | quote }}
+            {{- end }}
+            {{- with .Values.webhookBearerSecretRef }}
+            - name: CHAOS_WEBHOOK_BEARER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
             - name: AEGIS_JWT_SECRET
               valueFrom:
                 secretKeyRef:

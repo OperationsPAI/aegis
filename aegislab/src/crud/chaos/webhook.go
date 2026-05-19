@@ -27,6 +27,7 @@ var webhookBackoff = []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.
 type WebhookSender struct {
 	httpClient *http.Client
 	backendURL string
+	bearer     string
 	db         *gorm.DB
 	logger     *logrus.Logger
 }
@@ -42,6 +43,15 @@ func NewWebhookSender(httpClient *http.Client, backendURL string, db *gorm.DB, l
 		logger.Info("chaos webhook: delivery disabled (chaos.backendURL empty)")
 	}
 	return &WebhookSender{httpClient: httpClient, backendURL: backendURL, db: db, logger: logger}
+}
+
+// WithBearer wires a static Bearer token for the receiver's
+// TrustedHeaderAuth fallthrough path. The aegis-chaos pod reads
+// CHAOS_WEBHOOK_BEARER at boot; production deployments stamp a
+// service-token JWT, dev installs can stamp an admin token.
+func (w *WebhookSender) WithBearer(token string) *WebhookSender {
+	w.bearer = token
+	return w
 }
 
 type webhookPayload struct {
@@ -107,6 +117,9 @@ func (w *WebhookSender) attempt(ctx context.Context, url string, body []byte) er
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if w.bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+w.bearer)
+	}
 	otel.GetTextMapPropagator().Inject(attemptCtx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := w.httpClient.Do(req)
