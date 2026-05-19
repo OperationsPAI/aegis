@@ -175,6 +175,7 @@ __debug*
 .deploy
 temp
 ts
+.worktrees/
 logs/
 .codebuddy
 .github/instructions/tmp/
