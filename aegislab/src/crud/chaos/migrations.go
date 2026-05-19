@@ -46,6 +46,10 @@ func SeedCapabilities(db *gorm.DB) error {
 		},
 	}
 	seed = append(seed, SeedsNetwork...)
+	seed = append(seed, SeedsPodChaosExtra...)
+	seed = append(seed, SeedsStress...)
+	seed = append(seed, SeedsTime...)
+	seed = append(seed, SeedsDNS...)
 	return db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "name"}},
 		DoUpdates: clause.AssignmentColumns([]string{
