@@ -441,3 +441,26 @@ func (s *Service) runDatapackQuery(ctx context.Context, id int, userSQL string) 
 func quoteIdent(name string) string {
 	return fmt.Sprintf("\"%s\"", strings.ReplaceAll(name, "\"", "\"\""))
 }
+
+// countParquetRows resolves the parquet file's reader path and runs
+// SELECT count(*). Returns (0,false) if any step fails — the caller treats
+// nil-rows as "unknown" rather than "zero".
+func (s *Service) countParquetRows(ctx context.Context, datapackName, file string) (int64, bool) {
+	path, err := s.store.ParquetReaderPath(ctx, datapackName, file, 15*time.Minute)
+	if err != nil {
+		return 0, false
+	}
+	connector, err := newDuckDBConnector()
+	if err != nil {
+		return 0, false
+	}
+	db := sql.OpenDB(connector)
+	defer func() { _ = db.Close() }()
+	var rows int64
+	if err := db.QueryRowContext(ctx,
+		fmt.Sprintf("SELECT count(*) FROM read_parquet('%s')", path),
+	).Scan(&rows); err != nil {
+		return 0, false
+	}
+	return rows, true
+}

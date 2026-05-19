@@ -63,6 +63,7 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 					observation.GET("/:id/logs", handler.GetInjectionLogs)
 					observation.GET("/:id/logs/histogram", handler.GetInjectionLogsHistogram)
 					observation.GET("/:id/timeline", handler.GetInjectionTimeline)
+					observation.GET("/:id/diagnose", handler.DiagnoseDatapack)
 				}
 			}
 		},
