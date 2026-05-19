@@ -18,11 +18,13 @@ import (
 
 var errWebhookDisabled = errors.New("chaos webhook: disabled (empty backendURL)")
 
-// webhookBackoff matches the design-doc retry schedule. 5 attempts ≈ 31s
-// of total wait — short enough that a reconciler tick stays interactive
-// for an operator watching `kubectl get injection`, long enough to tide
-// over a one-pod aegis-api roll.
-var webhookBackoff = []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second, 16 * time.Second}
+const webhookMaxAttempts = 5
+
+// webhookBackoff is the inter-attempt sleep schedule. 5 attempts with
+// 4 sleeps between them = 1+2+4+8 = 15s of total wait — short enough
+// that a reconciler tick stays interactive, long enough to tide over a
+// one-pod aegis-api roll.
+var webhookBackoff = []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second}
 
 type WebhookSender struct {
 	httpClient *http.Client
@@ -45,15 +47,19 @@ func NewWebhookSender(httpClient *http.Client, backendURL string, db *gorm.DB, l
 	return &WebhookSender{httpClient: httpClient, backendURL: backendURL, db: db, logger: logger}
 }
 
-// WithBearer wires a static Bearer token for the receiver's
+// SetBearer wires a static Bearer token for the receiver's
 // TrustedHeaderAuth fallthrough path. The aegis-chaos pod reads
 // CHAOS_WEBHOOK_BEARER at boot; production deployments stamp a
 // service-token JWT, dev installs can stamp an admin token.
-func (w *WebhookSender) WithBearer(token string) *WebhookSender {
+func (w *WebhookSender) SetBearer(token string) {
 	w.bearer = token
-	return w
 }
 
+// webhookPayload uses json.RawMessage so the JSON columns (Groundtruth /
+// Diagnostics / CallerMetadata) survive the Injection→payload→HTTP→
+// receiver hop as logically-equivalent JSON. Byte-identity is not
+// preserved — the source columns are gorm JSONMap, so jsonOrNull
+// re-marshals via Go's map sort order. Field set + values match.
 type webhookPayload struct {
 	InjectionID    string          `json:"injection_id"`
 	IdempotencyKey string          `json:"idempotency_key"`
@@ -91,12 +97,14 @@ func (w *WebhookSender) Fire(ctx context.Context, inj *Injection) error {
 
 	url := w.backendURL + "/api/v1/hooks/chaos"
 	var lastErr error
-	for attempt := 0; attempt < len(webhookBackoff); attempt++ {
+	for attempt := 0; attempt < webhookMaxAttempts; attempt++ {
 		if attempt > 0 {
 			select {
 			case <-ctx.Done():
-				lastErr = ctx.Err()
-				break
+				// Return without recording another (cancelled-ctx) attempt
+				// against the row — a bare `break` here would only exit the
+				// select and then run w.attempt(ctx, ...) with a dead ctx.
+				return ctx.Err()
 			case <-time.After(webhookBackoff[attempt-1]):
 			}
 		}

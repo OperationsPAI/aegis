@@ -33,7 +33,7 @@ var Module = fx.Module("chaos",
 func NewWebhookSenderFromEnv(db *gorm.DB) *WebhookSender {
 	w := NewWebhookSender(&http.Client{Timeout: 60 * time.Second}, os.Getenv("CHAOS_BACKEND_URL"), db, logrus.StandardLogger())
 	if tok := os.Getenv("CHAOS_WEBHOOK_BEARER"); tok != "" {
-		w.WithBearer(tok)
+		w.SetBearer(tok)
 	}
 	return w
 }

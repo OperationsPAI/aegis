@@ -14,20 +14,21 @@ import (
 
 // TestWebhookFire_PayloadAndRetry exercises the three webhook behaviours
 // the live-cluster A5/A6/A7 assertions can't easily isolate: payload
-// shape (caller_metadata byte-identical round-trip), retry-on-5xx, and
-// final-failure surfaced into webhook_error.
+// shape (caller_metadata logical-equivalence round-trip via JSONMap
+// re-marshal), retry-on-5xx, and final-failure surfaced into webhook_error.
 func TestWebhookFire_PayloadAndRetry(t *testing.T) {
 	db := testutil.NewSQLiteGormDB(t)
 	if err := db.AutoMigrate(&Injection{}); err != nil {
 		t.Fatal(err)
 	}
 
-	// Make backoff effectively zero for the test.
+	// Make backoff effectively zero for the test. Length matches the
+	// 4 inter-attempt sleeps (webhookMaxAttempts - 1).
 	origBackoff := webhookBackoff
-	webhookBackoff = []time.Duration{0, 0, 0, 0, 0}
+	webhookBackoff = []time.Duration{0, 0, 0, 0}
 	t.Cleanup(func() { webhookBackoff = origBackoff })
 
-	t.Run("happy path + caller_metadata byte-identity", func(t *testing.T) {
+	t.Run("happy path + caller_metadata logical-equivalence", func(t *testing.T) {
 		var gotBody []byte
 		var hits atomic.Int32
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -109,8 +110,8 @@ func TestWebhookFire_PayloadAndRetry(t *testing.T) {
 		if err := w.Fire(t.Context(), &inj); err == nil {
 			t.Errorf("Fire should return final error")
 		}
-		if got := hits.Load(); got != int32(len(webhookBackoff)) {
-			t.Errorf("hits = %d, want %d", got, len(webhookBackoff))
+		if got := hits.Load(); got != int32(webhookMaxAttempts) {
+			t.Errorf("hits = %d, want %d", got, webhookMaxAttempts)
 		}
 		var reloaded Injection
 		_ = db.Where("id = ?", "inj3").Take(&reloaded).Error

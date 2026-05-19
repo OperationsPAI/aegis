@@ -9,6 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// reconcilerBatchSize caps the per-tick scan so a slow Executor.Status
+// call (or a slow webhook delivery downstream) can't starve the loop.
+// Raise this when row throughput grows enough that 200/tick saturates
+// — config plumbing for it is step 5b/5c work, not 5a.
+const reconcilerBatchSize = 200
+
 // Reconciler closes ADR-0006's stickiness loop. The CreateInjection path
 // flips the row to `running` after Apply but cannot observe the
 // chaos-mesh CR moving to AllRecovered; without this polling loop the
@@ -48,7 +54,7 @@ func (r *Reconciler) tick(ctx context.Context) {
 	var rows []Injection
 	if err := r.db.WithContext(ctx).
 		Where("status IN ?", []string{StatusPending, StatusRunning}).
-		Limit(200).Find(&rows).Error; err != nil {
+		Limit(reconcilerBatchSize).Find(&rows).Error; err != nil {
 		r.logger.WithError(err).Warn("chaos reconciler: list active injections")
 		return
 	}
@@ -104,6 +110,11 @@ func (r *Reconciler) reconcileOne(ctx context.Context, inj *Injection) {
 		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: reload row")
 		return
 	}
+	// TODO(step-5b/5c): Fire blocks this single-goroutine reconciler for up
+	// to ~15s of retry sleep + 5×60s of per-attempt timeout, so one stuck
+	// receiver stalls every other row's reconcile. Move to a bounded
+	// goroutine pool (or a dedicated webhook worker queue) when row
+	// throughput justifies the complexity. Out of scope for step 5a.
 	if err := r.webhook.Fire(ctx, &fresh); err != nil && !errors.Is(err, errWebhookDisabled) {
 		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: webhook fire")
 	}
