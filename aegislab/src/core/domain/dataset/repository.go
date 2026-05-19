@@ -1,6 +1,7 @@
 package dataset
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -10,6 +11,21 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+// applyDatasetScope narrows a datasets query to rows the caller can see:
+// admins see everything, otherwise public rows OR rows the caller owns
+// (user_scoped_roles with scope_type=aegis.dataset, status=enabled).
+func applyDatasetScope(db *gorm.DB, query *gorm.DB, scope authz.CallerScope, datasetTable string) *gorm.DB {
+	if scope.IsAdmin {
+		return query
+	}
+	subq := db.Table("user_scoped_roles").
+		Select("scope_id").
+		Where("user_id = ? AND scope_type = ? AND status = ?",
+			scope.UserID, consts.ScopeTypeDataset, consts.CommonEnabled)
+	return query.Where(db.Where(fmt.Sprintf("%s.is_public = ?", datasetTable), true).
+		Or(fmt.Sprintf("CAST(%s.id AS CHAR) IN (?)", datasetTable), subq))
+}
 
 const (
 	datasetCommonOmitFields       = "active_name"
@@ -84,6 +100,16 @@ func (r *Repository) getDatasetByID(datasetID int) (*model.Dataset, error) {
 	return &dataset, nil
 }
 
+func (r *Repository) getDatasetByIDScoped(datasetID int, scope authz.CallerScope) (*model.Dataset, error) {
+	var dataset model.Dataset
+	q := r.db.Model(&model.Dataset{}).Where("datasets.id = ? AND datasets.status != ?", datasetID, consts.CommonDeleted)
+	q = applyDatasetScope(r.db, q, scope, "datasets")
+	if err := q.First(&dataset).Error; err != nil {
+		return nil, err
+	}
+	return &dataset, nil
+}
+
 func (r *Repository) listDatasetVersionsByDatasetID(datasetID int) ([]model.DatasetVersion, error) {
 	var versions []model.DatasetVersion
 	if err := r.db.Where("dataset_id = ?", datasetID).Find(&versions).Error; err != nil {
@@ -121,13 +147,14 @@ func (r *Repository) batchGetDatasetVersions(datasetNames []string, userID int) 
 	return versions, nil
 }
 
-func (r *Repository) listDatasets(limit, offset int, datasetType string, isPublic *bool, status *consts.StatusType) ([]model.Dataset, int64, error) {
+func (r *Repository) listDatasets(scope authz.CallerScope, limit, offset int, datasetType string, isPublic *bool, status *consts.StatusType) ([]model.Dataset, int64, error) {
 	var (
 		datasets []model.Dataset
 		total    int64
 	)
 
 	query := r.db.Model(&model.Dataset{})
+	query = applyDatasetScope(r.db, query, scope, "datasets")
 	if datasetType != "" {
 		query = query.Where("type = ?", datasetType)
 	}
@@ -147,12 +174,23 @@ func (r *Repository) listDatasets(limit, offset int, datasetType string, isPubli
 	return datasets, total, nil
 }
 
-func (r *Repository) searchDatasets(searchReq *dto.SearchReq[consts.DatasetField]) ([]model.Dataset, int64, error) {
+func (r *Repository) searchDatasets(scope authz.CallerScope, searchReq *dto.SearchReq[consts.DatasetField]) ([]model.Dataset, int64, error) {
 	qb := searchx.NewQueryBuilder(r.db, consts.DatasetAllowedFields)
 	qb.ApplySearchReq(searchReq.Filters, searchReq.Keyword, searchReq.Sort, searchReq.GroupBy, model.Dataset{})
 	qb.ApplyIncludes(searchReq.Includes)
 	qb.ApplyIncludeFields(searchReq.IncludeFields)
 	qb.ApplyExcludeFields(searchReq.ExcludeFields, model.Dataset{})
+
+	if !scope.IsAdmin {
+		qb.Apply(func(db *gorm.DB) *gorm.DB {
+			subq := db.Session(&gorm.Session{NewDB: true}).Table("user_scoped_roles").
+				Select("scope_id").
+				Where("user_id = ? AND scope_type = ? AND status = ?",
+					scope.UserID, consts.ScopeTypeDataset, consts.CommonEnabled)
+			return db.Where(db.Where("datasets.is_public = ?", true).
+				Or("CAST(datasets.id AS CHAR) IN (?)", subq))
+		})
+	}
 
 	total, err := qb.GetCount()
 	if err != nil {

@@ -1,6 +1,7 @@
 package container
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -11,6 +12,21 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+// applyContainerScope narrows a containers query to rows the caller can see:
+// admins see everything, otherwise public rows OR rows the caller owns
+// (user_scoped_roles with scope_type=aegis.container, status=enabled).
+func applyContainerScope(db *gorm.DB, query *gorm.DB, scope authz.CallerScope, containerTable string) *gorm.DB {
+	if scope.IsAdmin {
+		return query
+	}
+	subq := db.Table("user_scoped_roles").
+		Select("scope_id").
+		Where("user_id = ? AND scope_type = ? AND status = ?",
+			scope.UserID, consts.ScopeTypeContainer, consts.CommonEnabled)
+	return query.Where(db.Where(fmt.Sprintf("%s.is_public = ?", containerTable), true).
+		Or(fmt.Sprintf("CAST(%s.id AS CHAR) IN (?)", containerTable), subq))
+}
 
 const (
 	containerCommonOmitFields       = "active_name"
@@ -102,6 +118,16 @@ func (r *Repository) getContainerByID(containerID int) (*model.Container, error)
 	return &container, nil
 }
 
+func (r *Repository) getContainerByIDScoped(containerID int, scope authz.CallerScope) (*model.Container, error) {
+	var container model.Container
+	q := r.db.Model(&model.Container{}).Where("containers.id = ? AND containers.status != ?", containerID, consts.CommonDeleted)
+	q = applyContainerScope(r.db, q, scope, "containers")
+	if err := q.First(&container).Error; err != nil {
+		return nil, err
+	}
+	return &container, nil
+}
+
 func (r *Repository) listContainerVersionsByContainerID(containerID int) ([]model.ContainerVersion, error) {
 	var versions []model.ContainerVersion
 	if err := r.db.
@@ -166,13 +192,14 @@ func (r *Repository) checkContainerExistsWithDifferentType(containerName string,
 	return true, container.Type, nil
 }
 
-func (r *Repository) listContainers(limit, offset int, containerType *consts.ContainerType, isPublic *bool, status *consts.StatusType) ([]model.Container, int64, error) {
+func (r *Repository) listContainers(scope authz.CallerScope, limit, offset int, containerType *consts.ContainerType, isPublic *bool, status *consts.StatusType) ([]model.Container, int64, error) {
 	var (
 		containers []model.Container
 		total      int64
 	)
 
 	query := r.db.Model(&model.Container{})
+	query = applyContainerScope(r.db, query, scope, "containers")
 	if containerType != nil {
 		query = query.Where("type = ?", *containerType)
 	}

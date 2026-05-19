@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -51,9 +52,15 @@ func (s *Service) CreateDataset(_ context.Context, req *CreateDatasetReq, userID
 	return NewDatasetResp(dataset), nil
 }
 
-func (s *Service) DeleteDataset(_ context.Context, datasetID int) error {
+func (s *Service) DeleteDataset(_ context.Context, scope authz.CallerScope, datasetID int) error {
 	return s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
+		if _, err := repo.getDatasetByIDScoped(datasetID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: dataset id %d not found", consts.ErrNotFound, datasetID)
+			}
+			return fmt.Errorf("failed to get dataset: %w", err)
+		}
 		if _, err := repo.batchDeleteDatasetVersions(datasetID); err != nil {
 			return fmt.Errorf("failed to delete dataset versions: %w", err)
 		}
@@ -71,8 +78,8 @@ func (s *Service) DeleteDataset(_ context.Context, datasetID int) error {
 	})
 }
 
-func (s *Service) GetDataset(_ context.Context, datasetID int) (*DatasetDetailResp, error) {
-	dataset, err := s.repo.getDatasetByID(datasetID)
+func (s *Service) GetDataset(_ context.Context, scope authz.CallerScope, datasetID int) (*DatasetDetailResp, error) {
+	dataset, err := s.repo.getDatasetByIDScoped(datasetID, scope)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
@@ -93,10 +100,10 @@ func (s *Service) GetDataset(_ context.Context, datasetID int) (*DatasetDetailRe
 	return resp, nil
 }
 
-func (s *Service) ListDatasets(_ context.Context, req *ListDatasetReq) (*dto.ListResp[DatasetResp], error) {
+func (s *Service) ListDatasets(_ context.Context, scope authz.CallerScope, req *ListDatasetReq) (*dto.ListResp[DatasetResp], error) {
 	limit, offset := req.ToGormParams()
 
-	datasets, total, err := s.repo.listDatasets(limit, offset, req.Type, req.IsPublic, req.Status)
+	datasets, total, err := s.repo.listDatasets(scope, limit, offset, req.Type, req.IsPublic, req.Status)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list datasets: %w", err)
 	}
@@ -125,12 +132,12 @@ func (s *Service) ListDatasets(_ context.Context, req *ListDatasetReq) (*dto.Lis
 	}, nil
 }
 
-func (s *Service) SearchDatasets(_ context.Context, req *SearchDatasetReq) (*dto.ListResp[DatasetDetailResp], error) {
+func (s *Service) SearchDatasets(_ context.Context, scope authz.CallerScope, req *SearchDatasetReq) (*dto.ListResp[DatasetDetailResp], error) {
 	if req == nil {
 		return nil, fmt.Errorf("search dataset request is nil")
 	}
 
-	results, total, err := s.repo.searchDatasets(req.ConvertToSearchReq())
+	results, total, err := s.repo.searchDatasets(scope, req.ConvertToSearchReq())
 	if err != nil {
 		return nil, fmt.Errorf("failed to search datasets: %w", err)
 	}
@@ -146,12 +153,12 @@ func (s *Service) SearchDatasets(_ context.Context, req *SearchDatasetReq) (*dto
 	}, nil
 }
 
-func (s *Service) UpdateDataset(_ context.Context, req *UpdateDatasetReq, datasetID int) (*DatasetResp, error) {
+func (s *Service) UpdateDataset(_ context.Context, scope authz.CallerScope, req *UpdateDatasetReq, datasetID int) (*DatasetResp, error) {
 	var updatedDataset *model.Dataset
 
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
-		dataset, err := repo.getDatasetByID(datasetID)
+		dataset, err := repo.getDatasetByIDScoped(datasetID, scope)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
@@ -173,7 +180,7 @@ func (s *Service) UpdateDataset(_ context.Context, req *UpdateDatasetReq, datase
 	return NewDatasetResp(updatedDataset), nil
 }
 
-func (s *Service) ManageDatasetLabels(_ context.Context, req *ManageDatasetLabelReq, datasetID int) (*DatasetResp, error) {
+func (s *Service) ManageDatasetLabels(_ context.Context, scope authz.CallerScope, req *ManageDatasetLabelReq, datasetID int) (*DatasetResp, error) {
 	if req == nil {
 		return nil, fmt.Errorf("manage dataset labels request is nil")
 	}
@@ -181,7 +188,7 @@ func (s *Service) ManageDatasetLabels(_ context.Context, req *ManageDatasetLabel
 	var managedDataset *model.Dataset
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
-		dataset, err := repo.getDatasetByID(datasetID)
+		dataset, err := repo.getDatasetByIDScoped(datasetID, scope)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
@@ -240,7 +247,7 @@ func (s *Service) ManageDatasetLabels(_ context.Context, req *ManageDatasetLabel
 	return NewDatasetResp(managedDataset), nil
 }
 
-func (s *Service) CreateDatasetVersion(_ context.Context, req *CreateDatasetVersionReq, datasetID, userID int) (*DatasetVersionResp, error) {
+func (s *Service) CreateDatasetVersion(_ context.Context, scope authz.CallerScope, req *CreateDatasetVersionReq, datasetID, userID int) (*DatasetVersionResp, error) {
 	if req == nil {
 		return nil, fmt.Errorf("create dataset version request is nil")
 	}
@@ -252,6 +259,12 @@ func (s *Service) CreateDatasetVersion(_ context.Context, req *CreateDatasetVers
 	var createdVersion *model.DatasetVersion
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
+		if _, err := repo.getDatasetByIDScoped(datasetID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
+			}
+			return fmt.Errorf("failed to get dataset: %w", err)
+		}
 		versions, err := s.createDatasetVersionsCore(repo, []model.DatasetVersion{*version})
 		if err != nil {
 			return fmt.Errorf("failed to create dataset version: %w", err)
@@ -273,7 +286,20 @@ func (s *Service) CreateDatasetVersion(_ context.Context, req *CreateDatasetVers
 	return NewDatasetVersionResp(createdVersion), nil
 }
 
-func (s *Service) DeleteDatasetVersion(_ context.Context, versionID int) error {
+func (s *Service) DeleteDatasetVersion(_ context.Context, scope authz.CallerScope, versionID int) error {
+	version, err := s.repo.getDatasetVersionByID(versionID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: dataset version id %d not found", consts.ErrNotFound, versionID)
+		}
+		return fmt.Errorf("failed to get dataset version: %w", err)
+	}
+	if _, err := s.repo.getDatasetByIDScoped(version.DatasetID, scope); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: dataset version id %d not found", consts.ErrNotFound, versionID)
+		}
+		return fmt.Errorf("failed to get dataset: %w", err)
+	}
 	rows, err := s.repo.deleteDatasetVersion(versionID)
 	if err != nil {
 		return fmt.Errorf("failed to delete dataset version: %w", err)
@@ -284,8 +310,8 @@ func (s *Service) DeleteDatasetVersion(_ context.Context, versionID int) error {
 	return nil
 }
 
-func (s *Service) GetDatasetVersion(_ context.Context, datasetID, versionID int) (*DatasetVersionDetailResp, error) {
-	if _, err := s.repo.getDatasetByID(datasetID); err != nil {
+func (s *Service) GetDatasetVersion(_ context.Context, scope authz.CallerScope, datasetID, versionID int) (*DatasetVersionDetailResp, error) {
+	if _, err := s.repo.getDatasetByIDScoped(datasetID, scope); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
 		}
@@ -303,7 +329,13 @@ func (s *Service) GetDatasetVersion(_ context.Context, datasetID, versionID int)
 	return NewDatasetVersionDetailResp(version), nil
 }
 
-func (s *Service) ListDatasetVersions(_ context.Context, req *ListDatasetVersionReq, datasetID int) (*dto.ListResp[DatasetVersionResp], error) {
+func (s *Service) ListDatasetVersions(_ context.Context, scope authz.CallerScope, req *ListDatasetVersionReq, datasetID int) (*dto.ListResp[DatasetVersionResp], error) {
+	if _, err := s.repo.getDatasetByIDScoped(datasetID, scope); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
+		}
+		return nil, fmt.Errorf("failed to get dataset: %w", err)
+	}
 	limit, offset := req.ToGormParams()
 
 	versions, total, err := s.repo.listDatasetVersions(limit, offset, datasetID, req.Status)
@@ -322,12 +354,18 @@ func (s *Service) ListDatasetVersions(_ context.Context, req *ListDatasetVersion
 	}, nil
 }
 
-func (s *Service) UpdateDatasetVersion(_ context.Context, req *UpdateDatasetVersionReq, datasetID, versionID int) (*DatasetVersionResp, error) {
+func (s *Service) UpdateDatasetVersion(_ context.Context, scope authz.CallerScope, req *UpdateDatasetVersionReq, datasetID, versionID int) (*DatasetVersionResp, error) {
 	_ = datasetID
 
 	var updatedVersion *model.DatasetVersion
 	if err := s.repo.db.Transaction(func(tx *gorm.DB) error {
 		repo := NewRepository(tx)
+		if _, err := repo.getDatasetByIDScoped(datasetID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
+			}
+			return fmt.Errorf("failed to get dataset: %w", err)
+		}
 		version, err := repo.getDatasetVersionByID(versionID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -350,8 +388,8 @@ func (s *Service) UpdateDatasetVersion(_ context.Context, req *UpdateDatasetVers
 	return NewDatasetVersionResp(updatedVersion), nil
 }
 
-func (s *Service) GetDatasetVersionFilename(_ context.Context, datasetID, versionID int) (string, error) {
-	dataset, err := s.repo.getDatasetByID(datasetID)
+func (s *Service) GetDatasetVersionFilename(_ context.Context, scope authz.CallerScope, datasetID, versionID int) (string, error) {
+	dataset, err := s.repo.getDatasetByIDScoped(datasetID, scope)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", fmt.Errorf("%w: dataset id: %d", consts.ErrNotFound, datasetID)
@@ -370,9 +408,23 @@ func (s *Service) GetDatasetVersionFilename(_ context.Context, datasetID, versio
 	return fmt.Sprintf("%s-%s", dataset.Name, version.Name), nil
 }
 
-func (s *Service) DownloadDatasetVersion(_ context.Context, zipWriter *zip.Writer, excludeRules []utils.ExculdeRule, versionID int) error {
+func (s *Service) DownloadDatasetVersion(_ context.Context, scope authz.CallerScope, zipWriter *zip.Writer, excludeRules []utils.ExculdeRule, versionID int) error {
 	if zipWriter == nil {
 		return fmt.Errorf("zip writer cannot be nil")
+	}
+
+	version, err := s.repo.getDatasetVersionByID(versionID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: dataset version id: %d", consts.ErrNotFound, versionID)
+		}
+		return fmt.Errorf("failed to get dataset version: %w", err)
+	}
+	if _, err := s.repo.getDatasetByIDScoped(version.DatasetID, scope); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: dataset version id: %d", consts.ErrNotFound, versionID)
+		}
+		return fmt.Errorf("failed to get dataset: %w", err)
 	}
 
 	datapacks, err := s.repo.ListInjectionsByDatasetVersionID(versionID, false)
@@ -387,7 +439,7 @@ func (s *Service) DownloadDatasetVersion(_ context.Context, zipWriter *zip.Write
 	return nil
 }
 
-func (s *Service) ManageDatasetVersionInjections(_ context.Context, req *ManageDatasetVersionInjectionReq, versionID int) (*DatasetVersionDetailResp, error) {
+func (s *Service) ManageDatasetVersionInjections(_ context.Context, scope authz.CallerScope, req *ManageDatasetVersionInjectionReq, versionID int) (*DatasetVersionDetailResp, error) {
 	if req == nil {
 		return nil, fmt.Errorf("manage dataset version injections request is nil")
 	}
@@ -401,6 +453,12 @@ func (s *Service) ManageDatasetVersionInjections(_ context.Context, req *ManageD
 				return fmt.Errorf("%w: dataset version id: %d", consts.ErrNotFound, versionID)
 			}
 			return fmt.Errorf("failed to get dataset version: %w", err)
+		}
+		if _, err := repo.getDatasetByIDScoped(version.DatasetID, scope); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: dataset version id: %d", consts.ErrNotFound, versionID)
+			}
+			return fmt.Errorf("failed to get dataset: %w", err)
 		}
 
 		if len(req.AddDatapacks) > 0 {
