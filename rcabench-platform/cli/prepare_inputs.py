@@ -10,6 +10,7 @@ from typing import Any
 
 import pandas as pd
 import requests
+import typer
 
 from rcabench_platform.v3.cli.main import app, logger, timeit
 from rcabench_platform.v3.internal.clients.clickhouse import (
@@ -300,7 +301,13 @@ def query_kube_info(namespace: str) -> dict[str, Any] | None:
 
 @app.command()
 @timeit()
-def run():
+def run(
+    allow_empty: bool = typer.Option(
+        False,
+        "--allow-empty",
+        help="Warn instead of failing when a required parquet has zero rows.",
+    ),
+):
     ping_clickhouse()
 
     base_url = os.environ.get("RCABENCH_BASE_URL")
@@ -409,7 +416,7 @@ def run():
         # the bucket free of half-written / invalid datapacks; for the
         # filesystem path it just inverts the order without changing
         # behaviour (validation reads the same files either way).
-        _, is_valid = valid(tempdir)
+        _, is_valid = valid(tempdir, allow_empty=allow_empty)
         if not is_valid:
             logger.error(
                 f"Output validation failed for staging dir {tempdir}. "
