@@ -424,7 +424,11 @@ func (h *Handler) BatchDeleteInjections(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	if httpx.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), &req)) {
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	if httpx.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), scope, &req)) {
 		return
 	}
 	dto.JSONResponse[any](c, http.StatusNoContent, "Injections deleted successfully", nil)

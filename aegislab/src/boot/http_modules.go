@@ -158,6 +158,14 @@ func chaosSystemWriterAdapter(w chaossystem.Writer) injection.ChaosSystemWriter 
 	return w
 }
 
+// executionCascaderAdapter bridges execution.Cascader into the narrow
+// injection.ExecutionCascader seam. Defined at the app level so injection
+// doesn't import execution (the reverse edge — execution → injection.Reader
+// — already exists).
+func executionCascaderAdapter(c execution.Cascader) injection.ExecutionCascader {
+	return c
+}
+
 func ExecutionInjectionOwnerModules() fx.Option {
 	return fx.Options(
 		chaossystem.Module,
@@ -175,6 +183,7 @@ func ExecutionInjectionOwnerModules() fx.Option {
 		blobclient.Module,
 		fx.Provide(chaosSystemWriterAdapter),
 		fx.Provide(newTaskCanceller),
+		fx.Provide(executionCascaderAdapter),
 	)
 }
 
@@ -183,5 +192,6 @@ func ProducerHTTPModules() fx.Option {
 		fx.Options(apiHTTPModules()...),
 		fx.Provide(chaosSystemWriterAdapter),
 		fx.Provide(newTaskCanceller),
+		fx.Provide(executionCascaderAdapter),
 	)
 }

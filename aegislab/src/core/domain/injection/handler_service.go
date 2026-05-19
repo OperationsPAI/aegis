@@ -22,7 +22,7 @@ type HandlerService interface {
 	GetInjection(context.Context, authz.CallerScope, int) (*InjectionDetailResp, error)
 	ManageLabels(context.Context, *ManageInjectionLabelReq, int) (*InjectionResp, error)
 	BatchManageLabels(context.Context, *BatchManageInjectionLabelReq) (*BatchManageInjectionLabelResp, error)
-	BatchDelete(context.Context, *BatchDeleteInjectionReq) error
+	BatchDelete(context.Context, authz.CallerScope, *BatchDeleteInjectionReq) error
 	Clone(context.Context, int, *CloneInjectionReq) (*InjectionDetailResp, error)
 	GetLogs(context.Context, int) (*InjectionLogsResp, error)
 	GetLogsFiltered(context.Context, int, *InjectionLogQueryReq) (*InjectionLogsFilteredResp, error)
