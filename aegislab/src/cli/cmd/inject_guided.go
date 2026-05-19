@@ -118,6 +118,15 @@ var (
 	guidedApplyPedestalTag   string
 	guidedApplyBenchmarkName string
 	guidedApplyBenchmarkTag  string
+
+	// §11 step 4 Round 3: feature-flagged cutover to aegis-chaos. Default OFF
+	// keeps the legacy backend submit path (today's 798-line flow) byte-for-
+	// byte unchanged; ON routes finalized guided cfgs through the chaos
+	// service's /v1beta/injections{,/batches}. Both paths coexist until the
+	// backend BatchCreate catalog read lands in Round 4.
+	guidedViaChaos          bool
+	guidedChaosInstance     string
+	guidedChaosChartVersion string
 )
 
 // injectGuidedCmd is the aegislab-aware wrapper around the chaos-experiment
@@ -483,7 +492,30 @@ func init() {
 	f.IntVar(&guidedCPUCount, "cpu-count", 0, "JVM CPU core count")
 	f.IntVar(&guidedStatusCode, "status-code", 0, "HTTP status code")
 
+	// §11 step 4 Round 3 cutover flags. --chaos-server reuses the persistent
+	// flag registered on `chaos` cobra parent (flagChaosServer) — declaring it
+	// again on `inject guided` lets the user pass it positionally without
+	// rebuilding the command tree.
+	f.BoolVar(&guidedViaChaos, "via-chaos", envBool("AEGIS_INJECT_VIA_CHAOS"),
+		"Route the finalized guided submit through aegis-chaos /v1beta/injections instead of the legacy backend (env: AEGIS_INJECT_VIA_CHAOS)")
+	f.StringVar(&flagChaosServer, "chaos-server", flagChaosServer,
+		"aegis-chaos service URL when --via-chaos is set (env: AEGIS_CHAOS_SERVER)")
+	f.StringVar(&guidedChaosInstance, "chaos-instance", "seed",
+		"Point catalog instance slot to address (seed manifests carry instance=seed)")
+	f.StringVar(&guidedChaosChartVersion, "chaos-chart-version", "seed-genesis",
+		"chart_version recorded against the catalog row (seed manifests carry seed-genesis)")
+
 	injectCmd.AddCommand(injectGuidedCmd)
+}
+
+// envBool reads a boolean env var. Empty / unparseable values fall back to false.
+func envBool(name string) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(name)))
+	switch v {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 // guidedResolveErr inspects a GuidedResponse for resolver errors or a
@@ -578,6 +610,25 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 			cfgs[i].Namespace = ""
 		}
 	}
+	// §11 step 4 Round 3 — when --via-chaos is on, route to the chaos service.
+	// requireAPIContext below is aegis-api-only; the chaos service uses its
+	// own URL and the same bearer token (see chaos_apiclient.go).
+	if guidedViaChaos {
+		opts := guidedApplyOptions{
+			PedestalName:  guidedApplyPedestalName,
+			PedestalTag:   guidedApplyPedestalTag,
+			BenchmarkName: guidedApplyBenchmarkName,
+			BenchmarkTag:  guidedApplyBenchmarkTag,
+		}
+		if opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
+			return usageErrorf("--via-chaos still requires --benchmark-name and --benchmark-tag (these populate caller_metadata.benchmark for the hook receiver)")
+		}
+		if flagChaosServer == "" {
+			return usageErrorf("--via-chaos requires --chaos-server (or AEGIS_CHAOS_SERVER)")
+		}
+		return submitGuidedViaChaos(cfgs, opts)
+	}
+
 	if err := requireAPIContext(true); err != nil {
 		return err
 	}
