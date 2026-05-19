@@ -119,21 +119,21 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 
 	var point Point
 	if err := s.DB.WithContext(ctx).Where("id = ?", c.PointID).Take(&point).Error; err != nil {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", fmt.Errorf("point %s: %w", c.PointID, err))
+		row := s.persistFailedChild(ctx, batchID, c, fmt.Errorf("point %s: %w", c.PointID, err))
 		return row, err
 	}
 	if point.Status != PointActive {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", ErrPointNotActive)
+		row := s.persistFailedChild(ctx, batchID, c, ErrPointNotActive)
 		return row, ErrPointNotActive
 	}
 
 	var capRow Capability
 	if err := s.DB.WithContext(ctx).Where("name = ?", point.CapabilityName).Take(&capRow).Error; err != nil {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", err)
+		row := s.persistFailedChild(ctx, batchID, c, err)
 		return row, err
 	}
 	if capRow.Status == CapDeprecated {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", ErrCapabilityUnsupported)
+		row := s.persistFailedChild(ctx, batchID, c, ErrCapabilityUnsupported)
 		return row, ErrCapabilityUnsupported
 	}
 	supported := false
@@ -144,17 +144,17 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 		}
 	}
 	if !supported {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", ErrCapabilityUnsupported)
+		row := s.persistFailedChild(ctx, batchID, c, ErrCapabilityUnsupported)
 		return row, ErrCapabilityUnsupported
 	}
 
 	sys, err := s.GetSystem(ctx, point.SystemName)
 	if err != nil {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", err)
+		row := s.persistFailedChild(ctx, batchID, c, err)
 		return row, err
 	}
 	if !sys.Enabled {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", ErrSystemDisabled)
+		row := s.persistFailedChild(ctx, batchID, c, ErrSystemDisabled)
 		return row, ErrSystemDisabled
 	}
 	sysCtx := SystemContext{Name: sys.Name, AppLabelKey: sys.AppLabelKey}
@@ -162,7 +162,7 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 	target := map[string]any(point.Target)
 	handle, err := s.Executor.DeriveHandle(capRow.Name, c.IdempotencyKey, target)
 	if err != nil {
-		row := s.persistFailedChild(ctx, batchID, c, point, "", err)
+		row := s.persistFailedChild(ctx, batchID, c, err)
 		return row, err
 	}
 
@@ -219,10 +219,9 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 // persistFailedChild lands a synthetic failed-child row when we can't even
 // get to executor.Apply (point not found, capability unsupported, etc.).
 // Returns the persisted row; on DB-failure-of-the-DB-write it returns nil.
-func (s *Manager) persistFailedChild(ctx context.Context, batchID string, c CreateBatchChild, point Point, handle string, cause error) *Injection {
+func (s *Manager) persistFailedChild(ctx context.Context, batchID string, c CreateBatchChild, cause error) *Injection {
 	now := time.Now().UTC()
 	bid := batchID
-	pointID := c.PointID
 	executorName := ""
 	if s.Executor != nil {
 		executorName = s.Executor.Name()
@@ -234,11 +233,10 @@ func (s *Manager) persistFailedChild(ctx context.Context, batchID string, c Crea
 	row := Injection{
 		ID:             ulid.Make().String(),
 		BatchID:        &bid,
-		PointID:        pointID,
+		PointID:        c.PointID,
 		Params:         JSONMap(params),
 		IdempotencyKey: c.IdempotencyKey,
 		ExecutorName:   executorName,
-		ExecutorHandle: handle,
 		Status:         StatusFailed,
 		Diagnostics:    JSONMap{"error": cause.Error()},
 		CallerMetadata: JSONMap(c.CallerMetadata),
@@ -250,7 +248,6 @@ func (s *Manager) persistFailedChild(ctx context.Context, batchID string, c Crea
 		logrus.WithError(err).WithField("batch_id", batchID).Warn("chaos: persist failed-child row")
 		return nil
 	}
-	_ = point // reserved for future diagnostics enrichment
 	return &row
 }
 

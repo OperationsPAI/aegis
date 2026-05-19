@@ -104,4 +104,13 @@ func resetChaosFlags() {
 	chaosInjectIdemKey = ""
 	chaosInjectCallerMeta = ""
 	chaosInjectExecutor = ""
+	chaosBatchChildrenFile = ""
+	chaosBatchIdemKey = ""
+	chaosBatchCallerMeta = ""
+	chaosPointsSystem = ""
+	chaosPointsService = ""
+	chaosPointsCapability = ""
+	chaosPointsStatus = ""
+	chaosPointsLimit = 0
+	chaosPointsOffset = 0
 }
