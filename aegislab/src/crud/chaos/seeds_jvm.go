@@ -178,6 +178,9 @@ func jvmMethodLatencyParamSchema() JSONMap {
 	}
 }
 
+// exception_mode (default|random) from capgen is intentionally omitted:
+// the renderer always emits jvmDefaultException(), so admitting the knob
+// in the schema would silently fall back to default for "random".
 func jvmMethodExceptionParamSchema() JSONMap {
 	return JSONMap{
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",
@@ -185,16 +188,14 @@ func jvmMethodExceptionParamSchema() JSONMap {
 		"additionalProperties": false,
 		"required":             []any{},
 		"properties": map[string]any{
-			"exception_mode": map[string]any{
-				"type":    "string",
-				"enum":    []any{"default", "random"},
-				"default": "default",
-			},
 			"duration_s": durationParam(),
 		},
 	}
 }
 
+// value_mode (default|random) from capgen is intentionally omitted: the
+// renderer only branches on return_type, so "random" would silently
+// no-op.
 func jvmMethodReturnParamSchema() JSONMap {
 	return JSONMap{
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",
@@ -205,11 +206,6 @@ func jvmMethodReturnParamSchema() JSONMap {
 			"return_type": map[string]any{
 				"type": "string",
 				"enum": []any{"string", "int"},
-			},
-			"value_mode": map[string]any{
-				"type":    "string",
-				"enum":    []any{"default", "random"},
-				"default": "default",
 			},
 			"duration_s": durationParam(),
 		},

@@ -212,6 +212,25 @@ func TestJVMRenderersActionMapping(t *testing.T) {
 	}
 }
 
+// TestDeriveHandleNamespaceOnly_JVM mirrors the §8 contract from
+// renderer_network_test.go for the JVM family: DeriveHandle must accept
+// namespace-only target (full target shape is enforced at Apply). Even
+// method-targeted caps that require class+method at Apply must NOT
+// require them for handle derivation — otherwise a row that failed mid-
+// Apply has no handle and is unrecoverable (ADR-0004).
+func TestDeriveHandleNamespaceOnly_JVM(t *testing.T) {
+	e := &ChaosMeshExecutor{}
+	target := map[string]any{"namespace": "ts"}
+	for _, cap := range jvmCapabilities {
+		if _, err := e.DeriveHandle(cap, "key-"+cap, target); err != nil {
+			t.Errorf("%s DeriveHandle with namespace-only target: %v", cap, err)
+		}
+		if _, err := e.DeriveHandle(cap, "key", map[string]any{}); err == nil {
+			t.Errorf("%s DeriveHandle should reject empty target", cap)
+		}
+	}
+}
+
 // TestJVMTargetValidation covers boundary checks: namespace/app required
 // for all, class/method required for every cap EXCEPT jvm_gc.
 func TestJVMTargetValidation(t *testing.T) {
