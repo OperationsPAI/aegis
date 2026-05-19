@@ -1,0 +1,216 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-admin-order-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-admin-order-service"
+        container: "ts-admin-order-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-admin-order-service"
+        container: "ts-admin-order-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-order-service"
+        method: "PUT"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.AdminOrderApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.controller.AdminOrderController"
+        method: "addOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.controller.AdminOrderController"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.controller.AdminOrderController"
+        method: "getAllOrders"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.controller.AdminOrderController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.controller.AdminOrderController"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.service.AdminOrderServiceImpl"
+        method: "addOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.service.AdminOrderServiceImpl"
+        method: "deleteOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.service.AdminOrderServiceImpl"
+        method: "getAllOrders"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.service.AdminOrderServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-order-service"
+        class: "adminorder.service.AdminOrderServiceImpl"
+        method: "updateOrder"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-admin-order-service"
+        container: "ts-admin-order-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-admin-order-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-admin-order-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-admin-order-service"
+        container: "ts-admin-order-service"
+        namespace: "ts"

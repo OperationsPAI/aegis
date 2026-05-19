@@ -1,0 +1,4 @@
+# Re-include ts/ — aegislab/.gitignore has a bare `ts` rule (preexisting,
+# unrelated) that would otherwise drop the ts benchmark manifest subtree.
+!ts/
+!ts/**

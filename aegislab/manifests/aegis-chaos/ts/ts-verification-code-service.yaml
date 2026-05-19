@@ -1,0 +1,98 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-verification-code-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-verification-code-service"
+        container: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        container: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.VerifyCodeApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "imageCode"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getImageCode"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getRandColor"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "CookieUtil"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "addCookie"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "getCookieByName"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "readCookieMap"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        container: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-verification-code-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-verification-code-service"
+        container: "ts-verification-code-service"
+        namespace: "ts"

@@ -1,0 +1,162 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-security-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-security-service"
+        container: "ts-security-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-security-service"
+        container: "ts-security-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-security-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/security/*/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-security-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/*/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-security-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/security/*/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-security-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/security/*/*"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.SecurityApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.controller.SecurityController"
+        method: "check"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.controller.SecurityController"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.controller.SecurityController"
+        method: "delete"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.controller.SecurityController"
+        method: "findAllSecurityConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.controller.SecurityController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.controller.SecurityController"
+        method: "update"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "addNewSecurityConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "check"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "deleteSecurityConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "findAllSecurityConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "getSecurityOrderInfoFromOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "getSecurityOrderOtherInfoFromOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-security-service"
+        class: "security.service.SecurityServiceImpl"
+        method: "modifySecurityConfig"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-security-service"
+        container: "ts-security-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-security-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-security-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-security-service"
+        container: "ts-security-service"
+        namespace: "ts"

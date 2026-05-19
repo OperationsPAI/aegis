@@ -1,0 +1,116 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-config-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-config-service"
+        container: "ts-config-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-config-service"
+        container: "ts-config-service"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.ConfigApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.controller.ConfigController"
+        method: "createConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.controller.ConfigController"
+        method: "deleteConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.controller.ConfigController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.controller.ConfigController"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.controller.ConfigController"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.controller.ConfigController"
+        method: "updateConfig"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.service.ConfigServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.service.ConfigServiceImpl"
+        method: "delete"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.service.ConfigServiceImpl"
+        method: "query"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.service.ConfigServiceImpl"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-config-service"
+        class: "config.service.ConfigServiceImpl"
+        method: "update"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-config-service"
+        container: "ts-config-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-config-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-config-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-config-service"
+        container: "ts-config-service"
+        namespace: "ts"

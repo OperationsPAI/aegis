@@ -1,0 +1,330 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-travel2-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-travel2-service"
+        container: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-travel2-service"
+        container: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/trainservice/trains/byName/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travels"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats/left_tickets"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/trainservice/trains/byName/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travel"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/basicservice/basic/travels"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-travel2-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/seatservice/seats/left_tickets"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.Travel2Application"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "createTrip"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "deleteTrip"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "getTripsByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "queryInfo"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.controller.Travel2Controller"
+        method: "updateTrip"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.entity.AdminTrip"
+        method: "AdminTrip"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.entity.Travel"
+        method: "Travel"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.entity.Trip"
+        method: "Trip"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "afterToday"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "delete"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getRestTicketNumber"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getTickets"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getTicketsByBatch"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "getTripByRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "query"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "queryByBatch"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "setResponse"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-travel2-service"
+        class: "travel2.service.TravelServiceImpl"
+        method: "update"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-travel2-service"
+        container: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-travel2-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-travel2-service"
+        container: "ts-travel2-service"
+        namespace: "ts"

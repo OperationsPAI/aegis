@@ -1,0 +1,160 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-execute-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-execute-service"
+        container: "ts-execute-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-execute-service"
+        container: "ts-execute-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/status/*/2"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/status/*/6"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/status/*/2"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderOtherService/orderOther/status/*/6"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-execute-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/orderservice/order/*"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.ExecuteApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.controller.ExecuteControlller"
+        method: "collectTicket"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.controller.ExecuteControlller"
+        method: "executeTicket"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.controller.ExecuteControlller"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.serivce.ExecuteServiceImpl"
+        method: "executeOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.serivce.ExecuteServiceImpl"
+        method: "executeOrderOther"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.serivce.ExecuteServiceImpl"
+        method: "getOrderByIdFromOrder"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.serivce.ExecuteServiceImpl"
+        method: "getOrderByIdFromOrderOther"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.serivce.ExecuteServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.serivce.ExecuteServiceImpl"
+        method: "ticketCollect"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-execute-service"
+        class: "execute.serivce.ExecuteServiceImpl"
+        method: "ticketExecute"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-execute-service"
+        container: "ts-execute-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-execute-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-execute-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-execute-service"
+        container: "ts-execute-service"
+        namespace: "ts"

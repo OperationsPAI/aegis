@@ -1,0 +1,154 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-admin-route-service"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "ts-admin-route-service"
+        container: "ts-admin-route-service"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "ts-admin-route-service"
+        container: "ts-admin-route-service"
+        namespace: "ts"
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-route-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-route-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-route-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes"
+        port: 8080
+    - capability: "http_request_abort"
+      target:
+        app: "ts-admin-route-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/stationservice/stations/idlist"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-route-service"
+        method: "DELETE"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes/*"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-route-service"
+        method: "GET"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-route-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/routeservice/routes"
+        port: 8080
+    - capability: "http_request_delay"
+      target:
+        app: "ts-admin-route-service"
+        method: "POST"
+        namespace: "ts"
+        path: "/api/v1/stationservice/stations/idlist"
+        port: 8080
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.AdminRouteApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        method: "addRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        method: "deleteRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        method: "getAllRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.controller.AdminRouteController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        method: "checkStationsExists"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        method: "createAndModifyRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        method: "deleteRoute"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        method: "getAllRoutes"
+        namespace: "ts"
+    - capability: "jvm_method_latency"
+      target:
+        app: "ts-admin-route-service"
+        class: "adminroute.service.AdminRouteServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "ts-admin-route-service"
+        container: "ts-admin-route-service"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "ts-admin-route-service"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "ts-admin-route-service"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "ts-admin-route-service"
+        container: "ts-admin-route-service"
+        namespace: "ts"

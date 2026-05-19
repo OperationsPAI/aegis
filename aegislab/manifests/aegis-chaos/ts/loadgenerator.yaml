@@ -1,0 +1,38 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "loadgenerator"
+  system: "ts"
+spec:
+  replace_scope: "service"
+  points:
+    - capability: "container_kill"
+      target:
+        app: "loadgenerator"
+        container: "loadgenerator"
+        namespace: "ts"
+    - capability: "cpu_stress"
+      target:
+        app: "loadgenerator"
+        container: "loadgenerator"
+        namespace: "ts"
+    - capability: "memory_stress"
+      target:
+        app: "loadgenerator"
+        container: "loadgenerator"
+        namespace: "ts"
+    - capability: "pod_failure"
+      target:
+        app: "loadgenerator"
+        namespace: "ts"
+    - capability: "pod_kill"
+      target:
+        app: "loadgenerator"
+        namespace: "ts"
+    - capability: "time_skew"
+      target:
+        app: "loadgenerator"
+        container: "loadgenerator"
+        namespace: "ts"
