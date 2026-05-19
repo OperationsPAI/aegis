@@ -1,6 +1,7 @@
 package project
 
 import (
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -9,6 +10,8 @@ import (
 
 	"gorm.io/gorm"
 )
+
+var _ = authz.SystemScope
 
 type Repository struct {
 	db *gorm.DB
