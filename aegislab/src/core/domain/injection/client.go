@@ -3,6 +3,7 @@ package injection
 import (
 	"context"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -17,8 +18,8 @@ type Reader interface {
 // Writer exposes the injection-owned runtime writes that consumer code depends on.
 type Writer interface {
 	CreateInjectionRecord(context.Context, *RuntimeCreateInjectionReq) (*dto.InjectionItem, error)
-	UpdateInjectionState(context.Context, *RuntimeUpdateInjectionStateReq) error
-	UpdateInjectionTimestamps(context.Context, *RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error)
+	UpdateInjectionState(context.Context, authz.CallerScope, *RuntimeUpdateInjectionStateReq) error
+	UpdateInjectionTimestamps(context.Context, authz.CallerScope, *RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error)
 }
 
 func AsReader(service *Service) Reader { return service }

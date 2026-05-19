@@ -25,8 +25,8 @@ type executionOwner interface {
 // injectionOwner is the local api-gateway-side injection module surface.
 type injectionOwner interface {
 	CreateInjectionRecord(context.Context, *injection.RuntimeCreateInjectionReq) (*dto.InjectionItem, error)
-	UpdateInjectionState(context.Context, *injection.RuntimeUpdateInjectionStateReq) error
-	UpdateInjectionTimestamps(context.Context, *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error)
+	UpdateInjectionState(context.Context, authz.CallerScope, *injection.RuntimeUpdateInjectionStateReq) error
+	UpdateInjectionTimestamps(context.Context, authz.CallerScope, *injection.RuntimeUpdateInjectionTimestampReq) (*dto.InjectionItem, error)
 }
 
 type intakeServer struct {
@@ -97,7 +97,7 @@ func (s *intakeServer) UpdateInjectionState(ctx context.Context, req *runtimev1.
 	if err != nil {
 		return nil, err
 	}
-	if err := s.injection.UpdateInjectionState(ctx, body); err != nil {
+	if err := s.injection.UpdateInjectionState(ctx, authz.SystemScope(), body); err != nil {
 		return nil, err
 	}
 	return encodeBody(map[string]any{"ok": true})
@@ -108,7 +108,7 @@ func (s *intakeServer) UpdateInjectionTimestamps(ctx context.Context, req *runti
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.injection.UpdateInjectionTimestamps(ctx, body)
+	resp, err := s.injection.UpdateInjectionTimestamps(ctx, authz.SystemScope(), body)
 	if err != nil {
 		return nil, err
 	}
