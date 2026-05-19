@@ -400,9 +400,7 @@ def run(
         }
         save_json(env_params, path=tempdir / "env.json")
 
-        datapack_name = (
-            output_path.rsplit("/", 1)[-1] if isinstance(output_path, str) else output_path.name
-        )
+        datapack_name = output_path.rsplit("/", 1)[-1] if isinstance(output_path, str) else output_path.name
         injection = query_injection(base_url, datapack_name)
         if injection:
             save_json(injection, path=tempdir / "injection.json")

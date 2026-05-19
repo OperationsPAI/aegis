@@ -160,9 +160,7 @@ class SQLModelUtils:
                 if not SQLModelUtils._column_exists(conn, table_name, column_name):
                     continue
                 try:
-                    conn.execute(
-                        text(f"UPDATE {table_name} SET {column_name} = NULL WHERE {column_name} = 'null'")
-                    )
+                    conn.execute(text(f"UPDATE {table_name} SET {column_name} = NULL WHERE {column_name} = 'null'"))
                     conn.commit()
                 except Exception as e:
                     logger.debug(f"Null-string repair skipped for {table_name}.{column_name}: {e}")

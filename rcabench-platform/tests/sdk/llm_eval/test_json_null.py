@@ -54,9 +54,7 @@ def test_none_writes_sql_null_not_string(monkeypatch):
         ).fetchone()
         assert eval_row == (1, 1, 1, "null", "null", "null"), eval_row
 
-        data_row = c.execute(
-            "SELECT meta IS NULL, tags IS NULL, typeof(meta), typeof(tags) FROM data"
-        ).fetchone()
+        data_row = c.execute("SELECT meta IS NULL, tags IS NULL, typeof(meta), typeof(tags) FROM data").fetchone()
         assert data_row == (1, 1, "null", "null"), data_row
     finally:
         c.close()
@@ -99,9 +97,7 @@ def test_migration_repairs_legacy_null_strings(monkeypatch):
             " FROM evaluation_data WHERE exp_id='legacy'"
         ).fetchone()
         assert row == (1, 1, 1, 1), row
-        row = c.execute(
-            "SELECT meta IS NULL, tags IS NULL FROM data WHERE dataset='d'"
-        ).fetchone()
+        row = c.execute("SELECT meta IS NULL, tags IS NULL FROM data WHERE dataset='d'").fetchone()
         assert row == (1, 1), row
     finally:
         c.close()
