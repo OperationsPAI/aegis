@@ -1,7 +1,10 @@
+import atexit
 import os
+import shutil
+import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import pandas as pd
 import typer
@@ -22,14 +25,41 @@ from ..sdk.utils.serde import load_json, save_csv
 app = typer.Typer()
 
 
+def _stage_s3_input_locally(s3_url: str) -> Path:
+    import fsspec
+
+    base = s3_url.rstrip("/")
+    endpoint = os.environ.get("AWS_ENDPOINT_URL_S3") or os.environ.get("AWS_ENDPOINT_URL")
+    storage_options: dict[str, Any] = {"client_kwargs": {"endpoint_url": endpoint}} if endpoint else {}
+
+    fs, urlpath = fsspec.core.url_to_fs(base, **storage_options)
+    name = base.rsplit("/", 1)[-1]
+
+    staging_root = Path(tempfile.mkdtemp(prefix="aegis-datapack-"))
+    atexit.register(shutil.rmtree, str(staging_root), ignore_errors=True)
+
+    local_dir = staging_root / name
+    local_dir.mkdir(parents=True, exist_ok=True)
+    fs.get(f"{str(urlpath).rstrip('/')}/", f"{str(local_dir).rstrip('/')}/", recursive=True)
+
+    logger.info("Staged s3 datapack from {} to {}", s3_url, local_dir)
+    return local_dir
+
+
 @app.command()
 @timeit()
 def run(
     algorithm: Annotated[str, typer.Option("-a", "--algorithm", envvar="ALGORITHM")],
-    input_path: Annotated[Path, typer.Option("-i", "--input-path", envvar="INPUT_PATH")],
+    input_path: Annotated[str, typer.Option("-i", "--input-path", envvar="INPUT_PATH")],
     output_path: Annotated[Path, typer.Option("-o", "--output-path", envvar="OUTPUT_PATH")],
 ):
     assert algorithm in global_algorithm_registry(), f"Unknown algorithm: {algorithm}"
+
+    if "://" in input_path:
+        input_path = _stage_s3_input_locally(input_path)
+    else:
+        input_path = Path(input_path)
+
     assert input_path.is_dir(), f"input_path: {input_path}"
     assert output_path.is_dir(), f"output_path: {output_path}"
 
@@ -105,4 +135,4 @@ def local_test(algorithm: str, datapack: str):
     output_path = get_config().temp / "run_exp_platform" / datapack / algorithm
     output_path.mkdir(parents=True, exist_ok=True)
 
-    run(algorithm, input_path, output_path)
+    run(algorithm, str(input_path), output_path)
