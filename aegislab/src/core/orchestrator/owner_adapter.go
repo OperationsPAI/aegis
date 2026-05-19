@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"aegis/platform/authz"
 	"aegis/platform/dto"
 	"aegis/clients/runtime"
 	execution "aegis/core/domain/execution"
@@ -42,7 +43,7 @@ func (a localExecutionOwner) GetExecution(ctx context.Context, executionID int) 
 	if a.svc == nil {
 		return nil, fmt.Errorf("missing execution owner service")
 	}
-	return a.svc.GetExecution(ctx, executionID)
+	return a.svc.GetExecution(ctx, authz.SystemScope(), executionID)
 }
 
 func (a localExecutionOwner) UpdateExecutionState(ctx context.Context, req *execution.RuntimeUpdateExecutionStateReq) error {

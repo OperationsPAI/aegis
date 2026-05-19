@@ -1,9 +1,13 @@
 package execution
 
-import "context"
+import (
+	"context"
+
+	"aegis/platform/authz"
+)
 
 type Reader interface {
-	GetExecution(context.Context, int) (*ExecutionDetailResp, error)
+	GetExecution(context.Context, authz.CallerScope, int) (*ExecutionDetailResp, error)
 	ListEvaluationExecutionsByDatapack(context.Context, *EvaluationExecutionsByDatapackReq) ([]EvaluationExecutionItem, error)
 	ListEvaluationExecutionsByDataset(context.Context, *EvaluationExecutionsByDatasetReq) ([]EvaluationExecutionItem, error)
 }

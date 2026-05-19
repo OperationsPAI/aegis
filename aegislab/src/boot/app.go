@@ -1,6 +1,7 @@
 package app
 
 import (
+	authz "aegis/platform/authz"
 	buildkit "aegis/platform/buildkit"
 	chinfra "aegis/platform/clickhouse"
 	config "aegis/platform/configfx"
@@ -57,6 +58,7 @@ func DataOptions() fx.Option {
 	return fx.Options(
 		db.Module,
 		redis.Module,
+		authz.Module,
 	)
 }
 

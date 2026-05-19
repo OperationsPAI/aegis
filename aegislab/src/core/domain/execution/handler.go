@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
@@ -17,11 +18,25 @@ import (
 )
 
 type Handler struct {
-	service HandlerService
+	service  HandlerService
+	resolver authz.ProjectMembershipResolver
 }
 
-func NewHandler(service HandlerService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service HandlerService, resolver authz.ProjectMembershipResolver) *Handler {
+	return &Handler{service: service, resolver: resolver}
+}
+
+func (h *Handler) scope(c *gin.Context) (authz.CallerScope, bool) {
+	s, err := authz.ScopeFromGinContext(c, h.resolver)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == authz.ErrMissingAuth {
+			status = http.StatusUnauthorized
+		}
+		dto.ErrorResponse(c, status, err.Error())
+		return authz.CallerScope{}, false
+	}
+	return s, true
 }
 
 // ListProjectExecutions lists all algorithm executions for a project
@@ -99,7 +114,11 @@ func (h *Handler) ListExecutions(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	resp, err := h.service.ListExecutions(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.ListExecutions(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -185,7 +204,11 @@ func (h *Handler) GetExecution(c *gin.Context) {
 	if !ok {
 		return
 	}
-	resp, err := h.service.GetExecution(c.Request.Context(), id)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.GetExecution(c.Request.Context(), scope, id)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}
@@ -316,7 +339,11 @@ func (h *Handler) CompareExecutions(c *gin.Context) {
 		dto.ErrorResponse(c, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	resp, err := h.service.CompareExecutions(c.Request.Context(), &req)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.CompareExecutions(c.Request.Context(), scope, &req)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

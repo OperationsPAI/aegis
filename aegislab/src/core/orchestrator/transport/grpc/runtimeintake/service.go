@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"aegis/platform/authz"
 	"aegis/platform/dto"
 	execution "aegis/core/domain/execution"
 	injection "aegis/core/domain/injection"
@@ -18,7 +19,7 @@ import (
 type executionOwner interface {
 	CreateExecutionRecord(context.Context, *execution.RuntimeCreateExecutionReq) (int, error)
 	UpdateExecutionState(context.Context, *execution.RuntimeUpdateExecutionStateReq) error
-	GetExecution(context.Context, int) (*execution.ExecutionDetailResp, error)
+	GetExecution(context.Context, authz.CallerScope, int) (*execution.ExecutionDetailResp, error)
 }
 
 // injectionOwner is the local api-gateway-side injection module surface.
@@ -61,7 +62,7 @@ func (s *intakeServer) GetExecution(ctx context.Context, req *runtimev1.StructRe
 	if !ok {
 		return nil, fmt.Errorf("intake GetExecution: missing execution_id")
 	}
-	resp, err := s.execution.GetExecution(ctx, int(idValue))
+	resp, err := s.execution.GetExecution(ctx, authz.SystemScope(), int(idValue))
 	if err != nil {
 		return nil, err
 	}
