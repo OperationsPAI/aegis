@@ -97,3 +97,59 @@ type ChaosImportPointsResp struct {
 	DryRun     bool     `json:"dry_run"`
 	PointIDs   []string `json:"point_ids"`
 }
+
+// ChaosCreateBatchChildReq is one child entry inside a batch submission.
+type ChaosCreateBatchChildReq struct {
+	PointID        string         `json:"point_id"                  example:"step5acart11111"`
+	Params         map[string]any `json:"params"`
+	IdempotencyKey string         `json:"idempotency_key"           example:"client-1700000000-c0"`
+	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`
+	ExecutorPin    string         `json:"executor_pin,omitempty"`
+}
+
+// ChaosCreateInjectionBatchReq is the request body for
+// POST /v1beta/injection-batches. Each child carries its own idempotency_key;
+// the batch-level key gates re-submission of the whole envelope.
+type ChaosCreateInjectionBatchReq struct {
+	BatchIdempotencyKey string                     `json:"batch_idempotency_key" binding:"required" example:"batch-1700000000"`
+	BatchCallerMetadata map[string]any             `json:"batch_caller_metadata,omitempty"`
+	Children            []ChaosCreateBatchChildReq `json:"children"               binding:"required"`
+}
+
+// ChaosInjectionBatchResp is the persisted Batch row returned by create / get /
+// destroy, together with all known children at read time.
+type ChaosInjectionBatchResp struct {
+	ID                  string               `json:"id"`
+	IdempotencyKey      string               `json:"idempotency_key"`
+	AggregatedStatus    string               `json:"aggregated_status"`
+	BatchCallerMetadata map[string]any       `json:"batch_caller_metadata,omitempty"`
+	Ts                  time.Time            `json:"ts"`
+	StartedAt           *time.Time           `json:"started_at,omitempty"`
+	FinishedAt          *time.Time           `json:"finished_at,omitempty"`
+	WebhookAttemptedAt  *time.Time           `json:"webhook_attempted_at,omitempty"`
+	WebhookError        string               `json:"webhook_error,omitempty"`
+	Children            []ChaosInjectionResp `json:"children"`
+}
+
+// ChaosPointResp is a row in the /v1beta/systems/{sys}/points listing.
+type ChaosPointResp struct {
+	ID             string         `json:"id"`
+	SystemName     string         `json:"system_name"`
+	ServiceID      *int64         `json:"service_id,omitempty"`
+	ServiceName    string         `json:"service_name,omitempty"`
+	CapabilityName string         `json:"capability_name"`
+	Target         map[string]any `json:"target"`
+	ParamOverrides map[string]any `json:"param_overrides,omitempty"`
+	Source         string         `json:"source"`
+	Status         string         `json:"status"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+// ChaosListPointsResp is the paged listing returned by GET /v1beta/systems/{sys}/points.
+type ChaosListPointsResp struct {
+	Points []ChaosPointResp `json:"points"`
+	Total  int64            `json:"total"`
+	Limit  int              `json:"limit"`
+	Offset int              `json:"offset"`
+}

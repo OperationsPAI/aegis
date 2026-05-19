@@ -156,6 +156,102 @@ func (w *WebhookSender) recordAttempt(ctx context.Context, id string, attemptErr
 	}
 }
 
+type batchChildPayload struct {
+	InjectionID    string          `json:"injection_id"`
+	PointID        string          `json:"point_id"`
+	Status         string          `json:"status"`
+	StartedAt      string          `json:"started_at,omitempty"`
+	FinishedAt     string          `json:"finished_at,omitempty"`
+	Groundtruth    json.RawMessage `json:"groundtruth,omitempty"`
+	Diagnostics    json.RawMessage `json:"diagnostics_brief,omitempty"`
+	CallerMetadata json.RawMessage `json:"caller_metadata,omitempty"`
+}
+
+type batchPayload struct {
+	BatchID             string              `json:"batch_id"`
+	IdempotencyKey      string              `json:"idempotency_key"`
+	AggregatedStatus    string              `json:"aggregated_status"`
+	StartedAt           string              `json:"started_at,omitempty"`
+	FinishedAt          string              `json:"finished_at,omitempty"`
+	ChildResults        []batchChildPayload `json:"child_results"`
+	BatchCallerMetadata json.RawMessage     `json:"batch_caller_metadata,omitempty"`
+}
+
+// FireBatch posts the §10.2 batch envelope to /api/v1/hooks/chaos-batch.
+// Same retry/timeout policy as singleton Fire.
+func (w *WebhookSender) FireBatch(ctx context.Context, batch *InjectionBatch, children []Injection) error {
+	if w == nil || w.backendURL == "" {
+		return errWebhookDisabled
+	}
+
+	payload := batchPayload{
+		BatchID:             batch.ID,
+		IdempotencyKey:      batch.IdempotencyKey,
+		AggregatedStatus:    batch.AggregatedStatus,
+		BatchCallerMetadata: jsonOrNull(batch.BatchCallerMetadata),
+		ChildResults:        make([]batchChildPayload, 0, len(children)),
+	}
+	if batch.StartedAt != nil {
+		payload.StartedAt = batch.StartedAt.UTC().Format(time.RFC3339)
+	}
+	if batch.FinishedAt != nil {
+		payload.FinishedAt = batch.FinishedAt.UTC().Format(time.RFC3339)
+	}
+	for _, c := range children {
+		cp := batchChildPayload{
+			InjectionID:    c.ID,
+			PointID:        c.PointID,
+			Status:         c.Status,
+			Groundtruth:    jsonOrNull(c.Groundtruth),
+			Diagnostics:    jsonOrNull(c.Diagnostics),
+			CallerMetadata: jsonOrNull(c.CallerMetadata),
+		}
+		if c.StartedAt != nil {
+			cp.StartedAt = c.StartedAt.UTC().Format(time.RFC3339)
+		}
+		if c.FinishedAt != nil {
+			cp.FinishedAt = c.FinishedAt.UTC().Format(time.RFC3339)
+		}
+		payload.ChildResults = append(payload.ChildResults, cp)
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal batch payload: %w", err)
+	}
+
+	url := w.backendURL + "/api/v1/hooks/chaos-batch"
+	var lastErr error
+	for attempt := 0; attempt < webhookMaxAttempts; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(webhookBackoff[attempt-1]):
+			}
+		}
+		lastErr = w.attempt(ctx, url, body)
+		w.recordBatchAttempt(ctx, batch.ID, lastErr)
+		if lastErr == nil {
+			return nil
+		}
+	}
+	return lastErr
+}
+
+func (w *WebhookSender) recordBatchAttempt(ctx context.Context, id string, attemptErr error) {
+	now := time.Now().UTC()
+	updates := map[string]any{"webhook_attempted_at": &now}
+	if attemptErr == nil {
+		updates["webhook_error"] = ""
+	} else {
+		updates["webhook_error"] = attemptErr.Error()
+	}
+	if err := w.db.WithContext(ctx).Model(&InjectionBatch{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		w.logger.WithError(err).WithField("id", id).Warn("chaos webhook: record batch attempt")
+	}
+}
+
 func jsonOrNull(m JSONMap) json.RawMessage {
 	if m == nil {
 		return nil

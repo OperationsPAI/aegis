@@ -18788,6 +18788,165 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1beta/injection-batches": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create (or return the existing batch for the same batch_idempotency_key) an InjectionBatch and its children.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Submit a chaos injection batch",
+                "operationId": "chaos_create_injection_batch",
+                "parameters": [
+                    {
+                        "description": "Create-batch request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chaos.ChaosCreateInjectionBatchReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Batch accepted",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosInjectionBatchResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
+        "/v1beta/injection-batches/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetch the persisted InjectionBatch row and its children.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Get a chaos injection batch",
+                "operationId": "chaos_get_injection_batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Batch id (ULID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Batch found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosInjectionBatchResp"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "404": {
+                        "description": "Batch not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cancel a batch and all non-terminal children.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Destroy a chaos injection batch",
+                "operationId": "chaos_delete_injection_batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Batch id (ULID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Batch cancelled",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosInjectionBatchResp"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "404": {
+                        "description": "Batch not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
         "/v1beta/injections": {
             "post": {
                 "security": [
@@ -19074,6 +19233,92 @@ const docTemplate = `{
                         "description": "System registered",
                         "schema": {
                             "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosSystemResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
+        "/v1beta/systems/{sys}/points": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List Points filtered by service / capability / status with limit/offset paging.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "List chaos Points for a system",
+                "operationId": "chaos_list_system_points",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System name",
+                        "name": "sys",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by service name",
+                        "name": "service",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by capability name",
+                        "name": "capability",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Point status (active / superseded / deprecated)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 100, max 500)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page offset (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Points list",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosListPointsResp"
                         }
                     },
                     "400": {
@@ -20033,6 +20278,53 @@ const docTemplate = `{
                 }
             }
         },
+        "chaos.ChaosCreateBatchChildReq": {
+            "type": "object",
+            "properties": {
+                "caller_metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "executor_pin": {
+                    "type": "string"
+                },
+                "idempotency_key": {
+                    "type": "string",
+                    "example": "client-1700000000-c0"
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "point_id": {
+                    "type": "string",
+                    "example": "step5acart11111"
+                }
+            }
+        },
+        "chaos.ChaosCreateInjectionBatchReq": {
+            "type": "object",
+            "required": [
+                "batch_idempotency_key",
+                "children"
+            ],
+            "properties": {
+                "batch_caller_metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "batch_idempotency_key": {
+                    "type": "string",
+                    "example": "batch-1700000000"
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/chaos.ChaosCreateBatchChildReq"
+                    }
+                }
+            }
+        },
         "chaos.ChaosCreateInjectionReq": {
             "type": "object",
             "properties": {
@@ -20144,6 +20436,45 @@ const docTemplate = `{
                 }
             }
         },
+        "chaos.ChaosInjectionBatchResp": {
+            "type": "object",
+            "properties": {
+                "aggregated_status": {
+                    "type": "string"
+                },
+                "batch_caller_metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/chaos.ChaosInjectionResp"
+                    }
+                },
+                "finished_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "ts": {
+                    "type": "string"
+                },
+                "webhook_attempted_at": {
+                    "type": "string"
+                },
+                "webhook_error": {
+                    "type": "string"
+                }
+            }
+        },
         "chaos.ChaosInjectionResp": {
             "type": "object",
             "properties": {
@@ -20203,6 +20534,66 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "webhook_error": {
+                    "type": "string"
+                }
+            }
+        },
+        "chaos.ChaosListPointsResp": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/chaos.ChaosPointResp"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "chaos.ChaosPointResp": {
+            "type": "object",
+            "properties": {
+                "capability_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "param_overrides": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "service_id": {
+                    "type": "integer"
+                },
+                "service_name": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "system_name": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -23230,6 +23621,31 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GenericResponse-chaos_ChaosInjectionBatchResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosInjectionBatchResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.GenericResponse-chaos_ChaosInjectionResp": {
             "type": "object",
             "properties": {
@@ -23242,6 +23658,31 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/chaos.ChaosInjectionResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.GenericResponse-chaos_ChaosListPointsResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosListPointsResp"
                         }
                     ]
                 },

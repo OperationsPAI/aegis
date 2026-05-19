@@ -573,6 +573,39 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  chaos.ChaosCreateBatchChildReq:
+    properties:
+      caller_metadata:
+        additionalProperties: {}
+        type: object
+      executor_pin:
+        type: string
+      idempotency_key:
+        example: client-1700000000-c0
+        type: string
+      params:
+        additionalProperties: {}
+        type: object
+      point_id:
+        example: step5acart11111
+        type: string
+    type: object
+  chaos.ChaosCreateInjectionBatchReq:
+    properties:
+      batch_caller_metadata:
+        additionalProperties: {}
+        type: object
+      batch_idempotency_key:
+        example: batch-1700000000
+        type: string
+      children:
+        items:
+          $ref: '#/definitions/chaos.ChaosCreateBatchChildReq'
+        type: array
+    required:
+    - batch_idempotency_key
+    - children
+    type: object
   chaos.ChaosCreateInjectionReq:
     properties:
       caller_metadata:
@@ -648,6 +681,32 @@ definitions:
       upserted:
         type: integer
     type: object
+  chaos.ChaosInjectionBatchResp:
+    properties:
+      aggregated_status:
+        type: string
+      batch_caller_metadata:
+        additionalProperties: {}
+        type: object
+      children:
+        items:
+          $ref: '#/definitions/chaos.ChaosInjectionResp'
+        type: array
+      finished_at:
+        type: string
+      id:
+        type: string
+      idempotency_key:
+        type: string
+      started_at:
+        type: string
+      ts:
+        type: string
+      webhook_attempted_at:
+        type: string
+      webhook_error:
+        type: string
+    type: object
   chaos.ChaosInjectionResp:
     properties:
       batch_id:
@@ -689,6 +748,46 @@ definitions:
       webhook_attempted_at:
         type: string
       webhook_error:
+        type: string
+    type: object
+  chaos.ChaosListPointsResp:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      points:
+        items:
+          $ref: '#/definitions/chaos.ChaosPointResp'
+        type: array
+      total:
+        type: integer
+    type: object
+  chaos.ChaosPointResp:
+    properties:
+      capability_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      param_overrides:
+        additionalProperties: {}
+        type: object
+      service_id:
+        type: integer
+      service_name:
+        type: string
+      source:
+        type: string
+      status:
+        type: string
+      system_name:
+        type: string
+      target:
+        additionalProperties: {}
+        type: object
+      updated_at:
         type: string
     type: object
   chaos.ChaosSystemResp:
@@ -2814,6 +2913,22 @@ definitions:
         description: Response generation time
         type: integer
     type: object
+  dto.GenericResponse-chaos_ChaosInjectionBatchResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosInjectionBatchResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
   dto.GenericResponse-chaos_ChaosInjectionResp:
     properties:
       code:
@@ -2822,6 +2937,22 @@ definitions:
       data:
         allOf:
         - $ref: '#/definitions/chaos.ChaosInjectionResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosListPointsResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosListPointsResp'
         description: Generic type data
       message:
         description: Response message
@@ -21338,6 +21469,109 @@ paths:
       - Chaos
       x-api-type:
         sdk: "true"
+  /v1beta/injection-batches:
+    post:
+      consumes:
+      - application/json
+      description: Create (or return the existing batch for the same batch_idempotency_key)
+        an InjectionBatch and its children.
+      operationId: chaos_create_injection_batch
+      parameters:
+      - description: Create-batch request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaos.ChaosCreateInjectionBatchReq'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Batch accepted
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosInjectionBatchResp'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Submit a chaos injection batch
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/injection-batches/{id}:
+    delete:
+      description: Cancel a batch and all non-terminal children.
+      operationId: chaos_delete_injection_batch
+      parameters:
+      - description: Batch id (ULID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Batch cancelled
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosInjectionBatchResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Batch not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Destroy a chaos injection batch
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+    get:
+      description: Fetch the persisted InjectionBatch row and its children.
+      operationId: chaos_get_injection_batch
+      parameters:
+      - description: Batch id (ULID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Batch found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosInjectionBatchResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Batch not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Get a chaos injection batch
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
   /v1beta/injections:
     post:
       consumes:
@@ -21539,6 +21773,63 @@ paths:
       security:
       - BearerAuth: []
       summary: Register or update a chaos system
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/systems/{sys}/points:
+    get:
+      description: List Points filtered by service / capability / status with limit/offset
+        paging.
+      operationId: chaos_list_system_points
+      parameters:
+      - description: System name
+        in: path
+        name: sys
+        required: true
+        type: string
+      - description: Filter by service name
+        in: query
+        name: service
+        type: string
+      - description: Filter by capability name
+        in: query
+        name: capability
+        type: string
+      - description: Filter by Point status (active / superseded / deprecated)
+        in: query
+        name: status
+        type: string
+      - description: Page size (default 100, max 500)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Points list
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosListPointsResp'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: List chaos Points for a system
       tags:
       - Chaos
       x-api-type:

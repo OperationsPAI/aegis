@@ -3,6 +3,7 @@ package chaos
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"aegis/platform/dto"
 
@@ -303,6 +304,227 @@ func (h *Handler) GetCapability(c *gin.Context) {
 //	@x-api-type		{"sdk":"true"}
 func (h *Handler) ManifestSchema(c *gin.Context) {
 	c.JSON(http.StatusOK, manifestEnvelopeSchema)
+}
+
+type createBatchChild struct {
+	PointID        string         `json:"point_id"         binding:"required"`
+	Params         map[string]any `json:"params"`
+	IdempotencyKey string         `json:"idempotency_key"  binding:"required"`
+	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`
+	ExecutorPin    string         `json:"executor_pin,omitempty"`
+}
+
+type createBatchReq struct {
+	BatchIdempotencyKey string             `json:"batch_idempotency_key" binding:"required"`
+	BatchCallerMetadata map[string]any     `json:"batch_caller_metadata,omitempty"`
+	Children            []createBatchChild `json:"children"               binding:"required"`
+}
+
+// CreateInjectionBatch submits a batch of chaos injections. Each child is
+// applied synchronously; per-child failures land on the child row only.
+//
+//	@Summary		Submit a chaos injection batch
+//	@Description	Create (or return the existing batch for the same batch_idempotency_key) an InjectionBatch and its children.
+//	@Tags			Chaos
+//	@ID				chaos_create_injection_batch
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		ChaosCreateInjectionBatchReq					true	"Create-batch request"
+//	@Success		202		{object}	dto.GenericResponse[ChaosInjectionBatchResp]	"Batch accepted"
+//	@Failure		400		{object}	dto.GenericResponse[any]						"Invalid request"
+//	@Failure		401		{object}	dto.GenericResponse[any]						"Authentication required"
+//	@Failure		500		{object}	dto.GenericResponse[any]						"Internal server error"
+//	@Router			/v1beta/injection-batches [post]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) CreateInjectionBatch(c *gin.Context) {
+	var req createBatchReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	children := make([]CreateBatchChild, 0, len(req.Children))
+	for _, ch := range req.Children {
+		children = append(children, CreateBatchChild{
+			PointID:        ch.PointID,
+			Params:         ch.Params,
+			IdempotencyKey: ch.IdempotencyKey,
+			CallerMetadata: ch.CallerMetadata,
+			ExecutorPin:    ch.ExecutorPin,
+		})
+	}
+	out, err := h.Mgr.CreateInjectionBatch(c.Request.Context(), CreateBatchInput{
+		BatchIdempotencyKey: req.BatchIdempotencyKey,
+		BatchCallerMetadata: req.BatchCallerMetadata,
+		Children:            children,
+	})
+	if err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, ErrBatchEmpty) || errors.Is(err, ErrIdempotencyMismatch) {
+			code = http.StatusBadRequest
+		}
+		dto.ErrorResponse(c, code, err.Error())
+		return
+	}
+	dto.JSONResponse(c, http.StatusAccepted, "Batch accepted", batchToDTO(out))
+}
+
+// GetInjectionBatch returns one InjectionBatch by id, with all known children.
+//
+//	@Summary		Get a chaos injection batch
+//	@Description	Fetch the persisted InjectionBatch row and its children.
+//	@Tags			Chaos
+//	@ID				chaos_get_injection_batch
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string											true	"Batch id (ULID)"
+//	@Success		200	{object}	dto.GenericResponse[ChaosInjectionBatchResp]	"Batch found"
+//	@Failure		401	{object}	dto.GenericResponse[any]						"Authentication required"
+//	@Failure		404	{object}	dto.GenericResponse[any]						"Batch not found"
+//	@Router			/v1beta/injection-batches/{id} [get]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) GetInjectionBatch(c *gin.Context) {
+	out, err := h.Mgr.GetInjectionBatch(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		code := http.StatusNotFound
+		if !errors.Is(err, ErrBatchNotFound) {
+			code = http.StatusInternalServerError
+		}
+		dto.ErrorResponse(c, code, err.Error())
+		return
+	}
+	dto.SuccessResponse(c, batchToDTO(out))
+}
+
+// DeleteInjectionBatch cancels every non-terminal child and stamps the batch
+// aggregated_status as `cancelled`.
+//
+//	@Summary		Destroy a chaos injection batch
+//	@Description	Cancel a batch and all non-terminal children.
+//	@Tags			Chaos
+//	@ID				chaos_delete_injection_batch
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string											true	"Batch id (ULID)"
+//	@Success		200	{object}	dto.GenericResponse[ChaosInjectionBatchResp]	"Batch cancelled"
+//	@Failure		401	{object}	dto.GenericResponse[any]						"Authentication required"
+//	@Failure		404	{object}	dto.GenericResponse[any]						"Batch not found"
+//	@Router			/v1beta/injection-batches/{id} [delete]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) DeleteInjectionBatch(c *gin.Context) {
+	out, err := h.Mgr.DeleteInjectionBatch(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		code := http.StatusNotFound
+		if !errors.Is(err, ErrBatchNotFound) {
+			code = http.StatusInternalServerError
+		}
+		dto.ErrorResponse(c, code, err.Error())
+		return
+	}
+	dto.SuccessResponse(c, batchToDTO(out))
+}
+
+func batchToDTO(b *BatchWithChildren) ChaosInjectionBatchResp {
+	out := ChaosInjectionBatchResp{
+		ID:                  b.Batch.ID,
+		IdempotencyKey:      b.Batch.IdempotencyKey,
+		AggregatedStatus:    b.Batch.AggregatedStatus,
+		BatchCallerMetadata: map[string]any(b.Batch.BatchCallerMetadata),
+		Ts:                  b.Batch.Ts,
+		StartedAt:           b.Batch.StartedAt,
+		FinishedAt:          b.Batch.FinishedAt,
+		WebhookAttemptedAt:  b.Batch.WebhookAttemptedAt,
+		WebhookError:        b.Batch.WebhookError,
+		Children:            make([]ChaosInjectionResp, 0, len(b.Children)),
+	}
+	for _, c := range b.Children {
+		out.Children = append(out.Children, injectionToDTO(c))
+	}
+	return out
+}
+
+func injectionToDTO(i Injection) ChaosInjectionResp {
+	return ChaosInjectionResp{
+		ID:                 i.ID,
+		BatchID:            i.BatchID,
+		PointID:            i.PointID,
+		Params:             map[string]any(i.Params),
+		IdempotencyKey:     i.IdempotencyKey,
+		ExecutorName:       i.ExecutorName,
+		ExecutorHandle:     i.ExecutorHandle,
+		Status:             i.Status,
+		Groundtruth:        map[string]any(i.Groundtruth),
+		Diagnostics:        map[string]any(i.Diagnostics),
+		CallerMetadata:     map[string]any(i.CallerMetadata),
+		DestroyedAt:        i.DestroyedAt,
+		DestroyError:       i.DestroyError,
+		Ts:                 i.Ts,
+		StartedAt:          i.StartedAt,
+		FinishedAt:         i.FinishedAt,
+		WebhookAttemptedAt: i.WebhookAttemptedAt,
+		WebhookError:       i.WebhookError,
+	}
+}
+
+// ListSystemPoints lists Points belonging to a system, with optional service /
+// capability / status filters.
+//
+//	@Summary		List chaos Points for a system
+//	@Description	List Points filtered by service / capability / status with limit/offset paging.
+//	@Tags			Chaos
+//	@ID				chaos_list_system_points
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			sys			path		string										true	"System name"
+//	@Param			service		query		string										false	"Filter by service name"
+//	@Param			capability	query		string										false	"Filter by capability name"
+//	@Param			status		query		string										false	"Filter by Point status (active / superseded / deprecated)"
+//	@Param			limit		query		int											false	"Page size (default 100, max 500)"
+//	@Param			offset		query		int											false	"Page offset (default 0)"
+//	@Success		200			{object}	dto.GenericResponse[ChaosListPointsResp]	"Points list"
+//	@Failure		400			{object}	dto.GenericResponse[any]					"Invalid request"
+//	@Failure		401			{object}	dto.GenericResponse[any]					"Authentication required"
+//	@Failure		500			{object}	dto.GenericResponse[any]					"Internal server error"
+//	@Router			/v1beta/systems/{sys}/points [get]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) ListSystemPoints(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	offset, _ := strconv.Atoi(c.Query("offset"))
+	rows, svcNames, total, err := h.Mgr.ListSystemPoints(c.Request.Context(), ListPointsFilter{
+		System:     c.Param("sys"),
+		Service:    c.Query("service"),
+		Capability: c.Query("capability"),
+		Status:     c.Query("status"),
+		Limit:      limit,
+		Offset:     offset,
+	})
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	out := ChaosListPointsResp{Points: make([]ChaosPointResp, 0, len(rows)), Total: total, Limit: limit, Offset: offset}
+	if out.Limit <= 0 {
+		out.Limit = 100
+	}
+	for _, p := range rows {
+		entry := ChaosPointResp{
+			ID:             p.ID,
+			SystemName:     p.SystemName,
+			ServiceID:      p.ServiceID,
+			CapabilityName: p.CapabilityName,
+			Target:         map[string]any(p.Target),
+			ParamOverrides: map[string]any(p.ParamOverrides),
+			Source:         p.Source,
+			Status:         p.Status,
+			CreatedAt:      p.CreatedAt,
+			UpdatedAt:      p.UpdatedAt,
+		}
+		if p.ServiceID != nil {
+			entry.ServiceName = svcNames[*p.ServiceID]
+		}
+		out.Points = append(out.Points, entry)
+	}
+	dto.SuccessResponse(c, out)
 }
 
 var manifestEnvelopeSchema = map[string]any{

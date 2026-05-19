@@ -179,5 +179,8 @@ func init() {
 	chaosInjectCmd.AddCommand(chaosInjectSubmitCmd)
 	chaosInjectCmd.AddCommand(chaosInjectGetCmd)
 	chaosInjectCmd.AddCommand(chaosInjectDestroyCmd)
+	chaosInjectCmd.AddCommand(chaosInjectBatchCmd)
 	chaosCmd.AddCommand(chaosInjectCmd)
 }
+
+func ptr[T any](v T) *T { return &v }
