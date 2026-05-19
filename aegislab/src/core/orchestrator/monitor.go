@@ -87,7 +87,13 @@ type monitor struct {
 	locks        state.LockStore
 	status       state.StatusStore
 	activator    NamespaceActivator
-	mu           sync.RWMutex // Protects namespace operations
+	// cfgMu guards the namespace catalog refresh path (RefreshNamespaces and
+	// any other catalog-wide config mutation). wireMu guards the lifecycle
+	// pointers (ctx, activator) that SetContext / SetActivator rewire. They
+	// are deliberately separate so a long-running RefreshNamespaces cannot
+	// block AcquireLock's read of ctx/activator.
+	cfgMu  sync.RWMutex
+	wireMu sync.RWMutex
 }
 
 func NewMonitor(gateway *redisinfra.Gateway) NamespaceMonitor {
@@ -102,16 +108,16 @@ func NewMonitor(gateway *redisinfra.Gateway) NamespaceMonitor {
 }
 
 func (m *monitor) SetActivator(activator NamespaceActivator) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.wireMu.Lock()
+	defer m.wireMu.Unlock()
 	m.activator = activator
 }
 
 // currentActivator returns the wired activator under the read lock so tests
 // and AcquireLock can fetch it without racing against SetActivator.
 func (m *monitor) currentActivator() NamespaceActivator {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.wireMu.RLock()
+	defer m.wireMu.RUnlock()
 	return m.activator
 }
 
@@ -119,14 +125,14 @@ func (m *monitor) SetContext(ctx context.Context) {
 	if ctx == nil {
 		return
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.wireMu.Lock()
+	defer m.wireMu.Unlock()
 	m.ctx = ctx
 }
 
 func (m *monitor) currentContext() context.Context {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.wireMu.RLock()
+	defer m.wireMu.RUnlock()
 	if m.ctx != nil {
 		return m.ctx
 	}
@@ -385,16 +391,10 @@ func (m *monitor) InitializeNamespaces() ([]string, error) {
 // RefreshNamespaces updates the namespace list based on current configuration
 // Returns detailed results of namespace state changes
 func (m *monitor) RefreshNamespaces() (*NamespaceRefreshResult, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.cfgMu.Lock()
+	defer m.cfgMu.Unlock()
 
-	// Snapshot the monitor context while holding the write lock. Calling helper
-	// methods like m.currentContext()/m.listNamespaces() from inside this locked
-	// section would try to re-acquire m.mu via an RLock and self-deadlock.
-	ctx := m.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx := m.currentContext()
 
 	result := &NamespaceRefreshResult{
 		Added:     make([]string, 0),
