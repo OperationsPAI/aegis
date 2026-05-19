@@ -23,9 +23,10 @@ type Params struct {
 
 // New assembles the gin.Engine. It iterates every module-provided
 // `framework.RouteRegistrar` via fx-group, mounting each on the /api/v2
-// sub-group (or on the engine root when BasePath is set). The
-// registrar's Audience field is informational only — see
-// framework.RouteRegistrar for details.
+// sub-group (or on the engine root when BasePath is set). For
+// audience-mounted registrars the framework prepends the audience's
+// canonical middleware chain (see audience_chain.go) before invoking
+// Register, unless the registrar sets SkipDefaultChain.
 func New(params Params) *gin.Engine {
 	router := gin.Default()
 
@@ -57,7 +58,13 @@ func New(params Params) *gin.Engine {
 			r.Register(router.Group(r.BasePath))
 			continue
 		}
-		r.Register(v2)
+		group := v2
+		if !r.SkipDefaultChain {
+			if chain := audienceChain(r.Audience); len(chain) > 0 {
+				group = v2.Group("", chain...)
+			}
+		}
+		r.Register(group)
 	}
 
 	// Swagger documentation

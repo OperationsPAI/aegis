@@ -27,6 +27,10 @@ func RoutesPortal(handler *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Audience: framework.AudiencePortal,
 		Name:     "blob.portal",
+		// /blob/raw/:token is an HMAC-token escape that runs without
+		// TrustedHeaderAuth; the registrar attaches auth itself on the
+		// /blob sub-group instead.
+		SkipDefaultChain: true,
 		Register: func(v2 *gin.RouterGroup) {
 			g := v2.Group("/blob", middleware.TrustedHeaderAuth())
 			{
