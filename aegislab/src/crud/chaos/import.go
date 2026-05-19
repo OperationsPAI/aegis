@@ -42,46 +42,49 @@ type PointManifestEntry struct {
 }
 
 type ImportResult struct {
-	Inserted   int      `json:"inserted"`
-	Updated    int      `json:"updated"`
+	Upserted   int      `json:"upserted"`
 	Superseded int      `json:"superseded"`
 	DryRun     bool     `json:"dry_run"`
 	PointIDs   []string `json:"point_ids"`
 }
 
 // ImportPoints applies a PointManifest under §6 / ADR-0011 semantics.
-// Serialises per (system, service, instance) via the import_locks table.
+// Serialises per (system, service, instance) via the import_locks table
+// (UPSERT then SELECT … FOR UPDATE inside the tx).
 func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointManifest, dryRun bool) (*ImportResult, error) {
-	if err := validateManifest(systemName, m); err != nil {
+	if err := validateManifest(systemName, &m); err != nil {
+		return nil, err
+	}
+	if m.Spec.ReplaceScope == ReplaceScopeSystem {
+		return nil, fmt.Errorf("chaos: replace_scope=system not implemented in step 1")
+	}
+
+	if _, err := s.GetSystem(ctx, systemName); err != nil {
 		return nil, err
 	}
 
 	tx := s.DB.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	committed := false
 	defer func() {
-		if dryRun {
+		if !committed {
 			tx.Rollback()
 		}
 	}()
 
-	if _, err := s.GetSystem(ctx, systemName); err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
 	if err := s.acquireImportLock(tx, m); err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	svc, err := s.upsertService(tx, m)
+	svcID, err := s.upsertService(tx, m)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	caps, err := s.loadCapabilityNames(tx)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
@@ -90,7 +93,6 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 
 	for _, p := range m.Spec.Points {
 		if _, ok := caps[p.Capability]; !ok {
-			tx.Rollback()
 			return nil, fmt.Errorf("chaos: unknown capability %q", p.Capability)
 		}
 		ident := PointIdentity{
@@ -100,7 +102,6 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 		}
 		id, err := ServiceBoundPointID(ident)
 		if err != nil {
-			tx.Rollback()
 			return nil, err
 		}
 		newIDs[id] = struct{}{}
@@ -109,7 +110,7 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 		row := Point{
 			ID:             id,
 			SystemName:     systemName,
-			ServiceID:      &svc.ID,
+			ServiceID:      &svcID,
 			CapabilityName: p.Capability,
 			Target:         JSONMap(p.Target),
 			ParamOverrides: JSONMap(p.ParamOverrides),
@@ -123,23 +124,19 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 			}),
 		}).Create(&row)
 		if res.Error != nil {
-			tx.Rollback()
 			return nil, res.Error
 		}
 		if res.RowsAffected > 0 {
-			out.Inserted++
+			out.Upserted++
 		}
 	}
 
 	if m.Spec.ReplaceScope == ReplaceScopeService {
-		// Mark Points absent from the payload as superseded for this
-		// (system, service_id) scope.
 		var stale []Point
 		if err := tx.Where(
 			"system_name = ? AND service_id = ? AND status = ?",
-			systemName, svc.ID, PointActive,
+			systemName, svcID, PointActive,
 		).Find(&stale).Error; err != nil {
-			tx.Rollback()
 			return nil, err
 		}
 		for _, p := range stale {
@@ -150,7 +147,6 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 				"status":     PointSuperseded,
 				"updated_at": time.Now().UTC(),
 			}).Error; err != nil {
-				tx.Rollback()
 				return nil, err
 			}
 			out.Superseded++
@@ -158,16 +154,16 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 	}
 
 	if dryRun {
-		// rolled back in deferred
 		return out, nil
 	}
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
+	committed = true
 	return out, nil
 }
 
-func validateManifest(systemName string, m PointManifest) error {
+func validateManifest(systemName string, m *PointManifest) error {
 	if m.APIVersion != "aegis-chaos/v1beta" {
 		return fmt.Errorf("chaos: unsupported manifest apiVersion %q", m.APIVersion)
 	}
@@ -194,23 +190,40 @@ func validateManifest(systemName string, m PointManifest) error {
 	return nil
 }
 
+// acquireImportLock upserts the lock row then takes a row lock so
+// concurrent imports against the same (system, service, instance) block
+// until the prior tx commits or rolls back. ADR-0011.
+//
+// SQLite tx serialisation gives equivalent behaviour for unit tests
+// (the writer holds an exclusive lock for the whole tx); FOR UPDATE is
+// a no-op there but doesn't error.
 func (s *Manager) acquireImportLock(tx *gorm.DB, m PointManifest) error {
 	now := time.Now().UTC()
 	row := ImportLock{
 		SystemName: m.Metadata.System, ServiceName: m.Metadata.Service,
 		Instance: m.Metadata.Instance, LockedBy: "import", LockedAt: &now,
 	}
-	// PK on (system, service, instance) — re-import for the same triple
-	// just refreshes the lock timestamp within the same tx.
-	return tx.Clauses(clause.OnConflict{
+	if err := tx.Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "system_name"}, {Name: "service_name"}, {Name: "instance"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{"locked_by", "locked_at"}),
-	}).Create(&row).Error
+	}).Create(&row).Error; err != nil {
+		return err
+	}
+	if tx.Dialector.Name() == "mysql" {
+		var locked ImportLock
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where(
+			"system_name = ? AND service_name = ? AND instance = ?",
+			m.Metadata.System, m.Metadata.Service, m.Metadata.Instance,
+		).Take(&locked).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (s *Manager) upsertService(tx *gorm.DB, m PointManifest) (*Service2, error) {
+func (s *Manager) upsertService(tx *gorm.DB, m PointManifest) (int64, error) {
 	now := time.Now().UTC()
 	var existing Service
 	err := tx.Where(
@@ -221,12 +234,12 @@ func (s *Manager) upsertService(tx *gorm.DB, m PointManifest) (*Service2, error)
 		existing.LastSeenAt = now
 		existing.Status = ServiceActive
 		if err := tx.Save(&existing).Error; err != nil {
-			return nil, err
+			return 0, err
 		}
-		return &Service2{ID: existing.ID}, nil
+		return existing.ID, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
+		return 0, err
 	}
 	row := Service{
 		SystemName:   m.Metadata.System,
@@ -238,15 +251,10 @@ func (s *Manager) upsertService(tx *gorm.DB, m PointManifest) (*Service2, error)
 		LastSeenAt:   now,
 	}
 	if err := tx.Create(&row).Error; err != nil {
-		return nil, err
+		return 0, err
 	}
-	return &Service2{ID: row.ID}, nil
+	return row.ID, nil
 }
-
-// Service2 carries just the id we need post-upsert; using the model type
-// directly forces awkward naming because the package itself is `chaos`
-// and the type is `Service`.
-type Service2 struct{ ID int64 }
 
 func (s *Manager) loadCapabilityNames(tx *gorm.DB) (map[string]struct{}, error) {
 	var rows []Capability

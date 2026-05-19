@@ -30,20 +30,27 @@ type CapabilitySupport struct {
 	Maturity   string `json:"maturity"`
 }
 
-// Executor is the §8 internal abstraction. Not exposed externally until a
-// second Executor lands (per §11 step 7) — keep it minimal.
+// Executor is the §8 internal abstraction. ADR-0004 requires the handle
+// to be persisted BEFORE Apply, so the service layer derives the handle
+// up-front (via DeriveHandle) and hands it in. Apply itself is a pure
+// renderer — it does not allocate names.
 type Executor interface {
 	Name() string
 	SupportedCapabilities() []CapabilitySupport
 
-	// Apply MUST be idempotent on idempotencyKey: a second call with the
-	// same key MUST be a no-op on the cluster and return the same handle.
-	// The Chaos-Mesh implementation derives CR metadata.name from the key
-	// (ADR-0004) so the natural backend uniqueness constraint enforces this.
+	// DeriveHandle produces the deterministic executor_handle for an
+	// (idempotency_key, target) tuple. Pure function — no cluster I/O.
+	// Same inputs always yield the same handle, which is what makes
+	// post-crash recovery a plain Status(handle) call.
+	DeriveHandle(capability, idempotencyKey string, target map[string]any) (handle string, err error)
+
+	// Apply is idempotent on handle: the second call with the same handle
+	// MUST be a no-op on the cluster. Chaos-Mesh treats AlreadyExists as
+	// success per ADR-0004.
 	Apply(ctx context.Context,
-		capability, idempotencyKey string,
+		capability, handle string,
 		target, params map[string]any,
-	) (handle string, err error)
+	) error
 
 	Status(ctx context.Context, handle string) (state ExecState, diagnostics map[string]any, err error)
 

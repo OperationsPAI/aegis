@@ -1,7 +1,9 @@
-// Package conformance is the §9 conformance harness shell. Step 1 ships
-// only the harness skeleton + the pod_kill test wired to the Chaos-Mesh
-// executor. Subsequent steps add per-Capability tests as Capability set
-// expands.
+// Package conformance is the §9 conformance harness shell.
+//
+// TODO(step-2): the pod_kill Observe currently only asserts the CR exists.
+// The §9 observable contract requires asserting target_pod.restart_count
+// increases by >= 1 within injection_window_s. Wire a typed kube client
+// into Case so Observe can poll Pod.Status.ContainerStatuses[].RestartCount.
 package conformance
 
 import (
@@ -62,8 +64,12 @@ func NewHarness(exec chaos.Executor) *Harness {
 func (h *Harness) Run(ctx context.Context, c Case) Result {
 	r := Result{Capability: c.Capability, Executor: h.Executor.Name()}
 
-	handle, err := h.Executor.Apply(ctx, c.Capability, c.IdempotencyKey, c.Target, c.Params)
+	handle, err := h.Executor.DeriveHandle(c.Capability, c.IdempotencyKey, c.Target)
 	if err != nil {
+		r.FailureReason = fmt.Sprintf("derive-handle: %v", err)
+		return r
+	}
+	if err := h.Executor.Apply(ctx, c.Capability, handle, c.Target, c.Params); err != nil {
 		r.FailureReason = fmt.Sprintf("apply: %v", err)
 		return r
 	}

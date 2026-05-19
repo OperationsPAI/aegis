@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -15,15 +16,14 @@ var (
 	ErrSystemDisabled        = errors.New("chaos: system disabled")
 	ErrPointNotFound         = errors.New("chaos: point not found")
 	ErrPointNotActive        = errors.New("chaos: point not active")
+	ErrInjectionNotFound     = errors.New("chaos: injection not found")
+	ErrCapabilityNotFound    = errors.New("chaos: capability not found")
 	ErrCapabilityUnsupported = errors.New("chaos: capability not supported by executor")
 	ErrIdempotencyMismatch   = errors.New("chaos: idempotency_key reused with different request body")
 )
 
-// Manager is the in-process facade the HTTP handler talks to. It owns the
-// DB + Executor and exposes the operations §5 wires up in step 1.
-//
-// Named Manager rather than Service so it doesn't collide with the Service
-// table model in this package.
+// Manager is named after the role rather than "Service" so it doesn't
+// collide with the Service table model in this package.
 type Manager struct {
 	DB       *gorm.DB
 	Executor Executor
@@ -55,9 +55,6 @@ func (s *Manager) GetSystem(ctx context.Context, name string) (*System, error) {
 	return &sys, nil
 }
 
-// CreateInjection is the singleton POST /v1beta/injections code path.
-// It enforces idempotency on idempotency_key and derives executor_handle
-// BEFORE Apply (ADR-0004).
 type CreateInjectionInput struct {
 	PointID        string
 	Params         map[string]any
@@ -94,17 +91,17 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 		return nil, ErrPointNotActive
 	}
 
-	var cap Capability
-	if err := s.DB.WithContext(ctx).Where("name = ?", point.CapabilityName).Take(&cap).Error; err != nil {
+	var capRow Capability
+	if err := s.DB.WithContext(ctx).Where("name = ?", point.CapabilityName).Take(&capRow).Error; err != nil {
 		return nil, err
 	}
-	if cap.Status == CapDeprecated {
+	if capRow.Status == CapDeprecated {
 		return nil, ErrCapabilityUnsupported
 	}
 
 	supported := false
 	for _, c := range s.Executor.SupportedCapabilities() {
-		if c.Capability == cap.Name {
+		if c.Capability == capRow.Name {
 			supported = true
 			break
 		}
@@ -121,19 +118,28 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 		return nil, ErrSystemDisabled
 	}
 
+	// ADR-0004: derive the executor_handle BEFORE Apply so a crash mid-Apply
+	// leaves a recoverable row — the persisted handle is valid regardless of
+	// whether the CR was created, because the CR name is deterministic.
+	target := map[string]any(point.Target)
+	handle, err := s.Executor.DeriveHandle(capRow.Name, in.IdempotencyKey, target)
+	if err != nil {
+		return nil, err
+	}
+
+	params := in.Params
+	if params == nil {
+		params = JSONMap{}
+	}
 	now := time.Now().UTC()
 	id := ulid.Make().String()
-
-	// Persist row in `pending` state with a placeholder handle, then Apply
-	// and update. ADR-0004's "handle derived from key" lets a crash at any
-	// point be recovered by re-Apply against the same CR name.
 	row := Injection{
 		ID:             id,
 		PointID:        point.ID,
-		Params:         in.Params,
+		Params:         params,
 		IdempotencyKey: in.IdempotencyKey,
 		ExecutorName:   s.Executor.Name(),
-		ExecutorHandle: "",
+		ExecutorHandle: handle,
 		Status:         StatusPending,
 		CallerMetadata: in.CallerMetadata,
 		Ts:             now,
@@ -142,31 +148,31 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 		return nil, err
 	}
 
-	handle, applyErr := s.Executor.Apply(ctx, cap.Name, in.IdempotencyKey, point.Target, in.Params)
-	if applyErr != nil {
-		fin := now
+	applyAt := time.Now().UTC()
+	if applyErr := s.Executor.Apply(ctx, capRow.Name, handle, target, in.Params); applyErr != nil {
+		fin := applyAt
 		updates := map[string]any{
 			"status":      StatusFailed,
 			"diagnostics": JSONMap{"error": applyErr.Error()},
-			"started_at":  &now,
+			"started_at":  &applyAt,
 			"finished_at": &fin,
 		}
-		_ = s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(updates).Error
+		if uerr := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(updates).Error; uerr != nil {
+			logrus.Warnf("chaos: failed to record Apply failure for %s: %v", id, uerr)
+		}
 		row.Status = StatusFailed
 		row.Diagnostics = JSONMap{"error": applyErr.Error()}
-		row.StartedAt = &now
+		row.StartedAt = &applyAt
 		row.FinishedAt = &fin
 		return &row, applyErr
 	}
-	row.ExecutorHandle = handle
+
 	row.Status = StatusRunning
-	row.StartedAt = &now
-	updates := map[string]any{
-		"executor_handle": handle,
-		"status":          StatusRunning,
-		"started_at":      &now,
-	}
-	if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+	row.StartedAt = &applyAt
+	if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(map[string]any{
+		"status":     StatusRunning,
+		"started_at": &applyAt,
+	}).Error; err != nil {
 		return nil, err
 	}
 	return &row, nil
@@ -176,7 +182,7 @@ func (s *Manager) GetInjection(ctx context.Context, id string) (*Injection, erro
 	var inj Injection
 	if err := s.DB.WithContext(ctx).Where("id = ?", id).Take(&inj).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrPointNotFound
+			return nil, ErrInjectionNotFound
 		}
 		return nil, err
 	}
@@ -184,8 +190,8 @@ func (s *Manager) GetInjection(ctx context.Context, id string) (*Injection, erro
 }
 
 // DeleteInjection implements the ADR-0003 Destroy contract. Idempotent on
-// id; terminal-state injections destroy the cluster artifact (no-op if
-// already gone) and move to `cancelled` only if not already terminal.
+// id; non-terminal injections move to `cancelled`. Destroy failure is
+// recorded in diagnostics but does NOT block the status transition.
 func (s *Manager) DeleteInjection(ctx context.Context, id string) (*Injection, error) {
 	inj, err := s.GetInjection(ctx, id)
 	if err != nil {
@@ -194,25 +200,28 @@ func (s *Manager) DeleteInjection(ctx context.Context, id string) (*Injection, e
 	now := time.Now().UTC()
 	terminal := isTerminal(inj.Status)
 
-	if inj.ExecutorHandle != "" {
+	if inj.ExecutorHandle != "" && inj.DestroyedAt == nil {
 		if dErr := s.Executor.Destroy(ctx, inj.ExecutorHandle); dErr != nil {
-			updates := map[string]any{"destroy_error": dErr.Error()}
-			_ = s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(updates).Error
+			if uerr := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).
+				Updates(map[string]any{"destroy_error": dErr.Error()}).Error; uerr != nil {
+				logrus.Warnf("chaos: failed to record Destroy error for %s: %v", id, uerr)
+			}
 			inj.DestroyError = dErr.Error()
-			// ADR-0003: Destroy failure does not block status transition.
 		} else {
-			updates := map[string]any{"destroyed_at": &now}
-			_ = s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(updates).Error
+			if uerr := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).
+				Updates(map[string]any{"destroyed_at": &now, "destroy_error": ""}).Error; uerr != nil {
+				logrus.Warnf("chaos: failed to record Destroy success for %s: %v", id, uerr)
+			}
 			inj.DestroyedAt = &now
+			inj.DestroyError = ""
 		}
 	}
 
 	if !terminal {
-		updates := map[string]any{
+		if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(map[string]any{
 			"status":      StatusCancelled,
 			"finished_at": &now,
-		}
-		if err := s.DB.WithContext(ctx).Model(&Injection{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		}).Error; err != nil {
 			return nil, err
 		}
 		inj.Status = StatusCancelled
@@ -241,7 +250,7 @@ func (s *Manager) GetCapability(ctx context.Context, name string) (*Capability, 
 	var c Capability
 	if err := s.DB.WithContext(ctx).Where("name = ?", name).Take(&c).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrPointNotFound
+			return nil, ErrCapabilityNotFound
 		}
 		return nil, err
 	}

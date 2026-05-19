@@ -9,12 +9,10 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// Migrations registers the seven aegis-chaos tables per design §7.
-//
-// Table names are prefixed `chaos_` because aegis-chaos shares MySQL with
-// the monolith aegislab, whose pre-existing `system_metadata` and
-// adjacent tables would collide with bare `systems` etc. from the SQL
-// sketch. The schema shape is otherwise verbatim.
+// Migrations: table names are prefixed `chaos_` because aegis-chaos
+// shares MySQL with the monolith aegislab, whose pre-existing
+// `system_metadata` and adjacent tables would collide with bare
+// `systems` etc. from the §7 SQL sketch.
 func Migrations() framework.MigrationRegistrar {
 	return framework.MigrationRegistrar{
 		Module: "chaos",

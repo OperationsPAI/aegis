@@ -37,6 +37,8 @@ type ChaosMeshExecutor struct {
 	Dyn dynamic.Interface
 }
 
+var _ Executor = (*ChaosMeshExecutor)(nil)
+
 func NewChaosMeshExecutor(dyn dynamic.Interface) *ChaosMeshExecutor {
 	return &ChaosMeshExecutor{Dyn: dyn}
 }
@@ -47,8 +49,6 @@ func (e *ChaosMeshExecutor) SupportedCapabilities() []CapabilitySupport {
 	return []CapabilitySupport{{Capability: "pod_kill", Maturity: CapStable}}
 }
 
-// ChaosMeshHandle is the opaque-to-callers JSON we persist as executor_handle
-// for Chaos-Mesh-backed Injections.
 type ChaosMeshHandle struct {
 	GVR       schema.GroupVersionResource `json:"gvr"`
 	Namespace string                      `json:"namespace"`
@@ -74,35 +74,49 @@ func decodeHandle(s string) (ChaosMeshHandle, error) {
 	return h, nil
 }
 
-func (e *ChaosMeshExecutor) Apply(
-	ctx context.Context,
-	capability, idempotencyKey string,
-	target, params map[string]any,
+func (e *ChaosMeshExecutor) DeriveHandle(
+	capability, idempotencyKey string, target map[string]any,
 ) (string, error) {
 	if capability != "pod_kill" {
 		return "", fmt.Errorf("chaos-mesh executor: unsupported capability %q", capability)
 	}
 	ns, _ := target["namespace"].(string)
-	app, _ := target["app"].(string)
-	if ns == "" || app == "" {
-		return "", fmt.Errorf("chaos-mesh pod_kill: target.namespace and target.app are required")
+	if ns == "" {
+		return "", fmt.Errorf("chaos-mesh pod_kill: target.namespace is required")
 	}
 	name, err := DeriveChaosMeshCRName("pod-kill", idempotencyKey)
 	if err != nil {
 		return "", err
 	}
-	cr := buildPodKillCR(name, ns, app, params)
+	return encodeHandle(ChaosMeshHandle{GVR: podChaosGVR, Namespace: ns, Name: name})
+}
 
-	_, err = e.Dyn.Resource(podChaosGVR).Namespace(ns).Create(ctx, cr, metav1.CreateOptions{})
+func (e *ChaosMeshExecutor) Apply(
+	ctx context.Context,
+	capability, handle string,
+	target, params map[string]any,
+) error {
+	if capability != "pod_kill" {
+		return fmt.Errorf("chaos-mesh executor: unsupported capability %q", capability)
+	}
+	app, _ := target["app"].(string)
+	if app == "" {
+		return fmt.Errorf("chaos-mesh pod_kill: target.app is required")
+	}
+	h, err := decodeHandle(handle)
+	if err != nil {
+		return err
+	}
+	cr := buildPodKillCR(h.Name, h.Namespace, app, params)
+	_, err = e.Dyn.Resource(h.GVR).Namespace(h.Namespace).Create(ctx, cr, metav1.CreateOptions{})
 	switch {
 	case err == nil:
-		// new CR created
+		return nil
 	case apierrors.IsAlreadyExists(err):
-		// ADR-0004: same key, same resource — Apply is idempotent.
+		return nil
 	default:
-		return "", fmt.Errorf("chaos-mesh pod_kill: create CR: %w", err)
+		return fmt.Errorf("chaos-mesh pod_kill: create CR: %w", err)
 	}
-	return encodeHandle(ChaosMeshHandle{GVR: podChaosGVR, Namespace: ns, Name: name})
 }
 
 func buildPodKillCR(name, ns, app string, params map[string]any) *unstructured.Unstructured {
@@ -165,9 +179,6 @@ func (e *ChaosMeshExecutor) Status(ctx context.Context, handle string) (ExecStat
 	return interpretPodChaosStatus(got), readStatusDiagnostics(got), nil
 }
 
-// interpretPodChaosStatus maps the CR's .status.conditions / .status.experiment
-// onto our ExecState. Chaos-Mesh's PodChaos surfaces two condition types we
-// care about: `Selected` (pods matched) and `AllInjected` (action applied).
 func interpretPodChaosStatus(u *unstructured.Unstructured) ExecState {
 	conds, found, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
 	if !found {

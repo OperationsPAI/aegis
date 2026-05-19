@@ -1,23 +1,15 @@
-// Package chaosapp hosts the fx composition for the standalone
-// aegis-chaos microservice. Mirrors boot/blob/options.go.
-//
-// What's in this binary:
-//   - crud/chaos      — catalog, executor, HTTP handler, migrations
-//   - infra           — db (MySQL), redis (unused yet, reserved for §12.1)
-//   - http server     — exposes /v1beta + /healthz
-//
-// What's NOT in this binary:
-//   - duckdb / arrow  — aegis-chaos has no parquet path
-//   - chaos-experiment — explicitly deleted in §11 step 6; this binary
-//     never imports it
+// Package chaos hosts the fx composition for the standalone aegis-chaos
+// microservice. Mirrors boot/blob/options.go.
 package chaos
 
 import (
 	"strings"
 
 	app "aegis/boot"
-	chaos "aegis/crud/chaos"
 	httpapi "aegis/boot/wiring/http"
+	ssoclient "aegis/clients/sso"
+	chaos "aegis/crud/chaos"
+	"aegis/platform/middleware"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
@@ -27,10 +19,15 @@ import (
 func Options(confPath, port string) fx.Option {
 	return fx.Options(
 		app.BaseOptions(confPath),
+		app.ObserveOptions(),
 		app.DataOptions(),
+
 		app.WithRemoteVerifier(),
+		ssoclient.Module,
 
 		chaos.Module,
+
+		fx.Invoke(func() { middleware.AssertTrustedHeaderKeyConfigured() }),
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),

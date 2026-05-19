@@ -29,7 +29,7 @@ type upsertSystemReq struct {
 }
 
 func (h *Handler) PutSystem(c *gin.Context) {
-	name := c.Param("name")
+	name := c.Param("sys")
 	if name == "" {
 		dto.ErrorResponse(c, http.StatusBadRequest, "system name required")
 		return
@@ -58,7 +58,7 @@ func (h *Handler) PutSystem(c *gin.Context) {
 }
 
 func (h *Handler) GetSystem(c *gin.Context) {
-	sys, err := h.Mgr.GetSystem(c.Request.Context(), c.Param("name"))
+	sys, err := h.Mgr.GetSystem(c.Request.Context(), c.Param("sys"))
 	if err != nil {
 		if errors.Is(err, ErrSystemNotFound) {
 			dto.ErrorResponse(c, http.StatusNotFound, err.Error())
@@ -110,7 +110,10 @@ func (h *Handler) CreateInjection(c *gin.Context) {
 	if err != nil {
 		code := http.StatusInternalServerError
 		switch {
-		case errors.Is(err, ErrSystemNotFound), errors.Is(err, ErrPointNotFound):
+		case errors.Is(err, ErrSystemNotFound),
+			errors.Is(err, ErrPointNotFound),
+			errors.Is(err, ErrInjectionNotFound),
+			errors.Is(err, ErrCapabilityNotFound):
 			code = http.StatusNotFound
 		case errors.Is(err, ErrSystemDisabled), errors.Is(err, ErrPointNotActive),
 			errors.Is(err, ErrCapabilityUnsupported), errors.Is(err, ErrIdempotencyMismatch):
@@ -119,7 +122,7 @@ func (h *Handler) CreateInjection(c *gin.Context) {
 		dto.ErrorResponse(c, code, err.Error())
 		return
 	}
-	c.JSON(http.StatusAccepted, inj)
+	dto.JSONResponse(c, http.StatusAccepted, "Injection accepted", inj)
 }
 
 func (h *Handler) GetInjection(c *gin.Context) {

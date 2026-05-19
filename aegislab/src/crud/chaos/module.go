@@ -11,8 +11,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Module wires the aegis-chaos service: DB migrations + seed, the
-// Chaos-Mesh executor, the Manager facade, the HTTP handler/routes.
 var Module = fx.Module("chaos",
 	fx.Provide(NewDynamicClient),
 	fx.Provide(NewExecutor),
@@ -25,8 +23,6 @@ var Module = fx.Module("chaos",
 	fx.Invoke(seedCapabilitiesOnStart),
 )
 
-// NewExecutor returns the Chaos-Mesh executor with the supplied dynamic
-// client. The Executor interface is satisfied by *ChaosMeshExecutor.
 func NewExecutor(dyn dynamic.Interface) Executor {
 	return NewChaosMeshExecutor(dyn)
 }

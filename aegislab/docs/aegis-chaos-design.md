@@ -384,6 +384,27 @@ backend:  POST /hooks/chaos-batch                       batch terminal
 | `POST /guided-sessions` / `/step` / `:commit`         | `manage:guided-session` (commit ALSO requires `inject`) |
 | Backend `/hooks/chaos` and `/hooks/chaos-batch` receivers | `webhook:chaos-receiver` (validated on backend side) |
 
+### Note on route syntax
+
+The endpoint table above spells action verbs with a colon suffix
+(`/systems/{sys}/points:import`, `/injections:preview`,
+`/executors/{name}:probe`, `/guided-sessions/{tok}:commit`,
+`/injection-batches/{id}:cancel`). Gin — the router aegis-chaos
+uses — treats a segment beginning with `:` as a path parameter and
+panics on a second `:` inside the same segment, so the colon-suffix
+form is unworkable. Action verbs are serialised as a trailing path
+segment instead. The shipped routes are:
+
+```
+POST /v1beta/systems/{sys}/points/import
+POST /v1beta/injections/preview
+POST /v1beta/executors/{name}/probe
+POST /v1beta/guided-sessions/{tok}/commit
+POST /v1beta/guided-sessions/{tok}/step
+```
+
+The scope matrix above applies unchanged; only the URL form differs.
+
 ## 6. Point Manifests and External Delivery
 
 aegis-chaos does not discover Points. Its catalog is fed exclusively by

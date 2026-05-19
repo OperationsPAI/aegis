@@ -7,16 +7,12 @@ import (
 	"regexp"
 )
 
-// ChaosMeshCRNameMaxLen is the DNS-1123 label limit Chaos-Mesh CRs are bound by.
+// 63 = DNS-1123 label limit Chaos-Mesh CR names are bound by.
 const ChaosMeshCRNameMaxLen = 63
 
-// DeriveChaosMeshCRName produces a deterministic CR metadata.name from a
-// caller idempotency_key, per ADR-0004. The action prefix is preserved so
-// `kubectl get` lists remain readable (`aegis-{action}-{12hex}`).
-//
-// Identical (action, key) always produces identical name; Apply against an
-// existing CR with the same name is the recoverability primitive — the
-// executor treats AlreadyExists as success.
+// DeriveChaosMeshCRName makes the CR metadata.name a pure function of
+// (action, idempotency_key) so a crash mid-Apply can be recovered by a
+// plain Status call (ADR-0004) — there is no orphan-name to reconcile.
 func DeriveChaosMeshCRName(action, idempotencyKey string) (string, error) {
 	if idempotencyKey == "" {
 		return "", fmt.Errorf("chaos: idempotency_key is required")
@@ -28,8 +24,6 @@ func DeriveChaosMeshCRName(action, idempotencyKey string) (string, error) {
 	sum := sha256.Sum256([]byte(idempotencyKey))
 	name := fmt.Sprintf("aegis-%s-%s", a, hex.EncodeToString(sum[:])[:12])
 	if len(name) > ChaosMeshCRNameMaxLen {
-		// action prefix is bounded by sanitizeAction; this guards against
-		// future action vocabulary additions creeping past the label limit.
 		return "", fmt.Errorf("chaos: derived CR name exceeds %d chars: %q", ChaosMeshCRNameMaxLen, name)
 	}
 	return name, nil

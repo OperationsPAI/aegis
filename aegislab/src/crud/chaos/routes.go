@@ -2,70 +2,68 @@ package chaos
 
 import (
 	"aegis/platform/framework"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Routes registers the §5 route table. Step 1 wires up:
+// Routes mounts the §5 surface under /v1beta. Step 1 wires systems,
+// points/import, singleton injections, capabilities, manifest-schema;
+// other endpoints return 501 until later steps.
 //
-//   - PUT  /v1beta/systems/{name}
-//   - GET  /v1beta/systems/{name}
-//   - POST /v1beta/systems/{sys}/points:import
-//   - POST /v1beta/injections
-//   - GET  /v1beta/injections/{id}
-//   - DEL  /v1beta/injections/{id}
-//   - GET  /v1beta/capabilities
-//   - GET  /v1beta/capabilities/{name}
-//   - GET  /v1beta/manifest-schema.json
-//
-// Other §5 endpoints exist but return 501 — they land in steps 2-5.
+// Route-syntax note: the design doc spells action verbs with a colon
+// suffix (`:import`, `:probe`, `:preview`, `:commit`). Gin treats the
+// segment after `:` as a path parameter and panics on a second `:` in
+// the same segment, so we serialise actions as a trailing `/<verb>`
+// path component. See the §5 addendum in
+// aegislab/docs/aegis-chaos-design.md.
 func Routes(h *Handler) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Name:             "chaos.v1beta",
 		BasePath:         "/v1beta",
 		SkipDefaultChain: true,
 		Register: func(g *gin.RouterGroup) {
+			// Manifest schema is the one read path chart authors hit from
+			// CI / pre-commit hooks that don't carry tokens.
 			g.GET("/manifest-schema.json", h.ManifestSchema)
 
-			g.GET("/systems", notImplemented)
-			g.PUT("/systems/:name", h.PutSystem)
-			g.GET("/systems/:name", h.GetSystem)
-			g.DELETE("/systems/:name", notImplemented)
+			auth := g.Group("", middleware.TrustedHeaderAuth())
 
-			g.GET("/systems/:name/services", notImplemented)
-			g.GET("/systems/:name/services/:svc", notImplemented)
-			g.GET("/systems/:name/services/:svc/versions", notImplemented)
+			auth.GET("/systems", notImplemented)
+			auth.PUT("/systems/:sys", h.PutSystem)
+			auth.GET("/systems/:sys", h.GetSystem)
+			auth.DELETE("/systems/:sys", notImplemented)
 
-			g.GET("/systems/:name/points", notImplemented)
-			g.GET("/systems/:name/services/:svc/points", notImplemented)
-			g.POST("/systems/:name/services/:svc/points", notImplemented)
-			g.GET("/points/:id", notImplemented)
-			g.DELETE("/points/:id", notImplemented)
-			// The :import alias under /systems/:sys/points:import. Gin's
-			// path syntax requires a literal segment; the design's "POST
-			// /systems/{sys}/points:import" is mounted as the explicit
-			// path below.
-			g.POST("/systems/:sys/points:import", h.ImportPoints)
+			auth.GET("/systems/:sys/services", notImplemented)
+			auth.GET("/systems/:sys/services/:svc", notImplemented)
+			auth.GET("/systems/:sys/services/:svc/versions", notImplemented)
 
-			g.GET("/capabilities", h.ListCapabilities)
-			g.GET("/capabilities/:name", h.GetCapability)
-			g.GET("/capabilities/:name/matrix", notImplemented)
+			auth.GET("/systems/:sys/points", notImplemented)
+			auth.GET("/systems/:sys/services/:svc/points", notImplemented)
+			auth.POST("/systems/:sys/services/:svc/points", notImplemented)
+			auth.GET("/points/:id", notImplemented)
+			auth.DELETE("/points/:id", notImplemented)
+			auth.POST("/systems/:sys/points/import", h.ImportPoints)
 
-			g.GET("/executors", notImplemented)
-			g.POST("/executors/:name:probe", notImplemented)
+			auth.GET("/capabilities", h.ListCapabilities)
+			auth.GET("/capabilities/:name", h.GetCapability)
+			auth.GET("/capabilities/:name/matrix", notImplemented)
 
-			g.POST("/injections", h.CreateInjection)
-			g.GET("/injections/:id", h.GetInjection)
-			g.DELETE("/injections/:id", h.DeleteInjection)
-			g.POST("/injections:preview", notImplemented)
+			auth.GET("/executors", notImplemented)
+			auth.POST("/executors/:name/probe", notImplemented)
 
-			g.POST("/injection-batches", notImplemented)
-			g.GET("/injection-batches/:id", notImplemented)
-			g.DELETE("/injection-batches/:id", notImplemented)
+			auth.POST("/injections", h.CreateInjection)
+			auth.GET("/injections/:id", h.GetInjection)
+			auth.DELETE("/injections/:id", h.DeleteInjection)
+			auth.POST("/injections/preview", notImplemented)
 
-			g.POST("/guided-sessions", notImplemented)
-			g.POST("/guided-sessions/:tok/step", notImplemented)
-			g.POST("/guided-sessions/:tok:commit", notImplemented)
+			auth.POST("/injection-batches", notImplemented)
+			auth.GET("/injection-batches/:id", notImplemented)
+			auth.DELETE("/injection-batches/:id", notImplemented)
+
+			auth.POST("/guided-sessions", notImplemented)
+			auth.POST("/guided-sessions/:tok/step", notImplemented)
+			auth.POST("/guided-sessions/:tok/commit", notImplemented)
 		},
 	}
 }
