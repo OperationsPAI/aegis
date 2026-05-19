@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,14 +13,19 @@ import (
 )
 
 const (
-	ChaosMeshGroup       = "chaos-mesh.org"
-	ChaosMeshVersion     = "v1alpha1"
-	PodChaosResource     = "podchaos"
+	ChaosMeshGroup        = "chaos-mesh.org"
+	ChaosMeshVersion      = "v1alpha1"
+	PodChaosResource      = "podchaos"
+	NetworkChaosResource  = "networkchaos"
 	ExecutorNameChaosMesh = "chaos-mesh"
 )
 
 var podChaosGVR = schema.GroupVersionResource{
 	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: PodChaosResource,
+}
+
+var networkChaosGVR = schema.GroupVersionResource{
+	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: NetworkChaosResource,
 }
 
 // ChaosMeshGroupVersionResourceForPodChaos exposes the PodChaos GVR for
@@ -31,8 +35,12 @@ func ChaosMeshGroupVersionResourceForPodChaos() schema.GroupVersionResource {
 	return podChaosGVR
 }
 
-// ChaosMeshExecutor renders supported Capabilities into Chaos-Mesh CRs.
-// Step 1 supports `pod_kill` only.
+// ChaosMeshGroupVersionResourceForNetworkChaos exposes the NetworkChaos
+// GVR for out-of-package callers (conformance harness).
+func ChaosMeshGroupVersionResourceForNetworkChaos() schema.GroupVersionResource {
+	return networkChaosGVR
+}
+
 type ChaosMeshExecutor struct {
 	Dyn dynamic.Interface
 }
@@ -46,7 +54,7 @@ func NewChaosMeshExecutor(dyn dynamic.Interface) *ChaosMeshExecutor {
 func (e *ChaosMeshExecutor) Name() string { return ExecutorNameChaosMesh }
 
 func (e *ChaosMeshExecutor) SupportedCapabilities() []CapabilitySupport {
-	return []CapabilitySupport{{Capability: "pod_kill", Maturity: CapStable}}
+	return registeredCapabilities()
 }
 
 type ChaosMeshHandle struct {
@@ -77,18 +85,19 @@ func decodeHandle(s string) (ChaosMeshHandle, error) {
 func (e *ChaosMeshExecutor) DeriveHandle(
 	capability, idempotencyKey string, target map[string]any,
 ) (string, error) {
-	if capability != "pod_kill" {
-		return "", fmt.Errorf("chaos-mesh executor: unsupported capability %q", capability)
-	}
-	ns, _ := target["namespace"].(string)
-	if ns == "" {
-		return "", fmt.Errorf("chaos-mesh pod_kill: target.namespace is required")
-	}
-	name, err := DeriveChaosMeshCRName("pod-kill", idempotencyKey)
+	r, err := lookupRenderer(capability)
 	if err != nil {
 		return "", err
 	}
-	return encodeHandle(ChaosMeshHandle{GVR: podChaosGVR, Namespace: ns, Name: name})
+	if err := r.ValidateTarget(target); err != nil {
+		return "", err
+	}
+	ns, _ := target["namespace"].(string)
+	name, err := DeriveChaosMeshCRName(r.HandlePrefix(), idempotencyKey)
+	if err != nil {
+		return "", err
+	}
+	return encodeHandle(ChaosMeshHandle{GVR: r.GVR(), Namespace: ns, Name: name})
 }
 
 func (e *ChaosMeshExecutor) Apply(
@@ -96,18 +105,24 @@ func (e *ChaosMeshExecutor) Apply(
 	capability, handle string,
 	target, params map[string]any,
 ) error {
-	if capability != "pod_kill" {
-		return fmt.Errorf("chaos-mesh executor: unsupported capability %q", capability)
+	r, err := lookupRenderer(capability)
+	if err != nil {
+		return err
 	}
-	app, _ := target["app"].(string)
-	if app == "" {
-		return fmt.Errorf("chaos-mesh pod_kill: target.app is required")
+	if err := r.ValidateTarget(target); err != nil {
+		return err
+	}
+	if err := r.ValidateParams(params); err != nil {
+		return err
 	}
 	h, err := decodeHandle(handle)
 	if err != nil {
 		return err
 	}
-	cr := buildPodKillCR(h.Name, h.Namespace, app, params)
+	cr, err := r.RenderCR(h.Name, h.Namespace, target, params)
+	if err != nil {
+		return fmt.Errorf("chaos-mesh %s: render CR: %w", capability, err)
+	}
 	_, err = e.Dyn.Resource(h.GVR).Namespace(h.Namespace).Create(ctx, cr, metav1.CreateOptions{})
 	switch {
 	case err == nil:
@@ -115,51 +130,8 @@ func (e *ChaosMeshExecutor) Apply(
 	case apierrors.IsAlreadyExists(err):
 		return nil
 	default:
-		return fmt.Errorf("chaos-mesh pod_kill: create CR: %w", err)
+		return fmt.Errorf("chaos-mesh %s: create CR: %w", capability, err)
 	}
-}
-
-func buildPodKillCR(name, ns, app string, params map[string]any) *unstructured.Unstructured {
-	duration := ""
-	if v, ok := params["duration_s"]; ok {
-		switch n := v.(type) {
-		case float64:
-			duration = fmt.Sprintf("%ds", int(n))
-		case int:
-			duration = fmt.Sprintf("%ds", n)
-		case int64:
-			duration = fmt.Sprintf("%ds", n)
-		case string:
-			duration = strings.TrimSpace(n)
-		}
-	}
-	spec := map[string]any{
-		"action": "pod-kill",
-		"mode":   "one",
-		"selector": map[string]any{
-			"namespaces": []any{ns},
-			"labelSelectors": map[string]any{
-				"app": app,
-			},
-		},
-	}
-	if duration != "" {
-		spec["duration"] = duration
-	}
-	u := &unstructured.Unstructured{Object: map[string]any{
-		"apiVersion": ChaosMeshGroup + "/" + ChaosMeshVersion,
-		"kind":       "PodChaos",
-		"metadata": map[string]any{
-			"name":      name,
-			"namespace": ns,
-			"labels": map[string]any{
-				"app.kubernetes.io/managed-by": "aegis-chaos",
-				"aegis-chaos/capability":       "pod_kill",
-			},
-		},
-		"spec": spec,
-	}}
-	return u
 }
 
 func (e *ChaosMeshExecutor) Status(ctx context.Context, handle string) (ExecState, map[string]any, error) {
@@ -176,10 +148,13 @@ func (e *ChaosMeshExecutor) Status(ctx context.Context, handle string) (ExecStat
 		}
 		return ExecStateFailed, nil, fmt.Errorf("chaos-mesh status: %w", err)
 	}
-	return interpretPodChaosStatus(got), readStatusDiagnostics(got), nil
+	return interpretChaosMeshStatus(got), readStatusDiagnostics(got), nil
 }
 
-func interpretPodChaosStatus(u *unstructured.Unstructured) ExecState {
+// interpretChaosMeshStatus reads AllInjected / AllRecovered conditions,
+// shared across PodChaos / NetworkChaos / HTTPChaos / etc. All Chaos-Mesh
+// CRDs publish the same condition shape under status.conditions[].
+func interpretChaosMeshStatus(u *unstructured.Unstructured) ExecState {
 	conds, found, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
 	if !found {
 		return ExecStatePending
@@ -230,4 +205,25 @@ func (e *ChaosMeshExecutor) Destroy(ctx context.Context, handle string) error {
 		return nil
 	}
 	return fmt.Errorf("chaos-mesh destroy: %w", err)
+}
+
+// durationFromParams reads the `duration_s` knob commonly carried in
+// param payloads and converts it to a Chaos-Mesh duration string. Empty
+// return means "no duration override" — caller should not set the field.
+func durationFromParams(params map[string]any) string {
+	v, ok := params["duration_s"]
+	if !ok {
+		return ""
+	}
+	switch n := v.(type) {
+	case float64:
+		return fmt.Sprintf("%ds", int(n))
+	case int:
+		return fmt.Sprintf("%ds", n)
+	case int64:
+		return fmt.Sprintf("%ds", n)
+	case string:
+		return n
+	}
+	return ""
 }

@@ -45,6 +45,7 @@ func SeedCapabilities(db *gorm.DB) error {
 			CreatedAt:          time.Now().UTC(),
 		},
 	}
+	seed = append(seed, SeedsNetwork...)
 	return db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "name"}},
 		DoUpdates: clause.AssignmentColumns([]string{
