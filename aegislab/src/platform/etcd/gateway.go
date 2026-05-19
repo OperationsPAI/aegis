@@ -17,14 +17,15 @@ type Gateway struct {
 }
 
 func NewGateway(client *clientv3.Client) *Gateway {
-	if client == nil {
-		client = newClient()
-	}
 	return &Gateway{client: client}
 }
 
-func NewGatewayWithLifecycle(lc fx.Lifecycle) *Gateway {
-	gateway := NewGateway(nil)
+func NewGatewayWithLifecycle(lc fx.Lifecycle) (*Gateway, error) {
+	client, err := newClient()
+	if err != nil {
+		return nil, err
+	}
+	gateway := &Gateway{client: client}
 
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
@@ -33,7 +34,7 @@ func NewGatewayWithLifecycle(lc fx.Lifecycle) *Gateway {
 		},
 	})
 
-	return gateway
+	return gateway, nil
 }
 
 func (g *Gateway) Put(ctx context.Context, key, value string, ttl time.Duration) error {
@@ -106,7 +107,12 @@ func (g *Gateway) Watch(ctx context.Context, key string, withPrefix bool) client
 
 func (g *Gateway) clientOrInit() *clientv3.Client {
 	if g.client == nil {
-		g.client = newClient()
+		client, err := newClient()
+		if err != nil {
+			logrus.Errorf("etcd client lazy init failed: %v", err)
+			return nil
+		}
+		g.client = client
 	}
 	return g.client
 }
@@ -118,7 +124,7 @@ func (g *Gateway) close() error {
 	return g.client.Close()
 }
 
-func newClient() *clientv3.Client {
+func newClient() (*clientv3.Client, error) {
 	endpoints := config.GetStringSlice("etcd.endpoints")
 	if len(endpoints) == 0 {
 		endpoints = []string{"localhost:2379"}
@@ -134,15 +140,16 @@ func newClient() *clientv3.Client {
 		Password:    config.GetString("etcd.password"),
 	})
 	if err != nil {
-		logrus.Fatalf("Failed to connect to etcd: %v", err)
+		return nil, fmt.Errorf("connect to etcd: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	if _, err := client.Status(ctx, endpoints[0]); err != nil {
-		logrus.Fatalf("Failed to verify etcd connection: %v", err)
+		_ = client.Close()
+		return nil, fmt.Errorf("verify etcd connection: %w", err)
 	}
 
 	logrus.Info("Successfully connected to etcd")
-	return client
+	return client, nil
 }

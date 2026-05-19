@@ -20,14 +20,15 @@ type Gateway struct {
 }
 
 func NewGateway(client *redis.Client) *Gateway {
-	if client == nil {
-		client = newClient()
-	}
 	return &Gateway{client: client}
 }
 
-func NewGatewayWithLifecycle(lc fx.Lifecycle) *Gateway {
-	gateway := NewGateway(nil)
+func NewGatewayWithLifecycle(lc fx.Lifecycle) (*Gateway, error) {
+	client, err := newClient()
+	if err != nil {
+		return nil, err
+	}
+	gateway := &Gateway{client: client}
 
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
@@ -36,12 +37,17 @@ func NewGatewayWithLifecycle(lc fx.Lifecycle) *Gateway {
 		},
 	})
 
-	return gateway
+	return gateway, nil
 }
 
 func (g *Gateway) clientOrInit() *redis.Client {
 	if g.client == nil {
-		g.client = newClient()
+		client, err := newClient()
+		if err != nil {
+			logrus.Errorf("redis client lazy init failed: %v", err)
+			return nil
+		}
+		g.client = client
 	}
 	return g.client
 }
@@ -409,7 +415,7 @@ func (g *Gateway) InitConcurrencyLock(ctx context.Context) error {
 	return g.clientOrInit().Set(ctx, ConcurrencyLockKey, 0, 0).Err()
 }
 
-func newClient() *redis.Client {
+func newClient() (*redis.Client, error) {
 	logrus.Infof("Connecting to Redis %s", config.GetString("redis.host"))
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.GetString("redis.host"),
@@ -417,10 +423,11 @@ func newClient() *redis.Client {
 		DB:       config.GetInt("redis.db"),
 	})
 	if err := client.Ping(context.Background()).Err(); err != nil {
-		logrus.Fatalf("Failed to connect to Redis: %v", err)
+		_ = client.Close()
+		return nil, fmt.Errorf("connect to Redis: %w", err)
 	}
 	if err := redisotel.InstrumentTracing(client); err != nil {
-		logrus.Fatalf("Failed to instrument Redis tracing: %v", err)
+		logrus.Warnf("Failed to instrument Redis tracing (continuing without tracing): %v", err)
 	}
-	return client
+	return client, nil
 }
