@@ -7,6 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RoutesLifecycle mounts the bucket-lifecycle preview endpoint. Split
+// out from RoutesPortal so the worker dependency stays out of Handler.
+func RoutesLifecycle(w *BucketLifecycleWorker) framework.RouteRegistrar {
+	return framework.RouteRegistrar{
+		Audience: framework.AudiencePortal,
+		Name:     "blob.lifecycle",
+		Register: func(v2 *gin.RouterGroup) {
+			g := v2.Group("/blob", middleware.TrustedHeaderAuth())
+			g.GET("/lifecycle/dry-run", w.DryRunHTTP)
+		},
+	}
+}
+
 // RoutesPortal mounts the human-portal-facing blob endpoints.
 // Authentication is JWT human-user; per-bucket ACL is enforced by the
 // handler.
