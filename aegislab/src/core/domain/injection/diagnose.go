@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"aegis/platform/authz"
 	"aegis/platform/consts"
 
 	"gorm.io/gorm"
@@ -142,13 +143,17 @@ func toFileHealth(in []datapackFileStat) []DatapackFileHealth {
 // report. Unlike GetDatapackFiles / GetDatapackSchema this works for any
 // injection regardless of build state — the whole point is to surface
 // partial / failed builds.
-func (s *Service) DiagnoseDatapack(ctx context.Context, id int) (*DatapackDiagnoseResp, error) {
+func (s *Service) DiagnoseDatapack(ctx context.Context, scope authz.CallerScope, id int) (*DatapackDiagnoseResp, error) {
 	injection, err := s.repo.loadInjection(id)
 	if err != nil {
 		if errors.Is(err, consts.ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("%w: injection id: %d", consts.ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get injection: %w", err)
+	}
+
+	if err := scope.MustHaveProject(int64(injection.Task.Trace.ProjectID)); err != nil {
+		return nil, err
 	}
 
 	parquets, jsonFiles, marker, extras := s.statDatapackArtifacts(ctx, injection.Name)

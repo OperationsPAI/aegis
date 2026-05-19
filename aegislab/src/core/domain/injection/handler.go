@@ -1127,7 +1127,11 @@ func (h *Handler) DiagnoseDatapack(c *gin.Context) {
 	if !ok {
 		return
 	}
-	resp, err := h.service.DiagnoseDatapack(c.Request.Context(), id)
+	scope, ok := h.scope(c)
+	if !ok {
+		return
+	}
+	resp, err := h.service.DiagnoseDatapack(c.Request.Context(), scope, id)
 	if httpx.HandleServiceError(c, err) {
 		return
 	}

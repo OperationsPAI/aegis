@@ -35,7 +35,7 @@ type HandlerService interface {
 	QueryDatapackFile(context.Context, authz.CallerScope, int, string) (string, int64, io.ReadCloser, error)
 	GetDatapackSchema(context.Context, authz.CallerScope, int) (*DatapackSchemaResp, error)
 	QueryDatapack(context.Context, authz.CallerScope, int, string) (io.ReadCloser, error)
-	DiagnoseDatapack(context.Context, int) (*DatapackDiagnoseResp, error)
+	DiagnoseDatapack(context.Context, authz.CallerScope, int) (*DatapackDiagnoseResp, error)
 	UpdateGroundtruth(context.Context, authz.CallerScope, int, *UpdateGroundtruthReq) error
 	UploadDatapack(context.Context, authz.CallerScope, *UploadDatapackReq, io.Reader, int64) (*UploadDatapackResp, error)
 	CancelInjection(context.Context, authz.CallerScope, int) (*CancelInjectionResp, error)

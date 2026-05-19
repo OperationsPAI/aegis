@@ -9,7 +9,7 @@ import (
 
 // HandlerService captures the execution operations consumed by the HTTP handler.
 type HandlerService interface {
-	ListProjectExecutions(context.Context, *ListExecutionReq, int) (*dto.ListResp[ExecutionResp], error)
+	ListProjectExecutions(context.Context, authz.CallerScope, *ListExecutionReq, int) (*dto.ListResp[ExecutionResp], error)
 	SubmitAlgorithmExecution(context.Context, *SubmitExecutionReq, string, int) (*SubmitExecutionResp, error)
 	ListExecutions(context.Context, authz.CallerScope, *ListExecutionReq) (*dto.ListResp[ExecutionResp], error)
 	GetExecution(context.Context, authz.CallerScope, int) (*ExecutionDetailResp, error)
