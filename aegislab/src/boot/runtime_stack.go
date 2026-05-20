@@ -12,6 +12,7 @@ import (
 	worker "aegis/core/orchestrator/transport/worker"
 	"aegis/clients/runtime"
 	"aegis/core/orchestrator"
+	task "aegis/core/domain/task"
 
 	"go.uber.org/fx"
 )
@@ -53,5 +54,6 @@ func RuntimeWorkerStackOptions() fx.Option {
 		controller.Module,
 		grpcruntime.Module,
 		receiver.Module,
+		fx.Invoke(func() { task.ChaosServiceCancelHook = consumer.CancelChaosServiceInjection }),
 	)
 }
