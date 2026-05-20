@@ -23,7 +23,7 @@ global:
   images:
     rcabench:
       name: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-      tag: byte-20260518-orch-trace-coverage-r1
+      tag: byte-20260520-step5b-full
       pullPolicy: IfNotPresent
 
 # Dev intercept anchors. Enabled on byte-cluster so developers can run
@@ -339,7 +339,7 @@ sso:
     # entrypoint). Pin to the volces mirror + matching tag so the byte
     # cluster doesn't try docker.io (unreachable from this VPC).
     repository: pair-cn-shanghai.cr.volces.com/opspai/rcabench
-    tag: byte-20260518-orch-trace-coverage-r1
+    tag: byte-20260520-step5b-full
     pullPolicy: IfNotPresent
   persistence:
     storageClass: rcabench
@@ -379,3 +379,17 @@ mysql:
     storageClass: rcabench
 
 serviceAccount: {}
+
+# §11 step-5b R1 — shared bearer for backend ↔ chaos service hop on
+# byte-cluster. Operator-managed Secret `rcabench-chaos-auth` (key `token`)
+# must exist before helm upgrade; rotation = single `kubectl create secret
+# --dry-run | apply -f`. Same secretName fans out to both directions via
+# `chaos.auth` (umbrella backend pods) and `chaos.chaosAuth` (chaos subchart).
+chaos:
+  enabled: true
+  auth:
+    secretName: rcabench-chaos-auth
+    secretKey: token
+  chaosAuth:
+    secretName: rcabench-chaos-auth
+    secretKey: token
