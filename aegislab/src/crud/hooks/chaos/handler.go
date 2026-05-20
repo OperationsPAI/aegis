@@ -349,7 +349,7 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 		logrus.WithError(createErr).WithFields(logrus.Fields{
 			"chaos_injection_id": chaosInjectionID,
 			"task_id":            *row.TaskID,
-		}).Warn("chaos hook: shadow FI Create failed with backend task_id; retrying with TaskID=nil")
+		}).Warn("shadow FI retry without TaskID due to FK violation on backend dispatcher path")
 		row.ID = 0
 		row.TaskID = nil
 		createErr = h.db.WithContext(ctx).Create(&row).Error
