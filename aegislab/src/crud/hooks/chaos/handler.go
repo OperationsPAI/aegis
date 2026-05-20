@@ -191,8 +191,27 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 		}
 	}
 
+	// Mirror k8s_handler.go HandleCRDSucceeded: prepend NAMESPACE env var
+	// override onto benchmark.EnvVars so the BuildDatapack container resolves
+	// os.environ["NAMESPACE"] to the actual injected namespace. Legacy CRD
+	// path does this via parsedAnnotations.benchmark.EnvVars; chaos webhook
+	// uses the concrete namespace stamped into caller_metadata by the
+	// dispatcher.
+	benchCopy := *meta.Benchmark
+	if meta.Namespace != "" {
+		nsOverride := dto.ParameterItem{Key: "NAMESPACE", Value: meta.Namespace}
+		merged := make([]dto.ParameterItem, 0, len(benchCopy.EnvVars)+1)
+		merged = append(merged, nsOverride)
+		for _, ev := range benchCopy.EnvVars {
+			if ev.Key != "NAMESPACE" {
+				merged = append(merged, ev)
+			}
+		}
+		benchCopy.EnvVars = merged
+	}
+
 	payload := map[string]any{
-		consts.BuildBenchmark:        *meta.Benchmark,
+		consts.BuildBenchmark:        benchCopy,
 		consts.BuildDatapack:         dp,
 		consts.BuildDatasetVersionID: consts.DefaultInvalidID,
 	}
