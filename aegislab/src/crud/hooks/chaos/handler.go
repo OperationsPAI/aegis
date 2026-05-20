@@ -268,9 +268,13 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 		GroundtruthSource: "auto",
 		EngineConfig:      "{}",
 		PreDuration:       preDuration,
-		TaskID:            utils.StringPtr(meta.TaskID),
-		State:             consts.DatapackInjectSuccess,
-		Status:            consts.CommonEnabled,
+		// TaskID intentionally nil for --via-chaos shadow rows: aegisctl
+		// generates a uuid client-side without persisting a backend tasks
+		// row, so the FK to tasks(id) would violate. The legacy CRD flow
+		// (k8s_handler.go) populates TaskID from K8s labels where a real
+		// tasks row exists; that path doesn't reach this shadow upsert.
+		State:  consts.DatapackInjectSuccess,
+		Status: consts.CommonEnabled,
 	}
 	if meta.Benchmark != nil && meta.Benchmark.ID != 0 {
 		bid := meta.Benchmark.ID
