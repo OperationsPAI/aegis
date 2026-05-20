@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 	"github.com/stretchr/testify/require"
 )
 

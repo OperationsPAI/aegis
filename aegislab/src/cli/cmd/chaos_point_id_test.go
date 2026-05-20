@@ -6,7 +6,7 @@ import (
 
 	chaoscrud "aegis/crud/chaos"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 )
 
 // TestChaosTypeTranslation pins the guided→capability lookup to the 32

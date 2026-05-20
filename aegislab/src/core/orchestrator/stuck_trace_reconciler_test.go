@@ -14,7 +14,7 @@ import (
 	execution "aegis/core/domain/execution"
 	injection "aegis/core/domain/injection"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"

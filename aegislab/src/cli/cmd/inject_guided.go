@@ -13,7 +13,7 @@ import (
 	"aegis/cli/output"
 	"aegis/platform/consts"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

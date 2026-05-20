@@ -14,7 +14,6 @@ import (
 	"aegis/platform/utils"
 
 	chaos "aegis/platform/chaos"
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 )
 
 // BatchDeleteInjectionReq represents the request to batch delete injections
@@ -348,7 +347,7 @@ func (req *SearchInjectionReq) ConvertToSearchReq() *dto.SearchReq[consts.Inject
 
 // GuidedSpec is the only accepted HTTP fault-spec payload shape.
 // Legacy FriendlyFaultSpec and raw chaos.Node payloads are rejected at bind time.
-type GuidedSpec guidedcli.GuidedConfig
+type GuidedSpec chaos.GuidedConfig
 
 func (spec *GuidedSpec) UnmarshalJSON(data []byte) error {
 	var probe map[string]json.RawMessage
@@ -385,8 +384,8 @@ func (spec *GuidedSpec) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (spec GuidedSpec) GuidedConfig() guidedcli.GuidedConfig {
-	return guidedcli.GuidedConfig(spec)
+func (spec GuidedSpec) GuidedConfig() chaos.GuidedConfig {
+	return chaos.GuidedConfig(spec)
 }
 
 // SubmitInjectionReq represents a request to submit fault injection tasks with
@@ -432,10 +431,10 @@ type SubmitInjectionReq struct {
 	AllowBootstrap bool `json:"allow_bootstrap" binding:"omitempty"`
 }
 
-func (req *SubmitInjectionReq) GuidedSpecs() [][]guidedcli.GuidedConfig {
-	result := make([][]guidedcli.GuidedConfig, len(req.Specs))
+func (req *SubmitInjectionReq) GuidedSpecs() [][]chaos.GuidedConfig {
+	result := make([][]chaos.GuidedConfig, len(req.Specs))
 	for i, batch := range req.Specs {
-		configs := make([]guidedcli.GuidedConfig, len(batch))
+		configs := make([]chaos.GuidedConfig, len(batch))
 		for j, spec := range batch {
 			configs[j] = spec.GuidedConfig()
 		}

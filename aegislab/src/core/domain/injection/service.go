@@ -24,7 +24,6 @@ import (
 	"aegis/platform/utils"
 
 	chaos "aegis/platform/chaos"
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -46,7 +45,7 @@ type allocatedSlot struct {
 // has an empty namespace and would therefore benefit from server-side
 // allocation. Returns false when every config already names a namespace
 // (caller leaves the explicit-ns path of #164 alone).
-func batchNeedsAutoAllocate(batch []guidedcli.GuidedConfig) bool {
+func batchNeedsAutoAllocate(batch []chaos.GuidedConfig) bool {
 	for _, cfg := range batch {
 		if strings.TrimSpace(cfg.Namespace) == "" {
 			return true
@@ -377,7 +376,7 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 
 	// Break the submit→restart-pedestal chicken-and-egg: on a first run,
 	// the target namespace doesn't exist yet (RestartPedestal hasn't run),
-	// so guidedcli.BuildInjection's pod listing would 500. Pre-create any
+	// so chaos.BuildInjection's pod listing would 500. Pre-create any
 	// missing namespaces now; RestartPedestal helm-installs into them in a
 	// few seconds. See github issues #91 item 1 and #92 item 1.
 	for _, batch := range guidedSpecs {
@@ -391,7 +390,7 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 	for i := range guidedSpecs {
 		alloc, hasAlloc := allocations[i]
 		// Fresh bootstrapped slots have no workload yet, so the submit-time
-		// guidedcli.BuildInjection inside parseBatchGuidedSpecs would fail
+		// chaos.BuildInjection inside parseBatchGuidedSpecs would fail
 		// at `app X not found in namespace Y` because pod listing returns
 		// empty. Build the item directly from the request-supplied fields
 		// — system-type sanity check has already been done implicitly by
