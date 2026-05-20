@@ -16,6 +16,19 @@ serviceAccount:
 # coexist (each scoped to its own SA).
 rbac:
   create: true
+  # crdResources mirrors the GVRs the renderer registry dispatches to —
+  # see aegislab/src/crud/chaos/renderer_*.go (one Resource per renderer
+  # family) as the source of truth. Keep this list aligned when adding a
+  # new renderer family; the executor's dynamic client needs the verb on
+  # every registered GVR.
+  crdResources:
+    - podchaos
+    - networkchaos
+    - stresschaos
+    - timechaos
+    - dnschaos
+    - httpchaos
+    - jvmchaos
 
 auth:
   jwtSecretRef:
