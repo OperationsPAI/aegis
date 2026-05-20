@@ -73,7 +73,7 @@ type dbPointsLookupFunc func(ctx context.Context, system, service, capability st
 func runCatalogPreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, db *gorm.DB, logEntry *logrus.Entry, lister pointsListerFunc, lookup dbPointsLookupFunc) {
 	source := strings.TrimSpace(config.GetString(catalogSourceFlagKey))
 	if source == "" {
-		source = catalogSourceInProc
+		source = catalogSourceChaos
 	}
 	switch source {
 	case catalogSourceChaos:
@@ -201,11 +201,15 @@ func newDBPointsLookup(db *gorm.DB) dbPointsLookupFunc {
 		var p chaoscrud.Point
 		q := db.WithContext(ctx).
 			Model(&chaoscrud.Point{}).
-			Joins("LEFT JOIN chaos_services ON chaos_services.id = chaos_points.service_id").
-			Where("chaos_points.system_name = ? AND chaos_points.capability_name = ? AND chaos_points.status = ?",
-				system, capability, chaoscrud.PointActive)
+			Where("chaos_points.system_name = ? AND chaos_points.capability_name = ?",
+				system, capability)
 		if service != "" {
-			q = q.Where("chaos_services.name = ?", service)
+			// INNER join scoped by both id AND system_name — a same-named
+			// service in another system must not shadow. Mirrors chaos-service
+			// ListSystemPoints which resolves Service first then matches
+			// service_id (crud/chaos/service_batch.go).
+			q = q.Joins("JOIN chaos_services ON chaos_services.id = chaos_points.service_id AND chaos_services.system_name = ? AND chaos_services.name = ?",
+				system, service)
 		}
 		err := q.Take(&p).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
