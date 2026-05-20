@@ -1,7 +1,9 @@
 # chaos subchart defaults — aegis-chaos microservice.
 # Rendering is gated by umbrella `chaos.enabled` (see helm/Chart.yaml).
 
-replicaCount: 1
+# replicaCount intentionally absent: the deployment hard-codes replicas=1
+# because the reconciler has no inter-replica coordination. See the
+# template for the lift criteria.
 httpPort: 8086
 binaryName: "aegis-chaos"
 
