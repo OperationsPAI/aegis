@@ -4,7 +4,11 @@ kind: Deployment
 metadata:
   name: {{ include "chaos.fullname" . }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  # Pinned: the reconciler is single-goroutine + 5s poll with no
+  # inter-replica coordination; ≥2 replicas race the stickiness gate and
+  # double-fire webhooks. Lift only after a leader-elect / distributed
+  # lock lands.
+  replicas: 1
   selector:
     matchLabels:
       app: {{ include "chaos.fullname" . }}
