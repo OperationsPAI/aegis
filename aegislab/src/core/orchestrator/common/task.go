@@ -8,6 +8,7 @@ import (
 	"aegis/platform/tracing"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -88,9 +89,22 @@ func SubmitTaskWithDB(ctx context.Context, db *gorm.DB, redisGateway *redis.Gate
 	if t.ParentTaskID != nil && t.State != consts.TaskRescheduled {
 		parentLevel, err := getParentTaskLevelByID(db, *t.ParentTaskID)
 		if err != nil {
-			return fmt.Errorf("failed to get parent task level: %w", err)
+			// §11 step 5b: chaos webhook flows generate a task_id on the
+			// aegisctl side without creating a backend Task row first, so
+			// the parent lookup misses. Treat the BuildDatapack as a root
+			// task (Level=0, drop ParentTaskID). Trace continuity is
+			// preserved by TraceID + RootTraceCarrier, which propagation
+			// uses independently of the task tree.
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				logrus.WithField("parent_task_id", *t.ParentTaskID).Warn("submit: parent task not found, promoting to root")
+				t.ParentTaskID = nil
+				t.Level = 0
+			} else {
+				return fmt.Errorf("failed to get parent task level: %w", err)
+			}
+		} else {
+			t.Level = parentLevel + 1
 		}
-		t.Level = parentLevel + 1
 	}
 
 	if !t.Immediate {
