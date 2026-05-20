@@ -157,6 +157,10 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 		row := s.persistFailedChild(ctx, batchID, c, ErrSystemDisabled)
 		return row, ErrSystemDisabled
 	}
+	if cerr := s.checkSystemCapacity(ctx, sys); cerr != nil {
+		row := s.persistFailedChild(ctx, batchID, c, cerr)
+		return row, cerr
+	}
 	sysCtx := SystemContext{Name: sys.Name, AppLabelKey: sys.AppLabelKey}
 
 	target := map[string]any(point.Target)

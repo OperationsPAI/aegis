@@ -190,6 +190,8 @@ func (h *Handler) CreateInjection(c *gin.Context) {
 		case errors.Is(err, ErrSystemDisabled), errors.Is(err, ErrPointNotActive),
 			errors.Is(err, ErrCapabilityUnsupported), errors.Is(err, ErrIdempotencyMismatch):
 			code = http.StatusBadRequest
+		case errors.Is(err, ErrSystemAtCapacity):
+			code = http.StatusTooManyRequests
 		}
 		dto.ErrorResponse(c, code, err.Error())
 		return
