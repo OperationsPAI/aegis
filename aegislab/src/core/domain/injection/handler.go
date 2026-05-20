@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 )
 
 type Handler struct {

@@ -11,11 +11,26 @@ type (
 	InjectionConf = chaosHandler.InjectionConf
 	MetadataStore = chaosHandler.MetadataStore
 	SystemConfig  = chaosHandler.SystemConfig
+
+	ChaosResourceMapping = chaosHandler.ChaosResourceMapping
+	Node                 = chaosHandler.Node
+
+	ServiceEndpointData      = chaosHandler.ServiceEndpointData
+	DatabaseOperationData    = chaosHandler.DatabaseOperationData
+	GRPCOperationData        = chaosHandler.GRPCOperationData
+	JavaClassMethodData      = chaosHandler.JavaClassMethodData
+	RuntimeMutatorTargetData = chaosHandler.RuntimeMutatorTargetData
+	NetworkPairData          = chaosHandler.NetworkPairData
 )
 
 var (
-	ChaosTypeMap        = chaosHandler.ChaosTypeMap
-	ChaosNameMap        = chaosHandler.ChaosNameMap
-	IsSystemRegistered  = chaosHandler.IsSystemRegistered
-	SetMetadataStore    = chaosHandler.SetMetadataStore
+	ChaosTypeMap       = chaosHandler.ChaosTypeMap
+	ChaosNameMap       = chaosHandler.ChaosNameMap
+	IsSystemRegistered = chaosHandler.IsSystemRegistered
+	SetMetadataStore   = chaosHandler.SetMetadataStore
+
+	RegisterSystem    = chaosHandler.RegisterSystem
+	UnregisterSystem  = chaosHandler.UnregisterSystem
+	UpdateSystem      = chaosHandler.UpdateSystem
+	GetAllSystemTypes = chaosHandler.GetAllSystemTypes
 )

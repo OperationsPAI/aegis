@@ -12,7 +12,7 @@ import (
 	"aegis/platform/consts"
 	redisinfra "aegis/platform/redis"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	goredis "github.com/redis/go-redis/v9"
 )
 

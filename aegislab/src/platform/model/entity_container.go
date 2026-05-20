@@ -8,7 +8,7 @@ import (
 	"aegis/platform/dockerutil"
 	"aegis/platform/utils"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"gorm.io/gorm"
 )
 

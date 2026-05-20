@@ -9,7 +9,7 @@ import (
 	"aegis/platform/model"
 	execution "aegis/core/domain/execution"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 )
 
 // ListEvaluationReq represents the request for listing evaluations.

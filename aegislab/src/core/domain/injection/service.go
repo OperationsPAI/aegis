@@ -23,7 +23,7 @@ import (
 	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/google/uuid"
 	"gorm.io/gorm"

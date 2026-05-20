@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"

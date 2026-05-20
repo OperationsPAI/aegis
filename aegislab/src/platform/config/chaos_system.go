@@ -7,7 +7,7 @@ import (
 
 	"aegis/platform/consts"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/mitchellh/mapstructure"
 )
 

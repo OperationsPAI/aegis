@@ -8,7 +8,7 @@ import (
 
 	"aegis/platform/model"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"gorm.io/gorm"
 )
 

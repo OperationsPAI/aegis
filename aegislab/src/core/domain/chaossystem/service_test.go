@@ -12,7 +12,7 @@ import (
 	"aegis/platform/model"
 	"aegis/core/orchestrator/common"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/spf13/viper"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
