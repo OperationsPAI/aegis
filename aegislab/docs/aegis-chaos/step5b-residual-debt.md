@@ -23,24 +23,13 @@ the shadow `fault_injections` row. Without that, the algorithm container's
 `caller_metadata.groundtruths` — the shadow upsert can then pull from
 `chaos_injections.groundtruth` instead.
 
-### 2. CRD watcher coexistence is still required
+### 2. CRD watcher coexistence — RESOLVED (§11 step 5c)
 
-The in-process CRD informer (`core/orchestrator/k8s_handler.go`) is the
-sole writer of `fault.injection.started` for the legacy `chaos-mesh-direct`
-path, and is the sole emitter of `fault.injection.completed` for the same
-path. The chaos-service path now emits both events itself:
-
-- `fault.injection.started` from `executeFaultInjection` (this pass).
-- `fault.injection.completed` from the webhook handler via the gate path
-  (already in place).
-
-**Trigger for cleanup**: §11 step 5c, after the chaos-service path soaks
-for two release windows without a fall-back. At that point:
-
-- Remove the CRD watcher startup wiring.
-- Remove `executorPathChaosMeshDirect` and the per-system flag.
-- Remove the `dispatchPath != executorPathChaosService` gate in
-  `fault_injection.go` around `CreateInjection`.
+The in-process CRD informer, the per-system executor flag, and the
+chaos-mesh-direct dispatch branch were all removed in §11 step 5c. The
+chaos-service path is now the only dispatcher path and emits both
+`fault.injection.started` (from `executeFaultInjection`) and
+`fault.injection.completed` (from the webhook handler via the gate path).
 
 ### 3. Dual natural keys on `FaultInjection`
 
@@ -58,25 +47,20 @@ point change `dispatcher.buildCallerMetadata` so `datapack.name` carries
 historical rows. Not done in this pass because no caller queries by name
 across the two windows yet, and the change is a migration concern.
 
-### 4. `--via-chaos` flag on `regression run` is deprecated but still bound
+### 4. `--via-chaos` flag on `regression run` — RESOLVED (§11 step 5c)
 
-The flag now errors out instead of routing the submit through chaos
-service. Kept bound so users with `AEGIS_INJECT_VIA_CHAOS=1` in their
-shell get a clear deprecation message instead of an unknown-flag error.
-
-**Trigger for cleanup**: drop after one release cycle (no callers in CI).
-The standard backend submit already exercises the chaos-service path via
-the per-system executor flag, so the case is fully covered.
+The flag and its underlying `aegisctl inject guided --via-chaos` client
+smoke were both removed in §11 step 5c. `AEGIS_INJECT_VIA_CHAOS=1` shells
+now get an unknown-flag error.
 
 ### 5. Shadow FI's defensive FK retry
 
 `crud/hooks/chaos/handler.go::getOrCreateShadowFaultInjection` writes the
 shadow row with `TaskID = meta.TaskID` when `meta.HasBackendTask` is true,
-then on Create error retries with `TaskID=nil`. The retry is belt-and-braces:
-both real backend dispatcher and aegisctl `--via-chaos` flows pass the
-correct `HasBackendTask` today. The retry catches the case where the
-backend task row was deleted out from under an in-flight webhook (FK
-violation race).
+then on Create error retries with `TaskID=nil`. The backend dispatcher
+always sets `HasBackendTask=true` after §11 step 5c. The retry catches the
+case where the backend task row was deleted out from under an in-flight
+webhook (FK violation race).
 
 **Trigger for cleanup**: drop when there's an integration test asserting
 backend-dispatcher tasks are never GC'd while their `fault_injections` row

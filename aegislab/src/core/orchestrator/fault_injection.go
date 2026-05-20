@@ -2,19 +2,13 @@ package consumer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"sort"
-	"strconv"
 	"sync"
 	"time"
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/tracing"
-	"aegis/platform/model"
-	injection "aegis/core/domain/injection"
-	runtimeinfra "aegis/platform/runtime"
 	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -80,9 +74,9 @@ func (bm *FaultBatchManager) isFinished(batchID string) bool {
 }
 
 // snapshotBatchProgress returns (count, expected) for batchID under read
-// lock. Used by HandleCRDSucceeded to log per-leaf progress so a hybrid
-// batch stuck waiting on a leaf whose CRD informer never fires (issue
-// #305) is observable rather than silent.
+// lock. Originally hooked into the legacy CRD watcher per-leaf log emit
+// for hybrid batches (issue #305); now retained because chaos-service
+// batch progress could grow the same observability need.
 func (bm *FaultBatchManager) snapshotBatchProgress(batchID string) (int, int) {
 	bm.mu.RLock()
 	defer bm.mu.RUnlock()
@@ -98,8 +92,11 @@ func (bm *FaultBatchManager) setBatchInjections(batchID string, injectionNames [
 	bm.batchInjections[batchID] = injectionNames
 }
 
-// executeFaultInjection handles the guided fault-injection batch path:
-// GuidedConfig -> guidedcli.BuildInjection -> handler.InjectionConf -> BatchCreate.
+// executeFaultInjection drives the guided fault-injection batch through
+// the chaos-service dispatcher. The chaos-service catalog-resolves each
+// guided spec server-side and returns a structured 400 on bad input, so
+// no local BuildInjection pre-flight is run here — a chaos-service
+// rejection is treated as the authoritative validation error.
 func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDeps) error {
 	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
 		batchManager := deps.FaultBatchManager
@@ -141,7 +138,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		// which is the concrete pool-allocated ns the CR is applied into.
 		// The catalog is keyed by the logical name; do not substitute the
 		// concrete ns here or every preflight will fall through to WARN.
-		runCatalogPreflight(childCtx, payload.system, payload.guidedConfigs, deps.DB, logEntry, nil, nil)
+		runCatalogPreflight(childCtx, payload.system, payload.guidedConfigs, deps.DB, logEntry, nil)
 
 		// Default: release the lock on exit. Ownership transfers to the
 		// CRD-success/CRD-failed path only after both BatchCreate and
@@ -165,96 +162,10 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			}
 		}()
 
-		batchLen := len(payload.guidedConfigs)
-		injectionConfs := make([]chaos.InjectionConf, 0, batchLen)
-		displayMaps := make([]map[string]any, 0, batchLen)
-		groundtruths := make([]model.Groundtruth, 0, batchLen)
-
-		for i, cfg := range payload.guidedConfigs {
-			conf, _, err := guidedcli.BuildInjection(childCtx, cfg)
-			if err != nil {
-				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to build guided injection %d", i), err)
-			}
-			displayMap, err := conf.GetDisplayConfig(childCtx)
-			if err != nil {
-				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get display config for guided config %d", i), err)
-			}
-			chaosGroundtruth, err := conf.GetGroundtruth(childCtx)
-			if err != nil {
-				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to get groundtruth for guided config %d", i), err)
-			}
-			injectionConfs = append(injectionConfs, conf)
-			displayMaps = append(displayMaps, displayMap)
-			groundtruths = append(groundtruths, *model.NewDBGroundtruth(&chaosGroundtruth))
-		}
-
-		// Re-capture groundtruth right before applying CRDs. The first pass
-		// above runs at the top of the FI handler — by the time annotations,
-		// labels, and the batch ID are wired up, RestartPedestal's helm-upgrade
-		// may have rolled the targeted pod and renamed it (the chaos-mesh CRD
-		// selector is label-based so the FI still lands, but the DB-recorded
-		// GT.Pod was the OLD name). Re-resolving here pins fresh pod / container
-		// names without changing the action-space (service-level groundtruth is
-		// expected to be stable; a service mismatch is logged but we proceed
-		// with the fresh values — the CRD is what's actually about to run).
-		for i, conf := range injectionConfs {
-			confCopy := conf
-			fresh, mismatch, err := recaptureGroundtruth(childCtx, func(ctx context.Context) (chaos.Groundtruth, error) {
-				return confCopy.GetGroundtruth(ctx)
-			}, groundtruths[i])
-			if err != nil {
-				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to re-capture groundtruth for guided config %d", i), err)
-			}
-			if mismatch {
-				logEntry.WithFields(logrus.Fields{
-					"index":           i,
-					"prior_service":   groundtruths[i].Service,
-					"fresh_service":   fresh.Service,
-					"prior_pod":       groundtruths[i].Pod,
-					"fresh_pod":       fresh.Pod,
-					"prior_container": groundtruths[i].Container,
-					"fresh_container": fresh.Container,
-				}).Warn("groundtruth service set changed between submit and CRD apply; persisting fresh values")
-			}
-			groundtruths[i] = fresh
-		}
-
-		// Marshal display config as array
-		displayData, err := json.Marshal(displayMaps)
-		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to marshal injection specs to display config", err)
-		}
-
-		engineData, err := json.Marshal(payload.guidedConfigs)
-		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to marshal injection specs to engine config", err)
-		}
-
-		annotations, err := task.GetAnnotations(childCtx)
-		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to get annotations", err)
-		}
-
-		itemJson, err := json.Marshal(payload.benchmark)
-		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to marshal benchmark item", err)
-		}
-		annotations[consts.CRDAnnotationBenchmark] = string(itemJson)
-
 		batchID := fmt.Sprintf("batch-%s", utils.GenerateULID(nil))
-		isHybrid := len(payload.guidedConfigs) > 1
-		crdLabels := utils.MergeSimpleMaps(
-			task.GetLabels(),
-			map[string]string{
-				consts.K8sLabelAppID:    runtimeinfra.AppID(),
-				consts.CRDLabelBatchID:  batchID,
-				consts.CRDLabelIsHybrid: strconv.FormatBool(isHybrid),
-			},
-		)
 
-		// §11 step 5b — per-system dispatch. chaos-mesh-direct keeps the
-		// legacy in-process chaos SDK; chaos-service POSTs to aegis-chaos
-		// and the webhook receiver completes the BuildDatapack handoff.
+		// Dispatch via aegis-chaos /v1beta/injections; the webhook receiver
+		// completes the BuildDatapack handoff.
 		dispDeps := dispatcherDeps{
 			taskID:           task.TaskID,
 			traceID:          task.TraceID,
@@ -271,144 +182,46 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			chartVersion:     payload.chartVersion,
 		}
 		var names []string
-		var dispatchPath string
 		err = tracing.WithSpanNamed(childCtx, "chaos.batch_create", func(c context.Context) error {
 			var werr error
-			names, dispatchPath, werr = dispatchBatchCreate(c, logEntry, payload.system, payload.namespace, payload.guidedConfigs, injectionConfs, annotations, crdLabels, dispDeps)
+			names, werr = dispatchBatchCreate(c, logEntry, payload.system, payload.namespace, payload.guidedConfigs, dispDeps)
 			return werr
 		})
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to inject faults", err)
 		}
-		logEntry.WithField("dispatch_path", dispatchPath).Info("dispatcher: faults submitted")
+		logEntry.Info("dispatcher: faults submitted")
 
 		var name string
-		var faultType chaos.ChaosType
 		if len(names) > 1 {
 			name = batchID
-			faultType = consts.Hybrid
 			batchManager.setBatchInjections(batchID, names)
 		} else {
 			name = names[0]
-			if ft, ok := chaos.ChaosNameMap[payload.guidedConfigs[0].ChaosType]; ok {
-				faultType = ft
-			} else {
-				faultType = consts.Hybrid
-			}
 		}
 
-		// chaos-service path has no CRD watcher to emit
-		// fault.injection.started at CR-apply time; legacy chaos-mesh-direct
-		// emits it from k8s_handler.HandleCRDAdd. Without this, the
-		// regression validator's required_events sequence is missing one
-		// event between restart.pedestal.* and datapack.build.started.
-		if dispatchPath == executorPathChaosService {
-			updateTaskState(childCtx,
-				newTaskStateUpdate(
-					task.TraceID,
-					task.TaskID,
-					task.Type,
-					consts.TaskRunning,
-					fmt.Sprintf("injecting fault for task %s", task.TaskID),
-				).withEvent(consts.EventFaultInjectionStarted, dto.FaultInjectionStartedPayload{
-					Name:         name,
-					ExecutorPath: consts.ExecutorPathChaosService,
-				}).withDB(deps.DB).withRedis(deps.RedisGateway),
-			)
-		}
-
-		// chaos-service dispatch: the webhook receiver
-		// (crud/hooks/chaos.getOrCreateShadowFaultInjection) is the sole
-		// writer of the fault_injections row for this task. Skipping the
-		// orchestrator-side CreateInjection here avoids a dual-row race
-		// where the two writers diverged on state.
-		if dispatchPath != executorPathChaosService {
-			if deps.InjectionOwner == nil {
-				return handleExecutionError(span, logEntry, "injection owner service is nil", fmt.Errorf("missing injection owner service"))
-			}
-
-			_, err = deps.InjectionOwner.CreateInjection(childCtx, &injection.RuntimeCreateInjectionReq{
-				Name:              name,
-				FaultType:         faultType,
-				Category:          chaos.SystemType(payload.pedestal),
-				Description:       fmt.Sprintf("Fault batch for task %s (%d faults)", task.TaskID, len(payload.guidedConfigs)),
-				DisplayConfig:     string(displayData),
-				EngineConfig:      string(engineData),
-				Groundtruths:      groundtruths,
-				GroundtruthSource: consts.GroundtruthSourceAuto,
-				PreDuration:       payload.preDuration,
-				TaskID:            task.TaskID,
-				BenchmarkID:       utils.IntPtr(payload.benchmark.ID),
-				PedestalID:        utils.IntPtr(payload.pedestalID),
-				Labels:            payload.labels,
-				State:             consts.DatapackInitial,
-			})
-			if err != nil {
-				return handleExecutionError(span, logEntry, "failed to write fault injection schedule to owner service", err)
-			}
-		}
-		// Ownership of the namespace lock passes to the CRD controller from
-		// here on; it will release on CRD success/failure (k8s_handler).
+		// Emit fault.injection.started so the regression validator's
+		// required_events sequence has its bridge event between
+		// restart.pedestal.* and datapack.build.started. The webhook
+		// receiver (crud/hooks/chaos) is the sole writer of the
+		// fault_injections row.
+		updateTaskState(childCtx,
+			newTaskStateUpdate(
+				task.TraceID,
+				task.TaskID,
+				task.Type,
+				consts.TaskRunning,
+				fmt.Sprintf("injecting fault for task %s", task.TaskID),
+			).withEvent(consts.EventFaultInjectionStarted, dto.FaultInjectionStartedPayload{
+				Name:         name,
+				ExecutorPath: consts.ExecutorPathChaosService,
+			}).withDB(deps.DB).withRedis(deps.RedisGateway),
+		)
+		// Ownership of the namespace lock passes to the webhook receiver from
+		// here on; it will release on terminal status.
 		toReleased = false
 		return nil
 	})
-}
-
-// recaptureGroundtruth re-invokes getter at fault-injection time and returns
-// the freshly-resolved groundtruth plus a serviceMismatch flag. Callers persist
-// the fresh value; mismatch only signals that the action's service set changed
-// between the early loop-time call and CRD apply (a known-bad sign that one of
-// the layers below — pod-listing, container-name resolution — saw a different
-// state). The chaos-mesh selector is label-based so the CRD still lands; the
-// fresh GT is what consumers like the datapack builder should record.
-//
-// Extracted as a getter-typed helper so unit tests can drive both passes
-// without standing up a real cluster (the K8s-touching work all lives inside
-// the spec's GetGroundtruth).
-func recaptureGroundtruth(ctx context.Context, getter func(context.Context) (chaos.Groundtruth, error), prior model.Groundtruth) (model.Groundtruth, bool, error) {
-	fresh, err := getter(ctx)
-	if err != nil {
-		return model.Groundtruth{}, false, err
-	}
-	freshDB := *model.NewDBGroundtruth(&fresh)
-	return freshDB, !sameStringSet(prior.Service, freshDB.Service), nil
-}
-
-// sameStringSet returns true when a and b contain the same elements ignoring
-// order and duplicates. Used by recaptureGroundtruth to detect cross-pass
-// service-set drift (which is structural, not a pod-rename).
-func sameStringSet(a, b []string) bool {
-	if len(a) == 0 && len(b) == 0 {
-		return true
-	}
-	as := append([]string(nil), a...)
-	bs := append([]string(nil), b...)
-	sort.Strings(as)
-	sort.Strings(bs)
-	as = dedupSorted(as)
-	bs = dedupSorted(bs)
-	if len(as) != len(bs) {
-		return false
-	}
-	for i := range as {
-		if as[i] != bs[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func dedupSorted(s []string) []string {
-	if len(s) < 2 {
-		return s
-	}
-	out := s[:1]
-	for _, v := range s[1:] {
-		if v != out[len(out)-1] {
-			out = append(out, v)
-		}
-	}
-	return out
 }
 
 // parseInjectionPayload extracts and validates the guided-config payload from

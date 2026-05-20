@@ -119,12 +119,6 @@ var (
 	guidedApplyBenchmarkName string
 	guidedApplyBenchmarkTag  string
 
-	// §11 step 4 Round 3: feature-flagged cutover to aegis-chaos. Default OFF
-	// keeps the legacy backend submit path (today's 798-line flow) byte-for-
-	// byte unchanged; ON routes finalized guided cfgs through the chaos
-	// service's /v1beta/injections{,/batches}. Both paths coexist until the
-	// backend BatchCreate catalog read lands in Round 4.
-	guidedViaChaos          bool
 	guidedChaosInstance     string
 	guidedChaosChartVersion string
 )
@@ -492,14 +486,6 @@ func init() {
 	f.IntVar(&guidedCPUCount, "cpu-count", 0, "JVM CPU core count")
 	f.IntVar(&guidedStatusCode, "status-code", 0, "HTTP status code")
 
-	// `inject` is NOT a child of `chaos`, so the persistent --chaos-server
-	// on chaosCmd doesn't reach here. Re-bind against the shared
-	// flagChaosServer var so users can pass it on inject guided directly;
-	// `regression run` does the same. Functional duplicate, not a leak.
-	f.BoolVar(&guidedViaChaos, "via-chaos", envBool("AEGIS_INJECT_VIA_CHAOS"),
-		"Route the finalized guided submit through aegis-chaos /v1beta/injections instead of the legacy backend (env: AEGIS_INJECT_VIA_CHAOS)")
-	f.StringVar(&flagChaosServer, "chaos-server", flagChaosServer,
-		"aegis-chaos service URL when --via-chaos is set (env: AEGIS_CHAOS_SERVER)")
 	f.StringVar(&guidedChaosInstance, "chaos-instance", "seed",
 		"Point catalog instance slot to address (seed manifests carry instance=seed)")
 	f.StringVar(&guidedChaosChartVersion, "chaos-chart-version", "seed-genesis",
@@ -610,31 +596,6 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 			cfgs[i].Namespace = ""
 		}
 	}
-	// §11 step 4 Round 3 — when --via-chaos is on, route to the chaos service.
-	// requireAPIContext below is aegis-api-only; the chaos service uses its
-	// own URL and the same bearer token (see chaos_apiclient.go).
-	if guidedViaChaos {
-		opts := guidedApplyOptions{
-			PedestalName:  guidedApplyPedestalName,
-			PedestalTag:   guidedApplyPedestalTag,
-			BenchmarkName: guidedApplyBenchmarkName,
-			BenchmarkTag:  guidedApplyBenchmarkTag,
-			ProjectName:   flagProject,
-		}
-		if opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
-			return usageErrorf("--via-chaos still requires --benchmark-name and --benchmark-tag (these populate caller_metadata.benchmark for the hook receiver)")
-		}
-		if flagChaosServer == "" {
-			return usageErrorf("--via-chaos requires --chaos-server (or AEGIS_CHAOS_SERVER)")
-		}
-		pid, err := resolveProjectIDForApply(flagProject)
-		if err != nil {
-			return fmt.Errorf("--via-chaos: resolve project id: %w", err)
-		}
-		opts.ProjectID = pid
-		return submitGuidedViaChaos(cfgs, opts)
-	}
-
 	if err := requireAPIContext(true); err != nil {
 		return err
 	}
@@ -706,18 +667,6 @@ type guidedApplyOptions struct {
 	PedestalTag   string
 	BenchmarkName string
 	BenchmarkTag  string
-	// ProjectID + ProjectName: required by the --via-chaos webhook hop so
-	// the backend hook receiver can satisfy the traces.project_id FK when
-	// it submits the downstream BuildDatapack. Legacy POST /v2/injections
-	// resolves these server-side from the auth context and ignores these
-	// fields; --via-chaos has no such context so we resolve client-side.
-	ProjectID   int
-	ProjectName string
-
-	// PreDuration is the seconds of normal-window data BuildDatapack should
-	// collect ahead of the abnormal window. Only consumed by --via-chaos; the
-	// legacy POST /v2/injections derives it server-side from the spec.
-	PreDuration int
 }
 
 func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions) (*client.APIResponse[injectSubmitResponse], error) {

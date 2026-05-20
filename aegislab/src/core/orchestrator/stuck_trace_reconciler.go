@@ -663,11 +663,13 @@ func pickInjectionForDatapack(injections []model.FaultInjection) *model.FaultInj
 	return &injections[bestIdx]
 }
 
-// mergeBenchmarkEnvVars rebuilds the env-var slice that postProcess in
-// HandleCRDSucceeded would have constructed: NAMESPACE override at the top,
-// then de-duplicated benchmark env vars from container_version_env_vars.
-// We tolerate ListEnvVarsByVersionID failures the same way postProcess does
-// — treat as empty list, log and continue.
+// mergeBenchmarkEnvVars rebuilds the BuildDatapack env-var slice: NAMESPACE
+// override at the top, then de-duplicated benchmark env vars from
+// container_version_env_vars. Mirrors the merge the chaos-webhook
+// receiver does (crud/hooks/chaos/handler.go::fireOnce); the reconciler
+// reuses the same shape for retries against rows the webhook stamped.
+// ListEnvVarsByVersionID failures are tolerated — treat as empty list,
+// log and continue.
 func mergeBenchmarkEnvVars(repo containerEnvVarLister, benchmarkID int, namespace string, logEntry *logrus.Entry) []dto.ParameterItem {
 	var benchEnvVars []dto.ParameterItem
 	if repo != nil {

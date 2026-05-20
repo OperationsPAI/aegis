@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,9 +14,7 @@ import (
 	"aegis/cli/apiclient"
 	chaoscrud "aegis/crud/chaos"
 	"aegis/platform/config"
-	"aegis/platform/consts"
 
-	"github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
@@ -23,15 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Per-system executor flag lives at consts.ExecutorFlagKey(system); empty /
-// unknown values fall through to chaos-mesh-direct.
 const (
-	executorFlagKeyPrefix = consts.ExecutorFlagKeyPrefix
-	executorFlagKeySuffix = consts.ExecutorFlagKeySuffix
-
-	executorPathChaosMeshDirect = consts.ExecutorPathChaosMeshDirect
-	executorPathChaosService    = consts.ExecutorPathChaosService
-
 	dispatcherChaosTimeoutConfigKey = "chaos.dispatch_timeout_seconds"
 	dispatcherChaosTimeoutDefault   = 60 * time.Second
 )
@@ -47,20 +38,8 @@ func dispatcherChaosTimeout() time.Duration {
 
 var injectionDispatchTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "aegis_injection_dispatch_total",
-	Help: "Fault-injection dispatches by executor path and logical system.",
-}, []string{"path", "system"})
-
-// executorAuthoritative returns the per-system executor path. Empty / unknown
-// values fall through to chaos-mesh-direct.
-func executorAuthoritative(system string) string {
-	key := executorFlagKeyPrefix + strings.TrimSpace(system) + executorFlagKeySuffix
-	switch strings.TrimSpace(config.GetString(key)) {
-	case executorPathChaosService:
-		return executorPathChaosService
-	default:
-		return executorPathChaosMeshDirect
-	}
-}
+	Help: "Fault-injection dispatches by logical system.",
+}, []string{"system"})
 
 // chaosServiceClient is the seam tests substitute. Returning the ack-id (one
 // per inject, or one batch_id) is enough for the dispatcher — the terminal
@@ -178,37 +157,24 @@ type dispatcherDeps struct {
 	benchmarkImage   string
 	benchmarkCommand string
 	// instance + chartVersion address per-instance Point catalog rows.
-	// Must match what aegisctl --via-chaos sends (chaos-instance /
-	// chaos-chart-version) or the chaos service will hash a divergent
-	// Point ID and reject the inject.
+	// Seed manifests carry instance=seed / chart_version=seed-genesis;
+	// these are what the chaos service hashes into the Point ID.
 	instance     string
 	chartVersion string
 }
 
-// dispatchBatchCreate is the §11 step 5b cutover seam. Reads the per-system
-// flag; chaos-mesh-direct delegates to the legacy in-process SDK call,
-// chaos-service POSTs and waits for ACK. Returns the names the FI orchestrator
-// uses to write FaultInjection rows + drive batch tracking.
+// dispatchBatchCreate POSTs the guided configs to aegis-chaos and blocks on
+// the ACK. The terminal webhook lands at crud/hooks/chaos and fires
+// BuildDatapack under the shared (task_id, kind) uniqueness gate.
 func dispatchBatchCreate(
 	ctx context.Context,
 	logEntry *logrus.Entry,
 	system, namespace string,
 	configs []guidedcli.GuidedConfig,
-	confs []handler.InjectionConf,
-	annotations, labels map[string]string,
 	deps dispatcherDeps,
-) ([]string, string, error) {
-	path := executorAuthoritative(system)
-	injectionDispatchTotal.WithLabelValues(path, system).Inc()
-
-	switch path {
-	case executorPathChaosService:
-		names, err := dispatchViaChaosService(ctx, logEntry, system, namespace, configs, deps)
-		return names, path, err
-	default:
-		names, err := handler.BatchCreate(ctx, confs, handler.SystemType(system), namespace, annotations, labels)
-		return names, executorPathChaosMeshDirect, err
-	}
+) ([]string, error) {
+	injectionDispatchTotal.WithLabelValues(system).Inc()
+	return dispatchViaChaosService(ctx, logEntry, system, namespace, configs, deps)
 }
 
 // dispatchViaChaosService POSTs to aegis-chaos and blocks on the ACK only.
@@ -235,6 +201,16 @@ func dispatchViaChaosService(
 
 	meta := buildCallerMetadata(deps, namespace)
 	meta["groundtruths"] = renderGroundtruths(configs)
+	// engine_config round-trips the originating guided spec list through
+	// caller_metadata so the webhook receiver can write the same JSON the
+	// pre-§11-5c orchestrator wrote into fault_injections.engine_config.
+	// Marshal failure here would silently land an empty-object engine_config
+	// downstream — fail the dispatch instead so the caller sees the bug.
+	engineConfigBytes, err := json.Marshal(configs)
+	if err != nil {
+		return nil, fmt.Errorf("dispatcher: marshal engine_config: %w", err)
+	}
+	meta["engine_config"] = string(engineConfigBytes)
 
 	if len(configs) == 1 {
 		pid, _, _, err := chaoscrud.GuidedChaosPointID(configs[0], deps.instance, deps.chartVersion)
@@ -257,7 +233,6 @@ func dispatchViaChaosService(
 		logEntry.WithFields(logrus.Fields{
 			"injection_id": injectionID,
 			"point_id":     pid,
-			"path":         executorPathChaosService,
 		}).Info("dispatcher: chaos service ack received")
 		return []string{injectionID}, nil
 	}
@@ -289,7 +264,6 @@ func dispatchViaChaosService(
 	registerChaosServiceTask(deps.taskID, batchID, true)
 	logEntry.WithFields(logrus.Fields{
 		"batch_id": batchID,
-		"path":     executorPathChaosService,
 	}).Info("dispatcher: chaos service ack received (batch)")
 	return []string{batchID}, nil
 }
