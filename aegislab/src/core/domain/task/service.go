@@ -144,6 +144,14 @@ func (s *Service) emitExpediteScheduledEvent(ctx context.Context, task *model.Ta
 	}
 }
 
+// ChaosServiceCancelHook lets the orchestrator route cancel cleanup through
+// the chaos-service DELETE endpoint instead of the legacy in-cluster CR
+// delete when the task was dispatched on the chaos-service executor path.
+// Returns (true, _) when the hook owns cleanup for this task; (false, nil)
+// means the legacy CR-delete path still runs. Set at boot wiring; nil means
+// "no chaos-service dispatch in this process".
+var ChaosServiceCancelHook func(ctx context.Context, taskID string) (bool, error)
+
 // CancelTask marks a non-terminal task as Cancelled and best-effort evicts
 // its redis queue entries + cluster-side PodChaos CRDs labelled with
 // task_id=<id>. Mirrors trace.Service.CancelTrace but scoped to a single
@@ -206,7 +214,15 @@ func (s *Service) CancelTask(ctx context.Context, taskID string) (*CancelTaskRes
 		}
 	}
 
-	if s.k8s != nil {
+	handled := false
+	if hook := ChaosServiceCancelHook; hook != nil {
+		ok, herr := hook(ctx, taskID)
+		if herr != nil {
+			logEntry.Warnf("chaos-service cancel: %v", herr)
+		}
+		handled = ok
+	}
+	if !handled && s.k8s != nil {
 		deleted, warnings := s.k8s.DeleteChaosCRDsByLabel(ctx, consts.JobLabelTaskID, taskID)
 		for _, d := range deleted {
 			resp.DeletedPodChaos = append(resp.DeletedPodChaos, d.Name)
