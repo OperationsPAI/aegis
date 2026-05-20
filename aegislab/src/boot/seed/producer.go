@@ -65,6 +65,14 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 		return fmt.Errorf("failed to reconcile system permissions: %w", err)
 	}
 
+	// Task #44: same gap as #104 but for service_accounts. A new SA row added
+	// to data.yaml after first boot must reach the DB; producerSeedRequired
+	// gates only on container count so a populated cluster never re-runs the
+	// once-only seeder.
+	if err := ReconcileServiceAccounts(db, initialData.ServiceAccounts); err != nil {
+		return fmt.Errorf("failed to reconcile service accounts: %w", err)
+	}
+
 	// Best-effort one-shot migration for issue #75:
 	//   1. Drain the retired systems table into dynamic_configs + etcd Global
 	//   2. Rewrite any Consumer-scoped `injection.system.*` rows to Global
@@ -170,25 +178,79 @@ func initializeProducer(db *gorm.DB, initialData *InitialData) error {
 }
 
 func initializeServiceAccounts(tx *gorm.DB, data *InitialData) error {
-	for _, sa := range data.ServiceAccounts {
+	return reconcileServiceAccountsTx(tx, data.ServiceAccounts)
+}
+
+// ReconcileServiceAccounts upserts service_accounts rows from initial-data on
+// every boot (Task #44). Companion to ReconcileSystemPermissions: closes the
+// same class of gap where a new row added to data.yaml after first boot never
+// landed in production DB because producerSeedRequired gates only on the
+// containers table being empty.
+//
+// Semantics:
+//   - INSERT rows missing from the DB.
+//   - UPDATE scopes / description on rows whose data.yaml entry differs.
+//   - PRESERVE a non-null revoked_at even if data.yaml is silent about it —
+//     manual revocations (via aegisctl / direct SQL) must stick across reseeds.
+//   - DO NOT delete rows that exist in DB but not in data.yaml (mirrors the
+//     conservatism of reconcileSystemPermissionsTx).
+func ReconcileServiceAccounts(db *gorm.DB, accounts []InitialDataServiceAccount) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		return reconcileServiceAccountsTx(tx, accounts)
+	})
+}
+
+func reconcileServiceAccountsTx(tx *gorm.DB, accounts []InitialDataServiceAccount) error {
+	if len(accounts) == 0 {
+		return nil
+	}
+
+	inserted, updated := 0, 0
+	for _, sa := range accounts {
 		if sa.Name == "" {
 			return fmt.Errorf("service account entry has empty name")
 		}
-		row := model.ServiceAccount{
-			Name:        sa.Name,
-			Scopes:      sa.Scopes,
-			Description: sa.Description,
+
+		var existing model.ServiceAccount
+		err := tx.Where("name = ?", sa.Name).First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			row := model.ServiceAccount{
+				Name:        sa.Name,
+				Scopes:      sa.Scopes,
+				Description: sa.Description,
+			}
+			if err := tx.Create(&row).Error; err != nil {
+				return fmt.Errorf("failed to insert service account %s: %w", sa.Name, err)
+			}
+			inserted++
+			continue
 		}
-		// Idempotent: skip if a row with this name already exists. We
-		// intentionally do NOT update scopes / description on re-seed —
-		// scope changes go through aegisctl (added in a later PR) so the
-		// audit trail stays in one place.
-		res := tx.Where(&model.ServiceAccount{Name: sa.Name}).
-			Attrs(row).
-			FirstOrCreate(&model.ServiceAccount{})
-		if res.Error != nil {
-			return fmt.Errorf("failed to seed service account %s: %w", sa.Name, res.Error)
+		if err != nil {
+			return fmt.Errorf("failed to look up service account %s: %w", sa.Name, err)
 		}
+
+		if existing.Scopes == sa.Scopes && existing.Description == sa.Description {
+			continue
+		}
+		// Update only the drifted columns; leave revoked_at untouched so a
+		// manual revocation (revoked_at IS NOT NULL) is not silently undone
+		// by a re-seed.
+		if err := tx.Model(&existing).Updates(map[string]any{
+			"scopes":      sa.Scopes,
+			"description": sa.Description,
+		}).Error; err != nil {
+			return fmt.Errorf("failed to update service account %s: %w", sa.Name, err)
+		}
+		updated++
+	}
+
+	if inserted > 0 || updated > 0 {
+		logrus.WithFields(logrus.Fields{
+			"inserted": inserted,
+			"updated":  updated,
+		}).Info("reconciled service_accounts from initial-data")
+	} else {
+		logrus.Debug("service_accounts already in sync with initial-data")
 	}
 	return nil
 }
