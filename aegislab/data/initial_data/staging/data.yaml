@@ -932,3 +932,6 @@ service_accounts:
   - name: chaos-service
     scopes: chaos.inject.write,chaos.inject.read,chaos.webhook.write
     description: backend↔chaos-service webhook + catalog auth (PR C3-C5)
+  - name: chaos-client
+    scopes: chaos.inject.write,chaos.inject.read
+    description: backend → chaos outbound (PR step5b-SA-cutover)

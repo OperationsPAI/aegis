@@ -3,7 +3,11 @@ package chaos
 import (
 	"testing"
 
+	"aegis/platform/jwtkeys"
+
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 // TestRoutes_NoGinPanic guards against the reviewer's B1/B2: Gin
@@ -15,5 +19,9 @@ func TestRoutes_NoGinPanic(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	g := r.Group("/v1beta")
-	Routes(&Handler{}).Register(g)
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	Routes(&Handler{}, db, &jwtkeys.Verifier{}).Register(g)
 }

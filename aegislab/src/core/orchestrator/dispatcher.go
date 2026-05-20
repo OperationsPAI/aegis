@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"aegis/cli/apiclient"
@@ -73,9 +74,28 @@ var defaultChaosServiceClient = func() (chaosServiceClient, error) {
 	if url == "" {
 		return nil, errors.New("chaos.service_url is empty; cannot dispatch via chaos service")
 	}
-	bearer := strings.TrimSpace(os.Getenv("CHAOS_OUTBOUND_BEARER"))
-	return &sdkChaosServiceClient{baseURL: url, bearer: bearer}, nil
+	return &sdkChaosServiceClient{baseURL: url, bearer: resolveChaosOutboundBearer()}, nil
 }
+
+// resolveChaosOutboundBearer prefers the SA token minted at boot; if mint
+// hasn't run (test binary, missing seed) it logs a one-shot ERROR and falls
+// back to CHAOS_OUTBOUND_BEARER. The env path is kept for one release as a
+// safety net — production must wire the SA token before next bump.
+func resolveChaosOutboundBearer() string {
+	if tok := currentChaosSAToken(); tok != "" {
+		return tok
+	}
+	envTok := strings.TrimSpace(os.Getenv(OutboundBearerEnv))
+	if envTok != "" {
+		outboundBearerEnvDeprecationOnce.Do(func() {
+			logrus.StandardLogger().WithField("env", OutboundBearerEnv).
+				Error("DEPRECATED: backend→chaos auth using static CHAOS_OUTBOUND_BEARER; chaos-client SA mint not wired (missing seed?). Token will be rejected once one-release grace window closes.")
+		})
+	}
+	return envTok
+}
+
+var outboundBearerEnvDeprecationOnce sync.Once
 
 type sdkChaosServiceClient struct {
 	baseURL string

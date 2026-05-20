@@ -37,6 +37,7 @@ func RuntimeWorkerStackOptions() fx.Option {
 		configcenterclient.Module,
 		consumer.Module,
 		consumer.JWTSignerModule,
+		consumer.ChaosSATokenModule,
 		fx.Provide(
 			consumer.NewMonitor,
 			fx.Annotate(consumer.NewRestartPedestalRateLimiter, fx.ResultTags(`name:"restart_limiter"`)),
