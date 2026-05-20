@@ -3,7 +3,6 @@ package consumer
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"aegis/platform/config"
@@ -11,14 +10,15 @@ import (
 	k8s "aegis/platform/k8s"
 	"aegis/core/orchestrator/common"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/sirupsen/logrus"
 )
 
 // RegisterConsumerHandlers registers the configuration handlers that the
-// consumer process owns. The chaos-system handler covers cross-process data
-// (producer validates against it, consumer applies it) and is therefore
-// registered under Global scope; everything else is consumer-local.
+// consumer process owns. §11 step 5c removed the etcd→chaos-experiment
+// registry sync: chaos-service has its own registry now and a live
+// `aegisctl chaos system update` no longer reflects into the in-process
+// registry — boot-time InitializeSystems is the only path until phase 2
+// finishes the chaos-experiment migration.
 //
 // Should be called during consumer initialization, after RegisterGlobalHandlers.
 func RegisterConsumerHandlers(
@@ -31,19 +31,10 @@ func RegisterConsumerHandlers(
 	buildDatapackLimiter *TokenBucketRateLimiter,
 	algoLimiter *TokenBucketRateLimiter,
 ) {
-	// Wire the controller as the monitor's NamespaceActivator so a successful
-	// AcquireLock (including the lazy-load path) re-marks the namespace as
-	// active in the controller's CRD-event filter. Without this hook, a
-	// namespace that was marked inactive by a prior RemoveNamespaceInformers
-	// stays filtered until the worker pod restarts — see issue #194.
 	if monitor != nil && controller != nil {
 		monitor.SetActivator(controller)
 	}
 
-	h := newChaosSystemHandler(monitor, controller, publisher)
-	for _, category := range chaosSystemCategories() {
-		common.RegisterHandler(h.forCategory(category))
-	}
 	common.RegisterHandler(newRateLimitingConfigHandler(
 		publisher,
 		restartLimiter,
@@ -79,229 +70,6 @@ func UpdateK8sController(controller *k8s.Controller, toAdd, toRemove []string) e
 	}
 
 	return nil
-}
-
-// =====================================================================
-// ChaosSystemHandler - drives chaos-experiment registry from etcd events
-// covering every injection.system.* sub-category.
-// =====================================================================
-
-// chaosSystemCategories enumerates the dynamic_config categories we bind to.
-// Creating / deleting / toggling a system in etcd fires events under one of
-// these categories; the handler fans them in and reconciles the registry.
-func chaosSystemCategories() []string {
-	return []string{
-		"injection.system.count",
-		"injection.system.ns_pattern",
-		"injection.system.extract_pattern",
-		"injection.system.display_name",
-		"injection.system.app_label_key",
-		"injection.system.is_builtin",
-		"injection.system.status",
-	}
-}
-
-// registrySyncer is the subset of chaos-experiment we call into from the
-// watch handler. Kept as a package variable so tests can swap in a fake.
-var registrySyncer chaosRegistrySyncer = defaultChaosRegistrySyncer{}
-
-type chaosRegistrySyncer interface {
-	IsRegistered(name string) bool
-	Register(cfg chaos.SystemConfig) error
-	Update(cfg chaos.SystemConfig) error
-	Unregister(name string) error
-}
-
-type defaultChaosRegistrySyncer struct{}
-
-func (defaultChaosRegistrySyncer) IsRegistered(name string) bool {
-	return chaos.IsSystemRegistered(name)
-}
-
-func (defaultChaosRegistrySyncer) Register(cfg chaos.SystemConfig) error {
-	return chaos.RegisterSystem(cfg)
-}
-
-func (defaultChaosRegistrySyncer) Update(cfg chaos.SystemConfig) error {
-	return chaos.UpdateSystem(cfg)
-}
-
-func (defaultChaosRegistrySyncer) Unregister(name string) error {
-	return chaos.UnregisterSystem(name)
-}
-
-type chaosSystemHandler struct {
-	monitor    NamespaceMonitor
-	controller *k8s.Controller
-	publisher  common.ConfigPublisher
-}
-
-func newChaosSystemHandler(m NamespaceMonitor, c *k8s.Controller, publisher common.ConfigPublisher) *chaosSystemHandler {
-	return &chaosSystemHandler{monitor: m, controller: c, publisher: publisher}
-}
-
-// forCategory returns a thin adapter that exposes a single category to the
-// common ConfigHandler interface while delegating the actual work back to
-// the shared reconcile method.
-func (h *chaosSystemHandler) forCategory(category string) common.ConfigHandler {
-	return &chaosSystemCategoryHandler{parent: h, category: category}
-}
-
-type chaosSystemCategoryHandler struct {
-	parent   *chaosSystemHandler
-	category string
-}
-
-func (h *chaosSystemCategoryHandler) Category() string { return h.category }
-
-// Scope reports Global: injection.system.* is cross-process data (producer
-// validates via SystemType.IsValid / GetAllSystemTypes, consumer applies the
-// chaos runtime registry), so both sides subscribe to the same etcd prefix.
-func (h *chaosSystemCategoryHandler) Scope() consts.ConfigScope {
-	return consts.ConfigScopeGlobal
-}
-
-func (h *chaosSystemCategoryHandler) Handle(ctx context.Context, key, oldValue, newValue string) error {
-	return h.parent.reconcile(ctx, key, oldValue, newValue)
-}
-
-// reconcile is the single entry point for every injection.system.* change.
-// The config manager now reads Viper on demand so no explicit reload is
-// needed — we sync the chaos-experiment registry for the affected system
-// and trigger a namespace refresh when count/ns_pattern changes require it.
-func (h *chaosSystemHandler) reconcile(ctx context.Context, key, oldValue, newValue string) error {
-	return common.PublishWrapper(ctx, h.publisher, func() error {
-		system, field := parseInjectionSystemKey(key)
-		if system == "" {
-			logrus.Warnf("ignoring non-system config change: %s", key)
-			return nil
-		}
-
-		if err := h.syncRegistry(system); err != nil {
-			return fmt.Errorf("failed to sync chaos-experiment registry for %s: %w", system, err)
-		}
-
-		// Only namespace-shaping fields require a monitor refresh.
-		if field == "count" || field == "ns_pattern" || field == "status" {
-			return h.refreshNamespaces()
-		}
-		return nil
-	})
-}
-
-// syncRegistry reconciles the chaos-experiment registry for a single system
-// against the current Viper/etcd state. New systems are registered, disabled
-// systems are unregistered, and changes to NsPattern / AppLabelKey /
-// DisplayName trigger a re-registration.
-func (h *chaosSystemHandler) syncRegistry(name string) error {
-	cfg, exists := config.GetChaosSystemConfigManager().Get(chaos.SystemType(name))
-	if !exists {
-		if registrySyncer.IsRegistered(name) {
-			if err := registrySyncer.Unregister(name); err != nil {
-				return fmt.Errorf("unregister %s after etcd delete: %w", name, err)
-			}
-			logrus.Infof("Unregistered system %s (no etcd state)", name)
-		}
-		return nil
-	}
-
-	if !cfg.IsEnabled() {
-		if registrySyncer.IsRegistered(name) {
-			if err := registrySyncer.Unregister(name); err != nil {
-				return fmt.Errorf("unregister %s on disable: %w", name, err)
-			}
-			logrus.Infof("Unregistered system %s (status=disabled)", name)
-		}
-		return nil
-	}
-
-	appLabelKey := cfg.AppLabelKey
-	if appLabelKey == "" {
-		appLabelKey = "app"
-	}
-	sysCfg := chaos.SystemConfig{
-		Name:        name,
-		NsPattern:   cfg.NsPattern,
-		DisplayName: cfg.DisplayName,
-		AppLabelKey: appLabelKey,
-	}
-	// Update in place when the system is already registered; this preserves
-	// the compile-time static metadata providers that Unregister+Register
-	// would drop (see issue #129). Falls back to Register for brand-new
-	// systems that were added at runtime via etcd.
-	if registrySyncer.IsRegistered(name) {
-		if err := registrySyncer.Update(sysCfg); err != nil {
-			return fmt.Errorf("update %s: %w", name, err)
-		}
-		logrus.Infof("Updated system %s (ns_pattern=%q, app_label=%q)",
-			name, cfg.NsPattern, appLabelKey)
-		return nil
-	}
-	if err := registrySyncer.Register(sysCfg); err != nil {
-		return fmt.Errorf("register %s: %w", name, err)
-	}
-	logrus.Infof("Registered system %s (ns_pattern=%q, app_label=%q)",
-		name, cfg.NsPattern, appLabelKey)
-	return nil
-}
-
-// parseInjectionSystemKey splits `injection.system.<name>.<field>` into
-// its system / field parts. Returns empty strings for non-system keys so the
-// caller can ignore them safely.
-func parseInjectionSystemKey(key string) (system, field string) {
-	const prefix = "injection.system."
-	if !strings.HasPrefix(key, prefix) {
-		return "", ""
-	}
-	rest := key[len(prefix):]
-	// The system name is everything up to the last dot; the remainder is the
-	// field name. System names today are single tokens (ts, otel-demo, …) so
-	// a simple last-dot split is sufficient.
-	idx := strings.LastIndex(rest, ".")
-	if idx < 0 {
-		return "", ""
-	}
-	return rest[:idx], rest[idx+1:]
-}
-
-func (h *chaosSystemHandler) refreshNamespaces() error {
-	logrus.Info("Chaos system configuration updated, refreshing namespaces...")
-
-	if h.monitor == nil {
-		logrus.Warn("Monitor not initialized, skipping namespace refresh")
-		return nil
-	}
-
-	result, err := h.monitor.RefreshNamespaces()
-	if err != nil {
-		return fmt.Errorf("failed to refresh namespaces: %w", err)
-	}
-
-	totalChanges := len(result.Added) + len(result.Recovered) + len(result.Disabled) + len(result.Deleted)
-	logrus.Infof("Namespace refresh completed: %d total changes", totalChanges)
-
-	if len(result.Added) > 0 {
-		logrus.Infof("Added namespaces: %v", result.Added)
-	}
-	if len(result.Recovered) > 0 {
-		logrus.Infof("Recovered namespaces: %v", result.Recovered)
-	}
-	if len(result.Disabled) > 0 {
-		logrus.Warnf("Disabled namespaces (have active locks): %v", result.Disabled)
-	}
-	if len(result.Deleted) > 0 {
-		logrus.Infof("Deleted namespaces (no active locks): %v", result.Deleted)
-	}
-
-	namespacesToAdd := make([]string, 0, len(result.Added)+len(result.Recovered))
-	namespacesToAdd = append(namespacesToAdd, result.Added...)
-	namespacesToAdd = append(namespacesToAdd, result.Recovered...)
-
-	namespacesToRemove := make([]string, 0, len(result.Disabled)+len(result.Deleted))
-	namespacesToRemove = append(namespacesToRemove, result.Disabled...)
-	namespacesToRemove = append(namespacesToRemove, result.Deleted...)
-
-	return UpdateK8sController(h.controller, namespacesToAdd, namespacesToRemove)
 }
 
 // =====================================================================

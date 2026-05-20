@@ -11,9 +11,8 @@ import (
 
 // TestChaosTypeTranslation pins the guided→capability lookup to the 32
 // entries lane A registered in capgen/output/capabilities.json. The table is
-// hand-maintained (see file-level comment in inject_guided_via_chaos.go);
-// adding a 33rd capability without updating both files is exactly the bug
-// this test catches.
+// hand-maintained; adding a 33rd capability without updating both files is
+// exactly the bug this test catches.
 func TestChaosTypeTranslation(t *testing.T) {
 	expected := map[string]string{
 		"ContainerKill":            "container_kill",

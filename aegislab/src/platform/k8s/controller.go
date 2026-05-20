@@ -4,15 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
-	"strconv"
 	"sync"
 	"time"
 
-	chaosCli "github.com/OperationsPAI/chaos-experiment/client"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -21,9 +17,6 @@ import (
 	runtimeinfra "aegis/platform/runtime"
 
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -35,52 +28,33 @@ const (
 	jobKind      = "Job"
 	resyncPeriod = 5 * time.Second
 
-	CheckRecovery ActionType = "CheckRecovery"
-	DeleteCRD     ActionType = "DeleteCRD"
-	DeleteJob     ActionType = "DeleteJob"
+	DeleteJob ActionType = "DeleteJob"
 )
 
-type timeRange struct {
-	Start time.Time
-	End   time.Time
-}
-
 type Callback interface {
-	HandleCRDAdd(name string, annotations map[string]string, labels map[string]string)
-	HandleCRDDelete(namespace string, annotations map[string]string, labels map[string]string)
-	HandleCRDFailed(name string, annotations map[string]string, labels map[string]string, errMsg string)
-	HandleCRDSucceeded(namespace, pod, name string, startTime, endTime time.Time, annotations map[string]string, labels map[string]string)
 	HandleJobAdd(name string, annotations map[string]string, labels map[string]string)
 	HandleJobFailed(job *batchv1.Job, annotations map[string]string, labels map[string]string)
 	HandleJobSucceeded(job *batchv1.Job, annotations map[string]string, labels map[string]string)
 }
 
 type QueueItem struct {
-	Type       ActionType
-	Namespace  string
-	Name       string
-	Duration   time.Duration
-	GVR        *schema.GroupVersionResource
-	RetryCount int
-	MaxRetries int
+	Type      ActionType
+	Namespace string
+	Name      string
 }
 
 type Controller struct {
 	callback         Callback
-	crdInformers     map[string]map[schema.GroupVersionResource]cache.SharedIndexInformer
-	informerMu       sync.RWMutex // Protects crdInformers map
 	activeNamespaces map[string]bool
 	namespaceMu      sync.RWMutex
 	jobInformer      cache.SharedIndexInformer
 	podInformer      cache.SharedIndexInformer
 	queue            workqueue.TypedRateLimitingInterface[QueueItem]
-	chaosGVRs        []schema.GroupVersionResource
 	ctx              context.Context
 	cancelFunc       context.CancelFunc
 }
 
 func newController() (*Controller, error) {
-	crdInformers := make(map[string]map[schema.GroupVersionResource]cache.SharedIndexInformer)
 	activeNamespaces := make(map[string]bool)
 
 	tweakListOptions := func(options *metav1.ListOptions) {
@@ -106,18 +80,11 @@ func newController() (*Controller, error) {
 	jobInformer := platformFactory.Batch().V1().Jobs().Informer()
 	podInformer := platformFactory.Core().V1().Pods().Informer()
 
-	chaosGVRs := make([]schema.GroupVersionResource, 0, len(chaosCli.GetCRDMapping()))
-	for gvr := range chaosCli.GetCRDMapping() {
-		chaosGVRs = append(chaosGVRs, gvr)
-	}
-
 	return &Controller{
-		crdInformers:     crdInformers,
 		activeNamespaces: activeNamespaces,
 		jobInformer:      jobInformer,
 		podInformer:      podInformer,
 		queue:            queue,
-		chaosGVRs:        chaosGVRs,
 	}, nil
 }
 
@@ -147,125 +114,27 @@ func (c *Controller) Initialize(ctx context.Context, cancelFunc context.CancelFu
 	logrus.Info("Controller shutdown complete")
 }
 
-// AddNamespaceInformers dynamically adds informers for new namespaces
+// AddNamespaceInformers marks the given namespaces as active so callers that
+// previously relied on CRD informer creation get the same observable side
+// effect (active set updated). The chaos CRD watcher was removed in §11 step
+// 5c; chaos-service is now the sole inject path and emits its terminal status
+// over the webhook receiver (crud/hooks/chaos).
 func (c *Controller) AddNamespaceInformers(namespaces []string) error {
 	if len(namespaces) == 0 {
-		logrus.Debug("No namespaces to add")
 		return nil
 	}
-
-	logrus.Debugf("Adding informers for %d namespace(s): %v", len(namespaces), namespaces)
-
-	tweakListOptions := func(options *metav1.ListOptions) {
-		options.LabelSelector = fmt.Sprintf("%s=%s", consts.K8sLabelAppID, runtimeinfra.AppID())
+	c.namespaceMu.Lock()
+	defer c.namespaceMu.Unlock()
+	for _, ns := range namespaces {
+		c.activeNamespaces[ns] = true
 	}
-
-	addedCount := 0
-	newInformers := make(map[string][]cache.InformerSynced) // Track new informers for cache sync
-
-	for _, namespace := range namespaces {
-		// Check if informer already exists (with read lock)
-		c.informerMu.RLock()
-		_, exists := c.crdInformers[namespace]
-		c.informerMu.RUnlock()
-
-		if exists {
-			logrus.Infof("Informer for namespace %s already exists, skipping", namespace)
-			// Still mark as active in case it was previously disabled
-			c.namespaceMu.Lock()
-			c.activeNamespaces[namespace] = true
-			c.namespaceMu.Unlock()
-			continue
-		}
-
-		// Create new factory for this namespace
-		logrus.Debugf("Creating new CRD informers for namespace: %s", namespace)
-		dynClient, err := getK8sDynamicClient()
-		if err != nil {
-			return fmt.Errorf("kubernetes dynamic client not available: %w", err)
-		}
-		chaosFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(
-			dynClient,
-			resyncPeriod,
-			namespace,
-			tweakListOptions,
-		)
-
-		// Create GVR informers
-		gvrInformers := make(map[schema.GroupVersionResource]cache.SharedIndexInformer, len(c.chaosGVRs))
-		syncFuncs := make([]cache.InformerSynced, 0, len(c.chaosGVRs))
-
-		// CRITICAL: Mark namespace as active BEFORE starting informers
-		// This prevents race condition where informer cache sync triggers AddFunc
-		// before namespace is marked active, causing events to be ignored
-		c.namespaceMu.Lock()
-		c.activeNamespaces[namespace] = true
-		c.namespaceMu.Unlock()
-
-		for _, gvr := range c.chaosGVRs {
-			informer := chaosFactory.ForResource(gvr).Informer()
-
-			// Register event handler
-			logrus.Debugf("Registering event handler for %s (Group: %s, Version: %s) in namespace %s",
-				gvr.Resource, gvr.Group, gvr.Version, namespace)
-			if _, err := informer.AddEventHandler(c.genCRDEventHandlerFuncs(gvr)); err != nil {
-				return fmt.Errorf("failed to add event handler for %s in namespace %s: %w",
-					gvr.Resource, namespace, err)
-			}
-
-			gvrInformers[gvr] = informer
-			syncFuncs = append(syncFuncs, informer.HasSynced)
-
-			// Start informer immediately
-			logrus.Debugf("Starting informer for %s in namespace %s", gvr.Resource, namespace)
-			go informer.Run(c.ctx.Done())
-		}
-
-		// Update crdInformers map with write lock
-		c.informerMu.Lock()
-		c.crdInformers[namespace] = gvrInformers
-		c.informerMu.Unlock()
-
-		newInformers[namespace] = syncFuncs
-		addedCount++
-		logrus.Debugf("Successfully added and started %d CRD informer(s) for namespace: %s", len(gvrInformers), namespace)
-	}
-
-	// Wait for all new informers to sync their caches
-	if len(newInformers) > 0 {
-		allSyncFuncs := make([]cache.InformerSynced, 0)
-		for _, syncFuncs := range newInformers {
-			allSyncFuncs = append(allSyncFuncs, syncFuncs...)
-		}
-
-		logrus.Debugf("Waiting for %d new CRD informer(s) to sync caches...", len(allSyncFuncs))
-		if !cache.WaitForCacheSync(c.ctx.Done(), allSyncFuncs...) {
-			return fmt.Errorf("timed out waiting for new CRD informer caches to sync")
-		}
-		logrus.Info("All new CRD informer caches synced successfully")
-	}
-
-	logrus.Infof("Namespace informer addition completed: %d new, %d existing", addedCount, len(namespaces)-addedCount)
 	return nil
 }
 
-// EnsureNamespaceActive marks the given namespace as active in the controller's
-// in-memory activeNamespaces set, creating informers on demand if they don't
-// already exist. Idempotent: safe to call repeatedly. Safe to call on a nil
-// receiver (no-op) so callers don't have to nil-check before invoking.
-//
-// This is the bridge between the namespace lock store and the controller's
-// CRD event filter (issue #194). When monitor.AcquireLock lazy-loads or
-// re-locks a namespace that the controller previously marked inactive (via
-// RemoveNamespaceInformers), it must call this method so subsequent CRD
-// AddFunc events for that namespace are not silently dropped at
-// genCRDEventHandlerFuncs::AddFunc — the historical "Ignoring CRD add event
-// for inactive namespace" symptom that required a worker pod restart to clear.
+// EnsureNamespaceActive marks the given namespace as active. Safe to call on
+// a nil receiver and with an empty namespace.
 func (c *Controller) EnsureNamespaceActive(namespace string) error {
-	if c == nil {
-		return nil
-	}
-	if namespace == "" {
+	if c == nil || namespace == "" {
 		return nil
 	}
 	return c.AddNamespaceInformers([]string{namespace})
@@ -374,130 +243,6 @@ func (c *Controller) startQueueWorker() {
 }
 
 // genCRDEventHandlerFuncs generates event handler functions for a given CRD GVR
-func (c *Controller) genCRDEventHandlerFuncs(gvr schema.GroupVersionResource) cache.ResourceEventHandlerFuncs {
-	return cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj any) {
-			u := obj.(*unstructured.Unstructured)
-
-			logrus.Infof("CRD AddFunc triggered: resource=%s, namespace=%s, name=%s",
-				gvr.Resource, u.GetNamespace(), u.GetName())
-
-			// Check if namespace is active
-			if !c.isNamespaceActive(u.GetNamespace()) {
-				logrus.Warnf("Ignoring CRD add event for inactive namespace %s: %s/%s",
-					u.GetNamespace(), gvr.Resource, u.GetName())
-				return
-			}
-
-			if initialTime := runtimeinfra.InitialTime(); !initialTime.IsZero() {
-				creationTime := u.GetCreationTimestamp().Time
-				if creationTime.Before(initialTime) {
-					logrus.Debugf("Ignoring CRD add event for object created before initial time: %s/%s in %s",
-						gvr.Resource, u.GetName(), u.GetNamespace())
-					return
-				}
-			}
-
-			c.callback.HandleCRDAdd(u.GetName(), u.GetAnnotations(), u.GetLabels())
-			logrus.WithFields(logrus.Fields{
-				"type":      gvr.Resource,
-				"namespace": u.GetNamespace(),
-				"name":      u.GetName(),
-			}).Info("chaos experiment created successfully")
-		},
-		UpdateFunc: func(oldObj, newObj any) {
-			oldU := oldObj.(*unstructured.Unstructured)
-			newU := newObj.(*unstructured.Unstructured)
-
-			// Check if namespace is active
-			if !c.isNamespaceActive(newU.GetNamespace()) {
-				logrus.Debugf("Ignoring CRD update event for inactive namespace %s: %s/%s",
-					newU.GetNamespace(), gvr.Resource, newU.GetName())
-				return
-			}
-
-			if oldU.GetName() == newU.GetName() {
-				logEntry := logrus.WithFields(logrus.Fields{
-					"type":      gvr.Resource,
-					"namespace": newU.GetNamespace(),
-					"name":      newU.GetName(),
-				})
-
-				oldPhase, _, _ := unstructured.NestedString(oldU.Object, "status", "experiment", "desiredPhase")
-				newPhase, _, _ := unstructured.NestedString(newU.Object, "status", "experiment", "desiredPhase")
-				if oldPhase == "Run" && newPhase == "Stop" {
-					conditions, _, _ := unstructured.NestedSlice(newU.Object, "status", "conditions")
-
-					selected := getCRDConditionStatus(conditions, "Selected")
-					if !selected {
-						c.handleCRDFailed(gvr, newU, "failed to select app in the chaos experiment")
-						return
-					}
-
-					allInjected := getCRDConditionStatus(conditions, "AllInjected")
-					if !allInjected {
-						c.handleCRDFailed(gvr, newU, "failed to inject all targets in the chaos experiment")
-						return
-					}
-				}
-
-				oldConditions, _, _ := unstructured.NestedSlice(oldU.Object, "status", "conditions")
-				newConditions, _, _ := unstructured.NestedSlice(newU.Object, "status", "conditions")
-
-				// Check if injected
-				oldAllInjected := getCRDConditionStatus(oldConditions, "AllInjected")
-				newAllInjected := getCRDConditionStatus(newConditions, "AllInjected")
-				if !oldAllInjected && newAllInjected {
-					logEntry.Infof("all targets injected in the chaos experiment")
-					durationStr, _, _ := unstructured.NestedString(newU.Object, "spec", "duration")
-
-					pattern := `(\d+)m`
-					re := regexp.MustCompile(pattern)
-					match := re.FindStringSubmatch(durationStr)
-					if len(match) <= 1 {
-						c.handleCRDFailed(gvr, newU, "failed to get the duration")
-						return
-					}
-
-					duration, err := strconv.Atoi(match[1])
-					if err != nil {
-						c.handleCRDFailed(gvr, newU, "failed to get the duration of the chaos experiement")
-						return
-					}
-
-					if duration > 0 {
-						c.queue.AddAfter(QueueItem{
-							Type:       CheckRecovery,
-							Namespace:  newU.GetNamespace(),
-							Name:       newU.GetName(),
-							Duration:   time.Duration(duration) * consts.DefaultTimeUnit,
-							GVR:        &gvr,
-							RetryCount: 0,
-							MaxRetries: 2,
-						}, time.Duration(duration)*time.Minute)
-					}
-				}
-			}
-		},
-		DeleteFunc: func(obj any) {
-			u := obj.(*unstructured.Unstructured)
-
-			// Check if namespace is active
-			if !c.isNamespaceActive(u.GetNamespace()) {
-				logrus.Debugf("Ignoring CRD delete event for inactive namespace %s: %s/%s",
-					u.GetNamespace(), gvr.Resource, u.GetName())
-				return
-			}
-
-			logrus.WithFields(logrus.Fields{
-				"type":      gvr.Resource,
-				"namespace": u.GetNamespace(),
-				"name":      u.GetName(),
-			}).Info("Chaos experiment deleted successfully")
-			c.callback.HandleCRDDelete(u.GetNamespace(), u.GetAnnotations(), u.GetLabels())
-		},
-	}
-}
 
 func jobHasTerminalCondition(job *batchv1.Job, want batchv1.JobConditionType) bool {
 	for _, c := range job.Status.Conditions {
@@ -645,16 +390,6 @@ func (c *Controller) processQueueItem() bool {
 
 	var err error
 	switch item.Type {
-	case CheckRecovery:
-		err = c.checkRecoveryStatus(item)
-	case DeleteCRD:
-		if item.GVR == nil {
-			logrus.Error("The groupVersionResource can not be nil")
-			c.queue.Forget(item)
-			return true
-		}
-
-		err = deleteCRD(context.Background(), item.GVR, item.Namespace, item.Name)
 	case DeleteJob:
 		if !config.GetBool("debugging.enabled") {
 			err = deleteJob(context.Background(), item.Namespace, item.Name)
@@ -680,96 +415,8 @@ func (c *Controller) processQueueItem() bool {
 	return true
 }
 
-func (c *Controller) checkRecoveryStatus(item QueueItem) error {
-	logEntry := logrus.WithFields(logrus.Fields{
-		"type":      item.GVR.Resource,
-		"namespace": item.Namespace,
-		"name":      item.Name,
-	})
 
-	dyn, err := getK8sDynamicClient()
-	if err != nil {
-		return fmt.Errorf("kubernetes dynamic client not available: %w", err)
-	}
-	obj, err := dyn.
-		Resource(*item.GVR).
-		Namespace(item.Namespace).
-		Get(context.Background(), item.Name, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			logEntry.Info("the chaos experiment has been deleted")
-			return nil
-		}
 
-		return fmt.Errorf("failed to get the CRD resource object: %w", err)
-	}
-
-	conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
-	recovered := getCRDConditionStatus(conditions, "AllRecovered")
-	if recovered {
-		logEntry.Infof("all targets recoverd in the chaos experiment after %d attempts", item.RetryCount+1)
-		c.handleCRDSuccess(*item.GVR, obj, item.Duration)
-		return nil
-	}
-
-	if item.RetryCount < item.MaxRetries {
-		logEntry.Warnf("Recovery not complete (attempt %d/%d), scheduling retry after 1 minute",
-			item.RetryCount+1, item.MaxRetries+1)
-		c.queue.AddAfter(QueueItem{
-			Type:       CheckRecovery,
-			Namespace:  item.Namespace,
-			Name:       item.Name,
-			Duration:   item.Duration,
-			GVR:        item.GVR,
-			RetryCount: item.RetryCount + 1,
-			MaxRetries: item.MaxRetries,
-		}, time.Duration(1)*time.Minute)
-	} else {
-		// If the retry count exceeds the maximum, log it and handle it normally.
-		logEntry.Warningf("Recovery not complete after %d retries, giving up but processing as success", item.MaxRetries+1)
-		c.handleCRDSuccess(*item.GVR, obj, item.Duration)
-	}
-
-	return nil
-}
-
-func (c *Controller) handleCRDSuccess(gvr schema.GroupVersionResource, u *unstructured.Unstructured, duration time.Duration) {
-	newRecords, _, _ := unstructured.NestedSlice(u.Object, "status", "experiment", "containerRecords")
-	timeRange := getCRDEventTimeRanges(newRecords, duration)
-	if timeRange == nil {
-		c.handleCRDFailed(gvr, u, "failed to get the start_time and end_time")
-		return
-	}
-
-	pod, _, _ := unstructured.NestedString(u.Object, "spec", "selector", "labelSelectors", "app")
-	c.callback.HandleCRDSucceeded(u.GetNamespace(), pod, u.GetName(), timeRange.Start, timeRange.End, u.GetAnnotations(), u.GetLabels())
-	if !config.GetBool("debugging.enabled") {
-		c.queue.Add(QueueItem{
-			Type:      DeleteCRD,
-			Namespace: u.GetNamespace(),
-			Name:      u.GetName(),
-			GVR:       &gvr,
-		})
-	}
-}
-
-func (c *Controller) handleCRDFailed(gvr schema.GroupVersionResource, u *unstructured.Unstructured, errMsg string) {
-	logrus.WithFields(logrus.Fields{
-		"type":      gvr.Resource,
-		"namespace": u.GetNamespace(),
-		"name":      u.GetName(),
-	}).Errorf("CRD failed: %s", errMsg)
-
-	c.callback.HandleCRDFailed(u.GetName(), u.GetAnnotations(), u.GetLabels(), errMsg)
-	if !config.GetBool("debugging.enabled") {
-		c.queue.Add(QueueItem{
-			Type:      DeleteCRD,
-			Namespace: u.GetNamespace(),
-			Name:      u.GetName(),
-			GVR:       &gvr,
-		})
-	}
-}
 
 // isNamespaceActive checks if a namespace is active and should process events
 func (c *Controller) isNamespaceActive(namespace string) bool {
@@ -781,77 +428,8 @@ func (c *Controller) isNamespaceActive(namespace string) bool {
 	return exists && active
 }
 
-func getCRDConditionStatus(conditions []any, conditionType string) bool {
-	for _, c := range conditions {
-		condition, ok := c.(map[string]any)
-		if !ok {
-			continue
-		}
 
-		t, _, _ := unstructured.NestedString(condition, "type")
-		status, _, _ := unstructured.NestedString(condition, "status")
-		if t == conditionType {
-			return status == "True"
-		}
-	}
 
-	return false
-}
-
-func getCRDEventTimeRanges(records []any, duration time.Duration) *timeRange {
-	r := records[0]
-	record, ok := r.(map[string]any)
-	if !ok {
-		logrus.Error("invalid record format")
-		return nil
-	}
-
-	var startTimePtr, endTimePtr *time.Time
-	events, _, _ := unstructured.NestedSlice(record, "events")
-	for _, e := range events {
-		event, ok := e.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		operation, _, _ := unstructured.NestedString(event, "operation")
-		eventType, _, _ := unstructured.NestedString(event, "type")
-
-		if eventType == "Succeeded" && operation == "Apply" {
-			startTimePtr, _ = parseEventTime(event)
-		}
-
-		if eventType == "Succeeded" && operation == "Recover" {
-			endTimePtr, _ = parseEventTime(event)
-		}
-	}
-
-	if startTimePtr == nil {
-		logrus.Error("start time not found in events")
-		return nil
-	}
-
-	startTime := *startTimePtr
-	var endTime time.Time
-
-	if endTimePtr != nil {
-		endTime = *endTimePtr
-	} else {
-		endTime = startTime.Add(duration)
-		logrus.Infof("end time not found, calculated from start time + duration: %v", endTime)
-	}
-
-	return &timeRange{Start: startTime, End: endTime}
-}
-
-func parseEventTime(event map[string]any) (*time.Time, error) {
-	t, _, _ := unstructured.NestedString(event, "timestamp")
-	if t, err := time.Parse(time.RFC3339, t); err == nil {
-		return &t, nil
-	}
-
-	return nil, fmt.Errorf("parse event time failed")
-}
 
 func checkPodReason(pod *corev1.Pod, reason string) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {

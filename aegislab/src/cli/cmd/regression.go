@@ -293,16 +293,11 @@ func validateRegressionCase(rc regressionCase, path string) error {
 }
 
 func runRegressionCase(parentCtx context.Context, casePath string, rc regressionCase) (regressionSummary, error) {
-	// Deprecation (§11 step 5b cleanup): --via-chaos on `regression run` is
-	// removed. The backend dispatcher now exercises the chaos-service path
-	// for normal submits (per-system executor flag), so the legacy POST
-	// below already validates the chaos-service path end-to-end. Keeping a
-	// CLI-only branch that returns after POST without observing trace
-	// events ("via_chaos_submitted") made the case pass without checking
-	// anything, which defeats the regression's purpose. Use `aegisctl
-	// inject guided --via-chaos` for the standalone client check.
+	// §11 step 5c cleanup: --via-chaos on `regression run` is removed. The
+	// backend dispatcher now always takes the chaos-service path, so the
+	// legacy POST below validates it end-to-end.
 	if regressionViaChaos {
-		return regressionSummary{}, usageErrorf("regression run: --via-chaos is removed (chaos-service path is now exercised by the standard backend submit); drop the flag or use `aegisctl inject guided --via-chaos` for a standalone client smoke")
+		return regressionSummary{}, usageErrorf("regression run: --via-chaos is removed (chaos-service is now the only dispatch path); drop the flag")
 	}
 
 	projectName := rc.ProjectName
@@ -875,12 +870,11 @@ func init() {
 	regressionRunCmd.Flags().IntVar(&regressionReadyTimeoutSeconds, "ready-timeout", 600, "Seconds --auto-install waits for all preflight targets to become Ready before submit")
 	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight")
 
-	// Deprecated: --via-chaos on `regression run` is removed (§11 step 5b
-	// cleanup). The flag stays bound so existing AEGIS_INJECT_VIA_CHAOS
-	// users get a clear error message; the run errors out instead of
-	// silently returning "via_chaos_submitted" without observing events.
+	// Deprecated: --via-chaos on `regression run` is removed (§11 step 5c).
+	// The flag stays bound so existing AEGIS_INJECT_VIA_CHAOS users get a
+	// clear error message instead of an "unknown flag" failure.
 	regressionRunCmd.Flags().BoolVar(&regressionViaChaos, "via-chaos", envBool("AEGIS_INJECT_VIA_CHAOS"),
-		"DEPRECATED (§11 step 5b): the chaos-service path is now exercised by the standard backend submit; this flag now errors out. Use `aegisctl inject guided --via-chaos` for a standalone client smoke.")
+		"DEPRECATED (§11 step 5c): chaos-service is now the only dispatch path; this flag now errors out.")
 
 	regressionCmd.AddCommand(regressionRunCmd)
 }

@@ -2,7 +2,6 @@ package consumer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -37,13 +36,9 @@ const OutboundBearerEnv = "CHAOS_OUTBOUND_BEARER"
 
 var outboundBearerAttachOnce sync.Once
 
-// Logging-only preflight; the result is not consulted by BuildInjection. Real
-// catalog cutover deferred to step 5b when the executor moves to chaos service.
-
 const (
-	catalogSourceFlagKey = "aegis.injection.catalog_source"
-	catalogSourceInProc  = "in_process"
-	catalogSourceChaos   = "chaos_service"
+	catalogSourceInProc = "in_process"
+	catalogSourceChaos  = "chaos_service"
 
 	catalogPreflightTimeout = 5 * time.Second
 )
@@ -52,50 +47,31 @@ const (
 // generated SDK against config.GetChaosServiceURL().
 type pointsListerFunc func(ctx context.Context, system, service, capability string) (matchedPointID string, httpStatus int, err error)
 
-// dbPointsLookupFunc resolves a Point directly from the chaos_points DB
-// table (the source step 3 seeded). Returns ("", nil) when no row matches.
-// Tests inject this seam to avoid binding to a live DB; production wires it
-// to newDBPointsLookup(db).
-type dbPointsLookupFunc func(ctx context.Context, system, service, capability string) (matchedPointID string, err error)
-
 // runCatalogPreflight enumerates the guided configs and resolves each Point
-// according to the etcd flag aegis.injection.catalog_source. Failures in the
-// chaos_service branch fall back silently to in-process — BuildInjection
-// continues regardless. Set lister/lookup to nil to use the default
-// production implementations.
+// against the chaos service catalog. Failures fall back silently (metric
+// records the effective source); BuildInjection continues regardless. Set
+// lister to nil to use the default production implementation.
 //
 // logicalSystem MUST be the catalog-side system name (e.g. "otel-demo"),
 // not the concrete pool-allocated namespace (e.g. "otel-demo0"). The chaos
 // service indexes chaos_points by Point.SystemName, which is populated from
 // the seed manifests' metadata.system field — passing a namespace-suffixed
 // value here will silently fall through to WARN-fallback every call.
-func runCatalogPreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, db *gorm.DB, logEntry *logrus.Entry, lister pointsListerFunc, lookup dbPointsLookupFunc) {
-	source := strings.TrimSpace(config.GetString(catalogSourceFlagKey))
-	if source == "" {
-		source = catalogSourceChaos
+func runCatalogPreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, _ *gorm.DB, logEntry *logrus.Entry, lister pointsListerFunc) {
+	url := config.GetChaosServiceURL()
+	if url == "" {
+		// Missing URL = no chaos service to call. Each config still counts
+		// as an in_process resolution so the metric reflects the effective
+		// source.
+		for range configs {
+			catalogReadSourceTotal.WithLabelValues(catalogSourceInProc).Inc()
+		}
+		return
 	}
-	switch source {
-	case catalogSourceChaos:
-		url := config.GetChaosServiceURL()
-		if url == "" {
-			// Silent override per design: missing URL = no chaos service to
-			// call. Each config still counts as an in_process resolution so
-			// the metric reflects the effective source.
-			for range configs {
-				catalogReadSourceTotal.WithLabelValues(catalogSourceInProc).Inc()
-			}
-			return
-		}
-		if lister == nil {
-			lister = newSDKPointsLister(url, logEntry)
-		}
-		runChaosServicePreflight(ctx, logicalSystem, configs, logEntry, lister)
-	default:
-		if lookup == nil {
-			lookup = newDBPointsLookup(db)
-		}
-		runInProcessPreflight(ctx, logicalSystem, configs, logEntry, lookup)
+	if lister == nil {
+		lister = newSDKPointsLister(url, logEntry)
 	}
+	runChaosServicePreflight(ctx, logicalSystem, configs, logEntry, lister)
 }
 
 func runChaosServicePreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, logEntry *logrus.Entry, lister pointsListerFunc) {
@@ -144,82 +120,6 @@ func runChaosServicePreflight(ctx context.Context, logicalSystem string, configs
 	}
 }
 
-func runInProcessPreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, logEntry *logrus.Entry, lookup dbPointsLookupFunc) {
-	for i, cfg := range configs {
-		catalogReadSourceTotal.WithLabelValues(catalogSourceInProc).Inc()
-		capability, ok := chaoscrud.ChaosTypeToCapability[strings.TrimSpace(cfg.ChaosType)]
-		if !ok {
-			logEntry.WithFields(logrus.Fields{
-				"index":      i,
-				"chaos_type": cfg.ChaosType,
-			}).Warn("catalog preflight: no capability mapping for chaos_type; using in-process resolution")
-			continue
-		}
-		if lookup == nil {
-			continue
-		}
-		service := strings.TrimSpace(cfg.App)
-		callCtx, cancel := context.WithTimeout(ctx, catalogPreflightTimeout)
-		pointID, err := lookup(callCtx, logicalSystem, service, capability)
-		cancel()
-		switch {
-		case err != nil:
-			logEntry.WithFields(logrus.Fields{
-				"index":      i,
-				"system":     logicalSystem,
-				"service":    service,
-				"capability": capability,
-			}).Warnf("in-process catalog read failed: %v", err)
-		case pointID == "":
-			logEntry.WithFields(logrus.Fields{
-				"index":      i,
-				"system":     logicalSystem,
-				"service":    service,
-				"capability": capability,
-			}).Warn("point not found in in-process catalog")
-		default:
-			logEntry.WithFields(logrus.Fields{
-				"index":      i,
-				"system":     logicalSystem,
-				"service":    service,
-				"capability": capability,
-				"point_id":   pointID,
-			}).Info("catalog source: in_process")
-		}
-	}
-}
-
-// newDBPointsLookup queries chaos_points joined with chaos_services for the
-// (system, service, capability) tuple. Returns ("", nil) when no active row
-// matches — this is not an error; callers continue to in-process resolution.
-func newDBPointsLookup(db *gorm.DB) dbPointsLookupFunc {
-	if db == nil {
-		return nil
-	}
-	return func(ctx context.Context, system, service, capability string) (string, error) {
-		var p chaoscrud.Point
-		q := db.WithContext(ctx).
-			Model(&chaoscrud.Point{}).
-			Where("chaos_points.system_name = ? AND chaos_points.capability_name = ?",
-				system, capability)
-		if service != "" {
-			// INNER join scoped by both id AND system_name — a same-named
-			// service in another system must not shadow. Mirrors chaos-service
-			// ListSystemPoints which resolves Service first then matches
-			// service_id (crud/chaos/service_batch.go).
-			q = q.Joins("JOIN chaos_services ON chaos_services.id = chaos_points.service_id AND chaos_services.system_name = ? AND chaos_services.name = ?",
-				system, service)
-		}
-		err := q.Take(&p).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", nil
-		}
-		if err != nil {
-			return "", err
-		}
-		return p.ID, nil
-	}
-}
 
 // newSDKPointsLister returns a pointsListerFunc backed by the generated
 // chaos-service Go SDK. Each invocation builds a fresh per-call configuration

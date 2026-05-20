@@ -171,7 +171,6 @@ func TestFaultInjectionStartedPayload_CarriesExecutorPath(t *testing.T) {
 		executor string
 	}{
 		{"chaos-service path", "fault_injection.go", "ExecutorPathChaosService"},
-		{"chaos-mesh-direct path", "k8s_handler.go", "ExecutorPathChaosMeshDirect"},
 	}
 
 	for _, tc := range cases {
