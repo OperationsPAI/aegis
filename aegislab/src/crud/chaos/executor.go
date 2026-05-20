@@ -9,6 +9,12 @@ const (
 	ExecStateRunning
 	ExecStateSucceeded
 	ExecStateFailed
+	// ExecStateOrphaned signals the executor's CR is gone but the executor
+	// cannot tell whether that is the legitimate post-Destroy steady state
+	// or a mid-flight vanish (manual kubectl delete, GC race). Callers that
+	// hold the row's prior status decide: terminal-prior rows treat this
+	// as Succeeded; pending/running rows treat it as Failed.
+	ExecStateOrphaned
 )
 
 func (s ExecState) String() string {
@@ -21,6 +27,8 @@ func (s ExecState) String() string {
 		return StatusSucceeded
 	case ExecStateFailed:
 		return StatusFailed
+	case ExecStateOrphaned:
+		return "orphaned"
 	}
 	return "unknown"
 }

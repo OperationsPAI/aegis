@@ -170,9 +170,10 @@ func (e *ChaosMeshExecutor) Status(ctx context.Context, handle string) (ExecStat
 	got, err := e.Dyn.Resource(h.GVR).Namespace(h.Namespace).Get(ctx, h.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// CR is gone — for terminal injections this is the post-Destroy
-			// steady state; callers interpret in context.
-			return ExecStateSucceeded, map[string]any{"reason": "cr_absent"}, nil
+			// CR absent. Caller (reconciler) reconciles against the row's
+			// prior status to distinguish post-Destroy steady state from a
+			// mid-flight vanish.
+			return ExecStateOrphaned, map[string]any{"reason": "cr_absent"}, nil
 		}
 		return ExecStateFailed, nil, fmt.Errorf("chaos-mesh status: %w", err)
 	}

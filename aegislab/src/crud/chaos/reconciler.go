@@ -78,6 +78,49 @@ func (r *Reconciler) reconcileOne(ctx context.Context, inj *Injection) {
 		return
 	}
 
+	// Orphaned (CR vanished). If the row was still in-flight, a 404 means
+	// someone (or the GC) destroyed the CR before chaos-mesh could report
+	// AllInjected/AllRecovered. Mark failed with a clear reason so the
+	// downstream pipeline doesn't treat a non-event as a successful inject.
+	// If the row was already terminal pending->the legitimate post-Destroy
+	// case, leave it alone (the stickiness gate below would no-op anyway).
+	if state == ExecStateOrphaned {
+		if inj.Status != StatusPending && inj.Status != StatusRunning {
+			return
+		}
+		now := time.Now().UTC()
+		diag["reason"] = "cr_vanished_mid_flight"
+		tx := r.db.WithContext(ctx).Model(&Injection{}).
+			Where("id = ? AND status IN ?", inj.ID, []string{StatusPending, StatusRunning}).
+			Updates(map[string]any{
+				"status":      StatusFailed,
+				"finished_at": &now,
+				"diagnostics": JSONMap(diag),
+			})
+		if tx.Error != nil {
+			r.logger.WithError(tx.Error).WithField("id", inj.ID).Warn("chaos reconciler: orphaned update")
+			return
+		}
+		if tx.RowsAffected == 0 {
+			return
+		}
+		if r.webhook == nil {
+			return
+		}
+		var fresh Injection
+		if err := r.db.WithContext(ctx).Where("id = ?", inj.ID).Take(&fresh).Error; err != nil {
+			r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: reload row")
+			return
+		}
+		if err := r.webhook.Fire(ctx, &fresh); err != nil && !errors.Is(err, errWebhookDisabled) {
+			r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: webhook fire")
+		}
+		if fresh.BatchID != nil && *fresh.BatchID != "" {
+			r.reconcileBatch(ctx, *fresh.BatchID)
+		}
+		return
+	}
+
 	terminal := StatusSucceeded
 	if state == ExecStateFailed {
 		terminal = StatusFailed
