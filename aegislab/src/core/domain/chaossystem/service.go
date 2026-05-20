@@ -18,7 +18,7 @@ import (
 	"aegis/core/orchestrator/common"
 	"aegis/boot/seed"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 )

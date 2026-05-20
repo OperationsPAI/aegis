@@ -11,7 +11,7 @@ import (
 	"aegis/platform/model"
 	"aegis/platform/utils"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 )
 
 // CreateDatasetReq represents dataset creation request.

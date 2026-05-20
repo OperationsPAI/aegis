@@ -3,7 +3,7 @@ package docs
 import (
 	group "aegis/core/domain/group"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/gin-gonic/gin"
 )
 

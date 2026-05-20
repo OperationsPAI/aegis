@@ -11,7 +11,7 @@ import (
 	"aegis/platform/tracing"
 	"aegis/platform/utils"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"

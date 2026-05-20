@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 )
 
 // FaultInjectionNoIssues view model

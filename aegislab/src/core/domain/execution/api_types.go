@@ -10,7 +10,7 @@ import (
 	"aegis/platform/dto"
 	"aegis/platform/model"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 )
 
 // ExecutionRef represents execution granularity results for evaluation.

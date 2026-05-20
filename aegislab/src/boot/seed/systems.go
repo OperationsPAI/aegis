@@ -4,7 +4,7 @@ import (
 	"aegis/platform/config"
 	"aegis/core/orchestrator/common"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )

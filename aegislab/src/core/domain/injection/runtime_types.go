@@ -7,7 +7,7 @@ import (
 	"aegis/platform/dto"
 	"aegis/platform/model"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 )
 
 // RuntimeCreateInjectionReq captures fault injection writes initiated by runtime-worker-service.

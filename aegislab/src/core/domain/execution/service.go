@@ -17,7 +17,7 @@ import (
 	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	chaos "aegis/platform/chaos"
 	"gorm.io/gorm"
 )
 
