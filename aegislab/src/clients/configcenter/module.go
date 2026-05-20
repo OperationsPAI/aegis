@@ -1,11 +1,13 @@
 package configcenterclient
 
 import (
+	"context"
 	"fmt"
 
 	"aegis/platform/config"
 	"aegis/crud/admin/configcenter"
 
+	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 )
 
@@ -18,7 +20,34 @@ import (
 // Consumers always inject `configcenterclient.Client`.
 var Module = fx.Module("configcenterclient",
 	fx.Provide(provideClient),
+	fx.Invoke(registerDynamicViper),
 )
+
+// registerDynamicViper attaches an OnStart hook that mirrors the "aegis"
+// configcenter namespace into viper so legacy `config.GetString` callers
+// observe live etcd values. Best-effort: a failed bootstrap logs WARN and
+// the process continues (TOML / env defaults remain authoritative).
+func registerDynamicViper(lc fx.Lifecycle, c Client) {
+	var stop func()
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			s, err := BootstrapDynamicViper(ctx, c, DynamicViperNamespace)
+			if err != nil {
+				logrus.WithError(err).
+					Warn("configcenterclient: dynamic viper bootstrap failed; static config remains authoritative")
+				return nil
+			}
+			stop = s
+			return nil
+		},
+		OnStop: func(context.Context) error {
+			if stop != nil {
+				stop()
+			}
+			return nil
+		},
+	})
+}
 
 func provideClient(
 	center configcenter.Center, // available iff module/configcenter is also loaded

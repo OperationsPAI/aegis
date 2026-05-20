@@ -52,6 +52,7 @@ type Client interface {
 	Set(ctx context.Context, namespace, key string, value any, opts ...SetOpt) error
 	Delete(ctx context.Context, namespace, key string) error
 	List(ctx context.Context, namespace string) ([]Entry, error)
+	Watch(ctx context.Context, namespace string) (<-chan Entry, func(), error)
 }
 
 // TokenSource produces a fresh Bearer token for cross-service calls
