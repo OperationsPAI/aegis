@@ -238,3 +238,52 @@ func TestDeleteInjection_Idempotent(t *testing.T) {
 		t.Fatalf("db row status: %q", inDB.Status)
 	}
 }
+
+// TestCreateInjection_RespectsMaxConcurrent asserts the per-system
+// concurrency gate: at limit-1 a new injection still succeeds, at limit
+// it returns ErrSystemAtCapacity. Reaches into the DB to pre-seed
+// in-flight rows so the test doesn't have to plumb a stuck executor.
+func TestCreateInjection_RespectsMaxConcurrent(t *testing.T) {
+	mgr, _, db := newTestManager(t)
+	sysName, pointID := seedSystemAndPoint(t, db)
+	if err := db.Model(&System{}).Where("name = ?", sysName).
+		Update("max_concurrent_injections", 2).Error; err != nil {
+		t.Fatalf("set limit: %v", err)
+	}
+
+	now := time.Now().UTC()
+	seedRow := func(id, key, status string) {
+		row := Injection{
+			ID: id, PointID: pointID, Params: JSONMap{},
+			IdempotencyKey: key, ExecutorName: "fake",
+			ExecutorHandle: "handle-" + id, Status: status, Ts: now,
+		}
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatalf("seed inflight: %v", err)
+		}
+	}
+
+	seedRow("01HQX0000000000000000000A0", "preexisting-1", StatusRunning)
+	// boundary − 1 → still accepted (count=1 < limit=2)
+	if _, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
+		PointID: pointID, IdempotencyKey: "below-limit",
+	}); err != nil {
+		t.Fatalf("below limit should be accepted, got %v", err)
+	}
+
+	// drop the new row's status to running directly (Apply succeeded in
+	// happy path; nothing terminal happened yet) so the next call sees
+	// count=2.
+	if err := db.Model(&Injection{}).Where("idempotency_key = ?", "below-limit").
+		Update("status", StatusRunning).Error; err != nil {
+		t.Fatalf("force running: %v", err)
+	}
+
+	// at boundary → rejected
+	_, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
+		PointID: pointID, IdempotencyKey: "at-limit",
+	})
+	if !errors.Is(err, ErrSystemAtCapacity) {
+		t.Fatalf("at limit: want ErrSystemAtCapacity, got %v", err)
+	}
+}

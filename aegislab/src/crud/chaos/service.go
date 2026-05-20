@@ -22,6 +22,7 @@ var (
 	ErrCapabilityUnsupported = errors.New("chaos: capability not supported by executor")
 	ErrIdempotencyMismatch   = errors.New("chaos: idempotency_key reused with different request body")
 	ErrBatchEmpty            = errors.New("chaos: injection batch requires at least one child")
+	ErrSystemAtCapacity      = errors.New("chaos: system at max concurrent injections")
 )
 
 // Manager is named after the role rather than "Service" so it doesn't
@@ -145,6 +146,9 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 	}
 	if !sys.Enabled {
 		return nil, ErrSystemDisabled
+	}
+	if err := s.checkSystemCapacity(ctx, sys); err != nil {
+		return nil, err
 	}
 	sysCtx := SystemContext{Name: sys.Name, AppLabelKey: sys.AppLabelKey}
 
@@ -274,6 +278,29 @@ func (s *Manager) ListCapabilities(ctx context.Context) ([]Capability, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// checkSystemCapacity counts non-terminal injections scoped to the given
+// system (joined via chaos_points.system_name) and refuses to accept a
+// new one when the system is at its MaxConcurrentInjections limit. A
+// zero limit is treated as unlimited.
+func (s *Manager) checkSystemCapacity(ctx context.Context, sys *System) error {
+	if sys.MaxConcurrentInjections <= 0 {
+		return nil
+	}
+	var inFlight int64
+	err := s.DB.WithContext(ctx).Model(&Injection{}).
+		Joins("JOIN chaos_points ON chaos_points.id = chaos_injections.point_id").
+		Where("chaos_points.system_name = ?", sys.Name).
+		Where("chaos_injections.status IN ?", []string{StatusPending, StatusRunning}).
+		Count(&inFlight).Error
+	if err != nil {
+		return err
+	}
+	if inFlight >= int64(sys.MaxConcurrentInjections) {
+		return ErrSystemAtCapacity
+	}
+	return nil
 }
 
 func (s *Manager) GetCapability(ctx context.Context, name string) (*Capability, error) {

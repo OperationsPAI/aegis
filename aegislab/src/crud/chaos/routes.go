@@ -1,10 +1,30 @@
 package chaos
 
 import (
+	"net/http"
+
+	"aegis/platform/dto"
 	"aegis/platform/framework"
 
 	"github.com/gin-gonic/gin"
 )
+
+// chaosMaxRequestBytes caps inbound /v1beta request bodies. caller_metadata
+// and batch_caller_metadata are unstructured maps with no other size guard.
+const chaosMaxRequestBytes = 1 << 20
+
+func limitRequestBody() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.ContentLength > chaosMaxRequestBytes {
+			dto.ErrorResponse(c, http.StatusRequestEntityTooLarge,
+				"request body exceeds 1 MiB limit")
+			c.Abort()
+			return
+		}
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, chaosMaxRequestBytes)
+		c.Next()
+	}
+}
 
 // Routes mounts the §5 surface under /v1beta. Step 1 wires systems,
 // points/import, singleton injections, capabilities, manifest-schema;
@@ -22,46 +42,30 @@ func Routes(h *Handler) framework.RouteRegistrar {
 		BasePath:         "/v1beta",
 		SkipDefaultChain: true,
 		Register: func(g *gin.RouterGroup) {
+			g.Use(limitRequestBody())
+
 			// Manifest schema is the one read path chart authors hit from
 			// CI / pre-commit hooks that don't carry tokens.
 			g.GET("/manifest-schema.json", h.ManifestSchema)
 
 			auth := g.Group("", NewChaosAuthFromEnv())
 
-			auth.GET("/systems", notImplemented)
 			auth.PUT("/systems/:sys", h.PutSystem)
 			auth.GET("/systems/:sys", h.GetSystem)
-			auth.DELETE("/systems/:sys", notImplemented)
-
-			auth.GET("/systems/:sys/services", notImplemented)
-			auth.GET("/systems/:sys/services/:svc", notImplemented)
-			auth.GET("/systems/:sys/services/:svc/versions", notImplemented)
 
 			auth.GET("/systems/:sys/points", h.ListSystemPoints)
-			auth.GET("/systems/:sys/services/:svc/points", notImplemented)
-			auth.GET("/points/:id", notImplemented)
-			auth.DELETE("/points/:id", notImplemented)
 			auth.POST("/systems/:sys/points/import", h.ImportPoints)
 
 			auth.GET("/capabilities", h.ListCapabilities)
 			auth.GET("/capabilities/:name", h.GetCapability)
-			auth.GET("/capabilities/:name/matrix", notImplemented)
-
-			auth.GET("/executors", notImplemented)
-			auth.POST("/executors/:name/probe", notImplemented)
 
 			auth.POST("/injections", h.CreateInjection)
 			auth.GET("/injections/:id", h.GetInjection)
 			auth.DELETE("/injections/:id", h.DeleteInjection)
-			auth.POST("/injections/preview", notImplemented)
 
 			auth.POST("/injection-batches", h.CreateInjectionBatch)
 			auth.GET("/injection-batches/:id", h.GetInjectionBatch)
 			auth.DELETE("/injection-batches/:id", h.DeleteInjectionBatch)
-
-			auth.POST("/guided-sessions", notImplemented)
-			auth.POST("/guided-sessions/:tok/step", notImplemented)
-			auth.POST("/guided-sessions/:tok/commit", notImplemented)
 		},
 	}
 }

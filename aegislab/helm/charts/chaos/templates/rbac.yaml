@@ -7,8 +7,10 @@ metadata:
 rules:
   - apiGroups: ["chaos-mesh.org"]
     resources:
-      - podchaos
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      {{- range .Values.rbac.crdResources }}
+      - {{ . }}
+      {{- end }}
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
