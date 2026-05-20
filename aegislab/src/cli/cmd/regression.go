@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,7 +15,6 @@ import (
 	"aegis/cli/output"
 	"aegis/platform/consts"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,10 +67,9 @@ var (
 	regressionInstallerHook     chartInstaller
 	regressionSystemsHook       SystemsFetcher // test injection seam; nil => real HTTP client
 
-	// §11 step 4 Round 3: cutover flag — when set, regression submit routes
-	// through aegis-chaos /v1beta/injections{,/batches} via submitGuidedViaChaos
-	// instead of the legacy backend POST. Off by default; AEGIS_INJECT_VIA_CHAOS
-	// is the shared env knob.
+	// Deprecated (§11 step 5b cleanup). Kept only so existing scripts /
+	// AEGIS_INJECT_VIA_CHAOS env users get a clear deprecation error
+	// instead of an unknown-flag error. See runRegressionCase.
 	regressionViaChaos bool
 )
 
@@ -296,6 +293,18 @@ func validateRegressionCase(rc regressionCase, path string) error {
 }
 
 func runRegressionCase(parentCtx context.Context, casePath string, rc regressionCase) (regressionSummary, error) {
+	// Deprecation (§11 step 5b cleanup): --via-chaos on `regression run` is
+	// removed. The backend dispatcher now exercises the chaos-service path
+	// for normal submits (per-system executor flag), so the legacy POST
+	// below already validates the chaos-service path end-to-end. Keeping a
+	// CLI-only branch that returns after POST without observing trace
+	// events ("via_chaos_submitted") made the case pass without checking
+	// anything, which defeats the regression's purpose. Use `aegisctl
+	// inject guided --via-chaos` for the standalone client check.
+	if regressionViaChaos {
+		return regressionSummary{}, usageErrorf("regression run: --via-chaos is removed (chaos-service path is now exercised by the standard backend submit); drop the flag or use `aegisctl inject guided --via-chaos` for a standalone client smoke")
+	}
+
 	projectName := rc.ProjectName
 	if flagProject != "" {
 		projectName = flagProject
@@ -317,38 +326,6 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 			rc.Submit = map[string]any{}
 		}
 		rc.Submit["skip_restart_pedestal"] = true
-	}
-	// §11 step 4 Round 3 — when --via-chaos is on, route this submit through
-	// aegis-chaos instead of the backend's freeform POST. The trace_id /
-	// observed-events chain currently depends on the backend's response (see
-	// the SSE reader below), which the chaos service does not yet emit; for
-	// now the via-chaos path returns after the chaos POST without observing
-	// trace events. Treat that as expected and surface a partial summary.
-	if regressionViaChaos {
-		if flagChaosServer == "" {
-			return regressionSummary{}, usageErrorf("regression --via-chaos requires --chaos-server (or AEGIS_CHAOS_SERVER)")
-		}
-		cfgs, opts, err := regressionSubmitToGuidedConfigs(rc)
-		if err != nil {
-			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: %w", rc.Name, err)
-		}
-		// §11 step 5b R6+ — hook receiver needs project_id (FK to traces).
-		// Resolve client-side; legacy POST got it from server auth context.
-		opts.ProjectName = projectName
-		pid, err := resolveProjectIDForApply(projectName)
-		if err != nil {
-			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: resolve project id: %w", rc.Name, err)
-		}
-		opts.ProjectID = pid
-		if err := submitGuidedViaChaos(cfgs, opts); err != nil {
-			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: %w", rc.Name, err)
-		}
-		return regressionSummary{
-			CaseName:    rc.Name,
-			CaseFile:    casePath,
-			ProjectName: projectName,
-			Status:      "via_chaos_submitted",
-		}, nil
 	}
 	// TODO: missing swag annotation — generated SubmitProjectFaultInjection
 	// requires a typed InjectionSubmitInjectionReq, but rc.Submit is a
@@ -889,67 +866,6 @@ func (l *livePodLister) CountReadyPods(ctx context.Context, namespace, labelSele
 	return len(pods.Items), ready, nil
 }
 
-// regressionSubmitToGuidedConfigs flattens rc.Submit.specs (shape:
-// [[{system, namespace, app, chaos_type, ...}, ...], ...]) into the flat
-// []guidedcli.GuidedConfig submitGuidedViaChaos expects, plus the
-// pedestal/benchmark envelope it needs for caller_metadata. JSON tags on
-// GuidedConfig already match the YAML keys so a round-trip unmarshal works.
-func regressionSubmitToGuidedConfigs(rc regressionCase) ([]guidedcli.GuidedConfig, guidedApplyOptions, error) {
-	specsRaw, ok := rc.Submit["specs"]
-	if !ok {
-		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.specs missing")
-	}
-	groups, ok := specsRaw.([]any)
-	if !ok {
-		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.specs is not a list")
-	}
-	var cfgs []guidedcli.GuidedConfig
-	for _, g := range groups {
-		inner, ok := g.([]any)
-		if !ok {
-			continue
-		}
-		for _, s := range inner {
-			spec, ok := s.(map[string]any)
-			if !ok {
-				continue
-			}
-			raw, err := json.Marshal(spec)
-			if err != nil {
-				return nil, guidedApplyOptions{}, err
-			}
-			var cfg guidedcli.GuidedConfig
-			if err := json.Unmarshal(raw, &cfg); err != nil {
-				return nil, guidedApplyOptions{}, err
-			}
-			cfgs = append(cfgs, cfg)
-		}
-	}
-	if len(cfgs) == 0 {
-		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.specs contained no usable spec entries")
-	}
-
-	var opts guidedApplyOptions
-	if ped, ok := rc.Submit["pedestal"].(map[string]any); ok {
-		opts.PedestalName, _ = ped["name"].(string)
-		opts.PedestalTag, _ = ped["version"].(string)
-	}
-	if ben, ok := rc.Submit["benchmark"].(map[string]any); ok {
-		opts.BenchmarkName, _ = ben["name"].(string)
-		opts.BenchmarkTag, _ = ben["version"].(string)
-	}
-	if opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
-		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.benchmark requires name + version (for caller_metadata)")
-	}
-	switch v := rc.Submit["pre_duration"].(type) {
-	case float64:
-		opts.PreDuration = int(v)
-	case int:
-		opts.PreDuration = v
-	}
-	return cfgs, opts, nil
-}
-
 func init() {
 	regressionRunCmd.Flags().StringVar(&regressionCasesDir, "cases-dir", "regression", "Directory containing repo-tracked regression case YAML files")
 	regressionRunCmd.Flags().StringVar(&regressionCaseFile, "file", "", "Path to a regression case YAML file")
@@ -959,13 +875,12 @@ func init() {
 	regressionRunCmd.Flags().IntVar(&regressionReadyTimeoutSeconds, "ready-timeout", 600, "Seconds --auto-install waits for all preflight targets to become Ready before submit")
 	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight")
 
-	// §11 step 4 Round 3 cutover flags. flagChaosServer is shared with `chaos`
-	// + `inject guided`; re-bind so users can pass --chaos-server on
-	// `regression run` directly.
+	// Deprecated: --via-chaos on `regression run` is removed (§11 step 5b
+	// cleanup). The flag stays bound so existing AEGIS_INJECT_VIA_CHAOS
+	// users get a clear error message; the run errors out instead of
+	// silently returning "via_chaos_submitted" without observing events.
 	regressionRunCmd.Flags().BoolVar(&regressionViaChaos, "via-chaos", envBool("AEGIS_INJECT_VIA_CHAOS"),
-		"Route the case submit through aegis-chaos /v1beta/injections instead of the legacy backend (env: AEGIS_INJECT_VIA_CHAOS)")
-	regressionRunCmd.Flags().StringVar(&flagChaosServer, "chaos-server", flagChaosServer,
-		"aegis-chaos service URL when --via-chaos is set (env: AEGIS_CHAOS_SERVER)")
+		"DEPRECATED (§11 step 5b): the chaos-service path is now exercised by the standard backend submit; this flag now errors out. Use `aegisctl inject guided --via-chaos` for a standalone client smoke.")
 
 	regressionCmd.AddCommand(regressionRunCmd)
 }
