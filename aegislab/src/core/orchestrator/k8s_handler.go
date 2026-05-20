@@ -178,7 +178,10 @@ func (h *k8sHandler) HandleCRDAdd(name string, annotations map[string]string, la
 				parsedLabels.taskType,
 				consts.TaskRunning,
 				fmt.Sprintf("injecting fault for task %s", parsedLabels.taskID),
-			).withEvent(consts.EventFaultInjectionStarted, name).withDB(h.db).withRedis(h.redisGateway),
+			).withEvent(consts.EventFaultInjectionStarted, dto.FaultInjectionStartedPayload{
+				Name:         name,
+				ExecutorPath: consts.ExecutorPathChaosMeshDirect,
+			}).withDB(h.db).withRedis(h.redisGateway),
 		)
 		return nil
 	})

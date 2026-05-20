@@ -201,13 +201,17 @@ kubectl -n exp logs deploy/rcabench-aegis-api --since=30m \
 
 Distinguishing dispatch path in `fault.injection.started`:
 
+The event payload carries an `executor_path` field
+(`chaos-service` or `chaos-mesh-direct`) set by the emit site, so the audit
+is a single jq query against the trace stream:
+
 ```bash
-kubectl -n exp logs deploy/rcabench-aegis-api --since=30m \
-  | grep -E 'executeFaultInjection|HandleCRDSucceeded' | head -20
+aegisctl trace stream --event fault.injection.started --since=30m \
+  | jq -r '.payload.executor_path' | sort | uniq -c
 ```
 
-The chaos-service path goes through `executeFaultInjection`; the legacy path
-through `HandleCRDSucceeded` (see `core/orchestrator/k8s_handler.go:181`).
+Legacy emits without the field decode as `null` (`omitempty`); treat those
+as `chaos-mesh-direct` for historical windows.
 
 ## 4. Soak pass criteria
 

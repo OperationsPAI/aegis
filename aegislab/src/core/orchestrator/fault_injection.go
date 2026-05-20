@@ -310,7 +310,10 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 					task.Type,
 					consts.TaskRunning,
 					fmt.Sprintf("injecting fault for task %s", task.TaskID),
-				).withEvent(consts.EventFaultInjectionStarted, name).withDB(deps.DB).withRedis(deps.RedisGateway),
+				).withEvent(consts.EventFaultInjectionStarted, dto.FaultInjectionStartedPayload{
+					Name:         name,
+					ExecutorPath: consts.ExecutorPathChaosService,
+				}).withDB(deps.DB).withRedis(deps.RedisGateway),
 			)
 		}
 
