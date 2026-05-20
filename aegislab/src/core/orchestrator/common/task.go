@@ -34,6 +34,34 @@ func SetOnTraceCreated(fn func(traceID, traceType, otelTraceID, otelRootSpanID s
 	OnTraceCreated = fn
 }
 
+// logMissingParent emits the parent-task-not-found log line for tasks
+// being promoted to root. Severity is WARN for aegisctl --via-chaos
+// (expected: the CLI never persists a tasks row before calling the
+// chaos service), ERROR otherwise (the backend dispatcher always
+// persists the parent row, so a missing parent there indicates a
+// tasks-row regression worth oncall attention). Split out from
+// SubmitTaskWithDB so the severity contract can be unit-tested.
+func logMissingParent(t *dto.UnifiedTask) {
+	viaAegisctl := false
+	if t.Extra != nil {
+		if v, ok := t.Extra[consts.TaskExtraParentSubmittedByAegisctlViaChaos]; ok {
+			b, _ := v.(bool)
+			viaAegisctl = b
+		}
+	}
+	entry := logrus.WithFields(logrus.Fields{
+		"parent_task_id":          *t.ParentTaskID,
+		"task_id":                 t.TaskID,
+		"task_type":               t.Type,
+		"via_aegisctl_chaos_hook": viaAegisctl,
+	})
+	if viaAegisctl {
+		entry.Warn("submit: parent task not found (aegisctl --via-chaos hook), promoting to root")
+	} else {
+		entry.Error("submit: parent task not found on backend-dispatched path, promoting to root; possible tasks-row regression")
+	}
+}
+
 // logEmitScheduledErr logs a failed task.scheduled event emission.
 func logEmitScheduledErr(taskID string, err error) {
 	logrus.WithField("task_id", taskID).
@@ -96,7 +124,7 @@ func SubmitTaskWithDB(ctx context.Context, db *gorm.DB, redisGateway *redis.Gate
 			// preserved by TraceID + RootTraceCarrier, which propagation
 			// uses independently of the task tree.
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				logrus.WithField("parent_task_id", *t.ParentTaskID).Warn("submit: parent task not found, promoting to root")
+				logMissingParent(t)
 				t.ParentTaskID = nil
 				t.Level = 0
 			} else {

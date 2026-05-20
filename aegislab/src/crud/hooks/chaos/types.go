@@ -35,6 +35,16 @@ type CallerMetadata struct {
 	PreDuration int    `json:"pre_duration,omitempty"`
 	Namespace   string `json:"namespace,omitempty"`
 
+	// HasBackendTask is true when the caller persisted a row in `tasks`
+	// keyed by TaskID before dispatching to the chaos service. The
+	// backend dispatcher (core/orchestrator/dispatcher.go) sets it; the
+	// aegisctl --via-chaos path generates a client-side UUID without
+	// persisting and leaves it false. The hook receiver uses it to:
+	//  - populate FaultInjection.TaskID on the shadow row (FK to tasks)
+	//  - downgrade the missing-parent log on the downstream BuildDatapack
+	//    task from ERROR (regression) to WARN (expected).
+	HasBackendTask bool `json:"has_backend_task,omitempty"`
+
 	// Groundtruths is the rendered expected-impact for the injection, derived
 	// at dispatch time from the originating GuidedConfig (service/container).
 	// hooks/chaos writes this onto the shadow FI row so the algorithm container

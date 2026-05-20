@@ -283,6 +283,12 @@ type TaskExtra string
 
 const (
 	TaskExtraInjectionAlgorithms TaskExtra = "injection_algorithms"
+	// TaskExtraParentSubmittedByAegisctlViaChaos marks tasks the chaos
+	// webhook submits on behalf of aegisctl --via-chaos, which never
+	// persists a backend tasks row for its ParentTaskID. SubmitTaskWithDB
+	// uses this to downgrade the missing-parent log from ERROR (regression
+	// in the backend dispatcher path) to WARN (expected for aegisctl).
+	TaskExtraParentSubmittedByAegisctlViaChaos TaskExtra = "parent_submitted_by_aegisctl_via_chaos"
 )
 
 type TaskState int
