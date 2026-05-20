@@ -22,9 +22,10 @@ const (
 
 // auth_type values stashed under CtxKeyAuthType.
 const (
-	AuthTypeUser    = "user"
-	AuthTypeAPIKey  = "api_key"
-	AuthTypeService = "service"
+	AuthTypeUser           = "user"
+	AuthTypeAPIKey         = "api_key"
+	AuthTypeService        = "service"
+	AuthTypeServiceAccount = "service_account"
 )
 
 // API-key scope syntax used by RequireAPIKeyScopesAny middleware.

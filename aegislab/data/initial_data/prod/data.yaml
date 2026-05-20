@@ -974,3 +974,8 @@ dynamic_configs:
     is_secret: false
     min_value: 1
     max_value: 300
+
+service_accounts:
+  - name: chaos-service
+    scopes: chaos.inject.write,chaos.inject.read,chaos.webhook.write
+    description: backend↔chaos-service webhook + catalog auth (PR C3-C5)

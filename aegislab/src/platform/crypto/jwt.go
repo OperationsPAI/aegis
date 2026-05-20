@@ -70,6 +70,21 @@ type ServiceClaims struct {
 	jwt.RegisteredClaims
 }
 
+// ServiceAccountClaims is the claim set for tokens minted by the SSO
+// /v1/service-accounts/{name}/issue endpoint. Service-account tokens carry
+// no task_id (they're not bound to a single task) and identify the caller
+// purely by the SA name in `sub`.
+type ServiceAccountClaims struct {
+	AuthType string   `json:"auth_type"`
+	Scopes   []string `json:"scopes"`
+	jwt.RegisteredClaims
+}
+
+// ErrInvalidToken is returned by Parse* when the token is structurally valid
+// but fails our policy checks (wrong issuer, etc.). Signature / expiry
+// failures bubble up as raw errors from jwt.ParseWithClaims.
+var ErrInvalidToken = errors.New("invalid token")
+
 // PublicKeyResolver maps a JWT header kid to the RSA public key that should
 // verify the signature. Returning an error rejects the token.
 type PublicKeyResolver func(kid string) (*rsa.PublicKey, error)
@@ -170,6 +185,54 @@ func GenerateServiceToken(taskID string, priv *rsa.PrivateKey, kid string) (stri
 		return "", time.Time{}, fmt.Errorf("failed to generate service token: %v", err)
 	}
 	return tokenString, expirationTime, nil
+}
+
+func GenerateServiceAccountToken(name string, scopes []string, lifetime time.Duration, priv *rsa.PrivateKey, kid string) (string, time.Time, error) {
+	if name == "" {
+		return "", time.Time{}, errors.New("service account name is required")
+	}
+	if lifetime <= 0 {
+		return "", time.Time{}, errors.New("lifetime must be positive")
+	}
+	expirationTime := time.Now().Add(lifetime)
+	claims := &ServiceAccountClaims{
+		AuthType: consts.AuthTypeServiceAccount,
+		Scopes:   append([]string(nil), scopes...),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        fmt.Sprintf("%s_%s_%d", consts.JWTJTIPrefixServiceAccount, name, time.Now().Unix()),
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    consts.JWTIssuerServiceAccount,
+			Subject:   name,
+		},
+	}
+	tokenString, err := signRS256(claims, priv, kid)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("failed to generate service-account token: %v", err)
+	}
+	return tokenString, expirationTime, nil
+}
+
+func ParseServiceAccountToken(tokenString string, resolve PublicKeyResolver) (*ServiceAccountClaims, error) {
+	if tokenString == "" {
+		return nil, errors.New("service-account token is required")
+	}
+	if resolve == nil {
+		return nil, errors.New("public key resolver is nil")
+	}
+	token, err := jwt.ParseWithClaims(tokenString, &ServiceAccountClaims{}, keyFunc(resolve))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse service-account token: %v", err)
+	}
+	claims, ok := token.Claims.(*ServiceAccountClaims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+	if claims.Issuer != consts.JWTIssuerServiceAccount {
+		return nil, ErrInvalidToken
+	}
+	return claims, nil
 }
 
 func keyFunc(resolve PublicKeyResolver) jwt.Keyfunc {

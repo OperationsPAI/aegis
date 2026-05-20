@@ -175,6 +175,23 @@ type RolePermission struct {
 	Permission *Permission `gorm:"foreignKey:PermissionID"`
 }
 
+// ServiceAccount represents a non-human identity used by backend services
+// (e.g. chaos-service) to mint service tokens. Scopes is a comma-separated
+// list of permission strings (e.g. "chaos.inject.write,chaos.webhook.write"
+// — stored as comma-separated text rather than JSON to keep raw SQL
+// inspection trivial). RevokedAt being non-null causes the issue endpoint
+// to refuse and parsed tokens issued before revocation to be ignored at the
+// auth layer (wired up in a later PR).
+type ServiceAccount struct {
+	ID          uint       `gorm:"primaryKey;autoIncrement"`
+	Name        string     `gorm:"uniqueIndex;not null;size:64"`
+	Scopes      string     `gorm:"type:text;not null"`
+	Description string     `gorm:"type:text"`
+	RevokedAt   *time.Time
+	CreatedAt   time.Time `gorm:"autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+}
+
 // UserPermission User direct permission table (supplements role permissions, supports special permission assignment)
 type UserPermission struct {
 	ID           int              `gorm:"primaryKey;autoIncrement"`                                                                                         // Unique identifier

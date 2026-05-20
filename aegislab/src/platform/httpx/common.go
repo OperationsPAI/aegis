@@ -74,6 +74,8 @@ func HandleServiceError(c *gin.Context, err error) bool {
 		dto.ErrorResponse(c, http.StatusNotFound, msg)
 	case consts.ErrAlreadyExists:
 		dto.ErrorResponse(c, http.StatusConflict, msg)
+	case consts.ErrConflict:
+		dto.ErrorResponse(c, http.StatusConflict, msg)
 	case consts.ErrInternal:
 		logrus.WithFields(logrus.Fields{
 			"path":   c.Request.URL.Path,
