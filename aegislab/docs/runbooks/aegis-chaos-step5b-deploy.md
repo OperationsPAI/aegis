@@ -222,23 +222,39 @@ Wire-format additions:
 The seed catalog `point_id` recipe is unchanged; the 8384 catalogued
 points stay addressable after the fix.
 
-## Known gaps (still tracked)
+## R5 cluster validation (2026-05-20, image `byte-20260520-step5b-r5full`)
 
-The major items from R4b that are NOT addressed by R5 — these go to
-parallel workers / later rounds:
+Re-ran the R4b smoke against the R5+M-cleanup build:
 
-## Followups (not part of 5b R5)
+1. Seed catalog point `3ab769060ded3d0d` (target = `{namespace: "otel-demo",
+   app: "frontend"}`) + request `namespace: "otel-demo0"` → POST 202;
+   `executor_handle.namespace == "otel-demo0"`; CR landed in `otel-demo0`,
+   NOT `otel-demo`. Bug 2 fixed.
+2. `aegisctl regression run --file aegislab/regression/otel-demo-guided.yaml
+   --via-chaos --skip-preflight --skip-restart-pedestal` → submitted with
+   `via_chaos: true`, hit catalog row `3ab769060ded3d0d` (the canonical
+   seed), returned `injection_id` + `status: running`. Bug 1 fixed.
+3. Both test injections cleanly cancelled via `DELETE /v1beta/injections/{id}`;
+   CRs removed from `otel-demo0`. No workload was running in the ns, so
+   they'd otherwise have sat as "no pod selected" indefinitely — that's a
+   cluster-state observation, not a chaos-service bug.
 
-| ID | Gap | Round target |
-|----|-----|--------------|
-| **MAJOR M1** | `executor_chaosmesh.go` `cr_absent ⇒ ExecStateSucceeded` state laundering | 5c-prep |
-| **MAJOR M5** | manifestgen `errors.Is` sentinel vs string-match | trivial; rolled into any manifestgen touch |
-| **MAJOR M6** | reconciler HA — no `replicas:1` guard in helm | document as known constraint, add chart guard |
-| **5c** | Tear down backend CRD watcher (irreversible) | post-soak |
+Catalog flag `aegis.injection.catalog_source` left at `chaos_service` as the
+new default.
+
+## Followups (post R5)
+
+| ID | Gap | Status |
+|----|-----|--------|
+| **MAJOR M1** | `executor_chaosmesh.go` `cr_absent ⇒ Succeeded` state laundering | ✅ FIXED (commit `fffee9a3`) — Status now returns `ExecStateOrphaned` and the reconciler marks the row `failed` with reason `cr_vanished_mid_flight` if it was non-terminal |
+| **MAJOR M5** | manifestgen `errors.Is` sentinel + family floor | ✅ FIXED (commit `7dd54403`) — `ErrVarNotFound` sentinel + per-system capability-family count floor |
+| **MAJOR M6** | reconciler HA — chart should guard replicas | ✅ FIXED (commit `9394f00e`) — chaos deployment template hard-codes `replicas: 1` with an explanatory comment; `--set replicas=N` is ignored |
+| **5c** | Tear down backend CRD watcher (irreversible) | Pending soak — keep `catalog_source=chaos_service` flag on for ≥ 1 week + per-system executor flip before 5c |
 
 ## Image tag history (byte-cluster, 2026-05)
 | Tag | Brief |
 |-----|-------|
 | `byte-20260518-orch-trace-coverage-r1` | pre-step-5b baseline |
 | `byte-20260519-step4r4` | step 4 R4 (catalog preflight observable cutover) |
-| `byte-20260520-step5b-full` | step 5b R1+R2+cleanup+R3+R4a — this runbook |
+| `byte-20260520-step5b-full` | step 5b R1+R2+cleanup+R3+R4a — first runbook publish |
+| `byte-20260520-step5b-r5full` | step 5b R5 (ns mapping fix) + M1/M5/M6 cleanup — **current** |
