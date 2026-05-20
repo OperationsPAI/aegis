@@ -393,3 +393,4 @@ chaos:
   chaosAuth:
     secretName: rcabench-chaos-auth
     secretKey: token
+    requireBearer: true

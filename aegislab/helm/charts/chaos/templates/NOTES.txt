@@ -1,0 +1,14 @@
+{{- if .Values.chaosAuth.requireBearer }}
+{{- if and (not .Values.chaosAuth.secretName) (not .Values.chaosAuth.literal) }}
+
+WARNING: chaosAuth.requireBearer is true but neither chaosAuth.secretName
+nor chaosAuth.literal is configured. The chaos pod will reject every
+/v1beta request with 401. Either:
+
+  - set chaosAuth.literal to a shared secret (dev/CI), or
+  - set chaosAuth.secretName to an existing Secret whose
+    chaosAuth.secretKey holds the bearer token, or
+  - set chaosAuth.requireBearer=false (NOT recommended in production).
+
+{{- end }}
+{{- end }}

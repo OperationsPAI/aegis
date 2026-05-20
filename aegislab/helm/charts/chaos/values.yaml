@@ -77,3 +77,6 @@ chaosAuth:
   secretName: ""
   secretKey: "token"
   literal: ""
+  # Fail-closed when CHAOS_INBOUND_BEARER is unset. Default true; flip to
+  # false ONLY for kind/local-dev to allow TrustedHeaderAuth-only mode.
+  requireBearer: true

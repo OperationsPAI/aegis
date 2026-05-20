@@ -77,6 +77,8 @@ spec:
             - name: CHAOS_INBOUND_BEARER
               value: {{ .Values.chaosAuth.literal | quote }}
             {{- end }}
+            - name: CHAOS_REQUIRE_BEARER
+              value: {{ .Values.chaosAuth.requireBearer | default true | quote }}
             - name: AEGIS_JWT_SECRET
               valueFrom:
                 secretKeyRef:
