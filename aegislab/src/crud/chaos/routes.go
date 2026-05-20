@@ -2,7 +2,6 @@ package chaos
 
 import (
 	"aegis/platform/framework"
-	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +26,7 @@ func Routes(h *Handler) framework.RouteRegistrar {
 			// CI / pre-commit hooks that don't carry tokens.
 			g.GET("/manifest-schema.json", h.ManifestSchema)
 
-			auth := g.Group("", middleware.TrustedHeaderAuth())
+			auth := g.Group("", NewChaosAuthFromEnv())
 
 			auth.GET("/systems", notImplemented)
 			auth.PUT("/systems/:sys", h.PutSystem)
