@@ -17,6 +17,14 @@ from enum import Enum
 
 
 class FaultKind(str, Enum):
+    """Observable-symptom labels for root causes.
+
+    Naming follows SRE / postmortem vocabulary, not chaos-engineering
+    mechanism names. Legacy values from earlier SDK versions are still
+    accepted on parse via ``_LEGACY_ALIASES`` (see ``_missing_``) so
+    historical ``eval_metrics`` rows keep deserializing.
+    """
+
     # ── Pod / container lifecycle ────────────────────────────────────────
     POD_FAILURE = "pod_failure"  # PodKill, ContainerKill — service blips and recovers
     POD_UNAVAILABLE = "pod_unavailable"  # PodFailure — service stays gone for the window
@@ -27,34 +35,65 @@ class FaultKind(str, Enum):
     NETWORK_PARTITION = "network_partition"
     NETWORK_CORRUPT = "network_corrupt"
     NETWORK_DUPLICATE = "network_duplicate"
-    NETWORK_BANDWIDTH_LIMIT = "network_bandwidth_limit"
+    NETWORK_BANDWIDTH_THROTTLED = "network_bandwidth_throttled"
 
     # ── HTTP layer (no direction — span carries service_name itself) ────
     HTTP_ABORTED = "http_aborted"  # HTTPRequestAbort, HTTPResponseAbort
     HTTP_SLOW = "http_slow"  # HTTPRequestDelay, HTTPResponseDelay
-    HTTP_PAYLOAD_MODIFIED = "http_payload_modified"  # ReplacePath/Method/Body, PatchBody
-    HTTP_RESPONSE_STATUS_MODIFIED = "http_response_status_modified"  # ReplaceCode
+    HTTP_RESPONSE_BODY_CORRUPTED = "http_response_body_corrupted"  # ReplacePath/Method/Body, PatchBody
+    HTTP_WRONG_STATUS_CODE = "http_wrong_status_code"  # ReplaceCode
 
     # ── Resource exhaustion ─────────────────────────────────────────────
-    CPU_STRESS = "cpu_stress"  # container.cpu.usage saturated
-    JVM_THREAD_CPU_STRESS = "jvm_thread_cpu_stress"  # jvm.cpu.* high specifically
-    MEM_STRESS = "mem_stress"  # container.memory.usage saturated
-    JVM_HEAP_STRESS = "jvm_heap_stress"  # jvm.memory.used → limit
-    JVM_GC_PRESSURE = "jvm_gc_pressure"  # jvm.gc.duration histogram spikes
+    CONTAINER_CPU_SATURATED = "container_cpu_saturated"  # cgroup CPU saturated
+    PROCESS_CPU_SATURATED = "process_cpu_saturated"  # in-process (e.g. JVM) CPU pinned
+    CONTAINER_MEMORY_SATURATED = "container_memory_saturated"  # cgroup memory saturated
+    JVM_HEAP_EXHAUSTED = "jvm_heap_exhausted"  # JVM heap occupancy near limit
+    JVM_GC_THRASHING = "jvm_gc_thrashing"  # GC pauses long enough to stall app threads
 
-    # ── Code-level JVM ──────────────────────────────────────────────────
-    JVM_METHOD_EXCEPTION = "jvm_method_exception"  # JVMException
-    JVM_JDBC_EXCEPTION = "jvm_jdbc_exception"  # JVMMySQLException
-    JVM_METHOD_LATENCY = "jvm_method_latency"  # JVMLatency
-    JVM_JDBC_LATENCY = "jvm_jdbc_latency"  # JVMMySQLLatency
-    JVM_METHOD_MUTATED = "jvm_method_mutated"  # JVMReturn, JVMRuntimeMutator
+    # ── Code-level (application / DB driver) ────────────────────────────
+    APPLICATION_EXCEPTION = "application_exception"  # JVMException
+    DATABASE_CALL_FAILED = "database_call_failed"  # JVMMySQLException
+    APPLICATION_METHOD_SLOW = "application_method_slow"  # JVMLatency
+    DATABASE_CALL_SLOW = "database_call_slow"  # JVMMySQLLatency
+    WRONG_RETURN_VALUE = "wrong_return_value"  # JVMReturn, JVMRuntimeMutator
 
     # ── DNS / time ──────────────────────────────────────────────────────
-    DNS_RESOLUTION_FAILED = "dns_resolution_failed"  # DNSError, DNSChaos (alias)
-    DNS_RESOLUTION_WRONG = "dns_resolution_wrong"  # DNSRandom
+    DNS_LOOKUP_FAILED = "dns_lookup_failed"  # DNSError, DNSChaos (alias)
+    DNS_RETURNED_WRONG_ADDRESS = "dns_returned_wrong_address"  # DNSRandom
     CLOCK_SKEW = "clock_skew"  # TimeSkew, TimeChaos (alias)
 
     UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "FaultKind | None":
+        """Accept legacy string values from earlier SDK versions."""
+        if isinstance(value, str):
+            new = _LEGACY_ALIASES.get(value)
+            if new is not None:
+                return cls(new)
+        return None
+
+
+# Legacy fault_kind strings → current canonical value. Keeps historical
+# ``eval_metrics`` JSON and any in-flight agent outputs parseable after the
+# SRE-vocabulary rename. Resolved by ``FaultKind._missing_``.
+_LEGACY_ALIASES: dict[str, str] = {
+    "network_bandwidth_limit": "network_bandwidth_throttled",
+    "http_payload_modified": "http_response_body_corrupted",
+    "http_response_status_modified": "http_wrong_status_code",
+    "cpu_stress": "container_cpu_saturated",
+    "jvm_thread_cpu_stress": "process_cpu_saturated",
+    "mem_stress": "container_memory_saturated",
+    "jvm_heap_stress": "jvm_heap_exhausted",
+    "jvm_gc_pressure": "jvm_gc_thrashing",
+    "jvm_method_exception": "application_exception",
+    "jvm_jdbc_exception": "database_call_failed",
+    "jvm_method_latency": "application_method_slow",
+    "jvm_jdbc_latency": "database_call_slow",
+    "jvm_method_mutated": "wrong_return_value",
+    "dns_resolution_failed": "dns_lookup_failed",
+    "dns_resolution_wrong": "dns_returned_wrong_address",
+}
 
 
 # chaos_type → FaultKind
@@ -66,22 +105,22 @@ _CHAOS_TYPE_MAP: dict[str, FaultKind] = {
     "PodFailure": FaultKind.POD_UNAVAILABLE,
     "ContainerKill": FaultKind.POD_FAILURE,
     # Resource (pod-level)
-    "MemoryStress": FaultKind.MEM_STRESS,
-    "CPUStress": FaultKind.CPU_STRESS,
+    "MemoryStress": FaultKind.CONTAINER_MEMORY_SATURATED,
+    "CPUStress": FaultKind.CONTAINER_CPU_SATURATED,
     # HTTP
     "HTTPRequestAbort": FaultKind.HTTP_ABORTED,
     "HTTPResponseAbort": FaultKind.HTTP_ABORTED,
     "HTTPRequestDelay": FaultKind.HTTP_SLOW,
     "HTTPResponseDelay": FaultKind.HTTP_SLOW,
-    "HTTPResponseReplaceBody": FaultKind.HTTP_PAYLOAD_MODIFIED,
-    "HTTPResponsePatchBody": FaultKind.HTTP_PAYLOAD_MODIFIED,
-    "HTTPRequestReplacePath": FaultKind.HTTP_PAYLOAD_MODIFIED,
-    "HTTPRequestReplaceMethod": FaultKind.HTTP_PAYLOAD_MODIFIED,
-    "HTTPResponseReplaceCode": FaultKind.HTTP_RESPONSE_STATUS_MODIFIED,
+    "HTTPResponseReplaceBody": FaultKind.HTTP_RESPONSE_BODY_CORRUPTED,
+    "HTTPResponsePatchBody": FaultKind.HTTP_RESPONSE_BODY_CORRUPTED,
+    "HTTPRequestReplacePath": FaultKind.HTTP_RESPONSE_BODY_CORRUPTED,
+    "HTTPRequestReplaceMethod": FaultKind.HTTP_RESPONSE_BODY_CORRUPTED,
+    "HTTPResponseReplaceCode": FaultKind.HTTP_WRONG_STATUS_CODE,
     # DNS
-    "DNSError": FaultKind.DNS_RESOLUTION_FAILED,
-    "DNSChaos": FaultKind.DNS_RESOLUTION_FAILED,  # chaos-mesh native alias
-    "DNSRandom": FaultKind.DNS_RESOLUTION_WRONG,
+    "DNSError": FaultKind.DNS_LOOKUP_FAILED,
+    "DNSChaos": FaultKind.DNS_LOOKUP_FAILED,  # chaos-mesh native alias
+    "DNSRandom": FaultKind.DNS_RETURNED_WRONG_ADDRESS,
     # Time
     "TimeSkew": FaultKind.CLOCK_SKEW,
     "TimeChaos": FaultKind.CLOCK_SKEW,  # chaos-mesh native alias
@@ -90,18 +129,18 @@ _CHAOS_TYPE_MAP: dict[str, FaultKind] = {
     "NetworkLoss": FaultKind.NETWORK_LOSS,
     "NetworkDuplicate": FaultKind.NETWORK_DUPLICATE,
     "NetworkCorrupt": FaultKind.NETWORK_CORRUPT,
-    "NetworkBandwidth": FaultKind.NETWORK_BANDWIDTH_LIMIT,
+    "NetworkBandwidth": FaultKind.NETWORK_BANDWIDTH_THROTTLED,
     "NetworkPartition": FaultKind.NETWORK_PARTITION,
     # JVM
-    "JVMLatency": FaultKind.JVM_METHOD_LATENCY,
-    "JVMReturn": FaultKind.JVM_METHOD_MUTATED,
-    "JVMRuntimeMutator": FaultKind.JVM_METHOD_MUTATED,  # chaos-mesh native alias
-    "JVMException": FaultKind.JVM_METHOD_EXCEPTION,
-    "JVMGarbageCollector": FaultKind.JVM_GC_PRESSURE,
-    "JVMCPUStress": FaultKind.JVM_THREAD_CPU_STRESS,
-    "JVMMemoryStress": FaultKind.JVM_HEAP_STRESS,
-    "JVMMySQLLatency": FaultKind.JVM_JDBC_LATENCY,
-    "JVMMySQLException": FaultKind.JVM_JDBC_EXCEPTION,
+    "JVMLatency": FaultKind.APPLICATION_METHOD_SLOW,
+    "JVMReturn": FaultKind.WRONG_RETURN_VALUE,
+    "JVMRuntimeMutator": FaultKind.WRONG_RETURN_VALUE,  # chaos-mesh native alias
+    "JVMException": FaultKind.APPLICATION_EXCEPTION,
+    "JVMGarbageCollector": FaultKind.JVM_GC_THRASHING,
+    "JVMCPUStress": FaultKind.PROCESS_CPU_SATURATED,
+    "JVMMemoryStress": FaultKind.JVM_HEAP_EXHAUSTED,
+    "JVMMySQLLatency": FaultKind.DATABASE_CALL_SLOW,
+    "JVMMySQLException": FaultKind.DATABASE_CALL_FAILED,
 }
 
 
@@ -154,7 +193,7 @@ NETWORK_KINDS: frozenset[FaultKind] = frozenset(
         FaultKind.NETWORK_PARTITION,
         FaultKind.NETWORK_CORRUPT,
         FaultKind.NETWORK_DUPLICATE,
-        FaultKind.NETWORK_BANDWIDTH_LIMIT,
+        FaultKind.NETWORK_BANDWIDTH_THROTTLED,
     }
 )
 
@@ -163,15 +202,15 @@ NETWORK_KINDS: frozenset[FaultKind] = frozenset(
 # `method_match` as a diagnostic bit).
 METHOD_RELEVANT_KINDS: frozenset[FaultKind] = frozenset(
     {
-        FaultKind.JVM_METHOD_EXCEPTION,
-        FaultKind.JVM_JDBC_EXCEPTION,
-        FaultKind.JVM_METHOD_LATENCY,
-        FaultKind.JVM_JDBC_LATENCY,
-        FaultKind.JVM_METHOD_MUTATED,
+        FaultKind.APPLICATION_EXCEPTION,
+        FaultKind.DATABASE_CALL_FAILED,
+        FaultKind.APPLICATION_METHOD_SLOW,
+        FaultKind.DATABASE_CALL_SLOW,
+        FaultKind.WRONG_RETURN_VALUE,
         FaultKind.HTTP_ABORTED,
         FaultKind.HTTP_SLOW,
-        FaultKind.HTTP_PAYLOAD_MODIFIED,
-        FaultKind.HTTP_RESPONSE_STATUS_MODIFIED,
+        FaultKind.HTTP_RESPONSE_BODY_CORRUPTED,
+        FaultKind.HTTP_WRONG_STATUS_CODE,
     }
 )
 

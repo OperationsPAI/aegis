@@ -14,7 +14,7 @@ the contract version follows the SDK version automatically.
 
 Usage (e.g. in a langgraph synthesis prompt)::
 
-    from rcabench_platform.v3.sdk.evaluation.v2 import get_agent_contract_prompt
+    from rcabench_platform.v3.sdk.evaluation import get_agent_contract_prompt
 
     SYSTEM_PROMPT = f\"\"\"
     You are an RCA synthesizer.
@@ -25,7 +25,18 @@ Usage (e.g. in a langgraph synthesis prompt)::
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .fault_kind import FaultKind
+
+_DISAMBIGUATION_PATH = Path(__file__).parent / "fault_kind_disambiguation.md"
+
+
+def get_fault_kind_disambiguation() -> str:
+    """Return the prose telling agents how to choose between similar
+    fault_kinds. Lives in a sibling markdown so the contract doc and the
+    in-prompt text never drift."""
+    return _DISAMBIGUATION_PATH.read_text(encoding="utf-8")
 
 
 def _enum_block() -> str:
@@ -78,6 +89,8 @@ def get_agent_contract_prompt() -> str:
 ## fault_kind enum (pick exactly one per root_cause)
 
   {_enum_block()}
+
+{get_fault_kind_disambiguation()}
 
 ## Field rules
   * Service names must match strings present in the data — do not invent.

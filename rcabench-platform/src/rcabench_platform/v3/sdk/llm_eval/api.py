@@ -3,7 +3,7 @@
 Designed for two writers:
 
   - the SDK's own evaluator pipeline (`eval/processer/*`), which writes the full
-    `EvaluationResultV2.model_dump()` into ``eval_metrics`` after each judge run.
+    `EvaluationResult.model_dump()` into ``eval_metrics`` after each judge run.
   - downstream agents that run rollout/eval in environments without LLM-API
     access; they partial-UPSERT only the axes they can compute.
 

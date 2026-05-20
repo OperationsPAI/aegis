@@ -4,8 +4,8 @@ Per case the agent emits an ``AgentRCAOutput`` JSON. Judging is mechanical
 for the deterministic axes (single-tier (service, fault_kind) match,
 sql_executable) and uses a per-evidence LLM judge for evidence_support.
 
-See the v2 README at ``v3/sdk/evaluation/v2/README.md`` for the full
-metric contract; this module is the aggregator that wraps `evaluate_v2`.
+See ``v3/sdk/evaluation/EVALUATION_CONTRACT.md`` for the full metric
+contract; this module is the aggregator that wraps ``evaluate()``.
 """
 
 import json
@@ -14,8 +14,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from ....evaluation import EvaluationResult, evaluate
 from ....evaluation.causal_graph import CausalGraph
-from ....evaluation.v2 import EvaluationResultV2, evaluate_v2
 from ...config import EvalConfig
 from ..data import EvaluationSample
 from .base_match_processor import BaseMatchProcesser
@@ -138,7 +138,7 @@ class RCABenchProcesser(BaseMatchProcesser):
             )
             return sample
 
-        result: EvaluationResultV2 = await evaluate_v2(
+        result: EvaluationResult = await evaluate(
             agent_output_raw=sample.response or "",
             injection=injection,
             parquet_dir=case_dir,
@@ -208,6 +208,11 @@ class RCABenchProcesser(BaseMatchProcesser):
                 "avg_precision": 0.0,
                 "avg_recall": 0.0,
                 "avg_f1": 0.0,
+                "avg_service_precision": 0.0,
+                "avg_service_recall": 0.0,
+                "avg_service_f1": 0.0,
+                "service_exact_match_count": 0,
+                "service_exact_match_rate": 0.0,
                 "avg_fault_kind_accuracy": 0.0,
                 "kind_accuracy_denom": 0,
                 "avg_sql_executable_rate": 0.0,
@@ -235,9 +240,13 @@ class RCABenchProcesser(BaseMatchProcesser):
         # cases are excluded from the kind-accuracy mean and kind_accuracy_denom
         # exposes how many cases actually contributed.
         exact_count = 0
+        service_exact_count = 0
         precision_sum = 0.0
         recall_sum = 0.0
         f1_sum = 0.0
+        service_precision_sum = 0.0
+        service_recall_sum = 0.0
+        service_f1_sum = 0.0
         sql_sum = 0.0
         ev_support_sum = 0.0
         node_f1_sum = 0.0
@@ -265,6 +274,9 @@ class RCABenchProcesser(BaseMatchProcesser):
             precision_sum += float(ev.get("precision") or 0.0)
             recall_sum += float(ev.get("recall") or 0.0)
             f1_sum += float(ev.get("f1") or 0.0)
+            service_precision_sum += float(ev.get("service_precision") or 0.0)
+            service_recall_sum += float(ev.get("service_recall") or 0.0)
+            service_f1_sum += float(ev.get("service_f1") or 0.0)
             sql_sum += float(ev.get("sql_executable_rate") or 0.0)
             node_f1_sum += float(ev.get("node_f1") or 0.0)
             edge_f1_sum += float(ev.get("edge_f1") or 0.0)
@@ -293,6 +305,8 @@ class RCABenchProcesser(BaseMatchProcesser):
 
             if ev.get("exact_match"):
                 exact_count += 1
+            if ev.get("service_exact_match"):
+                service_exact_count += 1
             if ev.get("parse_error"):
                 parse_errors += 1
             if not ev.get("per_evidence"):
@@ -310,6 +324,11 @@ class RCABenchProcesser(BaseMatchProcesser):
             "avg_precision": round(precision_sum / denom, 4),
             "avg_recall": round(recall_sum / denom, 4),
             "avg_f1": round(f1_sum / denom, 4),
+            "avg_service_precision": round(service_precision_sum / denom, 4),
+            "avg_service_recall": round(service_recall_sum / denom, 4),
+            "avg_service_f1": round(service_f1_sum / denom, 4),
+            "service_exact_match_count": service_exact_count,
+            "service_exact_match_rate": round(service_exact_count / denom, 4),
             "avg_fault_kind_accuracy": round(kind_acc_sum / kind_denom, 4),
             "kind_accuracy_denom": kind_acc_cases,
             "avg_sql_executable_rate": round(sql_sum / denom, 4),

@@ -1,15 +1,12 @@
-"""Top-level v2 evaluator (single-tier match + per-evidence judge).
+"""Top-level evaluator — orchestrate set-match, graph-match, evidence.
 
 Pipeline per case:
-    1. Parse agent output JSON           → AgentRCAOutput
-    2. Extract GT faults                  → list[GTFault]
-    3. Single-tier (service, fault_kind) multiset match
-                                          → precision/recall/f1, exact_match,
-                                            fault_kind_accuracy
-    4. Service-level node_f1 / edge_f1 vs GT causal_graph
-    5. Verify each evidence SQL via DuckDB
-                                          → sql_executable_rate, per_evidence
-    6. Per-evidence LLM judge             → evidence_support_rate
+    1. Parse agent output JSON → AgentRCAOutput
+    2. Extract GT faults from injection.json → list[GTFault]
+    3. Set match (strict + service-only) via set_match.compute_outcome
+    4. Graph match + path reachability via graph_match
+    5. Verify each evidence SQL via DuckDB → sql_executable_rate, per_evidence
+    6. Per-evidence LLM judge → evidence_support_rate
 """
 
 from __future__ import annotations
@@ -20,86 +17,16 @@ from pathlib import Path
 from typing import Any
 
 from openai import AsyncOpenAI
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 
-from ..causal_graph import CausalGraph
+from .agent_output import AgentRCAOutput, Evidence
+from .causal_graph import CausalGraph
 from .chain_judge import EvidenceJudgeResult, evidence_support
+from .graph_match import compute_graph_metrics, compute_path_reachability
 from .ground_truth import GTContext, extract_gt_faults
-from .matcher import (
-    FaultMatchResult,
-    GraphMetrics,
-    MatchStatus,
-    OutcomeResult,
-    compute_graph_metrics,
-    compute_outcome,
-    compute_path_reachability,
-)
-from .schema import AgentRCAOutput, Evidence
+from .result import EvaluationResult, PerEvidenceRecord
+from .set_match import MatchStatus, compute_outcome
 from .sql_verify import EvidenceStatus, EvidenceVerifyResult, verify_evidence
-
-
-class PerEvidenceRecord(BaseModel):
-    label: str
-    kind: str
-    sql: str
-    claim: str
-    status: EvidenceStatus
-    error: str | None = None
-    row_count: int = 0
-    supported: bool | None = None
-    judge_reasoning: str = ""
-
-
-class EvaluationResultV2(BaseModel):
-    """Per-case scoring under the simplified contract.
-
-    Headline numbers:
-      - precision / recall / f1 — over the (service, fault_kind) multiset
-      - exact_match              — boolean, multiset equality after match
-      - fault_kind_accuracy      — HIT / (HIT + WRONG_KIND); None when denom=0
-      - sql_executable_rate      — mechanical (DuckDB returns rows)
-      - evidence_support_rate    — supported / judged among per-evidence judges;
-                                   None when no evidence was judged
-      - node_f1 / edge_f1        — service-level graph alignment
-
-    No multiplicative headline. Each axis is reported independently so the
-    aggregator can show which one is failing without composing them.
-    """
-
-    precision: float
-    recall: float
-    f1: float
-    exact_match: bool
-
-    fault_kind_accuracy: float | None
-    kind_accuracy_denom: int
-
-    sql_executable_rate: float
-    evidence_support_rate: float | None
-
-    path_reachability: bool | None = None
-    any_root_cause_hit: bool = False
-    any_service_hit: bool = False
-    all_service_hit: bool = False
-
-    node_f1: float = 0.0
-    edge_f1: float = 0.0
-    node_precision: float = 0.0
-    node_recall: float = 0.0
-    edge_precision: float = 0.0
-    edge_recall: float = 0.0
-
-    per_fault: list[FaultMatchResult] = Field(default_factory=list)
-    overclaim_indices: list[int] = Field(default_factory=list)
-    per_evidence: list[PerEvidenceRecord] = Field(default_factory=list)
-    graph_metrics: GraphMetrics | None = None
-
-    n_evidence: int = 0
-    n_evidence_judged: int = 0
-    n_evidence_judge_failed: int = 0
-
-    parse_error: str | None = None
-    notes: list[str] = Field(default_factory=list)
 
 
 def _parse_agent(raw: str | dict[str, Any] | None) -> tuple[AgentRCAOutput | None, str | None]:
@@ -115,16 +42,12 @@ def _parse_agent(raw: str | dict[str, Any] | None) -> tuple[AgentRCAOutput | Non
         return None, f"schema validation error: {exc}"
 
 
-def _zero_result(parse_error: str, notes: list[str] | None = None) -> EvaluationResultV2:
-    return EvaluationResultV2(
+def _zero_result(parse_error: str, notes: list[str] | None = None) -> EvaluationResult:
+    return EvaluationResult(
         precision=0.0,
         recall=0.0,
         f1=0.0,
         exact_match=False,
-        fault_kind_accuracy=None,
-        kind_accuracy_denom=0,
-        sql_executable_rate=0.0,
-        evidence_support_rate=None,
         parse_error=parse_error,
         notes=notes or [],
     )
@@ -145,7 +68,7 @@ def _summarize_chain(agent: AgentRCAOutput) -> str:
     return "\n".join(lines) if lines else "  (empty chain)"
 
 
-async def evaluate_v2(
+async def evaluate(
     agent_output_raw: str | dict[str, Any] | None,
     injection: dict[str, Any],
     parquet_dir: str | Path,
@@ -153,7 +76,7 @@ async def evaluate_v2(
     llm_client: AsyncOpenAI | None = None,
     judge_model: str = "gpt-4o-mini",
     case_name: str | None = None,
-) -> EvaluationResultV2:
+) -> EvaluationResult:
     parquet_dir = Path(parquet_dir)
 
     agent, parse_error = _parse_agent(agent_output_raw)
@@ -164,15 +87,15 @@ async def evaluate_v2(
     if not gt_ctx.faults:
         return _zero_result("no GT faults extractable from injection.json")
 
-    outcome: OutcomeResult = compute_outcome(agent, gt_ctx.faults)
-    graph: GraphMetrics = compute_graph_metrics(agent, gt_graph)
-    path_reachable: bool | None = compute_path_reachability(agent, outcome, gt_graph)
-    any_hit: bool = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
+    outcome = compute_outcome(agent, gt_ctx.faults)
+    graph = compute_graph_metrics(agent, gt_graph)
+    path_reachable = compute_path_reachability(agent, outcome, gt_graph)
+    any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
     # Kind-agnostic siblings: HIT and WRONG_KIND both mean "service was right".
     # any_service_hit ≥ any_root_cause_hit; all_service_hit ≥ (recall == 1.0).
     _service_correct = (MatchStatus.HIT, MatchStatus.WRONG_KIND)
-    any_service: bool = any(m.status in _service_correct for m in outcome.per_fault)
-    all_service: bool = bool(outcome.per_fault) and all(m.status in _service_correct for m in outcome.per_fault)
+    any_service = any(m.status in _service_correct for m in outcome.per_fault)
+    all_service = bool(outcome.per_fault) and all(m.status in _service_correct for m in outcome.per_fault)
 
     per_evidence: list[PerEvidenceRecord] = []
     judge_inputs: list[tuple[int, str, str, Evidence, EvidenceVerifyResult]] = []
@@ -219,7 +142,6 @@ async def evaluate_v2(
     n_ok = sum(1 for r in per_evidence if r.status == EvidenceStatus.OK)
     sql_executable_rate = n_ok / n_ev if n_ev else 0.0
 
-    # Per-evidence judge fan-out (concurrent within case).
     if judge_inputs and llm_client is not None:
         chain_summary = _summarize_chain(agent)
 
@@ -250,26 +172,25 @@ async def evaluate_v2(
     n_supported = sum(1 for r in per_evidence if r.supported is True)
     n_unsupported = sum(1 for r in per_evidence if r.supported is False)
     n_judged = n_supported + n_unsupported
-    # judge_failed = evidences that went into the judge but came back None
-    # (transient outage etc.). When no judge ran at all (no client), it's 0.
     n_failed = (n_ev - n_judged) if (judge_inputs and llm_client is not None) else 0
 
     if n_judged > 0:
         evidence_support_rate: float | None = n_supported / n_judged
-    elif n_ev == 0:
-        # No evidence at all — caller will see zero_evidence in the per-case
-        # diagnostic. Score is 0 (nothing to support).
-        evidence_support_rate = 0.0
     else:
-        # Evidence exists but no judge ran (no client) or all judges failed.
-        # Per README: case scores 0 in benchmark mean; judge_failed exposed.
+        # No judge ran (no client, or no evidence at all, or all judges failed):
+        # per contract the case scores 0 in the benchmark mean; n_failed exposes
+        # the transient-judge-error case for diagnostics.
         evidence_support_rate = 0.0
 
-    return EvaluationResultV2(
+    return EvaluationResult(
         precision=outcome.precision,
         recall=outcome.recall,
         f1=outcome.f1,
         exact_match=outcome.exact_match,
+        service_precision=outcome.service_precision,
+        service_recall=outcome.service_recall,
+        service_f1=outcome.service_f1,
+        service_exact_match=outcome.service_exact_match,
         fault_kind_accuracy=outcome.fault_kind_accuracy,
         kind_accuracy_denom=outcome.kind_accuracy_denom,
         sql_executable_rate=sql_executable_rate,
@@ -278,12 +199,12 @@ async def evaluate_v2(
         any_root_cause_hit=any_hit,
         any_service_hit=any_service,
         all_service_hit=all_service,
-        node_f1=graph.node_f1,
-        edge_f1=graph.edge_f1,
         node_precision=graph.node_precision,
         node_recall=graph.node_recall,
+        node_f1=graph.node_f1,
         edge_precision=graph.edge_precision,
         edge_recall=graph.edge_recall,
+        edge_f1=graph.edge_f1,
         per_fault=outcome.per_fault,
         overclaim_indices=outcome.overclaim_indices,
         per_evidence=per_evidence,

@@ -25,7 +25,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .schema import Evidence, EvidenceKind
+from .agent_output import Evidence, EvidenceKind
 
 
 class EvidenceStatus(str, Enum):

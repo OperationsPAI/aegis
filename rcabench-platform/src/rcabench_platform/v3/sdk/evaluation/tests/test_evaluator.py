@@ -16,7 +16,7 @@ from typing import Any
 import polars as pl
 
 from rcabench_platform.v3.sdk.evaluation.causal_graph import CausalGraph
-from rcabench_platform.v3.sdk.evaluation.v2 import (
+from rcabench_platform.v3.sdk.evaluation import (
     AgentRCAOutput,
     Evidence,
     EvidenceKind,
@@ -27,7 +27,7 @@ from rcabench_platform.v3.sdk.evaluation.v2 import (
     compute_graph_metrics,
     compute_outcome,
     compute_path_reachability,
-    evaluate_v2,
+    evaluate,
     extract_gt_faults,
     map_chaos_type,
     verify_evidence,
@@ -42,17 +42,17 @@ def test_map_chaos_type_known() -> None:
     assert map_chaos_type("NetworkDelay") is FaultKind.NETWORK_DELAY
     assert map_chaos_type("PodKill") is FaultKind.POD_FAILURE
     assert map_chaos_type("PodFailure") is FaultKind.POD_UNAVAILABLE
-    assert map_chaos_type("JVMRuntimeMutator") is FaultKind.JVM_METHOD_MUTATED
-    assert map_chaos_type("JVMReturn") is FaultKind.JVM_METHOD_MUTATED
-    assert map_chaos_type("JVMLatency") is FaultKind.JVM_METHOD_LATENCY
-    assert map_chaos_type("JVMGarbageCollector") is FaultKind.JVM_GC_PRESSURE
-    assert map_chaos_type("JVMMySQLException") is FaultKind.JVM_JDBC_EXCEPTION
-    assert map_chaos_type("HTTPResponseReplaceCode") is FaultKind.HTTP_RESPONSE_STATUS_MODIFIED
+    assert map_chaos_type("JVMRuntimeMutator") is FaultKind.WRONG_RETURN_VALUE
+    assert map_chaos_type("JVMReturn") is FaultKind.WRONG_RETURN_VALUE
+    assert map_chaos_type("JVMLatency") is FaultKind.APPLICATION_METHOD_SLOW
+    assert map_chaos_type("JVMGarbageCollector") is FaultKind.JVM_GC_THRASHING
+    assert map_chaos_type("JVMMySQLException") is FaultKind.DATABASE_CALL_FAILED
+    assert map_chaos_type("HTTPResponseReplaceCode") is FaultKind.HTTP_WRONG_STATUS_CODE
     assert map_chaos_type("HTTPRequestDelay") is FaultKind.HTTP_SLOW
-    assert map_chaos_type("HTTPResponsePatchBody") is FaultKind.HTTP_PAYLOAD_MODIFIED
-    assert map_chaos_type("NetworkBandwidth") is FaultKind.NETWORK_BANDWIDTH_LIMIT
-    assert map_chaos_type("DNSChaos") is FaultKind.DNS_RESOLUTION_FAILED  # alias
-    assert map_chaos_type("DNSRandom") is FaultKind.DNS_RESOLUTION_WRONG
+    assert map_chaos_type("HTTPResponsePatchBody") is FaultKind.HTTP_RESPONSE_BODY_CORRUPTED
+    assert map_chaos_type("NetworkBandwidth") is FaultKind.NETWORK_BANDWIDTH_THROTTLED
+    assert map_chaos_type("DNSChaos") is FaultKind.DNS_LOOKUP_FAILED  # alias
+    assert map_chaos_type("DNSRandom") is FaultKind.DNS_RETURNED_WRONG_ADDRESS
     assert map_chaos_type("TimeChaos") is FaultKind.CLOCK_SKEW  # alias
 
 
@@ -86,7 +86,7 @@ def test_extract_gt_new_format_hybrid() -> None:
     assert f0.direction_src == "shipping" and f0.direction_dst == "quote"
 
     f1 = ctx.faults[1]
-    assert f1.service == "payment" and f1.fault_kind is FaultKind.CPU_STRESS
+    assert f1.service == "payment" and f1.fault_kind is FaultKind.CONTAINER_CPU_SATURATED
 
     assert ctx.start_time_ns is not None and ctx.end_time_ns is not None
     assert ctx.end_time_ns - ctx.start_time_ns == 5 * 60 * 1_000_000_000
@@ -145,12 +145,12 @@ def _agent(rcs: list[dict[str, Any]], propagation: list[dict[str, Any]] | None =
 
 
 def test_match_perfect_single_fault() -> None:
-    gt = [GTFault(service="ts-basic-service", fault_kind=FaultKind.JVM_METHOD_MUTATED)]
+    gt = [GTFault(service="ts-basic-service", fault_kind=FaultKind.WRONG_RETURN_VALUE)]
     agent = _agent(
         [
             {
                 "service": "ts-basic-service",
-                "fault_kind": "jvm_method_mutated",
+                "fault_kind": "wrong_return_value",
                 "evidence": [_DUMMY_EV],
             }
         ]
@@ -166,14 +166,15 @@ def test_match_perfect_single_fault() -> None:
 
 
 def test_match_wrong_kind() -> None:
-    """Service correct but kind wrong → WRONG_KIND, f1=0, but contributes to
-    fault_kind_accuracy denominator (0/1 = 0.0)."""
-    gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
+    """Service correct but kind wrong → WRONG_KIND. Strict f1=0; service-only
+    f1=1 because the service was right. Contributes to fault_kind_accuracy
+    denominator (0/1 = 0.0)."""
+    gt = [GTFault(service="payment", fault_kind=FaultKind.CONTAINER_CPU_SATURATED)]
     agent = _agent(
         [
             {
                 "service": "payment",
-                "fault_kind": "mem_stress",
+                "fault_kind": "container_memory_saturated",
                 "evidence": [_DUMMY_EV],
             }
         ]
@@ -182,8 +183,37 @@ def test_match_wrong_kind() -> None:
     assert out.per_fault[0].status is MatchStatus.WRONG_KIND
     assert out.f1 == 0.0
     assert out.exact_match is False
+    assert out.service_f1 == 1.0
+    assert out.service_precision == 1.0
+    assert out.service_recall == 1.0
+    assert out.service_exact_match is True
     assert out.fault_kind_accuracy == 0.0
     assert out.kind_accuracy_denom == 1
+
+
+def test_service_only_diverges_from_strict_on_overclaim() -> None:
+    """One HIT + one WRONG_KIND + one overclaim against 2 GT:
+    strict precision = 1/3, service precision = 2/3; strict recall = 1/2,
+    service recall = 2/2 = 1.0."""
+    gt = [
+        GTFault(service="payment", fault_kind=FaultKind.CONTAINER_CPU_SATURATED),
+        GTFault(service="cart", fault_kind=FaultKind.POD_FAILURE),
+    ]
+    agent = _agent(
+        [
+            {"service": "payment", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]},  # HIT
+            {"service": "cart", "fault_kind": "container_memory_saturated", "evidence": [_DUMMY_EV]},  # WRONG_KIND
+            {"service": "ghost", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]},  # MISS
+        ]
+    )
+    out = compute_outcome(agent, gt)
+    assert out.precision == 1 / 3
+    assert out.recall == 0.5
+    assert out.service_precision == 2 / 3
+    assert out.service_recall == 1.0
+    assert out.service_exact_match is False  # overclaim
+    assert out.exact_match is False
+    assert out.fault_kind_accuracy == 0.5  # 1 HIT / 2 service-correct
 
 
 def test_match_pod_failure_unavailable_equivalence() -> None:
@@ -207,11 +237,71 @@ def test_match_pod_failure_unavailable_equivalence() -> None:
     assert out.exact_match is True
 
 
+def test_match_network_loss_partition_equivalence() -> None:
+    """``network_loss`` and ``network_partition`` are collapsed into one
+    equivalence class — above ~60% loss rate the two signatures are
+    indistinguishable in our parquets (see openrca-2-lite §3.5)."""
+    # Direction 1: GT partition, agent loss → HIT
+    gt = [
+        GTFault(
+            service="auth-svc",
+            fault_kind=FaultKind.NETWORK_PARTITION,
+            direction_src="auth-svc",
+            direction_dst="db",
+        )
+    ]
+    agent = _agent([{"service": "auth-svc", "fault_kind": "network_loss", "evidence": [_DUMMY_EV]}])
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.HIT
+    assert out.exact_match is True
+
+    # Direction 2: GT loss, agent partition → HIT
+    gt = [
+        GTFault(
+            service="auth-svc",
+            fault_kind=FaultKind.NETWORK_LOSS,
+            direction_src="auth-svc",
+            direction_dst="db",
+        )
+    ]
+    agent = _agent([{"service": "auth-svc", "fault_kind": "network_partition", "evidence": [_DUMMY_EV]}])
+    out = compute_outcome(agent, gt)
+    assert out.per_fault[0].status is MatchStatus.HIT
+    assert out.exact_match is True
+
+
+def test_match_network_equivalence_does_not_leak() -> None:
+    """The network-blocking equivalence class must not pull in unrelated
+    network kinds. delay / corrupt / duplicate stay separate from loss /
+    partition."""
+    gt = [
+        GTFault(
+            service="auth-svc",
+            fault_kind=FaultKind.NETWORK_PARTITION,
+            direction_src="auth-svc",
+            direction_dst="db",
+        )
+    ]
+    for other in ("network_delay", "network_corrupt", "network_duplicate"):
+        agent = _agent([{"service": "auth-svc", "fault_kind": other, "evidence": [_DUMMY_EV]}])
+        out = compute_outcome(agent, gt)
+        assert out.per_fault[0].status is MatchStatus.WRONG_KIND, other
+
+
+def test_legacy_fault_kind_alias_parses() -> None:
+    """Old fault_kind strings written by previous SDK versions still parse
+    to their new canonical members via FaultKind._missing_."""
+    assert FaultKind("jvm_method_mutated") is FaultKind.WRONG_RETURN_VALUE
+    assert FaultKind("http_payload_modified") is FaultKind.HTTP_RESPONSE_BODY_CORRUPTED
+    assert FaultKind("cpu_stress") is FaultKind.CONTAINER_CPU_SATURATED
+    assert FaultKind("jvm_method_mutated").value == "wrong_return_value"
+
+
 def test_match_pod_equivalence_does_not_leak() -> None:
     """The pod equivalence class must not pull in unrelated kinds. A non-pod
     kind paired with pod_failure / pod_unavailable still yields WRONG_KIND."""
     gt = [GTFault(service="payment", fault_kind=FaultKind.POD_FAILURE)]
-    agent = _agent([{"service": "payment", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}])
+    agent = _agent([{"service": "payment", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]}])
     out = compute_outcome(agent, gt)
     assert out.per_fault[0].status is MatchStatus.WRONG_KIND
 
@@ -393,7 +483,7 @@ def test_match_partial_hybrid() -> None:
     """Hybrid GT (2 faults). Agent gets one right + an unrelated overclaim."""
     gt = [
         GTFault(service="shipping", fault_kind=FaultKind.NETWORK_DELAY),
-        GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS),
+        GTFault(service="payment", fault_kind=FaultKind.CONTAINER_CPU_SATURATED),
     ]
     agent = _agent(
         [
@@ -414,10 +504,10 @@ def test_match_partial_hybrid() -> None:
 
 def test_match_overclaim_drops_exact_match() -> None:
     """Agent finds the GT fault but adds an unrelated extra → exact_match=False."""
-    gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
+    gt = [GTFault(service="payment", fault_kind=FaultKind.CONTAINER_CPU_SATURATED)]
     agent = _agent(
         [
-            {"service": "payment", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
+            {"service": "payment", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]},
             {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
         ]
     )
@@ -431,13 +521,13 @@ def test_match_overclaim_drops_exact_match() -> None:
 def test_match_multiset_two_same_service() -> None:
     """Two GT faults on the same service → agent must HIT both to exact_match."""
     gt = [
-        GTFault(service="cart", fault_kind=FaultKind.CPU_STRESS),
-        GTFault(service="cart", fault_kind=FaultKind.CPU_STRESS),
+        GTFault(service="cart", fault_kind=FaultKind.CONTAINER_CPU_SATURATED),
+        GTFault(service="cart", fault_kind=FaultKind.CONTAINER_CPU_SATURATED),
     ]
     agent_two = _agent(
         [
-            {"service": "cart", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
-            {"service": "cart", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
+            {"service": "cart", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]},
+            {"service": "cart", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]},
         ]
     )
     out = compute_outcome(agent_two, gt)
@@ -445,7 +535,7 @@ def test_match_multiset_two_same_service() -> None:
     assert out.exact_match is True
 
     agent_one = _agent(
-        [{"service": "cart", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}],
+        [{"service": "cart", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]}],
     )
     out = compute_outcome(agent_one, gt)
     assert out.recall == 0.5
@@ -455,11 +545,11 @@ def test_match_multiset_two_same_service() -> None:
 def test_match_kind_accuracy_denom_excludes_pure_misses() -> None:
     """Agent rcs whose service doesn't match anyone don't count toward
     fault_kind_accuracy denom (they're hallucinations, not service-correct)."""
-    gt = [GTFault(service="payment", fault_kind=FaultKind.CPU_STRESS)]
+    gt = [GTFault(service="payment", fault_kind=FaultKind.CONTAINER_CPU_SATURATED)]
     agent = _agent(
         [
             {"service": "noise", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
-            {"service": "elsewhere", "fault_kind": "mem_stress", "evidence": [_DUMMY_EV]},
+            {"service": "elsewhere", "fault_kind": "container_memory_saturated", "evidence": [_DUMMY_EV]},
         ]
     )
     out = compute_outcome(agent, gt)
@@ -815,7 +905,7 @@ def test_any_root_cause_hit_all_miss() -> None:
 def test_any_root_cause_hit_wrong_kind_does_not_count() -> None:
     """Service-correct but wrong fault_kind is WRONG_KIND, not HIT → any_hit=False."""
     gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
-    agent = _agent([{"service": "a", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}])
+    agent = _agent([{"service": "a", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]}])
     outcome = compute_outcome(agent, gt_faults)
     any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
     assert any_hit is False
@@ -834,7 +924,7 @@ def test_any_service_hit_includes_wrong_kind() -> None:
     """Service-correct but wrong fault_kind → any_service_hit=True even though
     any_root_cause_hit=False. This is the rung any_root_cause_hit cannot reach."""
     gt_faults = [GTFault(service="a", fault_kind=FaultKind.POD_FAILURE)]
-    agent = _agent([{"service": "a", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]}])
+    agent = _agent([{"service": "a", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]}])
     outcome = compute_outcome(agent, gt_faults)
     any_service = any(m.status in (MatchStatus.HIT, MatchStatus.WRONG_KIND) for m in outcome.per_fault)
     any_hit = any(m.status == MatchStatus.HIT for m in outcome.per_fault)
@@ -874,7 +964,7 @@ def test_all_service_hit_full_coverage_with_wrong_kinds_is_true() -> None:
     agent = _agent(
         [
             {"service": "a", "fault_kind": "pod_failure", "evidence": [_DUMMY_EV]},
-            {"service": "b", "fault_kind": "cpu_stress", "evidence": [_DUMMY_EV]},
+            {"service": "b", "fault_kind": "container_cpu_saturated", "evidence": [_DUMMY_EV]},
         ]
     )
     outcome = compute_outcome(agent, gt_faults)
@@ -1051,11 +1141,11 @@ def _agent_perfect_payload() -> str:
     )
 
 
-def test_evaluate_v2_perfect(tmp_path: Path) -> None:
+def test_evaluate_perfect(tmp_path: Path) -> None:
     """Perfect agent: f1=1, sql=1, every evidence judged supported, exact_match=True."""
     case = _make_case(tmp_path)
     res = asyncio.run(
-        evaluate_v2(
+        evaluate(
             _agent_perfect_payload(),
             _injection(),
             case,
@@ -1074,12 +1164,12 @@ def test_evaluate_v2_perfect(tmp_path: Path) -> None:
     assert res.n_evidence_judge_failed == 0
 
 
-def test_evaluate_v2_unsupported_evidence(tmp_path: Path) -> None:
+def test_evaluate_unsupported_evidence(tmp_path: Path) -> None:
     """Judge says supported=False on every evidence → evidence_support_rate=0,
     but f1 / sql_executable_rate stay at 1 (independent axes)."""
     case = _make_case(tmp_path)
     res = asyncio.run(
-        evaluate_v2(
+        evaluate(
             _agent_perfect_payload(),
             _injection(),
             case,
@@ -1093,11 +1183,11 @@ def test_evaluate_v2_unsupported_evidence(tmp_path: Path) -> None:
     assert res.exact_match is True
 
 
-def test_evaluate_v2_unparseable_response(tmp_path: Path) -> None:
+def test_evaluate_unparseable_response(tmp_path: Path) -> None:
     """Parse-error short-circuits the pipeline — judge is never called."""
     case = _make_case(tmp_path)
     res = asyncio.run(
-        evaluate_v2(
+        evaluate(
             "NOT JSON",
             _injection(),
             case,
@@ -1128,13 +1218,13 @@ class _StubLLMClientFails:
         self.chat = _RaisingChat()
 
 
-def test_evaluate_v2_judge_failure_isolates_per_evidence(tmp_path: Path) -> None:
+def test_evaluate_judge_failure_isolates_per_evidence(tmp_path: Path) -> None:
     """Judge raises on every evidence → per-evidence supported=None,
     n_evidence_judge_failed counted; evidence_support_rate falls back to 0
     (case scores 0 in the benchmark mean per README) but f1 / sql stay correct."""
     case = _make_case(tmp_path)
     res = asyncio.run(
-        evaluate_v2(
+        evaluate(
             _agent_perfect_payload(),
             _injection(),
             case,
@@ -1158,9 +1248,9 @@ def test_evaluate_v2_judge_failure_isolates_per_evidence(tmp_path: Path) -> None
 
 def _judge_call(content: str) -> Any:
     """Helper: run evidence_support against a stub that returns ``content``."""
-    from rcabench_platform.v3.sdk.evaluation.v2.chain_judge import evidence_support
-    from rcabench_platform.v3.sdk.evaluation.v2.schema import Evidence as Ev
-    from rcabench_platform.v3.sdk.evaluation.v2.sql_verify import EvidenceStatus, EvidenceVerifyResult
+    from rcabench_platform.v3.sdk.evaluation.chain_judge import evidence_support
+    from rcabench_platform.v3.sdk.evaluation.agent_output import Evidence as Ev
+    from rcabench_platform.v3.sdk.evaluation.sql_verify import EvidenceStatus, EvidenceVerifyResult
 
     client = type("C", (), {"chat": _StubChat(content)})()
     ev = Ev(kind=EvidenceKind.METRIC, sql="SELECT 1", claim="x")
@@ -1207,9 +1297,9 @@ def test_evidence_judge_unparseable_value_returns_none() -> None:
 def test_evidence_judge_no_response_format_param() -> None:
     """Regression: gateways like litellm 400 on response_format=json_object;
     the judge must rely on prompt-only formatting, not that flag."""
-    from rcabench_platform.v3.sdk.evaluation.v2.chain_judge import evidence_support
-    from rcabench_platform.v3.sdk.evaluation.v2.schema import Evidence as Ev
-    from rcabench_platform.v3.sdk.evaluation.v2.sql_verify import EvidenceStatus, EvidenceVerifyResult
+    from rcabench_platform.v3.sdk.evaluation.chain_judge import evidence_support
+    from rcabench_platform.v3.sdk.evaluation.agent_output import Evidence as Ev
+    from rcabench_platform.v3.sdk.evaluation.sql_verify import EvidenceStatus, EvidenceVerifyResult
 
     completions = _StubCompletions(json.dumps({"supported": True, "reasoning": "ok"}))
     chat = type("Chat", (), {"completions": completions})()
@@ -1276,6 +1366,10 @@ def test_calculate_metrics_aggregation() -> None:
                 "any_root_cause_hit": True,
                 "any_service_hit": True,
                 "all_service_hit": True,
+                "service_precision": 1.0,
+                "service_recall": 1.0,
+                "service_f1": 1.0,
+                "service_exact_match": True,
                 "n_evidence_judge_failed": 0,
                 "per_evidence": [{}],
             }
@@ -1299,6 +1393,10 @@ def test_calculate_metrics_aggregation() -> None:
                 # exact_match=False and recall=0.5.
                 "any_service_hit": True,
                 "all_service_hit": True,
+                "service_precision": 1.0,
+                "service_recall": 1.0,
+                "service_f1": 1.0,
+                "service_exact_match": True,
                 "n_evidence_judge_failed": 0,
                 "per_evidence": [{}],
             }
@@ -1342,6 +1440,10 @@ def test_calculate_metrics_aggregation() -> None:
                     "any_root_cause_hit": True,
                     "any_service_hit": True,
                     "all_service_hit": True,
+                    "service_precision": 1.0,
+                    "service_recall": 1.0,
+                    "service_f1": 1.0,
+                    "service_exact_match": True,
                     "n_evidence_judge_failed": 1,
                     "per_evidence": [{}],
                 }
@@ -1393,3 +1495,11 @@ def test_calculate_metrics_aggregation() -> None:
     #   all_service ≥ exact_match
     assert metrics["avg_any_service_hit"] >= metrics["avg_any_root_cause_hit"]
     assert metrics["avg_all_service_hit"] >= metrics["exact_match_rate"]
+    # Service-only set match: samples 0, 1, 3 supplied 1.0; samples 2/4 default
+    # to 0 (parse-err / eval-err). Mean = 3/5.
+    assert metrics["avg_service_precision"] == round(3 / 5, 4)
+    assert metrics["avg_service_f1"] == round(3 / 5, 4)
+    assert metrics["service_exact_match_count"] == 3
+    assert metrics["service_exact_match_rate"] == round(3 / 5, 4)
+    assert metrics["avg_service_f1"] >= metrics["avg_f1"]
+    assert metrics["service_exact_match_rate"] >= metrics["exact_match_rate"]

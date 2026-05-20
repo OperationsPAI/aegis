@@ -16,16 +16,16 @@ already covered deterministically by ``f1`` / ``node_f1`` / ``edge_f1``.
 from __future__ import annotations
 
 import json
+import logging
 import re
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-from ...llm_eval.utils import get_logger
-from .schema import Evidence
+from .agent_output import Evidence
 from .sql_verify import EvidenceVerifyResult
 
-logger = get_logger("llm_eval.chain_judge")
+logger = logging.getLogger(__name__)
 
 _LOG_BODY_LIMIT = 8000
 
