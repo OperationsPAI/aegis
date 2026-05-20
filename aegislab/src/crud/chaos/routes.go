@@ -1,10 +1,30 @@
 package chaos
 
 import (
+	"net/http"
+
+	"aegis/platform/dto"
 	"aegis/platform/framework"
 
 	"github.com/gin-gonic/gin"
 )
+
+// chaosMaxRequestBytes caps inbound /v1beta request bodies. caller_metadata
+// and batch_caller_metadata are unstructured maps with no other size guard.
+const chaosMaxRequestBytes = 1 << 20
+
+func limitRequestBody() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.ContentLength > chaosMaxRequestBytes {
+			dto.ErrorResponse(c, http.StatusRequestEntityTooLarge,
+				"request body exceeds 1 MiB limit")
+			c.Abort()
+			return
+		}
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, chaosMaxRequestBytes)
+		c.Next()
+	}
+}
 
 // Routes mounts the §5 surface under /v1beta. Step 1 wires systems,
 // points/import, singleton injections, capabilities, manifest-schema;
@@ -22,6 +42,8 @@ func Routes(h *Handler) framework.RouteRegistrar {
 		BasePath:         "/v1beta",
 		SkipDefaultChain: true,
 		Register: func(g *gin.RouterGroup) {
+			g.Use(limitRequestBody())
+
 			// Manifest schema is the one read path chart authors hit from
 			// CI / pre-commit hooks that don't carry tokens.
 			g.GET("/manifest-schema.json", h.ManifestSchema)
