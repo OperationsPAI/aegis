@@ -43,7 +43,13 @@ type pointsListerFunc func(ctx context.Context, system, service, capability stri
 // requests it, calls the chaos service to validate each Point exists. The
 // return value is informational only — callers continue to BuildInjection
 // regardless. Set lister to nil to use the default SDK-backed implementation.
-func runCatalogPreflight(ctx context.Context, system string, configs []guidedcli.GuidedConfig, logEntry *logrus.Entry, lister pointsListerFunc) {
+//
+// logicalSystem MUST be the catalog-side system name (e.g. "otel-demo"),
+// not the concrete pool-allocated namespace (e.g. "otel-demo0"). The chaos
+// service indexes chaos_points by Point.SystemName, which is populated from
+// the seed manifests' metadata.system field — passing a namespace-suffixed
+// value here will silently fall through to WARN-fallback every call.
+func runCatalogPreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, logEntry *logrus.Entry, lister pointsListerFunc) {
 	source := strings.TrimSpace(config.GetString(catalogSourceFlagKey))
 	if source == "" {
 		source = catalogSourceInProc
@@ -71,13 +77,13 @@ func runCatalogPreflight(ctx context.Context, system string, configs []guidedcli
 		}
 		service := strings.TrimSpace(cfg.App)
 		callCtx, cancel := context.WithTimeout(ctx, catalogPreflightTimeout)
-		pointID, status, err := lister(callCtx, system, service, capability)
+		pointID, status, err := lister(callCtx, logicalSystem, service, capability)
 		cancel()
 		switch {
 		case err != nil:
 			logEntry.WithFields(logrus.Fields{
 				"index":       i,
-				"system":      system,
+				"system":      logicalSystem,
 				"service":     service,
 				"capability":  capability,
 				"http_status": status,
@@ -85,14 +91,14 @@ func runCatalogPreflight(ctx context.Context, system string, configs []guidedcli
 		case pointID == "":
 			logEntry.WithFields(logrus.Fields{
 				"index":      i,
-				"system":     system,
+				"system":     logicalSystem,
 				"service":    service,
 				"capability": capability,
 			}).Warn("point not found in chaos service catalog; using in-process resolution")
 		default:
 			logEntry.WithFields(logrus.Fields{
 				"index":      i,
-				"system":     system,
+				"system":     logicalSystem,
 				"service":    service,
 				"capability": capability,
 				"point_id":   pointID,
