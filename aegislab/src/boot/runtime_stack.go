@@ -4,6 +4,8 @@ import (
 	chaos "aegis/platform/chaos"
 	k8s "aegis/platform/k8s"
 	runtimeinfra "aegis/platform/runtime"
+	configcenterclient "aegis/clients/configcenter"
+	configcenter "aegis/crud/admin/configcenter"
 	controller "aegis/core/orchestrator/lifecycle"
 	grpcruntime "aegis/core/orchestrator/transport/grpc/runtime"
 	receiver "aegis/core/orchestrator/transport/receiver"
@@ -31,6 +33,8 @@ func RuntimeWorkerStackOptions() fx.Option {
 		chaos.Module,
 		k8s.Module,
 		runtimeclient.Module,
+		configcenter.Module,
+		configcenterclient.Module,
 		consumer.Module,
 		consumer.JWTSignerModule,
 		fx.Provide(
