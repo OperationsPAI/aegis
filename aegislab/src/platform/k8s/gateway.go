@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"aegis/platform/chaos"
 	"aegis/platform/consts"
 
-	chaosCli "github.com/OperationsPAI/chaos-experiment/client"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -106,8 +106,8 @@ func (g *Gateway) DeleteJob(ctx context.Context, namespace, jobName string) erro
 // DeleteChaosCRDsByLabel for semantics. Failures on individual CRDs are
 // surfaced as warnings, not fatal errors.
 func (g *Gateway) DeleteChaosCRDsByLabel(ctx context.Context, labelKey, labelValue string) ([]DeletedCRD, []error) {
-	chaosGVRs := make([]schema.GroupVersionResource, 0, len(chaosCli.GetCRDMapping()))
-	for gvr := range chaosCli.GetCRDMapping() {
+	chaosGVRs := make([]schema.GroupVersionResource, 0, len(chaos.GetCRDMapping()))
+	for gvr := range chaos.GetCRDMapping() {
 		chaosGVRs = append(chaosGVRs, gvr)
 	}
 	return DeleteChaosCRDsByLabel(ctx, chaosGVRs, labelKey, labelValue)
