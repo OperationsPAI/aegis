@@ -580,12 +580,14 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		payload.injectPayload[consts.InjectNamespace] = namespace
 		payload.injectPayload[consts.InjectPedestal] = system
 		payload.injectPayload[consts.InjectPedestalID] = payload.pedestal.ID
-		chartVersion := ""
-		if payload.pedestal.Extra != nil {
-			chartVersion = payload.pedestal.Extra.Version
-		}
+		// Seeded catalog rows hash with chart_version="seed-genesis" (see
+		// aegislab/manifests/aegis-chaos/<sys>/*.yaml). Until the catalog is
+		// regenerated with real chart_versions tied to each helm release,
+		// the dispatcher must address points with the seed-genesis hash —
+		// the pedestal's actual chart version diverges and 404s.
 		payload.injectPayload[consts.InjectChaosInstance] = "seed"
-		payload.injectPayload[consts.InjectChartVersion] = chartVersion
+		payload.injectPayload[consts.InjectChartVersion] = "seed-genesis"
+		_ = payload.pedestal // chartVersion override retained above; field reserved for future per-release catalog rotation
 
 		if err := common.ProduceFaultInjectionTasksWithDB(childCtx, deps.DB, deps.RedisGateway, task, injectTime, payload.injectPayload); err != nil {
 			toReleased = true
