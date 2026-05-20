@@ -941,6 +941,12 @@ func regressionSubmitToGuidedConfigs(rc regressionCase) ([]guidedcli.GuidedConfi
 	if opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
 		return nil, guidedApplyOptions{}, fmt.Errorf("rc.Submit.benchmark requires name + version (for caller_metadata)")
 	}
+	switch v := rc.Submit["pre_duration"].(type) {
+	case float64:
+		opts.PreDuration = int(v)
+	case int:
+		opts.PreDuration = v
+	}
 	return cfgs, opts, nil
 }
 

@@ -232,7 +232,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 
 	traceID := uuid.NewString()
 	taskID := uuid.NewString()
-	makeMeta := func() map[string]any {
+	makeMeta := func(namespace string) map[string]any {
 		// CallerMetadata.Benchmark is *dto.ContainerVersionItem; Datapack is
 		// stubbed with just `name` so the receiver's name-key resolve works.
 		return map[string]any{
@@ -247,8 +247,12 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 				"container_name": benchmark.Name,
 			},
 			"datapack": map[string]any{
-				"name": taskID,
+				"name":         taskID,
+				"pre_duration": opts.PreDuration,
 			},
+			"pedestal":     opts.PedestalName,
+			"pre_duration": opts.PreDuration,
+			"namespace":    namespace,
 		}
 	}
 
@@ -276,7 +280,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 					"namespace":       requestNS,
 					"idempotency_key": idemKey,
 					"params":          params,
-					"caller_metadata": makeMeta(),
+					"caller_metadata": makeMeta(requestNS),
 				},
 				"derived": map[string]any{
 					"capability": cap,
@@ -295,7 +299,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		body.PointId = &pid
 		body.IdempotencyKey = &idemKey
 		body.Params = params
-		body.CallerMetadata = makeMeta()
+		body.CallerMetadata = makeMeta(requestNS)
 		body.AdditionalProperties = map[string]any{"namespace": requestNS}
 		resp, _, err := cli.ChaosAPI.ChaosCreateInjection(ctx).
 			ChaosChaosCreateInjectionReq(body).Execute()
@@ -333,7 +337,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 			PointId:              &pid,
 			IdempotencyKey:       &childKey,
 			Params:               params,
-			CallerMetadata:       makeMeta(),
+			CallerMetadata:       makeMeta(requestNS),
 			AdditionalProperties: map[string]any{"namespace": requestNS},
 		}
 		children = append(children, entry)
@@ -355,7 +359,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 			"url":       strings.TrimRight(chaosURL, "/") + "/v1beta/injection-batches",
 			"body": map[string]any{
 				"idempotency_key":       batchKey,
-				"batch_caller_metadata": makeMeta(),
+				"batch_caller_metadata": makeMeta(""),
 				"children":              dryChildren,
 			},
 			"derived": map[string]any{
@@ -370,7 +374,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		return err
 	}
 	body := *apiclient.NewChaosChaosCreateInjectionBatchReq(batchKey, children)
-	body.BatchCallerMetadata = makeMeta()
+	body.BatchCallerMetadata = makeMeta("")
 	resp, _, err := cli.ChaosAPI.ChaosCreateInjectionBatch(ctx).
 		ChaosChaosCreateInjectionBatchReq(body).Execute()
 	if err != nil {

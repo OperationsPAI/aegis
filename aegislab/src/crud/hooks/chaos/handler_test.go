@@ -12,6 +12,7 @@ import (
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
+	"aegis/platform/model"
 	"aegis/platform/testutil"
 
 	"github.com/gin-gonic/gin"
@@ -56,7 +57,7 @@ func (r *recorder) count() int {
 func setupRig(t *testing.T) (*gorm.DB, *recorder, *gin.Engine) {
 	t.Helper()
 	db := testutil.NewSQLiteGormDB(t)
-	if err := db.AutoMigrate(&HookSubmission{}); err != nil {
+	if err := db.AutoMigrate(&HookSubmission{}, &model.FaultInjection{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	rec := &recorder{}
@@ -295,6 +296,118 @@ func TestBatchSucceededThenPartialIsNoOp(t *testing.T) {
 	postJSON(t, r, "/api/v1/hooks/chaos-batch", second, nil)
 	if got := rec.count(); got != 1 {
 		t.Fatalf("second (partial) for same batch_id: want still 1 submit got %d", got)
+	}
+}
+
+func TestGetOrCreateShadowFaultInjectionIdempotent(t *testing.T) {
+	db, _, _ := setupRig(t)
+	h := NewHandlerWithSubmitter(db, func(context.Context, *dto.UnifiedTask) error { return nil })
+
+	meta := sampleMeta()
+	meta.Pedestal = "otel-demo"
+	meta.PreDuration = 60
+	start := time.Now().Add(-2 * time.Minute).UTC()
+	end := time.Now().UTC()
+
+	first, err := h.getOrCreateShadowFaultInjection(context.Background(), "chaos-inj-1", &meta, start, end)
+	if err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	if first == nil || first.ID == 0 {
+		t.Fatalf("first call: want non-zero FI, got %+v", first)
+	}
+
+	second, err := h.getOrCreateShadowFaultInjection(context.Background(), "chaos-inj-1", &meta, start, end)
+	if err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if second.ID != first.ID {
+		t.Fatalf("idempotency broken: first.ID=%d second.ID=%d", first.ID, second.ID)
+	}
+
+	var n int64
+	if err := db.Model(&model.FaultInjection{}).Where("chaos_injection_id = ?", "chaos-inj-1").Count(&n).Error; err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("want 1 row, got %d", n)
+	}
+}
+
+func TestGetOrCreateShadowFaultInjectionEmptyChaosIDNoOp(t *testing.T) {
+	db, _, _ := setupRig(t)
+	h := NewHandlerWithSubmitter(db, func(context.Context, *dto.UnifiedTask) error { return nil })
+
+	meta := sampleMeta()
+	got, err := h.getOrCreateShadowFaultInjection(context.Background(), "", &meta, time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if got != nil {
+		t.Fatalf("want nil row for empty chaos_injection_id, got %+v", got)
+	}
+	var n int64
+	if err := db.Model(&model.FaultInjection{}).Count(&n).Error; err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 0 {
+		t.Fatalf("want no rows, got %d", n)
+	}
+}
+
+func TestSingletonCreatesShadowFaultInjection(t *testing.T) {
+	db, rec, r := setupRig(t)
+	meta := sampleMeta()
+	meta.Pedestal = "otel-demo"
+	meta.PreDuration = 90
+	body := SingletonWebhook{
+		InjectionID:    "01HZZZULIDFOR-SHADOW",
+		IdempotencyKey: "k-shadow",
+		Status:         statusSucceeded,
+		StartedAt:      time.Now().Add(-time.Minute).UTC(),
+		FinishedAt:     time.Now().UTC(),
+		CallerMetadata: meta,
+	}
+
+	w := postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200 got %d body=%s", w.Code, w.Body.String())
+	}
+
+	var rows []model.FaultInjection
+	if err := db.Where("chaos_injection_id = ?", body.InjectionID).Find(&rows).Error; err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("want 1 shadow FI row, got %d", len(rows))
+	}
+	got := rows[0]
+	if got.Name != meta.Datapack.Name {
+		t.Fatalf("name mismatch: want %q got %q", meta.Datapack.Name, got.Name)
+	}
+	if got.PreDuration != meta.Datapack.PreDuration {
+		t.Fatalf("pre_duration mismatch: want %d got %d", meta.Datapack.PreDuration, got.PreDuration)
+	}
+	if got.StartTime == nil || !got.StartTime.Equal(body.StartedAt) {
+		t.Fatalf("start_time mismatch: want %v got %v", body.StartedAt, got.StartTime)
+	}
+	if got.EndTime == nil || !got.EndTime.Equal(body.FinishedAt) {
+		t.Fatalf("end_time mismatch: want %v got %v", body.FinishedAt, got.EndTime)
+	}
+	if got.State != consts.DatapackInjectSuccess {
+		t.Fatalf("state want DatapackInjectSuccess got %v", got.State)
+	}
+
+	if rec.count() != 1 {
+		t.Fatalf("want 1 build-datapack task, got %d", rec.count())
+	}
+	task := rec.tasks[0].task
+	dpPayload, ok := task.Payload[consts.BuildDatapack].(dto.InjectionItem)
+	if !ok {
+		t.Fatalf("payload[BuildDatapack] missing/wrong type: %T", task.Payload[consts.BuildDatapack])
+	}
+	if dpPayload.ID != got.ID {
+		t.Fatalf("downstream datapack.ID want shadow %d got %d", got.ID, dpPayload.ID)
 	}
 }
 

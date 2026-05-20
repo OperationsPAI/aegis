@@ -30,6 +30,10 @@ type CallerMetadata struct {
 	Benchmark *dto.ContainerVersionItem `json:"benchmark,omitempty"`
 	Datapack  *dto.InjectionItem        `json:"datapack,omitempty"`
 
+	Pedestal    string `json:"pedestal,omitempty"`
+	PreDuration int    `json:"pre_duration,omitempty"`
+	Namespace   string `json:"namespace,omitempty"`
+
 	// RootTraceCarrier preserves the grandparent-span linkage the CRD path
 	// reads back from K8s annotations (parseAnnotations → rootTraceCarrier
 	// → UnifiedTask.RootTraceCarrier). Without it, BuildDatapack tasks
