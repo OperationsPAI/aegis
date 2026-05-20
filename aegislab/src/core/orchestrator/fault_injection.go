@@ -3,14 +3,12 @@ package consumer
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/tracing"
-	"aegis/platform/model"
 	"aegis/platform/utils"
 
 	chaos "github.com/OperationsPAI/chaos-experiment/handler"
@@ -76,9 +74,9 @@ func (bm *FaultBatchManager) isFinished(batchID string) bool {
 }
 
 // snapshotBatchProgress returns (count, expected) for batchID under read
-// lock. Used by HandleCRDSucceeded to log per-leaf progress so a hybrid
-// batch stuck waiting on a leaf whose CRD informer never fires (issue
-// #305) is observable rather than silent.
+// lock. Originally hooked into the legacy CRD watcher per-leaf log emit
+// for hybrid batches (issue #305); now retained because chaos-service
+// batch progress could grow the same observability need.
 func (bm *FaultBatchManager) snapshotBatchProgress(batchID string) (int, int) {
 	bm.mu.RLock()
 	defer bm.mu.RUnlock()
@@ -94,8 +92,11 @@ func (bm *FaultBatchManager) setBatchInjections(batchID string, injectionNames [
 	bm.batchInjections[batchID] = injectionNames
 }
 
-// executeFaultInjection handles the guided fault-injection batch path:
-// GuidedConfig -> guidedcli.BuildInjection -> handler.InjectionConf -> BatchCreate.
+// executeFaultInjection drives the guided fault-injection batch through
+// the chaos-service dispatcher. The chaos-service catalog-resolves each
+// guided spec server-side and returns a structured 400 on bad input, so
+// no local BuildInjection pre-flight is run here — a chaos-service
+// rejection is treated as the authoritative validation error.
 func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps RuntimeDeps) error {
 	return tracing.WithSpan(ctx, func(childCtx context.Context) error {
 		batchManager := deps.FaultBatchManager
@@ -161,16 +162,6 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			}
 		}()
 
-		// Build guided injections so the catalog preflight sees their
-		// concrete chaos_type / target sets. Display + groundtruth + engine
-		// serialization moved to the webhook receiver (crud/hooks/chaos)
-		// which is now the sole writer of the fault_injections row.
-		for i, cfg := range payload.guidedConfigs {
-			if _, _, err := guidedcli.BuildInjection(childCtx, cfg); err != nil {
-				return handleExecutionError(span, logEntry, fmt.Sprintf("failed to build guided injection %d", i), err)
-			}
-		}
-
 		batchID := fmt.Sprintf("batch-%s", utils.GenerateULID(nil))
 
 		// Dispatch via aegis-chaos /v1beta/injections; the webhook receiver
@@ -231,63 +222,6 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		toReleased = false
 		return nil
 	})
-}
-
-// recaptureGroundtruth re-invokes getter at fault-injection time and returns
-// the freshly-resolved groundtruth plus a serviceMismatch flag. Callers persist
-// the fresh value; mismatch only signals that the action's service set changed
-// between the early loop-time call and CRD apply (a known-bad sign that one of
-// the layers below — pod-listing, container-name resolution — saw a different
-// state). The chaos-mesh selector is label-based so the CRD still lands; the
-// fresh GT is what consumers like the datapack builder should record.
-//
-// Extracted as a getter-typed helper so unit tests can drive both passes
-// without standing up a real cluster (the K8s-touching work all lives inside
-// the spec's GetGroundtruth).
-func recaptureGroundtruth(ctx context.Context, getter func(context.Context) (chaos.Groundtruth, error), prior model.Groundtruth) (model.Groundtruth, bool, error) {
-	fresh, err := getter(ctx)
-	if err != nil {
-		return model.Groundtruth{}, false, err
-	}
-	freshDB := *model.NewDBGroundtruth(&fresh)
-	return freshDB, !sameStringSet(prior.Service, freshDB.Service), nil
-}
-
-// sameStringSet returns true when a and b contain the same elements ignoring
-// order and duplicates. Used by recaptureGroundtruth to detect cross-pass
-// service-set drift (which is structural, not a pod-rename).
-func sameStringSet(a, b []string) bool {
-	if len(a) == 0 && len(b) == 0 {
-		return true
-	}
-	as := append([]string(nil), a...)
-	bs := append([]string(nil), b...)
-	sort.Strings(as)
-	sort.Strings(bs)
-	as = dedupSorted(as)
-	bs = dedupSorted(bs)
-	if len(as) != len(bs) {
-		return false
-	}
-	for i := range as {
-		if as[i] != bs[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func dedupSorted(s []string) []string {
-	if len(s) < 2 {
-		return s
-	}
-	out := s[:1]
-	for _, v := range s[1:] {
-		if v != out[len(out)-1] {
-			out = append(out, v)
-		}
-	}
-	return out
 }
 
 // parseInjectionPayload extracts and validates the guided-config payload from

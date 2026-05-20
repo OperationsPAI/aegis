@@ -308,13 +308,17 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 		preDuration = meta.PreDuration
 	}
 
+	engineConfig := meta.EngineConfig
+	if engineConfig == "" {
+		engineConfig = "{}"
+	}
 	row := model.FaultInjection{
 		Name:              name,
 		ChaosInjectionID:  chaosInjectionID,
 		Source:            consts.DatapackSourceInjection,
 		GroundtruthSource: "auto",
 		Groundtruths:      meta.Groundtruths,
-		EngineConfig:      "{}",
+		EngineConfig:      engineConfig,
 		PreDuration:       preDuration,
 		State:             consts.DatapackInjectSuccess,
 		Status:            consts.CommonEnabled,

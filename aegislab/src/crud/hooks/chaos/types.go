@@ -51,6 +51,13 @@ type CallerMetadata struct {
 	// sees a non-empty `ground_truth` in injection.json.
 	Groundtruths []model.Groundtruth `json:"groundtruths,omitempty"`
 
+	// EngineConfig is the JSON-encoded GuidedConfig slice the dispatcher
+	// posted to chaos-service. Pre-§11-5c the orchestrator wrote this into
+	// fault_injections.engine_config directly; after the CRD watcher
+	// removal the webhook receiver is the sole writer, so the dispatcher
+	// round-trips the value through caller_metadata.
+	EngineConfig string `json:"engine_config,omitempty"`
+
 	// RootTraceCarrier preserves the grandparent-span linkage the CRD path
 	// reads back from K8s annotations (parseAnnotations → rootTraceCarrier
 	// → UnifiedTask.RootTraceCarrier). Without it, BuildDatapack tasks

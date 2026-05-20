@@ -66,11 +66,6 @@ var (
 	regressionPodListerHook     PodLister // test injection seam; nil => real k8s client
 	regressionInstallerHook     chartInstaller
 	regressionSystemsHook       SystemsFetcher // test injection seam; nil => real HTTP client
-
-	// Deprecated (§11 step 5b cleanup). Kept only so existing scripts /
-	// AEGIS_INJECT_VIA_CHAOS env users get a clear deprecation error
-	// instead of an unknown-flag error. See runRegressionCase.
-	regressionViaChaos bool
 )
 
 // SystemsFetcher is the minimal /api/v2/systems surface
@@ -293,13 +288,6 @@ func validateRegressionCase(rc regressionCase, path string) error {
 }
 
 func runRegressionCase(parentCtx context.Context, casePath string, rc regressionCase) (regressionSummary, error) {
-	// §11 step 5c cleanup: --via-chaos on `regression run` is removed. The
-	// backend dispatcher now always takes the chaos-service path, so the
-	// legacy POST below validates it end-to-end.
-	if regressionViaChaos {
-		return regressionSummary{}, usageErrorf("regression run: --via-chaos is removed (chaos-service is now the only dispatch path); drop the flag")
-	}
-
 	projectName := rc.ProjectName
 	if flagProject != "" {
 		projectName = flagProject
@@ -869,12 +857,6 @@ func init() {
 	regressionRunCmd.Flags().BoolVar(&regressionSkipRestartPedestal, "skip-restart-pedestal", false, "Hint the backend to skip the RestartPedestal helm install when the chart is already deployed (useful after --auto-install + wait-for-ready)")
 	regressionRunCmd.Flags().IntVar(&regressionReadyTimeoutSeconds, "ready-timeout", 600, "Seconds --auto-install waits for all preflight targets to become Ready before submit")
 	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight")
-
-	// Deprecated: --via-chaos on `regression run` is removed (§11 step 5c).
-	// The flag stays bound so existing AEGIS_INJECT_VIA_CHAOS users get a
-	// clear error message instead of an "unknown flag" failure.
-	regressionRunCmd.Flags().BoolVar(&regressionViaChaos, "via-chaos", envBool("AEGIS_INJECT_VIA_CHAOS"),
-		"DEPRECATED (§11 step 5c): chaos-service is now the only dispatch path; this flag now errors out.")
 
 	regressionCmd.AddCommand(regressionRunCmd)
 }

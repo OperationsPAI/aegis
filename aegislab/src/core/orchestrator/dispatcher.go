@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -200,6 +201,16 @@ func dispatchViaChaosService(
 
 	meta := buildCallerMetadata(deps, namespace)
 	meta["groundtruths"] = renderGroundtruths(configs)
+	// engine_config round-trips the originating guided spec list through
+	// caller_metadata so the webhook receiver can write the same JSON the
+	// pre-§11-5c orchestrator wrote into fault_injections.engine_config.
+	// Marshal failure here would silently land an empty-object engine_config
+	// downstream — fail the dispatch instead so the caller sees the bug.
+	engineConfigBytes, err := json.Marshal(configs)
+	if err != nil {
+		return nil, fmt.Errorf("dispatcher: marshal engine_config: %w", err)
+	}
+	meta["engine_config"] = string(engineConfigBytes)
 
 	if len(configs) == 1 {
 		pid, _, _, err := chaoscrud.GuidedChaosPointID(configs[0], deps.instance, deps.chartVersion)

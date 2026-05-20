@@ -23,7 +23,6 @@ import (
 )
 
 const (
-	crdLabelsErrMsg = "missing or invalid '%s' key in k8s CRD labels"
 	jobLabelsErrMsg = "missing or invalid '%s' key in k8s job labels"
 )
 
@@ -111,12 +110,6 @@ type taskIdentifiers struct {
 	groupID   string
 	projectID int
 	userID    int
-}
-
-type crdLabels struct {
-	taskIdentifiers
-	batchID  string
-	IsHybrid bool
 }
 
 type jobLabels struct {
@@ -442,33 +435,6 @@ func parseTaskIdentifiers(message string, labels map[string]string) (*taskIdenti
 		groupID:   groupID,
 		projectID: projectID,
 		userID:    userID,
-	}, nil
-}
-
-func parseCRDLabels(labels map[string]string) (*crdLabels, error) {
-	identifiers, err := parseTaskIdentifiers(crdLabelsErrMsg, labels)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse task identifiers: %w", err)
-	}
-
-	batchID, ok := labels[consts.CRDLabelBatchID]
-	if !ok && batchID == "" {
-		return nil, fmt.Errorf(crdLabelsErrMsg, consts.CRDLabelBatchID)
-	}
-
-	isHybridStr, ok := labels[consts.CRDLabelIsHybrid]
-	if !ok || isHybridStr == "" {
-		return nil, fmt.Errorf(crdLabelsErrMsg, consts.CRDLabelIsHybrid)
-	}
-	isHybrid, err := strconv.ParseBool(isHybridStr)
-	if err != nil {
-		return nil, fmt.Errorf(crdLabelsErrMsg, consts.CRDLabelIsHybrid)
-	}
-
-	return &crdLabels{
-		taskIdentifiers: *identifiers,
-		batchID:         batchID,
-		IsHybrid:        isHybrid,
 	}, nil
 }
 
