@@ -75,6 +75,15 @@ type TaskScheduledPayload struct {
 	Reason      string `json:"reason"`
 }
 
+// FaultInjectionStartedPayload is the payload for the fault.injection.started
+// trace event. ExecutorPath distinguishes which dispatch path emitted the event
+// (consts.ExecutorPathChaosService vs consts.ExecutorPathChaosMeshDirect) so a
+// soak audit can attribute a started event without grepping pod logs.
+type FaultInjectionStartedPayload struct {
+	Name         string `json:"name"`
+	ExecutorPath string `json:"executor_path,omitempty"`
+}
+
 // Reasons for task.scheduled events.
 const (
 	TaskScheduledReasonPreDurationWait  = "pre_duration wait"

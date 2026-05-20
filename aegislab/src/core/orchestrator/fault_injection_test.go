@@ -164,6 +164,68 @@ func TestCatalogPreflight_HoistedAboveNamespaceLock(t *testing.T) {
 			"otherwise the catalog read pins the ns lock for ~5s per spec in the batch")
 }
 
+func TestFaultInjectionStartedPayload_CarriesExecutorPath(t *testing.T) {
+	cases := []struct {
+		name     string
+		file     string
+		executor string
+	}{
+		{"chaos-service path", "fault_injection.go", "ExecutorPathChaosService"},
+		{"chaos-mesh-direct path", "k8s_handler.go", "ExecutorPathChaosMeshDirect"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			astFile, err := parser.ParseFile(fset, tc.file, nil, parser.ParseComments)
+			require.NoError(t, err)
+
+			var found bool
+			ast.Inspect(astFile, func(n ast.Node) bool {
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || sel.Sel.Name != "withEvent" || len(call.Args) != 2 {
+					return true
+				}
+				eventArg, ok := call.Args[0].(*ast.SelectorExpr)
+				if !ok || eventArg.Sel.Name != "EventFaultInjectionStarted" {
+					return true
+				}
+				lit, ok := call.Args[1].(*ast.CompositeLit)
+				if !ok {
+					t.Fatalf("EventFaultInjectionStarted emit in %s must pass a struct literal, got %T", tc.file, call.Args[1])
+				}
+				ltype, ok := lit.Type.(*ast.SelectorExpr)
+				require.True(t, ok, "payload literal in %s must be a qualified type", tc.file)
+				require.Equal(t, "FaultInjectionStartedPayload", ltype.Sel.Name)
+
+				var pathValue string
+				for _, elt := range lit.Elts {
+					kv, ok := elt.(*ast.KeyValueExpr)
+					if !ok {
+						continue
+					}
+					key, ok := kv.Key.(*ast.Ident)
+					if !ok || key.Name != "ExecutorPath" {
+						continue
+					}
+					if sel, ok := kv.Value.(*ast.SelectorExpr); ok {
+						pathValue = sel.Sel.Name
+					}
+				}
+				require.Equal(t, tc.executor, pathValue,
+					"EventFaultInjectionStarted emit in %s must set ExecutorPath=%s", tc.file, tc.executor)
+				found = true
+				return false
+			})
+			require.True(t, found, "no EventFaultInjectionStarted withEvent call found in %s", tc.file)
+		})
+	}
+}
+
 func TestRecaptureGroundtruth_PropagatesGetterError(t *testing.T) {
 	prior := model.Groundtruth{Service: []string{"x"}}
 	want := errors.New("kube list timeout")
