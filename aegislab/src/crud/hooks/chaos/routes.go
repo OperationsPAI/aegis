@@ -18,8 +18,8 @@ func Routes(h *Handler) framework.RouteRegistrar {
 		BasePath: "/api/v1/hooks",
 		Register: func(g *gin.RouterGroup) {
 			g.Use(middleware.TrustedHeaderAuth())
-			g.POST("/chaos", h.Singleton)
-			g.POST("/chaos-batch", h.Batch)
+			g.POST("/chaos", middleware.RequireScope("chaos.webhook.write"), h.Singleton)
+			g.POST("/chaos-batch", middleware.RequireScope("chaos.webhook.write"), h.Batch)
 		},
 	}
 }

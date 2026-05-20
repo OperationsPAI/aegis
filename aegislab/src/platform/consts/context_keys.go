@@ -17,6 +17,7 @@ const (
 	CtxKeyTokenType      = "token_type"
 	CtxKeyTaskID         = "task_id"
 	CtxKeyGroupID        = "groupID"
+	CtxKeyScopes         = "scopes"
 )
 
 // auth_type values stashed under CtxKeyAuthType.

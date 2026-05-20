@@ -90,6 +90,7 @@ func JWTAuth() gin.HandlerFunc {
 			c.Set("token_expires_at", serviceClaims.ExpiresAt.Time)
 			c.Set(consts.CtxKeyTokenType, "service")
 			c.Set(consts.CtxKeyIsServiceToken, true)
+			c.Set(consts.CtxKeyScopes, append([]string(nil), serviceClaims.Scopes...))
 			c.Next()
 			return
 		}
@@ -284,6 +285,7 @@ func OptionalJWTAuth() gin.HandlerFunc {
 			c.Set("token_expires_at", serviceClaims.ExpiresAt.Time)
 			c.Set(consts.CtxKeyTokenType, "service")
 			c.Set(consts.CtxKeyIsServiceToken, true)
+			c.Set(consts.CtxKeyScopes, append([]string(nil), serviceClaims.Scopes...))
 			c.Next()
 			return
 		}

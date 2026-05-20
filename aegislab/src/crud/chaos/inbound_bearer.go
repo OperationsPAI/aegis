@@ -20,7 +20,15 @@ import (
 // backend): the two directions need independent rotation.
 const InboundBearerEnv = "CHAOS_INBOUND_BEARER"
 
-var inboundUnsetWarnOnce sync.Once
+// RequireBearerEnv toggles fail-closed behaviour when InboundBearerEnv is
+// unset. Defaults to true (fail-closed); local-dev/kind sets it to "false"
+// to fall through to TrustedHeaderAuth only.
+const RequireBearerEnv = "CHAOS_REQUIRE_BEARER"
+
+var (
+	inboundUnsetWarnOnce sync.Once
+	requireBearerWarnOnce sync.Once
+)
 
 // NewChaosAuthFromEnv composes the §11 step-5b R1 inbound auth chain:
 //
@@ -31,18 +39,44 @@ var inboundUnsetWarnOnce sync.Once
 //   - if the env is unset, behave exactly like TrustedHeaderAuth alone
 //     (kind dev path) and emit a single startup WARN.
 func NewChaosAuthFromEnv() gin.HandlerFunc {
-	return newChaosAuth(os.Getenv(InboundBearerEnv), middleware.TrustedHeaderAuth(), logrus.StandardLogger())
+	return newChaosAuth(
+		os.Getenv(InboundBearerEnv),
+		requireBearerFromEnv(os.Getenv(RequireBearerEnv)),
+		middleware.TrustedHeaderAuth(),
+		logrus.StandardLogger(),
+	)
+}
+
+// requireBearerFromEnv interprets the CHAOS_REQUIRE_BEARER env. Unset or any
+// value other than a recognised falsy string is treated as true (fail-closed
+// is the default).
+func requireBearerFromEnv(raw string) bool {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return true
+	}
 }
 
 // newChaosAuth is the testable seam. `fallback` is the middleware run when
 // the static bearer is absent or doesn't match (production: TrustedHeaderAuth).
-func newChaosAuth(token string, fallback gin.HandlerFunc, logger *logrus.Logger) gin.HandlerFunc {
+func newChaosAuth(token string, requireBearer bool, fallback gin.HandlerFunc, logger *logrus.Logger) gin.HandlerFunc {
 	if logger == nil {
 		logger = logrus.StandardLogger()
 	}
 	if token == "" {
+		if requireBearer {
+			requireBearerWarnOnce.Do(func() {
+				logger.Errorf("chaos inbound bearer: %s unset but %s=true; all /v1beta requests will be rejected with 401", InboundBearerEnv, RequireBearerEnv)
+			})
+			return func(c *gin.Context) {
+				dto.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized: inbound bearer not configured")
+				c.Abort()
+			}
+		}
 		inboundUnsetWarnOnce.Do(func() {
-			logger.Warnf("chaos inbound bearer: %s unset; /v1beta endpoints run open (TrustedHeaderAuth only)", InboundBearerEnv)
+			logger.Warnf("chaos inbound bearer: %s unset and %s=false; /v1beta endpoints run open (TrustedHeaderAuth only)", InboundBearerEnv, RequireBearerEnv)
 		})
 		return fallback
 	}

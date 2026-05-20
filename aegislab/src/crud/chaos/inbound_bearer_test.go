@@ -25,7 +25,10 @@ func captureLogger(buf *bytes.Buffer) *logrus.Logger {
 // resetOnce makes the sync.Once instances behave fresh for each subtest
 // since they're package-globals. The middleware exposes no Reset, so we
 // reach in via a small helper kept in test-only code.
-func resetInboundOnce() { inboundUnsetWarnOnce = sync.Once{} }
+func resetInboundOnce() {
+	inboundUnsetWarnOnce = sync.Once{}
+	requireBearerWarnOnce = sync.Once{}
+}
 
 func newAuthRouter(mw gin.HandlerFunc) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -45,7 +48,7 @@ func fallthroughRejecter(c *gin.Context) {
 func TestChaosAuth_EnvSet_MissingHeader_Rejects(t *testing.T) {
 	resetInboundOnce()
 	var buf bytes.Buffer
-	mw := newChaosAuth("s3cret", fallthroughRejecter, captureLogger(&buf))
+	mw := newChaosAuth("s3cret", true, fallthroughRejecter, captureLogger(&buf))
 	r := newAuthRouter(mw)
 
 	req := httptest.NewRequest(http.MethodGet, "/probe", nil)
@@ -60,7 +63,7 @@ func TestChaosAuth_EnvSet_MissingHeader_Rejects(t *testing.T) {
 func TestChaosAuth_EnvSet_GoodHeader_Accepts(t *testing.T) {
 	resetInboundOnce()
 	var buf bytes.Buffer
-	mw := newChaosAuth("s3cret", fallthroughRejecter, captureLogger(&buf))
+	mw := newChaosAuth("s3cret", true, fallthroughRejecter, captureLogger(&buf))
 	r := newAuthRouter(mw)
 
 	req := httptest.NewRequest(http.MethodGet, "/probe", nil)
@@ -76,7 +79,7 @@ func TestChaosAuth_EnvSet_GoodHeader_Accepts(t *testing.T) {
 func TestChaosAuth_EnvSet_WrongHeader_FallsThroughAndRejects(t *testing.T) {
 	resetInboundOnce()
 	var buf bytes.Buffer
-	mw := newChaosAuth("s3cret", fallthroughRejecter, captureLogger(&buf))
+	mw := newChaosAuth("s3cret", true, fallthroughRejecter, captureLogger(&buf))
 	r := newAuthRouter(mw)
 
 	req := httptest.NewRequest(http.MethodGet, "/probe", nil)
@@ -97,24 +100,62 @@ func TestChaosAuth_EnvSet_WrongHeader_FallsThroughAndRejects(t *testing.T) {
 	}
 }
 
-func TestChaosAuth_EnvUnset_PassesThroughWithStartupWarn(t *testing.T) {
+func TestChaosAuth_EnvUnset_RequireBearerFalse_PassesThrough(t *testing.T) {
 	resetInboundOnce()
 	var buf bytes.Buffer
-	// With env empty the middleware IS the fallback — production wires
-	// TrustedHeaderAuth which would 401 on no creds, but in this test the
-	// fallback is a permissive handler so we can assert the no-op shape.
 	passthrough := func(c *gin.Context) { c.Next() }
-	mw := newChaosAuth("", passthrough, captureLogger(&buf))
+	mw := newChaosAuth("", false, passthrough, captureLogger(&buf))
 	r := newAuthRouter(mw)
 
-	req := httptest.NewRequest(http.MethodGet, "/probe", nil) // no Authorization
+	req := httptest.NewRequest(http.MethodGet, "/probe", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected pass-through 200 when env unset, got %d", w.Code)
+		t.Fatalf("expected pass-through 200 when env unset + require=false, got %d", w.Code)
 	}
 	if !strings.Contains(buf.String(), InboundBearerEnv+" unset") {
 		t.Fatalf("expected startup WARN about unset env, got: %s", buf.String())
+	}
+}
+
+func TestChaosAuth_EnvUnset_RequireBearerTrue_Rejects(t *testing.T) {
+	resetInboundOnce()
+	var buf bytes.Buffer
+	// Fallback must NOT run when require=true + env unset; use a panicking
+	// handler to prove fail-closed short-circuits before any fallback.
+	panicFallback := func(c *gin.Context) { t.Fatalf("fallback unexpectedly invoked") }
+	mw := newChaosAuth("", true, panicFallback, captureLogger(&buf))
+	r := newAuthRouter(mw)
+
+	req := httptest.NewRequest(http.MethodGet, "/probe", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 when env unset + require=true, got %d", w.Code)
+	}
+	if !strings.Contains(buf.String(), RequireBearerEnv+"=true") {
+		t.Fatalf("expected ERROR log mentioning %s=true, got: %s", RequireBearerEnv, buf.String())
+	}
+}
+
+func TestRequireBearerFromEnv(t *testing.T) {
+	cases := map[string]bool{
+		"":      true,
+		"true":  true,
+		"True":  true,
+		"1":     true,
+		"yes":   true,
+		"false": false,
+		"FALSE": false,
+		"0":     false,
+		"no":    false,
+		"off":   false,
+	}
+	for raw, want := range cases {
+		if got := requireBearerFromEnv(raw); got != want {
+			t.Errorf("requireBearerFromEnv(%q) = %v, want %v", raw, got, want)
+		}
 	}
 }
