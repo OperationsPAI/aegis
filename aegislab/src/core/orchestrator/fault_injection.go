@@ -250,16 +250,33 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			},
 		)
 
-		// Batch create all fault injections in parallel
+		// §11 step 5b — per-system dispatch. chaos-mesh-direct keeps the
+		// legacy in-process chaos SDK; chaos-service POSTs to aegis-chaos
+		// and the webhook receiver completes the BuildDatapack handoff.
+		dispDeps := dispatcherDeps{
+			taskID:           task.TaskID,
+			traceID:          task.TraceID,
+			projectID:        task.ProjectID,
+			userID:           task.UserID,
+			groupID:          task.GroupID,
+			pedestal:         payload.pedestal,
+			preDuration:      payload.preDuration,
+			benchmarkID:      payload.benchmark.ID,
+			benchmarkName:    payload.benchmark.Name,
+			benchmarkImage:   payload.benchmark.ImageRef,
+			benchmarkCommand: payload.benchmark.Command,
+		}
 		var names []string
+		var dispatchPath string
 		err = tracing.WithSpanNamed(childCtx, "chaos.batch_create", func(c context.Context) error {
 			var werr error
-			names, werr = chaos.BatchCreate(c, injectionConfs, chaos.SystemType(payload.system), payload.namespace, annotations, crdLabels)
+			names, dispatchPath, werr = dispatchBatchCreate(c, logEntry, payload.system, payload.namespace, payload.guidedConfigs, injectionConfs, annotations, crdLabels, dispDeps)
 			return werr
 		})
 		if err != nil {
 			return handleExecutionError(span, logEntry, "failed to inject faults", err)
 		}
+		logEntry.WithField("dispatch_path", dispatchPath).Info("dispatcher: faults submitted")
 
 		var name string
 		var faultType chaos.ChaosType
