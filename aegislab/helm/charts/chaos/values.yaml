@@ -12,6 +12,13 @@ service:
 
 serviceAccount:
   name: ""
+  # SA-token Secret used by aegis-chaos to authenticate outbound webhook
+  # POSTs to aegis-api. Secret must hold a valid rcabench-sa JWT (minted
+  # via SSO POST /v1/service-accounts/chaos-service/issue). When unset
+  # the deployment falls back to the deprecated chaosAuth.webhookBearer*
+  # path and logs an ERROR at boot.
+  secretName: ""
+  secretKey: "token"
 
 # Step-1 RBAC: aegis-chaos owns the chaos-mesh.org CRD verbs. §11 step 5c
 # removes the same verbs from aegis-backend; until then the two roles

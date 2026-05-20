@@ -2,21 +2,25 @@ package chaoshooks
 
 import (
 	"aegis/platform/framework"
+	"aegis/platform/jwtkeys"
 	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-// Routes mounts the webhook receivers under /api/v1/hooks/*. Auth uses
-// TrustedHeaderAuth because aegis-chaos is a trusted in-cluster caller,
-// never a user-facing surface (design §10.1, scope `webhook:chaos-receiver`).
-// BasePath is used because /api/v1 sits outside the /api/v2 portal/SDK
-// surface — these are inter-service RPC, not API surface.
-func Routes(h *Handler) framework.RouteRegistrar {
+// Routes mounts the webhook receivers under /api/v1/hooks/*. Auth tries an
+// SA token first (chaos-service must present a non-revoked rcabench-sa
+// token); on missing/non-SA bearer it falls through to TrustedHeaderAuth +
+// JWTAuth so legacy user-JWT callers keep working during the cutover.
+// Design §10.1, scope `webhook:chaos-receiver`; BasePath is /api/v1
+// because these are inter-service RPC, not /api/v2 portal/SDK surface.
+func Routes(h *Handler, db *gorm.DB, verifier *jwtkeys.Verifier) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Name:     "hooks.chaos",
 		BasePath: "/api/v1/hooks",
 		Register: func(g *gin.RouterGroup) {
+			g.Use(middleware.RequireServiceAccount(db, verifier.Resolve, "chaos-service"))
 			g.Use(middleware.TrustedHeaderAuth())
 			g.POST("/chaos", middleware.RequireScope("chaos.webhook.write"), h.Singleton)
 			g.POST("/chaos-batch", middleware.RequireScope("chaos.webhook.write"), h.Batch)

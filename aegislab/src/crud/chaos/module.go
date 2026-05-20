@@ -35,8 +35,14 @@ var Module = fx.Module("chaos",
 // deployment.yaml + chaosAuth secret refs) so operators can rotate the
 // bearer with kubectl-restart alone, without re-rendering the ConfigMap.
 func NewWebhookSenderFromEnv(db *gorm.DB) *WebhookSender {
-	w := NewWebhookSender(&http.Client{Timeout: 60 * time.Second}, os.Getenv("CHAOS_BACKEND_URL"), db, logrus.StandardLogger())
+	logger := logrus.StandardLogger()
+	w := NewWebhookSender(&http.Client{Timeout: 60 * time.Second}, os.Getenv("CHAOS_BACKEND_URL"), db, logger)
+	if tok := os.Getenv("CHAOS_SA_TOKEN"); tok != "" {
+		w.SetBearer(tok)
+		return w
+	}
 	if tok := os.Getenv("CHAOS_WEBHOOK_BEARER"); tok != "" {
+		logger.Error("DEPRECATED: CHAOS_WEBHOOK_BEARER fallback active; provision CHAOS_SA_TOKEN via rcabench-chaos-sa Secret")
 		w.SetBearer(tok)
 	}
 	return w
