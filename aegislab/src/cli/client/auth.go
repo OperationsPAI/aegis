@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -202,7 +203,13 @@ func LoginWithAPIKeyTLS(server, keyID, keySecret string, opts TLSOptions) (*Logi
 
 // RefreshToken refreshes an existing JWT token.
 func RefreshToken(server, currentToken string) (string, time.Time, error) {
-	c := NewClient(server, currentToken, 30*time.Second)
+	return RefreshTokenTLS(server, currentToken, TLSOptions{})
+}
+
+// RefreshTokenTLS is RefreshToken with explicit TLS options so transparent
+// refresh honors the same trust config as the original request.
+func RefreshTokenTLS(server, currentToken string, opts TLSOptions) (string, time.Time, error) {
+	c := NewClientWithTLS(server, currentToken, 30*time.Second, opts)
 
 	var resp APIResponse[tokenRefreshResponseData]
 	err := c.Post(consts.APIPathAuthRefresh, tokenRefreshRequest{
@@ -242,6 +249,34 @@ func IsTokenExpired(expiry time.Time) bool {
 	}
 	return time.Now().After(expiry)
 }
+
+// ParseJWTExp decodes the unverified `exp` claim from a JWT. Signature is not
+// validated — that is the server's job. Returns the zero time if the token is
+// not a JWT, lacks an `exp` claim, or fails to decode.
+func ParseJWTExp(token string) time.Time {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return time.Time{}
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		payload, err = base64.StdEncoding.DecodeString(parts[1])
+		if err != nil {
+			return time.Time{}
+		}
+	}
+	var claims struct {
+		Exp int64 `json:"exp"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return time.Time{}
+	}
+	if claims.Exp == 0 {
+		return time.Time{}
+	}
+	return time.Unix(claims.Exp, 0)
+}
+
 
 // PrepareAPIKeyTokenDebug builds the canonical string, signature, and
 // headers for the token exchange request.

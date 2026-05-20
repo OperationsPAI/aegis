@@ -6,12 +6,19 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"aegis/cli/config"
 	"aegis/cli/output"
 
 	"github.com/spf13/cobra"
 )
+
+// tokenRefreshThreshold is the lead time before expiry at which the CLI
+// proactively refreshes the cached JWT. 15m covers ~10m clock skew plus 5m
+// pre-expiry headroom — a tighter window risks refreshing with an
+// already-expired token when local clock is behind the server.
+const tokenRefreshThreshold = 15 * time.Minute
 
 var (
 	// Global flag values.
@@ -201,6 +208,13 @@ NAMING CONVENTION:
 		// so resolveTLSOptions can fall back to env/context when the flag
 		// is absent (vs. honour --insecure=false when explicitly set).
 		flagInsecureSet = cmd.Flags().Lookup("insecure-skip-tls-verify").Changed
+
+		// Long-running CLI loops outlive the server's 24h JWT lifetime. If
+		// the cached token is within tokenRefreshThreshold of expiry, swap
+		// it for a fresh one before issuing the request. Best-effort: on any
+		// refresh failure we proceed with the stale token and let the server
+		// surface the auth error.
+		maybeRefreshToken()
 
 		// Respect --no-color and NO_COLOR for all colorized output.
 		output.SetNoColor(flagNoColor || os.Getenv("NO_COLOR") != "")

@@ -135,8 +135,29 @@ func SaveConfig(cfg *Config) error {
 		return fmt.Errorf("cannot marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return fmt.Errorf("cannot write config: %w", err)
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".config.yaml.*")
+	if err != nil {
+		return fmt.Errorf("cannot create temp config: %w", err)
+	}
+	tmpPath := tmp.Name()
+	// Config holds bearer tokens; force 0600 regardless of any pre-existing mode.
+	if err := os.Chmod(tmpPath, 0o600); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("cannot chmod temp config: %w", err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("cannot write temp config: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("cannot close temp config: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("cannot rename temp config: %w", err)
 	}
 	return nil
 }
