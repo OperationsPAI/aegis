@@ -220,19 +220,31 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		return usageErrorf("no guided config to apply")
 	}
 
+	// Resolve the benchmark container version to its real ImageRef so the
+	// downstream BuildDatapack pod doesn't try to pull "<name>:<tag>" against
+	// docker.io. Legacy POST /v2/injections does this server-side; --via-chaos
+	// has no server-side resolution, so we do it client-side via the same
+	// ContainersAPI the `container version describe` command uses.
+	benchmark, err := resolveBenchmarkImageRef(opts.BenchmarkName, opts.BenchmarkTag)
+	if err != nil {
+		return fmt.Errorf("via-chaos: resolve benchmark image_ref: %w", err)
+	}
+
 	traceID := uuid.NewString()
 	taskID := uuid.NewString()
 	makeMeta := func() map[string]any {
-		// CallerMetadata.Benchmark is *dto.ContainerVersionItem (no Tag
-		// field — version travels in ImageRef as "name:tag"); Datapack is
+		// CallerMetadata.Benchmark is *dto.ContainerVersionItem; Datapack is
 		// stubbed with just `name` so the receiver's name-key resolve works.
 		return map[string]any{
 			"task_id":    taskID,
 			"trace_id":   traceID,
 			"project_id": opts.ProjectID,
 			"benchmark": map[string]any{
-				"name":      opts.BenchmarkName,
-				"image_ref": opts.BenchmarkName + ":" + opts.BenchmarkTag,
+				"id":             benchmark.ID,
+				"name":           benchmark.Name,
+				"image_ref":      benchmark.ImageRef,
+				"command":        benchmark.Command,
+				"container_name": benchmark.Name,
 			},
 			"datapack": map[string]any{
 				"name": taskID,
@@ -374,4 +386,59 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		"children":          len(resp.Data.Children),
 	})
 	return nil
+}
+
+// resolvedBenchmark carries the container_version fields downstream
+// BuildDatapack needs to render a runnable pod spec. Built by --via-chaos
+// since there's no server-side resolution on that path.
+type resolvedBenchmark struct {
+	ID       int
+	Name     string
+	ImageRef string
+	Command  string
+}
+
+// resolveBenchmarkImageRef looks up the container_version row keyed by
+// (container name, version tag) and returns its ImageRef + Command. Required
+// by the --via-chaos path because the locally-built caller_metadata.benchmark
+// feeds the downstream BuildDatapack pod spec, and that pod can only pull
+// from the registry the operator wired up — a bare "<name>:<tag>" attempts
+// docker.io which is unreachable from byte-cluster, and an empty Command
+// makes containerd refuse to start the pod (no entrypoint).
+func resolveBenchmarkImageRef(name, tag string) (resolvedBenchmark, error) {
+	var empty resolvedBenchmark
+	if err := requireAPIContext(true); err != nil {
+		return empty, err
+	}
+	r := newResolver()
+	cid, _, err := r.ContainerIDOrName(name)
+	if err != nil {
+		return empty, fmt.Errorf("container %q not found: %w", name, err)
+	}
+	cli, ctx := newAPIClient()
+	ctrResp, _, err := cli.ContainersAPI.GetContainerById(ctx, int32(cid)).Execute()
+	if err != nil {
+		return empty, fmt.Errorf("fetch container detail: %w", err)
+	}
+	ctrData := ctrResp.GetData()
+	versions := apiVersionsToLocal(ctrData.GetVersions())
+	vid, err := resolveContainerVersionID(versions, tag)
+	if err != nil {
+		return empty, fmt.Errorf("version %q not found on container %q: %w", tag, name, err)
+	}
+	vResp, _, err := cli.ContainersAPI.GetContainerVersionById(ctx, int32(cid), int32(vid)).Execute()
+	if err != nil {
+		return empty, fmt.Errorf("fetch container version: %w", err)
+	}
+	vData := vResp.GetData()
+	ref := strings.TrimSpace(vData.GetImageRef())
+	if ref == "" {
+		return empty, fmt.Errorf("container version %s:%s has empty image_ref", name, tag)
+	}
+	return resolvedBenchmark{
+		ID:       vid,
+		Name:     name,
+		ImageRef: ref,
+		Command:  strings.TrimSpace(vData.GetCommand()),
+	}, nil
 }

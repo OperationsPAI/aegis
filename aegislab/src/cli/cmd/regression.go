@@ -332,6 +332,14 @@ func runRegressionCase(parentCtx context.Context, casePath string, rc regression
 		if err != nil {
 			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: %w", rc.Name, err)
 		}
+		// §11 step 5b R6+ — hook receiver needs project_id (FK to traces).
+		// Resolve client-side; legacy POST got it from server auth context.
+		opts.ProjectName = projectName
+		pid, err := resolveProjectIDForApply(projectName)
+		if err != nil {
+			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: resolve project id: %w", rc.Name, err)
+		}
+		opts.ProjectID = pid
 		if err := submitGuidedViaChaos(cfgs, opts); err != nil {
 			return regressionSummary{}, fmt.Errorf("via-chaos: case %q: %w", rc.Name, err)
 		}
