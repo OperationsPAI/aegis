@@ -57,6 +57,22 @@ spec:
             - name: CHAOS_WEBHOOK_BEARER
               value: {{ .Values.webhookBearer | quote }}
             {{- end }}
+            {{- /*
+              §11 step-5b R1 inbound auth: backend → chaos service.
+              Reads the SAME shared secret aegis-api stamps as
+              CHAOS_OUTBOUND_BEARER so one rotation updates both sides.
+              Unset → /v1beta runs open (TrustedHeaderAuth only, kind dev).
+            */ -}}
+            {{- if .Values.chaosAuth.secretName }}
+            - name: CHAOS_INBOUND_BEARER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.chaosAuth.secretName }}
+                  key: {{ .Values.chaosAuth.secretKey | default "token" }}
+            {{- else if .Values.chaosAuth.literal }}
+            - name: CHAOS_INBOUND_BEARER
+              value: {{ .Values.chaosAuth.literal | quote }}
+            {{- end }}
             - name: AEGIS_JWT_SECRET
               valueFrom:
                 secretKeyRef:

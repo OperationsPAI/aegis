@@ -3,7 +3,9 @@ package consumer
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"aegis/cli/apiclient"
@@ -13,6 +15,14 @@ import (
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 )
+
+// OutboundBearerEnv is read once at lister construction. Symmetric to
+// CHAOS_INBOUND_BEARER (chaos service side); kept as a separate env var
+// from CHAOS_WEBHOOK_BEARER (chaos → backend direction) so the two
+// service-to-service hops can be rotated independently.
+const OutboundBearerEnv = "CHAOS_OUTBOUND_BEARER"
+
+var outboundBearerAttachOnce sync.Once
 
 // Logging-only preflight; the result is not consulted by BuildInjection. Real
 // catalog cutover deferred to step 5b when the executor moves to chaos service.
@@ -47,7 +57,7 @@ func runCatalogPreflight(ctx context.Context, system string, configs []guidedcli
 		return
 	}
 	if lister == nil {
-		lister = newSDKPointsLister(url)
+		lister = newSDKPointsLister(url, logEntry)
 	}
 
 	for i, cfg := range configs {
@@ -94,10 +104,24 @@ func runCatalogPreflight(ctx context.Context, system string, configs []guidedcli
 // newSDKPointsLister returns a pointsListerFunc backed by the generated
 // chaos-service Go SDK. Each invocation builds a fresh per-call configuration
 // so test seams can override base URLs without process-wide state.
-func newSDKPointsLister(baseURL string) pointsListerFunc {
+//
+// When CHAOS_OUTBOUND_BEARER is set the lister attaches it as
+// `Authorization: Bearer …` on every request and logs an INFO line on
+// first invocation. Empty → no header (kind dev path preserved); chaos
+// service falls back to its existing TrustedHeaderAuth chain in that case.
+func newSDKPointsLister(baseURL string, logEntry *logrus.Entry) pointsListerFunc {
+	bearer := strings.TrimSpace(os.Getenv(OutboundBearerEnv))
+	if bearer != "" && logEntry != nil {
+		outboundBearerAttachOnce.Do(func() {
+			logEntry.WithField("env", OutboundBearerEnv).Info("chaos outbound: attaching bearer to catalog preflight requests")
+		})
+	}
 	return func(ctx context.Context, system, service, capability string) (string, int, error) {
 		cfg := apiclient.NewConfiguration()
 		cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(baseURL, "/")}}
+		if bearer != "" {
+			cfg.AddDefaultHeader("Authorization", "Bearer "+bearer)
+		}
 		cli := apiclient.NewAPIClient(cfg)
 		req := cli.ChaosAPI.ChaosListSystemPoints(ctx, system).Limit(50)
 		if service != "" {

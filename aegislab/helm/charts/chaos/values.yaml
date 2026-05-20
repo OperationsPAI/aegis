@@ -51,3 +51,14 @@ webhookBearer: ""
 webhookBearerSecretRef: {}
   # name: chaos-service-token
   # key: token
+
+# §11 step-5b R1 inbound auth: shared secret used by both directions of the
+# backend ↔ chaos hop. The chaos service reads it as CHAOS_INBOUND_BEARER;
+# aegis-api stamps the same value as CHAOS_OUTBOUND_BEARER. Operators must
+# create the Secret BEFORE install (no chart hook materialises it) so that
+# rotation is a single `kubectl create secret generic --dry-run | apply -f`.
+# Both fields empty → chaos service /v1beta runs open (kind dev only).
+chaosAuth:
+  secretName: ""
+  secretKey: "token"
+  literal: ""

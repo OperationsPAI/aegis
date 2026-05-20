@@ -135,6 +135,7 @@ spec:
               value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
+            {{- include "chaos.outboundBearerEnv" . | nindent 12 }}
           {{- with .Values.microservices.aegisApi.extraEnvFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}
@@ -303,6 +304,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
+            {{- include "chaos.outboundBearerEnv" . | nindent 12 }}
           {{- with .Values.microservices.runtimeWorkerService.extraEnvFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}

@@ -630,6 +630,28 @@ chaos:
   # release. Empty disables webhook delivery (reconciler still runs).
   backendURL: "http://rcabench-aegis-api:8082"
 
+  # §11 step-5b R1 shared bearer for the backend ↔ chaos service hop.
+  # The chaos subchart reads `chaosAuth.*` from its own values block (see
+  # charts/chaos/values.yaml); this `chaos.auth.*` block is consumed by
+  # the umbrella backend pods (aegis-api + runtime-worker) via the
+  # `chaos.outboundBearerEnv` helper. Both sides point at the SAME secret
+  # so rotation is one place. Operators create the Secret pre-install:
+  #   kubectl -n exp create secret generic rcabench-chaos-auth \
+  #     --from-literal=token="$(openssl rand -hex 24)"
+  # Both `secretName` and `literal` empty → no header attached (kind dev).
+  auth:
+    secretName: ""
+    secretKey: "token"
+    literal: ""
+  # The chaosAuth block below forwards the same values into the chaos
+  # subchart (charts/chaos/values.yaml). Keeping the two blocks in sync
+  # by default makes the single-secret rotation guarantee hold without
+  # operators having to touch two places.
+  chaosAuth:
+    secretName: ""
+    secretKey: "token"
+    literal: ""
+
 # ---------------------------------------------------------------------------
 # gateway subchart values (forwarded into `charts/gateway/`).
 # Parent configmap reads `trustedHeaderKey` / `rateLimit` / `cors` from

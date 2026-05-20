@@ -154,6 +154,60 @@ func TestCatalogPreflight_AppliesTimeoutToCallContext(t *testing.T) {
 	}
 }
 
+// SDK lister attaches Authorization: Bearer <token> when
+// CHAOS_OUTBOUND_BEARER is set and omits the header when unset. This is
+// the step-5b R1 outbound-signing contract — covered against the same
+// httptest stub the SDKLister_HTTPTest case uses.
+func TestCatalogPreflight_SDKLister_OutboundBearer(t *testing.T) {
+	t.Run("env set → header attached", func(t *testing.T) {
+		var gotAuth string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotAuth = r.Header.Get("Authorization")
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"points": []map[string]any{{"id": "stub-point", "capability": "pod_kill"}},
+					"total":  1, "limit": 50, "offset": 0,
+				},
+			})
+		}))
+		defer srv.Close()
+
+		t.Setenv("CHAOS_OUTBOUND_BEARER", "outbound-token")
+		// sync.Once is process-global; reset so the INFO log fires for THIS test.
+		outboundBearerAttachOnce = sync.Once{}
+
+		lister := newSDKPointsLister(srv.URL, testLogger())
+		if _, _, err := lister(context.Background(), "ts", "ts-order-service", "pod_kill"); err != nil {
+			t.Fatalf("lister err: %v", err)
+		}
+		if gotAuth != "Bearer outbound-token" {
+			t.Fatalf("expected Authorization=Bearer outbound-token, got %q", gotAuth)
+		}
+	})
+
+	t.Run("env unset → no header", func(t *testing.T) {
+		var gotAuth string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotAuth = r.Header.Get("Authorization")
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{"points": []map[string]any{}, "total": 0, "limit": 50, "offset": 0},
+			})
+		}))
+		defer srv.Close()
+
+		t.Setenv("CHAOS_OUTBOUND_BEARER", "")
+		outboundBearerAttachOnce = sync.Once{}
+
+		lister := newSDKPointsLister(srv.URL, testLogger())
+		_, _, _ = lister(context.Background(), "ts", "ts-order-service", "pod_kill")
+		if gotAuth != "" {
+			t.Fatalf("expected no Authorization header when env unset, got %q", gotAuth)
+		}
+	})
+}
+
 // httptest-backed end-to-end: SDK-driven lister against a stub
 // /v1beta/systems/{sys}/points endpoint mimicking the chaos service.
 func TestCatalogPreflight_SDKLister_HTTPTest(t *testing.T) {

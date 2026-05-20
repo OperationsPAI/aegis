@@ -173,3 +173,25 @@ Returns: JSON array of system helm configurations
 # helm/charts/rustfs/templates/_helpers.tpl. Helm template helpers are
 # global within a release, so parent-chart consumers that still
 # `include "rustfs.secretName" .` resolve through the subchart helper.
+
+{{/*
+chaos.outboundBearerEnv emits the CHAOS_OUTBOUND_BEARER env var entry for
+backend pods (aegis-api + runtime-worker) sourced from the same shared
+secret the chaos subchart consumes as CHAOS_INBOUND_BEARER. Empty values
+emit nothing, preserving the kind dev path (no header attached).
+
+Caller passes the root context: `{{ include "chaos.outboundBearerEnv" . }}`.
+*/}}
+{{- define "chaos.outboundBearerEnv" -}}
+{{- $auth := default dict (index .Values.chaos "auth") -}}
+{{- if $auth.secretName }}
+- name: CHAOS_OUTBOUND_BEARER
+  valueFrom:
+    secretKeyRef:
+      name: {{ $auth.secretName }}
+      key: {{ $auth.secretKey | default "token" }}
+{{- else if $auth.literal }}
+- name: CHAOS_OUTBOUND_BEARER
+  value: {{ $auth.literal | quote }}
+{{- end }}
+{{- end }}
