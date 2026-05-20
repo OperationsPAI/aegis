@@ -228,6 +228,11 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 		State:            consts.TaskPending,
 		RootTraceCarrier: meta.RootTraceCarrier,
 	}
+	if !meta.HasBackendTask {
+		task.Extra = map[consts.TaskExtra]any{
+			consts.TaskExtraParentSubmittedByAegisctlViaChaos: true,
+		}
+	}
 
 	tracer := otel.Tracer("rcabench/task")
 	return true, func() error {
@@ -311,13 +316,16 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 		Groundtruths:      meta.Groundtruths,
 		EngineConfig:      "{}",
 		PreDuration:       preDuration,
-		// TaskID intentionally nil for --via-chaos shadow rows: aegisctl
-		// generates a uuid client-side without persisting a backend tasks
-		// row, so the FK to tasks(id) would violate. The legacy CRD flow
-		// (k8s_handler.go) populates TaskID from K8s labels where a real
-		// tasks row exists; that path doesn't reach this shadow upsert.
-		State:  consts.DatapackInjectSuccess,
-		Status: consts.CommonEnabled,
+		State:             consts.DatapackInjectSuccess,
+		Status:            consts.CommonEnabled,
+	}
+	// Backend dispatcher persists the task row before POSTing; the chaos
+	// webhook's shadow FI should FK back to it so audit + lineage queries
+	// work. aegisctl --via-chaos generates a client-side UUID without
+	// persisting and leaves HasBackendTask=false.
+	if meta.HasBackendTask && meta.TaskID != "" {
+		tid := meta.TaskID
+		row.TaskID = &tid
 	}
 	if meta.Benchmark != nil && meta.Benchmark.ID != 0 {
 		bid := meta.Benchmark.ID
@@ -332,13 +340,27 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 		row.EndTime = &t
 	}
 
-	if err := h.db.WithContext(ctx).Create(&row).Error; err != nil {
+	createErr := h.db.WithContext(ctx).Create(&row).Error
+	if createErr != nil && row.TaskID != nil {
+		// Defensive: HasBackendTask was set but the parent row vanished
+		// (race with a DELETE / GC), or the task_id was bogus. Retry once
+		// with TaskID=nil so the shadow row still lands; lose the lineage
+		// link rather than the whole hook delivery.
+		logrus.WithError(createErr).WithFields(logrus.Fields{
+			"chaos_injection_id": chaosInjectionID,
+			"task_id":            *row.TaskID,
+		}).Warn("chaos hook: shadow FI Create failed with backend task_id; retrying with TaskID=nil")
+		row.ID = 0
+		row.TaskID = nil
+		createErr = h.db.WithContext(ctx).Create(&row).Error
+	}
+	if createErr != nil {
 		// Lost race with a concurrent winner: re-fetch and return.
 		var racer model.FaultInjection
 		if rerr := h.db.WithContext(ctx).Where("chaos_injection_id = ?", chaosInjectionID).Take(&racer).Error; rerr == nil {
 			return &racer, nil
 		}
-		return nil, err
+		return nil, createErr
 	}
 	return &row, nil
 }

@@ -316,6 +316,10 @@ func buildCallerMetadata(d dispatcherDeps, namespace string) map[string]any {
 		"pedestal":     d.pedestal,
 		"pre_duration": d.preDuration,
 		"namespace":    namespace,
+		// dispatcher always runs after SubmitTaskWithDB has persisted the
+		// orchestrator-side tasks row keyed by d.taskID, so the chaos hook
+		// can safely link FaultInjection.TaskID + ParentTaskID back to it.
+		"has_backend_task": true,
 	}
 }
 

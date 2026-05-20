@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -440,5 +441,104 @@ func TestW3CTraceparentBecomesParent(t *testing.T) {
 	}
 	if got.TraceID().String() != traceID {
 		t.Fatalf("traceID not propagated: want %s got %s", traceID, got.TraceID().String())
+	}
+}
+
+// TestShadowFIPersistsTaskIDWhenHasBackendTask locks in §11 step 5b
+// cleanup #2: the chaos webhook writes fault_injections.task_id back to
+// meta.TaskID when the caller flagged HasBackendTask=true, so audit /
+// lineage queries can join the shadow row to its dispatching task.
+func TestShadowFIPersistsTaskIDWhenHasBackendTask(t *testing.T) {
+	db, _, _ := setupRig(t)
+	h := NewHandlerWithSubmitter(db, func(context.Context, *dto.UnifiedTask) error { return nil })
+
+	meta := sampleMeta()
+	meta.TaskID = "task-bd"
+	meta.HasBackendTask = true
+
+	got, err := h.getOrCreateShadowFaultInjection(context.Background(), "chaos-real-1", &meta, time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatalf("create shadow: %v", err)
+	}
+	if got == nil || got.TaskID == nil || *got.TaskID != meta.TaskID {
+		t.Fatalf("want TaskID=%q on shadow row, got %+v", meta.TaskID, got.TaskID)
+	}
+}
+
+// TestShadowFINilTaskIDWhenAegisctlViaChaos locks in the inverse: when
+// HasBackendTask=false (aegisctl --via-chaos client-side UUID), the
+// shadow row leaves TaskID nil so the production FK to tasks(id) does
+// not fire on the real MySQL schema.
+func TestShadowFINilTaskIDWhenAegisctlViaChaos(t *testing.T) {
+	db, _, _ := setupRig(t)
+	h := NewHandlerWithSubmitter(db, func(context.Context, *dto.UnifiedTask) error { return nil })
+
+	meta := sampleMeta()
+	meta.TaskID = "no-such-task-uuid"
+	meta.HasBackendTask = false
+
+	got, err := h.getOrCreateShadowFaultInjection(context.Background(), "chaos-cli-1", &meta, time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatalf("create shadow: %v", err)
+	}
+	if got == nil {
+		t.Fatalf("want shadow row, got nil")
+	}
+	if got.TaskID != nil {
+		t.Fatalf("want TaskID=nil for aegisctl --via-chaos, got %q", *got.TaskID)
+	}
+}
+
+// TestShadowFIRetriesOnFKViolation locks in the defensive retry: if the
+// caller flagged HasBackendTask=true but the parent row vanished (race
+// with a DELETE / GC), the first Create fails with an FK violation; the
+// handler must retry once with TaskID=nil so the shadow row still
+// lands, preserving the BuildDatapack downstream submission instead of
+// losing the whole hook delivery.
+//
+// sqlite has no native FK enforcement in our test rig (other model
+// tables aren't migrated, so seeding a real parent fails too), so the
+// violation is simulated by a one-shot gorm BeforeCreate callback that
+// errors on the first insert with TaskID set. This mirrors production:
+// fault_injections.task_id FK fires → Create returns an error → handler
+// retries with TaskID=nil.
+func TestShadowFIRetriesOnFKViolation(t *testing.T) {
+	db, _, _ := setupRig(t)
+	fired := false
+	if err := db.Callback().Create().Before("gorm:create").Register("test:fk_violation_first", func(tx *gorm.DB) {
+		if fired {
+			return
+		}
+		fi, ok := tx.Statement.Dest.(*model.FaultInjection)
+		if !ok || fi.TaskID == nil {
+			return
+		}
+		fired = true
+		tx.AddError(errors.New("FOREIGN KEY constraint failed (simulated)"))
+	}); err != nil {
+		t.Fatalf("register callback: %v", err)
+	}
+
+	h := NewHandlerWithSubmitter(db, func(context.Context, *dto.UnifiedTask) error { return nil })
+
+	meta := sampleMeta()
+	meta.TaskID = "ghost-task-uuid"
+	meta.HasBackendTask = true
+
+	got, err := h.getOrCreateShadowFaultInjection(context.Background(), "chaos-ghost", &meta, time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatalf("expected successful retry, got err: %v", err)
+	}
+	if !fired {
+		t.Fatalf("callback never fired — the first Create did not include TaskID")
+	}
+	if got == nil {
+		t.Fatalf("want shadow row after retry, got nil")
+	}
+	if got.TaskID != nil {
+		t.Fatalf("want TaskID=nil after FK-retry, got %q", *got.TaskID)
+	}
+	if got.ChaosInjectionID != "chaos-ghost" {
+		t.Fatalf("want ChaosInjectionID=chaos-ghost, got %q", got.ChaosInjectionID)
 	}
 }

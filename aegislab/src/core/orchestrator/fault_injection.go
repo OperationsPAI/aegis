@@ -297,6 +297,23 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			}
 		}
 
+		// chaos-service path has no CRD watcher to emit
+		// fault.injection.started at CR-apply time; legacy chaos-mesh-direct
+		// emits it from k8s_handler.HandleCRDAdd. Without this, the
+		// regression validator's required_events sequence is missing one
+		// event between restart.pedestal.* and datapack.build.started.
+		if dispatchPath == executorPathChaosService {
+			updateTaskState(childCtx,
+				newTaskStateUpdate(
+					task.TraceID,
+					task.TaskID,
+					task.Type,
+					consts.TaskRunning,
+					fmt.Sprintf("injecting fault for task %s", task.TaskID),
+				).withEvent(consts.EventFaultInjectionStarted, name).withDB(deps.DB).withRedis(deps.RedisGateway),
+			)
+		}
+
 		// chaos-service dispatch: the webhook receiver
 		// (crud/hooks/chaos.getOrCreateShadowFaultInjection) is the sole
 		// writer of the fault_injections row for this task. Skipping the

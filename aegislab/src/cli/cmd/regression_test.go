@@ -780,3 +780,29 @@ validation:
 		t.Fatalf("expected final event datapack.no_anomaly, got %q", summary.FinalEvent)
 	}
 }
+
+// TestRegressionRunViaChaosFlagIsDeprecated locks in §11 step 5b cleanup
+// #4: the --via-chaos flag on `regression run` errors out instead of
+// silently returning "via_chaos_submitted" without observing trace
+// events. The chaos-service path is now exercised by the standard
+// backend submit, so the flag has no honest behavior left.
+func TestRegressionRunViaChaosFlagIsDeprecated(t *testing.T) {
+	prev := regressionViaChaos
+	regressionViaChaos = true
+	t.Cleanup(func() { regressionViaChaos = prev })
+
+	rc := regressionCase{
+		Name:        "via-chaos-deprecated",
+		ProjectName: "irrelevant",
+		Submit:      map[string]any{},
+		Validation:  regressionValidation{ExpectedFinalEvent: "x", RequiredTaskChain: []string{"y"}},
+	}
+	_, err := runRegressionCase(context.Background(), "/tmp/none.yaml", rc)
+	if err == nil {
+		t.Fatal("expected deprecation error, got nil")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "--via-chaos is removed") {
+		t.Fatalf("expected deprecation message, got %q", msg)
+	}
+}
