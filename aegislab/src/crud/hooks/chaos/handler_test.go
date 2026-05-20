@@ -17,6 +17,7 @@ import (
 	"aegis/platform/testutil"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -502,8 +503,24 @@ func TestShadowFINilTaskIDWhenAegisctlViaChaos(t *testing.T) {
 // errors on the first insert with TaskID set. This mirrors production:
 // fault_injections.task_id FK fires → Create returns an error → handler
 // retries with TaskID=nil.
+type testLogHook struct {
+	mu      sync.Mutex
+	entries []logrus.Entry
+}
+
+func (h *testLogHook) Levels() []logrus.Level { return []logrus.Level{logrus.WarnLevel} }
+func (h *testLogHook) Fire(e *logrus.Entry) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.entries = append(h.entries, *e)
+	return nil
+}
+
 func TestShadowFIRetriesOnFKViolation(t *testing.T) {
 	db, _, _ := setupRig(t)
+	hook := &testLogHook{}
+	logrus.AddHook(hook)
+	t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(logrus.LevelHooks{}) })
 	fired := false
 	if err := db.Callback().Create().Before("gorm:create").Register("test:fk_violation_first", func(tx *gorm.DB) {
 		if fired {
@@ -540,5 +557,21 @@ func TestShadowFIRetriesOnFKViolation(t *testing.T) {
 	}
 	if got.ChaosInjectionID != "chaos-ghost" {
 		t.Fatalf("want ChaosInjectionID=chaos-ghost, got %q", got.ChaosInjectionID)
+	}
+	var warn *logrus.Entry
+	for i := range hook.entries {
+		if hook.entries[i].Message == "shadow FI retry without TaskID due to FK violation on backend dispatcher path" {
+			warn = &hook.entries[i]
+			break
+		}
+	}
+	if warn == nil {
+		t.Fatalf("want WARN log for shadow FI retry without TaskID, got entries: %+v", hook.entries)
+	}
+	if warn.Data["chaos_injection_id"] != "chaos-ghost" {
+		t.Fatalf("want chaos_injection_id=chaos-ghost, got %v", warn.Data["chaos_injection_id"])
+	}
+	if warn.Data["task_id"] != "ghost-task-uuid" {
+		t.Fatalf("want task_id=ghost-task-uuid, got %v", warn.Data["task_id"])
 	}
 }
