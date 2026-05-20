@@ -23,6 +23,14 @@ var Module = fx.Module("configcenterclient",
 	fx.Invoke(registerDynamicViper),
 )
 
+// tokenSrcParams declares tokenSrc as optional so binaries that load the
+// Module but don't wire an SSO TokenSource (e.g. consumers running with
+// configcenter.client.mode=local) still satisfy provideClient's graph.
+type tokenSrcParams struct {
+	fx.In
+	Source TokenSource `optional:"true"`
+}
+
 // registerDynamicViper attaches an OnStart hook that mirrors the "aegis"
 // configcenter namespace into viper so legacy `config.GetString` callers
 // observe live etcd values. Best-effort: a failed bootstrap logs WARN and
@@ -51,8 +59,9 @@ func registerDynamicViper(lc fx.Lifecycle, c Client) {
 
 func provideClient(
 	center configcenter.Center, // available iff module/configcenter is also loaded
-	tokenSrc TokenSource, // available iff app wires an adapter
+	tokenP tokenSrcParams,
 ) (Client, error) {
+	tokenSrc := tokenP.Source
 	mode := config.GetString("configcenter.client.mode")
 	if mode == "" {
 		mode = "local"
