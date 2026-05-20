@@ -19112,6 +19112,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1beta/injections/{id}/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Server-Sent Events stream of status transitions for one injection. Terminates with ` + "`" + `event: terminal` + "`" + ` on terminal status or ` + "`" + `event: timeout` + "`" + ` after 30 minutes.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Stream chaos injection status events (SSE)",
+                "operationId": "chaos_stream_injection_events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Injection id (ULID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "404": {
+                        "description": "Injection not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                }
+            }
+        },
         "/v1beta/manifest-schema.json": {
             "get": {
                 "description": "Public endpoint returning the live JSON Schema for Point Manifests (ADR-0010). Unauthenticated.",
@@ -20298,7 +20345,7 @@ const docTemplate = `{
                 },
                 "point_id": {
                     "type": "string",
-                    "example": "step5acart11111"
+                    "example": "0123456789abcdef"
                 }
             }
         },
@@ -20345,7 +20392,7 @@ const docTemplate = `{
                 },
                 "point_id": {
                     "type": "string",
-                    "example": "step5acart11111"
+                    "example": "0123456789abcdef"
                 }
             }
         },

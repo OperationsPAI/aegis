@@ -587,7 +587,7 @@ definitions:
         additionalProperties: {}
         type: object
       point_id:
-        example: step5acart11111
+        example: 0123456789abcdef
         type: string
     type: object
   chaos.ChaosCreateInjectionBatchReq:
@@ -620,7 +620,7 @@ definitions:
         additionalProperties: {}
         type: object
       point_id:
-        example: step5acart11111
+        example: 0123456789abcdef
         type: string
     type: object
   chaos.ChaosImportPointsReq:
@@ -21679,6 +21679,38 @@ paths:
       - Chaos
       x-api-type:
         sdk: "true"
+  /v1beta/injections/{id}/events:
+    get:
+      description: 'Server-Sent Events stream of status transitions for one injection.
+        Terminates with `event: terminal` on terminal status or `event: timeout` after
+        30 minutes.'
+      operationId: chaos_stream_injection_events
+      parameters:
+      - description: Injection id (ULID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream
+          schema:
+            type: string
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: Injection not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Stream chaos injection status events (SSE)
+      tags:
+      - Chaos
   /v1beta/manifest-schema.json:
     get:
       description: Public endpoint returning the live JSON Schema for Point Manifests
