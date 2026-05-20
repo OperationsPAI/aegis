@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )

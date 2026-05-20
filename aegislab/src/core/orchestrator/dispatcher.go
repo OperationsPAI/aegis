@@ -15,7 +15,7 @@ import (
 	chaoscrud "aegis/crud/chaos"
 	"aegis/platform/config"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

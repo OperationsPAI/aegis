@@ -19,14 +19,13 @@ import (
 	"aegis/boot/seed"
 
 	chaos "aegis/platform/chaos"
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 )
 
 // enumerateCandidatesFn is the indirection used by ListInjectCandidates so
 // tests can inject a fixture without standing up a fake k8s API. Defaults to
 // the real in-process enumerator from chaos-experiment.
-var enumerateCandidatesFn = guidedcli.EnumerateAllCandidates
+var enumerateCandidatesFn = chaos.EnumerateAllCandidates
 
 // systemField is an internal enum of the injection.system.<name>.<field>
 // suffixes we manage. Keeping this tight (instead of free-form map keys)

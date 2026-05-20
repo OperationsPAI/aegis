@@ -12,7 +12,6 @@ import (
 	"aegis/platform/utils"
 
 	chaos "aegis/platform/chaos"
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -21,7 +20,7 @@ import (
 type injectionPayload struct {
 	benchmark     dto.ContainerVersionItem
 	preDuration   int
-	guidedConfigs []guidedcli.GuidedConfig
+	guidedConfigs []chaos.GuidedConfig
 	namespace     string
 	pedestal      string
 	pedestalID    int
@@ -240,7 +239,7 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 	}
 	preDuration := int(preDurationFloat)
 
-	guidedConfigs, err := utils.ConvertToType[[]guidedcli.GuidedConfig](payload[consts.InjectGuidedConfigs])
+	guidedConfigs, err := utils.ConvertToType[[]chaos.GuidedConfig](payload[consts.InjectGuidedConfigs])
 	if err != nil {
 		return nil, fmt.Errorf(message, consts.InjectGuidedConfigs)
 	}

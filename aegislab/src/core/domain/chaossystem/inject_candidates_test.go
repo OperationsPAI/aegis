@@ -8,7 +8,7 @@ import (
 	"aegis/platform/consts"
 	"aegis/platform/model"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 	"github.com/spf13/viper"
 )
 

@@ -6,7 +6,7 @@ import (
 
 	"aegis/platform/consts"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 )
 
 // CrossServiceCapabilities is the set of capabilities whose Point row carries

@@ -24,7 +24,7 @@ import (
 	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 )
 
 // StuckTraceReconciler is a DB-driven sweep that recovers traces stuck at

@@ -14,7 +14,7 @@ import (
 	"aegis/cli/config"
 	"aegis/cli/output"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	guidedcli "aegis/platform/chaos"
 )
 
 func resetCLIStateForTest() {
