@@ -20,16 +20,20 @@ var Module = fx.Module("sso",
 		NewAdminService,
 		NewAdminHandler,
 		NewOIDCService,
+		NewServiceAccountRepository,
+		NewServiceAccountService,
+		NewServiceAccountHandler,
 	),
 	fx.Provide(
 		fx.Annotate(Migrations, fx.ResultTags(`group:"migrations"`)),
 	),
-	fx.Invoke(func(engine *gin.Engine, admin *AdminHandler, client *Handler, oidc *OIDCService, rbacRepo *rbac.Repository) {
+	fx.Invoke(func(engine *gin.Engine, admin *AdminHandler, client *Handler, oidc *OIDCService, sa *ServiceAccountHandler, rbacRepo *rbac.Repository) {
 		// Register the rbac repository as the scope resolver consulted by
 		// requireAdminOrService for delegated service admins (Task #13).
 		SetAdminScopeResolver(rbacRepo)
 		RegisterAdminRoutes(engine, admin)
 		RegisterClientRoutes(engine, client)
 		RegisterOIDCRoutes(engine, oidc)
+		RegisterServiceAccountRoutes(engine, sa)
 	}),
 )

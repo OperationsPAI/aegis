@@ -248,13 +248,20 @@ func (u *InitialDataUser) ConvertToDBUser() *model.User {
 }
 
 type InitialData struct {
-	DynamicConfigs []InitialDynamicConfig `yaml:"dynamic_configs"`
-	Containers     []InitialDataContainer `yaml:"containers"`
-	Datasets       []InitialDatasaet      `yaml:"datasets"`
-	Projects       []InitialDataProject   `yaml:"projects"`
-	Teams          []InitialDataTeam      `yaml:"teams"`
-	AdminUser      InitialDataUser        `yaml:"admin_user"`
-	Users          []InitialDataUser      `yaml:"users"`
+	DynamicConfigs  []InitialDynamicConfig     `yaml:"dynamic_configs"`
+	Containers      []InitialDataContainer     `yaml:"containers"`
+	Datasets        []InitialDatasaet          `yaml:"datasets"`
+	Projects        []InitialDataProject       `yaml:"projects"`
+	Teams           []InitialDataTeam          `yaml:"teams"`
+	AdminUser       InitialDataUser            `yaml:"admin_user"`
+	Users           []InitialDataUser          `yaml:"users"`
+	ServiceAccounts []InitialDataServiceAccount `yaml:"service_accounts"`
+}
+
+type InitialDataServiceAccount struct {
+	Name        string `yaml:"name"`
+	Scopes      string `yaml:"scopes"`
+	Description string `yaml:"description"`
 }
 
 type configData struct {

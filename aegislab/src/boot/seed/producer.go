@@ -160,9 +160,37 @@ func initializeProducer(db *gorm.DB, initialData *InitialData) error {
 				return fmt.Errorf("failed to initialize execution labels: %w", err)
 			}
 
+			if err := initializeServiceAccounts(tx, initialData); err != nil {
+				return fmt.Errorf("failed to initialize service accounts: %w", err)
+			}
+
 			return nil
 		})
 	})
+}
+
+func initializeServiceAccounts(tx *gorm.DB, data *InitialData) error {
+	for _, sa := range data.ServiceAccounts {
+		if sa.Name == "" {
+			return fmt.Errorf("service account entry has empty name")
+		}
+		row := model.ServiceAccount{
+			Name:        sa.Name,
+			Scopes:      sa.Scopes,
+			Description: sa.Description,
+		}
+		// Idempotent: skip if a row with this name already exists. We
+		// intentionally do NOT update scopes / description on re-seed —
+		// scope changes go through aegisctl (added in a later PR) so the
+		// audit trail stays in one place.
+		res := tx.Where(&model.ServiceAccount{Name: sa.Name}).
+			Attrs(row).
+			FirstOrCreate(&model.ServiceAccount{})
+		if res.Error != nil {
+			return fmt.Errorf("failed to seed service account %s: %w", sa.Name, res.Error)
+		}
+	}
+	return nil
 }
 
 func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User, error) {

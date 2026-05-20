@@ -14,14 +14,16 @@ const (
 const (
 	JWTIssuerUser    = "rcabench"         // user access tokens (utils/jwt.go GenerateToken)
 	JWTIssuerRefresh = "rcabench-refresh" // refresh tokens
-	JWTIssuerService = "rcabench-service" // legacy service tokens (utils/jwt.go GenerateServiceToken)
+	JWTIssuerService        = "rcabench-service" // legacy service tokens (utils/jwt.go GenerateServiceToken)
+	JWTIssuerServiceAccount = "rcabench-sa"      // long-lived service-account tokens (utils/jwt.go GenerateServiceAccountToken)
 )
 
 // JTI (JWT ID claim) prefixes used as the first segment of the `jti` claim.
 // Format strings are kept in code, but the prefix tokens live here.
 const (
-	JWTJTIPrefixUser    = "jwt"
-	JWTJTIPrefixService = "svc"
+	JWTJTIPrefixUser           = "jwt"
+	JWTJTIPrefixService        = "svc"
+	JWTJTIPrefixServiceAccount = "sa"
 )
 
 // OpenTelemetry tracer instrumentation namespaces. Currently use the legacy

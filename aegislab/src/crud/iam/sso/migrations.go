@@ -8,6 +8,6 @@ import (
 func Migrations() framework.MigrationRegistrar {
 	return framework.MigrationRegistrar{
 		Module:   "sso",
-		Entities: []interface{}{&model.OIDCClient{}},
+		Entities: []interface{}{&model.OIDCClient{}, &model.ServiceAccount{}},
 	}
 }

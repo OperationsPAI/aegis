@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -54,6 +55,27 @@ func TestServiceToken(t *testing.T) {
 	claims, err := ParseServiceToken(tok, resolver())
 	require.NoError(t, err)
 	require.Equal(t, "task-xyz", claims.TaskID)
+}
+
+func TestServiceAccountToken_Roundtrip(t *testing.T) {
+	scopes := []string{"chaos.inject.write", "chaos.webhook.write"}
+	tok, exp, err := GenerateServiceAccountToken("chaos-service", scopes, 24*time.Hour, testRSAKey, "test-kid")
+	require.NoError(t, err)
+	require.NotEmpty(t, tok)
+	require.True(t, exp.After(time.Now()))
+
+	claims, err := ParseServiceAccountToken(tok, resolver())
+	require.NoError(t, err)
+	require.Equal(t, "chaos-service", claims.Subject)
+	require.Equal(t, "rcabench-sa", claims.Issuer)
+	require.Equal(t, "service_account", claims.AuthType)
+	require.Equal(t, scopes, claims.Scopes)
+
+	// Service-account parser must reject a user token (wrong issuer).
+	userTok, _, err := GenerateToken(1, "u", "u@x", true, false, nil, testRSAKey, "test-kid")
+	require.NoError(t, err)
+	_, err = ParseServiceAccountToken(userTok, resolver())
+	require.ErrorIs(t, err, ErrInvalidToken)
 }
 
 func TestParseToken_RejectsWrongKey(t *testing.T) {
