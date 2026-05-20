@@ -222,10 +222,10 @@ func TestDeriveHandleNamespaceOnly_JVM(t *testing.T) {
 	e := &ChaosMeshExecutor{}
 	target := map[string]any{"namespace": "ts"}
 	for _, cap := range jvmCapabilities {
-		if _, err := e.DeriveHandle(cap, "key-"+cap, target); err != nil {
+		if _, err := e.DeriveHandle(cap, "key-"+cap, "ns0", target); err != nil {
 			t.Errorf("%s DeriveHandle with namespace-only target: %v", cap, err)
 		}
-		if _, err := e.DeriveHandle(cap, "key", map[string]any{}); err == nil {
+		if _, err := e.DeriveHandle(cap, "key", "ns0", map[string]any{}); err == nil {
 			t.Errorf("%s DeriveHandle should reject empty target", cap)
 		}
 	}

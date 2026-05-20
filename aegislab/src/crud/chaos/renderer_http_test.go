@@ -260,10 +260,10 @@ func TestHTTPDeriveHandleNamespaceOnly(t *testing.T) {
 		"http_response_patch_body", "http_response_replace_body",
 		"http_response_replace_code",
 	} {
-		if _, err := e.DeriveHandle(capability, "key-"+capability, target); err != nil {
+		if _, err := e.DeriveHandle(capability, "key-"+capability, "ns0", target); err != nil {
 			t.Errorf("%s DeriveHandle with namespace-only target: %v", capability, err)
 		}
-		if _, err := e.DeriveHandle(capability, "key", map[string]any{}); err == nil {
+		if _, err := e.DeriveHandle(capability, "key", "ns0", map[string]any{}); err == nil {
 			t.Errorf("%s DeriveHandle should reject empty target", capability)
 		}
 	}

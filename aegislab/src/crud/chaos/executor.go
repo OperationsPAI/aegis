@@ -47,10 +47,12 @@ type Executor interface {
 	SupportedCapabilities() []CapabilitySupport
 
 	// DeriveHandle produces the deterministic executor_handle for an
-	// (idempotency_key, target) tuple. Pure function — no cluster I/O.
-	// Same inputs always yield the same handle, which is what makes
-	// post-crash recovery a plain Status(handle) call.
-	DeriveHandle(capability, idempotencyKey string, target map[string]any) (handle string, err error)
+	// (idempotency_key, requestNamespace, target) tuple. Pure function —
+	// no cluster I/O. requestNamespace is the concrete kubernetes
+	// namespace the CR will live in (pool-allocated, e.g. otel-demo0),
+	// which is distinct from any logical/system-name namespace stored in
+	// the catalog target.
+	DeriveHandle(capability, idempotencyKey, requestNamespace string, target map[string]any) (handle string, err error)
 
 	// Apply is idempotent on handle: the second call with the same handle
 	// MUST be a no-op on the cluster. Chaos-Mesh treats AlreadyExists as

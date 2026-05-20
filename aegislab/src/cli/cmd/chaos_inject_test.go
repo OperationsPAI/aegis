@@ -32,12 +32,16 @@ func TestChaosInjectSubmit_POSTsAcceptedResponse(t *testing.T) {
 	defer resetChaosFlags()
 
 	chaosInjectPointID = "p1"
+	chaosInjectNamespace = "ns0"
 	chaosInjectParams = `{"duration_s":5}`
 	chaosInjectIdemKey = "k1"
 	chaosInjectCallerMeta = `{"src":"test"}`
 
 	if err := runChaosInjectSubmit(nil, nil); err != nil {
 		t.Fatalf("submit failed: %v", err)
+	}
+	if gotBody["namespace"] != "ns0" {
+		t.Errorf("body.namespace = %v; want ns0", gotBody["namespace"])
 	}
 	if gotMethod != http.MethodPost {
 		t.Errorf("method = %q; want POST", gotMethod)

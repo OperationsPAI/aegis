@@ -76,6 +76,7 @@ func TestPodChaosExtraConformance(t *testing.T) {
 			c := Case{
 				Capability:     tc.capability,
 				IdempotencyKey: key,
+				Namespace:      ns,
 				Target:         tc.target,
 				Params:         map[string]any{"duration_s": 30},
 				Observe: func(ctx context.Context) error {

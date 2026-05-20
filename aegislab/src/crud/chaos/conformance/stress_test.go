@@ -65,6 +65,7 @@ func TestStressConformance(t *testing.T) {
 			c := Case{
 				Capability:     tc.capability,
 				IdempotencyKey: key,
+				Namespace:      ns,
 				Target:         target,
 				Params:         tc.params,
 				Observe: func(ctx context.Context) error {

@@ -139,3 +139,32 @@ func TestGuidedToChaosPointID_CrossService(t *testing.T) {
 		t.Errorf("expected cross-service id, but result matched service-bound id %s", pid)
 	}
 }
+
+// TestGuidedToChaosTarget_LogicalNsWhenPoolAllocated is the Step 5b R5 regression
+// guard for the R4b cluster validation gap: when the pool allocates a concrete
+// namespace (e.g. otel-demo0) that differs from the system name (e.g. otel-demo),
+// the chaos catalog still keys its Point on the logical system name, so the
+// derived target.namespace MUST be the system name — otherwise locally-derived
+// point_id won't match the catalog row and inject returns 404.
+func TestGuidedToChaosTarget_LogicalNsWhenPoolAllocated(t *testing.T) {
+	cfg := guidedcli.GuidedConfig{
+		System:    "otel-demo",
+		Namespace: "otel-demo0", // pool-allocated; differs from system
+		App:       "cart",
+		ChaosType: "PodKill",
+	}
+	pid, cap, target, err := guidedChaosPointID(cfg, "seed", "seed-genesis")
+	if err != nil {
+		t.Fatalf("derive: %v", err)
+	}
+	if cap != "pod_kill" {
+		t.Errorf("capability: got %s, want pod_kill", cap)
+	}
+	if got, _ := target["namespace"].(string); got != "otel-demo" {
+		t.Errorf("target.namespace: got %q, want logical system %q", got, "otel-demo")
+	}
+	if pid != expectCartPodKillPointID {
+		t.Fatalf("point_id with pool-allocated ns must match catalog row keyed on logical ns: got %q want %q",
+			pid, expectCartPodKillPointID)
+	}
+}

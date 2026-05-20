@@ -87,6 +87,7 @@ func (s *Manager) GetSystem(ctx context.Context, name string) (*System, error) {
 
 type CreateInjectionInput struct {
 	PointID        string
+	Namespace      string
 	Params         map[string]any
 	IdempotencyKey string
 	CallerMetadata map[string]any
@@ -96,6 +97,9 @@ type CreateInjectionInput struct {
 func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) (*Injection, error) {
 	if in.IdempotencyKey == "" {
 		return nil, fmt.Errorf("chaos: idempotency_key is required")
+	}
+	if in.Namespace == "" {
+		return nil, fmt.Errorf("chaos: namespace is required")
 	}
 
 	var existing Injection
@@ -156,7 +160,7 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 	// leaves a recoverable row — the persisted handle is valid regardless of
 	// whether the CR was created, because the CR name is deterministic.
 	target := map[string]any(point.Target)
-	handle, err := s.Executor.DeriveHandle(capRow.Name, in.IdempotencyKey, target)
+	handle, err := s.Executor.DeriveHandle(capRow.Name, in.IdempotencyKey, in.Namespace, target)
 	if err != nil {
 		return nil, err
 	}

@@ -101,6 +101,7 @@ func TestJVMConformance(t *testing.T) {
 			c := Case{
 				Capability:     tc.capability,
 				IdempotencyKey: idempotencyKey,
+				Namespace:      ns,
 				Target:         tc.target,
 				Params:         tc.params,
 				Observe: func(ctx context.Context) error {

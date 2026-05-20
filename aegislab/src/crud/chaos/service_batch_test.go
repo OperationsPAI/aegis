@@ -37,8 +37,8 @@ func TestCreateInjectionBatch_HappyPath(t *testing.T) {
 	out, err := mgr.CreateInjectionBatch(t.Context(), CreateBatchInput{
 		BatchIdempotencyKey: "batch-1",
 		Children: []CreateBatchChild{
-			{PointID: p1, IdempotencyKey: "k-c1", Params: map[string]any{"duration_s": 30}},
-			{PointID: p2id, IdempotencyKey: "k-c2", Params: map[string]any{"duration_s": 30}},
+			{PointID: p1, Namespace: "ns0", IdempotencyKey: "k-c1", Params: map[string]any{"duration_s": 30}},
+			{PointID: p2id, Namespace: "ns0", IdempotencyKey: "k-c2", Params: map[string]any{"duration_s": 30}},
 		},
 	})
 	if err != nil {
@@ -72,7 +72,7 @@ func TestCreateInjectionBatch_IdempotentReplay(t *testing.T) {
 	in := CreateBatchInput{
 		BatchIdempotencyKey: "batch-rep",
 		Children: []CreateBatchChild{
-			{PointID: p1, IdempotencyKey: "k-rep", Params: map[string]any{"duration_s": 30}},
+			{PointID: p1, Namespace: "ns0", IdempotencyKey: "k-rep", Params: map[string]any{"duration_s": 30}},
 		},
 	}
 	first, err := mgr.CreateInjectionBatch(t.Context(), in)
@@ -100,8 +100,8 @@ func TestCreateInjectionBatch_PartialFailure(t *testing.T) {
 	out, err := mgr.CreateInjectionBatch(t.Context(), CreateBatchInput{
 		BatchIdempotencyKey: "batch-partial",
 		Children: []CreateBatchChild{
-			{PointID: p1, IdempotencyKey: "k-ok"},
-			{PointID: "doesnotexist", IdempotencyKey: "k-bad"},
+			{PointID: p1, Namespace: "ns0", IdempotencyKey: "k-ok"},
+			{PointID: "doesnotexist", Namespace: "ns0", IdempotencyKey: "k-bad"},
 		},
 	})
 	if err != nil {

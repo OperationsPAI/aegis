@@ -58,6 +58,7 @@ func TestPodKillConformance(t *testing.T) {
 	c := Case{
 		Capability:     "pod_kill",
 		IdempotencyKey: "conformance-pod-kill-" + ns + "-" + app,
+		Namespace:      ns,
 		Target:         map[string]any{"namespace": ns, "app": app},
 		Params:         map[string]any{"duration_s": 30},
 		Observe: func(ctx context.Context) error {

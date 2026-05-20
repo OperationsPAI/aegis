@@ -135,6 +135,7 @@ func (h *Handler) ImportPoints(c *gin.Context) {
 
 type createInjectionReq struct {
 	PointID        string         `json:"point_id"         binding:"required"`
+	Namespace      string         `json:"namespace"        binding:"required"`
 	Params         map[string]any `json:"params"`
 	IdempotencyKey string         `json:"idempotency_key"  binding:"required"`
 	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`
@@ -168,6 +169,7 @@ func (h *Handler) CreateInjection(c *gin.Context) {
 	}
 	inj, err := h.Mgr.CreateInjection(c.Request.Context(), CreateInjectionInput{
 		PointID:        req.PointID,
+		Namespace:      req.Namespace,
 		Params:         req.Params,
 		IdempotencyKey: req.IdempotencyKey,
 		CallerMetadata: req.CallerMetadata,
@@ -304,6 +306,7 @@ func (h *Handler) ManifestSchema(c *gin.Context) {
 
 type createBatchChild struct {
 	PointID        string         `json:"point_id"         binding:"required"`
+	Namespace      string         `json:"namespace"        binding:"required"`
 	Params         map[string]any `json:"params"`
 	IdempotencyKey string         `json:"idempotency_key"  binding:"required"`
 	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`
@@ -343,6 +346,7 @@ func (h *Handler) CreateInjectionBatch(c *gin.Context) {
 	for _, ch := range req.Children {
 		children = append(children, CreateBatchChild{
 			PointID:        ch.PointID,
+			Namespace:      ch.Namespace,
 			Params:         ch.Params,
 			IdempotencyKey: ch.IdempotencyKey,
 			CallerMetadata: ch.CallerMetadata,

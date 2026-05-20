@@ -103,6 +103,7 @@ func TestHTTPConformance(t *testing.T) {
 			c := Case{
 				Capability:     tc.capability,
 				IdempotencyKey: idempotencyKey,
+				Namespace:      ns,
 				Target:         target,
 				Params:         tc.params,
 				Observe: func(ctx context.Context) error {

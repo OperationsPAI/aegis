@@ -51,6 +51,7 @@ var chaosInjectBatchDestroyCmd = &cobra.Command{
 type childrenFileShape struct {
 	Children []struct {
 		PointID        string         `json:"point_id"`
+		Namespace      string         `json:"namespace"`
 		Params         map[string]any `json:"params,omitempty"`
 		IdempotencyKey string         `json:"idempotency_key"`
 		CallerMetadata map[string]any `json:"caller_metadata,omitempty"`
@@ -87,10 +88,14 @@ func runChaosBatchSubmit(_ *cobra.Command, _ []string) error {
 	}
 
 	children := make([]apiclient.ChaosChaosCreateBatchChildReq, 0, len(spec.Children))
-	for _, c := range spec.Children {
+	for i, c := range spec.Children {
+		if c.Namespace == "" {
+			return usageErrorf("children[%d].namespace is required", i)
+		}
 		entry := apiclient.ChaosChaosCreateBatchChildReq{
-			PointId:        ptr(c.PointID),
-			IdempotencyKey: ptr(c.IdempotencyKey),
+			PointId:              ptr(c.PointID),
+			IdempotencyKey:       ptr(c.IdempotencyKey),
+			AdditionalProperties: map[string]any{"namespace": c.Namespace},
 		}
 		if c.Params != nil {
 			entry.Params = c.Params

@@ -100,6 +100,7 @@ func resetChaosFlags() {
 	chaosSysEnabled = false
 	chaosSysMaxConc = 0
 	chaosInjectPointID = ""
+	chaosInjectNamespace = ""
 	chaosInjectParams = ""
 	chaosInjectIdemKey = ""
 	chaosInjectCallerMeta = ""

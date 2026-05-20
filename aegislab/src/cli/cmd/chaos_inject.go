@@ -15,6 +15,7 @@ import (
 
 var (
 	chaosInjectPointID    string
+	chaosInjectNamespace  string
 	chaosInjectParams     string
 	chaosInjectIdemKey    string
 	chaosInjectCallerMeta string
@@ -51,6 +52,9 @@ func runChaosInjectSubmit(_ *cobra.Command, _ []string) error {
 	if chaosInjectPointID == "" {
 		return usageErrorf("--point-id is required")
 	}
+	if chaosInjectNamespace == "" {
+		return usageErrorf("--namespace is required")
+	}
 	if chaosInjectIdemKey == "" {
 		return usageErrorf("--idempotency-key is required")
 	}
@@ -70,6 +74,7 @@ func runChaosInjectSubmit(_ *cobra.Command, _ []string) error {
 	body := *apiclient.NewChaosChaosCreateInjectionReq()
 	body.PointId = &chaosInjectPointID
 	body.IdempotencyKey = &chaosInjectIdemKey
+	body.AdditionalProperties = map[string]any{"namespace": chaosInjectNamespace}
 	if params != nil {
 		body.Params = params
 	}
@@ -171,6 +176,7 @@ func loadJSONFlag(name, value string, required bool) (map[string]any, error) {
 
 func init() {
 	chaosInjectSubmitCmd.Flags().StringVar(&chaosInjectPointID, "point-id", "", "Point id to inject against (required)")
+	chaosInjectSubmitCmd.Flags().StringVar(&chaosInjectNamespace, "namespace", "", "Concrete kubernetes namespace to apply the CR in (pool-allocated, required)")
 	chaosInjectSubmitCmd.Flags().StringVar(&chaosInjectParams, "params", "", "JSON object (or @file / @-) of capability params (required)")
 	chaosInjectSubmitCmd.Flags().StringVar(&chaosInjectIdemKey, "idempotency-key", "", "Unique key — duplicate POSTs return the existing row (required)")
 	chaosInjectSubmitCmd.Flags().StringVar(&chaosInjectCallerMeta, "caller-metadata", "", "JSON object (or @file / @-) of opaque caller metadata")

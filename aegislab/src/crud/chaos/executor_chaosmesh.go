@@ -110,21 +110,23 @@ func decodeHandle(s string) (ChaosMeshHandle, error) {
 }
 
 func (e *ChaosMeshExecutor) DeriveHandle(
-	capability, idempotencyKey string, target map[string]any,
+	capability, idempotencyKey, requestNamespace string, target map[string]any,
 ) (string, error) {
 	r, err := lookupRenderer(capability)
 	if err != nil {
 		return "", err
 	}
+	if requestNamespace == "" {
+		return "", fmt.Errorf("chaos-mesh %s: request namespace is required", capability)
+	}
 	if err := r.ValidateForHandle(target); err != nil {
 		return "", err
 	}
-	ns, _ := target["namespace"].(string)
 	name, err := DeriveChaosMeshCRName(r.HandlePrefix(), idempotencyKey)
 	if err != nil {
 		return "", err
 	}
-	return encodeHandle(ChaosMeshHandle{GVR: r.GVR(), Namespace: ns, Name: name})
+	return encodeHandle(ChaosMeshHandle{GVR: r.GVR(), Namespace: requestNamespace, Name: name})
 }
 
 func (e *ChaosMeshExecutor) Apply(

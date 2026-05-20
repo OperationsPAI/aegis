@@ -49,6 +49,7 @@ func TestTimeSkewConformance(t *testing.T) {
 	c := Case{
 		Capability:     "time_skew",
 		IdempotencyKey: key,
+		Namespace:      ns,
 		Target:         map[string]any{"namespace": ns, "app": app, "container": container},
 		Params:         map[string]any{"offset_s": 60, "duration_s": 30},
 		Observe: func(ctx context.Context) error {

@@ -224,13 +224,19 @@ func TestDeriveHandleNamespaceOnly(t *testing.T) {
 	e := &ChaosMeshExecutor{}
 	target := map[string]any{"namespace": "ts"} // no `app`, no `source_app`/`target_service`
 	for _, capability := range []string{"pod_kill", "network_delay", "network_partition"} {
-		if _, err := e.DeriveHandle(capability, "key-"+capability, target); err != nil {
+		if _, err := e.DeriveHandle(capability, "key-"+capability, "ns0", target); err != nil {
 			t.Errorf("%s DeriveHandle with namespace-only target: %v", capability, err)
 		}
 	}
-	// Missing namespace must still be rejected.
+	// Missing request namespace must be rejected.
 	for _, capability := range []string{"pod_kill", "network_delay"} {
-		if _, err := e.DeriveHandle(capability, "key", map[string]any{}); err == nil {
+		if _, err := e.DeriveHandle(capability, "key", "", target); err == nil {
+			t.Errorf("%s DeriveHandle should reject empty request namespace", capability)
+		}
+	}
+	// Empty target still rejected (logical ns is a catalog-completeness check).
+	for _, capability := range []string{"pod_kill", "network_delay"} {
+		if _, err := e.DeriveHandle(capability, "key", "ns0", map[string]any{}); err == nil {
 			t.Errorf("%s DeriveHandle should reject empty target", capability)
 		}
 	}

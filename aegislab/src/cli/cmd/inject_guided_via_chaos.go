@@ -30,38 +30,44 @@ var crossServiceCapabilities = map[string]struct{}{
 // guidedToChaosTarget produces the canonical target map for the chosen
 // capability from a finalized GuidedConfig. Per-capability shapes match
 // tools/capgen/output/capabilities.json target_schema.required.
+//
+// target.namespace is the LOGICAL system name (catalog identifier, stable
+// across pool-allocated cluster topology) — NOT the concrete kubernetes
+// namespace. The concrete ns travels separately in the request body and
+// is what the executor uses for CR placement.
 func guidedToChaosTarget(capability string, cfg guidedcli.GuidedConfig) (map[string]any, error) {
 	app := strings.TrimSpace(cfg.App)
-	ns := strings.TrimSpace(cfg.Namespace)
-	if app == "" || ns == "" {
-		return nil, fmt.Errorf("via-chaos: app and namespace are required (got app=%q namespace=%q)", app, ns)
+	system := strings.TrimSpace(cfg.System)
+	if system == "" {
+		system = strings.TrimSpace(cfg.SystemType)
+	}
+	if app == "" || system == "" {
+		return nil, fmt.Errorf("via-chaos: app and system are required (got app=%q system=%q)", app, system)
 	}
 
 	switch capability {
 	case "pod_failure", "pod_kill", "jvm_gc":
-		return map[string]any{"namespace": ns, "app": app}, nil
+		return map[string]any{"namespace": system, "app": app}, nil
 	case "container_kill", "cpu_stress", "memory_stress", "time_skew":
 		container := strings.TrimSpace(cfg.Container)
 		if container == "" {
 			return nil, fmt.Errorf("via-chaos: capability %s requires container", capability)
 		}
-		return map[string]any{"namespace": ns, "app": app, "container": container}, nil
+		return map[string]any{"namespace": system, "app": app, "container": container}, nil
 	case "network_bandwidth", "network_corrupt", "network_delay",
 		"network_duplicate", "network_loss", "network_partition":
 		target := strings.TrimSpace(cfg.TargetService)
 		if target == "" {
 			return nil, fmt.Errorf("via-chaos: capability %s requires target_service", capability)
 		}
-		return map[string]any{"namespace": ns, "source_app": app, "target_service": target}, nil
+		return map[string]any{"namespace": system, "source_app": app, "target_service": target}, nil
 	case "dns_error", "dns_random":
 		domain := strings.TrimSpace(cfg.Domain)
 		if domain == "" {
 			return nil, fmt.Errorf("via-chaos: capability %s requires domain", capability)
 		}
-		// Server-side schema uses `domain_patterns` (array). YAML carries a
-		// single comma-separated `domain` string today; split on commas.
 		parts := splitTrim(domain, ",")
-		return map[string]any{"namespace": ns, "app": app, "domain_patterns": parts}, nil
+		return map[string]any{"namespace": system, "app": app, "domain_patterns": parts}, nil
 	case "jvm_cpu_stress", "jvm_memory_stress",
 		"jvm_method_exception", "jvm_method_latency", "jvm_method_return",
 		"jvm_mysql_exception", "jvm_mysql_latency", "jvm_runtime_mutator":
@@ -70,7 +76,7 @@ func guidedToChaosTarget(capability string, cfg guidedcli.GuidedConfig) (map[str
 		if class == "" || method == "" {
 			return nil, fmt.Errorf("via-chaos: capability %s requires class and method", capability)
 		}
-		return map[string]any{"namespace": ns, "app": app, "class": class, "method": method}, nil
+		return map[string]any{"namespace": system, "app": app, "class": class, "method": method}, nil
 	case "http_request_abort", "http_request_delay", "http_request_replace_method",
 		"http_request_replace_path", "http_response_abort", "http_response_delay",
 		"http_response_patch_body", "http_response_replace_body", "http_response_replace_code":
@@ -79,9 +85,6 @@ func guidedToChaosTarget(capability string, cfg guidedcli.GuidedConfig) (map[str
 		if route == "" || method == "" {
 			return nil, fmt.Errorf("via-chaos: capability %s requires route and http_method", capability)
 		}
-		// Port is not carried in GuidedConfig today — guided resolver embeds it
-		// into the route option metadata. Until guided emits port directly we
-		// can't safely synthesise the target; fail loud rather than guess.
 		return nil, fmt.Errorf("via-chaos: HTTP capabilities (%s) require a port that GuidedConfig does not yet expose; needs guided extension", capability)
 	default:
 		return nil, fmt.Errorf("via-chaos: unmapped capability %s", capability)
@@ -243,6 +246,10 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		if err != nil {
 			return err
 		}
+		requestNS := strings.TrimSpace(cfgs[0].Namespace)
+		if requestNS == "" {
+			return fmt.Errorf("via-chaos: namespace is required (concrete cluster ns where the CR is applied)")
+		}
 		params := guidedToChaosParams(cap, cfgs[0])
 		idemKey := traceID + ":" + pid
 		if flagDryRun {
@@ -253,6 +260,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 				"url":       strings.TrimRight(chaosURL, "/") + "/v1beta/injections",
 				"body": map[string]any{
 					"point_id":        pid,
+					"namespace":       requestNS,
 					"idempotency_key": idemKey,
 					"params":          params,
 					"caller_metadata": makeMeta(),
@@ -275,6 +283,7 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		body.IdempotencyKey = &idemKey
 		body.Params = params
 		body.CallerMetadata = makeMeta()
+		body.AdditionalProperties = map[string]any{"namespace": requestNS}
 		resp, _, err := cli.ChaosAPI.ChaosCreateInjection(ctx).
 			ChaosChaosCreateInjectionReq(body).Execute()
 		if err != nil {
@@ -301,18 +310,24 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		if err != nil {
 			return fmt.Errorf("via-chaos: spec[%d]: %w", i, err)
 		}
+		requestNS := strings.TrimSpace(cfgs[i].Namespace)
+		if requestNS == "" {
+			return fmt.Errorf("via-chaos: spec[%d]: namespace is required (concrete cluster ns where the CR is applied)", i)
+		}
 		params := guidedToChaosParams(cap, cfgs[i])
 		childKey := fmt.Sprintf("%s:%d:%s", traceID, i, pid)
 		entry := apiclient.ChaosChaosCreateBatchChildReq{
-			PointId:        &pid,
-			IdempotencyKey: &childKey,
-			Params:         params,
-			CallerMetadata: makeMeta(),
+			PointId:              &pid,
+			IdempotencyKey:       &childKey,
+			Params:               params,
+			CallerMetadata:       makeMeta(),
+			AdditionalProperties: map[string]any{"namespace": requestNS},
 		}
 		children = append(children, entry)
 		pointIDs = append(pointIDs, pid)
 		dryChildren = append(dryChildren, map[string]any{
 			"point_id":        pid,
+			"namespace":       requestNS,
 			"capability":      cap,
 			"target":          target,
 			"params":          params,

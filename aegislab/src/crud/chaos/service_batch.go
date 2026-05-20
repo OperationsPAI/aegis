@@ -13,6 +13,7 @@ import (
 
 type CreateBatchChild struct {
 	PointID        string
+	Namespace      string
 	Params         map[string]any
 	IdempotencyKey string
 	CallerMetadata map[string]any
@@ -69,6 +70,9 @@ func (s *Manager) CreateInjectionBatch(ctx context.Context, in CreateBatchInput)
 	for _, c := range in.Children {
 		if c.IdempotencyKey == "" {
 			return nil, fmt.Errorf("chaos: child idempotency_key is required")
+		}
+		if c.Namespace == "" {
+			return nil, fmt.Errorf("chaos: child namespace is required")
 		}
 		row, applyErr := s.createBatchChild(ctx, batch.ID, c)
 		if row != nil {
@@ -164,7 +168,7 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 	sysCtx := SystemContext{Name: sys.Name, AppLabelKey: sys.AppLabelKey}
 
 	target := map[string]any(point.Target)
-	handle, err := s.Executor.DeriveHandle(capRow.Name, c.IdempotencyKey, target)
+	handle, err := s.Executor.DeriveHandle(capRow.Name, c.IdempotencyKey, c.Namespace, target)
 	if err != nil {
 		row := s.persistFailedChild(ctx, batchID, c, err)
 		return row, err

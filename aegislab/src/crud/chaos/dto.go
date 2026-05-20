@@ -22,8 +22,12 @@ type ChaosSystemResp struct {
 }
 
 // ChaosCreateInjectionReq is the request body for POST /v1beta/injections.
+// Namespace is the concrete kubernetes namespace the CR is applied to —
+// always pool-allocated by the caller (e.g. otel-demo0), never the
+// system-name carried in the catalog Point's target.namespace.
 type ChaosCreateInjectionReq struct {
 	PointID        string         `json:"point_id"                  example:"0123456789abcdef"`
+	Namespace      string         `json:"namespace"                 example:"otel-demo0"`
 	Params         map[string]any `json:"params"`
 	IdempotencyKey string         `json:"idempotency_key"           example:"client-1700000000"`
 	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`
@@ -101,6 +105,7 @@ type ChaosImportPointsResp struct {
 // ChaosCreateBatchChildReq is one child entry inside a batch submission.
 type ChaosCreateBatchChildReq struct {
 	PointID        string         `json:"point_id"                  example:"0123456789abcdef"`
+	Namespace      string         `json:"namespace"                 example:"otel-demo0"`
 	Params         map[string]any `json:"params"`
 	IdempotencyKey string         `json:"idempotency_key"           example:"client-1700000000-c0"`
 	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`

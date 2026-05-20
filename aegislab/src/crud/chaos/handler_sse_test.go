@@ -25,6 +25,7 @@ func TestStreamInjectionEvents_DrivesPendingRunningSucceeded(t *testing.T) {
 
 	inj, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
 		PointID:        pointID,
+		Namespace:      "ns0",
 		Params:         map[string]any{"duration_s": 30},
 		IdempotencyKey: "key-sse-1",
 	})

@@ -28,14 +28,13 @@ func (e *fakeExecutor) Name() string { return "fake" }
 func (e *fakeExecutor) SupportedCapabilities() []CapabilitySupport {
 	return []CapabilitySupport{{Capability: "pod_kill", Maturity: CapStable}}
 }
-func (e *fakeExecutor) DeriveHandle(capability, key string, target map[string]any) (string, error) {
+func (e *fakeExecutor) DeriveHandle(capability, key, requestNamespace string, target map[string]any) (string, error) {
 	e.deriveCount.Add(1)
 	name, err := DeriveChaosMeshCRName("pod-kill", key)
 	if err != nil {
 		return "", err
 	}
-	ns, _ := target["namespace"].(string)
-	return string(mustJSON(map[string]any{"name": name, "namespace": ns, "gvr": "fake"})), nil
+	return string(mustJSON(map[string]any{"name": name, "namespace": requestNamespace, "gvr": "fake"})), nil
 }
 func (e *fakeExecutor) Apply(ctx context.Context, sysCtx SystemContext, capability, handle string, target, params map[string]any) error {
 	e.applyCount.Add(1)
@@ -121,7 +120,7 @@ func TestCreateInjection_HandlePersistedBeforeApply(t *testing.T) {
 	exec.applyErr = errors.New("simulated crash mid-Apply")
 
 	inj, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
-		PointID: pointID, Params: map[string]any{"duration_s": 30},
+		PointID: pointID, Namespace: "ns0", Params: map[string]any{"duration_s": 30},
 		IdempotencyKey: "key-crash-1",
 	})
 	if err == nil {
@@ -156,14 +155,14 @@ func TestCreateInjection_IdempotentReplay(t *testing.T) {
 	_, pointID := seedSystemAndPoint(t, db)
 
 	first, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
-		PointID: pointID, IdempotencyKey: "key-replay",
+		PointID: pointID, Namespace: "ns0", IdempotencyKey: "key-replay",
 		Params: map[string]any{"duration_s": 30},
 	})
 	if err != nil {
 		t.Fatalf("first: %v", err)
 	}
 	second, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
-		PointID: pointID, IdempotencyKey: "key-replay",
+		PointID: pointID, Namespace: "ns0", IdempotencyKey: "key-replay",
 		Params: map[string]any{"duration_s": 30},
 	})
 	if err != nil {
@@ -190,7 +189,7 @@ func TestDeleteInjection_Idempotent(t *testing.T) {
 	mgr, exec, db := newTestManager(t)
 	_, pointID := seedSystemAndPoint(t, db)
 	inj, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
-		PointID: pointID, IdempotencyKey: "key-del",
+		PointID: pointID, Namespace: "ns0", IdempotencyKey: "key-del",
 		Params: map[string]any{"duration_s": 30},
 	})
 	if err != nil {
@@ -266,7 +265,7 @@ func TestCreateInjection_RespectsMaxConcurrent(t *testing.T) {
 	seedRow("01HQX0000000000000000000A0", "preexisting-1", StatusRunning)
 	// boundary − 1 → still accepted (count=1 < limit=2)
 	if _, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
-		PointID: pointID, IdempotencyKey: "below-limit",
+		PointID: pointID, Namespace: "ns0", IdempotencyKey: "below-limit",
 	}); err != nil {
 		t.Fatalf("below limit should be accepted, got %v", err)
 	}
@@ -281,7 +280,7 @@ func TestCreateInjection_RespectsMaxConcurrent(t *testing.T) {
 
 	// at boundary → rejected
 	_, err := mgr.CreateInjection(t.Context(), CreateInjectionInput{
-		PointID: pointID, IdempotencyKey: "at-limit",
+		PointID: pointID, Namespace: "ns0", IdempotencyKey: "at-limit",
 	})
 	if !errors.Is(err, ErrSystemAtCapacity) {
 		t.Fatalf("at limit: want ErrSystemAtCapacity, got %v", err)

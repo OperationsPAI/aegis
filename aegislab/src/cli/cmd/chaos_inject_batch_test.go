@@ -51,8 +51,8 @@ func TestChaosInjectBatchSubmit_ShapeMatches(t *testing.T) {
 	defer resetChaosFlags()
 
 	chaosBatchChildrenFile = writeChildrenFile(t, `{"children":[
-		{"point_id":"p1","idempotency_key":"c1","params":{"duration_s":5}},
-		{"point_id":"p2","idempotency_key":"c2"}
+		{"point_id":"p1","namespace":"ns0","idempotency_key":"c1","params":{"duration_s":5}},
+		{"point_id":"p2","namespace":"ns0","idempotency_key":"c2"}
 	]}`)
 	chaosBatchIdemKey = "b-1"
 	chaosBatchCallerMeta = `{"task_id":"t-1"}`
@@ -80,6 +80,9 @@ func TestChaosInjectBatchSubmit_ShapeMatches(t *testing.T) {
 	c0, _ := children[0].(map[string]any)
 	if c0["point_id"] != "p1" || c0["idempotency_key"] != "c1" {
 		t.Errorf("child[0] missing fields: %v", c0)
+	}
+	if c0["namespace"] != "ns0" {
+		t.Errorf("child[0].namespace = %v; want ns0", c0["namespace"])
 	}
 	if p, _ := c0["params"].(map[string]any); p["duration_s"] != float64(5) {
 		t.Errorf("child[0].params.duration_s = %v; want 5", p["duration_s"])

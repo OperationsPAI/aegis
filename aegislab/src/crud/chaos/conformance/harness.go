@@ -37,6 +37,7 @@ func (r Result) Passed() bool {
 type Case struct {
 	Capability     string
 	IdempotencyKey string
+	Namespace      string
 	SystemContext  chaos.SystemContext
 	Target         map[string]any
 	Params         map[string]any
@@ -65,7 +66,7 @@ func NewHarness(exec chaos.Executor) *Harness {
 func (h *Harness) Run(ctx context.Context, c Case) Result {
 	r := Result{Capability: c.Capability, Executor: h.Executor.Name()}
 
-	handle, err := h.Executor.DeriveHandle(c.Capability, c.IdempotencyKey, c.Target)
+	handle, err := h.Executor.DeriveHandle(c.Capability, c.IdempotencyKey, c.Namespace, c.Target)
 	if err != nil {
 		r.FailureReason = fmt.Sprintf("derive-handle: %v", err)
 		return r

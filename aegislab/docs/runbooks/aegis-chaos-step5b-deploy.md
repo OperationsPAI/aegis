@@ -116,6 +116,12 @@ helm template rcabench aegislab/helm \
 Expect: podchaos, networkchaos, stresschaos, timechaos, dnschaos, httpchaos, jvmchaos.
 
 ## Step 6 — Flip the catalog flag via aegisctl etcd
+
+With 5b-R5 in place (see "Fixed in 5b-R5" below), `chaos_service` is safe
+as a default for the catalog flag (modulo M1's `cr_absent ⇒ Succeeded`
+state laundering, which still applies when a CR vanishes between Apply and
+Status).
+
 ```bash
 just build-aegisctl  # or: cd aegislab/src && go build -o /tmp/aegisctl ./cli
 /tmp/aegisctl etcd get aegis.injection.catalog_source
@@ -153,7 +159,8 @@ routes register HEAD handlers. Use plain `curl -s` or `-X GET`.
 ### 7.2 Inject smoke (manual)
 ```bash
 TOKEN=$(kubectl -n exp get secret rcabench-chaos-auth -o jsonpath='{.data.token}' | base64 -d)
-# 1) Pick a point that matches a real cluster ns (see step 5b R4b gap below).
+# 1) Pick a point. Concrete ns travels in the request body, not in the point target
+#    (see "Fixed in 5b-R5" — target.namespace stores the logical system name).
 POINT_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:18086/v1beta/systems/otel-demo/points?service=frontend&capability=pod_failure" \
   | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["data"]["points"][0]["id"])')
@@ -179,48 +186,52 @@ curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
 # Pretty-prints each transition; exits 0 on succeeded/destroyed, 1 otherwise.
 ```
 
-## Known gaps (do NOT promote chaos_service as default until these are fixed)
+## Fixed in 5b-R5
 
-These surfaced during 2026-05-20 validation. R3 (catalog preflight ns-clarity)
-documented the logical/concrete-ns distinction in comments and renames but did
-not fully wire the concrete ns through the runtime path:
+The two ns-mapping bugs that surfaced during 2026-05-20 R4b validation were
+fixed in step 5b Round 5:
 
-1. **`aegisctl regression run --via-chaos` PodFailure target uses concrete ns.**
-   `inject_guided_via_chaos.go` builds `target: {namespace: cfg.Namespace, app: cfg.App}`
-   where `cfg.Namespace` is the pool-allocated ns (e.g. `otel-demo0`). The
-   chaos catalog is seeded with `target: {namespace: <logical>, ...}` (e.g.
-   `otel-demo`), so the `point_id` derived locally never matches the catalog's
-   row → 404 `chaos: point not found`.
-   **Fix needed**: aegisctl must use the *logical* system name in the target
-   for catalog lookup; the concrete ns is carried separately in the request
-   `namespace` field for CR apply.
+1. **aegisctl `--via-chaos` now uses the LOGICAL system name** for
+   `target.namespace` (e.g. `otel-demo`), and carries the concrete
+   pool-allocated ns (e.g. `otel-demo0`) in the request body's
+   `namespace` field. The locally-derived `point_id` therefore matches
+   the catalog row keyed on the logical system name.
+   - File: `aegislab/src/cli/cmd/inject_guided_via_chaos.go`
+     (`guidedToChaosTarget`).
+2. **Executor honours the request namespace for CR apply.** The chaos
+   executor's `DeriveHandle` takes the request namespace as a first-class
+   parameter and stamps it into the persisted handle; subsequent
+   `Apply` / `Destroy` / `Status` calls operate against `h.Namespace`,
+   so the chaos-mesh CR is created in (and selects pods from) the live
+   workload namespace — not the logical catalog ns. Selector labels
+   come exclusively from `target.app` (and friends), never from
+   `target.namespace`.
+   - Files: `aegislab/src/crud/chaos/executor.go` (interface),
+     `executor_chaosmesh.go` (impl), `service.go` / `service_batch.go`
+     (request plumbing).
 
-2. **Executor uses point.target.namespace for CR create, not request namespace.**
-   Even when (1) is bypassed and the request `namespace=otel-demo0` is set
-   explicitly, the executor applies the chaos-mesh CR in the catalog's
-   `target.namespace` (`otel-demo`) → CR creation fails with
-   `namespaces "otel-demo" not found`.
-   **Fix needed**: renderer/executor must honor the request's `namespace`
-   field for CR apply (and selector `Namespaces:` list), with target metadata
-   only contributing to selector labels.
+Wire-format additions:
+- `POST /v1beta/injections` body now requires a top-level `namespace`
+  field (concrete cluster ns where the CR is applied).
+- Each child of `POST /v1beta/injection-batches` requires the same
+  `namespace` field.
+- The Go SDK does not (yet) expose this as a typed field; callers using
+  the generated `apiclient.ChaosChaos*Req` types should populate
+  `AdditionalProperties["namespace"]`. aegisctl does this internally.
 
-3. **Workaround used during R4b validation**: import a manifest with the
-   concrete ns into the catalog (`POST /v1beta/systems/otel-demo/points/import`
-   with `target: {namespace: otel-demo0, app: frontend}`), then POST inject
-   with that derived point_id. Full pipeline proven this way.
+The seed catalog `point_id` recipe is unchanged; the 8384 catalogued
+points stay addressable after the fix.
 
-**Bottom line**: at the time of writing, `aegis.injection.catalog_source =
-chaos_service` is safe to flip ON (the backend pre-flight observes it and
-gracefully falls back), but NEW injection-write paths (`aegisctl --via-chaos`)
-won't round-trip until gaps 1+2 are fixed. Keep the flag on `in_process` as
-the default until the followup round.
+## Known gaps (still tracked)
 
-## Followups (not part of 5b R4b)
+The major items from R4b that are NOT addressed by R5 — these go to
+parallel workers / later rounds:
+
+## Followups (not part of 5b R5)
 
 | ID | Gap | Round target |
 |----|-----|--------------|
-| **5b-R5** | aegisctl `--via-chaos` logical-ns target + executor concrete-ns apply | next |
-| **MAJOR M1** | `executor_chaosmesh.go` `cr_absent ⇒ ExecStateSucceeded` state laundering | 5b-R5 or 5c-prep |
+| **MAJOR M1** | `executor_chaosmesh.go` `cr_absent ⇒ ExecStateSucceeded` state laundering | 5c-prep |
 | **MAJOR M5** | manifestgen `errors.Is` sentinel vs string-match | trivial; rolled into any manifestgen touch |
 | **MAJOR M6** | reconciler HA — no `replicas:1` guard in helm | document as known constraint, add chart guard |
 | **5c** | Tear down backend CRD watcher (irreversible) | post-soak |
