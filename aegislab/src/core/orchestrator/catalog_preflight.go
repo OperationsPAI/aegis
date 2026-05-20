@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -226,18 +225,19 @@ func newDBPointsLookup(db *gorm.DB) dbPointsLookupFunc {
 // chaos-service Go SDK. Each invocation builds a fresh per-call configuration
 // so test seams can override base URLs without process-wide state.
 //
-// When CHAOS_OUTBOUND_BEARER is set the lister attaches it as
-// `Authorization: Bearer …` on every request and logs an INFO line on
-// first invocation. Empty → no header (kind dev path preserved); chaos
-// service falls back to its existing TrustedHeaderAuth chain in that case.
+// The lister prefers the backend→chaos SA token minted at boot
+// (chaosSATokenRef). When the SA mint hasn't run it falls back to
+// CHAOS_OUTBOUND_BEARER with a one-shot deprecation ERROR. Empty on both
+// sides → no header (kind dev path); chaos service then falls back to its
+// existing TrustedHeaderAuth chain.
 func newSDKPointsLister(baseURL string, logEntry *logrus.Entry) pointsListerFunc {
-	bearer := strings.TrimSpace(os.Getenv(OutboundBearerEnv))
-	if bearer != "" && logEntry != nil {
-		outboundBearerAttachOnce.Do(func() {
-			logEntry.WithField("env", OutboundBearerEnv).Info("chaos outbound: attaching bearer to catalog preflight requests")
-		})
-	}
 	return func(ctx context.Context, system, service, capability string) (string, int, error) {
+		bearer := resolveChaosOutboundBearer()
+		if bearer != "" && logEntry != nil {
+			outboundBearerAttachOnce.Do(func() {
+				logEntry.Info("chaos outbound: attaching bearer to catalog preflight requests")
+			})
+		}
 		cfg := apiclient.NewConfiguration()
 		cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(baseURL, "/")}}
 		if bearer != "" {

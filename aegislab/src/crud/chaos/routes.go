@@ -5,8 +5,11 @@ import (
 
 	"aegis/platform/dto"
 	"aegis/platform/framework"
+	"aegis/platform/jwtkeys"
+	"aegis/platform/middleware"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // chaosMaxRequestBytes caps inbound /v1beta request bodies. caller_metadata
@@ -36,7 +39,7 @@ func limitRequestBody() gin.HandlerFunc {
 // the same segment, so we serialise actions as a trailing `/<verb>`
 // path component. See the §5 addendum in
 // aegislab/docs/aegis-chaos-design.md.
-func Routes(h *Handler) framework.RouteRegistrar {
+func Routes(h *Handler, db *gorm.DB, verifier *jwtkeys.Verifier) framework.RouteRegistrar {
 	return framework.RouteRegistrar{
 		Name:             "chaos.v1beta",
 		BasePath:         "/v1beta",
@@ -48,6 +51,12 @@ func Routes(h *Handler) framework.RouteRegistrar {
 			// CI / pre-commit hooks that don't carry tokens.
 			g.GET("/manifest-schema.json", h.ManifestSchema)
 
+			// SA token first (backend mints rcabench-sa for chaos-client at
+			// boot, see core/orchestrator/chaos_sa_token.go); on missing/
+			// non-SA bearer the chain falls through to the static-bearer
+			// path so kubectl smoke-tests with CHAOS_INBOUND_BEARER keep
+			// working through the cutover.
+			g.Use(middleware.RequireServiceAccount(db, verifier.Resolve, "chaos-client"))
 			auth := g.Group("", NewChaosAuthFromEnv())
 
 			auth.PUT("/systems/:sys", h.PutSystem)

@@ -135,6 +135,10 @@ spec:
               value: "/etc/aegis/sso/client-secret"
             {{- end }}
             {{- end }}
+            # DEPRECATED: CHAOS_OUTBOUND_BEARER replaced by the chaos-client SA
+            # token minted at boot from the seeded ServiceAccount row (see
+            # aegislab/src/core/orchestrator/chaos_sa_token.go). Kept as a
+            # one-release fallback safety net — remove next bump.
             {{- include "chaos.outboundBearerEnv" . | nindent 12 }}
           {{- with .Values.microservices.aegisApi.extraEnvFrom }}
           envFrom:
@@ -304,6 +308,10 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-auth
                   key: jwt_secret
+            # DEPRECATED: CHAOS_OUTBOUND_BEARER replaced by the chaos-client SA
+            # token minted at boot from the seeded ServiceAccount row (see
+            # aegislab/src/core/orchestrator/chaos_sa_token.go). Kept as a
+            # one-release fallback safety net — remove next bump.
             {{- include "chaos.outboundBearerEnv" . | nindent 12 }}
           {{- with .Values.microservices.runtimeWorkerService.extraEnvFrom }}
           envFrom:
