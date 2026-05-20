@@ -120,6 +120,27 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		if monitor == nil {
 			return handleExecutionError(span, logEntry, "monitor not initialized", fmt.Errorf("monitor not initialized"))
 		}
+
+		// §11 step 4.5 — observable cutover: when etcd flag
+		// aegis.injection.catalog_source=chaos_service, validate each Point
+		// against the chaos service catalog before in-process resolution.
+		// Failures fall back silently — the real source of truth remains
+		// in-process until step 5b moves the executor.
+		//
+		// Hoisted above CheckNamespaceToInject (M4): the preflight only reads
+		// the catalog over HTTP and does not touch the ns lock store, so
+		// running it while holding the lock pins the lock for up to
+		// catalogPreflightTimeout per config (≈ 5s × N) and serialises
+		// concurrent injects against the same ns for no reason.
+		//
+		// payload.system is the *logical* system name (e.g. "otel-demo"),
+		// matching chaos_points.system_name in the seed manifests. It is
+		// deliberately distinct from payload.namespace (e.g. "otel-demo0"),
+		// which is the concrete pool-allocated ns the CR is applied into.
+		// The catalog is keyed by the logical name; do not substitute the
+		// concrete ns here or every preflight will fall through to WARN.
+		runCatalogPreflight(childCtx, payload.system, payload.guidedConfigs, logEntry, nil)
+
 		// Default: release the lock on exit. Ownership transfers to the
 		// CRD-success/CRD-failed path only after both BatchCreate and
 		// CreateInjection succeed; until then every early-return must free
@@ -146,13 +167,6 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		injectionConfs := make([]chaos.InjectionConf, 0, batchLen)
 		displayMaps := make([]map[string]any, 0, batchLen)
 		groundtruths := make([]model.Groundtruth, 0, batchLen)
-
-		// §11 step 4.5 — observable cutover: when etcd flag
-		// aegis.injection.catalog_source=chaos_service, validate each Point
-		// against the chaos service catalog before in-process resolution.
-		// Failures fall back silently — the real source of truth remains
-		// in-process until step 5b moves the executor.
-		runCatalogPreflight(childCtx, payload.system, payload.guidedConfigs, logEntry, nil)
 
 		for i, cfg := range payload.guidedConfigs {
 			conf, _, err := guidedcli.BuildInjection(childCtx, cfg)

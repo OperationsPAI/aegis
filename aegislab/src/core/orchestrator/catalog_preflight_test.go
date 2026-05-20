@@ -208,6 +208,70 @@ func TestCatalogPreflight_SDKLister_OutboundBearer(t *testing.T) {
 	})
 }
 
+// otel-demo / otel-demo0 disambiguation: when the catalog is keyed by the
+// logical system name ("otel-demo") and the runtime workload runs in a
+// pool-allocated ns ("otel-demo0"), the preflight must query the catalog by
+// the *logical* name and find the seeded Point — no WARN-fallback.
+//
+// Regression for the structural mismatch fixed in step 5b R3: passing
+// payload.namespace ("otel-demo0") instead of payload.system ("otel-demo")
+// to the lister would have caused every preflight to log
+// "point not found in chaos service catalog" even on a correctly populated
+// catalog.
+func TestCatalogPreflight_LogicalSystem_NotConcreteNamespace(t *testing.T) {
+	resetCatalogFlags(t)
+
+	var mu sync.Mutex
+	var gotSystemPathParam string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		// Path shape: /v1beta/systems/{sys}/points
+		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(parts) >= 3 && parts[0] == "v1beta" && parts[1] == "systems" {
+			gotSystemPathParam = parts[2]
+		}
+		mu.Unlock()
+		body := map[string]any{
+			"data": map[string]any{
+				"points": []map[string]any{{
+					"id":         "otel-demo:cart::seed:pod_kill::abc12345",
+					"capability": r.URL.Query().Get("capability"),
+				}},
+				"total": 1, "limit": 50, "offset": 0,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(body)
+	}))
+	defer srv.Close()
+
+	viper.Set(catalogSourceFlagKey, catalogSourceChaos)
+	viper.Set("chaos.service_url", srv.URL)
+
+	configs := []guidedcli.GuidedConfig{{
+		System:    "otel-demo",
+		App:       "cart",
+		ChaosType: "PodKill",
+	}}
+
+	var buf bytes.Buffer
+	// Pass the logical system "otel-demo" — NOT the runtime ns "otel-demo0".
+	runCatalogPreflight(context.Background(), "otel-demo", configs, capturingLogger(&buf), nil)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if gotSystemPathParam != "otel-demo" {
+		t.Fatalf("expected chaos service queried with logical name 'otel-demo', got %q", gotSystemPathParam)
+	}
+	out := buf.String()
+	if strings.Contains(out, "falling back to in-process") || strings.Contains(out, "point not found") {
+		t.Fatalf("expected catalog hit (no WARN-fallback), got logs: %s", out)
+	}
+	if !strings.Contains(out, "catalog source: chaos_service") {
+		t.Fatalf("expected INFO confirming catalog hit, got logs: %s", out)
+	}
+}
+
 // httptest-backed end-to-end: SDK-driven lister against a stub
 // /v1beta/systems/{sys}/points endpoint mimicking the chaos service.
 func TestCatalogPreflight_SDKLister_HTTPTest(t *testing.T) {

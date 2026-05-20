@@ -3,6 +3,9 @@ package consumer
 import (
 	"context"
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"testing"
 
 	"aegis/platform/consts"
@@ -103,6 +106,62 @@ func TestRecaptureGroundtruth_FlagsServiceMismatchAndStillReturnsFresh(t *testin
 	require.True(t, mismatch, "service set differs; mismatch flag must be true")
 	require.Equal(t, []string{"ts-travel-service"}, fresh.Service)
 	require.Equal(t, []string{"b"}, fresh.Pod)
+}
+
+// TestCatalogPreflight_HoistedAboveNamespaceLock pins the M4 fix (step 5b R3):
+// runCatalogPreflight must be invoked BEFORE monitor.CheckNamespaceToInject in
+// executeFaultInjection. Holding the ns lock across the preflight pins it for
+// up to catalogPreflightTimeout × N (≈ 5s × 10 = 50s for a 10-spec batch) and
+// serialises concurrent injects on the same ns for an HTTP call that touches
+// no lock-protected state.
+//
+// We assert on the AST source-order rather than spinning up a real Redis +
+// monitor + httptest stack: the only thing that can regress is the lexical
+// order of the two calls inside executeFaultInjection, and an AST check is
+// both deterministic and survives signature drift better than a behavioural
+// test with extensive mocking.
+func TestCatalogPreflight_HoistedAboveNamespaceLock(t *testing.T) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "fault_injection.go", nil, parser.SkipObjectResolution)
+	require.NoError(t, err, "parse fault_injection.go")
+
+	var fn *ast.FuncDecl
+	for _, decl := range file.Decls {
+		fd, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		if fd.Name.Name == "executeFaultInjection" {
+			fn = fd
+			break
+		}
+	}
+	require.NotNil(t, fn, "executeFaultInjection function not found")
+
+	var preflightPos, checkLockPos token.Pos
+	ast.Inspect(fn, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch f := call.Fun.(type) {
+		case *ast.Ident:
+			if f.Name == "runCatalogPreflight" && !preflightPos.IsValid() {
+				preflightPos = call.Pos()
+			}
+		case *ast.SelectorExpr:
+			if f.Sel.Name == "CheckNamespaceToInject" && !checkLockPos.IsValid() {
+				checkLockPos = call.Pos()
+			}
+		}
+		return true
+	})
+
+	require.True(t, preflightPos.IsValid(), "runCatalogPreflight call site not found in executeFaultInjection")
+	require.True(t, checkLockPos.IsValid(), "CheckNamespaceToInject call site not found in executeFaultInjection")
+	require.Less(t, int(preflightPos), int(checkLockPos),
+		"runCatalogPreflight must precede CheckNamespaceToInject (M4 hoist); "+
+			"otherwise the catalog read pins the ns lock for ~5s per spec in the batch")
 }
 
 func TestRecaptureGroundtruth_PropagatesGetterError(t *testing.T) {
