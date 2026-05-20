@@ -47,20 +47,62 @@ func sampleConfigs() []guidedcli.GuidedConfig {
 	}}
 }
 
-// flag=in_process → lister never called.
+// flag=in_process → chaos service lister never called; resolution goes
+// through the DB lookup seam.
 func TestCatalogPreflight_FlagInProcess_SkipsLister(t *testing.T) {
 	resetCatalogFlags(t)
 	viper.Set(catalogSourceFlagKey, catalogSourceInProc)
 	viper.Set("chaos.service_url", "http://example.invalid")
 
-	var calls int32
+	var listerCalls int32
 	lister := func(ctx context.Context, system, service, capability string) (string, int, error) {
-		atomic.AddInt32(&calls, 1)
+		atomic.AddInt32(&listerCalls, 1)
 		return "", 0, nil
 	}
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), testLogger(), lister)
-	if atomic.LoadInt32(&calls) != 0 {
-		t.Fatalf("lister invoked despite in_process flag (calls=%d)", calls)
+	var lookupCalls int32
+	var gotSys, gotSvc, gotCap string
+	lookup := func(ctx context.Context, system, service, capability string) (string, error) {
+		atomic.AddInt32(&lookupCalls, 1)
+		gotSys, gotSvc, gotCap = system, service, capability
+		return "ts:ts-order-service::seed:pod_kill::abc", nil
+	}
+	var buf bytes.Buffer
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, capturingLogger(&buf), lister, lookup)
+	if atomic.LoadInt32(&listerCalls) != 0 {
+		t.Fatalf("chaos-service lister invoked despite in_process flag (calls=%d)", listerCalls)
+	}
+	if atomic.LoadInt32(&lookupCalls) != 1 {
+		t.Fatalf("expected DB lookup invoked once, got %d", lookupCalls)
+	}
+	if gotSys != "ts" || gotSvc != "ts-order-service" || gotCap != "pod_kill" {
+		t.Fatalf("unexpected lookup args system=%q service=%q capability=%q", gotSys, gotSvc, gotCap)
+	}
+	if !strings.Contains(buf.String(), "catalog source: in_process") {
+		t.Fatalf("expected INFO confirming in_process hit, got: %s", buf.String())
+	}
+}
+
+// flag=in_process + a recording HTTP server: zero requests must reach the
+// network — soak guarantee that chaos-service outage does not block
+// submission.
+func TestCatalogPreflight_FlagInProcess_NoHTTPCalls(t *testing.T) {
+	resetCatalogFlags(t)
+	viper.Set(catalogSourceFlagKey, catalogSourceInProc)
+
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	viper.Set("chaos.service_url", srv.URL)
+
+	lookup := func(ctx context.Context, system, service, capability string) (string, error) {
+		return "ts:ts-order-service::seed:pod_kill::abc", nil
+	}
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, testLogger(), nil, lookup)
+	if got := atomic.LoadInt32(&hits); got != 0 {
+		t.Fatalf("expected no HTTP calls under in_process, got %d", got)
 	}
 }
 
@@ -74,7 +116,7 @@ func TestCatalogPreflight_FlagChaosService_NoURL_SilentOverride(t *testing.T) {
 		atomic.AddInt32(&calls, 1)
 		return "", 0, nil
 	}
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), testLogger(), lister)
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, testLogger(), lister, nil)
 	if atomic.LoadInt32(&calls) != 0 {
 		t.Fatalf("lister invoked with empty chaos.service_url (calls=%d)", calls)
 	}
@@ -92,7 +134,7 @@ func TestCatalogPreflight_FlagChaosService_PointFound(t *testing.T) {
 		gotSystem, gotService, gotCapability = system, service, capability
 		return "ts:ts-order-service::seed:pod_kill::abc", http.StatusOK, nil
 	}
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), testLogger(), lister)
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, testLogger(), lister, nil)
 	if gotSystem != "ts" || gotService != "ts-order-service" || gotCapability != "pod_kill" {
 		t.Fatalf("unexpected lister args system=%q service=%q capability=%q",
 			gotSystem, gotService, gotCapability)
@@ -110,7 +152,7 @@ func TestCatalogPreflight_FlagChaosService_FiveXX_LogsFallback(t *testing.T) {
 		return "", http.StatusServiceUnavailable, errors.New("chaos service returned 503")
 	}
 	var buf bytes.Buffer
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), capturingLogger(&buf), lister)
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, capturingLogger(&buf), lister, nil)
 	if !strings.Contains(buf.String(), "falling back to in-process") {
 		t.Fatalf("expected fallback WARN, got: %s", buf.String())
 	}
@@ -127,7 +169,7 @@ func TestCatalogPreflight_FlagChaosService_PointNotFound_LogsWarn(t *testing.T) 
 		return "", http.StatusNotFound, nil
 	}
 	var buf bytes.Buffer
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), capturingLogger(&buf), lister)
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, capturingLogger(&buf), lister, nil)
 	if !strings.Contains(buf.String(), "point not found in chaos service catalog") {
 		t.Fatalf("expected point-not-found WARN, got: %s", buf.String())
 	}
@@ -145,7 +187,7 @@ func TestCatalogPreflight_AppliesTimeoutToCallContext(t *testing.T) {
 		deadline, hasDeadline = ctx.Deadline()
 		return "", 0, errors.New("timeout sentinel")
 	}
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), testLogger(), lister)
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, testLogger(), lister, nil)
 	if !hasDeadline {
 		t.Fatal("expected per-call context to carry a deadline")
 	}
@@ -256,7 +298,7 @@ func TestCatalogPreflight_LogicalSystem_NotConcreteNamespace(t *testing.T) {
 
 	var buf bytes.Buffer
 	// Pass the logical system "otel-demo" — NOT the runtime ns "otel-demo0".
-	runCatalogPreflight(context.Background(), "otel-demo", configs, capturingLogger(&buf), nil)
+	runCatalogPreflight(context.Background(), "otel-demo", configs, nil, capturingLogger(&buf), nil, nil)
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -300,7 +342,7 @@ func TestCatalogPreflight_SDKLister_HTTPTest(t *testing.T) {
 	viper.Set(catalogSourceFlagKey, catalogSourceChaos)
 	viper.Set("chaos.service_url", srv.URL)
 
-	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), testLogger(), nil)
+	runCatalogPreflight(context.Background(), "ts", sampleConfigs(), nil, testLogger(), nil, nil)
 
 	mu.Lock()
 	defer mu.Unlock()
