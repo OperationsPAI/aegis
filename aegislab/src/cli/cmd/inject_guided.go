@@ -619,6 +619,7 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 			PedestalTag:   guidedApplyPedestalTag,
 			BenchmarkName: guidedApplyBenchmarkName,
 			BenchmarkTag:  guidedApplyBenchmarkTag,
+			ProjectName:   flagProject,
 		}
 		if opts.BenchmarkName == "" || opts.BenchmarkTag == "" {
 			return usageErrorf("--via-chaos still requires --benchmark-name and --benchmark-tag (these populate caller_metadata.benchmark for the hook receiver)")
@@ -626,6 +627,11 @@ func submitGuidedApply(cfgs ...guidedcli.GuidedConfig) error {
 		if flagChaosServer == "" {
 			return usageErrorf("--via-chaos requires --chaos-server (or AEGIS_CHAOS_SERVER)")
 		}
+		pid, err := resolveProjectIDForApply(flagProject)
+		if err != nil {
+			return fmt.Errorf("--via-chaos: resolve project id: %w", err)
+		}
+		opts.ProjectID = pid
 		return submitGuidedViaChaos(cfgs, opts)
 	}
 
@@ -700,6 +706,13 @@ type guidedApplyOptions struct {
 	PedestalTag   string
 	BenchmarkName string
 	BenchmarkTag  string
+	// ProjectID + ProjectName: required by the --via-chaos webhook hop so
+	// the backend hook receiver can satisfy the traces.project_id FK when
+	// it submits the downstream BuildDatapack. Legacy POST /v2/injections
+	// resolves these server-side from the auth context and ignores these
+	// fields; --via-chaos has no such context so we resolve client-side.
+	ProjectID   int
+	ProjectName string
 }
 
 func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions) (*client.APIResponse[injectSubmitResponse], error) {

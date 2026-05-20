@@ -227,8 +227,9 @@ func submitGuidedViaChaos(cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions
 		// field — version travels in ImageRef as "name:tag"); Datapack is
 		// stubbed with just `name` so the receiver's name-key resolve works.
 		return map[string]any{
-			"task_id":  taskID,
-			"trace_id": traceID,
+			"task_id":    taskID,
+			"trace_id":   traceID,
+			"project_id": opts.ProjectID,
 			"benchmark": map[string]any{
 				"name":      opts.BenchmarkName,
 				"image_ref": opts.BenchmarkName + ":" + opts.BenchmarkTag,
