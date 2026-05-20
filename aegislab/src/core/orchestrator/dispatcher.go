@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -72,17 +73,26 @@ var defaultChaosServiceClient = func() (chaosServiceClient, error) {
 	if url == "" {
 		return nil, errors.New("chaos.service_url is empty; cannot dispatch via chaos service")
 	}
-	return &sdkChaosServiceClient{baseURL: url}, nil
+	bearer := strings.TrimSpace(os.Getenv("CHAOS_OUTBOUND_BEARER"))
+	return &sdkChaosServiceClient{baseURL: url, bearer: bearer}, nil
 }
 
 type sdkChaosServiceClient struct {
 	baseURL string
+	bearer  string
+}
+
+func (c *sdkChaosServiceClient) newAPIClient() *apiclient.APIClient {
+	cfg := apiclient.NewConfiguration()
+	cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(c.baseURL, "/")}}
+	if c.bearer != "" {
+		cfg.AddDefaultHeader("Authorization", "Bearer "+c.bearer)
+	}
+	return apiclient.NewAPIClient(cfg)
 }
 
 func (c *sdkChaosServiceClient) CreateInjection(ctx context.Context, body apiclient.ChaosChaosCreateInjectionReq) (string, error) {
-	cfg := apiclient.NewConfiguration()
-	cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(c.baseURL, "/")}}
-	cli := apiclient.NewAPIClient(cfg)
+	cli := c.newAPIClient()
 	resp, _, err := cli.ChaosAPI.ChaosCreateInjection(ctx).ChaosChaosCreateInjectionReq(body).Execute()
 	if err != nil {
 		return "", err
@@ -94,9 +104,7 @@ func (c *sdkChaosServiceClient) CreateInjection(ctx context.Context, body apicli
 }
 
 func (c *sdkChaosServiceClient) CreateInjectionBatch(ctx context.Context, body apiclient.ChaosChaosCreateInjectionBatchReq) (string, error) {
-	cfg := apiclient.NewConfiguration()
-	cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(c.baseURL, "/")}}
-	cli := apiclient.NewAPIClient(cfg)
+	cli := c.newAPIClient()
 	resp, _, err := cli.ChaosAPI.ChaosCreateInjectionBatch(ctx).ChaosChaosCreateInjectionBatchReq(body).Execute()
 	if err != nil {
 		return "", err
