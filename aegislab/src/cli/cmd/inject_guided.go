@@ -713,6 +713,11 @@ type guidedApplyOptions struct {
 	// fields; --via-chaos has no such context so we resolve client-side.
 	ProjectID   int
 	ProjectName string
+
+	// PreDuration is the seconds of normal-window data BuildDatapack should
+	// collect ahead of the abnormal window. Only consumed by --via-chaos; the
+	// legacy POST /v2/injections derives it server-side from the spec.
+	PreDuration int
 }
 
 func submitGuidedApplyWithOptions(projectName string, cfgs []guidedcli.GuidedConfig, opts guidedApplyOptions) (*client.APIResponse[injectSubmitResponse], error) {

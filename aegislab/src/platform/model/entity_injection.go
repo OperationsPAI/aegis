@@ -26,6 +26,7 @@ type FaultInjection struct {
 	BenchmarkID       *int                  `gorm:"index:idx_fault_bench_ped"` // Associated benchmark ID, nullable for manual uploads
 	PedestalID        *int                  `gorm:"index:idx_fault_bench_ped"` // Associated pedestal ID, nullable for manual uploads
 	TaskID            *string               `gorm:"index;size:64"`             // Associated task ID, add composite index
+	ChaosInjectionID  string                `gorm:"size:64;index"`             // aegis-chaos injection ULID (empty for legacy CRD path); shadow-row natural key
 
 	State     consts.DatapackState `gorm:"not null;default:0;index:idx_fault_type_state"` // Datapack state
 	Status    consts.StatusType    `gorm:"not null;default:1;index"`                      // Status: -1:deleted 0:disabled 1:enabled

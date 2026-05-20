@@ -9,6 +9,7 @@ import (
 	"aegis/core/orchestrator/common"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
+	"aegis/platform/model"
 	redis "aegis/platform/redis"
 	"aegis/platform/utils"
 
@@ -169,6 +170,23 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 		dp.EndTime = finishedAt
 	}
 
+	// chaos webhook path (id is the chaos-service ULID) needs a shadow
+	// fault_injections row so audit + BuildDatapack's FI-by-ID lookup work.
+	// Legacy CRD path leaves id empty and keeps its own owning row.
+	if id != "" {
+		shadow, err := h.getOrCreateShadowFaultInjection(parentCtx, id, meta, startedAt, finishedAt)
+		if err != nil {
+			return false, err
+		}
+		if shadow != nil {
+			dp.ID = shadow.ID
+			dp.Name = shadow.Name
+			if dp.PreDuration == 0 {
+				dp.PreDuration = shadow.PreDuration
+			}
+		}
+	}
+
 	payload := map[string]any{
 		consts.BuildBenchmark:        *meta.Benchmark,
 		consts.BuildDatapack:         dp,
@@ -210,6 +228,72 @@ func (h *Handler) claimGate(ctx context.Context, id, kind, terminal string) (boo
 		return false, res.Error
 	}
 	return res.RowsAffected == 1, nil
+}
+
+// getOrCreateShadowFaultInjection materialises the downstream-shadow
+// fault_injections row keyed by chaos_injection_id. Returns nil on empty
+// chaosInjectionID so the legacy CRD path is unaffected if this is ever
+// reached with an unkeyed payload.
+func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInjectionID string, meta *CallerMetadata, startedAt, finishedAt time.Time) (*model.FaultInjection, error) {
+	if chaosInjectionID == "" {
+		return nil, nil
+	}
+
+	var existing model.FaultInjection
+	res := h.db.WithContext(ctx).Where("chaos_injection_id = ?", chaosInjectionID).Take(&existing)
+	if res.Error == nil {
+		return &existing, nil
+	}
+	if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
+		return nil, res.Error
+	}
+
+	name := ""
+	preDuration := 0
+	if meta.Datapack != nil {
+		name = meta.Datapack.Name
+		preDuration = meta.Datapack.PreDuration
+	}
+	if name == "" {
+		name = meta.TaskID
+	}
+	if preDuration == 0 {
+		preDuration = meta.PreDuration
+	}
+
+	row := model.FaultInjection{
+		Name:              name,
+		ChaosInjectionID:  chaosInjectionID,
+		Source:            consts.DatapackSourceInjection,
+		GroundtruthSource: "auto",
+		EngineConfig:      "{}",
+		PreDuration:       preDuration,
+		TaskID:            utils.StringPtr(meta.TaskID),
+		State:             consts.DatapackInjectSuccess,
+		Status:            consts.CommonEnabled,
+	}
+	if meta.Benchmark != nil && meta.Benchmark.ID != 0 {
+		bid := meta.Benchmark.ID
+		row.BenchmarkID = &bid
+	}
+	if !startedAt.IsZero() {
+		t := startedAt
+		row.StartTime = &t
+	}
+	if !finishedAt.IsZero() {
+		t := finishedAt
+		row.EndTime = &t
+	}
+
+	if err := h.db.WithContext(ctx).Create(&row).Error; err != nil {
+		// Lost race with a concurrent winner: re-fetch and return.
+		var racer model.FaultInjection
+		if rerr := h.db.WithContext(ctx).Where("chaos_injection_id = ?", chaosInjectionID).Take(&racer).Error; rerr == nil {
+			return &racer, nil
+		}
+		return nil, err
+	}
+	return &row, nil
 }
 
 // recordGate is the non-submitting variant: tag a terminal as seen so a
