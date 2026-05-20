@@ -265,6 +265,10 @@ func buildCallerMetadata(d dispatcherDeps, namespace string) map[string]any {
 		"datapack": map[string]any{
 			"name":         d.taskID,
 			"pre_duration": d.preDuration,
+			// pedestal short-code (e.g. "otel-demo") drives BENCHMARK_SYSTEM
+			// in algo_execution.go; empty falls back to "ts" and breaks
+			// detection on every non-train-ticket datapack.
+			"pedestal": d.pedestal,
 		},
 		"pedestal":     d.pedestal,
 		"pre_duration": d.preDuration,
