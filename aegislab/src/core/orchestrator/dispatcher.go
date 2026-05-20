@@ -12,6 +12,7 @@ import (
 	"aegis/cli/apiclient"
 	chaoscrud "aegis/crud/chaos"
 	"aegis/platform/config"
+	"aegis/platform/consts"
 
 	"github.com/OperationsPAI/chaos-experiment/handler"
 	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
@@ -21,15 +22,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Per-system executor flag lives at
-// aegis.injection.system.<system>.executor_authoritative; empty/unknown
-// values fall through to chaos-mesh-direct.
+// Per-system executor flag lives at consts.ExecutorFlagKey(system); empty /
+// unknown values fall through to chaos-mesh-direct.
 const (
-	executorFlagKeyPrefix = "aegis.injection.system."
-	executorFlagKeySuffix = ".executor_authoritative"
+	executorFlagKeyPrefix = consts.ExecutorFlagKeyPrefix
+	executorFlagKeySuffix = consts.ExecutorFlagKeySuffix
 
-	executorPathChaosMeshDirect = "chaos-mesh-direct"
-	executorPathChaosService    = "chaos-service"
+	executorPathChaosMeshDirect = consts.ExecutorPathChaosMeshDirect
+	executorPathChaosService    = consts.ExecutorPathChaosService
 
 	dispatcherChaosTimeoutConfigKey = "chaos.dispatch_timeout_seconds"
 	dispatcherChaosTimeoutDefault   = 60 * time.Second
