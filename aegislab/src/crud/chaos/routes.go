@@ -61,6 +61,7 @@ func Routes(h *Handler) framework.RouteRegistrar {
 
 			auth.POST("/injections", h.CreateInjection)
 			auth.GET("/injections/:id", h.GetInjection)
+			auth.GET("/injections/:id/events", h.StreamInjectionEvents)
 			auth.DELETE("/injections/:id", h.DeleteInjection)
 
 			auth.POST("/injection-batches", h.CreateInjectionBatch)
