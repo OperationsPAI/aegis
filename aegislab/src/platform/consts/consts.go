@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	chaos "github.com/OperationsPAI/chaos-experiment/handler"
+	"aegis/platform/chaos"
 )
 
 const InitialFilename = "data.yaml"
