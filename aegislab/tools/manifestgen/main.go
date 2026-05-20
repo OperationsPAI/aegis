@@ -9,17 +9,25 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 )
+
+// ErrVarNotFound is returned by parseMapLiteral when the target var name
+// is absent from the parsed Go file. We match this with errors.Is rather
+// than the previous strings.Contains(err, "no such file") hack which
+// would swallow it whenever a var name happened to share that substring.
+var ErrVarNotFound = errors.New("manifestgen: ast variable not found")
 
 const (
 	defaultChartVersion = "seed-genesis"
@@ -77,6 +85,11 @@ type systemData struct {
 	methods map[string][]classMethod
 	// union of every service name observed anywhere in this system
 	services map[string]struct{}
+	// presentFamilies records which capability-family source files existed
+	// at load time. Empty data after a present file means the source was
+	// truncated or the AST var name drifted — the run should fail loudly
+	// rather than emit silent zero-point manifests.
+	presentFamilies map[string]bool
 }
 
 type point struct {
@@ -109,6 +122,11 @@ type stats struct {
 	servicesBySystem map[string]int
 	pointsBySystem   map[string]int
 	skippedSystems   []string
+	// httpPointsBySystem counts http_request_* across the system; sourced
+	// from serviceendpoints/grpcoperations files.
+	httpPointsBySystem map[string]int
+	// jvmPointsBySystem counts jvm_method_latency; sourced from javaclassmethods.
+	jvmPointsBySystem map[string]int
 }
 
 func main() {
@@ -124,7 +142,12 @@ func main() {
 }
 
 func run(chaosRoot, outRoot, chartVersion string) error {
-	st := stats{servicesBySystem: map[string]int{}, pointsBySystem: map[string]int{}}
+	st := stats{
+		servicesBySystem:   map[string]int{},
+		pointsBySystem:     map[string]int{},
+		httpPointsBySystem: map[string]int{},
+		jvmPointsBySystem:  map[string]int{},
+	}
 
 	if err := os.MkdirAll(outRoot, 0o755); err != nil {
 		return err
@@ -170,8 +193,30 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 			}
 			st.servicesBySystem[sysKey]++
 			st.pointsBySystem[sysKey] += len(pts)
+			for _, p := range pts {
+				switch p.Capability {
+				case "http_request_delay", "http_request_abort":
+					st.httpPointsBySystem[sysKey]++
+				case "jvm_method_latency":
+					st.jvmPointsBySystem[sysKey]++
+				}
+			}
 		}
 		st.systems++
+
+		// Sanity floor: a present family file must yield non-zero points.
+		// Mismatch means the source was truncated, the AST var name drifted,
+		// or the loader silently swallowed a parse error.
+		var mismatches []string
+		if (data.presentFamilies["serviceendpoints"] || data.presentFamilies["grpcoperations"]) && st.httpPointsBySystem[sysKey] == 0 {
+			mismatches = append(mismatches, "http (serviceendpoints/grpcoperations file present, 0 http_request_* points)")
+		}
+		if data.presentFamilies["javaclassmethods"] && st.jvmPointsBySystem[sysKey] == 0 {
+			mismatches = append(mismatches, "jvm (javaclassmethods file present, 0 jvm_method_latency points)")
+		}
+		if len(mismatches) > 0 {
+			return fmt.Errorf("system %s: capability-family floor failed: %s", sysKey, strings.Join(mismatches, "; "))
+		}
 	}
 
 	printSummary(os.Stdout, st)
@@ -319,28 +364,39 @@ func loadSystem(chaosRoot, sysKey string) (*systemData, error) {
 		return nil, fmt.Errorf("no namespace mapping for %s", sysKey)
 	}
 	d := &systemData{
-		namespace: ns,
-		endpoints: map[string][]httpEndpoint{},
-		methods:   map[string][]classMethod{},
-		services:  map[string]struct{}{},
+		namespace:       ns,
+		endpoints:       map[string][]httpEndpoint{},
+		methods:         map[string][]classMethod{},
+		services:        map[string]struct{}{},
+		presentFamilies: map[string]bool{},
 	}
 
-	if err := loadHTTPEndpoints(filepath.Join(root, "serviceendpoints", "serviceendpoints.go"), d); err != nil {
+	sePath := filepath.Join(root, "serviceendpoints", "serviceendpoints.go")
+	if _, err := os.Stat(sePath); err == nil {
+		d.presentFamilies["serviceendpoints"] = true
+	}
+	if err := loadHTTPEndpoints(sePath, d); err != nil {
 		return nil, fmt.Errorf("serviceendpoints: %w", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "grpcoperations", "grpcoperations.go")); err == nil {
+		d.presentFamilies["grpcoperations"] = true
+	}
+	if _, err := os.Stat(filepath.Join(root, "javaclassmethods", "javaclassmethods.go")); err == nil {
+		d.presentFamilies["javaclassmethods"] = true
 	}
 	if err := loadHTTPEndpoints(filepath.Join(root, "grpcoperations", "grpcoperations.go"), d); err != nil {
 		// gRPC operations file is optional; only complain if present and unparseable.
-		if !os.IsNotExist(err) && !strings.Contains(err.Error(), "no such file") {
+		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, ErrVarNotFound) {
 			return nil, fmt.Errorf("grpcoperations: %w", err)
 		}
 	}
 	if err := loadDatabaseOperations(filepath.Join(root, "databaseoperations", "databaseoperations.go"), d); err != nil {
-		if !os.IsNotExist(err) && !strings.Contains(err.Error(), "no such file") {
+		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, ErrVarNotFound) {
 			return nil, fmt.Errorf("databaseoperations: %w", err)
 		}
 	}
 	if err := loadJavaClassMethods(filepath.Join(root, "javaclassmethods", "javaclassmethods.go"), d); err != nil {
-		if !os.IsNotExist(err) && !strings.Contains(err.Error(), "no such file") {
+		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, ErrVarNotFound) {
 			return nil, fmt.Errorf("javaclassmethods: %w", err)
 		}
 	}
@@ -428,7 +484,7 @@ func parseMapLiteral(path, varName string) (*ast.CompositeLit, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("var %s not found in %s", varName, path)
+	return nil, fmt.Errorf("%s in %s: %w", varName, path, ErrVarNotFound)
 }
 
 func loadHTTPEndpoints(path string, d *systemData) error {
