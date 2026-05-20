@@ -84,9 +84,11 @@ func GuidedToChaosTarget(capability string, cfg guidedcli.GuidedConfig) (map[str
 
 // GuidedToChaosParams extracts the capability-specific param map.
 func GuidedToChaosParams(capability string, cfg guidedcli.GuidedConfig) map[string]any {
+	// GuidedConfig.Duration is in minutes (pinned to FixedAbnormalWindowMinutes
+	// upstream in api_types.go). chaos service expects seconds.
 	durationS := consts.FixedAbnormalWindowSeconds
 	if cfg.Duration != nil && *cfg.Duration > 0 {
-		durationS = *cfg.Duration
+		durationS = *cfg.Duration * 60
 	}
 	out := map[string]any{"duration_s": durationS}
 
