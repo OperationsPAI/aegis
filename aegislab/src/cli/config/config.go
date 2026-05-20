@@ -140,6 +140,7 @@ func SaveConfig(cfg *Config) error {
 		return fmt.Errorf("cannot create temp config: %w", err)
 	}
 	tmpPath := tmp.Name()
+	// Config holds bearer tokens; force 0600 regardless of any pre-existing mode.
 	if err := os.Chmod(tmpPath, 0o600); err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmpPath)

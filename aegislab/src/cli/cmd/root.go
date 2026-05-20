@@ -15,9 +15,10 @@ import (
 )
 
 // tokenRefreshThreshold is the lead time before expiry at which the CLI
-// proactively refreshes the cached JWT. Tuned for the server's 24h tokens
-// and the multi-hour inject-loop runs that originally surfaced the gap.
-const tokenRefreshThreshold = 5 * time.Minute
+// proactively refreshes the cached JWT. 15m covers ~10m clock skew plus 5m
+// pre-expiry headroom — a tighter window risks refreshing with an
+// already-expired token when local clock is behind the server.
+const tokenRefreshThreshold = 15 * time.Minute
 
 var (
 	// Global flag values.

@@ -103,6 +103,9 @@ func apiClientCLIError(err error) *clierr.CLIError {
 		Message:  msg,
 		ExitCode: exitCode,
 	}
+	if typ == "auth" && lastRefreshError != nil {
+		out.Cause = "token refresh attempted earlier and failed: " + lastRefreshError.Error()
+	}
 	// Pull request_id + a sanitized server-side cause out of the body
 	// so --output=json keeps the original observability fields.
 	// X-Request-Id from the last response header is the canonical
