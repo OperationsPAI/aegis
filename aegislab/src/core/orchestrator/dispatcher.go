@@ -19,12 +19,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// §11 step 5b — per-system executor dispatch.
-//
-// chaos-mesh-direct (default) keeps the legacy in-process SDK call. chaos-service
-// posts to aegis-chaos and lets the webhook receiver complete the BuildDatapack
-// handoff. The flag lives at injection.system.<system>.executor_authoritative;
-// unknown / unset values default to chaos-mesh-direct.
+// Per-system executor flag lives at
+// aegis.injection.system.<system>.executor_authoritative; empty/unknown
+// values fall through to chaos-mesh-direct.
 const (
 	executorFlagKeyPrefix = "aegis.injection.system."
 	executorFlagKeySuffix = ".executor_authoritative"
@@ -32,8 +29,18 @@ const (
 	executorPathChaosMeshDirect = "chaos-mesh-direct"
 	executorPathChaosService    = "chaos-service"
 
-	dispatcherChaosTimeout = 60 * time.Second
+	dispatcherChaosTimeoutConfigKey = "chaos.dispatch_timeout_seconds"
+	dispatcherChaosTimeoutDefault   = 60 * time.Second
 )
+
+// dispatcherChaosTimeout returns the per-call timeout for chaos-service POSTs.
+// Unset / non-positive values fall back to dispatcherChaosTimeoutDefault.
+func dispatcherChaosTimeout() time.Duration {
+	if s := config.GetInt(dispatcherChaosTimeoutConfigKey); s > 0 {
+		return time.Duration(s) * time.Second
+	}
+	return dispatcherChaosTimeoutDefault
+}
 
 var injectionDispatchTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "aegis_injection_dispatch_total",
@@ -115,6 +122,12 @@ type dispatcherDeps struct {
 	benchmarkName    string
 	benchmarkImage   string
 	benchmarkCommand string
+	// instance + chartVersion address per-instance Point catalog rows.
+	// Must match what aegisctl --via-chaos sends (chaos-instance /
+	// chaos-chart-version) or the chaos service will hash a divergent
+	// Point ID and reject the inject.
+	instance     string
+	chartVersion string
 }
 
 // dispatchBatchCreate is the §11 step 5b cutover seam. Reads the per-system
@@ -162,13 +175,13 @@ func dispatchViaChaosService(
 		return nil, err
 	}
 
-	callCtx, cancel := context.WithTimeout(ctx, dispatcherChaosTimeout)
+	callCtx, cancel := context.WithTimeout(ctx, dispatcherChaosTimeout())
 	defer cancel()
 
 	meta := buildCallerMetadata(deps, namespace)
 
 	if len(configs) == 1 {
-		pid, _, _, err := chaoscrud.GuidedChaosPointID(configs[0], "", "")
+		pid, _, _, err := chaoscrud.GuidedChaosPointID(configs[0], deps.instance, deps.chartVersion)
 		if err != nil {
 			return nil, fmt.Errorf("dispatcher: derive point_id: %w", err)
 		}
@@ -195,7 +208,7 @@ func dispatchViaChaosService(
 	batchKey := deps.traceID + ":batch:" + uuid.NewString()
 	children := make([]apiclient.ChaosChaosCreateBatchChildReq, 0, len(configs))
 	for i, cfg := range configs {
-		pid, _, _, err := chaoscrud.GuidedChaosPointID(cfg, "", "")
+		pid, _, _, err := chaoscrud.GuidedChaosPointID(cfg, deps.instance, deps.chartVersion)
 		if err != nil {
 			return nil, fmt.Errorf("dispatcher: spec[%d]: derive point_id: %w", i, err)
 		}

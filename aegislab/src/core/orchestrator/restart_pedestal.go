@@ -580,6 +580,12 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		payload.injectPayload[consts.InjectNamespace] = namespace
 		payload.injectPayload[consts.InjectPedestal] = system
 		payload.injectPayload[consts.InjectPedestalID] = payload.pedestal.ID
+		chartVersion := ""
+		if payload.pedestal.Extra != nil {
+			chartVersion = payload.pedestal.Extra.Version
+		}
+		payload.injectPayload[consts.InjectChaosInstance] = "seed"
+		payload.injectPayload[consts.InjectChartVersion] = chartVersion
 
 		if err := common.ProduceFaultInjectionTasksWithDB(childCtx, deps.DB, deps.RedisGateway, task, injectTime, payload.injectPayload); err != nil {
 			toReleased = true

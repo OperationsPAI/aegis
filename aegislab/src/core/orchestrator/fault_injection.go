@@ -33,6 +33,8 @@ type injectionPayload struct {
 	pedestalID    int
 	labels        []dto.LabelItem
 	system        string
+	chaosInstance string
+	chartVersion  string
 }
 
 type FaultBatchManager struct {
@@ -265,6 +267,8 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			benchmarkName:    payload.benchmark.Name,
 			benchmarkImage:   payload.benchmark.ImageRef,
 			benchmarkCommand: payload.benchmark.Command,
+			instance:         payload.chaosInstance,
+			chartVersion:     payload.chartVersion,
 		}
 		var names []string
 		var dispatchPath string
@@ -293,28 +297,35 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			}
 		}
 
-		if deps.InjectionOwner == nil {
-			return handleExecutionError(span, logEntry, "injection owner service is nil", fmt.Errorf("missing injection owner service"))
-		}
+		// chaos-service dispatch: the webhook receiver
+		// (crud/hooks/chaos.getOrCreateShadowFaultInjection) is the sole
+		// writer of the fault_injections row for this task. Skipping the
+		// orchestrator-side CreateInjection here avoids a dual-row race
+		// where the two writers diverged on state.
+		if dispatchPath != executorPathChaosService {
+			if deps.InjectionOwner == nil {
+				return handleExecutionError(span, logEntry, "injection owner service is nil", fmt.Errorf("missing injection owner service"))
+			}
 
-		_, err = deps.InjectionOwner.CreateInjection(childCtx, &injection.RuntimeCreateInjectionReq{
-			Name:              name,
-			FaultType:         faultType,
-			Category:          chaos.SystemType(payload.pedestal),
-			Description:       fmt.Sprintf("Fault batch for task %s (%d faults)", task.TaskID, len(payload.guidedConfigs)),
-			DisplayConfig:     string(displayData),
-			EngineConfig:      string(engineData),
-			Groundtruths:      groundtruths,
-			GroundtruthSource: consts.GroundtruthSourceAuto,
-			PreDuration:       payload.preDuration,
-			TaskID:            task.TaskID,
-			BenchmarkID:       utils.IntPtr(payload.benchmark.ID),
-			PedestalID:        utils.IntPtr(payload.pedestalID),
-			Labels:            payload.labels,
-			State:             consts.DatapackInitial,
-		})
-		if err != nil {
-			return handleExecutionError(span, logEntry, "failed to write fault injection schedule to owner service", err)
+			_, err = deps.InjectionOwner.CreateInjection(childCtx, &injection.RuntimeCreateInjectionReq{
+				Name:              name,
+				FaultType:         faultType,
+				Category:          chaos.SystemType(payload.pedestal),
+				Description:       fmt.Sprintf("Fault batch for task %s (%d faults)", task.TaskID, len(payload.guidedConfigs)),
+				DisplayConfig:     string(displayData),
+				EngineConfig:      string(engineData),
+				Groundtruths:      groundtruths,
+				GroundtruthSource: consts.GroundtruthSourceAuto,
+				PreDuration:       payload.preDuration,
+				TaskID:            task.TaskID,
+				BenchmarkID:       utils.IntPtr(payload.benchmark.ID),
+				PedestalID:        utils.IntPtr(payload.pedestalID),
+				Labels:            payload.labels,
+				State:             consts.DatapackInitial,
+			})
+			if err != nil {
+				return handleExecutionError(span, logEntry, "failed to write fault injection schedule to owner service", err)
+			}
 		}
 		// Ownership of the namespace lock passes to the CRD controller from
 		// here on; it will release on CRD success/failure (k8s_handler).
@@ -433,6 +444,12 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 		return nil, fmt.Errorf(message, consts.InjectSystem)
 	}
 
+	chaosInstance, _ := payload[consts.InjectChaosInstance].(string)
+	if chaosInstance == "" {
+		chaosInstance = "seed"
+	}
+	chartVersion, _ := payload[consts.InjectChartVersion].(string)
+
 	return &injectionPayload{
 		benchmark:     benchmark,
 		preDuration:   preDuration,
@@ -442,5 +459,7 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 		pedestalID:    pedestalID,
 		labels:        labels,
 		system:        system,
+		chaosInstance: chaosInstance,
+		chartVersion:  chartVersion,
 	}, nil
 }
