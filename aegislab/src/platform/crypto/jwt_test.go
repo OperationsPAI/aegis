@@ -78,6 +78,31 @@ func TestServiceAccountToken_Roundtrip(t *testing.T) {
 	require.ErrorIs(t, err, ErrInvalidToken)
 }
 
+func TestParseServiceAccountToken_NonJWTFallsThrough(t *testing.T) {
+	// A raw hex bearer (e.g. the dispatcher's CHAOS_OUTBOUND_BEARER fallback)
+	// is not a JWT at all. The parser must surface this as ErrInvalidToken so
+	// the SA middleware falls through to the next auth scheme.
+	_, err := ParseServiceAccountToken("deadbeef-not-a-jwt", resolver())
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrInvalidToken)
+}
+
+func TestParseServiceAccountToken_BadSignatureIsRejection(t *testing.T) {
+	// `a.b.c` is JWT-shaped but the segments are not valid base64 JSON, so the
+	// parser fails before signature verification — still a malformed-token
+	// path (fall through). Use a real RS256 token signed by a different key
+	// to force a signature-validation failure, which must NOT wrap
+	// ErrInvalidToken (rejection path, 401).
+	otherKey, err := generateOtherKey()
+	require.NoError(t, err)
+	tok, _, err := GenerateServiceAccountToken("chaos-service", nil, time.Hour, otherKey, "test-kid")
+	require.NoError(t, err)
+
+	_, err = ParseServiceAccountToken(tok, resolver())
+	require.Error(t, err)
+	require.NotErrorIs(t, err, ErrInvalidToken)
+}
+
 func TestParseToken_RejectsWrongKey(t *testing.T) {
 	tok, _, err := GenerateToken(1, "a", "a@x", true, false, nil, testRSAKey, "test-kid")
 	require.NoError(t, err)

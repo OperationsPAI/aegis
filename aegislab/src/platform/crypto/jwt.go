@@ -80,9 +80,12 @@ type ServiceAccountClaims struct {
 	jwt.RegisteredClaims
 }
 
-// ErrInvalidToken is returned by Parse* when the token is structurally valid
-// but fails our policy checks (wrong issuer, etc.). Signature / expiry
-// failures bubble up as raw errors from jwt.ParseWithClaims.
+// ErrInvalidToken is returned (wrapped) by Parse* when the input is "not a
+// token of this kind" — either it doesn't structure-parse as a JWT at all, or
+// it parses but fails our policy checks (wrong issuer, etc.). Callers can use
+// errors.Is to fall through to alternative auth schemes. Signature / expiry
+// failures bubble up as raw errors from jwt.ParseWithClaims and are NOT
+// wrapped with ErrInvalidToken — those must reject the request.
 var ErrInvalidToken = errors.New("invalid token")
 
 // PublicKeyResolver maps a JWT header kid to the RSA public key that should
@@ -223,6 +226,9 @@ func ParseServiceAccountToken(tokenString string, resolve PublicKeyResolver) (*S
 	}
 	token, err := jwt.ParseWithClaims(tokenString, &ServiceAccountClaims{}, keyFunc(resolve))
 	if err != nil {
+		if errors.Is(err, jwt.ErrTokenMalformed) {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
+		}
 		return nil, fmt.Errorf("failed to parse service-account token: %v", err)
 	}
 	claims, ok := token.Claims.(*ServiceAccountClaims)

@@ -146,6 +146,22 @@ func TestRequireServiceAccount_NonSABearer_FallsThrough(t *testing.T) {
 	require.Contains(t, w.Body.String(), `"is_service":false`)
 }
 
+func TestRequireServiceAccount_NonJWTBearer_FallsThrough(t *testing.T) {
+	// Raw hex static bearer (dispatcher's CHAOS_OUTBOUND_BEARER fallback) is
+	// not a JWT at all. Must fall through to the next auth middleware rather
+	// than 401-abort.
+	db, _, resolve := saTestSetup(t)
+	r := saRouter(t, db, resolve, "chaos-service")
+
+	req := httptest.NewRequest(http.MethodPost, "/probe", nil)
+	req.Header.Set("Authorization", "Bearer deadbeefcafef00d")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.NotContains(t, w.Body.String(), `"auth_type":"service_account"`)
+	require.Contains(t, w.Body.String(), `"is_service":false`)
+}
+
 func TestRequireServiceAccount_NoAuth_FallsThrough(t *testing.T) {
 	db, _, resolve := saTestSetup(t)
 	r := saRouter(t, db, resolve, "chaos-service")
