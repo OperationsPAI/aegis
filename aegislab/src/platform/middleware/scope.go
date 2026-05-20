@@ -2,12 +2,21 @@ package middleware
 
 import (
 	"net/http"
+	"sync"
+	"time"
 
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+)
+
+const emptyScopeWarnWindow = time.Minute
+
+var (
+	emptyScopeWarnMu   sync.Mutex
+	emptyScopeWarnLast = map[string]time.Time{}
 )
 
 // RequireScope enforces a single OIDC-style scope on the authenticated
@@ -29,11 +38,13 @@ func RequireScope(scope string) gin.HandlerFunc {
 
 		scopes := currentScopes(c)
 		if len(scopes) == 0 {
-			logrus.WithFields(logrus.Fields{
-				"path":      c.Request.URL.Path,
-				"principal": principalIdent(c),
-				"required":  scope,
-			}).Warn("scope check: principal has no scopes; accepting (transient back-compat)")
+			if shouldLogEmptyScope(principalIdent(c)) {
+				logrus.WithFields(logrus.Fields{
+					"path":      c.Request.URL.Path,
+					"principal": principalIdent(c),
+					"required":  scope,
+				}).Warn("scope check: principal has no scopes; accepting (transient back-compat)")
+			}
 			c.Next()
 			return
 		}
@@ -67,6 +78,17 @@ func currentScopes(c *gin.Context) []string {
 		}
 	}
 	return nil
+}
+
+func shouldLogEmptyScope(principal string) bool {
+	emptyScopeWarnMu.Lock()
+	defer emptyScopeWarnMu.Unlock()
+	now := time.Now()
+	if prev, ok := emptyScopeWarnLast[principal]; ok && now.Sub(prev) < emptyScopeWarnWindow {
+		return false
+	}
+	emptyScopeWarnLast[principal] = now
+	return true
 }
 
 func principalIdent(c *gin.Context) string {

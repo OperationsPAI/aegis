@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -22,13 +21,10 @@ func captureLogger(buf *bytes.Buffer) *logrus.Logger {
 	return l
 }
 
-// resetOnce makes the sync.Once instances behave fresh for each subtest
-// since they're package-globals. The middleware exposes no Reset, so we
-// reach in via a small helper kept in test-only code.
-func resetInboundOnce() {
-	inboundUnsetWarnOnce = sync.Once{}
-	requireBearerWarnOnce = sync.Once{}
-}
+// resetInboundOnce is a no-op since newChaosAuth now owns its sync.Once
+// per-instance. Kept for test readability — old call sites still mark
+// the "start fresh" intent.
+func resetInboundOnce() {}
 
 func newAuthRouter(mw gin.HandlerFunc) *gin.Engine {
 	gin.SetMode(gin.TestMode)
