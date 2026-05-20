@@ -187,6 +187,7 @@ func dispatchViaChaosService(
 	defer cancel()
 
 	meta := buildCallerMetadata(deps, namespace)
+	meta["groundtruths"] = renderGroundtruths(configs)
 
 	if len(configs) == 1 {
 		pid, _, _, err := chaoscrud.GuidedChaosPointID(configs[0], deps.instance, deps.chartVersion)
@@ -246,6 +247,28 @@ func dispatchViaChaosService(
 
 func capabilityOf(cfg guidedcli.GuidedConfig) string {
 	return chaoscrud.ChaosTypeToCapability[strings.TrimSpace(cfg.ChaosType)]
+}
+
+// renderGroundtruths derives a minimal per-spec impact ({service, container}).
+// chaos service stores chaos_injections.groundtruth=NULL today; the algorithm
+// container asserts non-empty ground_truth in injection.json, so the dispatcher
+// computes it here from the originating GuidedConfig. Legacy
+// handler.BatchCreate populates this server-side; this mirrors that contract.
+func renderGroundtruths(configs []guidedcli.GuidedConfig) []map[string]any {
+	gts := make([]map[string]any, 0, len(configs))
+	for _, cfg := range configs {
+		gt := map[string]any{}
+		if app := strings.TrimSpace(cfg.App); app != "" {
+			gt["service"] = []string{app}
+		}
+		if container := strings.TrimSpace(cfg.Container); container != "" {
+			gt["container"] = []string{container}
+		}
+		if len(gt) > 0 {
+			gts = append(gts, gt)
+		}
+	}
+	return gts
 }
 
 func buildCallerMetadata(d dispatcherDeps, namespace string) map[string]any {

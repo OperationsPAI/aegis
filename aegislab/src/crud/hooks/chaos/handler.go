@@ -308,6 +308,7 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 		ChaosInjectionID:  chaosInjectionID,
 		Source:            consts.DatapackSourceInjection,
 		GroundtruthSource: "auto",
+		Groundtruths:      meta.Groundtruths,
 		EngineConfig:      "{}",
 		PreDuration:       preDuration,
 		// TaskID intentionally nil for --via-chaos shadow rows: aegisctl

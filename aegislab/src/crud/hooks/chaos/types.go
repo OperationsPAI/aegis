@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"aegis/platform/dto"
+	"aegis/platform/model"
 
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -33,6 +34,12 @@ type CallerMetadata struct {
 	Pedestal    string `json:"pedestal,omitempty"`
 	PreDuration int    `json:"pre_duration,omitempty"`
 	Namespace   string `json:"namespace,omitempty"`
+
+	// Groundtruths is the rendered expected-impact for the injection, derived
+	// at dispatch time from the originating GuidedConfig (service/container).
+	// hooks/chaos writes this onto the shadow FI row so the algorithm container
+	// sees a non-empty `ground_truth` in injection.json.
+	Groundtruths []model.Groundtruth `json:"groundtruths,omitempty"`
 
 	// RootTraceCarrier preserves the grandparent-span linkage the CRD path
 	// reads back from K8s annotations (parseAnnotations → rootTraceCarrier
