@@ -394,3 +394,11 @@ chaos:
     secretName: rcabench-chaos-auth
     secretKey: token
     requireBearer: true
+  # Outbound webhook auth: chaos → backend now uses a service-account JWT
+  # held in the operator-managed Secret rcabench-chaos-sa (key `token`).
+  # Provision via SSO POST /v1/service-accounts/chaos-service/issue; rotate
+  # by re-issuing and applying a new Secret. Replaces the deprecated
+  # webhookBearer / chaosAuth fallback for the outbound direction.
+  serviceAccount:
+    secretName: rcabench-chaos-sa
+    secretKey: token

@@ -51,6 +51,13 @@ spec:
               value: {{ .Values.env.ENV | quote }}
             - name: CHAOS_BACKEND_URL
               value: {{ .Values.backendURL | quote }}
+            {{- if .Values.serviceAccount.secretName }}
+            - name: CHAOS_SA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.serviceAccount.secretName }}
+                  key: {{ .Values.serviceAccount.secretKey | default "token" }}
+            {{- end }}
             {{- if .Values.webhookBearerSecretRef.name }}
             - name: CHAOS_WEBHOOK_BEARER
               valueFrom:

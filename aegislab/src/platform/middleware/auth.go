@@ -116,6 +116,14 @@ func JWTAuth() gin.HandlerFunc {
 // this variable.
 func TrustedHeaderAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// A preceding RequireServiceAccount may have already authenticated
+		// the caller as a non-revoked service account. Skip further auth
+		// in that case — re-running JWTAuth on the SA bearer would 401
+		// because SA tokens are neither user JWTs nor legacy service JWTs.
+		if v, _ := c.Get(consts.CtxKeyAuthType); v == consts.AuthTypeServiceAccount {
+			c.Next()
+			return
+		}
 		hasSig := c.GetHeader(trustedHeaderSignature) != ""
 		hasBearer := c.GetHeader("Authorization") != ""
 		// Inter-service / K8s-Job callers bypass the gateway and present
