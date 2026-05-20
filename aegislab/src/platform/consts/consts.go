@@ -373,6 +373,12 @@ const (
 	InjectPedestalID    = "pedestal_id"
 	InjectLabels        = "labels"
 	InjectSystem        = "system"
+	// Chaos point-catalog identity threaded through to the dispatcher so
+	// chaos-service POSTs hash the same Point ID as aegisctl --via-chaos.
+	// Empty values map to the seed-catalog defaults (instance="seed",
+	// chart_version=helm_configs.version).
+	InjectChaosInstance = "chaos_instance"
+	InjectChartVersion  = "chart_version"
 
 	BuildBenchmark        = "benchmark"
 	BuildDatapack         = "datapack"

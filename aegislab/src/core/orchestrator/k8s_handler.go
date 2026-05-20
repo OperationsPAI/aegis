@@ -15,6 +15,7 @@ import (
 	"aegis/platform/tracing"
 	container "aegis/core/domain/container"
 	"aegis/core/orchestrator/common"
+	chaoshooks "aegis/crud/hooks/chaos"
 	"aegis/platform/utils"
 
 	"github.com/sirupsen/logrus"
@@ -250,6 +251,17 @@ func (h *k8sHandler) HandleCRDFailed(name string, annotations map[string]string,
 		errCtx := NewErrorContext(ctx, h.db, h.redisGateway, taskSpan, &parsedLabels.taskIdentifiers)
 
 		postprocess := func(injectionName string) {
+			// Symmetric with HandleCRDSucceeded: both terminal paths must
+			// claim the shared (task_id, kind) gate so the chaos-webhook
+			// receiver and the legacy CRD watcher cannot double-process.
+			claimed, claimErr := chaoshooks.ClaimBuildDatapackGate(ctx, h.db, parsedLabels.taskID, parsedLabels.IsHybrid, "failed")
+			if claimErr != nil {
+				errCtx.Warn(nil, "claim build-datapack gate failed", claimErr)
+				return
+			}
+			if !claimed {
+				return
+			}
 			if err := h.store.updateInjectionState(ctx, injectionName, consts.DatapackInjectFailed); err != nil {
 				errCtx.Warn(nil, "update injection state failed", err)
 			}
@@ -320,6 +332,20 @@ func (h *k8sHandler) HandleCRDSucceeded(namespace, pod, name string, startTime, 
 	errCtx := NewErrorContext(taskCtx, h.db, h.redisGateway, taskSpan, &parsedLabels.taskIdentifiers)
 
 	postProcess := func(injectionName string) {
+		// §11 step 5b coexistence: claim the shared (task_id, kind) gate
+		// before submitting BuildDatapack. If the chaos-webhook receiver
+		// already fired for this task (chaos-service dispatch path), skip.
+		claimed, claimErr := chaoshooks.ClaimBuildDatapackGate(taskCtx, h.db, parsedLabels.taskID, parsedLabels.IsHybrid, "succeeded")
+		if claimErr != nil {
+			errCtx.Warn(nil, "claim build-datapack gate failed", claimErr)
+			return
+		}
+		if !claimed {
+			logEntry.WithField("task_id", parsedLabels.taskID).
+				Info("HandleCRDSucceeded: build-datapack gate already claimed (chaos-service path won); skipping submit")
+			return
+		}
+
 		if err := h.store.updateInjectionState(taskCtx, injectionName, consts.DatapackInjectSuccess); err != nil {
 			errCtx.Warn(nil, "update injection state failed", err)
 		}

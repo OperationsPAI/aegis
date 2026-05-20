@@ -49,12 +49,12 @@ func TestChaosTypeTranslation(t *testing.T) {
 		"PodKill":                  "pod_kill",
 		"TimeSkew":                 "time_skew",
 	}
-	if len(chaosTypeToCapability) != len(expected) {
+	if len(chaoscrud.ChaosTypeToCapability) != len(expected) {
 		t.Fatalf("table size drift: got %d entries, expected %d (capabilities.json has 32)",
-			len(chaosTypeToCapability), len(expected))
+			len(chaoscrud.ChaosTypeToCapability), len(expected))
 	}
 	for in, want := range expected {
-		got, ok := chaosTypeToCapability[in]
+		got, ok := chaoscrud.ChaosTypeToCapability[in]
 		if !ok {
 			t.Errorf("missing entry for chaos_type=%s", in)
 			continue
@@ -80,7 +80,7 @@ func TestGuidedToChaosPointID_OtelDemoCart(t *testing.T) {
 		App:       "cart",
 		ChaosType: "PodKill",
 	}
-	pid, cap, target, err := guidedChaosPointID(cfg, "seed", "seed-genesis")
+	pid, cap, target, err := chaoscrud.GuidedChaosPointID(cfg, "seed", "seed-genesis")
 	if err != nil {
 		t.Fatalf("derive: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestGuidedToChaosPointID_CrossService(t *testing.T) {
 		TargetService: "checkout",
 		ChaosType:     "NetworkPartition",
 	}
-	pid, cap, target, err := guidedChaosPointID(cfg, "seed", "seed-genesis")
+	pid, cap, target, err := chaoscrud.GuidedChaosPointID(cfg, "seed", "seed-genesis")
 	if err != nil {
 		t.Fatalf("derive: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestGuidedToChaosTarget_LogicalNsWhenPoolAllocated(t *testing.T) {
 		App:       "cart",
 		ChaosType: "PodKill",
 	}
-	pid, cap, target, err := guidedChaosPointID(cfg, "seed", "seed-genesis")
+	pid, cap, target, err := chaoscrud.GuidedChaosPointID(cfg, "seed", "seed-genesis")
 	if err != nil {
 		t.Fatalf("derive: %v", err)
 	}

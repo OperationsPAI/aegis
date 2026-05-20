@@ -83,7 +83,7 @@ func (h *Handler) Singleton(c *gin.Context) {
 		// failed / cancelled: no BuildDatapack downstream, matching today's
 		// HandleCRDFailed in k8s_handler.go. We still record the gate so
 		// duplicate webhooks remain no-ops.
-		_ = h.recordGate(c.Request.Context(), body.InjectionID, kindSingleton, body.Status)
+		_ = h.recordGate(c.Request.Context(), body.CallerMetadata.TaskID, kindSingleton, body.Status)
 		dto.SuccessResponse(c, gin.H{"accepted": true, "submitted": false})
 		return
 	}
@@ -122,7 +122,7 @@ func (h *Handler) Batch(c *gin.Context) {
 	// cancelled / failed: nothing fires downstream — the campaign step
 	// decides whether to retry. Record the gate so retries are no-ops.
 	if body.AggregatedStatus == statusCancelled || body.AggregatedStatus == statusFailed {
-		_ = h.recordGate(c.Request.Context(), body.BatchID, kindBatch, body.AggregatedStatus)
+		_ = h.recordGate(c.Request.Context(), body.BatchCallerMetadata.TaskID, kindBatch, body.AggregatedStatus)
 		dto.SuccessResponse(c, gin.H{"accepted": true, "submitted": false})
 		return
 	}
@@ -142,7 +142,11 @@ func (h *Handler) Batch(c *gin.Context) {
 }
 
 // fireOnce is the shared submit path. Returns whether a downstream task
-// was actually submitted (false on idempotent replay).
+// was actually submitted (false on idempotent replay). The gate is keyed on
+// meta.TaskID — the campaign-side UnifiedTask ID — because the legacy CRD
+// watcher path knows that same value via K8s labels but does not know the
+// chaos-service ULID. Keying on TaskID lets both paths collide cleanly when
+// the dispatcher and CRD informer race for the same conceptual injection.
 func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string, meta *CallerMetadata, startedAt, finishedAt time.Time) (bool, error) {
 	if meta == nil || meta.TaskID == "" || meta.TraceID == "" {
 		return false, errors.New("caller_metadata missing task_id/trace_id")
@@ -151,7 +155,7 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 		return false, errors.New("caller_metadata missing benchmark/datapack")
 	}
 
-	claimed, err := h.claimGate(parentCtx, id, kind, terminal)
+	claimed, err := h.claimGate(parentCtx, meta.TaskID, kind, terminal)
 	if err != nil {
 		return false, err
 	}
@@ -217,10 +221,29 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 	}()
 }
 
+// ClaimBuildDatapackGate is the legacy-CRD entry point into the same gate
+// the chaos-webhook handler claims via fireOnce. §11 step 5b coexistence
+// requires both paths claim the same (task_id, kind) row so a race between
+// the in-process CRD informer and the chaos-service webhook cannot fire two
+// BuildDatapack tasks for one conceptual injection. Returns true when the
+// caller won the race and should proceed with BuildDatapack submission.
+func ClaimBuildDatapackGate(ctx context.Context, db *gorm.DB, taskID string, isHybrid bool, terminal string) (bool, error) {
+	kind := kindSingleton
+	if isHybrid {
+		kind = kindBatch
+	}
+	row := HookSubmission{ID: taskID, Kind: kind, TerminalStatus: terminal, SubmittedAt: time.Now().UTC()}
+	res := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&row)
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected == 1, nil
+}
+
 // claimGate INSERTs the dedup row; returns true on win, false on conflict.
-// PK is (injection_or_batch_id, kind) — design §11 step 4 prereq: only
-// one downstream BuildDatapack per fault, regardless of which terminal
-// status (succeeded/partial/failed/cancelled) arrives first.
+// PK is (task_id, kind) — design §11 step 4 prereq: only one downstream
+// BuildDatapack per fault, regardless of which terminal status
+// (succeeded/partial/failed/cancelled) arrives first.
 func (h *Handler) claimGate(ctx context.Context, id, kind, terminal string) (bool, error) {
 	row := HookSubmission{ID: id, Kind: kind, TerminalStatus: terminal, SubmittedAt: time.Now().UTC()}
 	res := h.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&row)
