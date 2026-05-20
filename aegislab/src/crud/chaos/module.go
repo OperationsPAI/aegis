@@ -30,6 +30,10 @@ var Module = fx.Module("chaos",
 	fx.Invoke(runReconciler),
 )
 
+// Read directly from the process env rather than via config.GetString:
+// the chart wires these as bare env vars (helm/charts/chaos/templates/
+// deployment.yaml + chaosAuth secret refs) so operators can rotate the
+// bearer with kubectl-restart alone, without re-rendering the ConfigMap.
 func NewWebhookSenderFromEnv(db *gorm.DB) *WebhookSender {
 	w := NewWebhookSender(&http.Client{Timeout: 60 * time.Second}, os.Getenv("CHAOS_BACKEND_URL"), db, logrus.StandardLogger())
 	if tok := os.Getenv("CHAOS_WEBHOOK_BEARER"); tok != "" {

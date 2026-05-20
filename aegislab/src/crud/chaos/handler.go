@@ -16,12 +16,6 @@ type Handler struct {
 
 func NewHandler(m *Manager) *Handler { return &Handler{Mgr: m} }
 
-// notImplemented is the §11 step-1 stand-in for endpoints whose behaviour
-// arrives in later steps. ADR-0008/0010 list which surfaces those are.
-func notImplemented(c *gin.Context) {
-	dto.ErrorResponse(c, http.StatusNotImplemented, "endpoint not implemented in step 1")
-}
-
 type upsertSystemReq struct {
 	NsPattern               string `json:"ns_pattern"                            binding:"required"`
 	AppLabelKey             string `json:"app_label_key"                         binding:"required"`

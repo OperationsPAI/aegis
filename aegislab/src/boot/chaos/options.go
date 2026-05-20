@@ -9,7 +9,6 @@ import (
 	httpapi "aegis/boot/wiring/http"
 	ssoclient "aegis/clients/sso"
 	chaos "aegis/crud/chaos"
-	"aegis/platform/middleware"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
@@ -27,7 +26,10 @@ func Options(confPath, port string) fx.Option {
 
 		chaos.Module,
 
-		fx.Invoke(func() { middleware.AssertTrustedHeaderKeyConfigured() }),
+		// CHAOS_INBOUND_BEARER (see crud/chaos/inbound_bearer.go) is the
+		// canonical auth for /v1beta — the trusted-header path is only
+		// used as a fall-through, so we don't gate boot on the gateway
+		// HMAC key being configured.
 
 		fx.Supply(&router.Handlers{}),
 		fx.Supply(httpapi.ServerConfig{Addr: normalizeAddr(port)}),

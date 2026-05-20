@@ -50,40 +50,22 @@ func Routes(h *Handler) framework.RouteRegistrar {
 
 			auth := g.Group("", NewChaosAuthFromEnv())
 
-			auth.GET("/systems", notImplemented)
 			auth.PUT("/systems/:sys", h.PutSystem)
 			auth.GET("/systems/:sys", h.GetSystem)
-			auth.DELETE("/systems/:sys", notImplemented)
-
-			auth.GET("/systems/:sys/services", notImplemented)
-			auth.GET("/systems/:sys/services/:svc", notImplemented)
-			auth.GET("/systems/:sys/services/:svc/versions", notImplemented)
 
 			auth.GET("/systems/:sys/points", h.ListSystemPoints)
-			auth.GET("/systems/:sys/services/:svc/points", notImplemented)
-			auth.GET("/points/:id", notImplemented)
-			auth.DELETE("/points/:id", notImplemented)
 			auth.POST("/systems/:sys/points/import", h.ImportPoints)
 
 			auth.GET("/capabilities", h.ListCapabilities)
 			auth.GET("/capabilities/:name", h.GetCapability)
-			auth.GET("/capabilities/:name/matrix", notImplemented)
-
-			auth.GET("/executors", notImplemented)
-			auth.POST("/executors/:name/probe", notImplemented)
 
 			auth.POST("/injections", h.CreateInjection)
 			auth.GET("/injections/:id", h.GetInjection)
 			auth.DELETE("/injections/:id", h.DeleteInjection)
-			auth.POST("/injections/preview", notImplemented)
 
 			auth.POST("/injection-batches", h.CreateInjectionBatch)
 			auth.GET("/injection-batches/:id", h.GetInjectionBatch)
 			auth.DELETE("/injection-batches/:id", h.DeleteInjectionBatch)
-
-			auth.POST("/guided-sessions", notImplemented)
-			auth.POST("/guided-sessions/:tok/step", notImplemented)
-			auth.POST("/guided-sessions/:tok/commit", notImplemented)
 		},
 	}
 }

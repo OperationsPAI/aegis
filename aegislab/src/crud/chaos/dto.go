@@ -23,7 +23,7 @@ type ChaosSystemResp struct {
 
 // ChaosCreateInjectionReq is the request body for POST /v1beta/injections.
 type ChaosCreateInjectionReq struct {
-	PointID        string         `json:"point_id"                  example:"step5acart11111"`
+	PointID        string         `json:"point_id"                  example:"0123456789abcdef"`
 	Params         map[string]any `json:"params"`
 	IdempotencyKey string         `json:"idempotency_key"           example:"client-1700000000"`
 	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`
@@ -100,7 +100,7 @@ type ChaosImportPointsResp struct {
 
 // ChaosCreateBatchChildReq is one child entry inside a batch submission.
 type ChaosCreateBatchChildReq struct {
-	PointID        string         `json:"point_id"                  example:"step5acart11111"`
+	PointID        string         `json:"point_id"                  example:"0123456789abcdef"`
 	Params         map[string]any `json:"params"`
 	IdempotencyKey string         `json:"idempotency_key"           example:"client-1700000000-c0"`
 	CallerMetadata map[string]any `json:"caller_metadata,omitempty"`

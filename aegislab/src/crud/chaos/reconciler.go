@@ -110,11 +110,11 @@ func (r *Reconciler) reconcileOne(ctx context.Context, inj *Injection) {
 		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: reload row")
 		return
 	}
-	// TODO(step-5b/5c): Fire blocks this single-goroutine reconciler for up
-	// to ~15s of retry sleep + 5×60s of per-attempt timeout, so one stuck
-	// receiver stalls every other row's reconcile. Move to a bounded
-	// goroutine pool (or a dedicated webhook worker queue) when row
-	// throughput justifies the complexity. Out of scope for step 5a.
+	// Fire blocks this single-goroutine reconciler for up to ~15s of retry
+	// sleep + 5×60s of per-attempt timeout, so one stuck receiver stalls
+	// every other row's reconcile. Acceptable while row throughput is low;
+	// revisit (bounded goroutine pool or dedicated webhook worker queue)
+	// when that ceases to hold.
 	if err := r.webhook.Fire(ctx, &fresh); err != nil && !errors.Is(err, errWebhookDisabled) {
 		r.logger.WithError(err).WithField("id", inj.ID).Warn("chaos reconciler: webhook fire")
 	}
