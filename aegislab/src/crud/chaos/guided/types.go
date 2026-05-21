@@ -1,4 +1,4 @@
-package guidedcli
+package guided
 
 type GuidedConfig struct {
 	System          string `json:"system,omitempty" yaml:"system,omitempty"`

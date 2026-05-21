@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net/http"
 
-	cechaos "aegis/internal/chaosengine/guidedcli"
+	"aegis/crud/chaos/guided"
 
 	localchaos "aegis/platform/chaos"
 	"aegis/platform/dto"
@@ -14,10 +14,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// guidedcli walkers reach into a live kubernetes cluster + resourcelookup cache;
+// guided walkers reach into a live kubernetes cluster + resourcelookup cache;
 // handler tests swap them out via these package-level seams. The handler
 // converts between the local platform/chaos GuidedConfig shape (wire DTO) and
-// chaosengine guidedcli.GuidedConfig (runtime input) via JSON round-trip — the
+// guided.GuidedConfig (runtime input) via JSON round-trip — the
 // JSON tags match field-for-field.
 var (
 	testGuidedResolve   func(ctx context.Context, cfg localchaos.GuidedConfig) (*localchaos.GuidedResponse, error)
@@ -29,11 +29,11 @@ func resolveGuided(ctx context.Context, cfg localchaos.GuidedConfig) (*localchao
 	if testGuidedResolve != nil {
 		return testGuidedResolve(ctx, cfg)
 	}
-	var ceCfg cechaos.GuidedConfig
+	var ceCfg guided.GuidedConfig
 	if err := jsonRoundTrip(cfg, &ceCfg); err != nil {
 		return nil, err
 	}
-	ceResp, err := cechaos.Resolve(ctx, ceCfg)
+	ceResp, err := guided.Resolve(ctx, ceCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -48,11 +48,11 @@ func applyGuidedNext(response *localchaos.GuidedResponse, rawValue string) (loca
 	if testGuidedApplyNext != nil {
 		return testGuidedApplyNext(response, rawValue)
 	}
-	var ceResp cechaos.GuidedResponse
+	var ceResp guided.GuidedResponse
 	if err := jsonRoundTrip(response, &ceResp); err != nil {
 		return localchaos.GuidedConfig{}, err
 	}
-	merged, err := cechaos.ApplyNextSelection(&ceResp, rawValue)
+	merged, err := guided.ApplyNextSelection(&ceResp, rawValue)
 	if err != nil {
 		return localchaos.GuidedConfig{}, err
 	}
@@ -67,7 +67,7 @@ func enumerateGuided(ctx context.Context, system, namespace string) ([]localchao
 	if testGuidedEnumerate != nil {
 		return testGuidedEnumerate(ctx, system, namespace)
 	}
-	ceCands, err := cechaos.EnumerateAllCandidates(ctx, system, namespace)
+	ceCands, err := guided.EnumerateAllCandidates(ctx, system, namespace)
 	if err != nil {
 		return nil, err
 	}

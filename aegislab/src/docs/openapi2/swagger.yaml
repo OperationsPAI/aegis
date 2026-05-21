@@ -639,7 +639,7 @@ definitions:
   chaos.ChaosGuidedApplyNextReq:
     properties:
       current:
-        $ref: '#/definitions/guidedcli.GuidedConfig'
+        $ref: '#/definitions/chaos.GuidedConfig'
       value:
         type: string
     required:
@@ -648,12 +648,12 @@ definitions:
   chaos.ChaosGuidedApplyNextResp:
     properties:
       config:
-        $ref: '#/definitions/guidedcli.GuidedConfig'
+        $ref: '#/definitions/chaos.GuidedConfig'
     type: object
   chaos.ChaosGuidedResolveReq:
     properties:
       config:
-        $ref: '#/definitions/guidedcli.GuidedConfig'
+        $ref: '#/definitions/chaos.GuidedConfig'
     type: object
   chaos.ChaosGuidedResolveResp:
     properties:
@@ -663,7 +663,7 @@ definitions:
       can_apply:
         type: boolean
       config:
-        $ref: '#/definitions/guidedcli.GuidedConfig'
+        $ref: '#/definitions/chaos.GuidedConfig'
       errors:
         items:
           type: string
@@ -675,10 +675,10 @@ definitions:
         type: string
       next:
         items:
-          $ref: '#/definitions/guidedcli.FieldSpec'
+          $ref: '#/definitions/chaos.FieldSpec'
         type: array
       preview:
-        $ref: '#/definitions/guidedcli.Preview'
+        $ref: '#/definitions/chaos.Preview'
       resolved:
         additionalProperties: {}
         type: object
@@ -866,7 +866,7 @@ definitions:
     properties:
       candidates:
         items:
-          $ref: '#/definitions/guidedcli.GuidedConfig'
+          $ref: '#/definitions/chaos.GuidedConfig'
         type: array
       namespace:
         type: string
@@ -983,6 +983,51 @@ definitions:
     - JVMMySQLLatency
     - JVMMySQLException
     - JVMRuntimeMutator
+  chaos.FieldOption:
+    properties:
+      description:
+        type: string
+      label:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      value:
+        type: string
+    type: object
+  chaos.FieldSpec:
+    properties:
+      default:
+        type: integer
+      description:
+        type: string
+      fields:
+        items:
+          $ref: '#/definitions/chaos.FieldSpec'
+        type: array
+      key_fields:
+        items:
+          type: string
+        type: array
+      kind:
+        type: string
+      max:
+        type: integer
+      min:
+        type: integer
+      name:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/chaos.FieldOption'
+        type: array
+      required:
+        type: boolean
+      step:
+        type: integer
+      unit:
+        type: string
+    type: object
   chaos.Groundtruth:
     properties:
       container:
@@ -1009,6 +1054,95 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  chaos.GuidedConfig:
+    properties:
+      app:
+        type: string
+      body_type:
+        type: string
+      buffer:
+        type: integer
+      chaos_type:
+        type: string
+      class:
+        type: string
+      container:
+        type: string
+      correlation:
+        type: integer
+      corrupt:
+        type: integer
+      cpu_count:
+        type: integer
+      cpu_load:
+        type: integer
+      cpu_worker:
+        type: integer
+      database:
+        type: string
+      delay_duration:
+        type: integer
+      direction:
+        type: string
+      domain:
+        type: string
+      duplicate:
+        type: integer
+      duration:
+        type: integer
+      exception_opt:
+        type: string
+      http_method:
+        type: string
+      jitter:
+        type: integer
+      latency:
+        type: integer
+      latency_duration:
+        type: integer
+      latency_ms:
+        type: integer
+      limit:
+        type: integer
+      loss:
+        type: integer
+      mem_type:
+        type: string
+      mem_worker:
+        type: integer
+      memory_size:
+        type: integer
+      method:
+        type: string
+      mutator_config:
+        type: string
+      namespace:
+        type: string
+      operation:
+        type: string
+      rate:
+        type: integer
+      replace_method:
+        type: string
+      return_type:
+        type: string
+      return_value_opt:
+        type: string
+      route:
+        type: string
+      status_code:
+        type: integer
+      system:
+        type: string
+      system_type:
+        type: string
+      table:
+        type: string
+      target_service:
+        type: string
+      time_offset:
+        type: integer
     type: object
   chaos.Node:
     properties:
@@ -1068,6 +1202,18 @@ definitions:
         type: array
       replace_scope:
         type: string
+    type: object
+  chaos.Preview:
+    properties:
+      display_config:
+        additionalProperties: {}
+        type: object
+      groundtruth:
+        additionalProperties: {}
+        type: object
+      resource_summary:
+        additionalProperties: {}
+        type: object
     type: object
   chaosprune.PruneCandidate:
     properties:
@@ -6220,152 +6366,6 @@ definitions:
         type: string
       type:
         type: string
-    type: object
-  guidedcli.FieldOption:
-    properties:
-      description:
-        type: string
-      label:
-        type: string
-      metadata:
-        additionalProperties: {}
-        type: object
-      value:
-        type: string
-    type: object
-  guidedcli.FieldSpec:
-    properties:
-      default:
-        type: integer
-      description:
-        type: string
-      fields:
-        items:
-          $ref: '#/definitions/guidedcli.FieldSpec'
-        type: array
-      key_fields:
-        items:
-          type: string
-        type: array
-      kind:
-        type: string
-      max:
-        type: integer
-      min:
-        type: integer
-      name:
-        type: string
-      options:
-        items:
-          $ref: '#/definitions/guidedcli.FieldOption'
-        type: array
-      required:
-        type: boolean
-      step:
-        type: integer
-      unit:
-        type: string
-    type: object
-  guidedcli.GuidedConfig:
-    properties:
-      app:
-        type: string
-      body_type:
-        type: string
-      buffer:
-        type: integer
-      chaos_type:
-        type: string
-      class:
-        type: string
-      container:
-        type: string
-      correlation:
-        type: integer
-      corrupt:
-        type: integer
-      cpu_count:
-        type: integer
-      cpu_load:
-        type: integer
-      cpu_worker:
-        type: integer
-      database:
-        type: string
-      delay_duration:
-        type: integer
-      direction:
-        type: string
-      domain:
-        type: string
-      duplicate:
-        type: integer
-      duration:
-        type: integer
-      exception_opt:
-        type: string
-      http_method:
-        type: string
-      jitter:
-        type: integer
-      latency:
-        type: integer
-      latency_duration:
-        type: integer
-      latency_ms:
-        type: integer
-      limit:
-        type: integer
-      loss:
-        type: integer
-      mem_type:
-        type: string
-      mem_worker:
-        type: integer
-      memory_size:
-        type: integer
-      method:
-        type: string
-      mutator_config:
-        type: string
-      namespace:
-        type: string
-      operation:
-        type: string
-      rate:
-        type: integer
-      replace_method:
-        type: string
-      return_type:
-        type: string
-      return_value_opt:
-        type: string
-      route:
-        type: string
-      status_code:
-        type: integer
-      system:
-        type: string
-      system_type:
-        type: string
-      table:
-        type: string
-      target_service:
-        type: string
-      time_offset:
-        type: integer
-    type: object
-  guidedcli.Preview:
-    properties:
-      display_config:
-        additionalProperties: {}
-        type: object
-      groundtruth:
-        additionalProperties: {}
-        type: object
-      resource_summary:
-        additionalProperties: {}
-        type: object
     type: object
   injection.BatchDeleteInjectionReq:
     properties:
