@@ -1,6 +1,7 @@
 package chaos
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -124,6 +125,63 @@ func TestImportPoints_RejectsReplaceScopeSystem(t *testing.T) {
 	m.Spec.ReplaceScope = ReplaceScopeSystem
 	if _, err := mgr.ImportPoints(t.Context(), "ts", m, false); err == nil {
 		t.Fatalf("expected step-1 rejection of replace_scope=system")
+	}
+}
+
+// TestImportPoints_BatchUpsert_LargeManifest exercises the batched UPSERT
+// path: importing 500 points in one manifest must persist all of them in
+// a single CreateInBatches call and the result must enumerate every
+// PointID. The Upserted counter is dialect-dependent (SQLite reports 1
+// per row, MySQL up to 2 for replaced rows) so we only assert it matches
+// the count of rows actually persisted.
+func TestImportPoints_BatchUpsert_LargeManifest(t *testing.T) {
+	mgr := newImportTestManager(t)
+
+	m := baseManifest()
+	pts := make([]PointManifestEntry, 0, 500)
+	for i := 0; i < 500; i++ {
+		pts = append(pts, PointManifestEntry{
+			Capability: "pod_kill",
+			Target: map[string]any{
+				"namespace": "ts",
+				"app":       fmt.Sprintf("frontend-%04d", i),
+			},
+		})
+	}
+	m.Spec.Points = pts
+	m.Spec.ReplaceScope = ReplaceScopeNone
+
+	res, err := mgr.ImportPoints(t.Context(), "ts", m, false)
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	if len(res.PointIDs) != 500 {
+		t.Fatalf("expected 500 PointIDs, got %d", len(res.PointIDs))
+	}
+
+	var active int64
+	mgr.DB.Model(&Point{}).Where("status = ?", PointActive).Count(&active)
+	if active != 500 {
+		t.Fatalf("expected 500 active points persisted, got %d", active)
+	}
+	if res.Upserted != int(active) {
+		t.Fatalf("Upserted counter should equal rows persisted on SQLite; got upserted=%d active=%d",
+			res.Upserted, active)
+	}
+
+	// Re-import the same manifest: every row hits the ON CONFLICT branch
+	// and updates rather than inserts. PointIDs must still enumerate all
+	// 500, and the active row count stays at 500.
+	res2, err := mgr.ImportPoints(t.Context(), "ts", m, false)
+	if err != nil {
+		t.Fatalf("re-import: %v", err)
+	}
+	if len(res2.PointIDs) != 500 {
+		t.Fatalf("re-import PointIDs: want 500, got %d", len(res2.PointIDs))
+	}
+	mgr.DB.Model(&Point{}).Where("status = ?", PointActive).Count(&active)
+	if active != 500 {
+		t.Fatalf("after re-import expected 500 active, got %d", active)
 	}
 }
 

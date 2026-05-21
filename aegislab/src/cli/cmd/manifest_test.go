@@ -8,7 +8,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestManifestValidate_Valid_ExitsZero(t *testing.T) {
@@ -87,6 +89,99 @@ func TestManifestImport_DryRun_SendsCorrectPathBodyAndQuery(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "abc") {
 		t.Errorf("expected stdout to include forwarded point id 'abc', got: %q", stdout)
+	}
+}
+
+// TestResolveChaosServer_DefaultsToGatewayUnderServer verifies the new
+// fallback path: when --chaos-server / AEGIS_CHAOS_SERVER are both
+// unset, the resolver derives the URL from --server (which every other
+// aegisctl command already requires), appending /v1beta/chaos to land
+// on the gateway-federated prefix.
+func TestResolveChaosServer_DefaultsToGatewayUnderServer(t *testing.T) {
+	resetManifestTestState(t)
+	t.Setenv(chaosServerEnv, "")
+	prev := flagServer
+	t.Cleanup(func() { flagServer = prev })
+	flagServer = "https://aegis.example.com/"
+
+	got, err := resolveChaosServer()
+	if err != nil {
+		t.Fatalf("resolveChaosServer: %v", err)
+	}
+	const want = "https://aegis.example.com/v1beta/chaos"
+	if got != want {
+		t.Fatalf("default chaos-server URL: got %q want %q", got, want)
+	}
+}
+
+// TestManifestImport_ThroughGatewayPrefix simulates the federated path:
+// chaos-server points at <gateway>/v1beta/chaos, the gateway middleware
+// rewrites /v1beta/chaos/* → /v1beta/*, and the chaos handler must
+// receive the un-prefixed path. Catches CLI regressions that would
+// break the federation contract.
+func TestManifestImport_ThroughGatewayPrefix(t *testing.T) {
+	resetManifestTestState(t)
+
+	var gotUpstreamPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Mimic the gateway's strip_prefix on "/v1beta/chaos": the
+		// /chaos segment is gateway-side only, so it's removed before
+		// the chaos service sees the request.
+		const prefix = "/v1beta/chaos"
+		gotUpstreamPath = strings.TrimPrefix(r.URL.Path, prefix)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"upserted":2,"superseded":0,"dry_run":true,"point_ids":["abc"]}}`))
+	}))
+	defer srv.Close()
+
+	t.Setenv("AEGIS_CHAOS_SERVER", srv.URL+"/v1beta/chaos")
+
+	if rc := executeArgs([]string{"manifest", "import", "--dry-run", "testdata/manifest-valid.yaml"}); rc != 0 {
+		t.Fatalf("import returned non-zero: %d", rc)
+	}
+	const want = "/v1beta/systems/ts/points/import"
+	if gotUpstreamPath != want {
+		t.Fatalf("upstream path after gateway rewrite: got %q want %q", gotUpstreamPath, want)
+	}
+}
+
+// TestChaosDoJSON_RetriesOn5xx exercises the anti-hang retry: a server
+// that fails the first POST with 503 must be retried once and the
+// second-attempt success must be returned to the caller.
+func TestChaosDoJSON_RetriesOn5xx(t *testing.T) {
+	resetManifestTestState(t)
+
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		if n == 1 {
+			http.Error(w, "transient", http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"upserted":1,"superseded":0,"dry_run":false,"point_ids":["x"]}}`))
+	}))
+	defer srv.Close()
+	t.Setenv(chaosServerEnv, srv.URL)
+
+	start := time.Now()
+	body, status, err := chaosDoJSON(http.MethodPost, "/v1beta/systems/ts/points/import", []byte(`{}`))
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("chaosDoJSON: %v", err)
+	}
+	if status != http.StatusOK {
+		t.Fatalf("status: got %d want 200", status)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("expected exactly 2 attempts, got %d", calls.Load())
+	}
+	if !strings.Contains(string(body), `"upserted":1`) {
+		t.Fatalf("body from successful retry not returned: %s", string(body))
+	}
+	// Backoff is 1s between attempts; allow generous upper bound for CI.
+	if elapsed < 1*time.Second {
+		t.Fatalf("expected ≥1s sleep between retries, got %s", elapsed)
 	}
 }
 

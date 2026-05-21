@@ -253,6 +253,18 @@ data:
     strip_prefix = true
 
     [[gateway.routes]]
+    # Federate aegis-chaos behind the same EIP as aegis-api. The /chaos
+    # segment is a gateway-side namespace; the chaos handler registers
+    # at /v1beta/* upstream. strip_prefix removes the matched
+    # "/v1beta/chaos" before forwarding (external
+    # /v1beta/chaos/v1beta/systems/X → upstream /v1beta/systems/X).
+    # aegis-chaos validates the bearer itself via TrustedHeaderAuth.
+    prefix       = "/v1beta/chaos"
+    upstream     = "{{ .Release.Name }}-chaos:{{ .Values.chaos.httpPort | default 8086 }}"
+    auth         = "jwt"
+    strip_prefix = true
+
+    [[gateway.routes]]
     prefix   = "/api/v2/auth/"
     upstream = "{{ .Release.Name }}-sso:{{ .Values.sso.service.port }}"
     auth     = "none"

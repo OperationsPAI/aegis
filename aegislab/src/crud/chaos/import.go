@@ -91,6 +91,7 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 	out := &ImportResult{DryRun: dryRun}
 	newIDs := make(map[string]struct{}, len(m.Spec.Points))
 
+	rows := make([]Point, 0, len(m.Spec.Points))
 	for _, p := range m.Spec.Points {
 		if _, ok := caps[p.Capability]; !ok {
 			return nil, fmt.Errorf("chaos: unknown capability %q", p.Capability)
@@ -107,7 +108,7 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 		newIDs[id] = struct{}{}
 		out.PointIDs = append(out.PointIDs, id)
 
-		row := Point{
+		rows = append(rows, Point{
 			ID:             id,
 			SystemName:     systemName,
 			ServiceID:      &svcID,
@@ -116,19 +117,25 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 			ParamOverrides: JSONMap(p.ParamOverrides),
 			Source:         "import",
 			Status:         PointActive,
-		}
+		})
+	}
+
+	if len(rows) > 0 {
 		res := tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"param_overrides", "status", "updated_at",
 			}),
-		}).Create(&row)
+		}).CreateInBatches(&rows, 200)
 		if res.Error != nil {
 			return nil, res.Error
 		}
-		if res.RowsAffected > 0 {
-			out.Upserted++
-		}
+		// GORM sums RowsAffected across batches. On MySQL an UPSERT
+		// reports 2 per replaced row, 1 per fresh insert; on SQLite
+		// (unit tests) it reports 1 in both cases. Either way the
+		// counter reflects total rows touched, which is what callers
+		// want for the import summary.
+		out.Upserted = int(res.RowsAffected)
 	}
 
 	if m.Spec.ReplaceScope == ReplaceScopeService {

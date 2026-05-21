@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"aegis/cli/client"
 	"aegis/cli/output"
@@ -360,51 +362,100 @@ func resolveChaosServer() (string, error) {
 	if v := os.Getenv(chaosServerEnv); v != "" {
 		return v, nil
 	}
-	return "", usageErrorf("aegis-chaos URL required: pass --chaos-server or set %s "+
-		"(helm hooks: http://{{ include \"chaos.fullname\" . }}.{{ .Release.Namespace }}.svc:{{ .Values.httpPort }})",
+	// Fall through to the federated gateway path. aegis-chaos is
+	// reachable through rcabench-gateway under /v1beta/chaos/*, so
+	// interactive aegisctl users only need --server (or AEGIS_SERVER).
+	// Helm chart hooks should still pass --chaos-server explicitly
+	// because they call the in-cluster ClusterIP directly.
+	if flagServer != "" {
+		return strings.TrimRight(flagServer, "/") + "/v1beta/chaos", nil
+	}
+	return "", usageErrorf("aegis-chaos URL required: pass --chaos-server, set %s, "+
+		"or pass --server (defaults to <server>/v1beta/chaos via the gateway)",
 		chaosServerEnv)
 }
+
+// chaosHTTPTimeout caps a single chaos-service request. Sized for the
+// slowest realistic call (server-side batched UPSERT of a 600-point
+// manifest after the import_lock SELECT…FOR UPDATE settles).
+const chaosHTTPTimeout = 90 * time.Second
 
 func chaosDoJSON(method, path string, body []byte) ([]byte, int, error) {
 	server, err := resolveChaosServer()
 	if err != nil {
 		return nil, 0, err
 	}
-	var reader io.Reader
-	if body != nil {
-		reader = bytes.NewReader(body)
+	httpClient := &http.Client{
+		Transport: client.TransportFor(resolveTLSOptions()),
+		Timeout:   chaosHTTPTimeout,
 	}
-	req, err := http.NewRequestWithContext(context.Background(), method,
-		strings.TrimRight(server, "/")+path, reader)
-	if err != nil {
-		return nil, 0, fmt.Errorf("build request: %w", err)
+	url := strings.TrimRight(server, "/") + path
+
+	var lastErr error
+	var lastStatus int
+	var lastBody []byte
+	for attempt := 0; attempt < 2; attempt++ {
+		var reader io.Reader
+		if body != nil {
+			reader = bytes.NewReader(body)
+		}
+		req, err := http.NewRequestWithContext(context.Background(), method, url, reader)
+		if err != nil {
+			return nil, 0, fmt.Errorf("build request: %w", err)
+		}
+		if body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.Header.Set("Accept", "application/json")
+		// aegis-chaos auths via TrustedHeaderAuth, same Bearer scheme as the
+		// backend. manifest-schema.json is the only unauthenticated endpoint;
+		// sending a bearer there is harmless.
+		if flagToken != "" {
+			req.Header.Set("Authorization", "Bearer "+flagToken)
+		}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			lastErr = err
+			if attempt == 0 && isRetryableNetErr(err) {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			return nil, 0, fmt.Errorf("%s %s: %w", method, path, err)
+		}
+		b, readErr := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if readErr != nil {
+			return nil, resp.StatusCode, fmt.Errorf("read response: %w", readErr)
+		}
+		lastStatus = resp.StatusCode
+		lastBody = b
+		if attempt == 0 && resp.StatusCode >= 500 {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		return b, resp.StatusCode, nil
 	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if lastErr != nil {
+		return nil, 0, fmt.Errorf("%s %s: %w", method, path, lastErr)
 	}
-	req.Header.Set("Accept", "application/json")
-	// aegis-chaos auths via TrustedHeaderAuth, same Bearer scheme as the
-	// backend. manifest-schema.json is the only unauthenticated endpoint;
-	// sending a bearer there is harmless.
-	if flagToken != "" {
-		req.Header.Set("Authorization", "Bearer "+flagToken)
+	return lastBody, lastStatus, nil
+}
+
+func isRetryableNetErr(err error) bool {
+	var nerr net.Error
+	if errors.As(err, &nerr) {
+		return nerr.Timeout()
 	}
-	httpClient := &http.Client{Transport: client.TransportFor(resolveTLSOptions())}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("%s %s: %w", method, path, err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("read response: %w", err)
-	}
-	return b, resp.StatusCode, nil
+	return false
 }
 
 func init() {
 	manifestCmd.PersistentFlags().StringVar(&flagChaosServer, "chaos-server", "",
-		"aegis-chaos service URL (env: AEGIS_CHAOS_SERVER; required for import / list-points / --fetch-schema)")
+		"aegis-chaos service URL (env: AEGIS_CHAOS_SERVER). When unset, "+
+			"defaults to <--server>/v1beta/chaos so interactive aegisctl users can "+
+			"reach chaos-service through the federating gateway with just --server. "+
+			"Helm chart hooks should still set this explicitly to the in-cluster "+
+			"ClusterIP: http://{{ include \"chaos.fullname\" . }}.{{ .Release.Namespace }}.svc:{{ .Values.httpPort }}")
 
 	manifestValidateCmd.Flags().BoolVar(&flagFetchSchema, "fetch-schema", false,
 		"Fetch the live JSON Schema from GET /v1beta/manifest-schema.json instead of the bundled copy (ADR-0010)")
