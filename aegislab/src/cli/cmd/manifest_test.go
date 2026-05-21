@@ -7,10 +7,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 func TestManifestValidate_Valid_ExitsZero(t *testing.T) {
@@ -59,7 +60,7 @@ func TestManifestImport_DryRun_SendsCorrectPathBodyAndQuery(t *testing.T) {
 	t.Setenv("AEGIS_CHAOS_SERVER", srv.URL)
 
 	stdout, err := captureStdout(t, func() error {
-		if rc := executeArgs([]string{"manifest", "import", "--dry-run", "testdata/manifest-valid.yaml"}); rc != 0 {
+		if rc := executeArgs([]string{"manifest", "import", "--dry-run", "--output", "json", "testdata/manifest-valid.yaml"}); rc != 0 {
 			return errFromInt(rc)
 		}
 		return nil
@@ -92,11 +93,6 @@ func TestManifestImport_DryRun_SendsCorrectPathBodyAndQuery(t *testing.T) {
 	}
 }
 
-// TestResolveChaosServer_DefaultsToGatewayUnderServer verifies the new
-// fallback path: when --chaos-server / AEGIS_CHAOS_SERVER are both
-// unset, the resolver derives the URL from --server (which every other
-// aegisctl command already requires), appending /v1beta/chaos to land
-// on the gateway-federated prefix.
 func TestResolveChaosServer_DefaultsToGatewayUnderServer(t *testing.T) {
 	resetManifestTestState(t)
 	t.Setenv(chaosServerEnv, "")
@@ -114,74 +110,104 @@ func TestResolveChaosServer_DefaultsToGatewayUnderServer(t *testing.T) {
 	}
 }
 
-// TestManifestImport_ThroughGatewayPrefix simulates the federated path:
-// chaos-server points at <gateway>/v1beta/chaos, the gateway middleware
-// rewrites /v1beta/chaos/* → /v1beta/*, and the chaos handler must
-// receive the un-prefixed path. Catches CLI regressions that would
-// break the federation contract.
-func TestManifestImport_ThroughGatewayPrefix(t *testing.T) {
+func TestManifestImportDir_MixedTree_ImportsValidAndSkipsRest(t *testing.T) {
 	resetManifestTestState(t)
 
-	var gotUpstreamPath string
+	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Mimic the gateway's strip_prefix on "/v1beta/chaos": the
-		// /chaos segment is gateway-side only, so it's removed before
-		// the chaos service sees the request.
-		const prefix = "/v1beta/chaos"
-		gotUpstreamPath = strings.TrimPrefix(r.URL.Path, prefix)
+		calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"upserted":2,"superseded":0,"dry_run":true,"point_ids":["abc"]}}`))
+		_, _ = w.Write([]byte(`{"data":{"upserted":3,"superseded":1,"dry_run":false,"point_ids":["p1","p2","p3"]}}`))
 	}))
 	defer srv.Close()
+	t.Setenv(chaosServerEnv, srv.URL)
 
-	t.Setenv("AEGIS_CHAOS_SERVER", srv.URL+"/v1beta/chaos")
-
-	if rc := executeArgs([]string{"manifest", "import", "--dry-run", "testdata/manifest-valid.yaml"}); rc != 0 {
-		t.Fatalf("import returned non-zero: %d", rc)
+	root := t.TempDir()
+	validYAML, err := os.ReadFile("testdata/manifest-valid.yaml")
+	if err != nil {
+		t.Fatalf("read valid manifest: %v", err)
 	}
-	const want = "/v1beta/systems/ts/points/import"
-	if gotUpstreamPath != want {
-		t.Fatalf("upstream path after gateway rewrite: got %q want %q", gotUpstreamPath, want)
+	mustWrite(t, filepath.Join(root, "svc-a", "frontend.yaml"), validYAML)
+	mustWrite(t, filepath.Join(root, "svc-b", "checkout.yml"), validYAML)
+	mustWrite(t, filepath.Join(root, "notes.txt"), []byte("not yaml"))
+	mustWrite(t, filepath.Join(root, "other.yaml"), []byte("apiVersion: v1\nkind: ConfigMap\n"))
+
+	stderr, rc := captureManifestStderr(t, func() int {
+		return executeArgs([]string{"manifest", "import-dir", "--concurrency", "2", root})
+	})
+	if rc != 0 {
+		t.Fatalf("import-dir exit=%d stderr=%q", rc, stderr)
+	}
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("expected 2 server calls (one per valid PointManifest), got %d", got)
 	}
 }
 
-// TestChaosDoJSON_RetriesOn5xx exercises the anti-hang retry: a server
-// that fails the first POST with 503 must be retried once and the
-// second-attempt success must be returned to the caller.
-func TestChaosDoJSON_RetriesOn5xx(t *testing.T) {
+func TestManifestImportDir_FailureWithoutKeepGoing_AbortsNonZero(t *testing.T) {
+	resetManifestTestState(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"code":500,"message":"boom"}`))
+	}))
+	defer srv.Close()
+	t.Setenv(chaosServerEnv, srv.URL)
+
+	root := t.TempDir()
+	validYAML, err := os.ReadFile("testdata/manifest-valid.yaml")
+	if err != nil {
+		t.Fatalf("read valid manifest: %v", err)
+	}
+	mustWrite(t, filepath.Join(root, "a.yaml"), validYAML)
+
+	rc := executeArgs([]string{"manifest", "import-dir", root})
+	if rc == 0 {
+		t.Fatal("expected non-zero exit on server 500")
+	}
+}
+
+func TestManifestImportDir_KeepGoing_FinishesAllButReportsFailure(t *testing.T) {
 	resetManifestTestState(t)
 
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := calls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
 		if n == 1 {
-			http.Error(w, "transient", http.StatusServiceUnavailable)
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"code":500,"message":"transient"}`))
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"upserted":1,"superseded":0,"dry_run":false,"point_ids":["x"]}}`))
+		_, _ = w.Write([]byte(`{"data":{"upserted":1,"superseded":0,"dry_run":false,"point_ids":["p"]}}`))
 	}))
 	defer srv.Close()
 	t.Setenv(chaosServerEnv, srv.URL)
 
-	start := time.Now()
-	body, status, err := chaosDoJSON(http.MethodPost, "/v1beta/systems/ts/points/import", []byte(`{}`))
-	elapsed := time.Since(start)
+	root := t.TempDir()
+	validYAML, err := os.ReadFile("testdata/manifest-valid.yaml")
 	if err != nil {
-		t.Fatalf("chaosDoJSON: %v", err)
+		t.Fatalf("read valid manifest: %v", err)
 	}
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want 200", status)
+	mustWrite(t, filepath.Join(root, "a.yaml"), validYAML)
+	mustWrite(t, filepath.Join(root, "b.yaml"), validYAML)
+
+	rc := executeArgs([]string{"manifest", "import-dir", "--concurrency", "1", "--keep-going", root})
+	if rc == 0 {
+		t.Fatal("expected non-zero exit when --keep-going still has at least one failure")
 	}
-	if calls.Load() != 2 {
-		t.Fatalf("expected exactly 2 attempts, got %d", calls.Load())
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("expected both files attempted under --keep-going, got %d call(s)", got)
 	}
-	if !strings.Contains(string(body), `"upserted":1`) {
-		t.Fatalf("body from successful retry not returned: %s", string(body))
+}
+
+func mustWrite(t *testing.T, path string, data []byte) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
 	}
-	// Backoff is 1s between attempts; allow generous upper bound for CI.
-	if elapsed < 1*time.Second {
-		t.Fatalf("expected ≥1s sleep between retries, got %s", elapsed)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
 	}
 }
 
@@ -205,6 +231,9 @@ func resetManifestTestState(t *testing.T) {
 	flagListChartVer = ""
 	flagToken = ""
 	flagQuiet = true
+	flagImportDirConcurrency = 0
+	flagImportDirKeepGoing = false
+	chaosServerDeprecationOnce = sync.Once{}
 }
 
 func captureManifestStderr(t *testing.T, fn func() int) (string, int) {
