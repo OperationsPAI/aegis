@@ -15,11 +15,11 @@ import (
 	"encoding/json"
 )
 
-// checks if the HandlerGroundtruth type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &HandlerGroundtruth{}
+// checks if the ChaosGroundtruth type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &ChaosGroundtruth{}
 
-// HandlerGroundtruth struct for HandlerGroundtruth
-type HandlerGroundtruth struct {
+// ChaosGroundtruth struct for ChaosGroundtruth
+type ChaosGroundtruth struct {
 	Container            []string `json:"container,omitempty"`
 	Function             []string `json:"function,omitempty"`
 	Metric               []string `json:"metric,omitempty"`
@@ -29,27 +29,27 @@ type HandlerGroundtruth struct {
 	AdditionalProperties map[string]interface{}
 }
 
-type _HandlerGroundtruth HandlerGroundtruth
+type _ChaosGroundtruth ChaosGroundtruth
 
-// NewHandlerGroundtruth instantiates a new HandlerGroundtruth object
+// NewChaosGroundtruth instantiates a new ChaosGroundtruth object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewHandlerGroundtruth() *HandlerGroundtruth {
-	this := HandlerGroundtruth{}
+func NewChaosGroundtruth() *ChaosGroundtruth {
+	this := ChaosGroundtruth{}
 	return &this
 }
 
-// NewHandlerGroundtruthWithDefaults instantiates a new HandlerGroundtruth object
+// NewChaosGroundtruthWithDefaults instantiates a new ChaosGroundtruth object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewHandlerGroundtruthWithDefaults() *HandlerGroundtruth {
-	this := HandlerGroundtruth{}
+func NewChaosGroundtruthWithDefaults() *ChaosGroundtruth {
+	this := ChaosGroundtruth{}
 	return &this
 }
 
 // GetContainer returns the Container field value if set, zero value otherwise.
-func (o *HandlerGroundtruth) GetContainer() []string {
+func (o *ChaosGroundtruth) GetContainer() []string {
 	if o == nil || IsNil(o.Container) {
 		var ret []string
 		return ret
@@ -59,7 +59,7 @@ func (o *HandlerGroundtruth) GetContainer() []string {
 
 // GetContainerOk returns a tuple with the Container field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerGroundtruth) GetContainerOk() ([]string, bool) {
+func (o *ChaosGroundtruth) GetContainerOk() ([]string, bool) {
 	if o == nil || IsNil(o.Container) {
 		return nil, false
 	}
@@ -67,7 +67,7 @@ func (o *HandlerGroundtruth) GetContainerOk() ([]string, bool) {
 }
 
 // HasContainer returns a boolean if a field has been set.
-func (o *HandlerGroundtruth) HasContainer() bool {
+func (o *ChaosGroundtruth) HasContainer() bool {
 	if o != nil && !IsNil(o.Container) {
 		return true
 	}
@@ -76,12 +76,12 @@ func (o *HandlerGroundtruth) HasContainer() bool {
 }
 
 // SetContainer gets a reference to the given []string and assigns it to the Container field.
-func (o *HandlerGroundtruth) SetContainer(v []string) {
+func (o *ChaosGroundtruth) SetContainer(v []string) {
 	o.Container = v
 }
 
 // GetFunction returns the Function field value if set, zero value otherwise.
-func (o *HandlerGroundtruth) GetFunction() []string {
+func (o *ChaosGroundtruth) GetFunction() []string {
 	if o == nil || IsNil(o.Function) {
 		var ret []string
 		return ret
@@ -91,7 +91,7 @@ func (o *HandlerGroundtruth) GetFunction() []string {
 
 // GetFunctionOk returns a tuple with the Function field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerGroundtruth) GetFunctionOk() ([]string, bool) {
+func (o *ChaosGroundtruth) GetFunctionOk() ([]string, bool) {
 	if o == nil || IsNil(o.Function) {
 		return nil, false
 	}
@@ -99,7 +99,7 @@ func (o *HandlerGroundtruth) GetFunctionOk() ([]string, bool) {
 }
 
 // HasFunction returns a boolean if a field has been set.
-func (o *HandlerGroundtruth) HasFunction() bool {
+func (o *ChaosGroundtruth) HasFunction() bool {
 	if o != nil && !IsNil(o.Function) {
 		return true
 	}
@@ -108,12 +108,12 @@ func (o *HandlerGroundtruth) HasFunction() bool {
 }
 
 // SetFunction gets a reference to the given []string and assigns it to the Function field.
-func (o *HandlerGroundtruth) SetFunction(v []string) {
+func (o *ChaosGroundtruth) SetFunction(v []string) {
 	o.Function = v
 }
 
 // GetMetric returns the Metric field value if set, zero value otherwise.
-func (o *HandlerGroundtruth) GetMetric() []string {
+func (o *ChaosGroundtruth) GetMetric() []string {
 	if o == nil || IsNil(o.Metric) {
 		var ret []string
 		return ret
@@ -123,7 +123,7 @@ func (o *HandlerGroundtruth) GetMetric() []string {
 
 // GetMetricOk returns a tuple with the Metric field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerGroundtruth) GetMetricOk() ([]string, bool) {
+func (o *ChaosGroundtruth) GetMetricOk() ([]string, bool) {
 	if o == nil || IsNil(o.Metric) {
 		return nil, false
 	}
@@ -131,7 +131,7 @@ func (o *HandlerGroundtruth) GetMetricOk() ([]string, bool) {
 }
 
 // HasMetric returns a boolean if a field has been set.
-func (o *HandlerGroundtruth) HasMetric() bool {
+func (o *ChaosGroundtruth) HasMetric() bool {
 	if o != nil && !IsNil(o.Metric) {
 		return true
 	}
@@ -140,12 +140,12 @@ func (o *HandlerGroundtruth) HasMetric() bool {
 }
 
 // SetMetric gets a reference to the given []string and assigns it to the Metric field.
-func (o *HandlerGroundtruth) SetMetric(v []string) {
+func (o *ChaosGroundtruth) SetMetric(v []string) {
 	o.Metric = v
 }
 
 // GetPod returns the Pod field value if set, zero value otherwise.
-func (o *HandlerGroundtruth) GetPod() []string {
+func (o *ChaosGroundtruth) GetPod() []string {
 	if o == nil || IsNil(o.Pod) {
 		var ret []string
 		return ret
@@ -155,7 +155,7 @@ func (o *HandlerGroundtruth) GetPod() []string {
 
 // GetPodOk returns a tuple with the Pod field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerGroundtruth) GetPodOk() ([]string, bool) {
+func (o *ChaosGroundtruth) GetPodOk() ([]string, bool) {
 	if o == nil || IsNil(o.Pod) {
 		return nil, false
 	}
@@ -163,7 +163,7 @@ func (o *HandlerGroundtruth) GetPodOk() ([]string, bool) {
 }
 
 // HasPod returns a boolean if a field has been set.
-func (o *HandlerGroundtruth) HasPod() bool {
+func (o *ChaosGroundtruth) HasPod() bool {
 	if o != nil && !IsNil(o.Pod) {
 		return true
 	}
@@ -172,12 +172,12 @@ func (o *HandlerGroundtruth) HasPod() bool {
 }
 
 // SetPod gets a reference to the given []string and assigns it to the Pod field.
-func (o *HandlerGroundtruth) SetPod(v []string) {
+func (o *ChaosGroundtruth) SetPod(v []string) {
 	o.Pod = v
 }
 
 // GetService returns the Service field value if set, zero value otherwise.
-func (o *HandlerGroundtruth) GetService() []string {
+func (o *ChaosGroundtruth) GetService() []string {
 	if o == nil || IsNil(o.Service) {
 		var ret []string
 		return ret
@@ -187,7 +187,7 @@ func (o *HandlerGroundtruth) GetService() []string {
 
 // GetServiceOk returns a tuple with the Service field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerGroundtruth) GetServiceOk() ([]string, bool) {
+func (o *ChaosGroundtruth) GetServiceOk() ([]string, bool) {
 	if o == nil || IsNil(o.Service) {
 		return nil, false
 	}
@@ -195,7 +195,7 @@ func (o *HandlerGroundtruth) GetServiceOk() ([]string, bool) {
 }
 
 // HasService returns a boolean if a field has been set.
-func (o *HandlerGroundtruth) HasService() bool {
+func (o *ChaosGroundtruth) HasService() bool {
 	if o != nil && !IsNil(o.Service) {
 		return true
 	}
@@ -204,12 +204,12 @@ func (o *HandlerGroundtruth) HasService() bool {
 }
 
 // SetService gets a reference to the given []string and assigns it to the Service field.
-func (o *HandlerGroundtruth) SetService(v []string) {
+func (o *ChaosGroundtruth) SetService(v []string) {
 	o.Service = v
 }
 
 // GetSpan returns the Span field value if set, zero value otherwise.
-func (o *HandlerGroundtruth) GetSpan() []string {
+func (o *ChaosGroundtruth) GetSpan() []string {
 	if o == nil || IsNil(o.Span) {
 		var ret []string
 		return ret
@@ -219,7 +219,7 @@ func (o *HandlerGroundtruth) GetSpan() []string {
 
 // GetSpanOk returns a tuple with the Span field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerGroundtruth) GetSpanOk() ([]string, bool) {
+func (o *ChaosGroundtruth) GetSpanOk() ([]string, bool) {
 	if o == nil || IsNil(o.Span) {
 		return nil, false
 	}
@@ -227,7 +227,7 @@ func (o *HandlerGroundtruth) GetSpanOk() ([]string, bool) {
 }
 
 // HasSpan returns a boolean if a field has been set.
-func (o *HandlerGroundtruth) HasSpan() bool {
+func (o *ChaosGroundtruth) HasSpan() bool {
 	if o != nil && !IsNil(o.Span) {
 		return true
 	}
@@ -236,11 +236,11 @@ func (o *HandlerGroundtruth) HasSpan() bool {
 }
 
 // SetSpan gets a reference to the given []string and assigns it to the Span field.
-func (o *HandlerGroundtruth) SetSpan(v []string) {
+func (o *ChaosGroundtruth) SetSpan(v []string) {
 	o.Span = v
 }
 
-func (o HandlerGroundtruth) MarshalJSON() ([]byte, error) {
+func (o ChaosGroundtruth) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -248,7 +248,7 @@ func (o HandlerGroundtruth) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o HandlerGroundtruth) ToMap() (map[string]interface{}, error) {
+func (o ChaosGroundtruth) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Container) {
 		toSerialize["container"] = o.Container
@@ -276,16 +276,16 @@ func (o HandlerGroundtruth) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *HandlerGroundtruth) UnmarshalJSON(data []byte) (err error) {
-	varHandlerGroundtruth := _HandlerGroundtruth{}
+func (o *ChaosGroundtruth) UnmarshalJSON(data []byte) (err error) {
+	varChaosGroundtruth := _ChaosGroundtruth{}
 
-	err = json.Unmarshal(data, &varHandlerGroundtruth)
+	err = json.Unmarshal(data, &varChaosGroundtruth)
 
 	if err != nil {
 		return err
 	}
 
-	*o = HandlerGroundtruth(varHandlerGroundtruth)
+	*o = ChaosGroundtruth(varChaosGroundtruth)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -302,38 +302,38 @@ func (o *HandlerGroundtruth) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-type NullableHandlerGroundtruth struct {
-	value *HandlerGroundtruth
+type NullableChaosGroundtruth struct {
+	value *ChaosGroundtruth
 	isSet bool
 }
 
-func (v NullableHandlerGroundtruth) Get() *HandlerGroundtruth {
+func (v NullableChaosGroundtruth) Get() *ChaosGroundtruth {
 	return v.value
 }
 
-func (v *NullableHandlerGroundtruth) Set(val *HandlerGroundtruth) {
+func (v *NullableChaosGroundtruth) Set(val *ChaosGroundtruth) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableHandlerGroundtruth) IsSet() bool {
+func (v NullableChaosGroundtruth) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableHandlerGroundtruth) Unset() {
+func (v *NullableChaosGroundtruth) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableHandlerGroundtruth(val *HandlerGroundtruth) *NullableHandlerGroundtruth {
-	return &NullableHandlerGroundtruth{value: val, isSet: true}
+func NewNullableChaosGroundtruth(val *ChaosGroundtruth) *NullableChaosGroundtruth {
+	return &NullableChaosGroundtruth{value: val, isSet: true}
 }
 
-func (v NullableHandlerGroundtruth) MarshalJSON() ([]byte, error) {
+func (v NullableChaosGroundtruth) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableHandlerGroundtruth) UnmarshalJSON(src []byte) error {
+func (v *NullableChaosGroundtruth) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

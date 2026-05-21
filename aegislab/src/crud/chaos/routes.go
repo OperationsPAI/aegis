@@ -64,6 +64,10 @@ func Routes(h *Handler, db *gorm.DB, verifier *jwtkeys.Verifier) framework.Route
 
 			auth.GET("/systems/:sys/points", h.ListSystemPoints)
 			auth.POST("/systems/:sys/points/import", h.ImportPoints)
+			auth.GET("/systems/:sys/candidates", h.ListSystemCandidates)
+
+			auth.POST("/guided/resolve", h.GuidedResolve)
+			auth.POST("/guided/apply-next", h.GuidedApplyNext)
 
 			auth.GET("/capabilities", h.ListCapabilities)
 			auth.GET("/capabilities/:name", h.GetCapability)
@@ -71,6 +75,7 @@ func Routes(h *Handler, db *gorm.DB, verifier *jwtkeys.Verifier) framework.Route
 			auth.POST("/injections", h.CreateInjection)
 			auth.GET("/injections/:id", h.GetInjection)
 			auth.GET("/injections/:id/events", h.StreamInjectionEvents)
+			auth.DELETE("/injections/by-task/:taskID", h.DeleteInjectionByTask)
 			auth.DELETE("/injections/:id", h.DeleteInjection)
 
 			auth.POST("/injection-batches", h.CreateInjectionBatch)

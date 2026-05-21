@@ -180,6 +180,7 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 		ExecutorHandle: handle,
 		Status:         StatusPending,
 		CallerMetadata: in.CallerMetadata,
+		TaskID:         taskIDFromMeta(in.CallerMetadata),
 		Ts:             now,
 	}
 	if err := s.DB.WithContext(ctx).Create(&row).Error; err != nil {
@@ -274,6 +275,68 @@ func isTerminal(s string) bool {
 		return true
 	}
 	return false
+}
+
+// TaskInjectionRef is the resolved (id, isBatch) pair for a caller-supplied
+// task_id.
+type TaskInjectionRef struct {
+	ID      string
+	IsBatch bool
+}
+
+// taskIDFromMeta returns "" for non-string values — the by-task DELETE then
+// can't find the row, which is the correct outcome for callers that didn't
+// stamp a usable task_id.
+func taskIDFromMeta(meta map[string]any) string {
+	if meta == nil {
+		return ""
+	}
+	v, ok := meta["task_id"].(string)
+	if !ok {
+		return ""
+	}
+	return v
+}
+
+// LookupTaskInjection resolves a caller-supplied task_id into a (batch|injection)
+// destroy target. Lookup is singleton-first to handle the hybrid-batch case:
+// when the CLI / external caller stamps the same task_id on both the batch
+// envelope AND every child, a singleton hit whose row carries batch_id != NULL
+// means the caller wants the whole batch destroyed, not one arbitrary child.
+func (s *Manager) LookupTaskInjection(ctx context.Context, taskID string) (TaskInjectionRef, error) {
+	if taskID == "" {
+		return TaskInjectionRef{}, ErrInjectionNotFound
+	}
+	db := s.DB.WithContext(ctx)
+
+	var child Injection
+	err := db.Select("id", "batch_id").
+		Where("task_id = ?", taskID).
+		Order("ts ASC").Limit(1).Take(&child).Error
+	if err == nil {
+		if child.BatchID != nil && *child.BatchID != "" {
+			return TaskInjectionRef{ID: *child.BatchID, IsBatch: true}, nil
+		}
+		return TaskInjectionRef{ID: child.ID, IsBatch: false}, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return TaskInjectionRef{}, err
+	}
+
+	// Singleton miss can still mean a batch was created with zero children that
+	// landed in chaos_injections (e.g. all children rejected pre-insert). Fall
+	// through to the batch table on its own indexed task_id column.
+	var batchID string
+	err = db.Model(&InjectionBatch{}).
+		Where("task_id = ?", taskID).
+		Limit(1).Pluck("id", &batchID).Error
+	if err != nil {
+		return TaskInjectionRef{}, err
+	}
+	if batchID == "" {
+		return TaskInjectionRef{}, ErrInjectionNotFound
+	}
+	return TaskInjectionRef{ID: batchID, IsBatch: true}, nil
 }
 
 func (s *Manager) ListCapabilities(ctx context.Context) ([]Capability, error) {

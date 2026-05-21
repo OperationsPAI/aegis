@@ -59,6 +59,7 @@ func (s *Manager) CreateInjectionBatch(ctx context.Context, in CreateBatchInput)
 		IdempotencyKey:      in.BatchIdempotencyKey,
 		AggregatedStatus:    AggPending,
 		BatchCallerMetadata: JSONMap(in.BatchCallerMetadata),
+		TaskID:              taskIDFromMeta(in.BatchCallerMetadata),
 		Ts:                  now,
 		StartedAt:           &now,
 	}
@@ -190,6 +191,7 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 		ExecutorHandle: handle,
 		Status:         StatusPending,
 		CallerMetadata: JSONMap(c.CallerMetadata),
+		TaskID:         taskIDFromMeta(c.CallerMetadata),
 		Ts:             now,
 	}
 	if err := s.DB.WithContext(ctx).Create(&row).Error; err != nil {
@@ -248,6 +250,7 @@ func (s *Manager) persistFailedChild(ctx context.Context, batchID string, c Crea
 		Status:         StatusFailed,
 		Diagnostics:    JSONMap{"error": cause.Error()},
 		CallerMetadata: JSONMap(c.CallerMetadata),
+		TaskID:         taskIDFromMeta(c.CallerMetadata),
 		Ts:             now,
 		StartedAt:      &now,
 		FinishedAt:     &now,

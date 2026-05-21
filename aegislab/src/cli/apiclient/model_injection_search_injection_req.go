@@ -20,11 +20,11 @@ var _ MappedNullable = &InjectionSearchInjectionReq{}
 
 // InjectionSearchInjectionReq struct for InjectionSearchInjectionReq
 type InjectionSearchInjectionReq struct {
-	Benchmarks []string            `json:"benchmarks,omitempty"`
-	Categories []HandlerSystemType `json:"categories,omitempty"`
-	CreatedAt  *DtoDateRange       `json:"created_at,omitempty"`
-	EndTime    *DtoDateRange       `json:"end_time,omitempty"`
-	FaultTypes []HandlerChaosType  `json:"fault_types,omitempty"`
+	Benchmarks []string         `json:"benchmarks,omitempty"`
+	Categories []string         `json:"categories,omitempty"`
+	CreatedAt  *DtoDateRange    `json:"created_at,omitempty"`
+	EndTime    *DtoDateRange    `json:"end_time,omitempty"`
+	FaultTypes []ChaosChaosType `json:"fault_types,omitempty"`
 	// Group results into tree structure by these fields (ordered)
 	GroupBy []ConstsInjectionField `json:"group_by,omitempty"`
 	// Whether to include labels in the response
@@ -98,9 +98,9 @@ func (o *InjectionSearchInjectionReq) SetBenchmarks(v []string) {
 }
 
 // GetCategories returns the Categories field value if set, zero value otherwise.
-func (o *InjectionSearchInjectionReq) GetCategories() []HandlerSystemType {
+func (o *InjectionSearchInjectionReq) GetCategories() []string {
 	if o == nil || IsNil(o.Categories) {
-		var ret []HandlerSystemType
+		var ret []string
 		return ret
 	}
 	return o.Categories
@@ -108,7 +108,7 @@ func (o *InjectionSearchInjectionReq) GetCategories() []HandlerSystemType {
 
 // GetCategoriesOk returns a tuple with the Categories field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *InjectionSearchInjectionReq) GetCategoriesOk() ([]HandlerSystemType, bool) {
+func (o *InjectionSearchInjectionReq) GetCategoriesOk() ([]string, bool) {
 	if o == nil || IsNil(o.Categories) {
 		return nil, false
 	}
@@ -124,8 +124,8 @@ func (o *InjectionSearchInjectionReq) HasCategories() bool {
 	return false
 }
 
-// SetCategories gets a reference to the given []HandlerSystemType and assigns it to the Categories field.
-func (o *InjectionSearchInjectionReq) SetCategories(v []HandlerSystemType) {
+// SetCategories gets a reference to the given []string and assigns it to the Categories field.
+func (o *InjectionSearchInjectionReq) SetCategories(v []string) {
 	o.Categories = v
 }
 
@@ -194,9 +194,9 @@ func (o *InjectionSearchInjectionReq) SetEndTime(v DtoDateRange) {
 }
 
 // GetFaultTypes returns the FaultTypes field value if set, zero value otherwise.
-func (o *InjectionSearchInjectionReq) GetFaultTypes() []HandlerChaosType {
+func (o *InjectionSearchInjectionReq) GetFaultTypes() []ChaosChaosType {
 	if o == nil || IsNil(o.FaultTypes) {
-		var ret []HandlerChaosType
+		var ret []ChaosChaosType
 		return ret
 	}
 	return o.FaultTypes
@@ -204,7 +204,7 @@ func (o *InjectionSearchInjectionReq) GetFaultTypes() []HandlerChaosType {
 
 // GetFaultTypesOk returns a tuple with the FaultTypes field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *InjectionSearchInjectionReq) GetFaultTypesOk() ([]HandlerChaosType, bool) {
+func (o *InjectionSearchInjectionReq) GetFaultTypesOk() ([]ChaosChaosType, bool) {
 	if o == nil || IsNil(o.FaultTypes) {
 		return nil, false
 	}
@@ -220,8 +220,8 @@ func (o *InjectionSearchInjectionReq) HasFaultTypes() bool {
 	return false
 }
 
-// SetFaultTypes gets a reference to the given []HandlerChaosType and assigns it to the FaultTypes field.
-func (o *InjectionSearchInjectionReq) SetFaultTypes(v []HandlerChaosType) {
+// SetFaultTypes gets a reference to the given []ChaosChaosType and assigns it to the FaultTypes field.
+func (o *InjectionSearchInjectionReq) SetFaultTypes(v []ChaosChaosType) {
 	o.FaultTypes = v
 }
 

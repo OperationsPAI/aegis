@@ -236,7 +236,11 @@ func (h *Handler) GetInjection(c *gin.Context) {
 func (h *Handler) DeleteInjection(c *gin.Context) {
 	inj, err := h.Mgr.DeleteInjection(c.Request.Context(), c.Param("id"))
 	if err != nil {
-		dto.ErrorResponse(c, http.StatusNotFound, err.Error())
+		code := http.StatusInternalServerError
+		if errors.Is(err, ErrInjectionNotFound) {
+			code = http.StatusNotFound
+		}
+		dto.ErrorResponse(c, code, err.Error())
 		return
 	}
 	dto.SuccessResponse(c, inj)

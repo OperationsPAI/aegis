@@ -31,7 +31,7 @@ type InjectionInjectionDetailResp struct {
 	// EngineConfigSummary is the parsed leaf list for hybrid batch parents only. For non-hybrid (single-leaf) injections it's omitted because the row's own fault_type and display_config already describe the leaf.
 	EngineConfigSummary  []map[string]interface{} `json:"engine_config_summary,omitempty"`
 	FaultType            *string                  `json:"fault_type,omitempty"`
-	GroundTruth          []HandlerGroundtruth     `json:"ground_truth,omitempty"`
+	GroundTruth          []ChaosGroundtruth       `json:"ground_truth,omitempty"`
 	GroundtruthSource    *string                  `json:"groundtruth_source,omitempty"`
 	Id                   *int32                   `json:"id,omitempty"`
 	Labels               []DtoLabelItem           `json:"labels,omitempty"`
@@ -389,9 +389,9 @@ func (o *InjectionInjectionDetailResp) SetFaultType(v string) {
 }
 
 // GetGroundTruth returns the GroundTruth field value if set, zero value otherwise.
-func (o *InjectionInjectionDetailResp) GetGroundTruth() []HandlerGroundtruth {
+func (o *InjectionInjectionDetailResp) GetGroundTruth() []ChaosGroundtruth {
 	if o == nil || IsNil(o.GroundTruth) {
-		var ret []HandlerGroundtruth
+		var ret []ChaosGroundtruth
 		return ret
 	}
 	return o.GroundTruth
@@ -399,7 +399,7 @@ func (o *InjectionInjectionDetailResp) GetGroundTruth() []HandlerGroundtruth {
 
 // GetGroundTruthOk returns a tuple with the GroundTruth field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *InjectionInjectionDetailResp) GetGroundTruthOk() ([]HandlerGroundtruth, bool) {
+func (o *InjectionInjectionDetailResp) GetGroundTruthOk() ([]ChaosGroundtruth, bool) {
 	if o == nil || IsNil(o.GroundTruth) {
 		return nil, false
 	}
@@ -415,8 +415,8 @@ func (o *InjectionInjectionDetailResp) HasGroundTruth() bool {
 	return false
 }
 
-// SetGroundTruth gets a reference to the given []HandlerGroundtruth and assigns it to the GroundTruth field.
-func (o *InjectionInjectionDetailResp) SetGroundTruth(v []HandlerGroundtruth) {
+// SetGroundTruth gets a reference to the given []ChaosGroundtruth and assigns it to the GroundTruth field.
+func (o *InjectionInjectionDetailResp) SetGroundTruth(v []ChaosGroundtruth) {
 	o.GroundTruth = v
 }
 

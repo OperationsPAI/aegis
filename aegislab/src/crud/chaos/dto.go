@@ -1,6 +1,10 @@
 package chaos
 
-import "time"
+import (
+	"time"
+
+	guidedcli "aegis/platform/chaos"
+)
 
 // ChaosSystemUpsertReq is the request body for PUT /v1beta/systems/{sys}.
 type ChaosSystemUpsertReq struct {
@@ -157,4 +161,67 @@ type ChaosListPointsResp struct {
 	Total  int64            `json:"total"`
 	Limit  int              `json:"limit"`
 	Offset int              `json:"offset"`
+}
+
+// ChaosGuidedResolveReq is the request body for POST /v1beta/guided/resolve.
+// The current GuidedConfig is passed through as-is; the server walks one step
+// of the guided state machine and returns the next required field along with
+// the (canonicalised) config it derived.
+type ChaosGuidedResolveReq struct {
+	Config guidedcli.GuidedConfig `json:"config"`
+}
+
+// ChaosGuidedResolveResp wraps the guidedcli response in the same JSON shape
+// the in-process callers used. Fields mirror guidedcli.GuidedResponse so the
+// CLI replacement is a transparent swap.
+type ChaosGuidedResolveResp struct {
+	Mode         string                 `json:"mode"`
+	Stage        string                 `json:"stage"`
+	Config       guidedcli.GuidedConfig `json:"config"`
+	Resolved     map[string]any         `json:"resolved,omitempty"`
+	Next         []guidedcli.FieldSpec  `json:"next,omitempty"`
+	Preview      *guidedcli.Preview     `json:"preview,omitempty"`
+	ApplyPayload map[string]any         `json:"apply_payload,omitempty"`
+	Result       map[string]any         `json:"result,omitempty"`
+	CanApply     bool                   `json:"can_apply"`
+	Warnings     []string               `json:"warnings,omitempty"`
+	Errors       []string               `json:"errors,omitempty"`
+	Resources    map[string]any         `json:"resources,omitempty"`
+	Meta         map[string]any         `json:"meta,omitempty"`
+}
+
+// ChaosGuidedApplyNextReq is the request body for POST /v1beta/guided/apply-next.
+// `value` is the raw user selection for the single next-step field that the
+// preceding /resolve call surfaced; the server re-derives the resolve response
+// from `current`, applies the value, and returns the updated config.
+type ChaosGuidedApplyNextReq struct {
+	Current guidedcli.GuidedConfig `json:"current"`
+	Value   string                 `json:"value" binding:"required"`
+}
+
+// ChaosGuidedApplyNextResp is the merged GuidedConfig the caller should pass
+// to the next /resolve call.
+type ChaosGuidedApplyNextResp struct {
+	Config guidedcli.GuidedConfig `json:"config"`
+}
+
+// ChaosSystemCandidatesResp enumerates every reachable
+// (chaos_type, target...) GuidedConfig for the named system, with one entry
+// per leaf in the guided enumeration tree. Numeric param grids (latency_ms,
+// loss_pct, ...) are NOT expanded.
+type ChaosSystemCandidatesResp struct {
+	System     string                   `json:"system"`
+	Namespace  string                   `json:"namespace"`
+	Candidates []guidedcli.GuidedConfig `json:"candidates"`
+}
+
+// ChaosTaskInjectionRef is the resolved (injection_id, is_batch) pair returned
+// by DELETE /v1beta/injections/by-task/{taskID}. The same shape `Children`-less
+// reply that the singleton/batch DELETE endpoints emit is returned via the
+// payload pointers — exactly one of `injection` or `batch` is populated.
+type ChaosTaskInjectionRef struct {
+	TaskID    string                   `json:"task_id"`
+	IsBatch   bool                     `json:"is_batch"`
+	Injection *ChaosInjectionResp      `json:"injection,omitempty"`
+	Batch     *ChaosInjectionBatchResp `json:"batch,omitempty"`
 }

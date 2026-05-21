@@ -23,6 +23,7 @@ type ChaosChaosCreateInjectionReq struct {
 	CallerMetadata       map[string]interface{} `json:"caller_metadata,omitempty"`
 	ExecutorPin          *string                `json:"executor_pin,omitempty"`
 	IdempotencyKey       *string                `json:"idempotency_key,omitempty"`
+	Namespace            *string                `json:"namespace,omitempty"`
 	Params               map[string]interface{} `json:"params,omitempty"`
 	PointId              *string                `json:"point_id,omitempty"`
 	AdditionalProperties map[string]interface{}
@@ -143,6 +144,38 @@ func (o *ChaosChaosCreateInjectionReq) SetIdempotencyKey(v string) {
 	o.IdempotencyKey = &v
 }
 
+// GetNamespace returns the Namespace field value if set, zero value otherwise.
+func (o *ChaosChaosCreateInjectionReq) GetNamespace() string {
+	if o == nil || IsNil(o.Namespace) {
+		var ret string
+		return ret
+	}
+	return *o.Namespace
+}
+
+// GetNamespaceOk returns a tuple with the Namespace field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ChaosChaosCreateInjectionReq) GetNamespaceOk() (*string, bool) {
+	if o == nil || IsNil(o.Namespace) {
+		return nil, false
+	}
+	return o.Namespace, true
+}
+
+// HasNamespace returns a boolean if a field has been set.
+func (o *ChaosChaosCreateInjectionReq) HasNamespace() bool {
+	if o != nil && !IsNil(o.Namespace) {
+		return true
+	}
+
+	return false
+}
+
+// SetNamespace gets a reference to the given string and assigns it to the Namespace field.
+func (o *ChaosChaosCreateInjectionReq) SetNamespace(v string) {
+	o.Namespace = &v
+}
+
 // GetParams returns the Params field value if set, zero value otherwise.
 func (o *ChaosChaosCreateInjectionReq) GetParams() map[string]interface{} {
 	if o == nil || IsNil(o.Params) {
@@ -226,6 +259,9 @@ func (o ChaosChaosCreateInjectionReq) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.IdempotencyKey) {
 		toSerialize["idempotency_key"] = o.IdempotencyKey
 	}
+	if !IsNil(o.Namespace) {
+		toSerialize["namespace"] = o.Namespace
+	}
 	if !IsNil(o.Params) {
 		toSerialize["params"] = o.Params
 	}
@@ -257,6 +293,7 @@ func (o *ChaosChaosCreateInjectionReq) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "caller_metadata")
 		delete(additionalProperties, "executor_pin")
 		delete(additionalProperties, "idempotency_key")
+		delete(additionalProperties, "namespace")
 		delete(additionalProperties, "params")
 		delete(additionalProperties, "point_id")
 		o.AdditionalProperties = additionalProperties

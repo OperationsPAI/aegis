@@ -117,6 +117,9 @@ type InjectionBatch struct {
 	IdempotencyKey      string     `gorm:"size:64;not null;uniqueIndex"                             json:"idempotency_key"`
 	AggregatedStatus    string     `gorm:"size:16;not null;default:'pending';index:idx_batch_agg_ts,priority:1" json:"aggregated_status"`
 	BatchCallerMetadata JSONMap    `gorm:"type:json"                                                json:"batch_caller_metadata,omitempty"`
+	// TaskID mirrors batch_caller_metadata.task_id at insert time so the
+	// by-task DELETE lookup is an indexed point-read, not a JSON_EXTRACT scan.
+	TaskID              string     `gorm:"size:64;index:idx_batch_task_id"                          json:"task_id,omitempty"`
 	Ts                  time.Time  `gorm:"not null;index:idx_batch_agg_ts,priority:2"               json:"ts"`
 	StartedAt           *time.Time `                                                                 json:"started_at,omitempty"`
 	FinishedAt          *time.Time `                                                                 json:"finished_at,omitempty"`
@@ -138,6 +141,8 @@ type Injection struct {
 	Groundtruth     JSONMap    `gorm:"type:json"                                                json:"groundtruth,omitempty"`
 	Diagnostics     JSONMap    `gorm:"type:json"                                                json:"diagnostics,omitempty"`
 	CallerMetadata  JSONMap    `gorm:"type:json"                                                json:"caller_metadata,omitempty"`
+	// TaskID mirrors caller_metadata.task_id at insert time. See InjectionBatch.TaskID.
+	TaskID          string     `gorm:"size:64;index:idx_inj_task_id"                            json:"task_id,omitempty"`
 	DestroyedAt     *time.Time `                                                                 json:"destroyed_at,omitempty"`
 	DestroyError    string     `gorm:"type:text"                                                json:"destroy_error,omitempty"`
 	Ts              time.Time  `gorm:"not null;index:idx_inj_status_ts,priority:2"              json:"ts"`

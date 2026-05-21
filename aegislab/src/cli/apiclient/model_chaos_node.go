@@ -15,42 +15,42 @@ import (
 	"encoding/json"
 )
 
-// checks if the HandlerNode type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &HandlerNode{}
+// checks if the ChaosNode type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &ChaosNode{}
 
-// HandlerNode struct for HandlerNode
-type HandlerNode struct {
-	Children             *map[string]HandlerNode `json:"children,omitempty"`
-	Description          *string                 `json:"description,omitempty"`
-	Name                 *string                 `json:"name,omitempty"`
-	Range                []int32                 `json:"range,omitempty"`
-	Value                *int32                  `json:"value,omitempty"`
+// ChaosNode struct for ChaosNode
+type ChaosNode struct {
+	Children             *map[string]ChaosNode `json:"children,omitempty"`
+	Description          *string               `json:"description,omitempty"`
+	Name                 *string               `json:"name,omitempty"`
+	Range                []int32               `json:"range,omitempty"`
+	Value                *int32                `json:"value,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
-type _HandlerNode HandlerNode
+type _ChaosNode ChaosNode
 
-// NewHandlerNode instantiates a new HandlerNode object
+// NewChaosNode instantiates a new ChaosNode object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewHandlerNode() *HandlerNode {
-	this := HandlerNode{}
+func NewChaosNode() *ChaosNode {
+	this := ChaosNode{}
 	return &this
 }
 
-// NewHandlerNodeWithDefaults instantiates a new HandlerNode object
+// NewChaosNodeWithDefaults instantiates a new ChaosNode object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewHandlerNodeWithDefaults() *HandlerNode {
-	this := HandlerNode{}
+func NewChaosNodeWithDefaults() *ChaosNode {
+	this := ChaosNode{}
 	return &this
 }
 
 // GetChildren returns the Children field value if set, zero value otherwise.
-func (o *HandlerNode) GetChildren() map[string]HandlerNode {
+func (o *ChaosNode) GetChildren() map[string]ChaosNode {
 	if o == nil || IsNil(o.Children) {
-		var ret map[string]HandlerNode
+		var ret map[string]ChaosNode
 		return ret
 	}
 	return *o.Children
@@ -58,7 +58,7 @@ func (o *HandlerNode) GetChildren() map[string]HandlerNode {
 
 // GetChildrenOk returns a tuple with the Children field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerNode) GetChildrenOk() (*map[string]HandlerNode, bool) {
+func (o *ChaosNode) GetChildrenOk() (*map[string]ChaosNode, bool) {
 	if o == nil || IsNil(o.Children) {
 		return nil, false
 	}
@@ -66,7 +66,7 @@ func (o *HandlerNode) GetChildrenOk() (*map[string]HandlerNode, bool) {
 }
 
 // HasChildren returns a boolean if a field has been set.
-func (o *HandlerNode) HasChildren() bool {
+func (o *ChaosNode) HasChildren() bool {
 	if o != nil && !IsNil(o.Children) {
 		return true
 	}
@@ -74,13 +74,13 @@ func (o *HandlerNode) HasChildren() bool {
 	return false
 }
 
-// SetChildren gets a reference to the given map[string]HandlerNode and assigns it to the Children field.
-func (o *HandlerNode) SetChildren(v map[string]HandlerNode) {
+// SetChildren gets a reference to the given map[string]ChaosNode and assigns it to the Children field.
+func (o *ChaosNode) SetChildren(v map[string]ChaosNode) {
 	o.Children = &v
 }
 
 // GetDescription returns the Description field value if set, zero value otherwise.
-func (o *HandlerNode) GetDescription() string {
+func (o *ChaosNode) GetDescription() string {
 	if o == nil || IsNil(o.Description) {
 		var ret string
 		return ret
@@ -90,7 +90,7 @@ func (o *HandlerNode) GetDescription() string {
 
 // GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerNode) GetDescriptionOk() (*string, bool) {
+func (o *ChaosNode) GetDescriptionOk() (*string, bool) {
 	if o == nil || IsNil(o.Description) {
 		return nil, false
 	}
@@ -98,7 +98,7 @@ func (o *HandlerNode) GetDescriptionOk() (*string, bool) {
 }
 
 // HasDescription returns a boolean if a field has been set.
-func (o *HandlerNode) HasDescription() bool {
+func (o *ChaosNode) HasDescription() bool {
 	if o != nil && !IsNil(o.Description) {
 		return true
 	}
@@ -107,12 +107,12 @@ func (o *HandlerNode) HasDescription() bool {
 }
 
 // SetDescription gets a reference to the given string and assigns it to the Description field.
-func (o *HandlerNode) SetDescription(v string) {
+func (o *ChaosNode) SetDescription(v string) {
 	o.Description = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
-func (o *HandlerNode) GetName() string {
+func (o *ChaosNode) GetName() string {
 	if o == nil || IsNil(o.Name) {
 		var ret string
 		return ret
@@ -122,7 +122,7 @@ func (o *HandlerNode) GetName() string {
 
 // GetNameOk returns a tuple with the Name field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerNode) GetNameOk() (*string, bool) {
+func (o *ChaosNode) GetNameOk() (*string, bool) {
 	if o == nil || IsNil(o.Name) {
 		return nil, false
 	}
@@ -130,7 +130,7 @@ func (o *HandlerNode) GetNameOk() (*string, bool) {
 }
 
 // HasName returns a boolean if a field has been set.
-func (o *HandlerNode) HasName() bool {
+func (o *ChaosNode) HasName() bool {
 	if o != nil && !IsNil(o.Name) {
 		return true
 	}
@@ -139,12 +139,12 @@ func (o *HandlerNode) HasName() bool {
 }
 
 // SetName gets a reference to the given string and assigns it to the Name field.
-func (o *HandlerNode) SetName(v string) {
+func (o *ChaosNode) SetName(v string) {
 	o.Name = &v
 }
 
 // GetRange returns the Range field value if set, zero value otherwise.
-func (o *HandlerNode) GetRange() []int32 {
+func (o *ChaosNode) GetRange() []int32 {
 	if o == nil || IsNil(o.Range) {
 		var ret []int32
 		return ret
@@ -154,7 +154,7 @@ func (o *HandlerNode) GetRange() []int32 {
 
 // GetRangeOk returns a tuple with the Range field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerNode) GetRangeOk() ([]int32, bool) {
+func (o *ChaosNode) GetRangeOk() ([]int32, bool) {
 	if o == nil || IsNil(o.Range) {
 		return nil, false
 	}
@@ -162,7 +162,7 @@ func (o *HandlerNode) GetRangeOk() ([]int32, bool) {
 }
 
 // HasRange returns a boolean if a field has been set.
-func (o *HandlerNode) HasRange() bool {
+func (o *ChaosNode) HasRange() bool {
 	if o != nil && !IsNil(o.Range) {
 		return true
 	}
@@ -171,12 +171,12 @@ func (o *HandlerNode) HasRange() bool {
 }
 
 // SetRange gets a reference to the given []int32 and assigns it to the Range field.
-func (o *HandlerNode) SetRange(v []int32) {
+func (o *ChaosNode) SetRange(v []int32) {
 	o.Range = v
 }
 
 // GetValue returns the Value field value if set, zero value otherwise.
-func (o *HandlerNode) GetValue() int32 {
+func (o *ChaosNode) GetValue() int32 {
 	if o == nil || IsNil(o.Value) {
 		var ret int32
 		return ret
@@ -186,7 +186,7 @@ func (o *HandlerNode) GetValue() int32 {
 
 // GetValueOk returns a tuple with the Value field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *HandlerNode) GetValueOk() (*int32, bool) {
+func (o *ChaosNode) GetValueOk() (*int32, bool) {
 	if o == nil || IsNil(o.Value) {
 		return nil, false
 	}
@@ -194,7 +194,7 @@ func (o *HandlerNode) GetValueOk() (*int32, bool) {
 }
 
 // HasValue returns a boolean if a field has been set.
-func (o *HandlerNode) HasValue() bool {
+func (o *ChaosNode) HasValue() bool {
 	if o != nil && !IsNil(o.Value) {
 		return true
 	}
@@ -203,11 +203,11 @@ func (o *HandlerNode) HasValue() bool {
 }
 
 // SetValue gets a reference to the given int32 and assigns it to the Value field.
-func (o *HandlerNode) SetValue(v int32) {
+func (o *ChaosNode) SetValue(v int32) {
 	o.Value = &v
 }
 
-func (o HandlerNode) MarshalJSON() ([]byte, error) {
+func (o ChaosNode) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -215,7 +215,7 @@ func (o HandlerNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o HandlerNode) ToMap() (map[string]interface{}, error) {
+func (o ChaosNode) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Children) {
 		toSerialize["children"] = o.Children
@@ -240,16 +240,16 @@ func (o HandlerNode) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *HandlerNode) UnmarshalJSON(data []byte) (err error) {
-	varHandlerNode := _HandlerNode{}
+func (o *ChaosNode) UnmarshalJSON(data []byte) (err error) {
+	varChaosNode := _ChaosNode{}
 
-	err = json.Unmarshal(data, &varHandlerNode)
+	err = json.Unmarshal(data, &varChaosNode)
 
 	if err != nil {
 		return err
 	}
 
-	*o = HandlerNode(varHandlerNode)
+	*o = ChaosNode(varChaosNode)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -265,38 +265,38 @@ func (o *HandlerNode) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-type NullableHandlerNode struct {
-	value *HandlerNode
+type NullableChaosNode struct {
+	value *ChaosNode
 	isSet bool
 }
 
-func (v NullableHandlerNode) Get() *HandlerNode {
+func (v NullableChaosNode) Get() *ChaosNode {
 	return v.value
 }
 
-func (v *NullableHandlerNode) Set(val *HandlerNode) {
+func (v *NullableChaosNode) Set(val *ChaosNode) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableHandlerNode) IsSet() bool {
+func (v NullableChaosNode) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableHandlerNode) Unset() {
+func (v *NullableChaosNode) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableHandlerNode(val *HandlerNode) *NullableHandlerNode {
-	return &NullableHandlerNode{value: val, isSet: true}
+func NewNullableChaosNode(val *ChaosNode) *NullableChaosNode {
+	return &NullableChaosNode{value: val, isSet: true}
 }
 
-func (v NullableHandlerNode) MarshalJSON() ([]byte, error) {
+func (v NullableChaosNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableHandlerNode) UnmarshalJSON(src []byte) error {
+func (v *NullableChaosNode) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

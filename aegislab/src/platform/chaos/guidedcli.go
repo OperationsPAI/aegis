@@ -8,6 +8,9 @@ type (
 	GuidedConfig   = guidedcli.GuidedConfig
 	GuidedResponse = guidedcli.GuidedResponse
 	GuidedSession  = guidedcli.GuidedSession
+	FieldSpec      = guidedcli.FieldSpec
+	FieldOption    = guidedcli.FieldOption
+	Preview        = guidedcli.Preview
 )
 
 var (

@@ -20,11 +20,11 @@ var _ MappedNullable = &InjectionInjectionNoIssuesResp{}
 
 // InjectionInjectionNoIssuesResp struct for InjectionInjectionNoIssuesResp
 type InjectionInjectionNoIssuesResp struct {
-	Category             *string      `json:"category,omitempty"`
-	DatapackId           *int32       `json:"datapack_id,omitempty"`
-	DatapackName         *string      `json:"datapack_name,omitempty"`
-	EngineConfig         *HandlerNode `json:"engine_config,omitempty"`
-	FaultType            *string      `json:"fault_type,omitempty"`
+	Category             *string    `json:"category,omitempty"`
+	DatapackId           *int32     `json:"datapack_id,omitempty"`
+	DatapackName         *string    `json:"datapack_name,omitempty"`
+	EngineConfig         *ChaosNode `json:"engine_config,omitempty"`
+	FaultType            *string    `json:"fault_type,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -144,9 +144,9 @@ func (o *InjectionInjectionNoIssuesResp) SetDatapackName(v string) {
 }
 
 // GetEngineConfig returns the EngineConfig field value if set, zero value otherwise.
-func (o *InjectionInjectionNoIssuesResp) GetEngineConfig() HandlerNode {
+func (o *InjectionInjectionNoIssuesResp) GetEngineConfig() ChaosNode {
 	if o == nil || IsNil(o.EngineConfig) {
-		var ret HandlerNode
+		var ret ChaosNode
 		return ret
 	}
 	return *o.EngineConfig
@@ -154,7 +154,7 @@ func (o *InjectionInjectionNoIssuesResp) GetEngineConfig() HandlerNode {
 
 // GetEngineConfigOk returns a tuple with the EngineConfig field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *InjectionInjectionNoIssuesResp) GetEngineConfigOk() (*HandlerNode, bool) {
+func (o *InjectionInjectionNoIssuesResp) GetEngineConfigOk() (*ChaosNode, bool) {
 	if o == nil || IsNil(o.EngineConfig) {
 		return nil, false
 	}
@@ -170,8 +170,8 @@ func (o *InjectionInjectionNoIssuesResp) HasEngineConfig() bool {
 	return false
 }
 
-// SetEngineConfig gets a reference to the given HandlerNode and assigns it to the EngineConfig field.
-func (o *InjectionInjectionNoIssuesResp) SetEngineConfig(v HandlerNode) {
+// SetEngineConfig gets a reference to the given ChaosNode and assigns it to the EngineConfig field.
+func (o *InjectionInjectionNoIssuesResp) SetEngineConfig(v ChaosNode) {
 	o.EngineConfig = &v
 }
 

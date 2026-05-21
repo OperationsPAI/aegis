@@ -20,18 +20,18 @@ var _ MappedNullable = &InjectionInjectionWithIssuesResp{}
 
 // InjectionInjectionWithIssuesResp struct for InjectionInjectionWithIssuesResp
 type InjectionInjectionWithIssuesResp struct {
-	AbnormalAvgDuration  *float32     `json:"abnormal_avg_duration,omitempty"`
-	AbnormalP99          *float32     `json:"abnormal_p99,omitempty"`
-	AbnormalSuccRate     *float32     `json:"abnormal_succ_rate,omitempty"`
-	Category             *string      `json:"category,omitempty"`
-	DatapackId           *int32       `json:"datapack_id,omitempty"`
-	DatapackName         *string      `json:"datapack_name,omitempty"`
-	EngineConfig         *HandlerNode `json:"engine_config,omitempty"`
-	FaultType            *string      `json:"fault_type,omitempty"`
-	Issues               *string      `json:"issues,omitempty"`
-	NormalAvgDuration    *float32     `json:"normal_avg_duration,omitempty"`
-	NormalP99            *float32     `json:"normal_p99,omitempty"`
-	NormalSuccRate       *float32     `json:"normal_succ_rate,omitempty"`
+	AbnormalAvgDuration  *float32   `json:"abnormal_avg_duration,omitempty"`
+	AbnormalP99          *float32   `json:"abnormal_p99,omitempty"`
+	AbnormalSuccRate     *float32   `json:"abnormal_succ_rate,omitempty"`
+	Category             *string    `json:"category,omitempty"`
+	DatapackId           *int32     `json:"datapack_id,omitempty"`
+	DatapackName         *string    `json:"datapack_name,omitempty"`
+	EngineConfig         *ChaosNode `json:"engine_config,omitempty"`
+	FaultType            *string    `json:"fault_type,omitempty"`
+	Issues               *string    `json:"issues,omitempty"`
+	NormalAvgDuration    *float32   `json:"normal_avg_duration,omitempty"`
+	NormalP99            *float32   `json:"normal_p99,omitempty"`
+	NormalSuccRate       *float32   `json:"normal_succ_rate,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -247,9 +247,9 @@ func (o *InjectionInjectionWithIssuesResp) SetDatapackName(v string) {
 }
 
 // GetEngineConfig returns the EngineConfig field value if set, zero value otherwise.
-func (o *InjectionInjectionWithIssuesResp) GetEngineConfig() HandlerNode {
+func (o *InjectionInjectionWithIssuesResp) GetEngineConfig() ChaosNode {
 	if o == nil || IsNil(o.EngineConfig) {
-		var ret HandlerNode
+		var ret ChaosNode
 		return ret
 	}
 	return *o.EngineConfig
@@ -257,7 +257,7 @@ func (o *InjectionInjectionWithIssuesResp) GetEngineConfig() HandlerNode {
 
 // GetEngineConfigOk returns a tuple with the EngineConfig field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *InjectionInjectionWithIssuesResp) GetEngineConfigOk() (*HandlerNode, bool) {
+func (o *InjectionInjectionWithIssuesResp) GetEngineConfigOk() (*ChaosNode, bool) {
 	if o == nil || IsNil(o.EngineConfig) {
 		return nil, false
 	}
@@ -273,8 +273,8 @@ func (o *InjectionInjectionWithIssuesResp) HasEngineConfig() bool {
 	return false
 }
 
-// SetEngineConfig gets a reference to the given HandlerNode and assigns it to the EngineConfig field.
-func (o *InjectionInjectionWithIssuesResp) SetEngineConfig(v HandlerNode) {
+// SetEngineConfig gets a reference to the given ChaosNode and assigns it to the EngineConfig field.
+func (o *InjectionInjectionWithIssuesResp) SetEngineConfig(v ChaosNode) {
 	o.EngineConfig = &v
 }
 

@@ -22,7 +22,7 @@ var _ MappedNullable = &EvaluationEvaluateDatapackRef{}
 type EvaluationEvaluateDatapackRef struct {
 	Datapack             *string                 `json:"datapack,omitempty"`
 	ExecutionRefs        []ExecutionExecutionRef `json:"execution_refs,omitempty"`
-	Groundtruths         []HandlerGroundtruth    `json:"groundtruths,omitempty"`
+	Groundtruths         []ChaosGroundtruth      `json:"groundtruths,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -110,9 +110,9 @@ func (o *EvaluationEvaluateDatapackRef) SetExecutionRefs(v []ExecutionExecutionR
 }
 
 // GetGroundtruths returns the Groundtruths field value if set, zero value otherwise.
-func (o *EvaluationEvaluateDatapackRef) GetGroundtruths() []HandlerGroundtruth {
+func (o *EvaluationEvaluateDatapackRef) GetGroundtruths() []ChaosGroundtruth {
 	if o == nil || IsNil(o.Groundtruths) {
-		var ret []HandlerGroundtruth
+		var ret []ChaosGroundtruth
 		return ret
 	}
 	return o.Groundtruths
@@ -120,7 +120,7 @@ func (o *EvaluationEvaluateDatapackRef) GetGroundtruths() []HandlerGroundtruth {
 
 // GetGroundtruthsOk returns a tuple with the Groundtruths field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *EvaluationEvaluateDatapackRef) GetGroundtruthsOk() ([]HandlerGroundtruth, bool) {
+func (o *EvaluationEvaluateDatapackRef) GetGroundtruthsOk() ([]ChaosGroundtruth, bool) {
 	if o == nil || IsNil(o.Groundtruths) {
 		return nil, false
 	}
@@ -136,8 +136,8 @@ func (o *EvaluationEvaluateDatapackRef) HasGroundtruths() bool {
 	return false
 }
 
-// SetGroundtruths gets a reference to the given []HandlerGroundtruth and assigns it to the Groundtruths field.
-func (o *EvaluationEvaluateDatapackRef) SetGroundtruths(v []HandlerGroundtruth) {
+// SetGroundtruths gets a reference to the given []ChaosGroundtruth and assigns it to the Groundtruths field.
+func (o *EvaluationEvaluateDatapackRef) SetGroundtruths(v []ChaosGroundtruth) {
 	o.Groundtruths = v
 }
 

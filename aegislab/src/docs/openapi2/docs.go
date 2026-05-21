@@ -18788,6 +18788,128 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1beta/guided/apply-next": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Merge a single field selection into the current GuidedConfig.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Apply a guided next-step selection",
+                "operationId": "chaos_guided_apply_next",
+                "parameters": [
+                    {
+                        "description": "Current config + selection",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chaos.ChaosGuidedApplyNextReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Merged config",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosGuidedApplyNextResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request / selection",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Resolve failed",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
+        "/v1beta/guided/resolve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Walk one step of the guided state machine for chaos injection authoring.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Resolve the next step of a chaos guided walkthrough",
+                "operationId": "chaos_guided_resolve",
+                "parameters": [
+                    {
+                        "description": "Current guided config",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chaos.ChaosGuidedResolveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Next field / preview / can_apply",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosGuidedResolveResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Resolve failed",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
         "/v1beta/injection-batches": {
             "post": {
                 "security": [
@@ -19004,6 +19126,62 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
+        "/v1beta/injections/by-task/{taskID}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Resolve task_id → (injection|batch) and run the appropriate destroy path.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Destroy a chaos injection by caller task_id",
+                "operationId": "chaos_delete_injection_by_task",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Caller-supplied task_id (from caller_metadata.task_id)",
+                        "name": "taskID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resolved + destroyed",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosTaskInjectionRef"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "404": {
+                        "description": "No injection / batch carries this task_id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Lookup or destroy failed",
                         "schema": {
                             "$ref": "#/definitions/dto.GenericResponse-any"
                         }
@@ -19296,6 +19474,68 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
+        "/v1beta/systems/{sys}/candidates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Walk the guided enumeration tree and return one GuidedConfig per leaf.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Enumerate all guided candidates for a system",
+                "operationId": "chaos_list_system_candidates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System name",
+                        "name": "sys",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Override the kubernetes namespace (defaults to the system's ns_pattern)",
+                        "name": "namespace",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "All candidate configs",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosSystemCandidatesResp"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "404": {
+                        "description": "System not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Enumerate failed",
                         "schema": {
                             "$ref": "#/definitions/dto.GenericResponse-any"
                         }
@@ -20339,6 +20579,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "client-1700000000-c0"
                 },
+                "namespace": {
+                    "type": "string",
+                    "example": "otel-demo0"
+                },
                 "params": {
                     "type": "object",
                     "additionalProperties": {}
@@ -20386,6 +20630,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "client-1700000000"
                 },
+                "namespace": {
+                    "type": "string",
+                    "example": "otel-demo0"
+                },
                 "params": {
                     "type": "object",
                     "additionalProperties": {}
@@ -20393,6 +20641,94 @@ const docTemplate = `{
                 "point_id": {
                     "type": "string",
                     "example": "0123456789abcdef"
+                }
+            }
+        },
+        "chaos.ChaosGuidedApplyNextReq": {
+            "type": "object",
+            "required": [
+                "value"
+            ],
+            "properties": {
+                "current": {
+                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "chaos.ChaosGuidedApplyNextResp": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                }
+            }
+        },
+        "chaos.ChaosGuidedResolveReq": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                }
+            }
+        },
+        "chaos.ChaosGuidedResolveResp": {
+            "type": "object",
+            "properties": {
+                "apply_payload": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "can_apply": {
+                    "type": "boolean"
+                },
+                "config": {
+                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "next": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/guidedcli.FieldSpec"
+                    }
+                },
+                "preview": {
+                    "$ref": "#/definitions/guidedcli.Preview"
+                },
+                "resolved": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "resources": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "result": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "stage": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -20645,6 +20981,23 @@ const docTemplate = `{
                 }
             }
         },
+        "chaos.ChaosSystemCandidatesResp": {
+            "type": "object",
+            "properties": {
+                "candidates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/guidedcli.GuidedConfig"
+                    }
+                },
+                "namespace": {
+                    "type": "string"
+                },
+                "system": {
+                    "type": "string"
+                }
+            }
+        },
         "chaos.ChaosSystemResp": {
             "type": "object",
             "properties": {
@@ -20688,6 +21041,161 @@ const docTemplate = `{
                 "ns_pattern": {
                     "type": "string",
                     "example": "otel-demo"
+                }
+            }
+        },
+        "chaos.ChaosTaskInjectionRef": {
+            "type": "object",
+            "properties": {
+                "batch": {
+                    "$ref": "#/definitions/chaos.ChaosInjectionBatchResp"
+                },
+                "injection": {
+                    "$ref": "#/definitions/chaos.ChaosInjectionResp"
+                },
+                "is_batch": {
+                    "type": "boolean"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "chaos.ChaosType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31
+            ],
+            "x-enum-varnames": [
+                "PodKill",
+                "PodFailure",
+                "ContainerKill",
+                "MemoryStress",
+                "CPUStress",
+                "HTTPRequestAbort",
+                "HTTPResponseAbort",
+                "HTTPRequestDelay",
+                "HTTPResponseDelay",
+                "HTTPResponseReplaceBody",
+                "HTTPResponsePatchBody",
+                "HTTPRequestReplacePath",
+                "HTTPRequestReplaceMethod",
+                "HTTPResponseReplaceCode",
+                "DNSError",
+                "DNSRandom",
+                "TimeSkew",
+                "NetworkDelay",
+                "NetworkLoss",
+                "NetworkDuplicate",
+                "NetworkCorrupt",
+                "NetworkBandwidth",
+                "NetworkPartition",
+                "JVMLatency",
+                "JVMReturn",
+                "JVMException",
+                "JVMGarbageCollector",
+                "JVMCPUStress",
+                "JVMMemoryStress",
+                "JVMMySQLLatency",
+                "JVMMySQLException",
+                "JVMRuntimeMutator"
+            ]
+        },
+        "chaos.Groundtruth": {
+            "type": "object",
+            "properties": {
+                "container": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "function": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "metric": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "pod": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "service": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "span": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "chaos.Node": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/chaos.Node"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "range": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "value": {
+                    "type": "integer"
                 }
             }
         },
@@ -23643,6 +24151,56 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GenericResponse-chaos_ChaosGuidedApplyNextResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosGuidedApplyNextResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.GenericResponse-chaos_ChaosGuidedResolveResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosGuidedResolveResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.GenericResponse-chaos_ChaosImportPointsResp": {
             "type": "object",
             "properties": {
@@ -23743,6 +24301,31 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GenericResponse-chaos_ChaosSystemCandidatesResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosSystemCandidatesResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.GenericResponse-chaos_ChaosSystemResp": {
             "type": "object",
             "properties": {
@@ -23755,6 +24338,31 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/chaos.ChaosSystemResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.GenericResponse-chaos_ChaosTaskInjectionRef": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosTaskInjectionRef"
                         }
                     ]
                 },
@@ -27592,7 +28200,7 @@ const docTemplate = `{
                 "groundtruths": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Groundtruth"
+                        "$ref": "#/definitions/chaos.Groundtruth"
                     }
                 }
             }
@@ -27612,7 +28220,7 @@ const docTemplate = `{
                 "groundtruths": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Groundtruth"
+                        "$ref": "#/definitions/chaos.Groundtruth"
                     }
                 }
             }
@@ -28291,174 +28899,224 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ChaosType": {
-            "type": "integer",
-            "enum": [
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
-                24,
-                25,
-                26,
-                27,
-                28,
-                29,
-                30,
-                31
-            ],
-            "x-enum-varnames": [
-                "PodKill",
-                "PodFailure",
-                "ContainerKill",
-                "MemoryStress",
-                "CPUStress",
-                "HTTPRequestAbort",
-                "HTTPResponseAbort",
-                "HTTPRequestDelay",
-                "HTTPResponseDelay",
-                "HTTPResponseReplaceBody",
-                "HTTPResponsePatchBody",
-                "HTTPRequestReplacePath",
-                "HTTPRequestReplaceMethod",
-                "HTTPResponseReplaceCode",
-                "DNSError",
-                "DNSRandom",
-                "TimeSkew",
-                "NetworkDelay",
-                "NetworkLoss",
-                "NetworkDuplicate",
-                "NetworkCorrupt",
-                "NetworkBandwidth",
-                "NetworkPartition",
-                "JVMLatency",
-                "JVMReturn",
-                "JVMException",
-                "JVMGarbageCollector",
-                "JVMCPUStress",
-                "JVMMemoryStress",
-                "JVMMySQLLatency",
-                "JVMMySQLException",
-                "JVMRuntimeMutator"
-            ]
-        },
-        "handler.Groundtruth": {
+        "guidedcli.FieldOption": {
             "type": "object",
             "properties": {
-                "container": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "description": {
+                    "type": "string"
                 },
-                "function": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "label": {
+                    "type": "string"
                 },
-                "metric": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
                 },
-                "pod": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "service": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "span": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "value": {
+                    "type": "string"
                 }
             }
         },
-        "handler.Node": {
+        "guidedcli.FieldSpec": {
             "type": "object",
             "properties": {
-                "children": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/handler.Node"
-                    }
+                "default": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
                 },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/guidedcli.FieldSpec"
+                    }
+                },
+                "key_fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "max": {
+                    "type": "integer"
+                },
+                "min": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
-                "range": {
+                "options": {
                     "type": "array",
                     "items": {
-                        "type": "integer"
+                        "$ref": "#/definitions/guidedcli.FieldOption"
                     }
                 },
-                "value": {
+                "required": {
+                    "type": "boolean"
+                },
+                "step": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "guidedcli.GuidedConfig": {
+            "type": "object",
+            "properties": {
+                "app": {
+                    "type": "string"
+                },
+                "body_type": {
+                    "type": "string"
+                },
+                "buffer": {
+                    "type": "integer"
+                },
+                "chaos_type": {
+                    "type": "string"
+                },
+                "class": {
+                    "type": "string"
+                },
+                "container": {
+                    "type": "string"
+                },
+                "correlation": {
+                    "type": "integer"
+                },
+                "corrupt": {
+                    "type": "integer"
+                },
+                "cpu_count": {
+                    "type": "integer"
+                },
+                "cpu_load": {
+                    "type": "integer"
+                },
+                "cpu_worker": {
+                    "type": "integer"
+                },
+                "database": {
+                    "type": "string"
+                },
+                "delay_duration": {
+                    "type": "integer"
+                },
+                "direction": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "duplicate": {
+                    "type": "integer"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "exception_opt": {
+                    "type": "string"
+                },
+                "http_method": {
+                    "type": "string"
+                },
+                "jitter": {
+                    "type": "integer"
+                },
+                "latency": {
+                    "type": "integer"
+                },
+                "latency_duration": {
+                    "type": "integer"
+                },
+                "latency_ms": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "loss": {
+                    "type": "integer"
+                },
+                "mem_type": {
+                    "type": "string"
+                },
+                "mem_worker": {
+                    "type": "integer"
+                },
+                "memory_size": {
+                    "type": "integer"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "mutator_config": {
+                    "type": "string"
+                },
+                "namespace": {
+                    "type": "string"
+                },
+                "operation": {
+                    "type": "string"
+                },
+                "rate": {
+                    "type": "integer"
+                },
+                "replace_method": {
+                    "type": "string"
+                },
+                "return_type": {
+                    "type": "string"
+                },
+                "return_value_opt": {
+                    "type": "string"
+                },
+                "route": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "system": {
+                    "type": "string"
+                },
+                "system_type": {
+                    "type": "string"
+                },
+                "table": {
+                    "type": "string"
+                },
+                "target_service": {
+                    "type": "string"
+                },
+                "time_offset": {
                     "type": "integer"
                 }
             }
         },
-        "handler.SystemType": {
-            "type": "string",
-            "enum": [
-                "ts",
-                "otel-demo",
-                "media",
-                "hs",
-                "sn",
-                "ob",
-                "sockshop",
-                "teastore",
-                "ts",
-                "otel-demo",
-                "media",
-                "hs",
-                "sn",
-                "ob",
-                "sockshop",
-                "teastore"
-            ],
-            "x-enum-varnames": [
-                "SystemTrainTicket",
-                "SystemOtelDemo",
-                "SystemMediaMicroservices",
-                "SystemHotelReservation",
-                "SystemSocialNetwork",
-                "SystemOnlineBoutique",
-                "SystemSockShop",
-                "SystemTeaStore"
-            ]
+        "guidedcli.Preview": {
+            "type": "object",
+            "properties": {
+                "display_config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "groundtruth": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "resource_summary": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
         },
         "injection.BatchDeleteInjectionReq": {
             "type": "object",
@@ -28940,7 +29598,7 @@ const docTemplate = `{
                 "ground_truth": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.Groundtruth"
+                        "$ref": "#/definitions/chaos.Groundtruth"
                     }
                 },
                 "groundtruth_source": {
@@ -29101,7 +29759,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "engine_config": {
-                    "$ref": "#/definitions/handler.Node"
+                    "$ref": "#/definitions/chaos.Node"
                 },
                 "fault_type": {
                     "type": "string"
@@ -29279,7 +29937,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "engine_config": {
-                    "$ref": "#/definitions/handler.Node"
+                    "$ref": "#/definitions/chaos.Node"
                 },
                 "fault_type": {
                     "type": "string"
@@ -29329,7 +29987,7 @@ const docTemplate = `{
                 "categories": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.SystemType"
+                        "type": "string"
                     }
                 },
                 "created_at": {
@@ -29341,7 +29999,7 @@ const docTemplate = `{
                 "fault_types": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.ChaosType"
+                        "$ref": "#/definitions/chaos.ChaosType"
                     }
                 },
                 "group_by": {

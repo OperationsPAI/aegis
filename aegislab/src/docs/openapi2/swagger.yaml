@@ -583,6 +583,9 @@ definitions:
       idempotency_key:
         example: client-1700000000-c0
         type: string
+      namespace:
+        example: otel-demo0
+        type: string
       params:
         additionalProperties: {}
         type: object
@@ -616,12 +619,74 @@ definitions:
       idempotency_key:
         example: client-1700000000
         type: string
+      namespace:
+        example: otel-demo0
+        type: string
       params:
         additionalProperties: {}
         type: object
       point_id:
         example: 0123456789abcdef
         type: string
+    type: object
+  chaos.ChaosGuidedApplyNextReq:
+    properties:
+      current:
+        $ref: '#/definitions/guidedcli.GuidedConfig'
+      value:
+        type: string
+    required:
+    - value
+    type: object
+  chaos.ChaosGuidedApplyNextResp:
+    properties:
+      config:
+        $ref: '#/definitions/guidedcli.GuidedConfig'
+    type: object
+  chaos.ChaosGuidedResolveReq:
+    properties:
+      config:
+        $ref: '#/definitions/guidedcli.GuidedConfig'
+    type: object
+  chaos.ChaosGuidedResolveResp:
+    properties:
+      apply_payload:
+        additionalProperties: {}
+        type: object
+      can_apply:
+        type: boolean
+      config:
+        $ref: '#/definitions/guidedcli.GuidedConfig'
+      errors:
+        items:
+          type: string
+        type: array
+      meta:
+        additionalProperties: {}
+        type: object
+      mode:
+        type: string
+      next:
+        items:
+          $ref: '#/definitions/guidedcli.FieldSpec'
+        type: array
+      preview:
+        $ref: '#/definitions/guidedcli.Preview'
+      resolved:
+        additionalProperties: {}
+        type: object
+      resources:
+        additionalProperties: {}
+        type: object
+      result:
+        additionalProperties: {}
+        type: object
+      stage:
+        type: string
+      warnings:
+        items:
+          type: string
+        type: array
     type: object
   chaos.ChaosImportPointsReq:
     properties:
@@ -790,6 +855,17 @@ definitions:
       updated_at:
         type: string
     type: object
+  chaos.ChaosSystemCandidatesResp:
+    properties:
+      candidates:
+        items:
+          $ref: '#/definitions/guidedcli.GuidedConfig'
+        type: array
+      namespace:
+        type: string
+      system:
+        type: string
+    type: object
   chaos.ChaosSystemResp:
     properties:
       app_label_key:
@@ -820,6 +896,129 @@ definitions:
       ns_pattern:
         example: otel-demo
         type: string
+    type: object
+  chaos.ChaosTaskInjectionRef:
+    properties:
+      batch:
+        $ref: '#/definitions/chaos.ChaosInjectionBatchResp'
+      injection:
+        $ref: '#/definitions/chaos.ChaosInjectionResp'
+      is_batch:
+        type: boolean
+      task_id:
+        type: string
+    type: object
+  chaos.ChaosType:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    type: integer
+    x-enum-varnames:
+    - PodKill
+    - PodFailure
+    - ContainerKill
+    - MemoryStress
+    - CPUStress
+    - HTTPRequestAbort
+    - HTTPResponseAbort
+    - HTTPRequestDelay
+    - HTTPResponseDelay
+    - HTTPResponseReplaceBody
+    - HTTPResponsePatchBody
+    - HTTPRequestReplacePath
+    - HTTPRequestReplaceMethod
+    - HTTPResponseReplaceCode
+    - DNSError
+    - DNSRandom
+    - TimeSkew
+    - NetworkDelay
+    - NetworkLoss
+    - NetworkDuplicate
+    - NetworkCorrupt
+    - NetworkBandwidth
+    - NetworkPartition
+    - JVMLatency
+    - JVMReturn
+    - JVMException
+    - JVMGarbageCollector
+    - JVMCPUStress
+    - JVMMemoryStress
+    - JVMMySQLLatency
+    - JVMMySQLException
+    - JVMRuntimeMutator
+  chaos.Groundtruth:
+    properties:
+      container:
+        items:
+          type: string
+        type: array
+      function:
+        items:
+          type: string
+        type: array
+      metric:
+        items:
+          type: string
+        type: array
+      pod:
+        items:
+          type: string
+        type: array
+      service:
+        items:
+          type: string
+        type: array
+      span:
+        items:
+          type: string
+        type: array
+    type: object
+  chaos.Node:
+    properties:
+      children:
+        additionalProperties:
+          $ref: '#/definitions/chaos.Node'
+        type: object
+      description:
+        type: string
+      name:
+        type: string
+      range:
+        items:
+          type: integer
+        type: array
+      value:
+        type: integer
     type: object
   chaosprune.PruneCandidate:
     properties:
@@ -2897,6 +3096,38 @@ definitions:
         description: Response generation time
         type: integer
     type: object
+  dto.GenericResponse-chaos_ChaosGuidedApplyNextResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosGuidedApplyNextResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosGuidedResolveResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosGuidedResolveResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
   dto.GenericResponse-chaos_ChaosImportPointsResp:
     properties:
       code:
@@ -2961,6 +3192,22 @@ definitions:
         description: Response generation time
         type: integer
     type: object
+  dto.GenericResponse-chaos_ChaosSystemCandidatesResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosSystemCandidatesResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
   dto.GenericResponse-chaos_ChaosSystemResp:
     properties:
       code:
@@ -2969,6 +3216,22 @@ definitions:
       data:
         allOf:
         - $ref: '#/definitions/chaos.ChaosSystemResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosTaskInjectionRef:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosTaskInjectionRef'
         description: Generic type data
       message:
         description: Response message
@@ -5430,7 +5693,7 @@ definitions:
         type: array
       groundtruths:
         items:
-          $ref: '#/definitions/handler.Groundtruth'
+          $ref: '#/definitions/chaos.Groundtruth'
         type: array
     type: object
   evaluation.EvaluateDatapackRef:
@@ -5443,7 +5706,7 @@ definitions:
         type: array
       groundtruths:
         items:
-          $ref: '#/definitions/handler.Groundtruth'
+          $ref: '#/definitions/chaos.Groundtruth'
         type: array
     type: object
   evaluation.EvaluateDatapackSpec:
@@ -5893,146 +6156,152 @@ definitions:
       type:
         type: string
     type: object
-  handler.ChaosType:
-    enum:
-    - 0
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
-    - 7
-    - 8
-    - 9
-    - 10
-    - 11
-    - 12
-    - 13
-    - 14
-    - 15
-    - 16
-    - 17
-    - 18
-    - 19
-    - 20
-    - 21
-    - 22
-    - 23
-    - 24
-    - 25
-    - 26
-    - 27
-    - 28
-    - 29
-    - 30
-    - 31
-    type: integer
-    x-enum-varnames:
-    - PodKill
-    - PodFailure
-    - ContainerKill
-    - MemoryStress
-    - CPUStress
-    - HTTPRequestAbort
-    - HTTPResponseAbort
-    - HTTPRequestDelay
-    - HTTPResponseDelay
-    - HTTPResponseReplaceBody
-    - HTTPResponsePatchBody
-    - HTTPRequestReplacePath
-    - HTTPRequestReplaceMethod
-    - HTTPResponseReplaceCode
-    - DNSError
-    - DNSRandom
-    - TimeSkew
-    - NetworkDelay
-    - NetworkLoss
-    - NetworkDuplicate
-    - NetworkCorrupt
-    - NetworkBandwidth
-    - NetworkPartition
-    - JVMLatency
-    - JVMReturn
-    - JVMException
-    - JVMGarbageCollector
-    - JVMCPUStress
-    - JVMMemoryStress
-    - JVMMySQLLatency
-    - JVMMySQLException
-    - JVMRuntimeMutator
-  handler.Groundtruth:
+  guidedcli.FieldOption:
     properties:
-      container:
-        items:
-          type: string
-        type: array
-      function:
-        items:
-          type: string
-        type: array
-      metric:
-        items:
-          type: string
-        type: array
-      pod:
-        items:
-          type: string
-        type: array
-      service:
-        items:
-          type: string
-        type: array
-      span:
-        items:
-          type: string
-        type: array
-    type: object
-  handler.Node:
-    properties:
-      children:
-        additionalProperties:
-          $ref: '#/definitions/handler.Node'
-        type: object
       description:
         type: string
+      label:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      value:
+        type: string
+    type: object
+  guidedcli.FieldSpec:
+    properties:
+      default:
+        type: integer
+      description:
+        type: string
+      fields:
+        items:
+          $ref: '#/definitions/guidedcli.FieldSpec'
+        type: array
+      key_fields:
+        items:
+          type: string
+        type: array
+      kind:
+        type: string
+      max:
+        type: integer
+      min:
+        type: integer
       name:
         type: string
-      range:
+      options:
         items:
-          type: integer
+          $ref: '#/definitions/guidedcli.FieldOption'
         type: array
-      value:
+      required:
+        type: boolean
+      step:
+        type: integer
+      unit:
+        type: string
+    type: object
+  guidedcli.GuidedConfig:
+    properties:
+      app:
+        type: string
+      body_type:
+        type: string
+      buffer:
+        type: integer
+      chaos_type:
+        type: string
+      class:
+        type: string
+      container:
+        type: string
+      correlation:
+        type: integer
+      corrupt:
+        type: integer
+      cpu_count:
+        type: integer
+      cpu_load:
+        type: integer
+      cpu_worker:
+        type: integer
+      database:
+        type: string
+      delay_duration:
+        type: integer
+      direction:
+        type: string
+      domain:
+        type: string
+      duplicate:
+        type: integer
+      duration:
+        type: integer
+      exception_opt:
+        type: string
+      http_method:
+        type: string
+      jitter:
+        type: integer
+      latency:
+        type: integer
+      latency_duration:
+        type: integer
+      latency_ms:
+        type: integer
+      limit:
+        type: integer
+      loss:
+        type: integer
+      mem_type:
+        type: string
+      mem_worker:
+        type: integer
+      memory_size:
+        type: integer
+      method:
+        type: string
+      mutator_config:
+        type: string
+      namespace:
+        type: string
+      operation:
+        type: string
+      rate:
+        type: integer
+      replace_method:
+        type: string
+      return_type:
+        type: string
+      return_value_opt:
+        type: string
+      route:
+        type: string
+      status_code:
+        type: integer
+      system:
+        type: string
+      system_type:
+        type: string
+      table:
+        type: string
+      target_service:
+        type: string
+      time_offset:
         type: integer
     type: object
-  handler.SystemType:
-    enum:
-    - ts
-    - otel-demo
-    - media
-    - hs
-    - sn
-    - ob
-    - sockshop
-    - teastore
-    - ts
-    - otel-demo
-    - media
-    - hs
-    - sn
-    - ob
-    - sockshop
-    - teastore
-    type: string
-    x-enum-varnames:
-    - SystemTrainTicket
-    - SystemOtelDemo
-    - SystemMediaMicroservices
-    - SystemHotelReservation
-    - SystemSocialNetwork
-    - SystemOnlineBoutique
-    - SystemSockShop
-    - SystemTeaStore
+  guidedcli.Preview:
+    properties:
+      display_config:
+        additionalProperties: {}
+        type: object
+      groundtruth:
+        additionalProperties: {}
+        type: object
+      resource_summary:
+        additionalProperties: {}
+        type: object
+    type: object
   injection.BatchDeleteInjectionReq:
     properties:
       ids:
@@ -6357,7 +6626,7 @@ definitions:
         type: string
       ground_truth:
         items:
-          $ref: '#/definitions/handler.Groundtruth'
+          $ref: '#/definitions/chaos.Groundtruth'
         type: array
       groundtruth_source:
         type: string
@@ -6464,7 +6733,7 @@ definitions:
       datapack_name:
         type: string
       engine_config:
-        $ref: '#/definitions/handler.Node'
+        $ref: '#/definitions/chaos.Node'
       fault_type:
         type: string
     type: object
@@ -6586,7 +6855,7 @@ definitions:
       datapack_name:
         type: string
       engine_config:
-        $ref: '#/definitions/handler.Node'
+        $ref: '#/definitions/chaos.Node'
       fault_type:
         type: string
       issues:
@@ -6619,7 +6888,7 @@ definitions:
         type: array
       categories:
         items:
-          $ref: '#/definitions/handler.SystemType'
+          type: string
         type: array
       created_at:
         $ref: '#/definitions/dto.DateRange'
@@ -6627,7 +6896,7 @@ definitions:
         $ref: '#/definitions/dto.DateRange'
       fault_types:
         items:
-          $ref: '#/definitions/handler.ChaosType'
+          $ref: '#/definitions/chaos.ChaosType'
         type: array
       group_by:
         description: Group results into tree structure by these fields (ordered)
@@ -21469,6 +21738,84 @@ paths:
       - Chaos
       x-api-type:
         sdk: "true"
+  /v1beta/guided/apply-next:
+    post:
+      consumes:
+      - application/json
+      description: Merge a single field selection into the current GuidedConfig.
+      operationId: chaos_guided_apply_next
+      parameters:
+      - description: Current config + selection
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaos.ChaosGuidedApplyNextReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Merged config
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosGuidedApplyNextResp'
+        "400":
+          description: Invalid request / selection
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Resolve failed
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Apply a guided next-step selection
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/guided/resolve:
+    post:
+      consumes:
+      - application/json
+      description: Walk one step of the guided state machine for chaos injection authoring.
+      operationId: chaos_guided_resolve
+      parameters:
+      - description: Current guided config
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaos.ChaosGuidedResolveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Next field / preview / can_apply
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosGuidedResolveResp'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Resolve failed
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Resolve the next step of a chaos guided walkthrough
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
   /v1beta/injection-batches:
     post:
       consumes:
@@ -21711,6 +22058,43 @@ paths:
       summary: Stream chaos injection status events (SSE)
       tags:
       - Chaos
+  /v1beta/injections/by-task/{taskID}:
+    delete:
+      description: Resolve task_id → (injection|batch) and run the appropriate destroy
+        path.
+      operationId: chaos_delete_injection_by_task
+      parameters:
+      - description: Caller-supplied task_id (from caller_metadata.task_id)
+        in: path
+        name: taskID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Resolved + destroyed
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosTaskInjectionRef'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: No injection / batch carries this task_id
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Lookup or destroy failed
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Destroy a chaos injection by caller task_id
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
   /v1beta/manifest-schema.json:
     get:
       description: Public endpoint returning the live JSON Schema for Point Manifests
@@ -21805,6 +22189,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Register or update a chaos system
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/systems/{sys}/candidates:
+    get:
+      description: Walk the guided enumeration tree and return one GuidedConfig per
+        leaf.
+      operationId: chaos_list_system_candidates
+      parameters:
+      - description: System name
+        in: path
+        name: sys
+        required: true
+        type: string
+      - description: Override the kubernetes namespace (defaults to the system's ns_pattern)
+        in: query
+        name: namespace
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All candidate configs
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosSystemCandidatesResp'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: System not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Enumerate failed
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Enumerate all guided candidates for a system
       tags:
       - Chaos
       x-api-type:
