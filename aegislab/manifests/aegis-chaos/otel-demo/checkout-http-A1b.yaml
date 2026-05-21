@@ -14,8 +14,6 @@ spec:
       namespace: otel-demo
       path: /get-quote
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_request_replace_method
     target:
       app: checkout
@@ -23,8 +21,6 @@ spec:
       namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
-      server_address: email
-      span_name: HTTP POST
   - capability: http_request_replace_method
     target:
       app: checkout
@@ -32,8 +28,6 @@ spec:
       namespace: otel-demo
       path: /ship-order
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_request_replace_path
     target:
       app: checkout
@@ -41,8 +35,6 @@ spec:
       namespace: otel-demo
       path: /get-quote
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_request_replace_path
     target:
       app: checkout
@@ -50,8 +42,6 @@ spec:
       namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
-      server_address: email
-      span_name: HTTP POST
   - capability: http_request_replace_path
     target:
       app: checkout
@@ -59,8 +49,6 @@ spec:
       namespace: otel-demo
       path: /ship-order
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_abort
     target:
       app: checkout
@@ -68,8 +56,6 @@ spec:
       namespace: otel-demo
       path: /get-quote
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_abort
     target:
       app: checkout
@@ -77,8 +63,6 @@ spec:
       namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
-      server_address: email
-      span_name: HTTP POST
   - capability: http_response_abort
     target:
       app: checkout
@@ -86,8 +70,6 @@ spec:
       namespace: otel-demo
       path: /ship-order
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_delay
     target:
       app: checkout
@@ -95,8 +77,6 @@ spec:
       namespace: otel-demo
       path: /get-quote
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_delay
     target:
       app: checkout
@@ -104,8 +84,6 @@ spec:
       namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
-      server_address: email
-      span_name: HTTP POST
   - capability: http_response_delay
     target:
       app: checkout
@@ -113,8 +91,6 @@ spec:
       namespace: otel-demo
       path: /ship-order
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_patch_body
     target:
       app: checkout
@@ -122,8 +98,6 @@ spec:
       namespace: otel-demo
       path: /get-quote
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_patch_body
     target:
       app: checkout
@@ -131,8 +105,6 @@ spec:
       namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
-      server_address: email
-      span_name: HTTP POST
   - capability: http_response_patch_body
     target:
       app: checkout
@@ -140,8 +112,6 @@ spec:
       namespace: otel-demo
       path: /ship-order
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_replace_body
     target:
       app: checkout
@@ -149,8 +119,6 @@ spec:
       namespace: otel-demo
       path: /get-quote
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_replace_body
     target:
       app: checkout
@@ -158,8 +126,6 @@ spec:
       namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
-      server_address: email
-      span_name: HTTP POST
   - capability: http_response_replace_body
     target:
       app: checkout
@@ -167,8 +133,6 @@ spec:
       namespace: otel-demo
       path: /ship-order
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_replace_code
     target:
       app: checkout
@@ -176,8 +140,6 @@ spec:
       namespace: otel-demo
       path: /get-quote
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   - capability: http_response_replace_code
     target:
       app: checkout
@@ -185,8 +147,6 @@ spec:
       namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
-      server_address: email
-      span_name: HTTP POST
   - capability: http_response_replace_code
     target:
       app: checkout
@@ -194,6 +154,4 @@ spec:
       namespace: otel-demo
       path: /ship-order
       port: 8080
-      server_address: shipping
-      span_name: HTTP POST
   replace_scope: service

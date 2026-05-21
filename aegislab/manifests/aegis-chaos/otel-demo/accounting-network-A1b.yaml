@@ -11,42 +11,30 @@ spec:
     target:
       namespace: otel-demo
       source_app: accounting
-      span_names:
-      - DB Access
       target_service: postgresql
   - capability: network_corrupt
     target:
       namespace: otel-demo
       source_app: accounting
-      span_names:
-      - DB Access
       target_service: postgresql
   - capability: network_delay
     target:
       namespace: otel-demo
       source_app: accounting
-      span_names:
-      - DB Access
       target_service: postgresql
   - capability: network_duplicate
     target:
       namespace: otel-demo
       source_app: accounting
-      span_names:
-      - DB Access
       target_service: postgresql
   - capability: network_loss
     target:
       namespace: otel-demo
       source_app: accounting
-      span_names:
-      - DB Access
       target_service: postgresql
   - capability: network_partition
     target:
       namespace: otel-demo
       source_app: accounting
-      span_names:
-      - DB Access
       target_service: postgresql
   replace_scope: service

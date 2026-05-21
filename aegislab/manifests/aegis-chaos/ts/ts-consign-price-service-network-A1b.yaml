@@ -11,78 +11,30 @@ spec:
     target:
       namespace: ts
       source_app: ts-consign-price-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.consign_price
-      - SELECT consign_price
-      - SELECT ts
-      - SELECT ts.consign_price
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-consign-price-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.consign_price
-      - SELECT consign_price
-      - SELECT ts
-      - SELECT ts.consign_price
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-consign-price-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.consign_price
-      - SELECT consign_price
-      - SELECT ts
-      - SELECT ts.consign_price
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-consign-price-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.consign_price
-      - SELECT consign_price
-      - SELECT ts
-      - SELECT ts.consign_price
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-consign-price-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.consign_price
-      - SELECT consign_price
-      - SELECT ts
-      - SELECT ts.consign_price
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-consign-price-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.consign_price
-      - SELECT consign_price
-      - SELECT ts
-      - SELECT ts.consign_price
-      - SELECT ts.ts
       target_service: mysql
   replace_scope: service

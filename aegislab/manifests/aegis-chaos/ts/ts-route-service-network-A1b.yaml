@@ -11,132 +11,30 @@ spec:
     target:
       namespace: ts
       source_app: ts-route-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`route_distances`
-      - CREATE TABLE `ts`.`route_stations`
-      - CREATE table ts
-      - DELETE ts.route
-      - DELETE ts.route_distances
-      - DELETE ts.route_stations
-      - INSERT ts.route
-      - INSERT ts.route_distances
-      - INSERT ts.route_stations
-      - SELECT `ts`.`route`
-      - SELECT ts
-      - SELECT ts.route
-      - SELECT ts.route_distances
-      - SELECT ts.route_stations
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-route-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`route_distances`
-      - CREATE TABLE `ts`.`route_stations`
-      - CREATE table ts
-      - DELETE ts.route
-      - DELETE ts.route_distances
-      - DELETE ts.route_stations
-      - INSERT ts.route
-      - INSERT ts.route_distances
-      - INSERT ts.route_stations
-      - SELECT `ts`.`route`
-      - SELECT ts
-      - SELECT ts.route
-      - SELECT ts.route_distances
-      - SELECT ts.route_stations
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-route-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`route_distances`
-      - CREATE TABLE `ts`.`route_stations`
-      - CREATE table ts
-      - DELETE ts.route
-      - DELETE ts.route_distances
-      - DELETE ts.route_stations
-      - INSERT ts.route
-      - INSERT ts.route_distances
-      - INSERT ts.route_stations
-      - SELECT `ts`.`route`
-      - SELECT ts
-      - SELECT ts.route
-      - SELECT ts.route_distances
-      - SELECT ts.route_stations
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-route-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`route_distances`
-      - CREATE TABLE `ts`.`route_stations`
-      - CREATE table ts
-      - DELETE ts.route
-      - DELETE ts.route_distances
-      - DELETE ts.route_stations
-      - INSERT ts.route
-      - INSERT ts.route_distances
-      - INSERT ts.route_stations
-      - SELECT `ts`.`route`
-      - SELECT ts
-      - SELECT ts.route
-      - SELECT ts.route_distances
-      - SELECT ts.route_stations
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-route-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`route_distances`
-      - CREATE TABLE `ts`.`route_stations`
-      - CREATE table ts
-      - DELETE ts.route
-      - DELETE ts.route_distances
-      - DELETE ts.route_stations
-      - INSERT ts.route
-      - INSERT ts.route_distances
-      - INSERT ts.route_stations
-      - SELECT `ts`.`route`
-      - SELECT ts
-      - SELECT ts.route
-      - SELECT ts.route_distances
-      - SELECT ts.route_stations
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-route-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`route_distances`
-      - CREATE TABLE `ts`.`route_stations`
-      - CREATE table ts
-      - DELETE ts.route
-      - DELETE ts.route_distances
-      - DELETE ts.route_stations
-      - INSERT ts.route
-      - INSERT ts.route_distances
-      - INSERT ts.route_stations
-      - SELECT `ts`.`route`
-      - SELECT ts
-      - SELECT ts.route
-      - SELECT ts.route_distances
-      - SELECT ts.route_stations
-      - SELECT ts.ts
       target_service: mysql
   replace_scope: service

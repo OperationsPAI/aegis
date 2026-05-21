@@ -14,8 +14,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
-      server_address: teastore-registry
-      span_name: GET
   - capability: http_request_replace_method
     target:
       app: teastore-auth
@@ -23,8 +21,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/cart/add/*
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/cart/add/{pid}
   - capability: http_request_replace_method
     target:
       app: teastore-auth
@@ -32,8 +28,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/isloggedin
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/isloggedin
   - capability: http_request_replace_method
     target:
       app: teastore-auth
@@ -41,8 +35,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/login
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/login
   - capability: http_request_replace_method
     target:
       app: teastore-auth
@@ -50,8 +42,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/logout
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/logout
   - capability: http_request_replace_method
     target:
       app: teastore-auth
@@ -59,8 +49,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth
       port: 8080
-      server_address: teastore-registry
-      span_name: PUT
   - capability: http_request_replace_path
     target:
       app: teastore-auth
@@ -68,8 +56,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
-      server_address: teastore-registry
-      span_name: GET
   - capability: http_request_replace_path
     target:
       app: teastore-auth
@@ -77,8 +63,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/cart/add/*
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/cart/add/{pid}
   - capability: http_request_replace_path
     target:
       app: teastore-auth
@@ -86,8 +70,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/isloggedin
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/isloggedin
   - capability: http_request_replace_path
     target:
       app: teastore-auth
@@ -95,8 +77,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/login
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/login
   - capability: http_request_replace_path
     target:
       app: teastore-auth
@@ -104,8 +84,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/logout
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/logout
   - capability: http_request_replace_path
     target:
       app: teastore-auth
@@ -113,8 +91,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth
       port: 8080
-      server_address: teastore-registry
-      span_name: PUT
   - capability: http_response_abort
     target:
       app: teastore-auth
@@ -122,8 +98,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
-      server_address: teastore-registry
-      span_name: GET
   - capability: http_response_abort
     target:
       app: teastore-auth
@@ -131,8 +105,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/cart/add/*
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/cart/add/{pid}
   - capability: http_response_abort
     target:
       app: teastore-auth
@@ -140,8 +112,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/isloggedin
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/isloggedin
   - capability: http_response_abort
     target:
       app: teastore-auth
@@ -149,8 +119,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/login
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/login
   - capability: http_response_abort
     target:
       app: teastore-auth
@@ -158,8 +126,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/logout
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/logout
   - capability: http_response_abort
     target:
       app: teastore-auth
@@ -167,8 +133,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth
       port: 8080
-      server_address: teastore-registry
-      span_name: PUT
   - capability: http_response_delay
     target:
       app: teastore-auth
@@ -176,8 +140,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
-      server_address: teastore-registry
-      span_name: GET
   - capability: http_response_delay
     target:
       app: teastore-auth
@@ -185,8 +147,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/cart/add/*
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/cart/add/{pid}
   - capability: http_response_delay
     target:
       app: teastore-auth
@@ -194,8 +154,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/isloggedin
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/isloggedin
   - capability: http_response_delay
     target:
       app: teastore-auth
@@ -203,8 +161,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/login
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/login
   - capability: http_response_delay
     target:
       app: teastore-auth
@@ -212,8 +168,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/logout
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/logout
   - capability: http_response_delay
     target:
       app: teastore-auth
@@ -221,8 +175,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth
       port: 8080
-      server_address: teastore-registry
-      span_name: PUT
   - capability: http_response_patch_body
     target:
       app: teastore-auth
@@ -230,8 +182,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
-      server_address: teastore-registry
-      span_name: GET
   - capability: http_response_patch_body
     target:
       app: teastore-auth
@@ -239,8 +189,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/cart/add/*
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/cart/add/{pid}
   - capability: http_response_patch_body
     target:
       app: teastore-auth
@@ -248,8 +196,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/isloggedin
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/isloggedin
   - capability: http_response_patch_body
     target:
       app: teastore-auth
@@ -257,8 +203,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/login
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/login
   - capability: http_response_patch_body
     target:
       app: teastore-auth
@@ -266,8 +210,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/logout
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/logout
   - capability: http_response_patch_body
     target:
       app: teastore-auth
@@ -275,8 +217,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth
       port: 8080
-      server_address: teastore-registry
-      span_name: PUT
   - capability: http_response_replace_body
     target:
       app: teastore-auth
@@ -284,8 +224,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
-      server_address: teastore-registry
-      span_name: GET
   - capability: http_response_replace_body
     target:
       app: teastore-auth
@@ -293,8 +231,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/cart/add/*
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/cart/add/{pid}
   - capability: http_response_replace_body
     target:
       app: teastore-auth
@@ -302,8 +238,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/isloggedin
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/isloggedin
   - capability: http_response_replace_body
     target:
       app: teastore-auth
@@ -311,8 +245,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/login
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/login
   - capability: http_response_replace_body
     target:
       app: teastore-auth
@@ -320,8 +252,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/logout
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/logout
   - capability: http_response_replace_body
     target:
       app: teastore-auth
@@ -329,8 +259,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth
       port: 8080
-      server_address: teastore-registry
-      span_name: PUT
   - capability: http_response_replace_code
     target:
       app: teastore-auth
@@ -338,8 +266,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
-      server_address: teastore-registry
-      span_name: GET
   - capability: http_response_replace_code
     target:
       app: teastore-auth
@@ -347,8 +273,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/cart/add/*
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/cart/add/{pid}
   - capability: http_response_replace_code
     target:
       app: teastore-auth
@@ -356,8 +280,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/isloggedin
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/isloggedin
   - capability: http_response_replace_code
     target:
       app: teastore-auth
@@ -365,8 +287,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/login
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/login
   - capability: http_response_replace_code
     target:
       app: teastore-auth
@@ -374,8 +294,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.auth/rest/useractions/logout
       port: 8080
-      server_address: teastore-auth
-      span_name: POST /tools.descartes.teastore.auth/rest/useractions/logout
   - capability: http_response_replace_code
     target:
       app: teastore-auth
@@ -383,6 +301,4 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/teastore-auth-0.teastore-auth
       port: 8080
-      server_address: teastore-registry
-      span_name: PUT
   replace_scope: service

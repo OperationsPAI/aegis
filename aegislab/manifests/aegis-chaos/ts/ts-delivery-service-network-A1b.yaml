@@ -11,114 +11,60 @@ spec:
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - CREATE table ts
-      - INSERT delivery
-      - INSERT ts.delivery
-      - SELECT ts
-      - SELECT ts.delivery
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - queue.declare
       target_service: ts-rabbitmq
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - CREATE table ts
-      - INSERT delivery
-      - INSERT ts.delivery
-      - SELECT ts
-      - SELECT ts.delivery
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - queue.declare
       target_service: ts-rabbitmq
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - CREATE table ts
-      - INSERT delivery
-      - INSERT ts.delivery
-      - SELECT ts
-      - SELECT ts.delivery
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - queue.declare
       target_service: ts-rabbitmq
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - CREATE table ts
-      - INSERT delivery
-      - INSERT ts.delivery
-      - SELECT ts
-      - SELECT ts.delivery
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - queue.declare
       target_service: ts-rabbitmq
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - CREATE table ts
-      - INSERT delivery
-      - INSERT ts.delivery
-      - SELECT ts
-      - SELECT ts.delivery
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - queue.declare
       target_service: ts-rabbitmq
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - CREATE table ts
-      - INSERT delivery
-      - INSERT ts.delivery
-      - SELECT ts
-      - SELECT ts.delivery
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-delivery-service
-      span_names:
-      - queue.declare
       target_service: ts-rabbitmq
   replace_scope: service

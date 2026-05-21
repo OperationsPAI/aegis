@@ -14,8 +14,6 @@ spec:
       namespace: sockshop
       path: /
       port: 8079
-      server_address: front-end
-      span_name: GET /
   - capability: http_request_replace_path
     target:
       app: orders
@@ -23,8 +21,6 @@ spec:
       namespace: sockshop
       path: /
       port: 8079
-      server_address: front-end
-      span_name: GET /
   - capability: http_response_abort
     target:
       app: orders
@@ -32,8 +28,6 @@ spec:
       namespace: sockshop
       path: /
       port: 8079
-      server_address: front-end
-      span_name: GET /
   - capability: http_response_delay
     target:
       app: orders
@@ -41,8 +35,6 @@ spec:
       namespace: sockshop
       path: /
       port: 8079
-      server_address: front-end
-      span_name: GET /
   - capability: http_response_patch_body
     target:
       app: orders
@@ -50,8 +42,6 @@ spec:
       namespace: sockshop
       path: /
       port: 8079
-      server_address: front-end
-      span_name: GET /
   - capability: http_response_replace_body
     target:
       app: orders
@@ -59,8 +49,6 @@ spec:
       namespace: sockshop
       path: /
       port: 8079
-      server_address: front-end
-      span_name: GET /
   - capability: http_response_replace_code
     target:
       app: orders
@@ -68,6 +56,4 @@ spec:
       namespace: sockshop
       path: /
       port: 8079
-      server_address: front-end
-      span_name: GET /
   replace_scope: service

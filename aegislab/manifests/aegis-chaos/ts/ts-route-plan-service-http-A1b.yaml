@@ -14,8 +14,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -23,8 +21,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -32,8 +28,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/routes/*
       port: 8080
-      server_address: ts-travel2-service
-      span_name: GET
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -41,8 +35,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/routes/*
       port: 8080
-      server_address: ts-travel-service
-      span_name: GET
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -50,8 +42,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trip_detail
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -59,8 +49,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/left
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -68,8 +56,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/routes
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -77,8 +63,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trip_detail
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -86,8 +70,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/left
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_request_replace_method
     target:
       app: ts-route-plan-service
@@ -95,8 +77,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/routes
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -104,8 +84,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -113,8 +91,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -122,8 +98,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/routes/*
       port: 8080
-      server_address: ts-travel2-service
-      span_name: GET
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -131,8 +105,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/routes/*
       port: 8080
-      server_address: ts-travel-service
-      span_name: GET
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -140,8 +112,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trip_detail
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -149,8 +119,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/left
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -158,8 +126,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/routes
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -167,8 +133,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trip_detail
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -176,8 +140,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/left
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_request_replace_path
     target:
       app: ts-route-plan-service
@@ -185,8 +147,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/routes
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -194,8 +154,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -203,8 +161,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -212,8 +168,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/routes/*
       port: 8080
-      server_address: ts-travel2-service
-      span_name: GET
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -221,8 +175,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/routes/*
       port: 8080
-      server_address: ts-travel-service
-      span_name: GET
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -230,8 +182,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trip_detail
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -239,8 +189,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/left
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -248,8 +196,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/routes
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -257,8 +203,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trip_detail
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -266,8 +210,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/left
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_abort
     target:
       app: ts-route-plan-service
@@ -275,8 +217,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/routes
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -284,8 +224,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -293,8 +231,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -302,8 +238,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/routes/*
       port: 8080
-      server_address: ts-travel2-service
-      span_name: GET
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -311,8 +245,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/routes/*
       port: 8080
-      server_address: ts-travel-service
-      span_name: GET
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -320,8 +252,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trip_detail
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -329,8 +259,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/left
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -338,8 +266,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/routes
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -347,8 +273,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trip_detail
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -356,8 +280,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/left
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_delay
     target:
       app: ts-route-plan-service
@@ -365,8 +287,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/routes
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -374,8 +294,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -383,8 +301,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -392,8 +308,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/routes/*
       port: 8080
-      server_address: ts-travel2-service
-      span_name: GET
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -401,8 +315,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/routes/*
       port: 8080
-      server_address: ts-travel-service
-      span_name: GET
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -410,8 +322,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trip_detail
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -419,8 +329,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/left
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -428,8 +336,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/routes
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -437,8 +343,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trip_detail
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -446,8 +350,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/left
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_patch_body
     target:
       app: ts-route-plan-service
@@ -455,8 +357,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/routes
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -464,8 +364,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -473,8 +371,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -482,8 +378,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/routes/*
       port: 8080
-      server_address: ts-travel2-service
-      span_name: GET
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -491,8 +385,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/routes/*
       port: 8080
-      server_address: ts-travel-service
-      span_name: GET
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -500,8 +392,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trip_detail
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -509,8 +399,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/left
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -518,8 +406,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/routes
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -527,8 +413,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trip_detail
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -536,8 +420,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/left
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_replace_body
     target:
       app: ts-route-plan-service
@@ -545,8 +427,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/routes
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -554,8 +434,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -563,8 +441,6 @@ spec:
       namespace: ts
       path: /api/v1/routeservice/routes/*
       port: 8080
-      server_address: ts-route-service
-      span_name: GET
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -572,8 +448,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/routes/*
       port: 8080
-      server_address: ts-travel2-service
-      span_name: GET
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -581,8 +455,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/routes/*
       port: 8080
-      server_address: ts-travel-service
-      span_name: GET
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -590,8 +462,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trip_detail
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -599,8 +469,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/left
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -608,8 +476,6 @@ spec:
       namespace: ts
       path: /api/v1/travel2service/trips/routes
       port: 8080
-      server_address: ts-travel2-service
-      span_name: POST
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -617,8 +483,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trip_detail
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -626,8 +490,6 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/left
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   - capability: http_response_replace_code
     target:
       app: ts-route-plan-service
@@ -635,6 +497,4 @@ spec:
       namespace: ts
       path: /api/v1/travelservice/trips/routes
       port: 8080
-      server_address: ts-travel-service
-      span_name: POST
   replace_scope: service

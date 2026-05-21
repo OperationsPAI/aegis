@@ -11,252 +11,180 @@ spec:
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CartService/EmptyCart
       target_service: cartservice
   - capability: network_bandwidth
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CurrencyService/Convert
       target_service: currencyservice
   - capability: network_bandwidth
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.EmailService/SendOrderConfirmation
       target_service: emailservice
   - capability: network_bandwidth
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.PaymentService/Charge
       target_service: paymentservice
   - capability: network_bandwidth
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ProductCatalogService/GetProduct
       target_service: productcatalogservice
   - capability: network_bandwidth
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ShippingService/GetQuote
       target_service: shippingservice
   - capability: network_corrupt
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CartService/EmptyCart
       target_service: cartservice
   - capability: network_corrupt
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CurrencyService/Convert
       target_service: currencyservice
   - capability: network_corrupt
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.EmailService/SendOrderConfirmation
       target_service: emailservice
   - capability: network_corrupt
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.PaymentService/Charge
       target_service: paymentservice
   - capability: network_corrupt
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ProductCatalogService/GetProduct
       target_service: productcatalogservice
   - capability: network_corrupt
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ShippingService/GetQuote
       target_service: shippingservice
   - capability: network_delay
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CartService/EmptyCart
       target_service: cartservice
   - capability: network_delay
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CurrencyService/Convert
       target_service: currencyservice
   - capability: network_delay
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.EmailService/SendOrderConfirmation
       target_service: emailservice
   - capability: network_delay
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.PaymentService/Charge
       target_service: paymentservice
   - capability: network_delay
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ProductCatalogService/GetProduct
       target_service: productcatalogservice
   - capability: network_delay
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ShippingService/GetQuote
       target_service: shippingservice
   - capability: network_duplicate
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CartService/EmptyCart
       target_service: cartservice
   - capability: network_duplicate
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CurrencyService/Convert
       target_service: currencyservice
   - capability: network_duplicate
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.EmailService/SendOrderConfirmation
       target_service: emailservice
   - capability: network_duplicate
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.PaymentService/Charge
       target_service: paymentservice
   - capability: network_duplicate
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ProductCatalogService/GetProduct
       target_service: productcatalogservice
   - capability: network_duplicate
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ShippingService/GetQuote
       target_service: shippingservice
   - capability: network_loss
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CartService/EmptyCart
       target_service: cartservice
   - capability: network_loss
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CurrencyService/Convert
       target_service: currencyservice
   - capability: network_loss
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.EmailService/SendOrderConfirmation
       target_service: emailservice
   - capability: network_loss
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.PaymentService/Charge
       target_service: paymentservice
   - capability: network_loss
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ProductCatalogService/GetProduct
       target_service: productcatalogservice
   - capability: network_loss
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ShippingService/GetQuote
       target_service: shippingservice
   - capability: network_partition
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CartService/EmptyCart
       target_service: cartservice
   - capability: network_partition
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.CurrencyService/Convert
       target_service: currencyservice
   - capability: network_partition
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.EmailService/SendOrderConfirmation
       target_service: emailservice
   - capability: network_partition
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.PaymentService/Charge
       target_service: paymentservice
   - capability: network_partition
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ProductCatalogService/GetProduct
       target_service: productcatalogservice
   - capability: network_partition
     target:
       namespace: ob
       source_app: checkoutservice
-      span_names:
-      - hipstershop.ShippingService/GetQuote
       target_service: shippingservice
   replace_scope: service

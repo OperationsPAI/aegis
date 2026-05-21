@@ -11,132 +11,90 @@ spec:
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
-      - /ship-order
       target_service: checkout
   - capability: network_bandwidth
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
       target_service: load-generator
   - capability: network_bandwidth
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - POST quote
       target_service: quote
   - capability: network_corrupt
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
-      - /ship-order
       target_service: checkout
   - capability: network_corrupt
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
       target_service: load-generator
   - capability: network_corrupt
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - POST quote
       target_service: quote
   - capability: network_delay
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
-      - /ship-order
       target_service: checkout
   - capability: network_delay
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
       target_service: load-generator
   - capability: network_delay
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - POST quote
       target_service: quote
   - capability: network_duplicate
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
-      - /ship-order
       target_service: checkout
   - capability: network_duplicate
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
       target_service: load-generator
   - capability: network_duplicate
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - POST quote
       target_service: quote
   - capability: network_loss
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
-      - /ship-order
       target_service: checkout
   - capability: network_loss
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
       target_service: load-generator
   - capability: network_loss
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - POST quote
       target_service: quote
   - capability: network_partition
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
-      - /ship-order
       target_service: checkout
   - capability: network_partition
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - /get-quote
       target_service: load-generator
   - capability: network_partition
     target:
       namespace: otel-demo
       source_app: shipping
-      span_names:
-      - POST quote
       target_service: quote
   replace_scope: service

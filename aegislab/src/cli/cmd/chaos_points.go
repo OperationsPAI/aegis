@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"aegis/cli/apiclient"
 	"aegis/cli/output"
 
 	"github.com/spf13/cobra"
+	sigsyaml "sigs.k8s.io/yaml"
 )
 
 var (
@@ -102,6 +104,79 @@ func int32Deref(p *int32) int32 {
 	return *p
 }
 
+var (
+	chaosPointsExportSystem            string
+	chaosPointsExportIncludeSuperseded bool
+)
+
+var chaosPointsExportCmd = &cobra.Command{
+	Use:   "export <out-dir>",
+	Short: "Dump chaos_points back into PointManifest YAMLs (GET /v1beta/systems/{sys}/points/export)",
+	Long: `Write one YAML per (system, service) under <out-dir>/<system>/<service>-export.yaml.
+
+The result is round-trip-safe: re-feeding each file through
+` + "`aegisctl manifest import`" + ` reproduces the same PointID set in MySQL.
+Only active rows by default; pass --include-superseded to also dump rows
+that an earlier import marked obsolete.`,
+	Args: cobra.ExactArgs(1),
+	RunE: runChaosPointsExport,
+}
+
+func runChaosPointsExport(_ *cobra.Command, args []string) error {
+	outDir := args[0]
+	if chaosPointsExportSystem == "" {
+		return usageErrorf("--system is required")
+	}
+
+	path := fmt.Sprintf("/v1beta/systems/%s/points/export", chaosPointsExportSystem)
+	if chaosPointsExportIncludeSuperseded {
+		path += "?include_superseded=true"
+	}
+	raw, status, err := chaosDoJSON("GET", path, nil)
+	if err != nil {
+		return err
+	}
+	if status < 200 || status >= 300 {
+		return fmt.Errorf("export: server returned %d: %s", status, string(raw))
+	}
+
+	var env struct {
+		Data struct {
+			Manifests []map[string]any `json:"manifests"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return fmt.Errorf("decode response: %w (body: %s)", err, string(raw))
+	}
+
+	if err := os.MkdirAll(filepath.Join(outDir, chaosPointsExportSystem), 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", outDir, err)
+	}
+
+	written := 0
+	for _, m := range env.Data.Manifests {
+		meta, _ := m["metadata"].(map[string]any)
+		svc, _ := meta["service"].(string)
+		if svc == "" {
+			return fmt.Errorf("export response carries a manifest with empty metadata.service: %v", meta)
+		}
+		yamlBytes, err := sigsyaml.Marshal(m)
+		if err != nil {
+			return fmt.Errorf("marshal %s: %w", svc, err)
+		}
+		filePath := filepath.Join(outDir, chaosPointsExportSystem, svc+"-export.yaml")
+		if err := os.WriteFile(filePath, yamlBytes, 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", filePath, err)
+		}
+		written++
+	}
+	if !flagQuiet {
+		fmt.Fprintf(os.Stderr, "exported %d manifest(s) to %s/%s\n",
+			written, outDir, chaosPointsExportSystem)
+	}
+	return nil
+}
+
 func init() {
 	chaosPointsListCmd.Flags().StringVar(&chaosPointsSystem, "system", "", "System name (required)")
 	chaosPointsListCmd.Flags().StringVar(&chaosPointsService, "service", "", "Filter by service name")
@@ -110,6 +185,11 @@ func init() {
 	chaosPointsListCmd.Flags().Int32Var(&chaosPointsLimit, "limit", 0, "Page size (default 100 server-side, max 500)")
 	chaosPointsListCmd.Flags().Int32Var(&chaosPointsOffset, "offset", 0, "Page offset")
 
+	chaosPointsExportCmd.Flags().StringVar(&chaosPointsExportSystem, "system", "", "System name (required)")
+	chaosPointsExportCmd.Flags().BoolVar(&chaosPointsExportIncludeSuperseded, "include-superseded", false,
+		"Also dump rows with status='superseded' (default: only 'active')")
+
 	chaosPointsCmd.AddCommand(chaosPointsListCmd)
+	chaosPointsCmd.AddCommand(chaosPointsExportCmd)
 	chaosCmd.AddCommand(chaosPointsCmd)
 }

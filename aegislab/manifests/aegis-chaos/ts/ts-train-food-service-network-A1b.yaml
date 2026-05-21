@@ -11,102 +11,30 @@ spec:
     target:
       namespace: ts
       source_app: ts-train-food-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`train_food_list`
-      - CREATE table ts
-      - DELETE ts.train_food_list
-      - INSERT ts.train_food
-      - INSERT ts.train_food_list
-      - SELECT `ts`.`train_food`
-      - SELECT ts
-      - SELECT ts.train_food
-      - SELECT ts.train_food_list
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-train-food-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`train_food_list`
-      - CREATE table ts
-      - DELETE ts.train_food_list
-      - INSERT ts.train_food
-      - INSERT ts.train_food_list
-      - SELECT `ts`.`train_food`
-      - SELECT ts
-      - SELECT ts.train_food
-      - SELECT ts.train_food_list
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-train-food-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`train_food_list`
-      - CREATE table ts
-      - DELETE ts.train_food_list
-      - INSERT ts.train_food
-      - INSERT ts.train_food_list
-      - SELECT `ts`.`train_food`
-      - SELECT ts
-      - SELECT ts.train_food
-      - SELECT ts.train_food_list
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-train-food-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`train_food_list`
-      - CREATE table ts
-      - DELETE ts.train_food_list
-      - INSERT ts.train_food
-      - INSERT ts.train_food_list
-      - SELECT `ts`.`train_food`
-      - SELECT ts
-      - SELECT ts.train_food
-      - SELECT ts.train_food_list
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-train-food-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`train_food_list`
-      - CREATE table ts
-      - DELETE ts.train_food_list
-      - INSERT ts.train_food
-      - INSERT ts.train_food_list
-      - SELECT `ts`.`train_food`
-      - SELECT ts
-      - SELECT ts.train_food
-      - SELECT ts.train_food_list
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-train-food-service
-      span_names:
-      - ALTER table ts
-      - CREATE TABLE `ts`.`train_food_list`
-      - CREATE table ts
-      - DELETE ts.train_food_list
-      - INSERT ts.train_food
-      - INSERT ts.train_food_list
-      - SELECT `ts`.`train_food`
-      - SELECT ts
-      - SELECT ts.train_food
-      - SELECT ts.train_food_list
-      - SELECT ts.ts
       target_service: mysql
   replace_scope: service

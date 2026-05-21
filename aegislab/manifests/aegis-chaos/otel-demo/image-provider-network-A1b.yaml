@@ -11,42 +11,30 @@ spec:
     target:
       namespace: otel-demo
       source_app: image-provider
-      span_names:
-      - image-provider
       target_service: load-generator
   - capability: network_corrupt
     target:
       namespace: otel-demo
       source_app: image-provider
-      span_names:
-      - image-provider
       target_service: load-generator
   - capability: network_delay
     target:
       namespace: otel-demo
       source_app: image-provider
-      span_names:
-      - image-provider
       target_service: load-generator
   - capability: network_duplicate
     target:
       namespace: otel-demo
       source_app: image-provider
-      span_names:
-      - image-provider
       target_service: load-generator
   - capability: network_loss
     target:
       namespace: otel-demo
       source_app: image-provider
-      span_names:
-      - image-provider
       target_service: load-generator
   - capability: network_partition
     target:
       namespace: otel-demo
       source_app: image-provider
-      span_names:
-      - image-provider
       target_service: load-generator
   replace_scope: service

@@ -14,8 +14,6 @@ spec:
       namespace: otel-demo
       path: /getquote
       port: 8080
-      server_address: quote
-      span_name: POST /getquote
   - capability: http_request_replace_path
     target:
       app: quote
@@ -23,8 +21,6 @@ spec:
       namespace: otel-demo
       path: /getquote
       port: 8080
-      server_address: quote
-      span_name: POST /getquote
   - capability: http_response_abort
     target:
       app: quote
@@ -32,8 +28,6 @@ spec:
       namespace: otel-demo
       path: /getquote
       port: 8080
-      server_address: quote
-      span_name: POST /getquote
   - capability: http_response_delay
     target:
       app: quote
@@ -41,8 +35,6 @@ spec:
       namespace: otel-demo
       path: /getquote
       port: 8080
-      server_address: quote
-      span_name: POST /getquote
   - capability: http_response_patch_body
     target:
       app: quote
@@ -50,8 +42,6 @@ spec:
       namespace: otel-demo
       path: /getquote
       port: 8080
-      server_address: quote
-      span_name: POST /getquote
   - capability: http_response_replace_body
     target:
       app: quote
@@ -59,8 +49,6 @@ spec:
       namespace: otel-demo
       path: /getquote
       port: 8080
-      server_address: quote
-      span_name: POST /getquote
   - capability: http_response_replace_code
     target:
       app: quote
@@ -68,6 +56,4 @@ spec:
       namespace: otel-demo
       path: /getquote
       port: 8080
-      server_address: quote
-      span_name: POST /getquote
   replace_scope: service

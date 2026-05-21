@@ -11,84 +11,60 @@ spec:
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - geo.Geo/Nearby
       target_service: geo
   - capability: network_bandwidth
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - rate.Rate/GetRates
       target_service: rate
   - capability: network_corrupt
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - geo.Geo/Nearby
       target_service: geo
   - capability: network_corrupt
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - rate.Rate/GetRates
       target_service: rate
   - capability: network_delay
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - geo.Geo/Nearby
       target_service: geo
   - capability: network_delay
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - rate.Rate/GetRates
       target_service: rate
   - capability: network_duplicate
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - geo.Geo/Nearby
       target_service: geo
   - capability: network_duplicate
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - rate.Rate/GetRates
       target_service: rate
   - capability: network_loss
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - geo.Geo/Nearby
       target_service: geo
   - capability: network_loss
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - rate.Rate/GetRates
       target_service: rate
   - capability: network_partition
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - geo.Geo/Nearby
       target_service: geo
   - capability: network_partition
     target:
       namespace: hs
       source_app: search
-      span_names:
-      - rate.Rate/GetRates
       target_service: rate
   replace_scope: service

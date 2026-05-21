@@ -11,240 +11,150 @@ spec:
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - CREATE table ts
-      - INSERT trip
-      - INSERT ts.trip
-      - SELECT ts
-      - SELECT ts.trip
-      - SELECT ts.ts
       target_service: mysql
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - GET
-      target_service: ts-route-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - GET
-      target_service: ts-train-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - POST
       target_service: ts-basic-service
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
-      target_service: ts-seat-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - CREATE table ts
-      - INSERT trip
-      - INSERT ts.trip
-      - SELECT ts
-      - SELECT ts.trip
-      - SELECT ts.ts
-      target_service: mysql
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - GET
       target_service: ts-route-service
-  - capability: network_corrupt
+  - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - GET
+      target_service: ts-seat-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-train-service
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
+      target_service: mysql
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-basic-service
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
-      target_service: ts-seat-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - CREATE table ts
-      - INSERT trip
-      - INSERT ts.trip
-      - SELECT ts
-      - SELECT ts.trip
-      - SELECT ts.ts
-      target_service: mysql
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - GET
       target_service: ts-route-service
-  - capability: network_delay
+  - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - GET
+      target_service: ts-seat-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-train-service
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
+      target_service: mysql
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-basic-service
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
-      target_service: ts-seat-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - CREATE table ts
-      - INSERT trip
-      - INSERT ts.trip
-      - SELECT ts
-      - SELECT ts.trip
-      - SELECT ts.ts
-      target_service: mysql
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - GET
       target_service: ts-route-service
-  - capability: network_duplicate
+  - capability: network_delay
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - GET
+      target_service: ts-seat-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-train-service
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
+      target_service: mysql
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-basic-service
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
-      target_service: ts-seat-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - CREATE table ts
-      - INSERT trip
-      - INSERT ts.trip
-      - SELECT ts
-      - SELECT ts.trip
-      - SELECT ts.ts
-      target_service: mysql
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - GET
       target_service: ts-route-service
-  - capability: network_loss
+  - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - GET
+      target_service: ts-seat-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-train-service
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
+      target_service: mysql
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-basic-service
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
-      target_service: ts-seat-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - CREATE table ts
-      - INSERT trip
-      - INSERT ts.trip
-      - SELECT ts
-      - SELECT ts.trip
-      - SELECT ts.ts
-      target_service: mysql
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-travel-service
-      span_names:
-      - GET
       target_service: ts-route-service
-  - capability: network_partition
+  - capability: network_loss
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - GET
+      target_service: ts-seat-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-train-service
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
+      target_service: mysql
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-basic-service
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-travel-service
-      span_names:
-      - POST
+      target_service: ts-route-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel-service
       target_service: ts-seat-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel-service
+      target_service: ts-train-service
   replace_scope: service

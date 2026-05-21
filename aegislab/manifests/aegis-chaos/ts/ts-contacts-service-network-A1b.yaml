@@ -11,84 +11,30 @@ spec:
     target:
       namespace: ts
       source_app: ts-contacts-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.contacts
-      - SELECT ts
-      - SELECT ts.contacts
-      - SELECT ts.ts
-      - UPDATE contacts
-      - UPDATE ts.contacts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-contacts-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.contacts
-      - SELECT ts
-      - SELECT ts.contacts
-      - SELECT ts.ts
-      - UPDATE contacts
-      - UPDATE ts.contacts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-contacts-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.contacts
-      - SELECT ts
-      - SELECT ts.contacts
-      - SELECT ts.ts
-      - UPDATE contacts
-      - UPDATE ts.contacts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-contacts-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.contacts
-      - SELECT ts
-      - SELECT ts.contacts
-      - SELECT ts.ts
-      - UPDATE contacts
-      - UPDATE ts.contacts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-contacts-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.contacts
-      - SELECT ts
-      - SELECT ts.contacts
-      - SELECT ts.ts
-      - UPDATE contacts
-      - UPDATE ts.contacts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-contacts-service
-      span_names:
-      - ALTER table ts
-      - CREATE table ts
-      - INSERT ts.contacts
-      - SELECT ts
-      - SELECT ts.contacts
-      - SELECT ts.ts
-      - UPDATE contacts
-      - UPDATE ts.contacts
       target_service: mysql
   replace_scope: service
