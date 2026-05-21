@@ -19625,6 +19625,68 @@
                 }
             }
         },
+        "/v1beta/systems/{sys}/points/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Dump every chaos Point for a system grouped by (service, instance, chart_version). Round-trip safe — pipe the response back through the import endpoint to restore.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chaos"
+                ],
+                "summary": "Export chaos Points as PointManifests",
+                "operationId": "chaos_export_system_points",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System name",
+                        "name": "sys",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include status='superseded' rows (default: only 'active')",
+                        "name": "include_superseded",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Manifests bundle",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaos_ChaosExportPointsResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "sdk": "true"
+                }
+            }
+        },
         "/v1beta/systems/{sys}/points/import": {
             "post": {
                 "security": [
@@ -20637,6 +20699,17 @@
                 }
             }
         },
+        "chaos.ChaosExportPointsResp": {
+            "type": "object",
+            "properties": {
+                "manifests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/chaos.PointManifest"
+                    }
+                }
+            }
+        },
         "chaos.ChaosGuidedApplyNextReq": {
             "type": "object",
             "required": [
@@ -21189,6 +21262,70 @@
                 },
                 "value": {
                     "type": "integer"
+                }
+            }
+        },
+        "chaos.PointManifest": {
+            "type": "object",
+            "properties": {
+                "apiVersion": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/chaos.PointManifestMetadata"
+                },
+                "spec": {
+                    "$ref": "#/definitions/chaos.PointManifestSpec"
+                }
+            }
+        },
+        "chaos.PointManifestEntry": {
+            "type": "object",
+            "properties": {
+                "capability": {
+                    "type": "string"
+                },
+                "param_overrides": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "target": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
+        "chaos.PointManifestMetadata": {
+            "type": "object",
+            "properties": {
+                "chart_version": {
+                    "type": "string"
+                },
+                "instance": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "system": {
+                    "type": "string"
+                }
+            }
+        },
+        "chaos.PointManifestSpec": {
+            "type": "object",
+            "properties": {
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/chaos.PointManifestEntry"
+                    }
+                },
+                "replace_scope": {
+                    "type": "string"
                 }
             }
         },
@@ -24131,6 +24268,31 @@
                     "allOf": [
                         {
                             "$ref": "#/definitions/chaos.ChaosCapabilityResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.GenericResponse-chaos_ChaosExportPointsResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaos.ChaosExportPointsResp"
                         }
                     ]
                 },
