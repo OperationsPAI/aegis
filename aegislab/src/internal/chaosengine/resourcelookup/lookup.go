@@ -12,9 +12,21 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"aegis/internal/chaosengine/client"
 	"aegis/internal/chaosengine/systemconfig"
 )
+
+// chaosPointsCacheTotal counts hit/miss against the per-system chaos_points
+// snapshot shared by all DB-backed GetAllX methods. A miss is one whose
+// chaosPointSnapshot() call triggered a fresh ChaosPointStore.QueryPoints;
+// every subsequent reuse within the same warm-up is a hit.
+var chaosPointsCacheTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "aegis_chaos_points_cache_total",
+	Help: "chaos_points per-system snapshot cache lookups by result (hit|miss).",
+}, []string{"system", "result"})
 
 // GetAllAppLabels returns app labels for the current system.
 func GetAllAppLabels(namespace, key string) ([]string, error) {
@@ -109,10 +121,13 @@ func GetSystemCache(system systemconfig.SystemType) *systemCache {
 func (s *systemCache) chaosPointSnapshot(ctx context.Context, store ChaosPointStore) ([]ChaosPointRow, error) {
 	s.dbSnapshotMu.Lock()
 	defer s.dbSnapshotMu.Unlock()
+	system := string(s.system)
 	if s.dbSnapshotOK {
+		chaosPointsCacheTotal.WithLabelValues(system, "hit").Inc()
 		return s.dbSnapshotRows, s.dbSnapshotErr
 	}
-	s.dbSnapshotRows, s.dbSnapshotErr = store.QueryPoints(ctx, string(s.system))
+	chaosPointsCacheTotal.WithLabelValues(system, "miss").Inc()
+	s.dbSnapshotRows, s.dbSnapshotErr = store.QueryPoints(ctx, system)
 	s.dbSnapshotOK = true
 	return s.dbSnapshotRows, s.dbSnapshotErr
 }

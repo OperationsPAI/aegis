@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	"aegis/internal/chaosengine/systemconfig"
 )
 
@@ -245,5 +247,53 @@ func TestDBBacked_SharedSnapshot_OneQueryPerWarmup(t *testing.T) {
 
 	if n := atomic.LoadInt64(&store.queryCount); n != 1 {
 		t.Errorf("want exactly 1 QueryPoints call across 5 GetAllX, got %d", n)
+	}
+}
+
+// TestDBBacked_CacheMetric_HitMiss proves the per-system snapshot counter
+// classifies the first GetAllX as a miss and every subsequent reuse within
+// the same warm-up as a hit. ResetSystemCache forces a new warm-up.
+func TestDBBacked_CacheMetric_HitMiss(t *testing.T) {
+	store := newStubStore()
+	withChaosStore(t, store)
+
+	miss := chaosPointsCacheTotal.WithLabelValues("ts", "miss")
+	hit := chaosPointsCacheTotal.WithLabelValues("ts", "hit")
+	missBefore := testutil.ToFloat64(miss)
+	hitBefore := testutil.ToFloat64(hit)
+
+	cache := GetSystemCache(systemconfig.SystemTrainTicket)
+	if _, err := cache.GetAllHTTPEndpoints(); err != nil {
+		t.Fatalf("http: %v", err)
+	}
+	if _, err := cache.GetAllNetworkPairs(); err != nil {
+		t.Fatalf("network: %v", err)
+	}
+	if _, err := cache.GetAllDNSEndpoints(); err != nil {
+		t.Fatalf("dns: %v", err)
+	}
+	if _, err := cache.GetAllJVMMethods(); err != nil {
+		t.Fatalf("jvm: %v", err)
+	}
+	if _, err := cache.GetAllDatabaseOperations(); err != nil {
+		t.Fatalf("db: %v", err)
+	}
+
+	if got := testutil.ToFloat64(miss) - missBefore; got != 1 {
+		t.Errorf("want 1 miss across 5 GetAllX in one warm-up, got %v", got)
+	}
+	if got := testutil.ToFloat64(hit) - hitBefore; got != 4 {
+		t.Errorf("want 4 hits across 5 GetAllX in one warm-up, got %v", got)
+	}
+	if n := atomic.LoadInt64(&store.queryCount); n != 1 {
+		t.Errorf("metric/QueryPoints disagree: want 1 SELECT, got %d", n)
+	}
+
+	ResetSystemCache(systemconfig.SystemTrainTicket)
+	if _, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllHTTPEndpoints(); err != nil {
+		t.Fatalf("http (post-reset): %v", err)
+	}
+	if got := testutil.ToFloat64(miss) - missBefore; got != 2 {
+		t.Errorf("post-reset: want 2 cumulative misses, got %v", got)
 	}
 }
