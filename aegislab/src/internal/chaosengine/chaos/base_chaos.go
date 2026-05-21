@@ -23,7 +23,6 @@ type ConfigChaos struct {
 	RuntimeMutatorChaos  *chaosmeshv1alpha1.RuntimeMutatorChaosSpec
 	StressChaos          *chaosmeshv1alpha1.StressChaosSpec
 	TimeChaos            *chaosmeshv1alpha1.TimeChaosSpec
-	Workflow             *chaosmeshv1alpha1.WorkflowSpec
 }
 
 type OptChaos func(opt *ConfigChaos)
@@ -96,11 +95,5 @@ func WithDnsChaosSpec(spec *chaosmeshv1alpha1.DNSChaosSpec) OptChaos {
 func WithJVMChaosSpec(spec *chaosmeshv1alpha1.JVMChaosSpec) OptChaos {
 	return func(config *ConfigChaos) {
 		config.JVMChaos = spec
-	}
-}
-
-func WithWorkflowSpec(spec *chaosmeshv1alpha1.WorkflowSpec) OptChaos {
-	return func(opt *ConfigChaos) {
-		opt.Workflow = spec
 	}
 }
