@@ -22,10 +22,9 @@ func newServiceAccountTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// TestSeedServiceAccounts_AddsRowOnSubsequentBoot pins the bug the unconditional
-// seed call exists to fix: producerSeedRequired returns false once `containers`
-// is non-empty, so without an unconditional upsert path, a fresh SA row added
-// to data.yaml after first boot would never reach the DB.
+// TestSeedServiceAccounts_AddsRowOnSubsequentBoot pins the unconditional
+// upsert path: an SA row added to data.yaml after first boot reaches the DB
+// on the next restart without manual intervention.
 func TestSeedServiceAccounts_AddsRowOnSubsequentBoot(t *testing.T) {
 	db := newServiceAccountTestDB(t)
 
