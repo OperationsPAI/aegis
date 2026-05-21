@@ -255,7 +255,7 @@ func TestPedestalChartInstallValidation(t *testing.T) {
 			t.Fatalf("want 1 helm call, got %d: %v", len(f.calls), f.calls)
 		}
 		call := f.calls[0]
-		if call[0] != "helm" || call[1] != "install" || call[2] != "ts0" {
+		if call[0] != "helm" || call[1] != "upgrade" || call[2] != "--install" || call[3] != "ts0" {
 			t.Fatalf("bad helm args: %v", call)
 		}
 		joined := strings.Join(call, " ")

@@ -429,6 +429,14 @@ type SubmitInjectionReq struct {
 	// submit-time BuildInjection's pod listing is skipped for fresh
 	// slots since pods don't exist yet. See PR-C of #166.
 	AllowBootstrap bool `json:"allow_bootstrap" binding:"omitempty"`
+
+	// ForceResubmit, when true, suppresses the engine-config dedup check
+	// even if a previous batch with the same engine_config is still in a
+	// non-terminal task state. Terminal-state previous batches (Completed /
+	// Error / Cancelled) no longer block resubmission — this flag exists
+	// for the narrower case where the operator wants to override an in-
+	// flight run as well.
+	ForceResubmit bool `json:"force_resubmit" binding:"omitempty"`
 }
 
 func (req *SubmitInjectionReq) GuidedSpecs() [][]chaos.GuidedConfig {

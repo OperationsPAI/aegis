@@ -63,6 +63,8 @@ var (
 	regressionSkipRestartPedestal bool
 	regressionReadyTimeoutSeconds int
 	regressionAppLabelKey       string
+	regressionAppOverride       string
+	regressionForceResubmit     bool
 	regressionPodListerHook     PodLister // test injection seam; nil => real k8s client
 	regressionInstallerHook     chartInstaller
 	regressionSystemsHook       SystemsFetcher // test injection seam; nil => real HTTP client
@@ -133,6 +135,19 @@ var regressionRunCmd = &cobra.Command{
 		}
 		if err != nil {
 			return err
+		}
+
+		if regressionAppOverride != "" {
+			if err := overrideFirstSpecApp(&rc, regressionAppOverride); err != nil {
+				return err
+			}
+		}
+
+		if regressionForceResubmit {
+			if rc.Submit == nil {
+				rc.Submit = map[string]any{}
+			}
+			rc.Submit["force_resubmit"] = true
 		}
 
 		if err := resolveRegressionNamespaces(cmd.Context(), &rc, regressionSystemsHook); err != nil {
@@ -284,6 +299,59 @@ func validateRegressionCase(rc regressionCase, path string) error {
 	if rc.Validation.MinEvents < 0 {
 		return fmt.Errorf("validate regression case %q: validation.min_events must be >= 0", path)
 	}
+	if err := rejectSpecDurationField(rc, path); err != nil {
+		return err
+	}
+	return nil
+}
+
+// rejectSpecDurationField fails the case load when any inject spec carries a
+// `duration:` key. The server pins per-spec duration to
+// consts.FixedAbnormalWindowMinutes via SubmitInjectionReq.Validate, so the
+// YAML field has been load-bearing only as a footgun — operators edit it
+// expecting an effect that never lands.
+func rejectSpecDurationField(rc regressionCase, path string) error {
+	groups, ok := rc.Submit["specs"].([]any)
+	if !ok {
+		return nil
+	}
+	for i, g := range groups {
+		inner, ok := g.([]any)
+		if !ok {
+			continue
+		}
+		for j, s := range inner {
+			spec, ok := s.(map[string]any)
+			if !ok {
+				continue
+			}
+			if _, has := spec["duration"]; has {
+				return fmt.Errorf("validate regression case %q: submit.specs[%d][%d].duration is no longer accepted; duration is fixed by the server (FixedAbnormalWindowMinutes) — remove the field", path, i, j)
+			}
+		}
+	}
+	return nil
+}
+
+// overrideFirstSpecApp rewrites the `app` field of the first spec in the first
+// batch. Callers use this to retarget a regression case without touching the
+// YAML on disk (typical use: dedup workaround after a previous run completed).
+// Multi-batch / multi-spec cases are untouched beyond the first entry; that's
+// the contract documented on the --app flag.
+func overrideFirstSpecApp(rc *regressionCase, app string) error {
+	groups, ok := rc.Submit["specs"].([]any)
+	if !ok || len(groups) == 0 {
+		return fmt.Errorf("--app: regression case has no submit.specs to override")
+	}
+	inner, ok := groups[0].([]any)
+	if !ok || len(inner) == 0 {
+		return fmt.Errorf("--app: regression case first batch is empty")
+	}
+	spec, ok := inner[0].(map[string]any)
+	if !ok {
+		return fmt.Errorf("--app: first spec is not a map")
+	}
+	spec["app"] = app
 	return nil
 }
 
@@ -695,20 +763,39 @@ func preflightRegressionCase(ctx context.Context, rc regressionCase, lister PodL
 		}
 		lister = l
 	}
-	labelKey := strings.TrimSpace(regressionAppLabelKey)
-	if labelKey == "" {
-		labelKey = "app"
+	primaryLabelKey := strings.TrimSpace(regressionAppLabelKey)
+	if primaryLabelKey == "" {
+		primaryLabelKey = "app"
+	}
+	// Fallback covers modern charts (otel-demo, etc.) that label pods with
+	// app.kubernetes.io/name=<svc> instead of the legacy app=<svc> key. Keep
+	// the primary first so operators who explicitly set --app-label-key still
+	// see their selector tried before the fallback.
+	labelKeysToTry := []string{primaryLabelKey}
+	if primaryLabelKey == "app" {
+		labelKeysToTry = append(labelKeysToTry, "app.kubernetes.io/name")
 	}
 
 	var misses []regressionTarget
+	var missAttempts [][]string // parallel to misses; selectors that returned 0
 	for _, t := range targets {
-		selector := labelKey + "=" + t.App
-		n, err := lister.ListPods(ctx, t.Namespace, selector)
-		if err != nil {
-			return fmt.Errorf("preflight: list pods in ns=%s selector=%s: %w (use --skip-preflight to bypass)", t.Namespace, selector, err)
+		var triedSelectors []string
+		matched := false
+		for _, key := range labelKeysToTry {
+			selector := key + "=" + t.App
+			triedSelectors = append(triedSelectors, selector)
+			n, err := lister.ListPods(ctx, t.Namespace, selector)
+			if err != nil {
+				return fmt.Errorf("preflight: list pods in ns=%s selector=%s: %w (use --skip-preflight to bypass)", t.Namespace, selector, err)
+			}
+			if n > 0 {
+				matched = true
+				break
+			}
 		}
-		if n == 0 {
+		if !matched {
 			misses = append(misses, t)
+			missAttempts = append(missAttempts, triedSelectors)
 		}
 	}
 	if len(misses) == 0 {
@@ -716,12 +803,12 @@ func preflightRegressionCase(ctx context.Context, rc regressionCase, lister PodL
 	}
 
 	var b strings.Builder
-	for _, m := range misses {
+	for idx, m := range misses {
 		sys := m.System
 		if sys == "" {
 			sys = "<system>"
 		}
-		fmt.Fprintf(&b, "preflight: namespace %s has no pods matching %s=%s\n", m.Namespace, labelKey, m.App)
+		fmt.Fprintf(&b, "preflight: namespace %s has no pods matching any of: %s\n", m.Namespace, strings.Join(missAttempts[idx], ", "))
 		fmt.Fprintf(&b, "  fix: aegisctl pedestal chart install %s --namespace %s\n", sys, m.Namespace)
 	}
 
@@ -757,19 +844,36 @@ func preflightRegressionCase(ctx context.Context, rc regressionCase, lister PodL
 		}
 		deadline := time.Now().Add(time.Duration(timeoutSec) * time.Second)
 		for _, m := range misses {
-			selector := labelKey + "=" + m.App
 			for {
-				total, ready, err := lister.CountReadyPods(ctx, m.Namespace, selector)
-				if err != nil {
-					return fmt.Errorf("preflight: wait-for-ready ns=%s selector=%s: %w", m.Namespace, selector, err)
+				// Match the same pair of selectors used during the initial
+				// preflight scan so a chart that labels pods with the modern
+				// app.kubernetes.io/name key is still counted as Ready.
+				var total, ready int
+				var lastSelector string
+				var listErr error
+				for _, key := range labelKeysToTry {
+					sel := key + "=" + m.App
+					lastSelector = sel
+					t, r, err := lister.CountReadyPods(ctx, m.Namespace, sel)
+					if err != nil {
+						listErr = err
+						break
+					}
+					if t > 0 {
+						total, ready = t, r
+						break
+					}
+				}
+				if listErr != nil {
+					return fmt.Errorf("preflight: wait-for-ready ns=%s selector=%s: %w", m.Namespace, lastSelector, listErr)
 				}
 				if total > 0 && ready == total {
-					fmt.Fprintf(os.Stderr, "preflight: ready ns=%s %s (%d/%d)\n", m.Namespace, selector, ready, total)
+					fmt.Fprintf(os.Stderr, "preflight: ready ns=%s %s (%d/%d)\n", m.Namespace, lastSelector, ready, total)
 					break
 				}
 				if time.Now().After(deadline) {
 					return fmt.Errorf("preflight: timed out after %ds waiting for pods ns=%s selector=%s (ready %d/%d); bump --ready-timeout or inspect with `kubectl -n %s get pods -l %s`",
-						timeoutSec, m.Namespace, selector, ready, total, m.Namespace, selector)
+						timeoutSec, m.Namespace, lastSelector, ready, total, m.Namespace, lastSelector)
 				}
 				select {
 				case <-ctx.Done():
@@ -856,7 +960,9 @@ func init() {
 	regressionRunCmd.Flags().BoolVar(&regressionAutoInstall, "auto-install", false, "If preflight finds missing charts, shell out to `aegisctl pedestal chart install <system> --namespace <ns>` to fix them before submit")
 	regressionRunCmd.Flags().BoolVar(&regressionSkipRestartPedestal, "skip-restart-pedestal", false, "Hint the backend to skip the RestartPedestal helm install when the chart is already deployed (useful after --auto-install + wait-for-ready)")
 	regressionRunCmd.Flags().IntVar(&regressionReadyTimeoutSeconds, "ready-timeout", 600, "Seconds --auto-install waits for all preflight targets to become Ready before submit")
-	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight")
+	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight (always falls back to app.kubernetes.io/name when unset)")
+	regressionRunCmd.Flags().StringVar(&regressionAppOverride, "app", "", "Override the FIRST spec's `app` value without editing the YAML on disk (multi-spec cases: only spec[0] is changed)")
+	regressionRunCmd.Flags().BoolVar(&regressionForceResubmit, "force", false, "Bypass the server-side dedup check even when the previous batch is still Running. \"I know what I'm doing\" cases only — normal terminal-state retries no longer require this.")
 
 	regressionCmd.AddCommand(regressionRunCmd)
 }

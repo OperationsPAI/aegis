@@ -26,7 +26,6 @@ submit:
         namespace: mm0
         app: user-service
         chaos_type: PodKill
-        duration: 5
 validation:
   timeout_seconds: 3000
   min_events: 6

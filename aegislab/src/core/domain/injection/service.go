@@ -420,7 +420,7 @@ func (s *Service) SubmitFaultInjection(ctx context.Context, req *SubmitInjection
 		}
 	}
 
-	uniqueItems, duplicatedInRequest, alreadyExisted, err := s.removeDuplicated(processedItems)
+	uniqueItems, duplicatedInRequest, alreadyExisted, err := s.removeDuplicated(processedItems, req.ForceResubmit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to remove duplicated batches: %w", err)
 	}

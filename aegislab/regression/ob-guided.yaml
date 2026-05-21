@@ -24,7 +24,6 @@ submit:
         namespace: ob0
         app: checkoutservice
         chaos_type: PodKill
-        duration: 1
 validation:
   timeout_seconds: 3000
   min_events: 6

@@ -24,7 +24,6 @@ submit:
         namespace: otel-demo0
         app: quote
         chaos_type: PodFailure
-        duration: 1
 validation:
   timeout_seconds: 3000
   min_events: 6

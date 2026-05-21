@@ -7097,6 +7097,15 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.ContainerSpec'
         description: Benchmark (detector) configuration
+      force_resubmit:
+        description: |-
+          ForceResubmit, when true, suppresses the engine-config dedup check
+          even if a previous batch with the same engine_config is still in a
+          non-terminal task state. Terminal-state previous batches (Completed /
+          Error / Cancelled) no longer block resubmission — this flag exists
+          for the narrower case where the operator wants to override an in-
+          flight run as well.
+        type: boolean
       labels:
         description: Labels to attach to the injection
         items:

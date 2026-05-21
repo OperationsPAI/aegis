@@ -31,7 +31,6 @@ submit:
         namespace: otel-demo
         app: frontend
         chaos_type: PodKill
-        duration: 1
 validation:
   timeout_seconds: 3000
   min_events: 6
@@ -69,6 +68,10 @@ validation:
   observed trace events.
 - `validation.required_task_chain`: Ordered subsequence of task types that must
   be present on the fetched trace detail.
+
+`submit.specs[][].duration` is **not accepted** — the abnormal window is pinned
+server-side to `consts.FixedAbnormalWindowMinutes`. The case loader rejects any
+file that carries a `duration:` field inside a spec entry.
 
 ## Running a case
 

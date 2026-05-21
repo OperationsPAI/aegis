@@ -161,11 +161,26 @@ func (r *Repository) listExistingEngineConfigs(configs []string) ([]string, erro
 		Joins("JOIN labels ON labels.id = fil.label_id").
 		Where("labels.label_key = ? AND labels.label_value = ?", consts.LabelKeyTag, "invalid")
 
+	// Only count a previous injection as a "still in flight" duplicate when
+	// its owning task hasn't reached a terminal state. A regression case
+	// rerun after its previous batch completed / failed / was cancelled
+	// must not be silently suppressed — the operator's intent is clearly to
+	// re-run the same scenario. Tasks in pending/rescheduled/running keep
+	// the suppression active so a second submit during an in-flight run
+	// still fails fast.
+	terminalTaskStates := []consts.TaskState{
+		consts.TaskCompleted,
+		consts.TaskError,
+		consts.TaskCancelled,
+	}
+
 	var existing []string
 	if err := r.db.Model(&model.FaultInjection{}).
 		Select("engine_config").
-		Where("engine_config IN (?) AND state >= ? AND status = ?", configs, consts.DatapackInjectSuccess, consts.CommonEnabled).
+		Joins("LEFT JOIN tasks ON tasks.id = fault_injections.task_id").
+		Where("engine_config IN (?) AND fault_injections.state >= ? AND fault_injections.status = ?", configs, consts.DatapackInjectSuccess, consts.CommonEnabled).
 		Where("fault_injections.id NOT IN (?)", invalidLabelSubQuery).
+		Where("tasks.id IS NULL OR tasks.state NOT IN (?)", terminalTaskStates).
 		Pluck("engine_config", &existing).Error; err != nil {
 		return nil, err
 	}
