@@ -3,6 +3,7 @@ package initialization
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -37,27 +38,16 @@ func InitializeConsumer(
 	buildDatapackLimiter *consumer.TokenBucketRateLimiter,
 	algoLimiter *consumer.TokenBucketRateLimiter,
 ) error {
+	// Declarative seeds run unconditionally and are idempotent: see
+	// initializeDynamicConfigs and initializeSystemPrerequisites for the
+	// per-row upsert semantics.
+	if err := initializeConsumer(ctx, db, etcdGw); err != nil {
+		return fmt.Errorf("failed to initialize system data for consumer: %w", err)
+	}
+
 	consumerData, err := newConfigDataWithDB(db, consts.ConfigScopeConsumer)
 	if err != nil {
 		return fmt.Errorf("failed to load consumer config metadata: %w", err)
-	}
-
-	if len(consumerData.configs) == 0 {
-		logrus.Info("Seeding initial system data for consumer...")
-		if err := initializeConsumer(ctx, db, etcdGw); err != nil {
-			return fmt.Errorf("failed to initialize system data for consumer: %w", err)
-		}
-		logrus.Info("Successfully seeded initial system data for consumer")
-	} else {
-		logrus.Info("Initial system data for consumer already seeded, skipping initialization")
-		// Prerequisites (issue #115) are additive metadata, not the big
-		// first-boot bootstrap. Reconcile them on every boot so a data.yaml
-		// prereq addition (e.g. new sockshop chart) lands without requiring
-		// a full reseed. ReconcileSystemPrerequisites is idempotent and does
-		// not stomp a reconciled status for unchanged specs.
-		if err := reconcilePrerequisitesFromDataFile(db); err != nil {
-			logrus.WithError(err).Warn("Failed to reconcile system prerequisites from data.yaml")
-		}
 	}
 
 	common.RegisterGlobalHandlers(publisher)
@@ -155,6 +145,19 @@ func initializeDynamicConfigs(tx *gorm.DB, data *InitialData) ([]model.DynamicCo
 		cfg := configData.ConvertToDBDynamicConfig()
 		if err := common.ValidateConfigMetadataConstraints(cfg); err != nil {
 			return nil, fmt.Errorf("invalid config value for key %s: %w", configData.Key, err)
+		}
+
+		// Idempotency: skip rows whose key already exists. default_value
+		// drift between data.yaml and DB is reconciled by the explicit
+		// ReseedFromDataFile path, never silently on boot.
+		var existing model.DynamicConfig
+		err := tx.Where("config_key = ?", configData.Key).First(&existing).Error
+		if err == nil {
+			configs = append(configs, existing)
+			continue
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("lookup dynamic config %s: %w", configData.Key, err)
 		}
 
 		if err := common.CreateConfig(tx, cfg); err != nil {

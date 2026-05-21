@@ -40,35 +40,20 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 		return fmt.Errorf("failed to load producer initial data: %w", err)
 	}
 
-	shouldSeed, err := producerSeedRequired(db, initialData)
-	if err != nil {
-		return fmt.Errorf("failed to determine producer bootstrap state: %w", err)
+	// Every declarative seed runs on every boot and is idempotent: rows added
+	// to data.yaml after first boot land on the next restart without operator
+	// intervention, and re-running over an already-seeded DB is a no-op. The
+	// old `producerSeedRequired` gate (which used a non-empty `containers`
+	// table as proxy for "have we ever bootstrapped") is gone — it silently
+	// dropped new declarative rows past the first boot.
+	if err := initializeProducer(db, initialData); err != nil {
+		return fmt.Errorf("failed to initialize system data for producer: %w", err)
 	}
 
-	if shouldSeed {
-		logrus.Info("Seeding initial system data for producer...")
-		if err := initializeProducer(db, initialData); err != nil {
-			return fmt.Errorf("failed to initialize system data for producer: %w", err)
-		}
-		logrus.Info("Successfully seeded initial system data for producer")
-	} else {
-		logrus.Info("Initial system data for producer already seeded, skipping initialization")
-	}
-
-	// Issue #104: even after first-boot seeding, a new permission added to
-	// consts.SystemRolePermissions (or contributed via a module's RoleGrants
-	// registrar and merged by rbac.AggregatePermissions) must reach the
-	// permissions + role_permissions tables. Running ReconcileSystemPermissions
-	// unconditionally is the canonical place — it is idempotent and only
-	// writes rows that are missing.
 	if err := ReconcileSystemPermissions(db); err != nil {
 		return fmt.Errorf("failed to reconcile system permissions: %w", err)
 	}
 
-	// service_accounts is a declarative table — every boot upserts by name so
-	// rows added to data.yaml after the once-only seed (gated on `containers`
-	// being empty) still land. Manual revocations are preserved because the
-	// upsert never touches `revoked_at`.
 	if err := seedServiceAccounts(db, initialData.ServiceAccounts); err != nil {
 		return fmt.Errorf("failed to seed service accounts: %w", err)
 	}
@@ -114,29 +99,6 @@ func loadInitialDataFromConfiguredPath() (*InitialData, error) {
 	dataPath := config.GetString("initialization.data_path")
 	filePath := filepath.Join(dataPath, consts.InitialFilename)
 	return loadInitialDataFromFile(filePath)
-}
-
-func producerSeedRequired(db *gorm.DB, initialData *InitialData) (bool, error) {
-	if initialData == nil {
-		return false, fmt.Errorf("initial data is nil")
-	}
-	adminUsername := initialData.AdminUser.Username
-	if adminUsername == "" {
-		return false, fmt.Errorf("initial data admin user username is empty")
-	}
-
-	// SSO bootstraps its own admin user, so admin-existence alone is not a
-	// reliable gate for "producer already seeded". Require that containers
-	// have been seeded too — they're producer-owned and won't appear by
-	// accident.
-	var containerCount int64
-	if err := db.Table("containers").Count(&containerCount).Error; err != nil {
-		return false, fmt.Errorf("failed to count containers: %w", err)
-	}
-	if containerCount > 0 {
-		return false, nil
-	}
-	return true, nil
 }
 
 func initializeProducer(db *gorm.DB, initialData *InitialData) error {
@@ -270,6 +232,20 @@ func initializeContainers(tx *gorm.DB, data *InitialData, userID int) error {
 	dataPath := config.GetString("initialization.data_path")
 
 	for _, containerData := range data.Containers {
+		// Idempotency: if a container with this name already exists, the
+		// nested CreateContainerCore path would error with ErrDuplicatedKey
+		// on the unique active_name index. Containers are declarative, so
+		// skip the row — additive changes (new versions / values) are
+		// reconciled via the ReseedFromDataFile path, not the boot seed.
+		var existing model.Container
+		err := tx.Where("name = ? AND type = ?", containerData.Name, containerData.Type).First(&existing).Error
+		if err == nil {
+			continue
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("lookup container %s: %w", containerData.Name, err)
+		}
+
 		containerModel := containerData.ConvertToDBContainer()
 		if containerModel.Type == consts.ContainerTypePedestal {
 			system := chaos.SystemType(containerModel.Name)
@@ -337,6 +313,15 @@ func initializeContainers(tx *gorm.DB, data *InitialData, userID int) error {
 
 func initializeDatasets(tx *gorm.DB, data *InitialData, userID int) error {
 	for _, datasetData := range data.Datasets {
+		var existing model.Dataset
+		err := tx.Where("name = ?", datasetData.Name).First(&existing).Error
+		if err == nil {
+			continue
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("lookup dataset %s: %w", datasetData.Name, err)
+		}
+
 		datasetModel := datasetData.ConvertToDBDataset()
 
 		versions := make([]model.DatasetVersion, 0, len(datasetData.Versions))
@@ -345,8 +330,7 @@ func initializeDatasets(tx *gorm.DB, data *InitialData, userID int) error {
 			versions = append(versions, *version)
 		}
 
-		_, err := dataset.NewRepository(tx).CreateDatasetCore(datasetModel, versions, userID)
-		if err != nil {
+		if _, err := dataset.NewRepository(tx).CreateDatasetCore(datasetModel, versions, userID); err != nil {
 			return fmt.Errorf("failed to create dataset %s: %w", datasetData.Name, err)
 		}
 	}
