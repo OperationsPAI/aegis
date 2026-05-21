@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -63,8 +67,21 @@ func ChaosMeshGroupVersionResourceForNetworkChaos() schema.GroupVersionResource 
 	return networkChaosGVR
 }
 
+// chaosMeshInformerResync controls how often the shared informer relists
+// each watched GVR. 5m matches client-go's typical defaults and is long
+// enough that the relist storm at boot doesn't dominate apiserver load,
+// short enough that any missed-event drift heals within a single
+// reconciler tick window.
+const chaosMeshInformerResync = 5 * time.Minute
+
 type ChaosMeshExecutor struct {
 	Dyn dynamic.Interface
+
+	informerMu sync.RWMutex
+	// factory + listers are populated by WatchStatus. When listers is empty
+	// (test / pre-boot path), Status falls back to a per-call dynamic.Get.
+	factory dynamicinformer.DynamicSharedInformerFactory
+	listers map[schema.GroupVersionResource]cache.GenericLister
 }
 
 var _ Executor = (*ChaosMeshExecutor)(nil)
@@ -164,17 +181,80 @@ func (e *ChaosMeshExecutor) Status(ctx context.Context, handle string) (ExecStat
 	if err != nil {
 		return ExecStateFailed, nil, err
 	}
+
+	if got, ok := e.lookupFromInformer(h); ok {
+		return interpretChaosMeshStatus(got), readStatusDiagnostics(got), nil
+	}
+
+	// Cache miss (informer not started, GVR not watched, or just-after-Apply
+	// before the watch has observed the new CR). One dynamic.Get keeps the
+	// pre-informer semantics — including the cr_absent → Orphaned branch
+	// that the reconciler depends on.
 	got, err := e.Dyn.Resource(h.GVR).Namespace(h.Namespace).Get(ctx, h.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// CR absent. Caller (reconciler) reconciles against the row's
-			// prior status to distinguish post-Destroy steady state from a
-			// mid-flight vanish.
 			return ExecStateOrphaned, map[string]any{"reason": "cr_absent"}, nil
 		}
 		return ExecStateFailed, nil, fmt.Errorf("chaos-mesh status: %w", err)
 	}
 	return interpretChaosMeshStatus(got), readStatusDiagnostics(got), nil
+}
+
+// lookupFromInformer returns (CR, true) if the shared informer for h.GVR
+// is started and its cache currently holds the named CR. Any other
+// outcome — informer not started, GVR not watched, cache miss, type
+// mismatch — returns (_, false) so Status falls back to dynamic.Get.
+// Treating cache-miss as "fall back" (rather than as cr_absent) is
+// deliberate: informers are eventually consistent, and a just-applied CR
+// can legitimately be absent from the cache for a tick.
+func (e *ChaosMeshExecutor) lookupFromInformer(h ChaosMeshHandle) (*unstructured.Unstructured, bool) {
+	e.informerMu.RLock()
+	lister, ok := e.listers[h.GVR]
+	e.informerMu.RUnlock()
+	if !ok || lister == nil {
+		return nil, false
+	}
+	obj, err := lister.ByNamespace(h.Namespace).Get(h.Name)
+	if err != nil {
+		return nil, false
+	}
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, false
+	}
+	return u, true
+}
+
+// WatchStatus starts a chaos-mesh CR informer for every GVR currently
+// known to the renderer registry and blocks until ctx is done. Status
+// reads from the informer cache instead of issuing one GET per row per
+// tick once this returns from WaitForCacheSync.
+//
+// The watch is single-flight: a second concurrent WatchStatus call
+// returns immediately. client-go's shared informer factory handles
+// apiserver disconnects and resyncs internally, so no manual restart
+// logic is needed.
+func (e *ChaosMeshExecutor) WatchStatus(ctx context.Context) error {
+	e.informerMu.Lock()
+	if e.factory != nil {
+		e.informerMu.Unlock()
+		<-ctx.Done()
+		return nil
+	}
+	factory := dynamicinformer.NewDynamicSharedInformerFactory(e.Dyn, chaosMeshInformerResync)
+	gvrs := registeredGVRs()
+	listers := make(map[schema.GroupVersionResource]cache.GenericLister, len(gvrs))
+	for _, gvr := range gvrs {
+		listers[gvr] = factory.ForResource(gvr).Lister()
+	}
+	e.factory = factory
+	e.listers = listers
+	e.informerMu.Unlock()
+
+	factory.Start(ctx.Done())
+	factory.WaitForCacheSync(ctx.Done())
+	<-ctx.Done()
+	return nil
 }
 
 // interpretChaosMeshStatus reads AllInjected / AllRecovered conditions,
