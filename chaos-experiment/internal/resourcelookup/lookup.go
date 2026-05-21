@@ -96,29 +96,31 @@ type systemCache struct {
 	dnsEndpoints          []AppDNSPair
 	containerInfo         map[string][]ContainerInfo
 	dbOperations          []AppDatabasePair
+
+	// chaos_points snapshot shared by all DB-backed GetAllX methods so the
+	// first warm-up does one DB hit instead of five.
+	dbSnapshotMu   sync.Mutex
+	dbSnapshotRows []ChaosPointRow
+	dbSnapshotErr  error
+	dbSnapshotOK   bool
 }
 
 func GetSystemCache(system systemconfig.SystemType) *systemCache {
 	return getCacheManager().getSystemCache(system)
 }
 
-// NewSystemCache returns a systemCache for the given system. When store is
-// non-nil it is installed as the process-wide ChaosPointStore so subsequent
-// GetSystemCache calls (and the methods on this returned cache) source
-// metadata from chaos_points instead of the static internal/<sys>/* maps.
-//
-// Passing a nil store leaves the existing store untouched (caller-friendly
-// "give me a cache without binding a store").
-//
-// Note on SetCurrentSystem: when a store is wired in, the per-query system
-// parameter is what matters; the process-wide systemconfig.GetCurrentSystem
-// becomes informational only (still used by safeContainers + a handful of
-// MetadataStore.GetAllServiceNames fallback paths).
-func NewSystemCache(store ChaosPointStore, system systemconfig.SystemType) *systemCache {
-	if store != nil {
-		SetChaosPointStore(store)
+// chaosPointSnapshot returns a cached snapshot of chaos_points for this
+// system. The query runs at most once per cache lifetime; the five
+// DB-backed GetAllX methods share the result.
+func (s *systemCache) chaosPointSnapshot(ctx context.Context, store ChaosPointStore) ([]ChaosPointRow, error) {
+	s.dbSnapshotMu.Lock()
+	defer s.dbSnapshotMu.Unlock()
+	if s.dbSnapshotOK {
+		return s.dbSnapshotRows, s.dbSnapshotErr
 	}
-	return GetSystemCache(system)
+	s.dbSnapshotRows, s.dbSnapshotErr = store.QueryPoints(ctx, string(s.system))
+	s.dbSnapshotOK = true
+	return s.dbSnapshotRows, s.dbSnapshotErr
 }
 
 // ResetSystemCache clears and removes cached lookup data for a system.
@@ -227,11 +229,11 @@ func (s *systemCache) GetAllJVMMethods() ([]AppMethodPair, error) {
 	}
 
 	if store := getChaosPointStore(); store != nil {
-		r := &dbMetadataReader{store: store, system: string(s.system)}
-		result, err := r.jvmMethods(context.Background())
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
 		if err != nil {
 			return nil, err
 		}
+		result := extractJVMMethods(rows)
 		s.appMethods = result
 		return result, nil
 	}
@@ -328,11 +330,11 @@ func (s *systemCache) GetAllHTTPEndpoints() ([]AppEndpointPair, error) {
 	}
 
 	if store := getChaosPointStore(); store != nil {
-		r := &dbMetadataReader{store: store, system: string(s.system)}
-		result, err := r.httpEndpoints(context.Background())
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
 		if err != nil {
 			return nil, err
 		}
+		result := extractHTTPEndpoints(rows)
 		s.appEndpoints = result
 		return result, nil
 	}
@@ -383,16 +385,11 @@ func (s *systemCache) GetAllNetworkPairs() ([]AppNetworkPair, error) {
 	}
 
 	if store := getChaosPointStore(); store != nil {
-		r := &dbMetadataReader{store: store, system: string(s.system)}
-		result, err := r.networkPairs(context.Background())
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
 		if err != nil {
 			return nil, err
 		}
-		// span_names are intentionally empty when sourced from chaos_points:
-		// the in-memory derivation walked service endpoints to find matching
-		// spans, but chaos_points stores network points without span detail.
-		// Consumers that need span names should fall back to per-endpoint
-		// lookups; current callers (preview/groundtruth) tolerate empty.
+		result := extractNetworkPairs(rows)
 		s.networkPairs = result
 		return result, nil
 	}
@@ -453,11 +450,11 @@ func (s *systemCache) GetAllDNSEndpoints() ([]AppDNSPair, error) {
 	}
 
 	if store := getChaosPointStore(); store != nil {
-		r := &dbMetadataReader{store: store, system: string(s.system)}
-		result, err := r.dnsEndpoints(context.Background())
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
 		if err != nil {
 			return nil, err
 		}
+		result := extractDNSEndpoints(rows)
 		s.dnsEndpoints = result
 		return result, nil
 	}
@@ -574,11 +571,11 @@ func (s *systemCache) GetAllDatabaseOperations() ([]AppDatabasePair, error) {
 	}
 
 	if store := getChaosPointStore(); store != nil {
-		r := &dbMetadataReader{store: store, system: string(s.system)}
-		result, err := r.databaseOperations(context.Background())
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
 		if err != nil {
 			return nil, err
 		}
+		result := extractDatabaseOperations(rows)
 		s.dbOperations = result
 		return result, nil
 	}
@@ -755,4 +752,10 @@ func (s *systemCache) InvalidateCache() {
 	s.dnsEndpoints = []AppDNSPair{}
 	s.containerInfo = make(map[string][]ContainerInfo)
 	s.dbOperations = []AppDatabasePair{}
+
+	s.dbSnapshotMu.Lock()
+	s.dbSnapshotRows = nil
+	s.dbSnapshotErr = nil
+	s.dbSnapshotOK = false
+	s.dbSnapshotMu.Unlock()
 }

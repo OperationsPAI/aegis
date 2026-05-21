@@ -11,30 +11,42 @@ spec:
     target:
       namespace: ob
       source_app: recommendationservice
+      span_names:
+      - hipstershop.ProductCatalogService/ListProducts
       target_service: productcatalogservice
   - capability: network_corrupt
     target:
       namespace: ob
       source_app: recommendationservice
+      span_names:
+      - hipstershop.ProductCatalogService/ListProducts
       target_service: productcatalogservice
   - capability: network_delay
     target:
       namespace: ob
       source_app: recommendationservice
+      span_names:
+      - hipstershop.ProductCatalogService/ListProducts
       target_service: productcatalogservice
   - capability: network_duplicate
     target:
       namespace: ob
       source_app: recommendationservice
+      span_names:
+      - hipstershop.ProductCatalogService/ListProducts
       target_service: productcatalogservice
   - capability: network_loss
     target:
       namespace: ob
       source_app: recommendationservice
+      span_names:
+      - hipstershop.ProductCatalogService/ListProducts
       target_service: productcatalogservice
   - capability: network_partition
     target:
       namespace: ob
       source_app: recommendationservice
+      span_names:
+      - hipstershop.ProductCatalogService/ListProducts
       target_service: productcatalogservice
   replace_scope: service

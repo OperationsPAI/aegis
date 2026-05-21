@@ -14,6 +14,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_method
     target:
       app: teastore-image
@@ -21,6 +23,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getProductImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getProductImages
   - capability: http_request_replace_method
     target:
       app: teastore-image
@@ -28,6 +32,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getWebImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getWebImages
   - capability: http_request_replace_method
     target:
       app: teastore-image
@@ -35,6 +41,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_request_replace_path
     target:
       app: teastore-image
@@ -42,6 +50,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_path
     target:
       app: teastore-image
@@ -49,6 +59,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getProductImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getProductImages
   - capability: http_request_replace_path
     target:
       app: teastore-image
@@ -56,6 +68,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getWebImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getWebImages
   - capability: http_request_replace_path
     target:
       app: teastore-image
@@ -63,6 +77,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_abort
     target:
       app: teastore-image
@@ -70,6 +86,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_abort
     target:
       app: teastore-image
@@ -77,6 +95,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getProductImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getProductImages
   - capability: http_response_abort
     target:
       app: teastore-image
@@ -84,6 +104,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getWebImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getWebImages
   - capability: http_response_abort
     target:
       app: teastore-image
@@ -91,6 +113,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_delay
     target:
       app: teastore-image
@@ -98,6 +122,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_delay
     target:
       app: teastore-image
@@ -105,6 +131,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getProductImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getProductImages
   - capability: http_response_delay
     target:
       app: teastore-image
@@ -112,6 +140,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getWebImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getWebImages
   - capability: http_response_delay
     target:
       app: teastore-image
@@ -119,6 +149,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_patch_body
     target:
       app: teastore-image
@@ -126,6 +158,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_patch_body
     target:
       app: teastore-image
@@ -133,6 +167,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getProductImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getProductImages
   - capability: http_response_patch_body
     target:
       app: teastore-image
@@ -140,6 +176,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getWebImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getWebImages
   - capability: http_response_patch_body
     target:
       app: teastore-image
@@ -147,6 +185,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_replace_body
     target:
       app: teastore-image
@@ -154,6 +194,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_body
     target:
       app: teastore-image
@@ -161,6 +203,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getProductImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getProductImages
   - capability: http_response_replace_body
     target:
       app: teastore-image
@@ -168,6 +212,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getWebImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getWebImages
   - capability: http_response_replace_body
     target:
       app: teastore-image
@@ -175,6 +221,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_replace_code
     target:
       app: teastore-image
@@ -182,6 +230,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_code
     target:
       app: teastore-image
@@ -189,6 +239,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getProductImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getProductImages
   - capability: http_response_replace_code
     target:
       app: teastore-image
@@ -196,6 +248,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.image/rest/image/getWebImages
       port: 8080
+      server_address: teastore-image
+      span_name: POST /tools.descartes.teastore.image/rest/image/getWebImages
   - capability: http_response_replace_code
     target:
       app: teastore-image
@@ -203,4 +257,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   replace_scope: service

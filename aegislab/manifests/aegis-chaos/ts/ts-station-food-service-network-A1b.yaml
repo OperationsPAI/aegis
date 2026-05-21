@@ -11,30 +11,96 @@ spec:
     target:
       namespace: ts
       source_app: ts-station-food-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`station_food_list`
+      - CREATE table ts
+      - INSERT ts.station_food_list
+      - INSERT ts.station_food_store
+      - SELECT `ts`.`station_food_store`
+      - SELECT ts
+      - SELECT ts.station_food_list
+      - SELECT ts.station_food_store
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-station-food-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`station_food_list`
+      - CREATE table ts
+      - INSERT ts.station_food_list
+      - INSERT ts.station_food_store
+      - SELECT `ts`.`station_food_store`
+      - SELECT ts
+      - SELECT ts.station_food_list
+      - SELECT ts.station_food_store
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-station-food-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`station_food_list`
+      - CREATE table ts
+      - INSERT ts.station_food_list
+      - INSERT ts.station_food_store
+      - SELECT `ts`.`station_food_store`
+      - SELECT ts
+      - SELECT ts.station_food_list
+      - SELECT ts.station_food_store
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-station-food-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`station_food_list`
+      - CREATE table ts
+      - INSERT ts.station_food_list
+      - INSERT ts.station_food_store
+      - SELECT `ts`.`station_food_store`
+      - SELECT ts
+      - SELECT ts.station_food_list
+      - SELECT ts.station_food_store
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-station-food-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`station_food_list`
+      - CREATE table ts
+      - INSERT ts.station_food_list
+      - INSERT ts.station_food_store
+      - SELECT `ts`.`station_food_store`
+      - SELECT ts
+      - SELECT ts.station_food_list
+      - SELECT ts.station_food_store
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-station-food-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`station_food_list`
+      - CREATE table ts
+      - INSERT ts.station_food_list
+      - INSERT ts.station_food_store
+      - SELECT `ts`.`station_food_store`
+      - SELECT ts
+      - SELECT ts.station_food_list
+      - SELECT ts.station_food_store
+      - SELECT ts.ts
       target_service: mysql
   replace_scope: service

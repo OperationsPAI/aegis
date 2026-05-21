@@ -14,6 +14,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_method
     target:
       app: teastore-webui
@@ -21,6 +23,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_method
     target:
       app: teastore-webui
@@ -28,6 +32,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_method
     target:
       app: teastore-webui
@@ -35,6 +41,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_method
     target:
       app: teastore-webui
@@ -42,6 +50,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_request_replace_path
     target:
       app: teastore-webui
@@ -49,6 +59,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_path
     target:
       app: teastore-webui
@@ -56,6 +68,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_path
     target:
       app: teastore-webui
@@ -63,6 +77,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_path
     target:
       app: teastore-webui
@@ -70,6 +86,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_request_replace_path
     target:
       app: teastore-webui
@@ -77,6 +95,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_abort
     target:
       app: teastore-webui
@@ -84,6 +104,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_abort
     target:
       app: teastore-webui
@@ -91,6 +113,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_abort
     target:
       app: teastore-webui
@@ -98,6 +122,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_abort
     target:
       app: teastore-webui
@@ -105,6 +131,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_abort
     target:
       app: teastore-webui
@@ -112,6 +140,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_delay
     target:
       app: teastore-webui
@@ -119,6 +149,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_delay
     target:
       app: teastore-webui
@@ -126,6 +158,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_delay
     target:
       app: teastore-webui
@@ -133,6 +167,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_delay
     target:
       app: teastore-webui
@@ -140,6 +176,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_delay
     target:
       app: teastore-webui
@@ -147,6 +185,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_patch_body
     target:
       app: teastore-webui
@@ -154,6 +194,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_patch_body
     target:
       app: teastore-webui
@@ -161,6 +203,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_patch_body
     target:
       app: teastore-webui
@@ -168,6 +212,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_patch_body
     target:
       app: teastore-webui
@@ -175,6 +221,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_patch_body
     target:
       app: teastore-webui
@@ -182,6 +230,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_replace_body
     target:
       app: teastore-webui
@@ -189,6 +239,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_body
     target:
       app: teastore-webui
@@ -196,6 +248,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_body
     target:
       app: teastore-webui
@@ -203,6 +257,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_body
     target:
       app: teastore-webui
@@ -210,6 +266,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_body
     target:
       app: teastore-webui
@@ -217,6 +275,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   - capability: http_response_replace_code
     target:
       app: teastore-webui
@@ -224,6 +284,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.auth/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_code
     target:
       app: teastore-webui
@@ -231,6 +293,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_code
     target:
       app: teastore-webui
@@ -238,6 +302,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_code
     target:
       app: teastore-webui
@@ -245,6 +311,8 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.recommender/
       port: 8080
+      server_address: teastore-registry
+      span_name: GET
   - capability: http_response_replace_code
     target:
       app: teastore-webui
@@ -252,4 +320,6 @@ spec:
       namespace: teastore
       path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.webui/teastore-webui-0.teastore-webui
       port: 8080
+      server_address: teastore-registry
+      span_name: PUT
   replace_scope: service

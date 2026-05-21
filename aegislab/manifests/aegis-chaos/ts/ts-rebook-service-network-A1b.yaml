@@ -11,30 +11,42 @@ spec:
     target:
       namespace: ts
       source_app: ts-rebook-service
+      span_names:
+      - GET
       target_service: ts-order-other-service
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-rebook-service
+      span_names:
+      - GET
       target_service: ts-order-other-service
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-rebook-service
+      span_names:
+      - GET
       target_service: ts-order-other-service
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-rebook-service
+      span_names:
+      - GET
       target_service: ts-order-other-service
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-rebook-service
+      span_names:
+      - GET
       target_service: ts-order-other-service
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-rebook-service
+      span_names:
+      - GET
       target_service: ts-order-other-service
   replace_scope: service

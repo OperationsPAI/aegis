@@ -1,9 +1,5 @@
 // Package chaosmeta is the public facade for installing a metadata source
-// into chaos-experiment's resourcelookup package. aegislab uses this to
-// route systemCache lookups against its chaos_points table instead of the
-// static internal/<sys>/* providers. Phase A4 — will collapse into
-// aegislab/internal/chaosengine alongside the rest of resourcelookup in
-// Phase B (chaos-experiment git mv).
+// into chaos-experiment's resourcelookup package.
 package chaosmeta
 
 import (

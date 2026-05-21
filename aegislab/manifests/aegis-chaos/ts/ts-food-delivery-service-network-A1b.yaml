@@ -11,30 +11,72 @@ spec:
     target:
       namespace: ts
       source_app: ts-food-delivery-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`food_delivery_order_food_list`
+      - CREATE table ts
+      - SELECT `ts`.`food_delivery_order`
+      - SELECT ts
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-food-delivery-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`food_delivery_order_food_list`
+      - CREATE table ts
+      - SELECT `ts`.`food_delivery_order`
+      - SELECT ts
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-food-delivery-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`food_delivery_order_food_list`
+      - CREATE table ts
+      - SELECT `ts`.`food_delivery_order`
+      - SELECT ts
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-food-delivery-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`food_delivery_order_food_list`
+      - CREATE table ts
+      - SELECT `ts`.`food_delivery_order`
+      - SELECT ts
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-food-delivery-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`food_delivery_order_food_list`
+      - CREATE table ts
+      - SELECT `ts`.`food_delivery_order`
+      - SELECT ts
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-food-delivery-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`food_delivery_order_food_list`
+      - CREATE table ts
+      - SELECT `ts`.`food_delivery_order`
+      - SELECT ts
+      - SELECT ts.ts
       target_service: mysql
   replace_scope: service

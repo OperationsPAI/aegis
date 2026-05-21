@@ -11,60 +11,150 @@ spec:
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`user_roles`
+      - CREATE table ts
+      - DELETE ts.auth_user
+      - DELETE ts.user_roles
+      - INSERT ts.auth_user
+      - INSERT ts.user_roles
+      - SELECT `ts`.`auth_user`
+      - SELECT ts
+      - SELECT ts.auth_user
+      - SELECT ts.ts
+      - SELECT ts.user_roles
       target_service: mysql
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - GET
       target_service: ts-verification-code-service
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`user_roles`
+      - CREATE table ts
+      - DELETE ts.auth_user
+      - DELETE ts.user_roles
+      - INSERT ts.auth_user
+      - INSERT ts.user_roles
+      - SELECT `ts`.`auth_user`
+      - SELECT ts
+      - SELECT ts.auth_user
+      - SELECT ts.ts
+      - SELECT ts.user_roles
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - GET
       target_service: ts-verification-code-service
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`user_roles`
+      - CREATE table ts
+      - DELETE ts.auth_user
+      - DELETE ts.user_roles
+      - INSERT ts.auth_user
+      - INSERT ts.user_roles
+      - SELECT `ts`.`auth_user`
+      - SELECT ts
+      - SELECT ts.auth_user
+      - SELECT ts.ts
+      - SELECT ts.user_roles
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - GET
       target_service: ts-verification-code-service
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`user_roles`
+      - CREATE table ts
+      - DELETE ts.auth_user
+      - DELETE ts.user_roles
+      - INSERT ts.auth_user
+      - INSERT ts.user_roles
+      - SELECT `ts`.`auth_user`
+      - SELECT ts
+      - SELECT ts.auth_user
+      - SELECT ts.ts
+      - SELECT ts.user_roles
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - GET
       target_service: ts-verification-code-service
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`user_roles`
+      - CREATE table ts
+      - DELETE ts.auth_user
+      - DELETE ts.user_roles
+      - INSERT ts.auth_user
+      - INSERT ts.user_roles
+      - SELECT `ts`.`auth_user`
+      - SELECT ts
+      - SELECT ts.auth_user
+      - SELECT ts.ts
+      - SELECT ts.user_roles
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - GET
       target_service: ts-verification-code-service
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - ALTER table ts
+      - CREATE TABLE `ts`.`user_roles`
+      - CREATE table ts
+      - DELETE ts.auth_user
+      - DELETE ts.user_roles
+      - INSERT ts.auth_user
+      - INSERT ts.user_roles
+      - SELECT `ts`.`auth_user`
+      - SELECT ts
+      - SELECT ts.auth_user
+      - SELECT ts.ts
+      - SELECT ts.user_roles
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-auth-service
+      span_names:
+      - GET
       target_service: ts-verification-code-service
   replace_scope: service

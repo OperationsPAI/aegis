@@ -18,9 +18,6 @@ func NewChaosPointStore(db *gorm.DB) chaosmeta.ChaosPointStore {
 }
 
 func (s *chaosPointStore) QueryPoints(ctx context.Context, system string) ([]chaosmeta.ChaosPointRow, error) {
-	if s.db == nil {
-		return nil, fmt.Errorf("chaosPointStore: nil DB")
-	}
 	var rows []Point
 	if err := s.db.WithContext(ctx).
 		Where("system_name = ? AND status = ?", system, PointActive).

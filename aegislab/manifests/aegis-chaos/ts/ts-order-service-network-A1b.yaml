@@ -11,30 +11,84 @@ spec:
     target:
       namespace: ts
       source_app: ts-order-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders
+      - DELETE ts.orders
+      - INSERT ts.orders
+      - SELECT ts
+      - SELECT ts.orders
+      - SELECT ts.ts
+      - UPDATE ts.orders
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-order-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders
+      - DELETE ts.orders
+      - INSERT ts.orders
+      - SELECT ts
+      - SELECT ts.orders
+      - SELECT ts.ts
+      - UPDATE ts.orders
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-order-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders
+      - DELETE ts.orders
+      - INSERT ts.orders
+      - SELECT ts
+      - SELECT ts.orders
+      - SELECT ts.ts
+      - UPDATE ts.orders
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-order-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders
+      - DELETE ts.orders
+      - INSERT ts.orders
+      - SELECT ts
+      - SELECT ts.orders
+      - SELECT ts.ts
+      - UPDATE ts.orders
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-order-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders
+      - DELETE ts.orders
+      - INSERT ts.orders
+      - SELECT ts
+      - SELECT ts.orders
+      - SELECT ts.ts
+      - UPDATE ts.orders
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-order-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders
+      - DELETE ts.orders
+      - INSERT ts.orders
+      - SELECT ts
+      - SELECT ts.orders
+      - SELECT ts.ts
+      - UPDATE ts.orders
       target_service: mysql
   replace_scope: service

@@ -11,30 +11,78 @@ spec:
     target:
       namespace: ts
       source_app: ts-train-service
+      span_names:
+      - ALTER table ts
+      - CREATE table ts
+      - INSERT train_type
+      - INSERT ts.train_type
+      - SELECT ts
+      - SELECT ts.train_type
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-train-service
+      span_names:
+      - ALTER table ts
+      - CREATE table ts
+      - INSERT train_type
+      - INSERT ts.train_type
+      - SELECT ts
+      - SELECT ts.train_type
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-train-service
+      span_names:
+      - ALTER table ts
+      - CREATE table ts
+      - INSERT train_type
+      - INSERT ts.train_type
+      - SELECT ts
+      - SELECT ts.train_type
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-train-service
+      span_names:
+      - ALTER table ts
+      - CREATE table ts
+      - INSERT train_type
+      - INSERT ts.train_type
+      - SELECT ts
+      - SELECT ts.train_type
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-train-service
+      span_names:
+      - ALTER table ts
+      - CREATE table ts
+      - INSERT train_type
+      - INSERT ts.train_type
+      - SELECT ts
+      - SELECT ts.train_type
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-train-service
+      span_names:
+      - ALTER table ts
+      - CREATE table ts
+      - INSERT train_type
+      - INSERT ts.train_type
+      - SELECT ts
+      - SELECT ts.train_type
+      - SELECT ts.ts
       target_service: mysql
   replace_scope: service

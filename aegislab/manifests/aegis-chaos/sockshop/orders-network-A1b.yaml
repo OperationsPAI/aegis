@@ -11,90 +11,126 @@ spec:
     target:
       namespace: sockshop
       source_app: orders
-      target_service: carts
-  - capability: network_bandwidth
-    target:
-      namespace: sockshop
-      source_app: orders
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_bandwidth
     target:
       namespace: sockshop
       source_app: orders
+      span_names:
+      - GET
+      target_service: carts
+  - capability: network_bandwidth
+    target:
+      namespace: sockshop
+      source_app: orders
+      span_names:
+      - GET
       target_service: user
   - capability: network_corrupt
     target:
       namespace: sockshop
       source_app: orders
-      target_service: carts
-  - capability: network_corrupt
-    target:
-      namespace: sockshop
-      source_app: orders
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_corrupt
     target:
       namespace: sockshop
       source_app: orders
+      span_names:
+      - GET
+      target_service: carts
+  - capability: network_corrupt
+    target:
+      namespace: sockshop
+      source_app: orders
+      span_names:
+      - GET
       target_service: user
   - capability: network_delay
     target:
       namespace: sockshop
       source_app: orders
-      target_service: carts
-  - capability: network_delay
-    target:
-      namespace: sockshop
-      source_app: orders
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_delay
     target:
       namespace: sockshop
       source_app: orders
+      span_names:
+      - GET
+      target_service: carts
+  - capability: network_delay
+    target:
+      namespace: sockshop
+      source_app: orders
+      span_names:
+      - GET
       target_service: user
   - capability: network_duplicate
     target:
       namespace: sockshop
       source_app: orders
-      target_service: carts
-  - capability: network_duplicate
-    target:
-      namespace: sockshop
-      source_app: orders
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_duplicate
     target:
       namespace: sockshop
       source_app: orders
+      span_names:
+      - GET
+      target_service: carts
+  - capability: network_duplicate
+    target:
+      namespace: sockshop
+      source_app: orders
+      span_names:
+      - GET
       target_service: user
   - capability: network_loss
     target:
       namespace: sockshop
       source_app: orders
-      target_service: carts
-  - capability: network_loss
-    target:
-      namespace: sockshop
-      source_app: orders
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_loss
     target:
       namespace: sockshop
       source_app: orders
+      span_names:
+      - GET
+      target_service: carts
+  - capability: network_loss
+    target:
+      namespace: sockshop
+      source_app: orders
+      span_names:
+      - GET
       target_service: user
   - capability: network_partition
     target:
       namespace: sockshop
       source_app: orders
-      target_service: carts
-  - capability: network_partition
-    target:
-      namespace: sockshop
-      source_app: orders
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_partition
     target:
       namespace: sockshop
       source_app: orders
+      span_names:
+      - GET
+      target_service: carts
+  - capability: network_partition
+    target:
+      namespace: sockshop
+      source_app: orders
+      span_names:
+      - GET
       target_service: user
   replace_scope: service

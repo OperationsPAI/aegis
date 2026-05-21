@@ -11,60 +11,126 @@ spec:
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - CREATE table ts
+      - DELETE ts.user
+      - DELETE user
+      - INSERT ts.user
+      - SELECT ts
+      - SELECT ts.ts
+      - SELECT ts.user
       target_service: mysql
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - DELETE
+      - POST
       target_service: ts-auth-service
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - CREATE table ts
+      - DELETE ts.user
+      - DELETE user
+      - INSERT ts.user
+      - SELECT ts
+      - SELECT ts.ts
+      - SELECT ts.user
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - DELETE
+      - POST
       target_service: ts-auth-service
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - CREATE table ts
+      - DELETE ts.user
+      - DELETE user
+      - INSERT ts.user
+      - SELECT ts
+      - SELECT ts.ts
+      - SELECT ts.user
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - DELETE
+      - POST
       target_service: ts-auth-service
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - CREATE table ts
+      - DELETE ts.user
+      - DELETE user
+      - INSERT ts.user
+      - SELECT ts
+      - SELECT ts.ts
+      - SELECT ts.user
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - DELETE
+      - POST
       target_service: ts-auth-service
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - CREATE table ts
+      - DELETE ts.user
+      - DELETE user
+      - INSERT ts.user
+      - SELECT ts
+      - SELECT ts.ts
+      - SELECT ts.user
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - DELETE
+      - POST
       target_service: ts-auth-service
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - CREATE table ts
+      - DELETE ts.user
+      - DELETE user
+      - INSERT ts.user
+      - SELECT ts
+      - SELECT ts.ts
+      - SELECT ts.user
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-user-service
+      span_names:
+      - DELETE
+      - POST
       target_service: ts-auth-service
   replace_scope: service

@@ -11,30 +11,84 @@ spec:
     target:
       namespace: ts
       source_app: ts-order-other-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders_other
+      - DELETE ts.orders_other
+      - INSERT ts.orders_other
+      - SELECT ts
+      - SELECT ts.orders_other
+      - SELECT ts.ts
+      - UPDATE ts.orders_other
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-order-other-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders_other
+      - DELETE ts.orders_other
+      - INSERT ts.orders_other
+      - SELECT ts
+      - SELECT ts.orders_other
+      - SELECT ts.ts
+      - UPDATE ts.orders_other
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-order-other-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders_other
+      - DELETE ts.orders_other
+      - INSERT ts.orders_other
+      - SELECT ts
+      - SELECT ts.orders_other
+      - SELECT ts.ts
+      - UPDATE ts.orders_other
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-order-other-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders_other
+      - DELETE ts.orders_other
+      - INSERT ts.orders_other
+      - SELECT ts
+      - SELECT ts.orders_other
+      - SELECT ts.ts
+      - UPDATE ts.orders_other
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-order-other-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders_other
+      - DELETE ts.orders_other
+      - INSERT ts.orders_other
+      - SELECT ts
+      - SELECT ts.orders_other
+      - SELECT ts.ts
+      - UPDATE ts.orders_other
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-order-other-service
+      span_names:
+      - CREATE table ts
+      - DELETE orders_other
+      - DELETE ts.orders_other
+      - INSERT ts.orders_other
+      - SELECT ts
+      - SELECT ts.orders_other
+      - SELECT ts.ts
+      - UPDATE ts.orders_other
       target_service: mysql
   replace_scope: service

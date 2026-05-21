@@ -11,30 +11,108 @@ spec:
     target:
       namespace: ts
       source_app: loadgenerator
+      span_names:
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminorderservice/adminorder/14badde7-691d-4f2a-99a3-01f0fe1518a7/G1234
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminrouteservice/adminroute/0b23bd3e-876a-4af3-b920-c50a90c90b04
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/assuranceservice/assurances/types
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/consignservice/consigns/order/{id}
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/verifycode/verify/{verifyCode}
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/preserveservice/preserve
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/travel2service/trips/left
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/users/login
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminuserservice/users
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/consignservice/consigns
       target_service: ts-rabbitmq
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: loadgenerator
+      span_names:
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminorderservice/adminorder/14badde7-691d-4f2a-99a3-01f0fe1518a7/G1234
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminrouteservice/adminroute/0b23bd3e-876a-4af3-b920-c50a90c90b04
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/assuranceservice/assurances/types
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/consignservice/consigns/order/{id}
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/verifycode/verify/{verifyCode}
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/preserveservice/preserve
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/travel2service/trips/left
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/users/login
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminuserservice/users
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/consignservice/consigns
       target_service: ts-rabbitmq
   - capability: network_delay
     target:
       namespace: ts
       source_app: loadgenerator
+      span_names:
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminorderservice/adminorder/14badde7-691d-4f2a-99a3-01f0fe1518a7/G1234
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminrouteservice/adminroute/0b23bd3e-876a-4af3-b920-c50a90c90b04
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/assuranceservice/assurances/types
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/consignservice/consigns/order/{id}
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/verifycode/verify/{verifyCode}
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/preserveservice/preserve
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/travel2service/trips/left
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/users/login
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminuserservice/users
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/consignservice/consigns
       target_service: ts-rabbitmq
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: loadgenerator
+      span_names:
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminorderservice/adminorder/14badde7-691d-4f2a-99a3-01f0fe1518a7/G1234
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminrouteservice/adminroute/0b23bd3e-876a-4af3-b920-c50a90c90b04
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/assuranceservice/assurances/types
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/consignservice/consigns/order/{id}
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/verifycode/verify/{verifyCode}
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/preserveservice/preserve
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/travel2service/trips/left
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/users/login
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminuserservice/users
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/consignservice/consigns
       target_service: ts-rabbitmq
   - capability: network_loss
     target:
       namespace: ts
       source_app: loadgenerator
+      span_names:
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminorderservice/adminorder/14badde7-691d-4f2a-99a3-01f0fe1518a7/G1234
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminrouteservice/adminroute/0b23bd3e-876a-4af3-b920-c50a90c90b04
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/assuranceservice/assurances/types
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/consignservice/consigns/order/{id}
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/verifycode/verify/{verifyCode}
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/preserveservice/preserve
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/travel2service/trips/left
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/users/login
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminuserservice/users
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/consignservice/consigns
       target_service: ts-rabbitmq
   - capability: network_partition
     target:
       namespace: ts
       source_app: loadgenerator
+      span_names:
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminorderservice/adminorder/14badde7-691d-4f2a-99a3-01f0fe1518a7/G1234
+      - HTTP DELETE http://ts-ui-dashboard:8080/api/v1/adminrouteservice/adminroute/0b23bd3e-876a-4af3-b920-c50a90c90b04
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/assuranceservice/assurances/types
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/consignservice/consigns/order/{id}
+      - HTTP GET http://ts-ui-dashboard:8080/api/v1/verifycode/verify/{verifyCode}
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/preserveservice/preserve
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/travel2service/trips/left
+      - HTTP POST http://ts-ui-dashboard:8080/api/v1/users/login
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminbasicservice/adminbasic/stations
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/adminuserservice/users
+      - HTTP PUT http://ts-ui-dashboard:8080/api/v1/consignservice/consigns
       target_service: ts-rabbitmq
   replace_scope: service

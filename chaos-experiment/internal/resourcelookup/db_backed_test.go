@@ -3,6 +3,7 @@ package resourcelookup
 import (
 	"context"
 	"sort"
+	"sync/atomic"
 	"testing"
 
 	"github.com/OperationsPAI/chaos-experiment/internal/systemconfig"
@@ -10,44 +11,61 @@ import (
 
 // stubStore returns canned chaos_points rows; mirrors the shape aegislab
 // produces from PointManifest imports without dragging gorm into this
-// package's test compile path.
+// package's test compile path. queryCount lets shared-snapshot tests
+// assert the warm-up does one DB hit per (system, cache).
 type stubStore struct {
-	rows map[string][]ChaosPointRow
+	rows       map[string][]ChaosPointRow
+	queryCount int64
 }
 
 func (s *stubStore) QueryPoints(_ context.Context, system string) ([]ChaosPointRow, error) {
+	atomic.AddInt64(&s.queryCount, 1)
 	return s.rows[system], nil
 }
 
 func newStubStore() *stubStore {
 	return &stubStore{rows: map[string][]ChaosPointRow{
 		"ts": {
-			// HTTP family — 3 capabilities on the same (app, path) collapse to 1 endpoint.
+			// HTTP family — 3 capabilities on the same (app, path) collapse to 1
+			// endpoint. The first row carries server_address + span_name (dump
+			// tool output); the others omit them, exercising the "metadata-only
+			// fields are preserved across the collapse" path.
 			{SystemName: "ts", CapabilityName: "http_response_abort", Target: map[string]any{
 				"app": "ts-user-service", "method": "GET", "path": "/api/users", "port": float64(8080),
+				"server_address": "ts-auth-service",
+				"span_name":      "GET /api/users",
 			}},
 			{SystemName: "ts", CapabilityName: "http_response_delay", Target: map[string]any{
 				"app": "ts-user-service", "method": "GET", "path": "/api/users", "port": float64(8080),
+				"server_address": "ts-auth-service",
+				"span_name":      "GET /api/users",
 			}},
+			// Chart-author-style HTTP point: required fields only, no extras.
 			{SystemName: "ts", CapabilityName: "http_request_replace_path", Target: map[string]any{
 				"app": "ts-order-service", "method": "POST", "path": "/api/orders", "port": float64(8080),
 			}},
-			// Network
+			// Network — span_names carried alongside required fields.
 			{SystemName: "ts", CapabilityName: "network_delay", Target: map[string]any{
 				"source_app": "ts-user-service", "target_service": "ts-auth-service",
+				"span_names": []any{"GET /authenticate", "POST /token"},
 			}},
 			{SystemName: "ts", CapabilityName: "network_loss", Target: map[string]any{
 				"source_app": "ts-user-service", "target_service": "ts-auth-service",
+				"span_names": []any{"GET /authenticate", "POST /token"},
 			}},
-			// DNS — domain_patterns is an array
+			// Chart-author-style network point: no span_names.
+			{SystemName: "ts", CapabilityName: "network_partition", Target: map[string]any{
+				"source_app": "ts-config-service", "target_service": "ts-registry",
+			}},
+			// DNS — domain_patterns is an array.
 			{SystemName: "ts", CapabilityName: "dns_error", Target: map[string]any{
 				"app": "ts-user-service", "domain_patterns": []any{"ts-auth-service", "ts-config-service"},
 			}},
-			// JVM method
+			// JVM method.
 			{SystemName: "ts", CapabilityName: "jvm_method_exception", Target: map[string]any{
 				"app": "ts-user-service", "class": "user.UserService", "method": "findById",
 			}},
-			// JVM mysql → database operations family
+			// JVM mysql → database operations family.
 			{SystemName: "ts", CapabilityName: "jvm_mysql_latency", Target: map[string]any{
 				"app": "ts-user-service", "db_name": "ts", "table": "users", "sql_type": "select",
 			}},
@@ -61,19 +79,17 @@ func newStubStore() *stubStore {
 }
 
 // withChaosStore installs the given store for the duration of t, restoring
-// the prior state on cleanup. Avoids leaking state across tests in the
-// same package — registry_test / lookup_test rely on the static path.
+// the prior state on cleanup.
 func withChaosStore(t *testing.T, s ChaosPointStore) {
 	t.Helper()
 	prev := getChaosPointStore()
 	SetChaosPointStore(s)
 	t.Cleanup(func() { SetChaosPointStore(prev) })
-	// Drop any cached results from a previous configuration.
 	ResetSystemCache(systemconfig.SystemTrainTicket)
 	ResetSystemCache(systemconfig.SystemOtelDemo)
 }
 
-func TestDBBacked_HTTPEndpoints_CollapsesCapabilities(t *testing.T) {
+func TestDBBacked_HTTPEndpoints_PreservesGroundtruthMetadata(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
 	got, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllHTTPEndpoints()
@@ -81,29 +97,63 @@ func TestDBBacked_HTTPEndpoints_CollapsesCapabilities(t *testing.T) {
 		t.Fatalf("GetAllHTTPEndpoints: %v", err)
 	}
 	if len(got) != 2 {
-		t.Fatalf("want 2 endpoints (two capabilities collapse), got %d: %#v", len(got), got)
+		t.Fatalf("want 2 endpoints (collapse on app|method|path|port), got %d: %#v", len(got), got)
 	}
 	sort.Slice(got, func(i, j int) bool { return got[i].AppName < got[j].AppName })
+
+	// Chart-author entry: required fields only; server_address / span_name empty.
 	if got[0].AppName != "ts-order-service" || got[0].Route != "/api/orders" {
 		t.Errorf("first endpoint wrong: %#v", got[0])
 	}
+	if got[0].ServerAddress != "" || got[0].SpanName != "" {
+		t.Errorf("chart-author entry should expose empty metadata, got server_address=%q span_name=%q",
+			got[0].ServerAddress, got[0].SpanName)
+	}
+
+	// Dump-tool entry: metadata fields populated.
 	if got[1].AppName != "ts-user-service" || got[1].Route != "/api/users" || got[1].ServerPort != "8080" {
 		t.Errorf("second endpoint wrong: %#v", got[1])
 	}
+	if got[1].ServerAddress != "ts-auth-service" {
+		t.Errorf("want ServerAddress=ts-auth-service for dump-tool entry, got %q", got[1].ServerAddress)
+	}
+	if got[1].SpanName != "GET /api/users" {
+		t.Errorf("want SpanName=GET /api/users for dump-tool entry, got %q", got[1].SpanName)
+	}
 }
 
-func TestDBBacked_NetworkPairs_Dedup(t *testing.T) {
+func TestDBBacked_NetworkPairs_CarriesSpanNames(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
 	got, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllNetworkPairs()
 	if err != nil {
 		t.Fatalf("GetAllNetworkPairs: %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("want 1 pair (network_delay + network_loss collapse), got %d: %#v", len(got), got)
+	if len(got) != 2 {
+		t.Fatalf("want 2 pairs, got %d: %#v", len(got), got)
 	}
-	if got[0].SourceService != "ts-user-service" || got[0].TargetService != "ts-auth-service" {
-		t.Errorf("pair wrong: %#v", got[0])
+	sort.Slice(got, func(i, j int) bool { return got[i].SourceService < got[j].SourceService })
+
+	// Chart-author entry: no span_names.
+	if got[0].SourceService != "ts-config-service" || got[0].TargetService != "ts-registry" {
+		t.Errorf("first pair wrong: %#v", got[0])
+	}
+	if len(got[0].SpanNames) != 0 {
+		t.Errorf("chart-author entry should expose empty SpanNames, got %v", got[0].SpanNames)
+	}
+
+	// Dump-tool entry: span_names populated; dedup across both rows.
+	if got[1].SourceService != "ts-user-service" || got[1].TargetService != "ts-auth-service" {
+		t.Errorf("second pair wrong: %#v", got[1])
+	}
+	if len(got[1].SpanNames) != 2 {
+		t.Fatalf("want 2 SpanNames for dump-tool entry, got %d: %v", len(got[1].SpanNames), got[1].SpanNames)
+	}
+	wantSpans := map[string]bool{"GET /authenticate": true, "POST /token": true}
+	for _, s := range got[1].SpanNames {
+		if !wantSpans[s] {
+			t.Errorf("unexpected span name %q", s)
+		}
 	}
 }
 
@@ -156,7 +206,6 @@ func TestDBBacked_DatabaseOperations_FromJVMMysqlFamily(t *testing.T) {
 func TestDBBacked_PerSystemScope(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
-	// Otel-demo cache must not see ts's points.
 	got, err := GetSystemCache(systemconfig.SystemOtelDemo).GetAllHTTPEndpoints()
 	if err != nil {
 		t.Fatalf("GetAllHTTPEndpoints: %v", err)
@@ -169,21 +218,32 @@ func TestDBBacked_PerSystemScope(t *testing.T) {
 	}
 }
 
-func TestNewSystemCache_InstallsStore(t *testing.T) {
-	prev := getChaosPointStore()
-	t.Cleanup(func() {
-		SetChaosPointStore(prev)
-		ResetSystemCache(systemconfig.SystemTrainTicket)
-	})
-	ResetSystemCache(systemconfig.SystemTrainTicket)
+// TestDBBacked_SharedSnapshot_OneQueryPerWarmup proves the five DB-backed
+// GetAllX methods reuse a single chaos_points snapshot per cache lifetime.
+// Without this, a guided walk that consults all five families issues five
+// MySQL round-trips on every warm-up.
+func TestDBBacked_SharedSnapshot_OneQueryPerWarmup(t *testing.T) {
+	store := newStubStore()
+	withChaosStore(t, store)
 
-	s := newStubStore()
-	cache := NewSystemCache(s, systemconfig.SystemTrainTicket)
-	got, err := cache.GetAllNetworkPairs()
-	if err != nil {
-		t.Fatalf("GetAllNetworkPairs: %v", err)
+	cache := GetSystemCache(systemconfig.SystemTrainTicket)
+	if _, err := cache.GetAllHTTPEndpoints(); err != nil {
+		t.Fatalf("http: %v", err)
 	}
-	if len(got) != 1 {
-		t.Errorf("expected store to be active, got %d pairs", len(got))
+	if _, err := cache.GetAllNetworkPairs(); err != nil {
+		t.Fatalf("network: %v", err)
+	}
+	if _, err := cache.GetAllDNSEndpoints(); err != nil {
+		t.Fatalf("dns: %v", err)
+	}
+	if _, err := cache.GetAllJVMMethods(); err != nil {
+		t.Fatalf("jvm: %v", err)
+	}
+	if _, err := cache.GetAllDatabaseOperations(); err != nil {
+		t.Fatalf("db: %v", err)
+	}
+
+	if n := atomic.LoadInt64(&store.queryCount); n != 1 {
+		t.Errorf("want exactly 1 QueryPoints call across 5 GetAllX, got %d", n)
 	}
 }

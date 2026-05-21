@@ -11,30 +11,48 @@ spec:
     target:
       namespace: teastore
       source_app: teastore-registry
+      span_names:
+      - GET /rest/services/{name}
+      - PUT /rest/services/{name}/{location}
       target_service: teastore-webui
   - capability: network_corrupt
     target:
       namespace: teastore
       source_app: teastore-registry
+      span_names:
+      - GET /rest/services/{name}
+      - PUT /rest/services/{name}/{location}
       target_service: teastore-webui
   - capability: network_delay
     target:
       namespace: teastore
       source_app: teastore-registry
+      span_names:
+      - GET /rest/services/{name}
+      - PUT /rest/services/{name}/{location}
       target_service: teastore-webui
   - capability: network_duplicate
     target:
       namespace: teastore
       source_app: teastore-registry
+      span_names:
+      - GET /rest/services/{name}
+      - PUT /rest/services/{name}/{location}
       target_service: teastore-webui
   - capability: network_loss
     target:
       namespace: teastore
       source_app: teastore-registry
+      span_names:
+      - GET /rest/services/{name}
+      - PUT /rest/services/{name}/{location}
       target_service: teastore-webui
   - capability: network_partition
     target:
       namespace: teastore
       source_app: teastore-registry
+      span_names:
+      - GET /rest/services/{name}
+      - PUT /rest/services/{name}/{location}
       target_service: teastore-webui
   replace_scope: service

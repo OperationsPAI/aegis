@@ -11,30 +11,72 @@ spec:
     target:
       namespace: ts
       source_app: ts-assurance-service
+      span_names:
+      - CREATE table ts
+      - INSERT assurance
+      - INSERT ts.assurance
+      - SELECT ts
+      - SELECT ts.assurance
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-assurance-service
+      span_names:
+      - CREATE table ts
+      - INSERT assurance
+      - INSERT ts.assurance
+      - SELECT ts
+      - SELECT ts.assurance
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-assurance-service
+      span_names:
+      - CREATE table ts
+      - INSERT assurance
+      - INSERT ts.assurance
+      - SELECT ts
+      - SELECT ts.assurance
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-assurance-service
+      span_names:
+      - CREATE table ts
+      - INSERT assurance
+      - INSERT ts.assurance
+      - SELECT ts
+      - SELECT ts.assurance
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-assurance-service
+      span_names:
+      - CREATE table ts
+      - INSERT assurance
+      - INSERT ts.assurance
+      - SELECT ts
+      - SELECT ts.assurance
+      - SELECT ts.ts
       target_service: mysql
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-assurance-service
+      span_names:
+      - CREATE table ts
+      - INSERT assurance
+      - INSERT ts.assurance
+      - SELECT ts
+      - SELECT ts.assurance
+      - SELECT ts.ts
       target_service: mysql
   replace_scope: service

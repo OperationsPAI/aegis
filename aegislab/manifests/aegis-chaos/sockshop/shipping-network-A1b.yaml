@@ -11,30 +11,42 @@ spec:
     target:
       namespace: sockshop
       source_app: shipping
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_corrupt
     target:
       namespace: sockshop
       source_app: shipping
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_delay
     target:
       namespace: sockshop
       source_app: shipping
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_duplicate
     target:
       namespace: sockshop
       source_app: shipping
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_loss
     target:
       namespace: sockshop
       source_app: shipping
+      span_names:
+      - GET /
       target_service: front-end
   - capability: network_partition
     target:
       namespace: sockshop
       source_app: shipping
+      span_names:
+      - GET /
       target_service: front-end
   replace_scope: service

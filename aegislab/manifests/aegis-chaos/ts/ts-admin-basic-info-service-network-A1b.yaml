@@ -11,150 +11,258 @@ spec:
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-config-service
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-contacts-service
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
-      target_service: ts-price-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-station-service
   - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-train-service
-  - capability: network_corrupt
+  - capability: network_bandwidth
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
-      target_service: ts-config-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
-      target_service: ts-contacts-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
       target_service: ts-price-service
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-config-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-contacts-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-station-service
   - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-train-service
-  - capability: network_delay
+  - capability: network_corrupt
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
-      target_service: ts-config-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
-      target_service: ts-contacts-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
       target_service: ts-price-service
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-config-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-contacts-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-station-service
   - capability: network_delay
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-train-service
-  - capability: network_duplicate
+  - capability: network_delay
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
-      target_service: ts-config-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
-      target_service: ts-contacts-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
       target_service: ts-price-service
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-config-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-contacts-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-station-service
   - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-train-service
-  - capability: network_loss
+  - capability: network_duplicate
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
-      target_service: ts-config-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
-      target_service: ts-contacts-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
       target_service: ts-price-service
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-config-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-contacts-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-station-service
   - capability: network_loss
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-train-service
-  - capability: network_partition
+  - capability: network_loss
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
-      target_service: ts-config-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
-      target_service: ts-contacts-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
       target_service: ts-price-service
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-config-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
+      target_service: ts-contacts-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-station-service
   - capability: network_partition
     target:
       namespace: ts
       source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      - POST
+      - PUT
       target_service: ts-train-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-admin-basic-info-service
+      span_names:
+      - GET
+      target_service: ts-price-service
   replace_scope: service
