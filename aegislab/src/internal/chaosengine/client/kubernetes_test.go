@@ -2,38 +2,10 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	"github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	"github.com/k0kubun/pp/v3"
-	"k8s.io/apimachinery/pkg/fields"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func TestCRDClient(t *testing.T) {
-	k8sClient := GetK8sClient()
-	ctx := context.Background()
-	podChaosList := &v1alpha1.StressChaosList{}
-	nameToQuery := "ts-ts-train-service-cpu-exhaustion-7mwd86"
-	listOptions := &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("metadata.name", nameToQuery),
-		Namespace:     "ts",
-	}
-	err := k8sClient.List(ctx, podChaosList, listOptions)
-	if err != nil {
-		fmt.Printf("Failed to list PodChaos: %v\n", err)
-		return
-	}
-
-	if len(podChaosList.Items) == 0 {
-		fmt.Printf("No PodChaos found with name: %s\n", nameToQuery)
-	} else {
-		for _, podChaos := range podChaosList.Items {
-			fmt.Printf("%+v", podChaos)
-		}
-	}
-}
 
 func TestGetContainersWithAppLabel(t *testing.T) {
 	containerInfos, err := GetContainersWithAppLabel(context.Background(), "ts0", "app")

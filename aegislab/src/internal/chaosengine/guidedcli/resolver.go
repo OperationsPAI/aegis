@@ -1038,10 +1038,10 @@ func replaceMethodOptions(systemType systemconfig.SystemType, cfg GuidedConfig) 
 	return nil, fmt.Errorf("http endpoint %s %s not found under app %q", cfg.HTTPMethod, cfg.Route, cfg.App)
 }
 
-type buildFunc func(context.Context, GuidedConfig, systemconfig.SystemType) (handler.InjectionConf, map[string]any, error)
+type buildFunc func(context.Context, GuidedConfig, systemconfig.SystemType) (map[string]any, error)
 
 func finalizeOrRequest(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType, next []FieldSpec, builder buildFunc) (*GuidedResponse, error) {
-	conf, payload, err := builder(ctx, cfg, systemType)
+	payload, err := builder(ctx, cfg, systemType)
 	if err != nil {
 		return &GuidedResponse{
 			Mode:     "guided",
@@ -1054,7 +1054,7 @@ func finalizeOrRequest(ctx context.Context, cfg GuidedConfig, systemType systemc
 	}
 
 	normalized := normalizeDuration(cfg)
-	response := &GuidedResponse{
+	return &GuidedResponse{
 		Mode:         "guided",
 		Stage:        "ready_to_apply",
 		Config:       normalized,
@@ -1063,24 +1063,7 @@ func finalizeOrRequest(ctx context.Context, cfg GuidedConfig, systemType systemc
 		Preview:      buildPreview(normalized, payload, systemType),
 		ApplyPayload: payload,
 		CanApply:     true,
-	}
-
-	if cfg.Apply {
-		names, err := handler.BatchCreate(ctx, []handler.InjectionConf{conf}, handler.SystemType(systemType), cfg.Namespace, map[string]string{}, map[string]string{})
-		if err != nil {
-			response.Errors = []string{err.Error()}
-			return response, nil
-		}
-		response.Stage = "applied"
-		response.Result = map[string]any{
-			"created":   names,
-			"count":     len(names),
-			"namespace": cfg.Namespace,
-			"system":    cfg.System,
-		}
-	}
-
-	return response, nil
+	}, nil
 }
 
 func availableChaosTypeOptions(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) ([]FieldOption, map[string]any, error) {

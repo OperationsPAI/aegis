@@ -10,81 +10,64 @@ import (
 	"aegis/internal/chaosengine/systemconfig"
 )
 
-func buildPodKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildPodKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	appIdx, systemIdx, duration, err := resolveAppLevel(ctx, cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.PodKillSpec{Duration: duration, System: systemIdx, AppIdx: appIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{PodKill: spec}, payload("PodKill", map[string]any{
+	return payload("PodKill", map[string]any{
 		"Duration": duration,
 		"System":   systemIdx,
 		"AppIdx":   appIdx,
 	}), nil
 }
 
-func buildPodFailure(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildPodFailure(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	appIdx, systemIdx, duration, err := resolveAppLevel(ctx, cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.PodFailureSpec{Duration: duration, System: systemIdx, AppIdx: appIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{PodFailure: spec}, payload("PodFailure", map[string]any{
+	return payload("PodFailure", map[string]any{
 		"Duration": duration,
 		"System":   systemIdx,
 		"AppIdx":   appIdx,
 	}), nil
 }
 
-func buildJVMGarbageCollector(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMGarbageCollector(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	appIdx, systemIdx, duration, err := resolveAppLevel(ctx, cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMGCSpec{Duration: duration, System: systemIdx, AppIdx: appIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{JVMGarbageCollector: spec}, payload("JVMGarbageCollector", map[string]any{
+	return payload("JVMGarbageCollector", map[string]any{
 		"Duration": duration,
 		"System":   systemIdx,
 		"AppIdx":   appIdx,
 	}), nil
 }
 
-func buildContainerKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildContainerKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.ContainerKillSpec{Duration: duration, System: systemIdx, ContainerIdx: containerIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{ContainerKill: spec}, payload("ContainerKill", map[string]any{
+	return payload("ContainerKill", map[string]any{
 		"Duration":     duration,
 		"System":       systemIdx,
 		"ContainerIdx": containerIdx,
 	}), nil
 }
 
-func buildCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.CPULoad == nil || cfg.CPUWorker == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("cpu_load and cpu_worker are required")
+		return nil, fmt.Errorf("cpu_load and cpu_worker are required")
 	}
 
 	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.CPUStressChaosSpec{
-		Duration:     duration,
-		System:       systemIdx,
-		ContainerIdx: containerIdx,
-		CPULoad:      *cfg.CPULoad,
-		CPUWorker:    *cfg.CPUWorker,
-		Namespace:    cfg.Namespace,
-	}
-	return handler.InjectionConf{CPUStress: spec}, payload("CPUStress", map[string]any{
+	return payload("CPUStress", map[string]any{
 		"Duration":     duration,
 		"System":       systemIdx,
 		"ContainerIdx": containerIdx,
@@ -93,25 +76,16 @@ func buildCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconf
 	}), nil
 }
 
-func buildMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.MemorySize == nil || cfg.MemWorker == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("memory_size and mem_worker are required")
+		return nil, fmt.Errorf("memory_size and mem_worker are required")
 	}
 
 	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.MemoryStressChaosSpec{
-		Duration:     duration,
-		System:       systemIdx,
-		ContainerIdx: containerIdx,
-		MemorySize:   *cfg.MemorySize,
-		MemWorker:    *cfg.MemWorker,
-		Namespace:    cfg.Namespace,
-	}
-	return handler.InjectionConf{MemoryStress: spec}, payload("MemoryStress", map[string]any{
+	return payload("MemoryStress", map[string]any{
 		"Duration":     duration,
 		"System":       systemIdx,
 		"ContainerIdx": containerIdx,
@@ -120,24 +94,16 @@ func buildMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemc
 	}), nil
 }
 
-func buildTimeSkew(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildTimeSkew(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.TimeOffset == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("time_offset is required")
+		return nil, fmt.Errorf("time_offset is required")
 	}
 
 	containerIdx, systemIdx, duration, err := resolveContainerLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.TimeSkewSpec{
-		Duration:     duration,
-		System:       systemIdx,
-		ContainerIdx: containerIdx,
-		TimeOffset:   *cfg.TimeOffset,
-		Namespace:    cfg.Namespace,
-	}
-	return handler.InjectionConf{TimeSkew: spec}, payload("TimeSkew", map[string]any{
+	return payload("TimeSkew", map[string]any{
 		"Duration":     duration,
 		"System":       systemIdx,
 		"ContainerIdx": containerIdx,
@@ -145,52 +111,40 @@ func buildTimeSkew(ctx context.Context, cfg GuidedConfig, systemType systemconfi
 	}), nil
 }
 
-func buildHTTPRequestAbort(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPRequestAbort(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPRequestAbortSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{HTTPRequestAbort: spec}, payload("HTTPRequestAbort", map[string]any{
+	return payload("HTTPRequestAbort", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"EndpointIdx": endpointIdx,
 	}), nil
 }
 
-func buildHTTPResponseAbort(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPResponseAbort(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPResponseAbortSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{HTTPResponseAbort: spec}, payload("HTTPResponseAbort", map[string]any{
+	return payload("HTTPResponseAbort", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"EndpointIdx": endpointIdx,
 	}), nil
 }
 
-func buildHTTPRequestDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPRequestDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.DelayDuration == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("delay_duration is required")
+		return nil, fmt.Errorf("delay_duration is required")
 	}
 
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPRequestDelaySpec{
-		Duration:      duration,
-		System:        systemIdx,
-		EndpointIdx:   endpointIdx,
-		DelayDuration: *cfg.DelayDuration,
-		Namespace:     cfg.Namespace,
-	}
-	return handler.InjectionConf{HTTPRequestDelay: spec}, payload("HTTPRequestDelay", map[string]any{
+	return payload("HTTPRequestDelay", map[string]any{
 		"Duration":      duration,
 		"System":        systemIdx,
 		"EndpointIdx":   endpointIdx,
@@ -198,53 +152,38 @@ func buildHTTPRequestDelay(ctx context.Context, cfg GuidedConfig, systemType sys
 	}), nil
 }
 
-func buildHTTPResponseDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPResponseDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.DelayDuration == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("delay_duration is required")
+		return nil, fmt.Errorf("delay_duration is required")
 	}
 
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPResponseDelaySpec{
-		Duration:      duration,
-		System:        systemIdx,
-		EndpointIdx:   endpointIdx,
-		DelayDuration: *cfg.DelayDuration,
-		Namespace:     cfg.Namespace,
-	}
-	return handler.InjectionConf{HTTPResponseDelay: spec}, payload("HTTPResponseDelay", map[string]any{
+	return payload("HTTPResponseDelay", map[string]any{
 		"Duration":      duration,
 		"System":        systemIdx,
 		"EndpointIdx":   endpointIdx,
 		"DelayDuration": *cfg.DelayDuration,
 	}), nil
 }
-func buildHTTPResponseReplaceBody(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+
+func buildHTTPResponseReplaceBody(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.BodyType == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("body_type is required")
+		return nil, fmt.Errorf("body_type is required")
 	}
 
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
 
 	bodyType, err := bodyTypeCode(cfg.BodyType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPResponseReplaceBodySpec{
-		Duration:    duration,
-		System:      systemIdx,
-		EndpointIdx: endpointIdx,
-		BodyType:    handler.ReplaceBodyType(bodyType),
-		Namespace:   cfg.Namespace,
-	}
-	return handler.InjectionConf{HTTPResponseReplaceBody: spec}, payload("HTTPResponseReplaceBody", map[string]any{
+	return payload("HTTPResponseReplaceBody", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"EndpointIdx": endpointIdx,
@@ -252,57 +191,45 @@ func buildHTTPResponseReplaceBody(ctx context.Context, cfg GuidedConfig, systemT
 	}), nil
 }
 
-func buildHTTPResponsePatchBody(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPResponsePatchBody(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPResponsePatchBodySpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{HTTPResponsePatchBody: spec}, payload("HTTPResponsePatchBody", map[string]any{
+	return payload("HTTPResponsePatchBody", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"EndpointIdx": endpointIdx,
 	}), nil
 }
 
-func buildHTTPRequestReplacePath(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPRequestReplacePath(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPRequestReplacePathSpec{Duration: duration, System: systemIdx, EndpointIdx: endpointIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{HTTPRequestReplacePath: spec}, payload("HTTPRequestReplacePath", map[string]any{
+	return payload("HTTPRequestReplacePath", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"EndpointIdx": endpointIdx,
 	}), nil
 }
 
-func buildHTTPRequestReplaceMethod(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPRequestReplaceMethod(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.ReplaceMethod == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("replace_method is required")
+		return nil, fmt.Errorf("replace_method is required")
 	}
 
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
 
 	methodCode, err := replaceMethodCode(systemType, cfg)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPRequestReplaceMethodSpec{
-		Duration:      duration,
-		System:        systemIdx,
-		EndpointIdx:   endpointIdx,
-		ReplaceMethod: methodCode,
-		Namespace:     cfg.Namespace,
-	}
-	return handler.InjectionConf{HTTPRequestReplaceMethod: spec}, payload("HTTPRequestReplaceMethod", map[string]any{
+	return payload("HTTPRequestReplaceMethod", map[string]any{
 		"Duration":      duration,
 		"System":        systemIdx,
 		"EndpointIdx":   endpointIdx,
@@ -310,29 +237,21 @@ func buildHTTPRequestReplaceMethod(ctx context.Context, cfg GuidedConfig, system
 	}), nil
 }
 
-func buildHTTPResponseReplaceCode(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildHTTPResponseReplaceCode(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.StatusCode == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("status_code is required")
+		return nil, fmt.Errorf("status_code is required")
 	}
 
 	endpointIdx, systemIdx, duration, err := resolveEndpointLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
 
 	statusCode, err := statusCodeCode(*cfg.StatusCode)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.HTTPResponseReplaceCodeSpec{
-		Duration:    duration,
-		System:      systemIdx,
-		EndpointIdx: endpointIdx,
-		StatusCode:  handler.HTTPStatusCode(statusCode),
-		Namespace:   cfg.Namespace,
-	}
-	return handler.InjectionConf{HTTPResponseReplaceCode: spec}, payload("HTTPResponseReplaceCode", map[string]any{
+	return payload("HTTPResponseReplaceCode", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"EndpointIdx": endpointIdx,
@@ -340,52 +259,40 @@ func buildHTTPResponseReplaceCode(ctx context.Context, cfg GuidedConfig, systemT
 	}), nil
 }
 
-func buildDNSError(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildDNSError(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	dnsIdx, systemIdx, duration, err := resolveDNSLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.DNSErrorSpec{Duration: duration, System: systemIdx, DNSEndpointIdx: dnsIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{DNSError: spec}, payload("DNSError", map[string]any{
+	return payload("DNSError", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"DNSEndpointIdx": dnsIdx,
 	}), nil
 }
 
-func buildDNSRandom(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildDNSRandom(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	dnsIdx, systemIdx, duration, err := resolveDNSLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.DNSRandomSpec{Duration: duration, System: systemIdx, DNSEndpointIdx: dnsIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{DNSRandom: spec}, payload("DNSRandom", map[string]any{
+	return payload("DNSRandom", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"DNSEndpointIdx": dnsIdx,
 	}), nil
 }
 
-func buildNetworkPartition(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildNetworkPartition(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.Direction == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("direction is required")
+		return nil, fmt.Errorf("direction is required")
 	}
 
 	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.NetworkPartitionSpec{
-		Duration:       duration,
-		System:         systemIdx,
-		NetworkPairIdx: pairIdx,
-		Direction:      direction,
-		Namespace:      cfg.Namespace,
-	}
-	return handler.InjectionConf{NetworkPartition: spec}, payload("NetworkPartition", map[string]any{
+	return payload("NetworkPartition", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"NetworkPairIdx": pairIdx,
@@ -393,27 +300,16 @@ func buildNetworkPartition(ctx context.Context, cfg GuidedConfig, systemType sys
 	}), nil
 }
 
-func buildNetworkDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildNetworkDelay(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.Latency == nil || cfg.Correlation == nil || cfg.Jitter == nil || cfg.Direction == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("latency, correlation, jitter and direction are required")
+		return nil, fmt.Errorf("latency, correlation, jitter and direction are required")
 	}
 
 	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.NetworkDelaySpec{
-		Duration:       duration,
-		System:         systemIdx,
-		NetworkPairIdx: pairIdx,
-		Latency:        *cfg.Latency,
-		Correlation:    *cfg.Correlation,
-		Jitter:         *cfg.Jitter,
-		Direction:      direction,
-		Namespace:      cfg.Namespace,
-	}
-	return handler.InjectionConf{NetworkDelay: spec}, payload("NetworkDelay", map[string]any{
+	return payload("NetworkDelay", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"NetworkPairIdx": pairIdx,
@@ -423,26 +319,17 @@ func buildNetworkDelay(ctx context.Context, cfg GuidedConfig, systemType systemc
 		"Direction":      direction,
 	}), nil
 }
-func buildNetworkLoss(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+
+func buildNetworkLoss(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.Loss == nil || cfg.Correlation == nil || cfg.Direction == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("loss, correlation and direction are required")
+		return nil, fmt.Errorf("loss, correlation and direction are required")
 	}
 
 	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.NetworkLossSpec{
-		Duration:       duration,
-		System:         systemIdx,
-		NetworkPairIdx: pairIdx,
-		Loss:           *cfg.Loss,
-		Correlation:    *cfg.Correlation,
-		Direction:      direction,
-		Namespace:      cfg.Namespace,
-	}
-	return handler.InjectionConf{NetworkLoss: spec}, payload("NetworkLoss", map[string]any{
+	return payload("NetworkLoss", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"NetworkPairIdx": pairIdx,
@@ -452,26 +339,16 @@ func buildNetworkLoss(ctx context.Context, cfg GuidedConfig, systemType systemco
 	}), nil
 }
 
-func buildNetworkDuplicate(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildNetworkDuplicate(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.Duplicate == nil || cfg.Correlation == nil || cfg.Direction == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("duplicate, correlation and direction are required")
+		return nil, fmt.Errorf("duplicate, correlation and direction are required")
 	}
 
 	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.NetworkDuplicateSpec{
-		Duration:       duration,
-		System:         systemIdx,
-		NetworkPairIdx: pairIdx,
-		Duplicate:      *cfg.Duplicate,
-		Correlation:    *cfg.Correlation,
-		Direction:      direction,
-		Namespace:      cfg.Namespace,
-	}
-	return handler.InjectionConf{NetworkDuplicate: spec}, payload("NetworkDuplicate", map[string]any{
+	return payload("NetworkDuplicate", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"NetworkPairIdx": pairIdx,
@@ -481,26 +358,16 @@ func buildNetworkDuplicate(ctx context.Context, cfg GuidedConfig, systemType sys
 	}), nil
 }
 
-func buildNetworkCorrupt(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildNetworkCorrupt(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.Corrupt == nil || cfg.Correlation == nil || cfg.Direction == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("corrupt, correlation and direction are required")
+		return nil, fmt.Errorf("corrupt, correlation and direction are required")
 	}
 
 	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.NetworkCorruptSpec{
-		Duration:       duration,
-		System:         systemIdx,
-		NetworkPairIdx: pairIdx,
-		Corrupt:        *cfg.Corrupt,
-		Correlation:    *cfg.Correlation,
-		Direction:      direction,
-		Namespace:      cfg.Namespace,
-	}
-	return handler.InjectionConf{NetworkCorrupt: spec}, payload("NetworkCorrupt", map[string]any{
+	return payload("NetworkCorrupt", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"NetworkPairIdx": pairIdx,
@@ -510,27 +377,16 @@ func buildNetworkCorrupt(ctx context.Context, cfg GuidedConfig, systemType syste
 	}), nil
 }
 
-func buildNetworkBandwidth(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildNetworkBandwidth(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.Rate == nil || cfg.Limit == nil || cfg.Buffer == nil || cfg.Direction == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("rate, limit, buffer and direction are required")
+		return nil, fmt.Errorf("rate, limit, buffer and direction are required")
 	}
 
 	pairIdx, systemIdx, duration, direction, err := resolveNetworkLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.NetworkBandwidthSpec{
-		Duration:       duration,
-		System:         systemIdx,
-		NetworkPairIdx: pairIdx,
-		Rate:           *cfg.Rate,
-		Limit:          *cfg.Limit,
-		Buffer:         *cfg.Buffer,
-		Direction:      direction,
-		Namespace:      cfg.Namespace,
-	}
-	return handler.InjectionConf{NetworkBandwidth: spec}, payload("NetworkBandwidth", map[string]any{
+	return payload("NetworkBandwidth", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"NetworkPairIdx": pairIdx,
@@ -541,24 +397,16 @@ func buildNetworkBandwidth(ctx context.Context, cfg GuidedConfig, systemType sys
 	}), nil
 }
 
-func buildJVMLatency(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMLatency(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.LatencyDuration == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("latency_duration is required")
+		return nil, fmt.Errorf("latency_duration is required")
 	}
 
 	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMLatencySpec{
-		Duration:        duration,
-		System:          systemIdx,
-		MethodIdx:       methodIdx,
-		LatencyDuration: *cfg.LatencyDuration,
-		Namespace:       cfg.Namespace,
-	}
-	return handler.InjectionConf{JVMLatency: spec}, payload("JVMLatency", map[string]any{
+	return payload("JVMLatency", map[string]any{
 		"Duration":        duration,
 		"System":          systemIdx,
 		"MethodIdx":       methodIdx,
@@ -566,34 +414,25 @@ func buildJVMLatency(ctx context.Context, cfg GuidedConfig, systemType systemcon
 	}), nil
 }
 
-func buildJVMReturn(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMReturn(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.ReturnType == "" || cfg.ReturnValueOpt == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("return_type and return_value_opt are required")
+		return nil, fmt.Errorf("return_type and return_value_opt are required")
 	}
 
 	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
 
 	returnType, err := returnTypeCode(cfg.ReturnType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
 	returnValueOpt, err := returnValueOptCode(cfg.ReturnValueOpt)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMReturnSpec{
-		Duration:       duration,
-		System:         systemIdx,
-		MethodIdx:      methodIdx,
-		ReturnType:     handler.JVMReturnType(returnType),
-		ReturnValueOpt: returnValueOpt,
-		Namespace:      cfg.Namespace,
-	}
-	return handler.InjectionConf{JVMReturn: spec}, payload("JVMReturn", map[string]any{
+	return payload("JVMReturn", map[string]any{
 		"Duration":       duration,
 		"System":         systemIdx,
 		"MethodIdx":      methodIdx,
@@ -602,53 +441,38 @@ func buildJVMReturn(ctx context.Context, cfg GuidedConfig, systemType systemconf
 	}), nil
 }
 
-func buildJVMException(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMException(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.ExceptionOpt == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("exception_opt is required")
+		return nil, fmt.Errorf("exception_opt is required")
 	}
 
 	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
 
 	exceptionOpt, err := exceptionOptCode(cfg.ExceptionOpt)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMExceptionSpec{
-		Duration:     duration,
-		System:       systemIdx,
-		MethodIdx:    methodIdx,
-		ExceptionOpt: exceptionOpt,
-		Namespace:    cfg.Namespace,
-	}
-	return handler.InjectionConf{JVMException: spec}, payload("JVMException", map[string]any{
+	return payload("JVMException", map[string]any{
 		"Duration":     duration,
 		"System":       systemIdx,
 		"MethodIdx":    methodIdx,
 		"ExceptionOpt": exceptionOpt,
 	}), nil
 }
-func buildJVMCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+
+func buildJVMCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.CPUCount == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("cpu_count is required")
+		return nil, fmt.Errorf("cpu_count is required")
 	}
 
 	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMCPUStressSpec{
-		Duration:  duration,
-		System:    systemIdx,
-		MethodIdx: methodIdx,
-		CPUCount:  *cfg.CPUCount,
-		Namespace: cfg.Namespace,
-	}
-	return handler.InjectionConf{JVMCPUStress: spec}, payload("JVMCPUStress", map[string]any{
+	return payload("JVMCPUStress", map[string]any{
 		"Duration":  duration,
 		"System":    systemIdx,
 		"MethodIdx": methodIdx,
@@ -656,29 +480,21 @@ func buildJVMCPUStress(ctx context.Context, cfg GuidedConfig, systemType systemc
 	}), nil
 }
 
-func buildJVMMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMMemoryStress(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.MemType == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("mem_type is required")
+		return nil, fmt.Errorf("mem_type is required")
 	}
 
 	methodIdx, systemIdx, duration, err := resolveMethodLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
 
 	memType, err := memTypeCode(cfg.MemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMMemoryStressSpec{
-		Duration:  duration,
-		System:    systemIdx,
-		MethodIdx: methodIdx,
-		MemType:   handler.JVMMemoryType(memType),
-		Namespace: cfg.Namespace,
-	}
-	return handler.InjectionConf{JVMMemoryStress: spec}, payload("JVMMemoryStress", map[string]any{
+	return payload("JVMMemoryStress", map[string]any{
 		"Duration":  duration,
 		"System":    systemIdx,
 		"MethodIdx": methodIdx,
@@ -686,24 +502,16 @@ func buildJVMMemoryStress(ctx context.Context, cfg GuidedConfig, systemType syst
 	}), nil
 }
 
-func buildJVMMySQLLatency(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMMySQLLatency(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.LatencyMs == nil {
-		return handler.InjectionConf{}, nil, fmt.Errorf("latency_ms is required")
+		return nil, fmt.Errorf("latency_ms is required")
 	}
 
 	databaseIdx, systemIdx, duration, err := resolveDatabaseLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMMySQLLatencySpec{
-		Duration:    duration,
-		System:      systemIdx,
-		DatabaseIdx: databaseIdx,
-		LatencyMs:   *cfg.LatencyMs,
-		Namespace:   cfg.Namespace,
-	}
-	return handler.InjectionConf{JVMMySQLLatency: spec}, payload("JVMMySQLLatency", map[string]any{
+	return payload("JVMMySQLLatency", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"DatabaseIdx": databaseIdx,
@@ -711,37 +519,28 @@ func buildJVMMySQLLatency(ctx context.Context, cfg GuidedConfig, systemType syst
 	}), nil
 }
 
-func buildJVMMySQLException(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMMySQLException(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	databaseIdx, systemIdx, duration, err := resolveDatabaseLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMMySQLExceptionSpec{
-		Duration:    duration,
-		System:      systemIdx,
-		DatabaseIdx: databaseIdx,
-		Namespace:   cfg.Namespace,
-	}
-	return handler.InjectionConf{JVMMySQLException: spec}, payload("JVMMySQLException", map[string]any{
+	return payload("JVMMySQLException", map[string]any{
 		"Duration":    duration,
 		"System":      systemIdx,
 		"DatabaseIdx": databaseIdx,
 	}), nil
 }
 
-func buildJVMRuntimeMutator(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (handler.InjectionConf, map[string]any, error) {
+func buildJVMRuntimeMutator(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {
 	if cfg.MutatorConfig == "" {
-		return handler.InjectionConf{}, nil, fmt.Errorf("mutator_config is required")
+		return nil, fmt.Errorf("mutator_config is required")
 	}
 
 	targetIdx, systemIdx, duration, err := resolveMutatorLevel(cfg, systemType)
 	if err != nil {
-		return handler.InjectionConf{}, nil, err
+		return nil, err
 	}
-
-	spec := &handler.JVMRuntimeMutatorSpec{Duration: duration, System: systemIdx, MutatorTargetIdx: targetIdx, Namespace: cfg.Namespace}
-	return handler.InjectionConf{JVMRuntimeMutator: spec}, payload("JVMRuntimeMutator", map[string]any{
+	return payload("JVMRuntimeMutator", map[string]any{
 		"Duration":         duration,
 		"System":           systemIdx,
 		"MutatorTargetIdx": targetIdx,
@@ -915,6 +714,7 @@ func resolveMethodLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (i
 	}
 	return methodIdx, systemIdx, normalizedDuration(cfg), nil
 }
+
 func resolveDatabaseLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
 	operations, err := resourcelookup.GetSystemCache(systemType).GetAllDatabaseOperations()
 	if err != nil {

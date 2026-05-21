@@ -1,9 +1,16 @@
 package guidedcli
 
 import (
-	"aegis/internal/chaosengine/handler"
 	"aegis/internal/chaosengine/resourcelookup"
 	"aegis/internal/chaosengine/systemconfig"
+)
+
+const (
+	metricCPU            = "cpu"
+	metricMemory         = "memory"
+	metricNetworkLatency = "network_latency"
+	metricHTTPLatency    = "http_latency"
+	metricSQLLatency     = "sql_latency"
 )
 
 func buildPreview(cfg GuidedConfig, payload map[string]any, systemType systemconfig.SystemType) *Preview {
@@ -29,11 +36,11 @@ func buildPreview(cfg GuidedConfig, payload map[string]any, systemType systemcon
 		case "CPUStress":
 			displayConfig["cpu_load"] = ptrValue(cfg.CPULoad)
 			displayConfig["cpu_worker"] = ptrValue(cfg.CPUWorker)
-			groundtruth["metric"] = []string{string(handler.MetricCPU)}
+			groundtruth["metric"] = []string{metricCPU}
 		case "MemoryStress":
 			displayConfig["memory_size"] = ptrValue(cfg.MemorySize)
 			displayConfig["mem_worker"] = ptrValue(cfg.MemWorker)
-			groundtruth["metric"] = []string{string(handler.MetricMemory)}
+			groundtruth["metric"] = []string{metricMemory}
 		case "TimeSkew":
 			displayConfig["time_offset"] = ptrValue(cfg.TimeOffset)
 		}
@@ -69,7 +76,7 @@ func buildPreview(cfg GuidedConfig, payload map[string]any, systemType systemcon
 				groundtruth["span"] = spanNames
 			}
 		}
-		groundtruth["metric"] = []string{string(handler.MetricNetworkLatency)}
+		groundtruth["metric"] = []string{metricNetworkLatency}
 	case "HTTPRequestAbort", "HTTPResponseAbort", "HTTPRequestDelay", "HTTPResponseDelay", "HTTPResponseReplaceBody", "HTTPResponsePatchBody", "HTTPRequestReplacePath", "HTTPRequestReplaceMethod", "HTTPResponseReplaceCode":
 		displayConfig["injection_point"] = lookupHTTPEndpoint(cfg, systemType)
 		switch cfg.ChaosType {
@@ -91,7 +98,7 @@ func buildPreview(cfg GuidedConfig, payload map[string]any, systemType systemcon
 		} else {
 			groundtruth["service"] = []string{cfg.App}
 		}
-		groundtruth["metric"] = []string{string(handler.MetricHTTPLatency)}
+		groundtruth["metric"] = []string{metricHTTPLatency}
 	case "DNSError", "DNSRandom":
 		displayConfig["injection_point"] = lookupDNSEndpoint(cfg, systemType)
 		groundtruth["service"] = []string{cfg.App, cfg.Domain}
@@ -109,7 +116,7 @@ func buildPreview(cfg GuidedConfig, payload map[string]any, systemType systemcon
 		switch cfg.ChaosType {
 		case "JVMLatency":
 			displayConfig["latency_duration"] = ptrValue(cfg.LatencyDuration)
-			groundtruth["metric"] = []string{string(handler.MetricNetworkLatency)}
+			groundtruth["metric"] = []string{metricNetworkLatency}
 		case "JVMReturn":
 			displayConfig["return_type"] = cfg.ReturnType
 			displayConfig["return_value_opt"] = cfg.ReturnValueOpt
@@ -117,10 +124,10 @@ func buildPreview(cfg GuidedConfig, payload map[string]any, systemType systemcon
 			displayConfig["exception_opt"] = cfg.ExceptionOpt
 		case "JVMCPUStress":
 			displayConfig["cpu_count"] = ptrValue(cfg.CPUCount)
-			groundtruth["metric"] = []string{string(handler.MetricCPU)}
+			groundtruth["metric"] = []string{metricCPU}
 		case "JVMMemoryStress":
 			displayConfig["mem_type"] = cfg.MemType
-			groundtruth["metric"] = []string{string(handler.MetricMemory)}
+			groundtruth["metric"] = []string{metricMemory}
 		}
 		groundtruth["service"] = []string{cfg.App}
 		groundtruth["function"] = []string{cfg.Class + "." + cfg.Method}
@@ -128,7 +135,7 @@ func buildPreview(cfg GuidedConfig, payload map[string]any, systemType systemcon
 		displayConfig["injection_point"] = lookupDatabaseOperation(cfg, systemType)
 		if cfg.ChaosType == "JVMMySQLLatency" {
 			displayConfig["latency_ms"] = ptrValue(cfg.LatencyMs)
-			groundtruth["metric"] = []string{string(handler.MetricSQLLatency)}
+			groundtruth["metric"] = []string{metricSQLLatency}
 		}
 		groundtruth["service"] = []string{cfg.App}
 	case "JVMRuntimeMutator":
