@@ -35,4 +35,3 @@ func GetAllSystemTypes() []SystemType {
 	return result
 }
 
-type InjectionConf struct{}

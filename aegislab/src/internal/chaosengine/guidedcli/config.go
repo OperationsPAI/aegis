@@ -270,7 +270,6 @@ func overlayConfig(dst *GuidedConfig, src GuidedConfig) {
 	}
 	dst.SaveConfig = src.SaveConfig
 	dst.ResetConfig = src.ResetConfig
-	dst.Apply = src.Apply
 }
 
 func hasRootOverride(cfg GuidedConfig) bool {
