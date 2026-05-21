@@ -876,10 +876,9 @@ func replaceMethodCode(systemType systemconfig.SystemType, cfg GuidedConfig) (in
 
 	for _, endpoint := range endpoints {
 		if endpoint.AppName == cfg.App && endpoint.Route == cfg.Route && endpoint.Method == cfg.HTTPMethod {
-			filtered := GetFilteredHTTPMethods(endpoint.Method)
 			targetMethod := strings.ToUpper(cfg.ReplaceMethod)
-			for idx, method := range filtered {
-				if GetHTTPMethodName(method) == targetMethod {
+			for idx, method := range filteredHTTPMethods(endpoint.Method) {
+				if method == targetMethod {
 					return idx, nil
 				}
 			}
