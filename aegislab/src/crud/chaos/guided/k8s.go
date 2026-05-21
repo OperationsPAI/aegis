@@ -8,8 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
+	"aegis/platform/k8s/chaosclient"
 	"aegis/platform/k8s/resourcelookup"
 	"aegis/platform/systemconfig"
 )
@@ -53,14 +53,11 @@ func safeContainers(namespace string) ([]resourcelookup.ContainerInfo, error) {
 }
 
 func listPodsSafe(namespace string) ([]corev1.Pod, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		config, err = buildKubeconfigSafe()
-		if err != nil {
-			return nil, err
-		}
+	cfg := chaosclient.GetK8sConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("chaosclient not initialized")
 	}
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("create kubernetes clientset: %w", err)
 	}
