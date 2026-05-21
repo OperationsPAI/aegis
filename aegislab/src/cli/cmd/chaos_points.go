@@ -128,25 +128,20 @@ func runChaosPointsExport(_ *cobra.Command, args []string) error {
 		return usageErrorf("--system is required")
 	}
 
-	path := fmt.Sprintf("/v1beta/systems/%s/points/export", chaosPointsExportSystem)
-	if chaosPointsExportIncludeSuperseded {
-		path += "?include_superseded=true"
-	}
-	raw, status, err := chaosDoJSON("GET", path, nil)
+	cli, ctx, err := newChaosAPIClient()
 	if err != nil {
 		return err
 	}
-	if status < 200 || status >= 300 {
-		return fmt.Errorf("export: server returned %d: %s", status, string(raw))
+	req := cli.ChaosAPI.ChaosExportSystemPoints(ctx, chaosPointsExportSystem)
+	if chaosPointsExportIncludeSuperseded {
+		req = req.IncludeSuperseded(true)
 	}
-
-	var env struct {
-		Data struct {
-			Manifests []map[string]any `json:"manifests"`
-		} `json:"data"`
+	resp, _, err := req.Execute()
+	if err != nil {
+		return err
 	}
-	if err := json.Unmarshal(raw, &env); err != nil {
-		return fmt.Errorf("decode response: %w (body: %s)", err, string(raw))
+	if resp == nil || resp.Data == nil {
+		return fmt.Errorf("export: aegis-chaos returned an empty envelope")
 	}
 
 	if err := os.MkdirAll(filepath.Join(outDir, chaosPointsExportSystem), 0o755); err != nil {
@@ -154,15 +149,21 @@ func runChaosPointsExport(_ *cobra.Command, args []string) error {
 	}
 
 	written := 0
-	for _, m := range env.Data.Manifests {
-		meta, _ := m["metadata"].(map[string]any)
-		svc, _ := meta["service"].(string)
-		if svc == "" {
-			return fmt.Errorf("export response carries a manifest with empty metadata.service: %v", meta)
+	for _, m := range resp.Data.Manifests {
+		var svc string
+		if m.Metadata != nil {
+			svc = m.Metadata.GetService()
 		}
-		yamlBytes, err := sigsyaml.Marshal(m)
+		if svc == "" {
+			return fmt.Errorf("export response carries a manifest with empty metadata.service")
+		}
+		raw, err := json.Marshal(m)
 		if err != nil {
 			return fmt.Errorf("marshal %s: %w", svc, err)
+		}
+		yamlBytes, err := sigsyaml.JSONToYAML(raw)
+		if err != nil {
+			return fmt.Errorf("yaml %s: %w", svc, err)
 		}
 		filePath := filepath.Join(outDir, chaosPointsExportSystem, svc+"-export.yaml")
 		if err := os.WriteFile(filePath, yamlBytes, 0o644); err != nil {

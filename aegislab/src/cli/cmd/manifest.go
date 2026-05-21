@@ -1,40 +1,39 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net"
-	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"aegis/cli/client"
+	"aegis/cli/apiclient"
 	"aegis/cli/output"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
 //go:embed manifest_schema.json
 var bundledManifestSchema []byte
 
-const chaosServerEnv = "AEGIS_CHAOS_SERVER"
-
 var (
-	flagChaosServer  string
 	flagFetchSchema  bool
 	flagListSystem   string
 	flagListService  string
 	flagListInstance string
 	flagListChartVer string
+
+	flagImportDirConcurrency int
+	flagImportDirKeepGoing   bool
 )
 
 var manifestCmd = &cobra.Command{
@@ -45,11 +44,10 @@ var manifestCmd = &cobra.Command{
 Used from helm post-install hooks shipped with benchmark charts and from
 chart-author workflows. See 'aegisctl manifest <subcommand> --help' for details.
 
-The chaos service URL must be supplied via --chaos-server or env
-AEGIS_CHAOS_SERVER. helm chart hooks should template it as
-http://{{ include "chaos.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.httpPort }}
-so the value tracks the actual Release.Name/Namespace (the chaos Service
-is named {Release}-chaos per charts/chaos/templates/_helpers.tpl).
+The chaos service is reached through --server / AEGIS_SERVER (the rcabench
+gateway federates /v1beta/chaos to aegis-chaos). The legacy --chaos-server
+flag and AEGIS_CHAOS_SERVER env var are accepted as deprecated aliases for
+chart-hook back-compat; helm hooks should migrate to --server.
 
 Note: 'manifest validate' without --fetch-schema runs entirely offline and
 does NOT require a server.`,
@@ -89,16 +87,26 @@ the manifest itself, per ADR-0009.`,
 	RunE: runManifestImport,
 }
 
+var manifestImportDirCmd = &cobra.Command{
+	Use:   "import-dir <root>",
+	Short: "Batch-import every PointManifest YAML under a directory",
+	Long: `Walk <root> recursively for *.yaml / *.yml files. Each file with
+apiVersion=aegis-chaos/v1beta and kind=PointManifest is imported through the
+same /v1beta/systems/{sys}/points/import endpoint as 'manifest import'; other
+files are skipped (and counted).
+
+--concurrency caps in-flight imports. --keep-going continues on per-file
+failure instead of aborting; the final exit status is non-zero whenever any
+file failed.`,
+	Args: cobra.ExactArgs(1),
+	RunE: runManifestImportDir,
+}
+
 var manifestListPointsCmd = &cobra.Command{
 	Use:   "list-points",
 	Short: "List Points currently active for a system",
 	Long: `GET /v1beta/systems/{sys}/points with optional service/instance/chart-version
-filters. Useful for chart authors to see what manifests are currently active.
-
-Note: in step 1 of the aegis-chaos migration the server-side endpoint is a
-501 stub. This subcommand is wired through so chart-author workflows can
-land alongside the server work; expect a 501 until the catalog endpoint
-arrives in step 3.`,
+filters. Useful for chart authors to see what manifests are currently active.`,
 	Args: requireNoArgs,
 	RunE: runManifestListPoints,
 }
@@ -193,129 +201,348 @@ func runManifestImport(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	body, err := sigsyaml.YAMLToJSON(raw)
-	if err != nil {
-		return fmt.Errorf("parse manifest as YAML/JSON: %w", err)
-	}
-	var probe struct {
-		Metadata struct {
-			System string `json:"system"`
-		} `json:"metadata"`
-	}
-	if err := json.Unmarshal(body, &probe); err != nil {
-		return fmt.Errorf("decode manifest metadata: %w", err)
-	}
-	if probe.Metadata.System == "" {
-		return usageErrorf("manifest metadata.system is required")
-	}
-	path := "/v1beta/systems/" + url.PathEscape(probe.Metadata.System) + "/points/import"
-	if flagDryRun {
-		path += "?dry_run=true"
-	}
-	respBody, status, err := chaosDoJSON(http.MethodPost, path, body)
+	req, system, err := manifestToImportReq(raw)
 	if err != nil {
 		return err
 	}
-	if status < 200 || status >= 300 {
-		return fmt.Errorf("aegis-chaos returned %d: %s", status, string(respBody))
+	cli, ctx, err := newChaosAPIClient()
+	if err != nil {
+		return err
 	}
-	var env struct {
-		Data importResultView `json:"data"`
+	result, err := importManifest(ctx, cli, system, req, flagDryRun)
+	if err != nil {
+		return err
 	}
-	if err := json.Unmarshal(respBody, &env); err != nil {
-		return fmt.Errorf("decode response: %w (body: %s)", err, string(respBody))
-	}
-	return renderImportResult(&env.Data, probe.Metadata.System)
+	return renderImportResult(result, system)
 }
 
-type importResultView struct {
-	Upserted   int      `json:"upserted"`
-	Superseded int      `json:"superseded"`
-	DryRun     bool     `json:"dry_run"`
-	PointIDs   []string `json:"point_ids"`
+func manifestToImportReq(raw []byte) (apiclient.ChaosChaosImportPointsReq, string, error) {
+	body, err := sigsyaml.YAMLToJSON(raw)
+	if err != nil {
+		return apiclient.ChaosChaosImportPointsReq{}, "", fmt.Errorf("parse manifest as YAML/JSON: %w", err)
+	}
+	var req apiclient.ChaosChaosImportPointsReq
+	if err := json.Unmarshal(body, &req); err != nil {
+		return apiclient.ChaosChaosImportPointsReq{}, "", fmt.Errorf("decode manifest into typed request: %w", err)
+	}
+	if req.Metadata == nil || req.Metadata.System == nil || *req.Metadata.System == "" {
+		return apiclient.ChaosChaosImportPointsReq{}, "", usageErrorf("manifest metadata.system is required")
+	}
+	return req, *req.Metadata.System, nil
 }
 
-func renderImportResult(r *importResultView, system string) error {
+func importManifest(ctx context.Context, cli *apiclient.APIClient, system string, req apiclient.ChaosChaosImportPointsReq, dryRun bool) (*apiclient.ChaosChaosImportPointsResp, error) {
+	call := cli.ChaosAPI.ChaosImportPoints(ctx, system).ChaosChaosImportPointsReq(req)
+	if dryRun {
+		call = call.DryRun(true)
+	}
+	resp, _, err := call.Execute()
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || resp.Data == nil {
+		return nil, fmt.Errorf("aegis-chaos returned an empty envelope")
+	}
+	return resp.Data, nil
+}
+
+func renderImportResult(r *apiclient.ChaosChaosImportPointsResp, system string) error {
 	if output.OutputFormat(flagOutput) == output.FormatJSON {
 		output.PrintJSON(r)
 		return nil
 	}
 	mode := "COMMITTED"
-	if r.DryRun {
+	if r.GetDryRun() {
 		mode = "DRY-RUN"
 	}
 	fmt.Fprintf(os.Stderr, "manifest import (%s) on system=%s\n", mode, system)
-	fmt.Fprintf(os.Stderr, "  points upserted:   %d\n", r.Upserted)
-	fmt.Fprintf(os.Stderr, "  points superseded: %d\n", r.Superseded)
+	fmt.Fprintf(os.Stderr, "  points upserted:   %d\n", r.GetUpserted())
+	fmt.Fprintf(os.Stderr, "  points superseded: %d\n", r.GetSuperseded())
 	headers := []string{"POINT_ID"}
-	rows := make([][]string, 0, len(r.PointIDs))
-	for _, id := range r.PointIDs {
+	ids := r.GetPointIds()
+	rows := make([][]string, 0, len(ids))
+	for _, id := range ids {
 		rows = append(rows, []string{id})
 	}
 	output.PrintTable(headers, rows)
 	return nil
 }
 
+type importDirOutcome struct {
+	File       string
+	Skipped    bool
+	SkipReason string
+	Err        error
+	Upserted   int32
+	Superseded int32
+}
+
+func runManifestImportDir(_ *cobra.Command, args []string) error {
+	root := args[0]
+	info, err := os.Stat(root)
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", root, err)
+	}
+	if !info.IsDir() {
+		return usageErrorf("%s is not a directory", root)
+	}
+
+	var files []string
+	if err := filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		switch strings.ToLower(filepath.Ext(path)) {
+		case ".yaml", ".yml":
+			files = append(files, path)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("walk %s: %w", root, err)
+	}
+
+	cli, ctx, err := newChaosAPIClient()
+	if err != nil {
+		return err
+	}
+
+	conc := flagImportDirConcurrency
+	if conc <= 0 {
+		conc = 4
+	}
+	sem := make(chan struct{}, conc)
+	outcomes := make([]importDirOutcome, len(files))
+	var firstFailure atomic.Value
+
+	groupCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	g, gctx := errgroup.WithContext(groupCtx)
+
+	start := time.Now()
+	for i, f := range files {
+		i, f := i, f
+		g.Go(func() error {
+			select {
+			case sem <- struct{}{}:
+			case <-gctx.Done():
+				return gctx.Err()
+			}
+			defer func() { <-sem }()
+
+			outcome := importDirFile(gctx, cli, f)
+			outcomes[i] = outcome
+			if outcome.Err != nil {
+				firstFailure.CompareAndSwap(nil, outcome.Err)
+				if !flagImportDirKeepGoing {
+					return outcome.Err
+				}
+			}
+			if !flagQuiet {
+				printImportDirProgress(outcome)
+			}
+			return nil
+		})
+	}
+	groupErr := g.Wait()
+	elapsed := time.Since(start)
+
+	files0, imported, skipped, failed := 0, 0, 0, 0
+	var totUps, totSups int32
+	for _, o := range outcomes {
+		if o.File == "" {
+			continue
+		}
+		files0++
+		switch {
+		case o.Skipped:
+			skipped++
+		case o.Err != nil:
+			failed++
+		default:
+			imported++
+			totUps += o.Upserted
+			totSups += o.Superseded
+		}
+	}
+	renderImportDirSummary(importDirSummary{
+		Files: files0, Imported: imported, Skipped: skipped, Failed: failed,
+		Upserted: totUps, Superseded: totSups, Elapsed: elapsed,
+		Outcomes: outcomes,
+	})
+
+	if groupErr != nil && !flagImportDirKeepGoing {
+		return fmt.Errorf("import-dir aborted: %w", groupErr)
+	}
+	if failed > 0 {
+		if v := firstFailure.Load(); v != nil {
+			return fmt.Errorf("import-dir: %d file(s) failed; first error: %w", failed, v.(error))
+		}
+		return fmt.Errorf("import-dir: %d file(s) failed", failed)
+	}
+	return nil
+}
+
+func importDirFile(ctx context.Context, cli *apiclient.APIClient, file string) importDirOutcome {
+	o := importDirOutcome{File: file}
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		o.Err = fmt.Errorf("read: %w", err)
+		return o
+	}
+	docJSON, err := sigsyaml.YAMLToJSON(raw)
+	if err != nil {
+		o.Skipped = true
+		o.SkipReason = "not valid YAML"
+		return o
+	}
+	var probe struct {
+		APIVersion string `json:"apiVersion"`
+		Kind       string `json:"kind"`
+	}
+	if err := json.Unmarshal(docJSON, &probe); err != nil {
+		o.Skipped = true
+		o.SkipReason = "not a Kubernetes-style document"
+		return o
+	}
+	if probe.APIVersion != "aegis-chaos/v1beta" || probe.Kind != "PointManifest" {
+		o.Skipped = true
+		o.SkipReason = fmt.Sprintf("apiVersion=%q kind=%q (want aegis-chaos/v1beta/PointManifest)", probe.APIVersion, probe.Kind)
+		return o
+	}
+	req, system, err := manifestToImportReq(raw)
+	if err != nil {
+		o.Err = err
+		return o
+	}
+	resp, err := importManifest(ctx, cli, system, req, flagDryRun)
+	if err != nil {
+		o.Err = err
+		return o
+	}
+	o.Upserted = resp.GetUpserted()
+	o.Superseded = resp.GetSuperseded()
+	return o
+}
+
+func printImportDirProgress(o importDirOutcome) {
+	switch {
+	case o.Skipped:
+		fmt.Fprintf(os.Stderr, "  skip   %s (%s)\n", o.File, o.SkipReason)
+	case o.Err != nil:
+		fmt.Fprintf(os.Stderr, "  FAIL   %s: %v\n", o.File, o.Err)
+	default:
+		fmt.Fprintf(os.Stderr, "  import %s (upserted=%d superseded=%d)\n", o.File, o.Upserted, o.Superseded)
+	}
+}
+
+type importDirSummary struct {
+	Files, Imported, Skipped, Failed int
+	Upserted, Superseded             int32
+	Elapsed                          time.Duration
+	Outcomes                         []importDirOutcome
+}
+
+func renderImportDirSummary(s importDirSummary) {
+	if output.OutputFormat(flagOutput) == output.FormatJSON {
+		out := map[string]any{
+			"files":      s.Files,
+			"imported":   s.Imported,
+			"skipped":    s.Skipped,
+			"failed":     s.Failed,
+			"upserted":   s.Upserted,
+			"superseded": s.Superseded,
+			"elapsed_ms": s.Elapsed.Milliseconds(),
+			"results":    importDirJSONResults(s.Outcomes),
+		}
+		output.PrintJSON(out)
+		return
+	}
+	headers := []string{"METRIC", "VALUE"}
+	rows := [][]string{
+		{"files", fmt.Sprintf("%d", s.Files)},
+		{"imported", fmt.Sprintf("%d", s.Imported)},
+		{"skipped", fmt.Sprintf("%d", s.Skipped)},
+		{"failed", fmt.Sprintf("%d", s.Failed)},
+		{"upserted_total", fmt.Sprintf("%d", s.Upserted)},
+		{"superseded_total", fmt.Sprintf("%d", s.Superseded)},
+		{"elapsed", s.Elapsed.Round(time.Millisecond).String()},
+	}
+	output.PrintTable(headers, rows)
+}
+
+func importDirJSONResults(outcomes []importDirOutcome) []map[string]any {
+	out := make([]map[string]any, 0, len(outcomes))
+	for _, o := range outcomes {
+		if o.File == "" {
+			continue
+		}
+		r := map[string]any{"file": o.File}
+		switch {
+		case o.Skipped:
+			r["status"] = "skipped"
+			r["reason"] = o.SkipReason
+		case o.Err != nil:
+			r["status"] = "failed"
+			r["error"] = o.Err.Error()
+		default:
+			r["status"] = "imported"
+			r["upserted"] = o.Upserted
+			r["superseded"] = o.Superseded
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
 func runManifestListPoints(cmd *cobra.Command, args []string) error {
 	if flagListSystem == "" {
 		return usageErrorf("--system is required")
 	}
-	path := "/v1beta/systems/" + url.PathEscape(flagListSystem) + "/points"
-	q := url.Values{}
-	if flagListService != "" {
-		q.Set("service", flagListService)
-	}
-	if flagListInstance != "" {
-		q.Set("instance", flagListInstance)
-	}
-	if flagListChartVer != "" {
-		q.Set("chart_version", flagListChartVer)
-	}
-	if enc := q.Encode(); enc != "" {
-		path += "?" + enc
-	}
-	respBody, status, err := chaosDoJSON(http.MethodGet, path, nil)
+	cli, ctx, err := newChaosAPIClient()
 	if err != nil {
 		return err
 	}
-	if status == http.StatusNotImplemented {
-		return fmt.Errorf("aegis-chaos %s returned 501 — catalog endpoint lands in step 3; see ADR-0010", path)
+	req := cli.ChaosAPI.ChaosListSystemPoints(ctx, flagListSystem)
+	if flagListService != "" {
+		req = req.Service(flagListService)
 	}
-	if status < 200 || status >= 300 {
-		return fmt.Errorf("aegis-chaos returned %d: %s", status, string(respBody))
+	if flagListInstance != "" || flagListChartVer != "" {
+		fmt.Fprintln(os.Stderr,
+			"warning: --instance / --chart-version are no longer supported here; "+
+				"use 'aegisctl chaos points list' for richer server-side filtering.")
 	}
-	var env struct {
-		Data []pointView `json:"data"`
+	resp, _, err := req.Execute()
+	if err != nil {
+		return err
 	}
-	if err := json.Unmarshal(respBody, &env); err != nil {
-		return fmt.Errorf("decode response: %w (body: %s)", err, string(respBody))
+	if resp == nil || resp.Data == nil {
+		return fmt.Errorf("aegis-chaos returned an empty envelope")
 	}
-	return renderPointList(env.Data)
+	return renderManifestPointList(resp.Data)
 }
 
-type pointView struct {
-	ID         string         `json:"id"`
-	Capability string         `json:"capability_name"`
-	Target     map[string]any `json:"target"`
-	Status     string         `json:"status"`
-	Source     string         `json:"source"`
-}
-
-func renderPointList(rows []pointView) error {
+func renderManifestPointList(data *apiclient.ChaosChaosListPointsResp) error {
+	pts := data.Points
 	if output.OutputFormat(flagOutput) == output.FormatJSON {
-		output.PrintJSON(rows)
+		output.PrintJSON(pts)
 		return nil
 	}
 	headers := []string{"POINT_ID", "CAPABILITY", "TARGET", "STATUS", "SOURCE"}
-	table := make([][]string, 0, len(rows))
-	for _, r := range rows {
-		table = append(table, []string{r.ID, r.Capability, compactTarget(r.Target), r.Status, r.Source})
+	table := make([][]string, 0, len(pts))
+	for _, p := range pts {
+		table = append(table, []string{
+			strDeref(p.Id), strDeref(p.CapabilityName),
+			compactPointTarget(p.Target), strDeref(p.Status), strDeref(p.Source),
+		})
 	}
 	output.PrintTable(headers, table)
 	return nil
 }
 
-func compactTarget(t map[string]any) string {
+func compactPointTarget(t map[string]interface{}) string {
 	if len(t) == 0 {
 		return "{}"
 	}
@@ -345,133 +572,47 @@ func loadManifestSchema() ([]byte, string, error) {
 	if !flagFetchSchema {
 		return bundledManifestSchema, "bundled", nil
 	}
-	body, status, err := chaosDoJSON(http.MethodGet, "/v1beta/manifest-schema.json", nil)
+	cli, ctx, err := newChaosAPIClient()
+	if err != nil {
+		return nil, "", err
+	}
+	schema, _, err := cli.ChaosAPI.ChaosManifestSchema(ctx).Execute()
 	if err != nil {
 		return nil, "", fmt.Errorf("fetch schema: %w", err)
 	}
-	if status < 200 || status >= 300 {
-		return nil, "", fmt.Errorf("fetch schema: aegis-chaos returned %d: %s", status, string(body))
+	body, err := json.Marshal(schema)
+	if err != nil {
+		return nil, "", fmt.Errorf("re-marshal fetched schema: %w", err)
 	}
 	return body, "live", nil
 }
 
-func resolveChaosServer() (string, error) {
-	if flagChaosServer != "" {
-		return flagChaosServer, nil
-	}
-	if v := os.Getenv(chaosServerEnv); v != "" {
-		return v, nil
-	}
-	// Fall through to the federated gateway path. aegis-chaos is
-	// reachable through rcabench-gateway under /v1beta/chaos/*, so
-	// interactive aegisctl users only need --server (or AEGIS_SERVER).
-	// Helm chart hooks should still pass --chaos-server explicitly
-	// because they call the in-cluster ClusterIP directly.
-	if flagServer != "" {
-		return strings.TrimRight(flagServer, "/") + "/v1beta/chaos", nil
-	}
-	return "", usageErrorf("aegis-chaos URL required: pass --chaos-server, set %s, "+
-		"or pass --server (defaults to <server>/v1beta/chaos via the gateway)",
-		chaosServerEnv)
-}
-
-// chaosHTTPTimeout caps a single chaos-service request. Sized for the
-// slowest realistic call (server-side batched UPSERT of a 600-point
-// manifest after the import_lock SELECT…FOR UPDATE settles).
-const chaosHTTPTimeout = 90 * time.Second
-
-func chaosDoJSON(method, path string, body []byte) ([]byte, int, error) {
-	server, err := resolveChaosServer()
-	if err != nil {
-		return nil, 0, err
-	}
-	httpClient := &http.Client{
-		Transport: client.TransportFor(resolveTLSOptions()),
-		Timeout:   chaosHTTPTimeout,
-	}
-	url := strings.TrimRight(server, "/") + path
-
-	var lastErr error
-	var lastStatus int
-	var lastBody []byte
-	for attempt := 0; attempt < 2; attempt++ {
-		var reader io.Reader
-		if body != nil {
-			reader = bytes.NewReader(body)
-		}
-		req, err := http.NewRequestWithContext(context.Background(), method, url, reader)
-		if err != nil {
-			return nil, 0, fmt.Errorf("build request: %w", err)
-		}
-		if body != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		req.Header.Set("Accept", "application/json")
-		// aegis-chaos auths via TrustedHeaderAuth, same Bearer scheme as the
-		// backend. manifest-schema.json is the only unauthenticated endpoint;
-		// sending a bearer there is harmless.
-		if flagToken != "" {
-			req.Header.Set("Authorization", "Bearer "+flagToken)
-		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			lastErr = err
-			if attempt == 0 && isRetryableNetErr(err) {
-				time.Sleep(1 * time.Second)
-				continue
-			}
-			return nil, 0, fmt.Errorf("%s %s: %w", method, path, err)
-		}
-		b, readErr := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if readErr != nil {
-			return nil, resp.StatusCode, fmt.Errorf("read response: %w", readErr)
-		}
-		lastStatus = resp.StatusCode
-		lastBody = b
-		if attempt == 0 && resp.StatusCode >= 500 {
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		return b, resp.StatusCode, nil
-	}
-	if lastErr != nil {
-		return nil, 0, fmt.Errorf("%s %s: %w", method, path, lastErr)
-	}
-	return lastBody, lastStatus, nil
-}
-
-func isRetryableNetErr(err error) bool {
-	var nerr net.Error
-	if errors.As(err, &nerr) {
-		return nerr.Timeout()
-	}
-	return false
-}
-
 func init() {
 	manifestCmd.PersistentFlags().StringVar(&flagChaosServer, "chaos-server", "",
-		"aegis-chaos service URL (env: AEGIS_CHAOS_SERVER). When unset, "+
-			"defaults to <--server>/v1beta/chaos so interactive aegisctl users can "+
-			"reach chaos-service through the federating gateway with just --server. "+
-			"Helm chart hooks should still set this explicitly to the in-cluster "+
-			"ClusterIP: http://{{ include \"chaos.fullname\" . }}.{{ .Release.Namespace }}.svc:{{ .Values.httpPort }}")
+		"DEPRECATED: aegis-chaos URL (env: AEGIS_CHAOS_SERVER). Use --server / "+
+			"AEGIS_SERVER instead; the gateway federates /v1beta/chaos. Kept as an "+
+			"alias for helm chart hook back-compat.")
 
 	manifestValidateCmd.Flags().BoolVar(&flagFetchSchema, "fetch-schema", false,
 		"Fetch the live JSON Schema from GET /v1beta/manifest-schema.json instead of the bundled copy (ADR-0010)")
 
 	manifestListPointsCmd.Flags().StringVar(&flagListSystem, "system", "", "System name (required)")
 	manifestListPointsCmd.Flags().StringVar(&flagListService, "service", "", "Filter by service name")
-	manifestListPointsCmd.Flags().StringVar(&flagListInstance, "instance", "", "Filter by service instance")
-	manifestListPointsCmd.Flags().StringVar(&flagListChartVer, "chart-version", "", "Filter by chart version")
+	manifestListPointsCmd.Flags().StringVar(&flagListInstance, "instance", "", "Filter by service instance (client-side)")
+	manifestListPointsCmd.Flags().StringVar(&flagListChartVer, "chart-version", "", "Filter by chart version (use 'aegisctl chaos points list' for server-side filtering)")
+
+	manifestImportDirCmd.Flags().IntVar(&flagImportDirConcurrency, "concurrency", 4, "Max parallel imports")
+	manifestImportDirCmd.Flags().BoolVar(&flagImportDirKeepGoing, "keep-going", false, "Continue past per-file failures (exit non-zero if any failed)")
 
 	manifestCmd.AddCommand(manifestValidateCmd)
 	manifestCmd.AddCommand(manifestImportCmd)
+	manifestCmd.AddCommand(manifestImportDirCmd)
 	manifestCmd.AddCommand(manifestListPointsCmd)
 
 	rootCmd.AddCommand(manifestCmd)
 
 	cobra.OnInitialize(func() {
 		markDryRunSupported(manifestImportCmd)
+		markDryRunSupported(manifestImportDirCmd)
 	})
 }
