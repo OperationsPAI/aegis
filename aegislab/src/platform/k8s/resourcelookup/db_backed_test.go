@@ -87,14 +87,14 @@ func withChaosStore(t *testing.T, s ChaosPointStore) {
 	prev := getChaosPointStore()
 	SetChaosPointStore(s)
 	t.Cleanup(func() { SetChaosPointStore(prev) })
-	ResetSystemCache(systemconfig.SystemTrainTicket)
-	ResetSystemCache(systemconfig.SystemOtelDemo)
+	ResetSystemCache(systemconfig.SystemType("ts"))
+	ResetSystemCache(systemconfig.SystemType("otel-demo"))
 }
 
 func TestDBBacked_HTTPEndpoints_PreservesGroundtruthMetadata(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
-	got, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllHTTPEndpoints()
+	got, err := GetSystemCache(systemconfig.SystemType("ts")).GetAllHTTPEndpoints()
 	if err != nil {
 		t.Fatalf("GetAllHTTPEndpoints: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestDBBacked_HTTPEndpoints_PreservesGroundtruthMetadata(t *testing.T) {
 func TestDBBacked_NetworkPairs_CarriesSpanNames(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
-	got, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllNetworkPairs()
+	got, err := GetSystemCache(systemconfig.SystemType("ts")).GetAllNetworkPairs()
 	if err != nil {
 		t.Fatalf("GetAllNetworkPairs: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestDBBacked_NetworkPairs_CarriesSpanNames(t *testing.T) {
 func TestDBBacked_DNSEndpoints_ExpandsDomainPatterns(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
-	got, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllDNSEndpoints()
+	got, err := GetSystemCache(systemconfig.SystemType("ts")).GetAllDNSEndpoints()
 	if err != nil {
 		t.Fatalf("GetAllDNSEndpoints: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestDBBacked_DNSEndpoints_ExpandsDomainPatterns(t *testing.T) {
 func TestDBBacked_JVMMethods(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
-	got, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllJVMMethods()
+	got, err := GetSystemCache(systemconfig.SystemType("ts")).GetAllJVMMethods()
 	if err != nil {
 		t.Fatalf("GetAllJVMMethods: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestDBBacked_JVMMethods(t *testing.T) {
 func TestDBBacked_DatabaseOperations_FromJVMMysqlFamily(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
-	got, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllDatabaseOperations()
+	got, err := GetSystemCache(systemconfig.SystemType("ts")).GetAllDatabaseOperations()
 	if err != nil {
 		t.Fatalf("GetAllDatabaseOperations: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestDBBacked_DatabaseOperations_FromJVMMysqlFamily(t *testing.T) {
 func TestDBBacked_PerSystemScope(t *testing.T) {
 	withChaosStore(t, newStubStore())
 
-	got, err := GetSystemCache(systemconfig.SystemOtelDemo).GetAllHTTPEndpoints()
+	got, err := GetSystemCache(systemconfig.SystemType("otel-demo")).GetAllHTTPEndpoints()
 	if err != nil {
 		t.Fatalf("GetAllHTTPEndpoints: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestDBBacked_SharedSnapshot_OneQueryPerWarmup(t *testing.T) {
 	store := newStubStore()
 	withChaosStore(t, store)
 
-	cache := GetSystemCache(systemconfig.SystemTrainTicket)
+	cache := GetSystemCache(systemconfig.SystemType("ts"))
 	if _, err := cache.GetAllHTTPEndpoints(); err != nil {
 		t.Fatalf("http: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestDBBacked_CacheMetric_HitMiss(t *testing.T) {
 	missBefore := testutil.ToFloat64(miss)
 	hitBefore := testutil.ToFloat64(hit)
 
-	cache := GetSystemCache(systemconfig.SystemTrainTicket)
+	cache := GetSystemCache(systemconfig.SystemType("ts"))
 	if _, err := cache.GetAllHTTPEndpoints(); err != nil {
 		t.Fatalf("http: %v", err)
 	}
@@ -289,8 +289,8 @@ func TestDBBacked_CacheMetric_HitMiss(t *testing.T) {
 		t.Errorf("metric/QueryPoints disagree: want 1 SELECT, got %d", n)
 	}
 
-	ResetSystemCache(systemconfig.SystemTrainTicket)
-	if _, err := GetSystemCache(systemconfig.SystemTrainTicket).GetAllHTTPEndpoints(); err != nil {
+	ResetSystemCache(systemconfig.SystemType("ts"))
+	if _, err := GetSystemCache(systemconfig.SystemType("ts")).GetAllHTTPEndpoints(); err != nil {
 		t.Fatalf("http (post-reset): %v", err)
 	}
 	if got := testutil.ToFloat64(miss) - missBefore; got != 2 {
