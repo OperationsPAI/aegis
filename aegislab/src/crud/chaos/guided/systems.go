@@ -3,17 +3,14 @@ package guided
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
+	"aegis/platform/k8s/chaosclient"
 	"aegis/platform/systemconfig"
 )
 
@@ -50,15 +47,11 @@ func discoverSystemInstances() ([]systemInstance, []string) {
 }
 
 func listNamespacesSafe() ([]string, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		config, err = buildKubeconfigSafe()
-		if err != nil {
-			return nil, err
-		}
+	cfg := chaosclient.GetK8sConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("chaosclient not initialized")
 	}
-
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("create kubernetes clientset: %w", err)
 	}
@@ -73,29 +66,6 @@ func listNamespacesSafe() ([]string, error) {
 		result = append(result, item.Name)
 	}
 	return result, nil
-}
-
-func buildKubeconfigSafe() (*rest.Config, error) {
-	paths := make([]string, 0, 2)
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		paths = append(paths, filepath.Join(home, ".kube", "config"))
-	}
-	if userProfile := os.Getenv("USERPROFILE"); userProfile != "" {
-		candidate := filepath.Join(userProfile, ".kube", "config")
-		if len(paths) == 0 || paths[0] != candidate {
-			paths = append(paths, candidate)
-		}
-	}
-
-	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			config, err := clientcmd.BuildConfigFromFlags("", path)
-			if err == nil {
-				return config, nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("kubeconfig not found in default locations")
 }
 
 func fallbackSystemInstances() []systemInstance {
