@@ -1,6 +1,7 @@
-// Package systemconfig provides a global configuration for the target system type.
-// This package allows different systems (TrainTicket, OtelDemo, etc.) to coexist
-// with their own metadata and configurations.
+// Package systemconfig exposes the live chaos-system configuration as a small
+// set of accessors. There is no static registration table — every read goes
+// through Provider, which is wired to the etcd/Viper-backed
+// chaosSystemConfigManager in production.
 package systemconfig
 
 import (
@@ -8,197 +9,134 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"aegis/platform/chaos"
+	"aegis/platform/config"
 )
 
-// SystemType represents the type of system being analyzed/targeted.
+// SystemType is the short code that identifies a target microservice system
+// (e.g. "ts", "otel-demo"). Live registrations live in etcd; this stays a
+// string alias to keep the chaos-service HTTP boundary trivial.
 type SystemType string
 
-const (
-	// SystemTrainTicket represents the TrainTicket microservice system.
-	SystemTrainTicket SystemType = "ts"
-	// SystemOtelDemo represents the OpenTelemetry Demo system.
-	SystemOtelDemo SystemType = "otel-demo"
-	// SystemMediaMicroservices represents the Media Microservices system.
-	SystemMediaMicroservices SystemType = "media"
-	// SystemHotelReservation represents the Hotel Reservation system.
-	SystemHotelReservation SystemType = "hs"
-	// SystemSocialNetwork represents the Social Network system.
-	SystemSocialNetwork SystemType = "sn"
-	// SystemOnlineBoutique represents the Online Boutique system.
-	SystemOnlineBoutique SystemType = "ob"
-	// SystemSockShop represents the Sock Shop system.
-	SystemSockShop SystemType = "sockshop"
-	// SystemTeaStore represents the Tea Store system.
-	SystemTeaStore SystemType = "teastore"
-)
+// String returns the string representation of the SystemType.
+func (s SystemType) String() string { return string(s) }
 
-// SystemRegistration holds registration data for a system.
-type SystemRegistration struct {
+// Registration is the read-only view of a chaos-system that callers need from
+// systemconfig. It is decoded from the live config manager every time it is
+// requested; there is no in-package cache.
+type Registration struct {
 	Name        SystemType
 	NsPattern   string
 	DisplayName string
-	// AppLabelKey is the pod label key used to select application workloads
-	// (e.g. "app", "app.kubernetes.io/name"). An empty value defaults to "app".
 	AppLabelKey string
 }
 
-var (
-	currentSystem   = SystemTrainTicket
-	currentSystemMu sync.RWMutex
-
-	registeredSystems   map[SystemType]SystemRegistration
-	registeredSystemsMu sync.RWMutex
-)
-
-func init() {
-	registeredSystems = make(map[SystemType]SystemRegistration)
-	for _, reg := range builtinSystemRegistrations() {
-		registeredSystems[reg.Name] = reg
-	}
+// Provider abstracts the source of system registrations so tests can swap in
+// an in-memory map without booting Viper / etcd.
+type Provider interface {
+	Get(SystemType) (Registration, bool)
+	All() []Registration
 }
 
-func builtinSystemRegistrations() []SystemRegistration {
-	return []SystemRegistration{
-		{Name: SystemTrainTicket, NsPattern: "^ts\\d+$", DisplayName: "TrainTicket", AppLabelKey: "app"},
-		{Name: SystemOtelDemo, NsPattern: "^otel-demo\\d+$", DisplayName: "OtelDemo", AppLabelKey: "app.kubernetes.io/name"},
-		{Name: SystemMediaMicroservices, NsPattern: "^media\\d+$", DisplayName: "MediaMicroservices", AppLabelKey: "app"},
-		{Name: SystemHotelReservation, NsPattern: "^hs\\d+$", DisplayName: "HotelReservation", AppLabelKey: "app"},
-		{Name: SystemSocialNetwork, NsPattern: "^sn\\d+$", DisplayName: "SocialNetwork", AppLabelKey: "app"},
-		{Name: SystemOnlineBoutique, NsPattern: "^ob\\d+$", DisplayName: "OnlineBoutique", AppLabelKey: "app"},
-		{Name: SystemSockShop, NsPattern: "^sockshop\\d+$", DisplayName: "SockShop", AppLabelKey: "app"},
-		{Name: SystemTeaStore, NsPattern: "^teastore\\d+$", DisplayName: "TeaStore", AppLabelKey: "app"},
+var (
+	providerMu sync.RWMutex
+	provider   Provider = configManagerProvider{}
+
+	currentSystem   SystemType = "ts"
+	currentSystemMu sync.RWMutex
+)
+
+// SetProvider swaps the active Provider. Returns the previously installed
+// provider so callers (typically test fixtures) can restore it.
+func SetProvider(p Provider) Provider {
+	providerMu.Lock()
+	defer providerMu.Unlock()
+	prev := provider
+	provider = p
+	return prev
+}
+
+func getProvider() Provider {
+	providerMu.RLock()
+	defer providerMu.RUnlock()
+	return provider
+}
+
+// configManagerProvider is the production Provider. It is stateless; the
+// chaosSystemConfigManager façade reads Viper on each call.
+type configManagerProvider struct{}
+
+func (configManagerProvider) Get(system SystemType) (Registration, bool) {
+	cfg, ok := config.GetChaosSystemConfigManager().Get(chaos.SystemType(system))
+	if !ok {
+		return Registration{}, false
 	}
+	return Registration{
+		Name:        system,
+		NsPattern:   cfg.NsPattern,
+		DisplayName: cfg.DisplayName,
+		AppLabelKey: cfg.AppLabelKey,
+	}, true
+}
+
+func (configManagerProvider) All() []Registration {
+	all := config.GetChaosSystemConfigManager().GetAll()
+	out := make([]Registration, 0, len(all))
+	for name, cfg := range all {
+		out = append(out, Registration{
+			Name:        SystemType(name),
+			NsPattern:   cfg.NsPattern,
+			DisplayName: cfg.DisplayName,
+			AppLabelKey: cfg.AppLabelKey,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return string(out[i].Name) < string(out[j].Name)
+	})
+	return out
+}
+
+// GetRegistration returns the live registration for a system, or nil if the
+// system is not configured.
+func GetRegistration(system SystemType) *Registration {
+	reg, ok := getProvider().Get(system)
+	if !ok {
+		return nil
+	}
+	return &reg
+}
+
+// IsRegistered reports whether the system is currently configured.
+func IsRegistered(system SystemType) bool {
+	_, ok := getProvider().Get(system)
+	return ok
 }
 
 // GetAppLabelKey returns the pod selector label key for the given system.
-// Defaults to "app" if the system is unregistered or the registration has an empty AppLabelKey.
+// Defaults to "app" if the system is unregistered or the field is empty.
 func GetAppLabelKey(system SystemType) string {
-	reg := GetRegistration(system)
-	if reg == nil || reg.AppLabelKey == "" {
+	reg, ok := getProvider().Get(system)
+	if !ok || reg.AppLabelKey == "" {
 		return "app"
 	}
 	return reg.AppLabelKey
 }
 
-// GetCurrentAppLabelKey returns the pod selector label key for the current system.
+// GetCurrentAppLabelKey returns the pod selector label key for the current
+// system.
 func GetCurrentAppLabelKey() string {
 	return GetAppLabelKey(GetCurrentSystem())
 }
 
-// RegisterSystem registers a new system type.
-func RegisterSystem(reg SystemRegistration) error {
-	if reg.Name == "" {
-		return fmt.Errorf("system name must not be empty")
-	}
-
-	registeredSystemsMu.Lock()
-	defer registeredSystemsMu.Unlock()
-
-	if _, exists := registeredSystems[reg.Name]; exists {
-		return fmt.Errorf("system %s is already registered", reg.Name)
-	}
-
-	registeredSystems[reg.Name] = reg
-	return nil
-}
-
-// UpdateSystem updates the registration fields (NsPattern/DisplayName/AppLabelKey)
-// of an already-registered system in place. Unlike UnregisterSystem + RegisterSystem,
-// this does NOT touch any metadata providers attached to the system, so the
-// compile-time static service-endpoint / database / JVM-method providers stay
-// wired up for callers that rely on internal-data fallback.
-func UpdateSystem(reg SystemRegistration) error {
-	if reg.Name == "" {
-		return fmt.Errorf("system name must not be empty")
-	}
-
-	registeredSystemsMu.Lock()
-	defer registeredSystemsMu.Unlock()
-
-	if _, exists := registeredSystems[reg.Name]; !exists {
-		return fmt.Errorf("system %s is not registered", reg.Name)
-	}
-
-	registeredSystems[reg.Name] = reg
-	return nil
-}
-
-// UnregisterSystem removes a previously registered system.
-func UnregisterSystem(name SystemType) error {
-	registeredSystemsMu.Lock()
-	defer registeredSystemsMu.Unlock()
-
-	if _, exists := registeredSystems[name]; !exists {
-		return fmt.Errorf("system %s is not registered", name)
-	}
-
-	delete(registeredSystems, name)
-
-	currentSystemMu.Lock()
-	defer currentSystemMu.Unlock()
-	if currentSystem != name {
-		return nil
-	}
-
-	if _, exists := registeredSystems[SystemTrainTicket]; exists {
-		currentSystem = SystemTrainTicket
-		return nil
-	}
-
-	currentSystem = ""
-	return nil
-}
-
-// IsRegistered returns true if the given system type is registered.
-func IsRegistered(system SystemType) bool {
-	registeredSystemsMu.RLock()
-	defer registeredSystemsMu.RUnlock()
-
-	_, exists := registeredSystems[system]
-	return exists
-}
-
-// GetRegistration returns the registration for a system, or nil if not found.
-func GetRegistration(system SystemType) *SystemRegistration {
-	registeredSystemsMu.RLock()
-	defer registeredSystemsMu.RUnlock()
-
-	reg, exists := registeredSystems[system]
-	if !exists {
-		return nil
-	}
-
-	copied := reg
-	return &copied
-}
-
-// GetAllRegisteredSystems returns all registered system type names in a stable order.
-func GetAllRegisteredSystems() []SystemType {
-	registeredSystemsMu.RLock()
-	defer registeredSystemsMu.RUnlock()
-
-	systems := make([]SystemType, 0, len(registeredSystems))
-	for system := range registeredSystems {
-		systems = append(systems, system)
-	}
-
-	sort.Slice(systems, func(i, j int) bool {
-		return string(systems[i]) < string(systems[j])
-	})
-
-	return systems
-}
-
-// SetCurrentSystem sets the global system type for the current process.
-// This should be called at initialization time before any metadata is accessed.
+// SetCurrentSystem sets the process-wide system type. It validates the value
+// against the live Provider.
 func SetCurrentSystem(system SystemType) error {
 	if !IsRegistered(system) {
 		return fmt.Errorf("invalid system type: %s, valid types are: %s", system, strings.Join(registeredSystemNames(), ", "))
 	}
-
 	currentSystemMu.Lock()
 	defer currentSystemMu.Unlock()
-
 	currentSystem = system
 	return nil
 }
@@ -210,75 +148,30 @@ func GetCurrentSystem() SystemType {
 	return currentSystem
 }
 
-// IsTrainTicket returns true if the current system is TrainTicket.
-func IsTrainTicket() bool {
-	return GetCurrentSystem() == SystemTrainTicket
-}
-
-// IsOtelDemo returns true if the current system is OpenTelemetry Demo.
-func IsOtelDemo() bool {
-	return GetCurrentSystem() == SystemOtelDemo
-}
-
-// IsMediaMicroservices returns true if the current system is Media Microservices.
-func IsMediaMicroservices() bool {
-	return GetCurrentSystem() == SystemMediaMicroservices
-}
-
-// IsHotelReservation returns true if the current system is Hotel Reservation.
-func IsHotelReservation() bool {
-	return GetCurrentSystem() == SystemHotelReservation
-}
-
-// IsSocialNetwork returns true if the current system is Social Network.
-func IsSocialNetwork() bool {
-	return GetCurrentSystem() == SystemSocialNetwork
-}
-
-// IsOnlineBoutique returns true if the current system is Online Boutique.
-func IsOnlineBoutique() bool {
-	return GetCurrentSystem() == SystemOnlineBoutique
-}
-
-// IsSockShop returns true if the current system is Sock Shop.
-func IsSockShop() bool {
-	return GetCurrentSystem() == SystemSockShop
-}
-
-// IsTeaStore returns true if the current system is Tea Store.
-func IsTeaStore() bool {
-	return GetCurrentSystem() == SystemTeaStore
-}
-
-// String returns the string representation of the SystemType.
-func (s SystemType) String() string {
-	return string(s)
-}
-
-// IsValid returns true if this SystemType is registered.
-func (s SystemType) IsValid() bool {
-	return IsRegistered(s)
-}
-
-// GetAllSystemTypes returns all registered system types.
+// GetAllSystemTypes returns every system currently configured, sorted by name.
 func GetAllSystemTypes() []SystemType {
-	return GetAllRegisteredSystems()
+	regs := getProvider().All()
+	out := make([]SystemType, len(regs))
+	for i, reg := range regs {
+		out[i] = reg.Name
+	}
+	return out
 }
 
-// GetNamespaceByIndex generates a namespace name based on the system type and index.
+// GetNamespaceByIndex expands the system's ns_pattern with the given index.
 func GetNamespaceByIndex(system SystemType, index int) (string, error) {
-	reg := GetRegistration(system)
-	if reg == nil {
+	reg, ok := getProvider().Get(system)
+	if !ok {
 		return "", fmt.Errorf("system type not found: %s", system)
 	}
-
 	name := strings.TrimPrefix(reg.NsPattern, "^")
 	name = strings.TrimSuffix(name, "$")
-	name = strings.Replace(name, "\\d+", fmt.Sprintf("%d", index), 1)
+	name = strings.Replace(name, `\d+`, fmt.Sprintf("%d", index), 1)
 	return name, nil
 }
 
-// ParseSystemType parses a string into a SystemType.
+// ParseSystemType parses a string into a SystemType, validating against the
+// live Provider.
 func ParseSystemType(s string) (SystemType, error) {
 	system := SystemType(s)
 	if !IsRegistered(system) {
@@ -288,7 +181,7 @@ func ParseSystemType(s string) (SystemType, error) {
 }
 
 func registeredSystemNames() []string {
-	systems := GetAllRegisteredSystems()
+	systems := GetAllSystemTypes()
 	names := make([]string, len(systems))
 	for i, system := range systems {
 		names[i] = system.String()
