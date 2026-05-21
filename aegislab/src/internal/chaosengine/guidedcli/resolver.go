@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"aegis/internal/chaosengine/handler"
 	"aegis/platform/k8s/resourcelookup"
 	"aegis/platform/systemconfig"
 )
@@ -1026,10 +1025,10 @@ func replaceMethodOptions(systemType systemconfig.SystemType, cfg GuidedConfig) 
 	}
 	for _, endpoint := range endpoints {
 		if endpoint.Route == cfg.Route && endpoint.Method == cfg.HTTPMethod {
-			methods := handler.GetFilteredHTTPMethods(endpoint.Method)
+			methods := GetFilteredHTTPMethods(endpoint.Method)
 			options := make([]FieldOption, 0, len(methods))
 			for _, method := range methods {
-				name := handler.GetHTTPMethodName(method)
+				name := GetHTTPMethodName(method)
 				options = append(options, FieldOption{Value: strings.ToUpper(name), Label: strings.ToUpper(name)})
 			}
 			return options, nil
