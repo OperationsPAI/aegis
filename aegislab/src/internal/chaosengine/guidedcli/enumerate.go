@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/systemconfig"
 )
 
 // EnumerateAllCandidates returns every reachable (app, chaos_type, target) tuple

@@ -16,7 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"aegis/internal/chaosengine/client"
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/systemconfig"
 )
 
 // chaosPointsCacheTotal counts hit/miss against the per-system chaos_points

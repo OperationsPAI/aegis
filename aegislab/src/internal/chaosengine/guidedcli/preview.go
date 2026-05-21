@@ -2,7 +2,7 @@ package guidedcli
 
 import (
 	"aegis/internal/chaosengine/resourcelookup"
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/systemconfig"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 	"sort"
 
 	"aegis/internal/chaosengine/client"
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/systemconfig"
 )
 
 // GetInjectableAppLabels returns the app labels used by guided app-level chaos.
