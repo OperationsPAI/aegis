@@ -1,0 +1,82 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: nginx-web-server
+  system: media
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - cast-info-service
+      namespace: media
+  - capability: dns_error
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - compose-review-service
+      namespace: media
+  - capability: dns_error
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - movie-info-service
+      namespace: media
+  - capability: dns_error
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - page-service
+      namespace: media
+  - capability: dns_error
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - plot-service
+      namespace: media
+  - capability: dns_error
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - user-service
+      namespace: media
+  - capability: dns_random
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - cast-info-service
+      namespace: media
+  - capability: dns_random
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - compose-review-service
+      namespace: media
+  - capability: dns_random
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - movie-info-service
+      namespace: media
+  - capability: dns_random
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - page-service
+      namespace: media
+  - capability: dns_random
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - plot-service
+      namespace: media
+  - capability: dns_random
+    target:
+      app: nginx-web-server
+      domain_patterns:
+      - user-service
+      namespace: media
+  replace_scope: service

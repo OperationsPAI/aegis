@@ -1,0 +1,1018 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: catalog
+  system: sockshop
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource.Count
+      method: Count
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getImage
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetById
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetByMissingId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetImage
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetMissingImage
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetTags
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryPaging
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithFilter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithoutFilter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithFilter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithoutFilter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: CoherenceCatalogRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: createTagsFilter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getActualTypeArguments
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getOwnerType
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getRawType
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getTags
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: init
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadData
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadSocksFromJson
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: getCatalogRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource.Tags
+      method: Tags
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource
+      method: getTags
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource.Count
+      method: Count
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getImage
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetById
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetByMissingId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetImage
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetMissingImage
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetTags
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryPaging
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithFilter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithoutFilter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithFilter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithoutFilter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: CoherenceCatalogRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: createTagsFilter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getActualTypeArguments
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getOwnerType
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getRawType
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getTags
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: init
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadData
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadSocksFromJson
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: getCatalogRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource.Tags
+      method: Tags
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource
+      method: getTags
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource.Count
+      method: Count
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getImage
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetById
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetByMissingId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetImage
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetMissingImage
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetTags
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryPaging
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithFilter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithoutFilter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithFilter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithoutFilter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: CoherenceCatalogRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: createTagsFilter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getActualTypeArguments
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getOwnerType
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getRawType
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getTags
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: init
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadData
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadSocksFromJson
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: getCatalogRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource.Tags
+      method: Tags
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource
+      method: getTags
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource.Count
+      method: Count
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getImage
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResource
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetById
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetByMissingId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetImage
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetMissingImage
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testGetTags
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryPaging
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithFilter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testQueryWithoutFilter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithFilter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CatalogResourceIT
+      method: testSockCountWithoutFilter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: CoherenceCatalogRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: createTagsFilter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getActualTypeArguments
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getOwnerType
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getRawType
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSock
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSockCount
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getSocks
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: getTags
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: init
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadData
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepository
+      method: loadSocksFromJson
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: getCatalogRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CoherenceCatalogRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource.Tags
+      method: Tags
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: catalog
+      class: com.oracle.coherence.examples.sockshop.helidon.catalog.TagsResource
+      method: getTags
+      namespace: sockshop
+  replace_scope: service

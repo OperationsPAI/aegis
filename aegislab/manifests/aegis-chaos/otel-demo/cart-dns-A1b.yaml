@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: cart
+  system: otel-demo
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: cart
+      domain_patterns:
+      - valkey-cart
+      namespace: otel-demo
+  - capability: dns_random
+    target:
+      app: cart
+      domain_patterns:
+      - valkey-cart
+      namespace: otel-demo
+  replace_scope: service

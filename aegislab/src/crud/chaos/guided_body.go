@@ -61,13 +61,24 @@ func GuidedToChaosTarget(capability string, cfg guidedcli.GuidedConfig) (map[str
 		return map[string]any{"namespace": system, "app": app, "domain_patterns": parts}, nil
 	case "jvm_cpu_stress", "jvm_memory_stress",
 		"jvm_method_exception", "jvm_method_latency", "jvm_method_return",
-		"jvm_mysql_exception", "jvm_mysql_latency", "jvm_runtime_mutator":
+		"jvm_runtime_mutator":
 		class := strings.TrimSpace(cfg.Class)
 		method := strings.TrimSpace(cfg.Method)
 		if class == "" || method == "" {
 			return nil, fmt.Errorf("via-chaos: capability %s requires class and method", capability)
 		}
 		return map[string]any{"namespace": system, "app": app, "class": class, "method": method}, nil
+	case "jvm_mysql_exception", "jvm_mysql_latency":
+		db := strings.TrimSpace(cfg.Database)
+		table := strings.TrimSpace(cfg.Table)
+		if db == "" || table == "" {
+			return nil, fmt.Errorf("via-chaos: capability %s requires database and table", capability)
+		}
+		target := map[string]any{"namespace": system, "app": app, "db_name": db, "table": table}
+		if op := strings.ToLower(strings.TrimSpace(cfg.Operation)); op != "" {
+			target["sql_type"] = op
+		}
+		return target, nil
 	case "http_request_abort", "http_request_delay", "http_request_replace_method",
 		"http_request_replace_path", "http_response_abort", "http_response_delay",
 		"http_response_patch_body", "http_response_replace_body", "http_response_replace_code":

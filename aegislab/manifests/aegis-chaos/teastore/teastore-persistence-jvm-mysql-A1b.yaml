@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-persistence
+  system: teastore
+spec:
+  points:
+  - capability: jvm_mysql_exception
+    target:
+      app: teastore-persistence
+      db_name: teadb
+      namespace: teastore
+      sql_type: select
+      table: PERSISTENCECATEGORY
+  - capability: jvm_mysql_exception
+    target:
+      app: teastore-persistence
+      db_name: teadb
+      namespace: teastore
+      sql_type: select
+      table: PERSISTENCEPRODUCT
+  - capability: jvm_mysql_exception
+    target:
+      app: teastore-persistence
+      db_name: teadb
+      namespace: teastore
+      sql_type: select
+      table: PERSISTENCEUSER
+  - capability: jvm_mysql_latency
+    target:
+      app: teastore-persistence
+      db_name: teadb
+      namespace: teastore
+      sql_type: select
+      table: PERSISTENCECATEGORY
+  - capability: jvm_mysql_latency
+    target:
+      app: teastore-persistence
+      db_name: teadb
+      namespace: teastore
+      sql_type: select
+      table: PERSISTENCEPRODUCT
+  - capability: jvm_mysql_latency
+    target:
+      app: teastore-persistence
+      db_name: teadb
+      namespace: teastore
+      sql_type: select
+      table: PERSISTENCEUSER
+  replace_scope: service

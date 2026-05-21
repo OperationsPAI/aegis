@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-price-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-price-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: price_config
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-price-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: price_config
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-price-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-price-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: price_config
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-price-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: price_config
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-price-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  replace_scope: service

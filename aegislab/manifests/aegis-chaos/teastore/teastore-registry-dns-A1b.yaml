@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-registry
+  system: teastore
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: teastore-registry
+      domain_patterns:
+      - teastore-webui
+      namespace: teastore
+  - capability: dns_random
+    target:
+      app: teastore-registry
+      domain_patterns:
+      - teastore-webui
+      namespace: teastore
+  replace_scope: service

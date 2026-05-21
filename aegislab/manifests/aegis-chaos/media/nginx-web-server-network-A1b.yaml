@@ -1,0 +1,190 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: nginx-web-server
+  system: media
+spec:
+  points:
+  - capability: network_bandwidth
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: cast-info-service
+  - capability: network_bandwidth
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: compose-review-service
+  - capability: network_bandwidth
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: movie-info-service
+  - capability: network_bandwidth
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: page-service
+  - capability: network_bandwidth
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: plot-service
+  - capability: network_bandwidth
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: user-service
+  - capability: network_corrupt
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: cast-info-service
+  - capability: network_corrupt
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: compose-review-service
+  - capability: network_corrupt
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: movie-info-service
+  - capability: network_corrupt
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: page-service
+  - capability: network_corrupt
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: plot-service
+  - capability: network_corrupt
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: user-service
+  - capability: network_delay
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: cast-info-service
+  - capability: network_delay
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: compose-review-service
+  - capability: network_delay
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: movie-info-service
+  - capability: network_delay
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: page-service
+  - capability: network_delay
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: plot-service
+  - capability: network_delay
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: user-service
+  - capability: network_duplicate
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: cast-info-service
+  - capability: network_duplicate
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: compose-review-service
+  - capability: network_duplicate
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: movie-info-service
+  - capability: network_duplicate
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: page-service
+  - capability: network_duplicate
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: plot-service
+  - capability: network_duplicate
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: user-service
+  - capability: network_loss
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: cast-info-service
+  - capability: network_loss
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: compose-review-service
+  - capability: network_loss
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: movie-info-service
+  - capability: network_loss
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: page-service
+  - capability: network_loss
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: plot-service
+  - capability: network_loss
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: user-service
+  - capability: network_partition
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: cast-info-service
+  - capability: network_partition
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: compose-review-service
+  - capability: network_partition
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: movie-info-service
+  - capability: network_partition
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: page-service
+  - capability: network_partition
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: plot-service
+  - capability: network_partition
+    target:
+      namespace: media
+      source_app: nginx-web-server
+      target_service: user-service
+  replace_scope: service

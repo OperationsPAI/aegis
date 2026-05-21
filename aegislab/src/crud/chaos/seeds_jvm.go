@@ -106,12 +106,10 @@ func jvmMySQLTargetSchema() JSONMap {
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",
 		"type":                 "object",
 		"additionalProperties": false,
-		"required":             []any{"namespace", "app", "class", "method"},
+		"required":             []any{"namespace", "app", "db_name", "table"},
 		"properties": map[string]any{
 			"namespace": map[string]any{"type": "string", "minLength": 1},
 			"app":       map[string]any{"type": "string", "minLength": 1},
-			"class":     map[string]any{"type": "string", "minLength": 1},
-			"method":    map[string]any{"type": "string", "minLength": 1},
 			"db_name":   map[string]any{"type": "string", "minLength": 1},
 			"table":     map[string]any{"type": "string", "minLength": 1},
 			"sql_type": map[string]any{

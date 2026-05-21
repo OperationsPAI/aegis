@@ -1,0 +1,250 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-admin-route-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.AdminRouteApplication
+      method: main
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: addRoute
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: home
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: createAndModifyRoute
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.AdminRouteApplication
+      method: main
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: addRoute
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: home
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: createAndModifyRoute
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.AdminRouteApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: addRoute
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: home
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: createAndModifyRoute
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.AdminRouteApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: addRoute
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.controller.AdminRouteController
+      method: home
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: createAndModifyRoute
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: deleteRoute
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getAllRoutes
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-route-service
+      class: adminroute.service.AdminRouteServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  replace_scope: service

@@ -1,0 +1,52 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-delivery-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-delivery-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: delivery
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-delivery-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: delivery
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-delivery-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-delivery-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: delivery
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-delivery-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: delivery
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-delivery-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  replace_scope: service

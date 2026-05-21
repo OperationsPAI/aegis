@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: loadgenerator
+  system: ts
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: loadgenerator
+      domain_patterns:
+      - ts-rabbitmq
+      namespace: ts
+  - capability: dns_random
+    target:
+      app: loadgenerator
+      domain_patterns:
+      - ts-rabbitmq
+      namespace: ts
+  replace_scope: service

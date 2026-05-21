@@ -1,0 +1,418 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-basic-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.BasicApplication
+      method: main
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: home
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationExists
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRouteByRouteId
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRoutesByRouteIds
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdAndTrainType
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdsAndTrainTypes
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByName
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByNames
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.BasicApplication
+      method: main
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: home
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationExists
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRouteByRouteId
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRoutesByRouteIds
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdAndTrainType
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdsAndTrainTypes
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByName
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByNames
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.BasicApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: home
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationExists
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRouteByRouteId
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRoutesByRouteIds
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdAndTrainType
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdsAndTrainTypes
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByName
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByNames
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.BasicApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: home
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.controller.BasicController
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationExists
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: checkStationsExists
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRouteByRouteId
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getRoutesByRouteIds
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForStationId
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravel
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryForTravels
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdAndTrainType
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryPriceConfigByRouteIdsAndTrainTypes
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByName
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-basic-service
+      class: fdse.microservice.service.BasicServiceImpl
+      method: queryTrainTypeByNames
+      namespace: ts
+  replace_scope: service

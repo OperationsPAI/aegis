@@ -1,0 +1,2386 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: orders
+  system: sockshop
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: collectCdiMocks
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getAnnotated
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getBean
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getMember
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getQualifiers
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getType
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: injectMockQualifier
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isDelegate
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isTransient
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: CoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: findOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: getOrderRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testFindOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testOrderCreation
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testFindOrdersByCustomerId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetMissingOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testInvalidOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentDeclined
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentFailure
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor.PaymentDeclinedException
+      method: PaymentDeclinedException
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: contains
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: keys
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: onOrderCreated
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processPayment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: shipOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: order
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.NewOrderRequest
+      method: NewOrderRequest
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: Order
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: compareTo
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderException
+      method: OrderException
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderExceptionMapper
+      method: toResponse
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource.InvalidOrderException
+      method: InvalidOrderException
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrdersForCustomer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: newOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: wrap
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Payment
+      method: Payment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: TestCartsClient
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: cart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: TestCoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: getLastOrderId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: item
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: items
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: order
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: payment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: TestPaymentClient
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: TestShippingClient
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: ship
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: TestUsersClient
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: card
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: customer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: extractContext
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: hasTraceContext
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: injectCurrentTraceParent
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: keys
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: collectCdiMocks
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getAnnotated
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getBean
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getMember
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getQualifiers
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getType
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: injectMockQualifier
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isDelegate
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isTransient
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: CoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: findOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: getOrderRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testFindOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testOrderCreation
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testFindOrdersByCustomerId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetMissingOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testInvalidOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentDeclined
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentFailure
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor.PaymentDeclinedException
+      method: PaymentDeclinedException
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: contains
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: keys
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: onOrderCreated
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processPayment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: shipOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: order
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.NewOrderRequest
+      method: NewOrderRequest
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: Order
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: compareTo
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderException
+      method: OrderException
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderExceptionMapper
+      method: toResponse
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource.InvalidOrderException
+      method: InvalidOrderException
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrdersForCustomer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: newOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: wrap
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Payment
+      method: Payment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: TestCartsClient
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: cart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: TestCoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: getLastOrderId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: item
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: items
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: order
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: payment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: TestPaymentClient
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: TestShippingClient
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: ship
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: TestUsersClient
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: card
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: customer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: extractContext
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: hasTraceContext
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: injectCurrentTraceParent
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: collectCdiMocks
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getAnnotated
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getBean
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getMember
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getQualifiers
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getType
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: injectMockQualifier
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isDelegate
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isTransient
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: CoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: findOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: getOrderRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testFindOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testOrderCreation
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testFindOrdersByCustomerId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetMissingOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testInvalidOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentDeclined
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentFailure
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor.PaymentDeclinedException
+      method: PaymentDeclinedException
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: contains
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: onOrderCreated
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processPayment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: shipOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: order
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.NewOrderRequest
+      method: NewOrderRequest
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: Order
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: compareTo
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderException
+      method: OrderException
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderExceptionMapper
+      method: toResponse
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource.InvalidOrderException
+      method: InvalidOrderException
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrdersForCustomer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: newOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: wrap
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Payment
+      method: Payment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: TestCartsClient
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: cart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: TestCoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: getLastOrderId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: item
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: items
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: order
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: payment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: TestPaymentClient
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: TestShippingClient
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: ship
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: TestUsersClient
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: extractContext
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: hasTraceContext
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: injectCurrentTraceParent
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: collectCdiMocks
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getAnnotated
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getBean
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getMember
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getQualifiers
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: getType
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: injectMockQualifier
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isDelegate
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CdiMocks
+      method: isTransient
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: CoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: findOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: getOrderRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testFindOrdersByCustomer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderRepositoryIT
+      method: testOrderCreation
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testFindOrdersByCustomerId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetMissingOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testGetOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testInvalidOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentDeclined
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CoherenceOrderResourceIT
+      method: testPaymentFailure
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor.PaymentDeclinedException
+      method: PaymentDeclinedException
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: contains
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: onOrderCreated
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: processPayment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.EventDrivenOrderProcessor
+      method: shipOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Links
+      method: order
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.MetricsIT
+      method: testCreateOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.NewOrderRequest
+      method: NewOrderRequest
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: Order
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: compareTo
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Order
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderException
+      method: OrderException
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderExceptionMapper
+      method: toResponse
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource.InvalidOrderException
+      method: InvalidOrderException
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: getOrdersForCustomer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: newOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.OrderResource
+      method: wrap
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Payment
+      method: Payment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: TestCartsClient
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCartsClient
+      method: cart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: TestCoherenceOrderRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: getLastOrderId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestCoherenceOrderRepository
+      method: saveOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: item
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: items
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: order
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: payment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: TestPaymentClient
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestPaymentClient
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: TestShippingClient
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestShippingClient
+      method: ship
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: TestUsersClient
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TestUsersClient
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: extractContext
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: hasTraceContext
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: injectCurrentTraceParent
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: orders
+      class: com.oracle.coherence.examples.sockshop.helidon.orders.TraceUtils
+      method: keys
+      namespace: sockshop
+  replace_scope: service

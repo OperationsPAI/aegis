@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: payment
+  system: sockshop
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: payment
+      domain_patterns:
+      - front-end
+      namespace: sockshop
+  - capability: dns_random
+    target:
+      app: payment
+      domain_patterns:
+      - front-end
+      namespace: sockshop
+  replace_scope: service

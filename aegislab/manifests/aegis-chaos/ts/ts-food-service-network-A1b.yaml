@@ -1,0 +1,160 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-food-service
+  system: ts
+spec:
+  points:
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: mysql
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-rabbitmq
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-station-food-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-train-food-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-travel-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: mysql
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-rabbitmq
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-station-food-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-train-food-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-travel-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: mysql
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-rabbitmq
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-station-food-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-train-food-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-travel-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: mysql
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-rabbitmq
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-station-food-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-train-food-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-travel-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: mysql
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-rabbitmq
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-station-food-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-train-food-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-travel-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: mysql
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-rabbitmq
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-station-food-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-train-food-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-food-service
+      target_service: ts-travel-service
+  replace_scope: service

@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: email
+  system: otel-demo
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: email
+      domain_patterns:
+      - checkout
+      namespace: otel-demo
+  - capability: dns_random
+    target:
+      app: email
+      domain_patterns:
+      - checkout
+      namespace: otel-demo
+  replace_scope: service

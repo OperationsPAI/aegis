@@ -1,0 +1,2194 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: carts
+  system: sockshop
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: add
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: merge
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: remove
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: update
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeCarts
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeNonExistentCarts
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testUpdateItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: CoherenceCartRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: CoherenceCartRepositoryAsync
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: incrementQuantity
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setQuantity
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: ItemsResource
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: ItemsResourceAsync
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: SyncCartRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: add
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: merge
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: remove
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: update
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeCarts
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeNonExistentCarts
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testUpdateItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: CoherenceCartRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: CoherenceCartRepositoryAsync
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: incrementQuantity
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setQuantity
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: ItemsResource
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: ItemsResourceAsync
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: SyncCartRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: add
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: merge
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: remove
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: update
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeCarts
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeNonExistentCarts
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testUpdateItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: CoherenceCartRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: CoherenceCartRepositoryAsync
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: incrementQuantity
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setQuantity
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: ItemsResource
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: ItemsResourceAsync
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: SyncCartRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: Cart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: add
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: merge
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: remove
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: setItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Cart
+      method: update
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResource
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceAsyncIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getBasePath
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: getCartsRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testDeleteItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testGetItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeCarts
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testMergeNonExistentCarts
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CartResourceIT
+      method: testUpdateItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: CoherenceCartRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepository
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: CoherenceCartRepositoryAsync
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryAsyncIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: getCartRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CoherenceCartRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: Item
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: getCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: incrementQuantity
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.Item
+      method: setQuantity
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: ItemsResource
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResource
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: ItemsResourceAsync
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.ItemsResourceAsync
+      method: updateItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.MetricsIT
+      method: testAddItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: SyncCartRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: addItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: deleteItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItem
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getItems
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: getOrCreateCart
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: mergeCarts
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: carts
+      class: com.oracle.coherence.examples.sockshop.helidon.carts.SyncCartRepository
+      method: updateItem
+      namespace: sockshop
+  replace_scope: service

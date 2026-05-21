@@ -1,0 +1,100 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-route-plan-service
+  system: ts
+spec:
+  points:
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-route-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel2-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-route-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel2-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-route-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel2-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-route-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel2-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-route-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel2-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-route-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-route-plan-service
+      target_service: ts-travel2-service
+  replace_scope: service

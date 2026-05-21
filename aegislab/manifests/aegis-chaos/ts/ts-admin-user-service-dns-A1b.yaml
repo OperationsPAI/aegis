@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-admin-user-service
+  system: ts
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: ts-admin-user-service
+      domain_patterns:
+      - ts-user-service
+      namespace: ts
+  - capability: dns_random
+    target:
+      app: ts-admin-user-service
+      domain_patterns:
+      - ts-user-service
+      namespace: ts
+  replace_scope: service

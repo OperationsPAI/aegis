@@ -1,0 +1,353 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-persistence
+  system: teastore
+spec:
+  points:
+  - capability: http_request_replace_method
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories/*
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/*
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/category/*
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/count/*
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/users/name/*
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-persistence
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories/*
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/*
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/category/*
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/count/*
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/users/name/*
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-persistence
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories/*
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/*
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/category/*
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/count/*
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/users/name/*
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-persistence
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories/*
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/*
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/category/*
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/count/*
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/users/name/*
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-persistence
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories/*
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/*
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/category/*
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/count/*
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/users/name/*
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-persistence
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories/*
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/*
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/category/*
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/count/*
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/users/name/*
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-persistence
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories/*
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/categories
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/*
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/category/*
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/products/count/*
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-persistence
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.persistence/rest/users/name/*
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-persistence
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/teastore-persistence-0.teastore-persistence
+      port: 8080
+  replace_scope: service
