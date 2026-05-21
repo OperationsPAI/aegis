@@ -44,11 +44,11 @@ func BuildInjection(ctx context.Context, cfg GuidedConfig) (handler.InjectionCon
 		return handler.InjectionConf{}, handler.SystemType(""), fmt.Errorf("guided config not ready to apply: chaos type %q is not supported", cfg.ChaosType)
 	}
 
-	conf, _, err := builder(ctx, cfg, systemType)
+	_, err = builder(ctx, cfg, systemType)
 	if err != nil {
 		return handler.InjectionConf{}, handler.SystemType(""), fmt.Errorf("build %s injection: %w", cfg.ChaosType, err)
 	}
-	return conf, handler.SystemType(systemType), nil
+	return handler.InjectionConf{}, handler.SystemType(systemType), nil
 }
 
 // lookupBuilder returns the builder registered for the given chaos type.
