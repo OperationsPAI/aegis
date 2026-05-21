@@ -325,6 +325,7 @@ changelog:
 # 🧬 Regenerate aegis-chaos Capability seed list + JSON schemas
 # Source of truth: aegislab/src/crud/chaos/guided/ ChaosTypeMap.
 # Outputs: tools/capgen/output/{capabilities.json,capabilities.md,conformance_cases.json}
+#          src/crud/chaos/capability_map_gen.go (ChaosType -> name map)
 capgen:
     #!/usr/bin/env bash
     set -euo pipefail
