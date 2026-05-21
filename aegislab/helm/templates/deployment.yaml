@@ -99,8 +99,6 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 15
           env:
-            - name: GOPRIVATE
-              value: "github.com/OperationsPAI/chaos-experiment"
             - name: ENV
               value: "prod"
             - name: GIN_MODE
@@ -299,8 +297,6 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 15
           env:
-            - name: GOPRIVATE
-              value: "github.com/OperationsPAI/chaos-experiment"
             - name: ENV
               value: "prod"
             - name: AEGIS_JWT_SECRET

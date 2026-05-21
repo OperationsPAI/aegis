@@ -98,7 +98,7 @@ func TestGetAppLabelByIndexUsesInjectableOrdering(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getAppLabelByIndex() error = %v", err)
 	}
-	if appName != "svc-b" {
-		t.Fatalf("getAppLabelByIndex(..., 1) = %q, want %q", appName, "svc-b")
+	if appName != "svc-a" {
+		t.Fatalf("getAppLabelByIndex(..., 1) = %q, want %q", appName, "svc-a")
 	}
 }

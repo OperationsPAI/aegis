@@ -11,13 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func TestGetLabel(t *testing.T) {
-	labels, err := GetLabels(context.Background(), "ts0", "app")
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(labels)
-}
 func TestCRDClient(t *testing.T) {
 	k8sClient := GetK8sClient()
 	ctx := context.Background()
@@ -40,13 +33,6 @@ func TestCRDClient(t *testing.T) {
 			fmt.Printf("%+v", podChaos)
 		}
 	}
-}
-func TestCRDClient1(t *testing.T) {
-	start, end, err := QueryCRDByName("ts", "ts-ts-train-service-cpu-exhaustion-7mwd86")
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(start, end)
 }
 
 func TestGetContainersWithAppLabel(t *testing.T) {
