@@ -2,149 +2,96 @@ package consumer
 
 import (
 	"context"
-	"errors"
+	"sync"
 	"testing"
 
 	"aegis/cli/apiclient"
+
+	"github.com/spf13/viper"
 )
 
-type fakeChaosCancelClient struct {
-	deleteInjectionID    string
-	deleteBatchID        string
-	deleteInjectionCalls int
-	deleteBatchCalls     int
-	deleteInjectionErr   error
-	deleteBatchErr       error
+type stubCancelClient struct {
+	called bool
+	err    error
 }
 
-func (f *fakeChaosCancelClient) CreateInjection(_ context.Context, _ apiclient.ChaosChaosCreateInjectionReq) (string, error) {
-	return "", errors.New("unused")
-}
-func (f *fakeChaosCancelClient) CreateInjectionBatch(_ context.Context, _ apiclient.ChaosChaosCreateInjectionBatchReq) (string, error) {
-	return "", errors.New("unused")
-}
-func (f *fakeChaosCancelClient) DeleteInjection(_ context.Context, id string) error {
-	f.deleteInjectionCalls++
-	f.deleteInjectionID = id
-	return f.deleteInjectionErr
-}
-func (f *fakeChaosCancelClient) DeleteInjectionBatch(_ context.Context, id string) error {
-	f.deleteBatchCalls++
-	f.deleteBatchID = id
-	return f.deleteBatchErr
+func (s *stubCancelClient) CreateInjection(_ context.Context, _ apiclient.ChaosChaosCreateInjectionReq) (string, error) {
+	return "", nil
 }
 
-func withFakeChaosClient(t *testing.T, fake *fakeChaosCancelClient) {
-	t.Helper()
-	prev := testChaosServiceClient
-	testChaosServiceClient = func() (chaosServiceClient, error) { return fake, nil }
-	t.Cleanup(func() { testChaosServiceClient = prev })
+func (s *stubCancelClient) CreateInjectionBatch(_ context.Context, _ apiclient.ChaosChaosCreateInjectionBatchReq) (string, error) {
+	return "", nil
 }
 
-func clearChaosServiceRegistry(t *testing.T) {
-	t.Helper()
-	chaosServiceTaskRegistryMutex.Lock()
-	chaosServiceTaskRegistry = make(map[string]chaosServiceInjectionRef)
-	chaosServiceTaskRegistryMutex.Unlock()
+func (s *stubCancelClient) DeleteInjectionByTask(_ context.Context, _ string) error {
+	s.called = true
+	return s.err
 }
 
-func TestCancelChaosServiceInjectionRoutesToDeleteInjection(t *testing.T) {
-	clearChaosServiceRegistry(t)
-	fake := &fakeChaosCancelClient{}
-	withFakeChaosClient(t, fake)
-
-	registerChaosServiceTask("task-A", "INJECT-ULID-1", false)
-
-	handled, err := CancelChaosServiceInjection(context.Background(), "task-A")
-	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if !handled {
-		t.Fatal("expected handled=true for registered task")
-	}
-	if fake.deleteInjectionCalls != 1 {
-		t.Fatalf("DeleteInjection calls: want 1 got %d", fake.deleteInjectionCalls)
-	}
-	if fake.deleteInjectionID != "INJECT-ULID-1" {
-		t.Fatalf("DeleteInjection id: want INJECT-ULID-1 got %q", fake.deleteInjectionID)
-	}
-	if fake.deleteBatchCalls != 0 {
-		t.Fatalf("DeleteInjectionBatch must not be called for non-batch task")
-	}
-	if _, ok := lookupChaosServiceTask("task-A"); ok {
-		t.Fatal("task should be deregistered after successful cancel")
-	}
-}
-
-func TestCancelChaosServiceInjectionRoutesBatch(t *testing.T) {
-	clearChaosServiceRegistry(t)
-	fake := &fakeChaosCancelClient{}
-	withFakeChaosClient(t, fake)
-
-	registerChaosServiceTask("task-B", "BATCH-ULID-1", true)
-
-	handled, err := CancelChaosServiceInjection(context.Background(), "task-B")
-	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if !handled {
-		t.Fatal("expected handled=true")
-	}
-	if fake.deleteBatchCalls != 1 || fake.deleteBatchID != "BATCH-ULID-1" {
-		t.Fatalf("want one DeleteInjectionBatch(BATCH-ULID-1), got calls=%d id=%q",
-			fake.deleteBatchCalls, fake.deleteBatchID)
-	}
-	if fake.deleteInjectionCalls != 0 {
-		t.Fatal("DeleteInjection must not be called for batch task")
-	}
-}
-
-func TestCancelChaosServiceInjectionSwallows404(t *testing.T) {
-	clearChaosServiceRegistry(t)
-	fake := &fakeChaosCancelClient{deleteInjectionErr: errChaosServiceNotFound}
-	withFakeChaosClient(t, fake)
-
-	registerChaosServiceTask("task-C", "INJECT-ULID-2", false)
-
-	handled, err := CancelChaosServiceInjection(context.Background(), "task-C")
-	if err != nil {
-		t.Fatalf("404 must be swallowed, got: %v", err)
-	}
-	if !handled {
-		t.Fatal("expected handled=true (we owned this task even though resource was gone)")
-	}
-	if _, ok := lookupChaosServiceTask("task-C"); ok {
-		t.Fatal("task should be deregistered after 404")
-	}
-}
-
+// TestCancelChaosServiceInjectionUnknownTaskNoop guards the orphan-CR fallback
+// path in task/service.go: when chaos-service reports the task as unknown
+// (404 → errChaosServiceNotFound) the hook MUST return handled=false so the
+// caller falls through to DeleteChaosCRDsByLabel and cleans up CRs created by
+// pre-migration runs / other orchestrator processes / hand edits.
 func TestCancelChaosServiceInjectionUnknownTaskNoop(t *testing.T) {
-	clearChaosServiceRegistry(t)
-	fake := &fakeChaosCancelClient{}
-	withFakeChaosClient(t, fake)
+	prevFactory := testChaosServiceClient
+	t.Cleanup(func() { testChaosServiceClient = prevFactory })
 
-	handled, err := CancelChaosServiceInjection(context.Background(), "task-never-dispatched")
+	stub := &stubCancelClient{err: errChaosServiceNotFound}
+	testChaosServiceClient = func() (chaosServiceClient, error) { return stub, nil }
+
+	handled, err := CancelChaosServiceInjection(context.Background(), "task-unknown")
 	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if handled {
-		t.Fatal("expected handled=false for unknown task — caller falls back to legacy CR delete")
+		t.Fatal("handled=true for unknown task; legacy CR-cleanup fallback will be skipped")
 	}
-	if fake.deleteInjectionCalls != 0 || fake.deleteBatchCalls != 0 {
-		t.Fatal("no Delete call should be issued for unknown task")
+	if !stub.called {
+		t.Fatal("DeleteInjectionByTask was not invoked")
 	}
 }
 
-// TestDefaultChaosServiceClientUsesSAResolver guards against the previous-attempt
-// regression where the Delete path introduced a parallel newClient() that read
-// CHAOS_OUTBOUND_BEARER directly, bypassing the SA-token mint. The production
-// factory must mint bearer via resolveChaosOutboundBearer so both Create and
-// Delete share the same auth path.
-func TestDefaultChaosServiceClientUsesSAResolver(t *testing.T) {
-	t.Setenv("CHAOS_OUTBOUND_BEARER", "env-token-xyz")
-	// no SA mint in test binary → resolver falls back to env.
-	got := resolveChaosOutboundBearer()
-	if got != "env-token-xyz" {
-		t.Fatalf("resolveChaosOutboundBearer must read env when SA mint absent; got %q", got)
+func TestCancelChaosServiceInjectionSuccessHandled(t *testing.T) {
+	prevFactory := testChaosServiceClient
+	t.Cleanup(func() { testChaosServiceClient = prevFactory })
+
+	stub := &stubCancelClient{}
+	testChaosServiceClient = func() (chaosServiceClient, error) { return stub, nil }
+
+	handled, err := CancelChaosServiceInjection(context.Background(), "task-known")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !handled {
+		t.Fatal("handled=false after successful chaos-service cancel; legacy cleanup will double-fire")
 	}
 }
+
+// TestDefaultChaosServiceClientUsesSAResolver guards against a previous-attempt
+// regression where the Cancel path built a parallel chaos client that bypassed
+// the SA mint. The Create and Delete paths share defaultChaosServiceClient,
+// so a single env-fallback assertion against the factory covers both.
+func TestDefaultChaosServiceClientUsesSAResolver(t *testing.T) {
+	prev := chaosSATokenRef.Load()
+	t.Cleanup(func() { chaosSATokenRef.Store(prev) })
+	chaosSATokenRef.Store(nil)
+
+	viper.Set("chaos.service_url", "http://example.invalid")
+	t.Cleanup(func() { viper.Set("chaos.service_url", "") })
+	t.Setenv(OutboundBearerEnv, "env-fallback-cancel")
+	outboundBearerEnvDeprecationOnce = sync.Once{}
+
+	cli, err := defaultChaosServiceClient()
+	if err != nil {
+		t.Fatalf("factory: %v", err)
+	}
+	sdkCli, ok := cli.(*sdkChaosServiceClient)
+	if !ok {
+		t.Fatalf("unexpected client type %T", cli)
+	}
+	if sdkCli.bearer != "env-fallback-cancel" {
+		t.Errorf("bearer = %q; want env fallback", sdkCli.bearer)
+	}
+}
+

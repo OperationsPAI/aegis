@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"aegis/cli/apiclient"
-	"aegis/platform/config"
 	chaoscrud "aegis/crud/chaos"
+	"aegis/platform/config"
 
 	guidedcli "aegis/platform/chaos"
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,8 +31,10 @@ var catalogReadSourceTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 // OutboundBearerEnv is read once at lister construction. Symmetric to
 // CHAOS_INBOUND_BEARER (chaos service side); kept as a separate env var
 // from CHAOS_WEBHOOK_BEARER (chaos → backend direction) so the two
-// service-to-service hops can be rotated independently.
-const OutboundBearerEnv = "CHAOS_OUTBOUND_BEARER"
+// service-to-service hops can be rotated independently. The constant
+// itself lives in platform/chaos so both this side and chaossystem's
+// candidate enumerator read the same name.
+const OutboundBearerEnv = guidedcli.OutboundBearerEnv
 
 var outboundBearerAttachOnce sync.Once
 
@@ -120,7 +122,6 @@ func runChaosServicePreflight(ctx context.Context, logicalSystem string, configs
 	}
 }
 
-
 // newSDKPointsLister returns a pointsListerFunc backed by the generated
 // chaos-service Go SDK. Each invocation builds a fresh per-call configuration
 // so test seams can override base URLs without process-wide state.
@@ -139,6 +140,7 @@ func newSDKPointsLister(baseURL string, logEntry *logrus.Entry) pointsListerFunc
 			})
 		}
 		cfg := apiclient.NewConfiguration()
+		cfg.HTTPClient = newOtelHTTPClient()
 		cfg.Servers = apiclient.ServerConfigurations{{URL: strings.TrimRight(baseURL, "/")}}
 		if bearer != "" {
 			cfg.AddDefaultHeader("Authorization", "Bearer "+bearer)

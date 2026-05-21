@@ -17,11 +17,10 @@ import (
 	label "aegis/crud/iam/label"
 	"aegis/core/orchestrator/common"
 
+	chaos "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-
-	chaos "aegis/platform/chaos"
 )
 
 type permMeta struct {
@@ -84,20 +83,31 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 	}
 
 	// Activate config listener first so Viper is populated from etcd before
-	// InitializeSystems reads it to drive chaos.RegisterSystem.
-	// injection.system.* is Global-scoped (issue #75 follow-up), so both
-	// producer and consumer pick it up through the standard Global listener.
+	// any consumer reads injection.system.* via the config manager. The
+	// chaos-experiment in-process registry is gone — chaos-service owns it
+	// now — so the only thing left to wire up here is the local
+	// chaos.IsSystemRegistered probe that validates pedestal short-codes
+	// against the live config manager.
 	common.RegisterGlobalHandlers(publisher)
 	if err := activateConfigScope(consts.ConfigScopeProducer, listener); err != nil {
 		return err
 	}
 
-	// Initialize systems (register with chaos-experiment from etcd, set MetadataStore)
-	if err := InitializeSystems(db); err != nil {
-		return fmt.Errorf("failed to initialize systems: %w", err)
-	}
-
+	wireChaosSystemValidation()
 	return nil
+}
+
+// wireChaosSystemValidation rewires the package-level chaos.IsSystemRegistered
+// probe to consult the live config manager. Defaults (always-true) survive in
+// test binaries that don't boot the config manager.
+func wireChaosSystemValidation() {
+	chaos.IsSystemRegistered = func(name string) bool {
+		cfg, ok := config.GetChaosSystemConfigManager().Get(chaos.SystemType(name))
+		if !ok {
+			return false
+		}
+		return cfg.IsEnabled()
+	}
 }
 
 func loadInitialDataFromConfiguredPath() (*InitialData, error) {

@@ -116,10 +116,11 @@ func parseChaosSAScopes(s string) []string {
 	return out
 }
 
-// currentChaosSAToken returns the minted SA token, or "" if mint hasn't
+// CurrentChaosSAToken returns the minted SA token, or "" if mint hasn't
 // completed. Exposed for the dispatcher / catalog preflight token-source
-// helpers; tests overwrite chaosSATokenRef directly.
-func currentChaosSAToken() string {
+// helpers and for boot wiring (chaossystem.SetChaosOutboundBearerProvider);
+// tests overwrite chaosSATokenRef directly.
+func CurrentChaosSAToken() string {
 	if p := chaosSATokenRef.Load(); p != nil {
 		return *p
 	}

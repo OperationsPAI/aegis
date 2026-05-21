@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"aegis/platform/authz"
+	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
 	"aegis/platform/middleware"
@@ -21,8 +22,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-
-	chaos "aegis/platform/chaos"
 )
 
 type Handler struct {
@@ -305,10 +304,17 @@ func (h *Handler) GetInjection(c *gin.Context) {
 //	@Failure		500	{object}	dto.GenericResponse[any]				"Internal server error"
 //	@Router			/api/v2/injections/systems [get]
 func (h *Handler) GetSystemMapping(c *gin.Context) {
-	allSystems := chaos.GetAllSystemTypes()
-	names := make([]string, 0, len(allSystems))
-	for _, system := range allSystems {
-		names = append(names, system.String())
+	// The chaos-experiment in-process registry is gone; system list comes
+	// from the live etcd-mirrored config manager. Disabled / tombstoned
+	// systems are filtered so the index stays consistent with what an
+	// enabled lookup would see.
+	cfgMap := config.GetChaosSystemConfigManager().GetAll()
+	names := make([]string, 0, len(cfgMap))
+	for name, cfg := range cfgMap {
+		if !cfg.IsEnabled() {
+			continue
+		}
+		names = append(names, name)
 	}
 	sort.Strings(names)
 

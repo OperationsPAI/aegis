@@ -17,7 +17,7 @@ import (
 // system/namespace/app/chaos_type/target identifiers populated. Numerical
 // params stay nil — callers fill them in before submitting.
 func TestListInjectCandidatesReturnsFlatJSON(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "bench-cand"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
@@ -89,7 +89,7 @@ func TestListInjectCandidatesReturnsFlatJSON(t *testing.T) {
 // enumerator output, deduping candidates whose identity matches across pool
 // slots.
 func TestListInjectCandidatesAutoNamespaceFansOut(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "bench-cand-auto"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
@@ -141,7 +141,7 @@ func TestListInjectCandidatesAutoNamespaceFansOut(t *testing.T) {
 }
 
 func TestListInjectCandidatesAutoNamespaceEmptyPool(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "bench-cand-zero"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
@@ -178,7 +178,7 @@ func TestListInjectCandidatesAutoNamespaceEmptyPool(t *testing.T) {
 }
 
 func TestListInjectCandidatesNotFoundForUnseededSystem(t *testing.T) {
-	service, _, _ := newMetadataService(t)
+	service, _ := newMetadataService(t)
 
 	_, err := service.ListInjectCandidates(context.Background(), "no-such-system", "no-such-system0")
 	if err == nil {

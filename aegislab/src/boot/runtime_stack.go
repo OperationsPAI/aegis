@@ -1,18 +1,19 @@
 package app
 
 import (
-	chaos "aegis/platform/chaos"
-	k8s "aegis/platform/k8s"
-	runtimeinfra "aegis/platform/runtime"
 	configcenterclient "aegis/clients/configcenter"
-	configcenter "aegis/crud/admin/configcenter"
+	"aegis/clients/runtime"
+	chaossystem "aegis/core/domain/chaossystem"
+	task "aegis/core/domain/task"
+	"aegis/core/orchestrator"
 	controller "aegis/core/orchestrator/lifecycle"
 	grpcruntime "aegis/core/orchestrator/transport/grpc/runtime"
 	receiver "aegis/core/orchestrator/transport/receiver"
 	worker "aegis/core/orchestrator/transport/worker"
-	"aegis/clients/runtime"
-	"aegis/core/orchestrator"
-	task "aegis/core/domain/task"
+	configcenter "aegis/crud/admin/configcenter"
+	chaos "aegis/platform/chaos"
+	k8s "aegis/platform/k8s"
+	runtimeinfra "aegis/platform/runtime"
 
 	"go.uber.org/fx"
 )
@@ -55,5 +56,8 @@ func RuntimeWorkerStackOptions() fx.Option {
 		grpcruntime.Module,
 		receiver.Module,
 		fx.Invoke(func() { task.ChaosServiceCancelHook = consumer.CancelChaosServiceInjection }),
+		fx.Invoke(func() {
+			chaossystem.SetChaosOutboundBearerProvider(consumer.CurrentChaosSAToken)
+		}),
 	)
 }

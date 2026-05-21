@@ -125,6 +125,21 @@ func buildFreshSlotItem(batchIndex int, configs []guidedcli.GuidedConfig) inject
 	}
 }
 
+// stripTrailingDigits removes the numeric suffix from a system short-code so
+// the namespace-instance form ("ts0", "sockshop14") collapses to the bare
+// pedestal name ("ts", "sockshop"). Returns the input unchanged when there
+// are no trailing digits.
+func stripTrailingDigits(s string) string {
+	i := len(s)
+	for i > 0 && s[i-1] >= '0' && s[i-1] <= '9' {
+		i--
+	}
+	if i == 0 {
+		return s
+	}
+	return s[:i]
+}
+
 // firstGuidedNamespace returns the first non-empty `namespace` among the
 // given guided configs. Used by SubmitFaultInjection to promote the
 // user-supplied namespace into RestartPedestal's payload as a hard
@@ -244,12 +259,15 @@ func (s *Service) removeDuplicated(items []injectionProcessItem) ([]injectionPro
 }
 
 // parseBatchGuidedSpecs parses a single batch of GuidedConfig specs for
-// parallel execution. Each GuidedConfig is resolved to an InjectionConf via
-// guidedcli.BuildInjection solely to compute duration, system-type sanity
-// check, and groundtruth-service dedup warnings. The returned item carries
-// the original GuidedConfigs; the actual BuildInjection call at execute-time
-// lives in the consumer.
-func parseBatchGuidedSpecs(ctx context.Context, pedestal string, batchIndex int, configs []guidedcli.GuidedConfig) (*injectionProcessItem, string, error) {
+// parallel execution. Each spec contributes its duration to the batch max,
+// its system to the pedestal sanity check, and its app to the cross-spec
+// duplicate-service warning. The previous in-process BuildInjection call
+// (which round-tripped through chaos-experiment's resourcelookup) is gone:
+// chaos-service owns the real builder now and runs it at execute time. The
+// dispatcher's renderGroundtruths uses the same `[]string{cfg.App}` shape, so
+// keeping the dedup check on cfg.App is consistent with what actually gets
+// persisted as ground_truth.
+func parseBatchGuidedSpecs(_ context.Context, pedestal string, batchIndex int, configs []guidedcli.GuidedConfig) (*injectionProcessItem, string, error) {
 	if len(configs) == 0 {
 		return nil, "", fmt.Errorf("empty guided fault batch at index %d", batchIndex)
 	}
@@ -259,12 +277,15 @@ func parseBatchGuidedSpecs(ctx context.Context, pedestal string, batchIndex int,
 	var duplicateServiceWarnings []string
 
 	for idx, cfg := range configs {
-		conf, systemType, err := guidedcli.BuildInjection(ctx, cfg)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to build injection from guided config at index %d: %w", idx, err)
-		}
-		if pedestal != systemType.String() {
-			return nil, "", fmt.Errorf("mismatched system type %s for pedestal %s at index %d", systemType.String(), pedestal, idx)
+		// cfg.System carries the namespace-instance short code (e.g. "ts0");
+		// pedestal is the system short code (e.g. "ts"). Strip the trailing
+		// digits before comparing so a `ts0` spec lines up with a `ts`
+		// pedestal. Empty cfg.System means the user left it to the server —
+		// that's allowed; skip the check rather than rejecting.
+		if sys := strings.TrimSpace(cfg.System); sys != "" {
+			if normalized := stripTrailingDigits(sys); normalized != pedestal {
+				return nil, "", fmt.Errorf("mismatched system type %s for pedestal %s at index %d", normalized, pedestal, idx)
+			}
 		}
 
 		duration := 0
@@ -275,12 +296,12 @@ func parseBatchGuidedSpecs(ctx context.Context, pedestal string, batchIndex int,
 			maxDuration = duration
 		}
 
-		groundtruth, err := conf.GetGroundtruth(ctx)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to get groundtruth from guided config at index %d: %w", idx, err)
-		}
+		// Dedup on cfg.App. dispatcher.renderGroundtruths writes
+		// {service: [cfg.App]} to caller_metadata.groundtruths, so a clash on
+		// App is exactly what surfaces as a duplicate ground_truth service
+		// downstream.
 		duplicateServiceWarnings = append(duplicateServiceWarnings,
-			mergeSpecServicesForDupCheck(uniqueServices, groundtruth.Service, idx)...)
+			mergeSpecServicesForDupCheck(uniqueServices, []string{strings.TrimSpace(cfg.App)}, idx)...)
 	}
 
 	var warning string

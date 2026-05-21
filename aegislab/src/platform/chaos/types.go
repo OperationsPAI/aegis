@@ -1,17 +1,21 @@
 package chaos
 
-import (
-	"github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
-)
-
 // SystemType is the aegislab identifier for a target microservice system
-// (e.g. "ts", "otel-demo"). Values are forwarded across the guidedcli
-// boundary as strings, so this type stays a string alias rather than a
-// distinct type.
+// (e.g. "ts", "otel-demo"). Values are forwarded across the chaos-service
+// HTTP boundary as strings, so this type stays a string alias.
 type SystemType string
 
 func (s SystemType) String() string { return string(s) }
 
+// IsSystemRegistered reports whether a given system short-code is a known
+// chaos-system. The boot path wires this to the live etcd/Viper config
+// manager; callers depending on this for validation must run after seed.
+// Defaults to "always true" so unit tests that don't boot the config
+// manager don't reject valid synthetic system names.
+var IsSystemRegistered = func(name string) bool { return true }
+
+// IsValid is a thin wrapper around IsSystemRegistered. Kept as a method on
+// SystemType for ergonomics in existing call sites.
 func (s SystemType) IsValid() bool { return IsSystemRegistered(string(s)) }
 
 // ChaosType enumerates the supported fault categories. Numeric values are
@@ -102,9 +106,7 @@ var ChaosNameMap = func() map[string]ChaosType {
 	return m
 }()
 
-// Groundtruth is the expected impact of a single chaos experiment. Mirrors
-// the JSON shape used by chaos-experiment so guidedcli.BuildInjection's
-// return value remains structurally interchangeable.
+// Groundtruth is the expected impact of a single chaos experiment.
 type Groundtruth struct {
 	Service   []string `json:"service,omitempty"`
 	Pod       []string `json:"pod,omitempty"`
@@ -131,33 +133,4 @@ type Node struct {
 type ChaosResourceMapping struct {
 	IndexFieldName string `json:"index_field_name"`
 	ResourceType   string `json:"resource_type"`
-}
-
-// Types and registration entry points that must stay identical to the
-// chaos-experiment runtime contract (DBMetadataStore is consumed inside
-// resourcelookup via this interface) are re-exported via guidedcli.
-type (
-	SystemConfig             = guidedcli.SystemConfig
-	MetadataStore            = guidedcli.MetadataStore
-	ServiceEndpointData      = guidedcli.ServiceEndpointData
-	DatabaseOperationData    = guidedcli.DatabaseOperationData
-	GRPCOperationData        = guidedcli.GRPCOperationData
-	JavaClassMethodData      = guidedcli.JavaClassMethodData
-	RuntimeMutatorTargetData = guidedcli.RuntimeMutatorTargetData
-	NetworkPairData          = guidedcli.NetworkPairData
-)
-
-func RegisterSystem(cfg SystemConfig) error { return guidedcli.RegisterSystem(cfg) }
-func UpdateSystem(cfg SystemConfig) error   { return guidedcli.UpdateSystem(cfg) }
-func UnregisterSystem(name string) error    { return guidedcli.UnregisterSystem(name) }
-func IsSystemRegistered(name string) bool   { return guidedcli.IsSystemRegistered(name) }
-func SetMetadataStore(store MetadataStore)  { guidedcli.SetMetadataStore(store) }
-
-func GetAllSystemTypes() []SystemType {
-	names := guidedcli.GetAllSystemTypes()
-	out := make([]SystemType, len(names))
-	for i, n := range names {
-		out[i] = SystemType(n)
-	}
-	return out
 }

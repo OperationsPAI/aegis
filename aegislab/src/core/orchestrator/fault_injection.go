@@ -255,7 +255,7 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 	if !ok || pedestalStr == "" {
 		return nil, fmt.Errorf(message, consts.InjectPedestal)
 	}
-	if !chaos.IsSystemRegistered(pedestalStr) {
+	if !chaos.SystemType(pedestalStr).IsValid() {
 		return nil, fmt.Errorf("invalid pedestal type: %s", pedestalStr)
 	}
 

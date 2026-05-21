@@ -23,9 +23,11 @@ import (
 )
 
 // enumerateCandidatesFn is the indirection used by ListInjectCandidates so
-// tests can inject a fixture without standing up a fake k8s API. Defaults to
-// the real in-process enumerator from chaos-experiment.
-var enumerateCandidatesFn = chaos.EnumerateAllCandidates
+// tests can inject a fixture without standing up a chaos-service double.
+// Defaults to a thin HTTP proxy against the chaos-service
+// /v1beta/systems/{sys}/candidates endpoint (PR phase 2e). The backend
+// /api/v2/chaos-systems/{system}/candidates handler is now a pass-through.
+var enumerateCandidatesFn = enumerateCandidatesViaChaosService
 
 // systemField is an internal enum of the injection.system.<name>.<field>
 // suffixes we manage. Keeping this tight (instead of free-form map keys)
@@ -230,7 +232,9 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 		}
 	}
 
-	common.InvalidateGlobalMetadataStoreCache()
+	// chaos-service owns its own metadata cache; cross-process invalidation
+	// from aegislab is no longer the right thing to do — the watch handler
+	// keeps Viper in sync and chaos-service refreshes on demand.
 
 	// The config manager reads Viper on demand; the consumer watch handler
 	// will keep Viper in sync when the etcd event round-trips back.
@@ -466,15 +470,8 @@ func (s *Service) DeleteSystem(ctx context.Context, id int) error {
 		return err
 	}
 
-	// Best-effort local unregister. The watcher is the primary driver, but
-	// we nudge the registry to stay consistent with existing behaviour for
-	// callers that mutate state inside the same process.
-	if chaos.IsSystemRegistered(view.Cfg.System) {
-		if err := chaos.UnregisterSystem(view.Cfg.System); err != nil {
-			logrus.WithError(err).Warnf("Failed to unregister system %s", view.Cfg.System)
-		}
-	}
-	common.InvalidateGlobalMetadataStoreCache()
+	// Local registry side-effects are gone — chaos-service owns the registry
+	// and reconciles on the etcd status flip.
 	return nil
 }
 
@@ -516,7 +513,6 @@ func (s *Service) UpsertMetadata(_ context.Context, id int, req *BulkUpsertSyste
 			return fmt.Errorf("failed to upsert topology metadata for service %s: %w", svc.Name, err)
 		}
 	}
-	common.InvalidateGlobalMetadataStoreCache()
 	return nil
 }
 
