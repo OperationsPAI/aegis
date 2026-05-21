@@ -46,7 +46,6 @@ type GuidedConfig struct {
 	StatusCode      *int   `json:"status_code,omitempty" yaml:"status_code,omitempty"`
 	SaveConfig      bool   `json:"-" yaml:"-"`
 	ResetConfig     bool   `json:"-" yaml:"-"`
-	Apply           bool   `json:"-" yaml:"-"`
 }
 
 type GuidedResponse struct {

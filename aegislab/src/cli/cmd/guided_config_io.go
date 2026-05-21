@@ -290,7 +290,6 @@ func overlayGuidedConfig(dst *chaos.GuidedConfig, src chaos.GuidedConfig) {
 	}
 	dst.SaveConfig = src.SaveConfig
 	dst.ResetConfig = src.ResetConfig
-	dst.Apply = src.Apply
 }
 
 func clearGuidedFromChaosType(cfg *chaos.GuidedConfig) {

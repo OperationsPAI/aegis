@@ -261,12 +261,6 @@ current stage's selection, and --apply to submit the finalized config.`,
 			MemType:        guidedMemType,
 			BodyType:       guidedBodyType,
 			ReplaceMethod:  guidedReplaceMethod,
-			// Apply is intentionally left false: the aegisctl CLI submits via
-			// the backend /inject endpoint (see submitGuidedApply), so the
-			// local-resolver Apply path must stay dormant or it would emit
-			// misleading "namespaces not found" errors while the real
-			// execution happens server-side (issue #132).
-			Apply:       false,
 			SaveConfig:  effectiveSave,
 			ResetConfig: guidedResetConfig,
 		}
@@ -315,10 +309,6 @@ current stage's selection, and --apply to submit the finalized config.`,
 			}
 		}
 
-		// Suppress any Apply=true inherited from the persisted session — see
-		// the Apply comment above; apply happens exclusively via the backend
-		// submit path.
-		merged.Apply = false
 		if guidedNext != "" {
 			next, err := guidedServiceApplyNext(ctx, merged, guidedNext)
 			if err != nil {
@@ -327,7 +317,6 @@ current stage's selection, and --apply to submit the finalized config.`,
 			merged = next
 			merged.SaveConfig = effectiveSave
 			merged.ResetConfig = guidedResetConfig
-			merged.Apply = false
 		}
 
 		response, err := guidedServiceResolve(ctx, merged)
