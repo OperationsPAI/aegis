@@ -2,7 +2,6 @@ package chaos
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -15,10 +14,10 @@ import (
 )
 
 // guided walkers reach into a live kubernetes cluster + resourcelookup cache;
-// handler tests swap them out via these package-level seams. The handler
-// converts between the local platform/chaos GuidedConfig shape (wire DTO) and
-// guided.GuidedConfig (runtime input) via JSON round-trip — the
-// JSON tags match field-for-field.
+// handler tests swap them out via these package-level seams. The guided
+// package's GuidedConfig / GuidedResponse / FieldSpec / FieldOption / Preview
+// types are aliases of the localchaos ones (see crud/chaos/guided/types.go),
+// so the handler and the walker share a single wire type with no conversion.
 var (
 	testGuidedResolve   func(ctx context.Context, cfg localchaos.GuidedConfig) (*localchaos.GuidedResponse, error)
 	testGuidedApplyNext func(response *localchaos.GuidedResponse, rawValue string) (localchaos.GuidedConfig, error)
@@ -29,65 +28,21 @@ func resolveGuided(ctx context.Context, cfg localchaos.GuidedConfig) (*localchao
 	if testGuidedResolve != nil {
 		return testGuidedResolve(ctx, cfg)
 	}
-	var ceCfg guided.GuidedConfig
-	if err := jsonRoundTrip(cfg, &ceCfg); err != nil {
-		return nil, err
-	}
-	ceResp, err := guided.Resolve(ctx, ceCfg)
-	if err != nil {
-		return nil, err
-	}
-	var out localchaos.GuidedResponse
-	if err := jsonRoundTrip(ceResp, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
+	return guided.Resolve(ctx, cfg)
 }
 
 func applyGuidedNext(response *localchaos.GuidedResponse, rawValue string) (localchaos.GuidedConfig, error) {
 	if testGuidedApplyNext != nil {
 		return testGuidedApplyNext(response, rawValue)
 	}
-	var ceResp guided.GuidedResponse
-	if err := jsonRoundTrip(response, &ceResp); err != nil {
-		return localchaos.GuidedConfig{}, err
-	}
-	merged, err := guided.ApplyNextSelection(&ceResp, rawValue)
-	if err != nil {
-		return localchaos.GuidedConfig{}, err
-	}
-	var out localchaos.GuidedConfig
-	if err := jsonRoundTrip(merged, &out); err != nil {
-		return localchaos.GuidedConfig{}, err
-	}
-	return out, nil
+	return guided.ApplyNextSelection(response, rawValue)
 }
 
 func enumerateGuided(ctx context.Context, system, namespace string) ([]localchaos.GuidedConfig, error) {
 	if testGuidedEnumerate != nil {
 		return testGuidedEnumerate(ctx, system, namespace)
 	}
-	ceCands, err := guided.EnumerateAllCandidates(ctx, system, namespace)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]localchaos.GuidedConfig, 0, len(ceCands))
-	for i := range ceCands {
-		var c localchaos.GuidedConfig
-		if err := jsonRoundTrip(ceCands[i], &c); err != nil {
-			return nil, err
-		}
-		out = append(out, c)
-	}
-	return out, nil
-}
-
-func jsonRoundTrip(src, dst any) error {
-	raw, err := json.Marshal(src)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(raw, dst)
+	return guided.EnumerateAllCandidates(ctx, system, namespace)
 }
 
 func guidedResponseToDTO(resp *localchaos.GuidedResponse) ChaosGuidedResolveResp {
