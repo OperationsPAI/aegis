@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/OperationsPAI/chaos-experiment/pkg/chaosmeta"
+	"aegis/internal/chaosengine/chaosmeta"
 )
 
 type chaosPointStore struct {

@@ -7,12 +7,6 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y g++ gcc
 
-# chaos-experiment is a sibling repo referenced via `replace ../../chaos-experiment`
-# from aegislab/src/go.mod. Build context must be the parent `aegis/` directory
-# so both trees are available. Staged at /chaos-experiment to match ../../chaos-experiment
-# when go resolves from /app (aegislab/src/).
-COPY chaos-experiment /chaos-experiment
-
 COPY aegislab/src/go.mod aegislab/src/go.sum ./
 RUN go env -w "GOPROXY=https://goproxy.cn|https://proxy.golang.org|direct"
 RUN go mod download

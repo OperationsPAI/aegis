@@ -8,9 +8,6 @@ WORKDIR /build
 
 RUN apt-get update && apt-get install -y g++ gcc
 
-# Build context is aegis/ (parent of aegislab and chaos-experiment)
-# Copy chaos-experiment so the replace directive in go.mod resolves.
-COPY chaos-experiment/ /build/chaos-experiment/
 COPY aegislab/src/ /build/aegislab/src/
 
 WORKDIR /build/aegislab/src

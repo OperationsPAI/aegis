@@ -204,14 +204,6 @@ local-debug:
     printf "{{blue}}⌛️ Starting local application...{{reset}}\n"
     cd {{src_dir}} && go run -tags=duckdb_arrow . both -conf ./config.dev.toml -port 8082
 
-# 📦 Update latest version of dependencies
-update-dependencies:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    printf "{{blue}}📦 Updating latest version of chaos-experiment library...{{reset}}\n"
-    cd {{src_dir}} && go get -u github.com/OperationsPAI/chaos-experiment@injectionv2-dev && go mod tidy
-    printf "{{green}}✅ Dependencies update completed{{reset}}\n"
-
 # 🔨 Build aegisctl CLI binary
 build-aegisctl output="/tmp/aegisctl":
     #!/usr/bin/env bash
@@ -331,15 +323,14 @@ changelog:
     printf "{{green}}✅ CHANGELOG.md generated successfully{{reset}}\n"
 
 # 🧬 Regenerate aegis-chaos Capability seed list + JSON schemas
-# Source of truth: chaos-experiment/handler/handler.go ChaosTypeMap.
+# Source of truth: aegislab/src/internal/chaosengine/handler/handler.go ChaosTypeMap.
 # Outputs: tools/capgen/output/{capabilities.json,capabilities.md,conformance_cases.json}
 capgen:
     #!/usr/bin/env bash
     set -euo pipefail
     cd tools/capgen && go run . output
 
-# 📜 Regenerate aegis-chaos Point Manifests from chaos-experiment per-system data
-# Source of truth: chaos-experiment/internal/<sys>/{serviceendpoints,grpcoperations,databaseoperations,javaclassmethods}
+# 📜 Regenerate aegis-chaos Point Manifests
 # Outputs: manifests/aegis-chaos/<system>/<service>.yaml
 manifestgen:
     #!/usr/bin/env bash
