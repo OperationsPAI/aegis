@@ -139,7 +139,7 @@ See [`src/service/consumer/task.go`](src/service/consumer/task.go:36-43) for que
 
 ### Key Dependencies
 
-- **Chaos Engineering**: `github.com/LGU-SE-Internal/chaos-experiment` for fault injection
+- **Chaos Engineering**: `aegis/internal/chaosengine` (in-tree under `aegislab/src/internal/chaosengine/`) for fault injection
 - **Kubernetes**: `controller-runtime` for K8s controllers
 - **Tracing**: OpenTelemetry for distributed tracing
 - **Router**: Gin for HTTP routing

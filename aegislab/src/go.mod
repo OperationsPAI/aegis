@@ -6,9 +6,9 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/ClickHouse/clickhouse-go/v2 v2.45.0
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/OperationsPAI/chaos-experiment v0.1.0
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/apache/arrow-go/v18 v18.5.2
+	github.com/chaos-mesh/chaos-mesh/api v0.0.0-20260203121111-e0d4747d7971
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v29.4.1+incompatible
 	github.com/duckdb/duckdb-go/v2 v2.10502.0
@@ -75,6 +75,7 @@ require (
 	k8s.io/apimachinery v0.35.4
 	k8s.io/cli-runtime v0.35.4
 	k8s.io/client-go v0.35.4
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -106,7 +107,6 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
-	github.com/chaos-mesh/chaos-mesh/api v0.0.0-20260203121111-e0d4747d7971 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/containerd/cgroups/v3 v3.1.3 // indirect
 	github.com/containerd/console v1.0.5 // indirect
@@ -271,6 +271,7 @@ require (
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
@@ -327,7 +328,6 @@ require (
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
 	k8s.io/kubectl v0.35.1 // indirect
-	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/kustomize/api v0.20.1 // indirect
@@ -335,8 +335,6 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
-
-replace github.com/OperationsPAI/chaos-experiment => ../../chaos-experiment
 
 replace github.com/chaos-mesh/chaos-mesh/api => github.com/OperationsPAI/chaos-mesh/api v0.0.0-20260124102507-517f3df45e54
 

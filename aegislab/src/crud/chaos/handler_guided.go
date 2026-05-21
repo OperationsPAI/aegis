@@ -10,7 +10,7 @@ import (
 	// chaos-experiment dependency is the actual runtime implementation of the
 	// guided walker. Aegislab business code does NOT import chaos-experiment
 	// anywhere else — do not copy this pattern outside crud/chaos/.
-	cechaos "github.com/OperationsPAI/chaos-experiment/pkg/guidedcli"
+	cechaos "aegis/internal/chaosengine/guidedcli"
 
 	localchaos "aegis/platform/chaos"
 	"aegis/platform/dto"
