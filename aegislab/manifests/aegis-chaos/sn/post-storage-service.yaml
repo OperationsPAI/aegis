@@ -12,41 +12,41 @@ spec:
       target:
         app: "post-storage-service"
         container: "post-storage-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "cpu_stress"
       target:
         app: "post-storage-service"
         container: "post-storage-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "http_request_abort"
       target:
         app: "post-storage-service"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/PostStorageService/ReadPosts"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "post-storage-service"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/PostStorageService/ReadPosts"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "post-storage-service"
         container: "post-storage-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "post-storage-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_kill"
       target:
         app: "post-storage-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "time_skew"
       target:
         app: "post-storage-service"
         container: "post-storage-service"
-        namespace: "social-network"
+        namespace: "sn"

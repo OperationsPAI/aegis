@@ -12,41 +12,41 @@ spec:
       target:
         app: "geo"
         container: "geo"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "cpu_stress"
       target:
         app: "geo"
         container: "geo"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "http_request_abort"
       target:
         app: "geo"
         method: "POST"
-        namespace: "hotel-reservation"
+        namespace: "hs"
         path: "/geo.Geo/Nearby"
         port: 8083
     - capability: "http_request_delay"
       target:
         app: "geo"
         method: "POST"
-        namespace: "hotel-reservation"
+        namespace: "hs"
         path: "/geo.Geo/Nearby"
         port: 8083
     - capability: "memory_stress"
       target:
         app: "geo"
         container: "geo"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "pod_failure"
       target:
         app: "geo"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "pod_kill"
       target:
         app: "geo"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "time_skew"
       target:
         app: "geo"
         container: "geo"
-        namespace: "hotel-reservation"
+        namespace: "hs"

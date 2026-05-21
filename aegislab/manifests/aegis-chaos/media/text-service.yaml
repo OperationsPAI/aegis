@@ -12,41 +12,41 @@ spec:
       target:
         app: "text-service"
         container: "text-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "text-service"
         container: "text-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "text-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/TextService/UploadText"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "text-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/TextService/UploadText"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "text-service"
         container: "text-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "text-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "text-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "text-service"
         container: "text-service"
-        namespace: "media-microsvc"
+        namespace: "media"

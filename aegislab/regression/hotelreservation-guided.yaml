@@ -4,7 +4,7 @@ project_name: pair_diagnosis
 submit:
   pedestal:
     name: hs
-    version: "0.1.1"
+    version: "0.1.6"
   benchmark:
     name: clickhouse
     version: "1.0.0"
@@ -24,8 +24,8 @@ submit:
     - - system: hs
         system_type: hs
         namespace: hs0
-        app: user
-        chaos_type: PodKill
+        app: profile
+        chaos_type: PodFailure
         duration: 5
 validation:
   timeout_seconds: 3000

@@ -12,41 +12,41 @@ spec:
       target:
         app: "emailservice"
         container: "emailservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "cpu_stress"
       target:
         app: "emailservice"
         container: "emailservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "http_request_abort"
       target:
         app: "emailservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
     - capability: "http_request_delay"
       target:
         app: "emailservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
     - capability: "memory_stress"
       target:
         app: "emailservice"
         container: "emailservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "emailservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_kill"
       target:
         app: "emailservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "time_skew"
       target:
         app: "emailservice"
         container: "emailservice"
-        namespace: "online-boutique"
+        namespace: "ob"

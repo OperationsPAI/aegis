@@ -12,55 +12,55 @@ spec:
       target:
         app: "movie-id-service"
         container: "movie-id-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "movie-id-service"
         container: "movie-id-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "movie-id-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/MovieIdService/RegisterMovieId"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "movie-id-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/MovieIdService/UploadMovieId"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "movie-id-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/MovieIdService/RegisterMovieId"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "movie-id-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/MovieIdService/UploadMovieId"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "movie-id-service"
         container: "movie-id-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "movie-id-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "movie-id-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "movie-id-service"
         container: "movie-id-service"
-        namespace: "media-microsvc"
+        namespace: "media"

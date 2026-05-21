@@ -12,55 +12,55 @@ spec:
       target:
         app: "productcatalogservice"
         container: "productcatalogservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "cpu_stress"
       target:
         app: "productcatalogservice"
         container: "productcatalogservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "http_request_abort"
       target:
         app: "productcatalogservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
     - capability: "http_request_abort"
       target:
         app: "productcatalogservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
     - capability: "http_request_delay"
       target:
         app: "productcatalogservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
     - capability: "http_request_delay"
       target:
         app: "productcatalogservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
     - capability: "memory_stress"
       target:
         app: "productcatalogservice"
         container: "productcatalogservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "productcatalogservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_kill"
       target:
         app: "productcatalogservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "time_skew"
       target:
         app: "productcatalogservice"
         container: "productcatalogservice"
-        namespace: "online-boutique"
+        namespace: "ob"

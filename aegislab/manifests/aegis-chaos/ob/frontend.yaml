@@ -12,167 +12,167 @@ spec:
       target:
         app: "frontend"
         container: "frontend"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "cpu_stress"
       target:
         app: "frontend"
         container: "frontend"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.AdService/GetAds"
         port: 9555
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/AddItem"
         port: 7070
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
         port: 7000
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.RecommendationService/ListRecommendations"
         port: 8080
     - capability: "http_request_abort"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.AdService/GetAds"
         port: 9555
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/AddItem"
         port: 7070
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
         port: 7000
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/ListProducts"
         port: 3550
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.RecommendationService/ListRecommendations"
         port: 8080
     - capability: "http_request_delay"
       target:
         app: "frontend"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
     - capability: "memory_stress"
       target:
         app: "frontend"
         container: "frontend"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "frontend"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_kill"
       target:
         app: "frontend"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "time_skew"
       target:
         app: "frontend"
         container: "frontend"
-        namespace: "online-boutique"
+        namespace: "ob"

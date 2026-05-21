@@ -12,55 +12,55 @@ spec:
       target:
         app: "currencyservice"
         container: "currencyservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "cpu_stress"
       target:
         app: "currencyservice"
         container: "currencyservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "http_request_abort"
       target:
         app: "currencyservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
     - capability: "http_request_abort"
       target:
         app: "currencyservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
         port: 7000
     - capability: "http_request_delay"
       target:
         app: "currencyservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
     - capability: "http_request_delay"
       target:
         app: "currencyservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/GetSupportedCurrencies"
         port: 7000
     - capability: "memory_stress"
       target:
         app: "currencyservice"
         container: "currencyservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "currencyservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_kill"
       target:
         app: "currencyservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "time_skew"
       target:
         app: "currencyservice"
         container: "currencyservice"
-        namespace: "online-boutique"
+        namespace: "ob"

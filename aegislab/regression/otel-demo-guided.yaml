@@ -9,7 +9,7 @@ submit:
     name: clickhouse
     version: "1.0.0"
   interval: 3
-  pre_duration: 1
+  pre_duration: 2
   algorithms:
     - name: random
       version: "1.0.0"
@@ -17,12 +17,12 @@ submit:
     - key: env
       value: local
     - key: batch
-      value: wrapper-0.1.4-verify
+      value: r11m-validation
   specs:
     - - system: otel-demo
         system_type: otel-demo
         namespace: otel-demo0
-        app: frontend
+        app: quote
         chaos_type: PodFailure
         duration: 1
 validation:

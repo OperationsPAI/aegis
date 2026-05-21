@@ -12,55 +12,55 @@ spec:
       target:
         app: "plot-service"
         container: "plot-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "plot-service"
         container: "plot-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "plot-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/PlotService/ReadPlot"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "plot-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/PlotService/WritePlot"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "plot-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/PlotService/ReadPlot"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "plot-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/PlotService/WritePlot"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "plot-service"
         container: "plot-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "plot-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "plot-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "plot-service"
         container: "plot-service"
-        namespace: "media-microsvc"
+        namespace: "media"

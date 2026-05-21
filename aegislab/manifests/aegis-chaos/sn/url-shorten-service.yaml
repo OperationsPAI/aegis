@@ -12,41 +12,41 @@ spec:
       target:
         app: "url-shorten-service"
         container: "url-shorten-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "cpu_stress"
       target:
         app: "url-shorten-service"
         container: "url-shorten-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "http_request_abort"
       target:
         app: "url-shorten-service"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/UrlShortenService/ComposeUrls"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "url-shorten-service"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/UrlShortenService/ComposeUrls"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "url-shorten-service"
         container: "url-shorten-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "url-shorten-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_kill"
       target:
         app: "url-shorten-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "time_skew"
       target:
         app: "url-shorten-service"
         container: "url-shorten-service"
-        namespace: "social-network"
+        namespace: "sn"

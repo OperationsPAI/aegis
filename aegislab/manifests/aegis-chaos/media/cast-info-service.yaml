@@ -12,69 +12,69 @@ spec:
       target:
         app: "cast-info-service"
         container: "cast-info-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "cast-info-service"
         container: "cast-info-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "cast-info-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/CastInfoService/ReadCastInfo"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "cast-info-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/CastInfoService/WriteCastInfo"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "cast-info-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/PageService/ReadPage"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "cast-info-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/CastInfoService/ReadCastInfo"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "cast-info-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/CastInfoService/WriteCastInfo"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "cast-info-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/PageService/ReadPage"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "cast-info-service"
         container: "cast-info-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "cast-info-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "cast-info-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "cast-info-service"
         container: "cast-info-service"
-        namespace: "media-microsvc"
+        namespace: "media"
