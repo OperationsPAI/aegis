@@ -74,9 +74,10 @@ func (m *MockJavaClassMethodProvider) GetClassMethodsByService(serviceName strin
 
 func TestMetadataRegistry(t *testing.T) {
 	// Reset the registry and system for testing
+	withBuiltins(t)
 	registry := GetRegistry()
 	registry.Clear()
-	_ = SetCurrentSystem(SystemTrainTicket)
+	_ = SetCurrentSystem(SystemType("ts"))
 
 	// Create mock providers
 	tsEndpointProvider := &MockServiceEndpointProvider{
@@ -98,11 +99,11 @@ func TestMetadataRegistry(t *testing.T) {
 	}
 
 	// Register providers
-	registry.RegisterServiceEndpointProvider(SystemTrainTicket, tsEndpointProvider)
-	registry.RegisterServiceEndpointProvider(SystemOtelDemo, otelEndpointProvider)
+	registry.RegisterServiceEndpointProvider(SystemType("ts"), tsEndpointProvider)
+	registry.RegisterServiceEndpointProvider(SystemType("otel-demo"), otelEndpointProvider)
 
 	// Test getting provider for TrainTicket system
-	_ = SetCurrentSystem(SystemTrainTicket)
+	_ = SetCurrentSystem(SystemType("ts"))
 	provider, err := registry.GetServiceEndpointProvider()
 	if err != nil {
 		t.Fatalf("GetServiceEndpointProvider() error = %v", err)
@@ -117,7 +118,7 @@ func TestMetadataRegistry(t *testing.T) {
 	}
 
 	// Test getting provider for OtelDemo system
-	_ = SetCurrentSystem(SystemOtelDemo)
+	_ = SetCurrentSystem(SystemType("otel-demo"))
 	provider, err = registry.GetServiceEndpointProvider()
 	if err != nil {
 		t.Fatalf("GetServiceEndpointProvider() error = %v", err)
@@ -133,9 +134,10 @@ func TestMetadataRegistry(t *testing.T) {
 }
 
 func TestRegistryHasProviders(t *testing.T) {
+	withBuiltins(t)
 	registry := GetRegistry()
 	registry.Clear()
-	_ = SetCurrentSystem(SystemTrainTicket)
+	_ = SetCurrentSystem(SystemType("ts"))
 
 	// Initially no providers
 	if registry.HasServiceEndpointProvider() {
@@ -143,7 +145,7 @@ func TestRegistryHasProviders(t *testing.T) {
 	}
 
 	// Register a provider
-	registry.RegisterServiceEndpointProvider(SystemTrainTicket, &MockServiceEndpointProvider{})
+	registry.RegisterServiceEndpointProvider(SystemType("ts"), &MockServiceEndpointProvider{})
 
 	// Now it should exist
 	if !registry.HasServiceEndpointProvider() {
@@ -151,16 +153,17 @@ func TestRegistryHasProviders(t *testing.T) {
 	}
 
 	// Switch to OtelDemo - should not have provider
-	_ = SetCurrentSystem(SystemOtelDemo)
+	_ = SetCurrentSystem(SystemType("otel-demo"))
 	if registry.HasServiceEndpointProvider() {
 		t.Error("HasServiceEndpointProvider() should return false for OtelDemo system")
 	}
 }
 
 func TestRegistryGetProviderNotRegistered(t *testing.T) {
+	withBuiltins(t)
 	registry := GetRegistry()
 	registry.Clear()
-	_ = SetCurrentSystem(SystemTrainTicket)
+	_ = SetCurrentSystem(SystemType("ts"))
 
 	_, err := registry.GetServiceEndpointProvider()
 	if err == nil {
@@ -179,9 +182,10 @@ func TestRegistryGetProviderNotRegistered(t *testing.T) {
 }
 
 func TestDatabaseOperationProviderRegistry(t *testing.T) {
+	withBuiltins(t)
 	registry := GetRegistry()
 	registry.Clear()
-	_ = SetCurrentSystem(SystemTrainTicket)
+	_ = SetCurrentSystem(SystemType("ts"))
 
 	mockProvider := &MockDatabaseOperationProvider{
 		services: []string{"ts-order-service"},
@@ -192,7 +196,7 @@ func TestDatabaseOperationProviderRegistry(t *testing.T) {
 		},
 	}
 
-	registry.RegisterDatabaseOperationProvider(SystemTrainTicket, mockProvider)
+	registry.RegisterDatabaseOperationProvider(SystemType("ts"), mockProvider)
 
 	if !registry.HasDatabaseOperationProvider() {
 		t.Error("HasDatabaseOperationProvider() should return true after registration")
@@ -210,9 +214,10 @@ func TestDatabaseOperationProviderRegistry(t *testing.T) {
 }
 
 func TestGRPCOperationProviderRegistry(t *testing.T) {
+	withBuiltins(t)
 	registry := GetRegistry()
 	registry.Clear()
-	_ = SetCurrentSystem(SystemOtelDemo)
+	_ = SetCurrentSystem(SystemType("otel-demo"))
 
 	mockProvider := &MockGRPCOperationProvider{
 		services: []string{"checkout"},
@@ -223,7 +228,7 @@ func TestGRPCOperationProviderRegistry(t *testing.T) {
 		},
 	}
 
-	registry.RegisterGRPCOperationProvider(SystemOtelDemo, mockProvider)
+	registry.RegisterGRPCOperationProvider(SystemType("otel-demo"), mockProvider)
 
 	if !registry.HasGRPCOperationProvider() {
 		t.Error("HasGRPCOperationProvider() should return true after registration")
@@ -244,9 +249,10 @@ func TestGRPCOperationProviderRegistry(t *testing.T) {
 }
 
 func TestJavaClassMethodProviderRegistry(t *testing.T) {
+	withBuiltins(t)
 	registry := GetRegistry()
 	registry.Clear()
-	_ = SetCurrentSystem(SystemTrainTicket)
+	_ = SetCurrentSystem(SystemType("ts"))
 
 	mockProvider := &MockJavaClassMethodProvider{
 		services: []string{"ts-order-service"},
@@ -257,7 +263,7 @@ func TestJavaClassMethodProviderRegistry(t *testing.T) {
 		},
 	}
 
-	registry.RegisterJavaClassMethodProvider(SystemTrainTicket, mockProvider)
+	registry.RegisterJavaClassMethodProvider(SystemType("ts"), mockProvider)
 
 	if !registry.HasJavaClassMethodProvider() {
 		t.Error("HasJavaClassMethodProvider() should return true after registration")
