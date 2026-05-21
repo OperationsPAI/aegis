@@ -7,11 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
-	"time"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,12 +37,6 @@ func InitWithConfig(config *rest.Config) error {
 	k8sConfigInstance = config
 	scheme := runtime.NewScheme()
 
-	// Register Chaos Mesh CRD scheme
-	if err := v1alpha1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("failed to add Chaos Mesh v1alpha1 scheme: %v", err)
-	}
-
-	// Register CoreV1 scheme
 	if err := corev1.AddToScheme(scheme); err != nil {
 		return fmt.Errorf("failed to add CoreV1 scheme: %v", err)
 	}
@@ -230,86 +220,3 @@ func GetPodsByLabel(namespace, labelKey, labelValue string) ([]string, error) {
 	return podNames, nil
 }
 
-func GetCRDMapping() map[schema.GroupVersionResource]client.Object {
-	return map[schema.GroupVersionResource]client.Object{
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "dnschaos"}:             &v1alpha1.DNSChaos{},
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "httpchaos"}:            &v1alpha1.HTTPChaos{},
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "jvmchaos"}:             &v1alpha1.JVMChaos{},
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "networkchaos"}:         &v1alpha1.NetworkChaos{},
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "podchaos"}:             &v1alpha1.PodChaos{},
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "stresschaos"}:          &v1alpha1.StressChaos{},
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "timechaos"}:            &v1alpha1.TimeChaos{},
-		{Group: "chaos-mesh.org", Version: "v1alpha1", Resource: "runtimemutatorchaos"}: &v1alpha1.RuntimeMutatorChaos{},
-	}
-}
-
-// QueryCRDByName 查询指定命名空间和名称的 CRD，并检查其状态
-func QueryCRDByName(namespace, nameToQuery string) (time.Time, time.Time, error) {
-	k8sClient := GetK8sClient()
-	ctx := context.Background()
-
-	// 定义支持的 CRD 类型和对应的 GVR 映射
-	crdMapping := GetCRDMapping()
-	for gvr, obj := range crdMapping {
-		objCopy := obj.DeepCopyObject().(client.Object)
-		err := k8sClient.Get(ctx, client.ObjectKey{Name: nameToQuery, Namespace: namespace}, objCopy)
-		if err == nil {
-			logrus.Infof("Found resource in GroupVersionResource: %s\n", gvr)
-
-			switch resource := objCopy.(type) {
-			case *v1alpha1.HTTPChaos:
-				return checkStatus(resource.Status.ChaosStatus)
-
-			case *v1alpha1.NetworkChaos:
-				return checkStatus(resource.Status.ChaosStatus)
-
-			case *v1alpha1.PodChaos:
-				return checkStatus(resource.Status.ChaosStatus)
-
-			case *v1alpha1.StressChaos:
-				return checkStatus(resource.Status.ChaosStatus)
-			}
-
-			return time.Time{}, time.Time{}, fmt.Errorf("CRD type not found")
-		}
-	}
-
-	return time.Time{}, time.Time{}, fmt.Errorf("No resource found for name '%s' in namespace '%s'\n", nameToQuery, namespace)
-}
-
-// checkStatus 检查 Chaos 状态是否注入成功和恢复成功
-func checkStatus(status v1alpha1.ChaosStatus) (time.Time, time.Time, error) {
-	var (
-		apply time.Time
-		reco  time.Time
-	)
-
-	for _, record := range status.Experiment.Records {
-		for _, event := range record.Events {
-			if event.Operation == v1alpha1.Apply && event.Type == v1alpha1.TypeSucceeded {
-				apply = event.Timestamp.Time
-			}
-			if event.Operation == v1alpha1.Recover && event.Type == v1alpha1.TypeSucceeded {
-				reco = event.Timestamp.Time
-			}
-		}
-	}
-
-	// 判断是否找到注入和恢复事件
-	if apply.IsZero() && reco.IsZero() {
-		return apply, reco, fmt.Errorf("no successful Apply or Recover events found")
-	}
-	if apply.IsZero() {
-		return apply, reco, fmt.Errorf("injection not successful: Apply event missing")
-	}
-	if reco.IsZero() {
-		return apply, reco, fmt.Errorf("injection successful but recovery not successful")
-	}
-
-	// 检查注入和恢复的逻辑关系
-	if apply.After(reco) {
-		return apply, reco, fmt.Errorf("recovery occurred before injection, which is invalid")
-	}
-
-	return apply, reco, nil
-}

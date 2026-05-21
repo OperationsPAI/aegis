@@ -15,11 +15,3 @@ func TestGetLabel(t *testing.T) {
 	}
 	fmt.Println(labels)
 }
-
-func TestCRDClient1(t *testing.T) {
-	start, end, err := QueryCRDByName("ts", "ts-ts-train-service-cpu-exhaustion-7mwd86")
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(start, end)
-}
