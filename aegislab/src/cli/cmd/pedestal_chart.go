@@ -279,7 +279,12 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 		output.PrintInfo(fmt.Sprintf("merged %d helm_config_values overrides for %s@%s", len(src.values), systemCode, tag))
 	}
 
-	helmArgs := []string{"install", namespace, src.positional, "-n", namespace, "--create-namespace"}
+	// "upgrade --install" is the upsert idiom — works whether the release
+	// exists or not. Previously this was bare `install`, which crashed on
+	// re-runs with "cannot re-use a name that is still in use" when the
+	// release was already deployed (hit by `regression run --auto-install`
+	// today after a prior preflight install).
+	helmArgs := []string{"upgrade", "--install", namespace, src.positional, "-n", namespace, "--create-namespace"}
 	cleanup := func() {}
 	if valuesFile, fileCleanup, err := materializeChartValuesFile(src); err != nil {
 		return err

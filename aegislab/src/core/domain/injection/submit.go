@@ -193,7 +193,7 @@ func flattenYAMLToParameters(data map[string]any, prefix string) []dto.Parameter
 	return params
 }
 
-func (s *Service) removeDuplicated(items []injectionProcessItem) ([]injectionProcessItem, []int, []int, error) {
+func (s *Service) removeDuplicated(items []injectionProcessItem, forceResubmit bool) ([]injectionProcessItem, []int, []int, error) {
 	engineConfigStrs := make([]string, len(items))
 	for i, item := range items {
 		if len(item.guidedConfigs) == 0 {
@@ -229,14 +229,16 @@ func (s *Service) removeDuplicated(items []injectionProcessItem) ([]injectionPro
 	}
 
 	existed := make(map[string]struct{})
-	for start := 0; start < len(keys); start += 100 {
-		end := min(start+100, len(keys))
-		existing, err := s.repo.listExistingEngineConfigs(keys[start:end])
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		for _, v := range existing {
-			existed[v] = struct{}{}
+	if !forceResubmit {
+		for start := 0; start < len(keys); start += 100 {
+			end := min(start+100, len(keys))
+			existing, err := s.repo.listExistingEngineConfigs(keys[start:end])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			for _, v := range existing {
+				existed[v] = struct{}{}
+			}
 		}
 	}
 

@@ -29,6 +29,8 @@ type InjectionSubmitInjectionReq struct {
 	AutoAllocate *bool `json:"auto_allocate,omitempty"`
 	// Benchmark (detector) configuration
 	Benchmark DtoContainerSpec `json:"benchmark"`
+	// ForceResubmit, when true, suppresses the engine-config dedup check even if a previous batch with the same engine_config is still in a non-terminal task state. Terminal-state previous batches (Completed / Error / Cancelled) no longer block resubmission — this flag exists for the narrower case where the operator wants to override an in- flight run as well.
+	ForceResubmit *bool `json:"force_resubmit,omitempty"`
 	// Labels to attach to the injection
 	Labels []DtoLabelItem `json:"labels,omitempty"`
 	// Pedestal (workload) configuration
@@ -182,6 +184,38 @@ func (o *InjectionSubmitInjectionReq) GetBenchmarkOk() (*DtoContainerSpec, bool)
 // SetBenchmark sets field value
 func (o *InjectionSubmitInjectionReq) SetBenchmark(v DtoContainerSpec) {
 	o.Benchmark = v
+}
+
+// GetForceResubmit returns the ForceResubmit field value if set, zero value otherwise.
+func (o *InjectionSubmitInjectionReq) GetForceResubmit() bool {
+	if o == nil || IsNil(o.ForceResubmit) {
+		var ret bool
+		return ret
+	}
+	return *o.ForceResubmit
+}
+
+// GetForceResubmitOk returns a tuple with the ForceResubmit field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InjectionSubmitInjectionReq) GetForceResubmitOk() (*bool, bool) {
+	if o == nil || IsNil(o.ForceResubmit) {
+		return nil, false
+	}
+	return o.ForceResubmit, true
+}
+
+// HasForceResubmit returns a boolean if a field has been set.
+func (o *InjectionSubmitInjectionReq) HasForceResubmit() bool {
+	if o != nil && !IsNil(o.ForceResubmit) {
+		return true
+	}
+
+	return false
+}
+
+// SetForceResubmit gets a reference to the given bool and assigns it to the ForceResubmit field.
+func (o *InjectionSubmitInjectionReq) SetForceResubmit(v bool) {
+	o.ForceResubmit = &v
 }
 
 // GetLabels returns the Labels field value if set, zero value otherwise.
@@ -348,6 +382,9 @@ func (o InjectionSubmitInjectionReq) ToMap() (map[string]interface{}, error) {
 		toSerialize["auto_allocate"] = o.AutoAllocate
 	}
 	toSerialize["benchmark"] = o.Benchmark
+	if !IsNil(o.ForceResubmit) {
+		toSerialize["force_resubmit"] = o.ForceResubmit
+	}
 	if !IsNil(o.Labels) {
 		toSerialize["labels"] = o.Labels
 	}
@@ -408,6 +445,7 @@ func (o *InjectionSubmitInjectionReq) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "allow_bootstrap")
 		delete(additionalProperties, "auto_allocate")
 		delete(additionalProperties, "benchmark")
+		delete(additionalProperties, "force_resubmit")
 		delete(additionalProperties, "labels")
 		delete(additionalProperties, "pedestal")
 		delete(additionalProperties, "project_name")

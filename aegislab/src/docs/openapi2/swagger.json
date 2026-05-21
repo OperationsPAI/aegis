@@ -30333,6 +30333,10 @@
                         }
                     ]
                 },
+                "force_resubmit": {
+                    "description": "ForceResubmit, when true, suppresses the engine-config dedup check\neven if a previous batch with the same engine_config is still in a\nnon-terminal task state. Terminal-state previous batches (Completed /\nError / Cancelled) no longer block resubmission — this flag exists\nfor the narrower case where the operator wants to override an in-\nflight run as well.",
+                    "type": "boolean"
+                },
                 "labels": {
                     "description": "Labels to attach to the injection",
                     "type": "array",

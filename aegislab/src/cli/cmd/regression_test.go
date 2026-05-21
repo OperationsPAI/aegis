@@ -225,7 +225,7 @@ func TestRegressionPreflight_MissingReportsFixHint(t *testing.T) {
 		t.Fatal("expected preflight error")
 	}
 	msg := err.Error()
-	wantLine := "preflight: namespace mm0 has no pods matching app=user-service"
+	wantLine := "preflight: namespace mm0 has no pods matching any of: app=user-service, app.kubernetes.io/name=user-service"
 	if !strings.Contains(msg, wantLine) {
 		t.Fatalf("missing preflight line; got: %s", msg)
 	}
@@ -308,7 +308,6 @@ project_name: pair_diagnosis
 submit:
   specs:
     - - chaos_type: PodKill
-        duration: 1
 validation:
   expected_final_event: datapack.result.collection
   required_task_chain:
@@ -355,7 +354,6 @@ project_name: pair_diagnosis
 submit:
   specs:
     - - chaos_type: PodKill
-        duration: 1
 validation:
   expected_final_event: datapack.result.collection
   required_task_chain:
@@ -585,7 +583,6 @@ project_name: pair_diagnosis
 submit:
   specs:
     - - chaos_type: PodKill
-        duration: 1
 validation:
   expected_final_event: datapack.no_anomaly
   required_task_chain:
@@ -719,7 +716,6 @@ submit:
         namespace: otel-demo
         app: frontend
         chaos_type: PodKill
-        duration: 1
 validation:
   timeout_seconds: 5
   min_events: 6
@@ -781,3 +777,188 @@ validation:
 	}
 }
 
+// TestRegressionPreflight_ModernAppLabelKeyFallback verifies that a chart
+// labeling its pods with app.kubernetes.io/name=<svc> (otel-demo and friends)
+// passes preflight even when the operator did not override --app-label-key.
+func TestRegressionPreflight_ModernAppLabelKeyFallback(t *testing.T) {
+	rc := makePreflightCase()
+	lister := &fakePodLister{byNSApp: map[string]int{
+		// Legacy `app=` selector returns zero pods.
+		"mm0|app=user-service":         0,
+		"mm0|app=compose-post-service": 0,
+		// Modern selector matches.
+		"mm0|app.kubernetes.io/name=user-service":         2,
+		"mm0|app.kubernetes.io/name=compose-post-service": 1,
+	}}
+	if err := preflightRegressionCase(context.Background(), rc, lister, nil); err != nil {
+		t.Fatalf("expected preflight to pass via modern label key, got %v", err)
+	}
+}
+
+// TestRegressionPreflight_MissingErrorListsBothSelectors confirms the failure
+// path reports both selectors that were tried so operators see why the
+// fallback also missed.
+func TestRegressionPreflight_MissingErrorListsBothSelectors(t *testing.T) {
+	rc := makePreflightCase()
+	lister := &fakePodLister{byNSApp: map[string]int{}} // every lookup returns 0
+	err := preflightRegressionCase(context.Background(), rc, lister, nil)
+	if err == nil {
+		t.Fatal("expected preflight error")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "app=user-service") || !strings.Contains(msg, "app.kubernetes.io/name=user-service") {
+		t.Fatalf("expected both selectors in error, got: %s", msg)
+	}
+}
+
+func TestOverrideFirstSpecApp(t *testing.T) {
+	rc := makePreflightCase()
+	if err := overrideFirstSpecApp(&rc, "shipping"); err != nil {
+		t.Fatalf("override: %v", err)
+	}
+	groups := rc.Submit["specs"].([]any)
+	first := groups[0].([]any)[0].(map[string]any)
+	if first["app"] != "shipping" {
+		t.Fatalf("expected app=shipping, got %v", first["app"])
+	}
+	// Second spec untouched.
+	second := groups[0].([]any)[1].(map[string]any)
+	if second["app"] != "compose-post-service" {
+		t.Fatalf("expected second spec unchanged, got %v", second["app"])
+	}
+}
+
+func TestRegressionRunWithAppOverride(t *testing.T) {
+	oldServer := flagServer
+	oldToken := flagToken
+	oldProject := flagProject
+	oldOutput := flagOutput
+	oldCasesDir := regressionCasesDir
+	oldCaseFile := regressionCaseFile
+	oldApp := regressionAppOverride
+	oldSkip := regressionSkipPreflight
+	defer func() {
+		flagServer = oldServer
+		flagToken = oldToken
+		flagProject = oldProject
+		flagOutput = oldOutput
+		regressionCasesDir = oldCasesDir
+		regressionCaseFile = oldCaseFile
+		regressionAppOverride = oldApp
+		regressionSkipPreflight = oldSkip
+	}()
+
+	var capturedApp string
+	traceID := "trace-app-override"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/v2/projects":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code": 200, "message": "success",
+				"data": map[string]any{
+					"items":      []map[string]any{{"id": 7, "name": "pair_diagnosis"}},
+					"pagination": map[string]any{"page": 1, "size": 100, "total": 1, "total_pages": 1},
+				},
+			})
+		case r.URL.Path == "/api/v2/projects/7/injections/inject":
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if specs, ok := body["specs"].([]any); ok && len(specs) > 0 {
+				if inner, ok := specs[0].([]any); ok && len(inner) > 0 {
+					if spec, ok := inner[0].(map[string]any); ok {
+						capturedApp, _ = spec["app"].(string)
+					}
+				}
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code": 200, "message": "success",
+				"data": map[string]any{
+					"group_id": "g",
+					"items":    []map[string]any{{"index": 0, "trace_id": traceID, "task_id": "t"}},
+				},
+			})
+		case r.URL.Path == "/api/v2/traces/"+traceID+"/stream":
+			w.Header().Set("Content-Type", "text/event-stream")
+			f, _ := w.(http.Flusher)
+			_, _ = fmt.Fprintf(w, "event: update\ndata: {\"event_name\":\"datapack.no_anomaly\"}\n\n")
+			f.Flush()
+			_, _ = fmt.Fprint(w, "event: end\ndata: done\n\n")
+			f.Flush()
+		case r.URL.Path == "/api/v2/traces/"+traceID:
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code": 200, "message": "success",
+				"data": map[string]any{"trace_id": traceID, "tasks": []map[string]any{{"type": "RestartPedestal"}}},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	casesDir := t.TempDir()
+	casePath := filepath.Join(casesDir, "appx.yaml")
+	if err := os.WriteFile(casePath, []byte(`name: appx
+project_name: pair_diagnosis
+submit:
+  specs:
+    - - chaos_type: PodKill
+        app: quote
+validation:
+  expected_final_event: datapack.no_anomaly
+  required_task_chain:
+    - RestartPedestal
+`), 0o644); err != nil {
+		t.Fatalf("write case: %v", err)
+	}
+
+	flagServer = ts.URL
+	flagToken = ""
+	flagProject = ""
+	flagOutput = "json"
+	regressionCasesDir = casesDir
+	regressionCaseFile = ""
+	regressionAppOverride = "shipping"
+	regressionSkipPreflight = true
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	err := regressionRunCmd.RunE(regressionRunCmd, []string{"appx"})
+	w.Close()
+	os.Stdout = oldStdout
+	_, _ = io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+	if capturedApp != "shipping" {
+		t.Fatalf("expected server to see app=shipping, got %q", capturedApp)
+	}
+}
+
+func TestLoadRegressionCaseRejectsSpecDuration(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "dur.yaml")
+	if err := os.WriteFile(path, []byte(`name: dur
+project_name: pair_diagnosis
+submit:
+  specs:
+    - - chaos_type: PodKill
+        duration: 5
+validation:
+  expected_final_event: datapack.no_anomaly
+  required_task_chain:
+    - RestartPedestal
+`), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	_, _, err := loadRegressionCaseFile(path)
+	if err == nil {
+		t.Fatal("expected duration field to be rejected")
+	}
+	if !strings.Contains(err.Error(), "duration") || !strings.Contains(err.Error(), "FixedAbnormalWindowMinutes") {
+		t.Fatalf("error should mention duration + server pin, got: %v", err)
+	}
+}
