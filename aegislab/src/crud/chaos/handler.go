@@ -531,6 +531,35 @@ func (h *Handler) ListSystemPoints(c *gin.Context) {
 	dto.SuccessResponse(c, out)
 }
 
+// ExportSystemPoints dumps the current chaos_points table for a system as a
+// bundle of PointManifest envelopes the caller can write to disk and feed back
+// through /v1beta/systems/{sys}/points/import.
+//
+//	@Summary		Export chaos Points as PointManifests
+//	@Description	Dump every chaos Point for a system grouped by (service, instance, chart_version). Round-trip safe — pipe the response back through the import endpoint to restore.
+//	@Tags			Chaos
+//	@ID				chaos_export_system_points
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			sys					path		string										true	"System name"
+//	@Param			include_superseded	query		bool										false	"Include status='superseded' rows (default: only 'active')"
+//	@Success		200					{object}	dto.GenericResponse[ChaosExportPointsResp]	"Manifests bundle"
+//	@Failure		400					{object}	dto.GenericResponse[any]					"Invalid request"
+//	@Failure		401					{object}	dto.GenericResponse[any]					"Authentication required"
+//	@Failure		500					{object}	dto.GenericResponse[any]					"Internal server error"
+//	@Router			/v1beta/systems/{sys}/points/export [get]
+//	@x-api-type		{"sdk":"true"}
+func (h *Handler) ExportSystemPoints(c *gin.Context) {
+	sysName := c.Param("sys")
+	includeSuperseded := c.Query("include_superseded") == "true"
+	manifests, err := h.Mgr.ExportSystemPoints(c.Request.Context(), sysName, includeSuperseded)
+	if err != nil {
+		dto.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	dto.SuccessResponse(c, ChaosExportPointsResp{Manifests: manifests})
+}
+
 var manifestEnvelopeSchema = map[string]any{
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"title":   "aegis-chaos PointManifest",

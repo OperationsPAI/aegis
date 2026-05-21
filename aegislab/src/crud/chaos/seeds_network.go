@@ -77,6 +77,13 @@ func networkTargetSchema() JSONMap {
 				"enum":    []any{"to"},
 				"default": "to",
 			},
+			// Optional metadata for groundtruth labelling — the chaos-mesh
+			// CR renderer ignores it. Chart-author manifests can omit it;
+			// the dump tool populates it from observed traces.
+			"span_names": map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
 		},
 	}
 }

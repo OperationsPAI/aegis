@@ -1,12 +1,92 @@
 package handler
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	k8sclient "github.com/OperationsPAI/chaos-experiment/client"
 	"github.com/OperationsPAI/chaos-experiment/internal/resourcelookup"
 	"github.com/OperationsPAI/chaos-experiment/internal/systemconfig"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+// stubChaosPointStore canned chaos_points rows for the groundtruth DB path tests.
+type stubChaosPointStore struct {
+	rows map[string][]resourcelookup.ChaosPointRow
+}
+
+func (s *stubChaosPointStore) QueryPoints(_ context.Context, system string) ([]resourcelookup.ChaosPointRow, error) {
+	return s.rows[system], nil
+}
+
+// TestGetHTTPGroundtruth_DBBackedSurfacesServerAddressAndSpanName pins the
+// regression that prompted the schema widen in this commit: with the
+// DB-backed reader and the old (narrow) chaos_points target JSON, HTTP
+// endpointPair.ServerAddress / .SpanName came back empty and getHTTPGroundtruth
+// produced Service=[source, ""] + Span=[source, ""]. Re-dump now emits both
+// fields and the reader plumbs them through.
+func TestGetHTTPGroundtruth_DBBackedSurfacesServerAddressAndSpanName(t *testing.T) {
+	t.Cleanup(func() {
+		resourcelookup.SetChaosPointStore(nil)
+		resourcelookup.ResetSystemCache(systemconfig.SystemTrainTicket)
+		scheme := runtime.NewScheme()
+		_ = corev1.AddToScheme(scheme)
+		k8sclient.InitWithClient(fake.NewClientBuilder().WithScheme(scheme).Build())
+	})
+
+	resourcelookup.SetChaosPointStore(&stubChaosPointStore{
+		rows: map[string][]resourcelookup.ChaosPointRow{
+			"ts": {{
+				SystemName:     "ts",
+				CapabilityName: "http_response_abort",
+				Target: map[string]any{
+					"app": "ts-user-service", "method": "GET", "path": "/api/users",
+					"port":           float64(8080),
+					"server_address": "ts-auth-service",
+					"span_name":      "GET /api/users",
+				},
+			}},
+		},
+	})
+	resourcelookup.ResetSystemCache(systemconfig.SystemTrainTicket)
+
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("AddToScheme: %v", err)
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "ts-user-service-0", Namespace: "ts0", Labels: map[string]string{"app": "ts-user-service"}},
+			Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "ts-user-service"}}},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "ts-auth-service-0", Namespace: "ts0", Labels: map[string]string{"app": "ts-auth-service"}},
+			Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "ts-auth-service"}}},
+		},
+	).Build()
+	k8sclient.InitWithClient(fakeClient)
+
+	gt, err := getHTTPGroundtruth(context.Background(), systemconfig.SystemTrainTicket, "ts0", 0)
+	if err != nil {
+		t.Fatalf("getHTTPGroundtruth: %v", err)
+	}
+	if len(gt.Service) != 2 {
+		t.Fatalf("want 2 Service entries, got %d: %v", len(gt.Service), gt.Service)
+	}
+	if gt.Service[0] == "" || gt.Service[1] == "" {
+		t.Errorf("both Service entries must be non-empty (regression: DB-backed produced [source, \"\"]), got %v", gt.Service)
+	}
+	if gt.Service[0] != "ts-user-service" || gt.Service[1] != "ts-auth-service" {
+		t.Errorf("Service mismatch: got %v, want [ts-user-service ts-auth-service]", gt.Service)
+	}
+	if len(gt.Span) != 1 || gt.Span[0] != "GET /api/users" {
+		t.Errorf("Span mismatch: got %v, want [GET /api/users]", gt.Span)
+	}
+}
 
 func TestSelectContainerByIndex_EmptyListGivesActionableError(t *testing.T) {
 	// Reproduces the sockshop "max: -1" failure: GetGroundtruth runs at a

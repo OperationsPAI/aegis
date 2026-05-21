@@ -96,10 +96,31 @@ type systemCache struct {
 	dnsEndpoints          []AppDNSPair
 	containerInfo         map[string][]ContainerInfo
 	dbOperations          []AppDatabasePair
+
+	// chaos_points snapshot shared by all DB-backed GetAllX methods so the
+	// first warm-up does one DB hit instead of five.
+	dbSnapshotMu   sync.Mutex
+	dbSnapshotRows []ChaosPointRow
+	dbSnapshotErr  error
+	dbSnapshotOK   bool
 }
 
 func GetSystemCache(system systemconfig.SystemType) *systemCache {
 	return getCacheManager().getSystemCache(system)
+}
+
+// chaosPointSnapshot returns a cached snapshot of chaos_points for this
+// system. The query runs at most once per cache lifetime; the five
+// DB-backed GetAllX methods share the result.
+func (s *systemCache) chaosPointSnapshot(ctx context.Context, store ChaosPointStore) ([]ChaosPointRow, error) {
+	s.dbSnapshotMu.Lock()
+	defer s.dbSnapshotMu.Unlock()
+	if s.dbSnapshotOK {
+		return s.dbSnapshotRows, s.dbSnapshotErr
+	}
+	s.dbSnapshotRows, s.dbSnapshotErr = store.QueryPoints(ctx, string(s.system))
+	s.dbSnapshotOK = true
+	return s.dbSnapshotRows, s.dbSnapshotErr
 }
 
 // ResetSystemCache clears and removes cached lookup data for a system.
@@ -207,6 +228,16 @@ func (s *systemCache) GetAllJVMMethods() ([]AppMethodPair, error) {
 		return s.appMethods, nil
 	}
 
+	if store := getChaosPointStore(); store != nil {
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
+		if err != nil {
+			return nil, err
+		}
+		result := extractJVMMethods(rows)
+		s.appMethods = result
+		return result, nil
+	}
+
 	// Get all service names first
 	services := javaclassmethods.ListAllServiceNames()
 	result := make([]AppMethodPair, 0)
@@ -298,6 +329,16 @@ func (s *systemCache) GetAllHTTPEndpoints() ([]AppEndpointPair, error) {
 		return s.appEndpoints, nil
 	}
 
+	if store := getChaosPointStore(); store != nil {
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
+		if err != nil {
+			return nil, err
+		}
+		result := extractHTTPEndpoints(rows)
+		s.appEndpoints = result
+		return result, nil
+	}
+
 	// Get all service names
 	services := serviceendpoints.GetAllServices()
 	result := make([]AppEndpointPair, 0)
@@ -341,6 +382,16 @@ func (s *systemCache) GetAllHTTPEndpoints() ([]AppEndpointPair, error) {
 func (s *systemCache) GetAllNetworkPairs() ([]AppNetworkPair, error) {
 	if len(s.networkPairs) > 0 {
 		return s.networkPairs, nil
+	}
+
+	if store := getChaosPointStore(); store != nil {
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
+		if err != nil {
+			return nil, err
+		}
+		result := extractNetworkPairs(rows)
+		s.networkPairs = result
+		return result, nil
 	}
 
 	// Get all service-to-service pairs
@@ -396,6 +447,16 @@ func getSpanNamesBetweenServices(sourceService, targetService string) []string {
 func (s *systemCache) GetAllDNSEndpoints() ([]AppDNSPair, error) {
 	if len(s.dnsEndpoints) > 0 {
 		return s.dnsEndpoints, nil
+	}
+
+	if store := getChaosPointStore(); store != nil {
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
+		if err != nil {
+			return nil, err
+		}
+		result := extractDNSEndpoints(rows)
+		s.dnsEndpoints = result
+		return result, nil
 	}
 
 	// Build a set of gRPC-only service pairs (source -> target)
@@ -507,6 +568,16 @@ func buildGRPCOnlyPairs() map[string]bool {
 func (s *systemCache) GetAllDatabaseOperations() ([]AppDatabasePair, error) {
 	if len(s.dbOperations) > 0 {
 		return s.dbOperations, nil
+	}
+
+	if store := getChaosPointStore(); store != nil {
+		rows, err := s.chaosPointSnapshot(context.Background(), store)
+		if err != nil {
+			return nil, err
+		}
+		result := extractDatabaseOperations(rows)
+		s.dbOperations = result
+		return result, nil
 	}
 
 	// Get all service names that have database operations
@@ -681,4 +752,10 @@ func (s *systemCache) InvalidateCache() {
 	s.dnsEndpoints = []AppDNSPair{}
 	s.containerInfo = make(map[string][]ContainerInfo)
 	s.dbOperations = []AppDatabasePair{}
+
+	s.dbSnapshotMu.Lock()
+	s.dbSnapshotRows = nil
+	s.dbSnapshotErr = nil
+	s.dbSnapshotOK = false
+	s.dbSnapshotMu.Unlock()
 }

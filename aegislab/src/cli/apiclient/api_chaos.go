@@ -96,6 +96,21 @@ type ChaosAPI interface {
 	ChaosDeleteInjectionByTaskExecute(r ApiChaosDeleteInjectionByTaskRequest) (*DtoGenericResponseChaosChaosTaskInjectionRef, *http.Response, error)
 
 	/*
+		ChaosExportSystemPoints Export chaos Points as PointManifests
+
+		Dump every chaos Point for a system grouped by (service, instance, chart_version). Round-trip safe — pipe the response back through the import endpoint to restore.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param sys System name
+		@return ApiChaosExportSystemPointsRequest
+	*/
+	ChaosExportSystemPoints(ctx context.Context, sys string) ApiChaosExportSystemPointsRequest
+
+	// ChaosExportSystemPointsExecute executes the request
+	//  @return DtoGenericResponseChaosChaosExportPointsResp
+	ChaosExportSystemPointsExecute(r ApiChaosExportSystemPointsRequest) (*DtoGenericResponseChaosChaosExportPointsResp, *http.Response, error)
+
+	/*
 		ChaosGetCapability Get a chaos capability
 
 		Fetch one Capability entry including target/param/observable schemas.
@@ -1010,6 +1025,166 @@ func (a *ChaosAPIService) ChaosDeleteInjectionByTaskExecute(r ApiChaosDeleteInje
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiChaosExportSystemPointsRequest struct {
+	ctx               context.Context
+	ApiService        ChaosAPI
+	sys               string
+	includeSuperseded *bool
+}
+
+// Include status&#x3D;&#39;superseded&#39; rows (default: only &#39;active&#39;)
+func (r ApiChaosExportSystemPointsRequest) IncludeSuperseded(includeSuperseded bool) ApiChaosExportSystemPointsRequest {
+	r.includeSuperseded = &includeSuperseded
+	return r
+}
+
+func (r ApiChaosExportSystemPointsRequest) Execute() (*DtoGenericResponseChaosChaosExportPointsResp, *http.Response, error) {
+	return r.ApiService.ChaosExportSystemPointsExecute(r)
+}
+
+/*
+ChaosExportSystemPoints Export chaos Points as PointManifests
+
+Dump every chaos Point for a system grouped by (service, instance, chart_version). Round-trip safe — pipe the response back through the import endpoint to restore.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param sys System name
+	@return ApiChaosExportSystemPointsRequest
+*/
+func (a *ChaosAPIService) ChaosExportSystemPoints(ctx context.Context, sys string) ApiChaosExportSystemPointsRequest {
+	return ApiChaosExportSystemPointsRequest{
+		ApiService: a,
+		ctx:        ctx,
+		sys:        sys,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseChaosChaosExportPointsResp
+func (a *ChaosAPIService) ChaosExportSystemPointsExecute(r ApiChaosExportSystemPointsRequest) (*DtoGenericResponseChaosChaosExportPointsResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseChaosChaosExportPointsResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChaosAPIService.ChaosExportSystemPoints")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta/systems/{sys}/points/export"
+	localVarPath = strings.Replace(localVarPath, "{"+"sys"+"}", url.PathEscape(parameterValueToString(r.sys, "sys")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.includeSuperseded != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "include_superseded", r.includeSuperseded, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
 			var v DtoGenericResponseAny
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {

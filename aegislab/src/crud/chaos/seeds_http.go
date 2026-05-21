@@ -85,6 +85,11 @@ var SeedsHTTP = []Capability{
 // required filters: chaos-mesh applies the action to every request
 // matching the {port, method, path} tuple, so omitting them would
 // silently broaden the blast radius beyond what callers intend.
+//
+// server_address and span_name are optional metadata for groundtruth
+// labelling — the chaos-mesh CR renderer ignores them, but the
+// DB-backed resourcelookup surfaces them so groundtruth Service / Span
+// fields stay populated. Chart-author manifests can omit them.
 func httpTargetSchema() JSONMap {
 	return JSONMap{
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",
@@ -99,7 +104,9 @@ func httpTargetSchema() JSONMap {
 				"type": "string",
 				"enum": []any{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"},
 			},
-			"path": map[string]any{"type": "string", "minLength": 1},
+			"path":           map[string]any{"type": "string", "minLength": 1},
+			"server_address": map[string]any{"type": "string"},
+			"span_name":      map[string]any{"type": "string"},
 		},
 	}
 }

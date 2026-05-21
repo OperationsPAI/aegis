@@ -163,6 +163,13 @@ type ChaosListPointsResp struct {
 	Offset int              `json:"offset"`
 }
 
+// ChaosExportPointsResp is the envelope returned by
+// GET /v1beta/systems/{sys}/points/export — one PointManifest per
+// (service, instance, chart_version) tuple, ready to re-import.
+type ChaosExportPointsResp struct {
+	Manifests []PointManifest `json:"manifests"`
+}
+
 // ChaosGuidedResolveReq is the request body for POST /v1beta/guided/resolve.
 // The current GuidedConfig is passed through as-is; the server walks one step
 // of the guided state machine and returns the next required field along with

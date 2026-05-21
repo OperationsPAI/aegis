@@ -629,6 +629,13 @@ definitions:
         example: 0123456789abcdef
         type: string
     type: object
+  chaos.ChaosExportPointsResp:
+    properties:
+      manifests:
+        items:
+          $ref: '#/definitions/chaos.PointManifest'
+        type: array
+    type: object
   chaos.ChaosGuidedApplyNextReq:
     properties:
       current:
@@ -1019,6 +1026,48 @@ definitions:
         type: array
       value:
         type: integer
+    type: object
+  chaos.PointManifest:
+    properties:
+      apiVersion:
+        type: string
+      kind:
+        type: string
+      metadata:
+        $ref: '#/definitions/chaos.PointManifestMetadata'
+      spec:
+        $ref: '#/definitions/chaos.PointManifestSpec'
+    type: object
+  chaos.PointManifestEntry:
+    properties:
+      capability:
+        type: string
+      param_overrides:
+        additionalProperties: {}
+        type: object
+      target:
+        additionalProperties: {}
+        type: object
+    type: object
+  chaos.PointManifestMetadata:
+    properties:
+      chart_version:
+        type: string
+      instance:
+        type: string
+      service:
+        type: string
+      system:
+        type: string
+    type: object
+  chaos.PointManifestSpec:
+    properties:
+      points:
+        items:
+          $ref: '#/definitions/chaos.PointManifestEntry'
+        type: array
+      replace_scope:
+        type: string
     type: object
   chaosprune.PruneCandidate:
     properties:
@@ -3088,6 +3137,22 @@ definitions:
       data:
         allOf:
         - $ref: '#/definitions/chaos.ChaosCapabilityResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaos_ChaosExportPointsResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaos.ChaosExportPointsResp'
         description: Generic type data
       message:
         description: Response message
@@ -22287,6 +22352,48 @@ paths:
       security:
       - BearerAuth: []
       summary: List chaos Points for a system
+      tags:
+      - Chaos
+      x-api-type:
+        sdk: "true"
+  /v1beta/systems/{sys}/points/export:
+    get:
+      description: Dump every chaos Point for a system grouped by (service, instance,
+        chart_version). Round-trip safe — pipe the response back through the import
+        endpoint to restore.
+      operationId: chaos_export_system_points
+      parameters:
+      - description: System name
+        in: path
+        name: sys
+        required: true
+        type: string
+      - description: 'Include status=''superseded'' rows (default: only ''active'')'
+        in: query
+        name: include_superseded
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Manifests bundle
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaos_ChaosExportPointsResp'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Export chaos Points as PointManifests
       tags:
       - Chaos
       x-api-type:

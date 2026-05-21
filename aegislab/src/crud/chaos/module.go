@@ -28,6 +28,7 @@ var Module = fx.Module("chaos",
 	),
 	fx.Invoke(seedCapabilitiesOnStart),
 	fx.Invoke(runReconciler),
+	fx.Invoke(func(db *gorm.DB) { RegisterChaosPointStore(db) }),
 )
 
 // Read directly from the process env rather than via config.GetString:
