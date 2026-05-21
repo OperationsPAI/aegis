@@ -28,7 +28,16 @@ var Module = fx.Module("chaos",
 	),
 	fx.Invoke(seedCapabilitiesOnStart),
 	fx.Invoke(runReconciler),
+	fx.Invoke(registerChaosPointStoreOnStart),
 )
+
+// registerChaosPointStoreOnStart installs the DB-backed chaos_points reader
+// into chaos-experiment's resourcelookup package at boot, so guided walks
+// and groundtruth lookups source from chaos_points instead of the legacy
+// internal/<sys>/* hardcoded maps. Phase A4.
+func registerChaosPointStoreOnStart(db *gorm.DB) {
+	RegisterChaosPointStore(db)
+}
 
 // Read directly from the process env rather than via config.GetString:
 // the chart wires these as bare env vars (helm/charts/chaos/templates/

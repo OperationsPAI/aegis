@@ -102,6 +102,25 @@ func GetSystemCache(system systemconfig.SystemType) *systemCache {
 	return getCacheManager().getSystemCache(system)
 }
 
+// NewSystemCache returns a systemCache for the given system. When store is
+// non-nil it is installed as the process-wide ChaosPointStore so subsequent
+// GetSystemCache calls (and the methods on this returned cache) source
+// metadata from chaos_points instead of the static internal/<sys>/* maps.
+//
+// Passing a nil store leaves the existing store untouched (caller-friendly
+// "give me a cache without binding a store").
+//
+// Note on SetCurrentSystem: when a store is wired in, the per-query system
+// parameter is what matters; the process-wide systemconfig.GetCurrentSystem
+// becomes informational only (still used by safeContainers + a handful of
+// MetadataStore.GetAllServiceNames fallback paths).
+func NewSystemCache(store ChaosPointStore, system systemconfig.SystemType) *systemCache {
+	if store != nil {
+		SetChaosPointStore(store)
+	}
+	return GetSystemCache(system)
+}
+
 // ResetSystemCache clears and removes cached lookup data for a system.
 func ResetSystemCache(system systemconfig.SystemType) {
 	cm := getCacheManager()
@@ -207,6 +226,16 @@ func (s *systemCache) GetAllJVMMethods() ([]AppMethodPair, error) {
 		return s.appMethods, nil
 	}
 
+	if store := getChaosPointStore(); store != nil {
+		r := &dbMetadataReader{store: store, system: string(s.system)}
+		result, err := r.jvmMethods(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		s.appMethods = result
+		return result, nil
+	}
+
 	// Get all service names first
 	services := javaclassmethods.ListAllServiceNames()
 	result := make([]AppMethodPair, 0)
@@ -298,6 +327,16 @@ func (s *systemCache) GetAllHTTPEndpoints() ([]AppEndpointPair, error) {
 		return s.appEndpoints, nil
 	}
 
+	if store := getChaosPointStore(); store != nil {
+		r := &dbMetadataReader{store: store, system: string(s.system)}
+		result, err := r.httpEndpoints(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		s.appEndpoints = result
+		return result, nil
+	}
+
 	// Get all service names
 	services := serviceendpoints.GetAllServices()
 	result := make([]AppEndpointPair, 0)
@@ -341,6 +380,21 @@ func (s *systemCache) GetAllHTTPEndpoints() ([]AppEndpointPair, error) {
 func (s *systemCache) GetAllNetworkPairs() ([]AppNetworkPair, error) {
 	if len(s.networkPairs) > 0 {
 		return s.networkPairs, nil
+	}
+
+	if store := getChaosPointStore(); store != nil {
+		r := &dbMetadataReader{store: store, system: string(s.system)}
+		result, err := r.networkPairs(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		// span_names are intentionally empty when sourced from chaos_points:
+		// the in-memory derivation walked service endpoints to find matching
+		// spans, but chaos_points stores network points without span detail.
+		// Consumers that need span names should fall back to per-endpoint
+		// lookups; current callers (preview/groundtruth) tolerate empty.
+		s.networkPairs = result
+		return result, nil
 	}
 
 	// Get all service-to-service pairs
@@ -396,6 +450,16 @@ func getSpanNamesBetweenServices(sourceService, targetService string) []string {
 func (s *systemCache) GetAllDNSEndpoints() ([]AppDNSPair, error) {
 	if len(s.dnsEndpoints) > 0 {
 		return s.dnsEndpoints, nil
+	}
+
+	if store := getChaosPointStore(); store != nil {
+		r := &dbMetadataReader{store: store, system: string(s.system)}
+		result, err := r.dnsEndpoints(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		s.dnsEndpoints = result
+		return result, nil
 	}
 
 	// Build a set of gRPC-only service pairs (source -> target)
@@ -507,6 +571,16 @@ func buildGRPCOnlyPairs() map[string]bool {
 func (s *systemCache) GetAllDatabaseOperations() ([]AppDatabasePair, error) {
 	if len(s.dbOperations) > 0 {
 		return s.dbOperations, nil
+	}
+
+	if store := getChaosPointStore(); store != nil {
+		r := &dbMetadataReader{store: store, system: string(s.system)}
+		result, err := r.databaseOperations(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		s.dbOperations = result
+		return result, nil
 	}
 
 	// Get all service names that have database operations
