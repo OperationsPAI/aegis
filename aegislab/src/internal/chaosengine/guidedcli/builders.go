@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"aegis/internal/chaosengine/handler"
 	"aegis/platform/k8s/resourcelookup"
 	"aegis/platform/systemconfig"
 )
@@ -877,10 +876,10 @@ func replaceMethodCode(systemType systemconfig.SystemType, cfg GuidedConfig) (in
 
 	for _, endpoint := range endpoints {
 		if endpoint.AppName == cfg.App && endpoint.Route == cfg.Route && endpoint.Method == cfg.HTTPMethod {
-			filtered := handler.GetFilteredHTTPMethods(endpoint.Method)
+			filtered := GetFilteredHTTPMethods(endpoint.Method)
 			targetMethod := strings.ToUpper(cfg.ReplaceMethod)
 			for idx, method := range filtered {
-				if handler.GetHTTPMethodName(method) == targetMethod {
+				if GetHTTPMethodName(method) == targetMethod {
 					return idx, nil
 				}
 			}
