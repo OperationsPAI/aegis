@@ -624,8 +624,8 @@ func decodeTaskPayload(t *model.Task) (map[string]any, error) {
 }
 
 // maxGuidedDurationMinutes returns the largest guided_configs[i].Duration in
-// the FaultInjection task's payload, in minutes. Defaults to 5 (the
-// chaos-experiment guided default) if no duration is present.
+// the FaultInjection task's payload, in minutes. Defaults to 5 (the guided
+// default) if no duration is present.
 func maxGuidedDurationMinutes(payload map[string]any) int {
 	configs, err := utils.ConvertToType[[]guidedcli.GuidedConfig](payload[consts.InjectGuidedConfigs])
 	if err != nil {

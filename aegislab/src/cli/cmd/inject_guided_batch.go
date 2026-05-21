@@ -13,9 +13,7 @@ import (
 // guidedBatchFile is the on-disk schema for staged guided configs that will
 // be submitted as a single parallel batch via `aegisctl inject guided
 // --apply --batch`. It is independent of guidedcli's session yaml so that
-// staging does not perturb the working session state, and so that one stage
-// file can be edited or shared without reaching into chaos-experiment's
-// config layout.
+// staging does not perturb the working session state.
 type guidedBatchFile struct {
 	Version     int                      `yaml:"version"`
 	StagedSpecs []guidedcli.GuidedConfig `yaml:"staged_specs"`

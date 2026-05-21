@@ -263,12 +263,10 @@ func (s *Service) removeDuplicated(items []injectionProcessItem, forceResubmit b
 // parseBatchGuidedSpecs parses a single batch of GuidedConfig specs for
 // parallel execution. Each spec contributes its duration to the batch max,
 // its system to the pedestal sanity check, and its app to the cross-spec
-// duplicate-service warning. The previous in-process BuildInjection call
-// (which round-tripped through chaos-experiment's resourcelookup) is gone:
-// chaos-service owns the real builder now and runs it at execute time. The
-// dispatcher's renderGroundtruths uses the same `[]string{cfg.App}` shape, so
-// keeping the dedup check on cfg.App is consistent with what actually gets
-// persisted as ground_truth.
+// duplicate-service warning. The chaos-service owns the real builder and runs
+// it at execute time; the dispatcher's renderGroundtruths uses the same
+// `[]string{cfg.App}` shape, so keeping the dedup check on cfg.App is
+// consistent with what actually gets persisted as ground_truth.
 func parseBatchGuidedSpecs(_ context.Context, pedestal string, batchIndex int, configs []guidedcli.GuidedConfig) (*injectionProcessItem, string, error) {
 	if len(configs) == 0 {
 		return nil, "", fmt.Errorf("empty guided fault batch at index %d", batchIndex)

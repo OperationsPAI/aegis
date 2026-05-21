@@ -225,7 +225,7 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 	}
 
 	// Publish every value to etcd. The consumer watcher reconciles the
-	// chaos-experiment registry on status/ns_pattern events.
+	// chaos-service registry on status/ns_pattern events.
 	for _, field := range allSystemFields() {
 		if err := s.publishKey(ctx, systemKey(name, field), defaults[field]); err != nil {
 			return nil, fmt.Errorf("failed to publish %s to etcd: %w", field, err)
@@ -455,8 +455,8 @@ func (s *Service) EnsureCountForNamespace(ctx context.Context, systemName, names
 
 // DeleteSystem marks the system as disabled/deleted by setting its etcd
 // `status` key to CommonDeleted. The consumer watcher sees the transition
-// and unregisters the system from chaos-experiment. Builtin systems cannot
-// be deleted.
+// and unregisters the system from the chaos-service registry. Builtin
+// systems cannot be deleted.
 func (s *Service) DeleteSystem(ctx context.Context, id int) error {
 	view, err := s.lookupByID(id)
 	if err != nil {
@@ -597,7 +597,7 @@ func (s *Service) ListPrerequisites(_ context.Context, name string) ([]SystemPre
 //
 // Existence of the system is checked before the enumeration so callers get
 // a clean 404 for an unknown short code instead of an opaque "system X is
-// not registered" error coming from chaos-experiment.
+// not registered" error from the chaos-service registry.
 func (s *Service) ListInjectCandidates(ctx context.Context, name, namespace string) (*InjectCandidatesResp, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {

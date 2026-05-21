@@ -10,9 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Local YAML I/O for the aegisctl `inject guided` session file. Inlined from
-// the (former) chaos-experiment pkg/guidedcli helpers so aegislab no longer
-// depends on that module just to read/write its own session state.
+// Local YAML I/O for the aegisctl `inject guided` session file.
 
 func defaultGuidedConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
@@ -94,9 +92,9 @@ func saveGuidedConfigFile(path string, cfg *chaos.ConfigFile, snapshot chaos.Gui
 	return nil
 }
 
-// mergeGuidedConfig overlays cliCfg onto the saved session config. Mirrors the
-// chaos-experiment MergeConfig semantics: a non-empty CLI flag overrides the
-// saved value, and changing a key that's higher up the discovery tree
+// mergeGuidedConfig overlays cliCfg onto the saved session config: a non-empty
+// CLI flag overrides the saved value, and changing a key that's higher up the
+// discovery tree
 // (system / app / chaos_type / class+method / route+http_method /
 // database+table+operation) clears the dependent fields below it so partial
 // overrides don't leave stale selections behind.
