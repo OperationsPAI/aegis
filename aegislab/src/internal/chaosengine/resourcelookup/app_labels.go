@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	"aegis/internal/chaosengine/client"
+	"aegis/platform/k8s/chaosclient"
 	"aegis/platform/systemconfig"
 )
 
@@ -16,7 +16,7 @@ import (
 // PodKill / PodFailure / CPUStress legitimately target those pods.
 func GetInjectableAppLabels(ctx context.Context, system systemconfig.SystemType, namespace string) ([]string, error) {
 	labelKey := systemconfig.GetAppLabelKey(system)
-	labels, err := client.GetLabels(ctx, namespace, labelKey)
+	labels, err := chaosclient.GetLabels(ctx, namespace, labelKey)
 	if err != nil || len(labels) == 0 {
 		fallback, fallbackErr := systemconfig.GetMetadataStore().GetAllServiceNames(string(system))
 		if len(fallback) == 0 {
