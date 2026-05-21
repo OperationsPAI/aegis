@@ -39,8 +39,6 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 15
           env:
-            - name: GOPRIVATE
-              value: {{ .Values.env.GOPRIVATE | quote }}
             - name: ENV
               value: {{ .Values.env.ENV | quote }}
             - name: AEGIS_JWT_SECRET

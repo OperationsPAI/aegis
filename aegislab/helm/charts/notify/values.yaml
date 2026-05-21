@@ -38,7 +38,6 @@ configMap:
 # Literal env-var values injected into the container.
 env:
   ENV: "prod"
-  GOPRIVATE: "github.com/OperationsPAI/chaos-experiment"
 
 # SSO client-side wiring.
 ssoClient:
