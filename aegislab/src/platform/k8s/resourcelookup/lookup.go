@@ -15,8 +15,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"aegis/internal/chaosengine/client"
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/k8s/chaosclient"
+	"aegis/platform/systemconfig"
 )
 
 // chaosPointsCacheTotal counts hit/miss against the per-system chaos_points
@@ -209,7 +209,7 @@ func (s *systemCache) GetAllAppLabels(ctx context.Context, namespace string, key
 		return labels, nil
 	}
 
-	labels, err := client.GetLabels(ctx, namespace, key)
+	labels, err := chaosclient.GetLabels(ctx, namespace, key)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func (s *systemCache) GetAllContainers(ctx context.Context, namespace string) ([
 		}
 	}
 
-	containers, err := client.GetContainersWithAppLabel(ctx, namespace, systemconfig.GetAppLabelKey(s.system))
+	containers, err := chaosclient.GetContainersWithAppLabel(ctx, namespace, systemconfig.GetAppLabelKey(s.system))
 	if err != nil {
 		return nil, err
 	}

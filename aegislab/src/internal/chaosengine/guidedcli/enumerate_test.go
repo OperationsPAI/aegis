@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"aegis/internal/chaosengine/resourcelookup"
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/k8s/resourcelookup"
+	"aegis/platform/systemconfig"
 )
 
 // installEnumerateFixture rewires the package-level hooks to a tiny

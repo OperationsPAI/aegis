@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/systemconfig"
 )
 
 type SystemType systemconfig.SystemType

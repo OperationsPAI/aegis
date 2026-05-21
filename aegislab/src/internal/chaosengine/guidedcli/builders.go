@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"aegis/internal/chaosengine/handler"
-	"aegis/internal/chaosengine/resourcelookup"
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/k8s/resourcelookup"
+	"aegis/platform/systemconfig"
 )
 
 func buildPodKill(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (map[string]any, error) {

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"aegis/internal/chaosengine/handler"
-	"aegis/internal/chaosengine/resourcelookup"
-	"aegis/internal/chaosengine/systemconfig"
+	"aegis/platform/k8s/resourcelookup"
+	"aegis/platform/systemconfig"
 )
 
 const defaultDurationMinutes = 5

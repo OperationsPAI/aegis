@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gorm.io/gorm"
 
-	"aegis/internal/chaosengine/chaosmeta"
+	"aegis/crud/chaos/chaosmeta"
 )
 
 // chaos_points DB-read instrumentation. Histogram buckets cover the 1ms-1s
