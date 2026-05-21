@@ -12,55 +12,55 @@ spec:
       target:
         app: "review-storage-service"
         container: "review-storage-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "review-storage-service"
         container: "review-storage-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "review-storage-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/ReviewStorageService/ReadReviews"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "review-storage-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/ReviewStorageService/StoreReview"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "review-storage-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/ReviewStorageService/ReadReviews"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "review-storage-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/ReviewStorageService/StoreReview"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "review-storage-service"
         container: "review-storage-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "review-storage-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "review-storage-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "review-storage-service"
         container: "review-storage-service"
-        namespace: "media-microsvc"
+        namespace: "media"

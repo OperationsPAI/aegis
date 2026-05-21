@@ -12,55 +12,55 @@ spec:
       target:
         app: "reservation"
         container: "reservation"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "cpu_stress"
       target:
         app: "reservation"
         container: "reservation"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "http_request_abort"
       target:
         app: "reservation"
         method: "POST"
-        namespace: "hotel-reservation"
+        namespace: "hs"
         path: "/reservation.Reservation/CheckAvailability"
         port: 8087
     - capability: "http_request_abort"
       target:
         app: "reservation"
         method: "POST"
-        namespace: "hotel-reservation"
+        namespace: "hs"
         path: "/reservation.Reservation/MakeReservation"
         port: 8087
     - capability: "http_request_delay"
       target:
         app: "reservation"
         method: "POST"
-        namespace: "hotel-reservation"
+        namespace: "hs"
         path: "/reservation.Reservation/CheckAvailability"
         port: 8087
     - capability: "http_request_delay"
       target:
         app: "reservation"
         method: "POST"
-        namespace: "hotel-reservation"
+        namespace: "hs"
         path: "/reservation.Reservation/MakeReservation"
         port: 8087
     - capability: "memory_stress"
       target:
         app: "reservation"
         container: "reservation"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "pod_failure"
       target:
         app: "reservation"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "pod_kill"
       target:
         app: "reservation"
-        namespace: "hotel-reservation"
+        namespace: "hs"
     - capability: "time_skew"
       target:
         app: "reservation"
         container: "reservation"
-        namespace: "hotel-reservation"
+        namespace: "hs"

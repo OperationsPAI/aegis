@@ -12,41 +12,41 @@ spec:
       target:
         app: "user-service"
         container: "user-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "user-service"
         container: "user-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "user-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/UserService/RegisterUser"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "user-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/UserService/RegisterUser"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "user-service"
         container: "user-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "user-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "user-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "user-service"
         container: "user-service"
-        namespace: "media-microsvc"
+        namespace: "media"

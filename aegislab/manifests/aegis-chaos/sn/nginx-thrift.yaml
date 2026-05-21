@@ -12,111 +12,111 @@ spec:
       target:
         app: "nginx-thrift"
         container: "nginx-thrift"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "cpu_stress"
       target:
         app: "nginx-thrift"
         container: "nginx-thrift"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
         method: "GET"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/home-timeline/read"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
         method: "GET"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user-timeline/read"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/post/compose"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user/follow"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user/register"
         port: 9090
     - capability: "http_request_abort"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user/unfollow"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
         method: "GET"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/home-timeline/read"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
         method: "GET"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user-timeline/read"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/post/compose"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user/follow"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user/register"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "nginx-thrift"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/wrk2-api/user/unfollow"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "nginx-thrift"
         container: "nginx-thrift"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "nginx-thrift"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_kill"
       target:
         app: "nginx-thrift"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "time_skew"
       target:
         app: "nginx-thrift"
         container: "nginx-thrift"
-        namespace: "social-network"
+        namespace: "sn"

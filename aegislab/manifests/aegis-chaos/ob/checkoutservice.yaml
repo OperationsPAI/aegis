@@ -12,153 +12,153 @@ spec:
       target:
         app: "checkoutservice"
         container: "checkoutservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "cpu_stress"
       target:
         app: "checkoutservice"
         container: "checkoutservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/EmptyCart"
         port: 7070
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
     - capability: "http_request_abort"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ShippingService/ShipOrder"
         port: 50051
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/EmptyCart"
         port: 7070
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CartService/GetCart"
         port: 7070
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CheckoutService/PlaceOrder"
         port: 5050
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.CurrencyService/Convert"
         port: 7000
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.EmailService/SendOrderConfirmation"
         port: 5000
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ProductCatalogService/GetProduct"
         port: 3550
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ShippingService/GetQuote"
         port: 50051
     - capability: "http_request_delay"
       target:
         app: "checkoutservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.ShippingService/ShipOrder"
         port: 50051
     - capability: "memory_stress"
       target:
         app: "checkoutservice"
         container: "checkoutservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "checkoutservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_kill"
       target:
         app: "checkoutservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "time_skew"
       target:
         app: "checkoutservice"
         container: "checkoutservice"
-        namespace: "online-boutique"
+        namespace: "ob"

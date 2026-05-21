@@ -12,41 +12,41 @@ spec:
       target:
         app: "user-mention-service"
         container: "user-mention-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "cpu_stress"
       target:
         app: "user-mention-service"
         container: "user-mention-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "http_request_abort"
       target:
         app: "user-mention-service"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/UserMentionService/ComposeUserMentions"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "user-mention-service"
         method: "POST"
-        namespace: "social-network"
+        namespace: "sn"
         path: "/UserMentionService/ComposeUserMentions"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "user-mention-service"
         container: "user-mention-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_failure"
       target:
         app: "user-mention-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "pod_kill"
       target:
         app: "user-mention-service"
-        namespace: "social-network"
+        namespace: "sn"
     - capability: "time_skew"
       target:
         app: "user-mention-service"
         container: "user-mention-service"
-        namespace: "social-network"
+        namespace: "sn"

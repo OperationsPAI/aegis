@@ -12,41 +12,41 @@ spec:
       target:
         app: "rating-service"
         container: "rating-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "rating-service"
         container: "rating-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "rating-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/RatingService/UploadRating"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "rating-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/RatingService/UploadRating"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "rating-service"
         container: "rating-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "rating-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "rating-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "rating-service"
         container: "rating-service"
-        namespace: "media-microsvc"
+        namespace: "media"

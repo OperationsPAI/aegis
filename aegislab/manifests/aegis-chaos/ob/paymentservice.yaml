@@ -12,41 +12,41 @@ spec:
       target:
         app: "paymentservice"
         container: "paymentservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "cpu_stress"
       target:
         app: "paymentservice"
         container: "paymentservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "http_request_abort"
       target:
         app: "paymentservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
     - capability: "http_request_delay"
       target:
         app: "paymentservice"
         method: "POST"
-        namespace: "online-boutique"
+        namespace: "ob"
         path: "/hipstershop.PaymentService/Charge"
         port: 50051
     - capability: "memory_stress"
       target:
         app: "paymentservice"
         container: "paymentservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_failure"
       target:
         app: "paymentservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "pod_kill"
       target:
         app: "paymentservice"
-        namespace: "online-boutique"
+        namespace: "ob"
     - capability: "time_skew"
       target:
         app: "paymentservice"
         container: "paymentservice"
-        namespace: "online-boutique"
+        namespace: "ob"

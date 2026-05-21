@@ -12,41 +12,41 @@ spec:
       target:
         app: "user-review-service"
         container: "user-review-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "cpu_stress"
       target:
         app: "user-review-service"
         container: "user-review-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "http_request_abort"
       target:
         app: "user-review-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/UserReviewService/UploadUserReview"
         port: 9090
     - capability: "http_request_delay"
       target:
         app: "user-review-service"
         method: "POST"
-        namespace: "media-microsvc"
+        namespace: "media"
         path: "/UserReviewService/UploadUserReview"
         port: 9090
     - capability: "memory_stress"
       target:
         app: "user-review-service"
         container: "user-review-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_failure"
       target:
         app: "user-review-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "pod_kill"
       target:
         app: "user-review-service"
-        namespace: "media-microsvc"
+        namespace: "media"
     - capability: "time_skew"
       target:
         app: "user-review-service"
         container: "user-review-service"
-        namespace: "media-microsvc"
+        namespace: "media"

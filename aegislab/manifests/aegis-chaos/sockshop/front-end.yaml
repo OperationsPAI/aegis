@@ -12,461 +12,461 @@ spec:
       target:
         app: "front-end"
         container: "front-end"
-        namespace: "sock-shop"
+        namespace: "sockshop"
     - capability: "cpu_stress"
       target:
         app: "front-end"
         container: "front-end"
-        namespace: "sock-shop"
+        namespace: "sockshop"
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "DELETE"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cart"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "DELETE"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/basket.html"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cart"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*/merge"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue*"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/*"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images*"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/WAT.jpg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/bit_of_leg_1.jpeg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/catsocks.jpg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/classic.jpg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/colourful_socks.jpg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/cross_1.jpeg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/holy_1.jpeg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/puma_1.jpeg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/youtube_1.jpeg"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/category.html"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/customers/*/addresses"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/customers/*/cards"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/customers/*"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/detail.html"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/login"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/addresses"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cards"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cart"
         port: 8079
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
     - capability: "http_request_abort"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/orders"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "DELETE"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cart"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "DELETE"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/basket.html"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cart"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*/merge"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue*"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/*"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images*"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/WAT.jpg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/bit_of_leg_1.jpeg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/catsocks.jpg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/classic.jpg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/colourful_socks.jpg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/cross_1.jpeg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/holy_1.jpeg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/puma_1.jpeg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue/images/youtube_1.jpeg"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/catalogue"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/category.html"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/customers/*/addresses"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/customers/*/cards"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/customers/*"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/detail.html"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "GET"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/login"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/addresses"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cards"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/cart"
         port: 8079
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/carts/*/items"
         port: 80
     - capability: "http_request_delay"
       target:
         app: "front-end"
         method: "POST"
-        namespace: "sock-shop"
+        namespace: "sockshop"
         path: "/orders"
         port: 80
     - capability: "memory_stress"
       target:
         app: "front-end"
         container: "front-end"
-        namespace: "sock-shop"
+        namespace: "sockshop"
     - capability: "pod_failure"
       target:
         app: "front-end"
-        namespace: "sock-shop"
+        namespace: "sockshop"
     - capability: "pod_kill"
       target:
         app: "front-end"
-        namespace: "sock-shop"
+        namespace: "sockshop"
     - capability: "time_skew"
       target:
         app: "front-end"
         container: "front-end"
-        namespace: "sock-shop"
+        namespace: "sockshop"
