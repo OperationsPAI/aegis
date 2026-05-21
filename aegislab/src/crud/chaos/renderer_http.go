@@ -33,8 +33,6 @@ var httpChaosGVR = schema.GroupVersionResource{
 	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: "httpchaos",
 }
 
-// ChaosMeshGroupVersionResourceForHTTPChaos exposes the HTTPChaos GVR
-// for out-of-package callers (notably the conformance harness).
 func ChaosMeshGroupVersionResourceForHTTPChaos() schema.GroupVersionResource {
 	return httpChaosGVR
 }

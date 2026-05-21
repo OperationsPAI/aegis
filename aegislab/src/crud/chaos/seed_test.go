@@ -7,8 +7,6 @@ import (
 // TestPodKillSeedShape locks in the structural shape of the pod_kill
 // seed: it MUST exist, be `stable` per §11 step 1, have a target schema
 // requiring namespace+app, and a param schema that admits duration_s.
-// Regressions here would silently break the conformance harness and the
-// Chaos-Mesh executor wiring.
 func TestPodKillSeedShape(t *testing.T) {
 	ts := podKillTargetSchema()
 	props, ok := ts["properties"].(map[string]any)

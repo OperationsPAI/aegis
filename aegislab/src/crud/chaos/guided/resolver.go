@@ -1025,11 +1025,10 @@ func replaceMethodOptions(systemType systemconfig.SystemType, cfg GuidedConfig) 
 	}
 	for _, endpoint := range endpoints {
 		if endpoint.Route == cfg.Route && endpoint.Method == cfg.HTTPMethod {
-			methods := GetFilteredHTTPMethods(endpoint.Method)
+			methods := filteredHTTPMethods(endpoint.Method)
 			options := make([]FieldOption, 0, len(methods))
 			for _, method := range methods {
-				name := GetHTTPMethodName(method)
-				options = append(options, FieldOption{Value: strings.ToUpper(name), Label: strings.ToUpper(name)})
+				options = append(options, FieldOption{Value: method, Label: method})
 			}
 			return options, nil
 		}
