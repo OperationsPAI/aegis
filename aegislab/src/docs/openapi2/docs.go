@@ -20724,7 +20724,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "current": {
-                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                    "$ref": "#/definitions/chaos.GuidedConfig"
                 },
                 "value": {
                     "type": "string"
@@ -20735,7 +20735,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "config": {
-                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                    "$ref": "#/definitions/chaos.GuidedConfig"
                 }
             }
         },
@@ -20743,7 +20743,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "config": {
-                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                    "$ref": "#/definitions/chaos.GuidedConfig"
                 }
             }
         },
@@ -20758,7 +20758,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "config": {
-                    "$ref": "#/definitions/guidedcli.GuidedConfig"
+                    "$ref": "#/definitions/chaos.GuidedConfig"
                 },
                 "errors": {
                     "type": "array",
@@ -20776,11 +20776,11 @@ const docTemplate = `{
                 "next": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/guidedcli.FieldSpec"
+                        "$ref": "#/definitions/chaos.FieldSpec"
                     }
                 },
                 "preview": {
-                    "$ref": "#/definitions/guidedcli.Preview"
+                    "$ref": "#/definitions/chaos.Preview"
                 },
                 "resolved": {
                     "type": "object",
@@ -21060,7 +21060,7 @@ const docTemplate = `{
                 "candidates": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/guidedcli.GuidedConfig"
+                        "$ref": "#/definitions/chaos.GuidedConfig"
                     }
                 },
                 "namespace": {
@@ -21205,6 +21205,74 @@ const docTemplate = `{
                 "JVMRuntimeMutator"
             ]
         },
+        "chaos.FieldOption": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "chaos.FieldSpec": {
+            "type": "object",
+            "properties": {
+                "default": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/chaos.FieldSpec"
+                    }
+                },
+                "key_fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "max": {
+                    "type": "integer"
+                },
+                "min": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/chaos.FieldOption"
+                    }
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "step": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "chaos.Groundtruth": {
             "type": "object",
             "properties": {
@@ -21243,6 +21311,140 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "chaos.GuidedConfig": {
+            "type": "object",
+            "properties": {
+                "app": {
+                    "type": "string"
+                },
+                "body_type": {
+                    "type": "string"
+                },
+                "buffer": {
+                    "type": "integer"
+                },
+                "chaos_type": {
+                    "type": "string"
+                },
+                "class": {
+                    "type": "string"
+                },
+                "container": {
+                    "type": "string"
+                },
+                "correlation": {
+                    "type": "integer"
+                },
+                "corrupt": {
+                    "type": "integer"
+                },
+                "cpu_count": {
+                    "type": "integer"
+                },
+                "cpu_load": {
+                    "type": "integer"
+                },
+                "cpu_worker": {
+                    "type": "integer"
+                },
+                "database": {
+                    "type": "string"
+                },
+                "delay_duration": {
+                    "type": "integer"
+                },
+                "direction": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "duplicate": {
+                    "type": "integer"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "exception_opt": {
+                    "type": "string"
+                },
+                "http_method": {
+                    "type": "string"
+                },
+                "jitter": {
+                    "type": "integer"
+                },
+                "latency": {
+                    "type": "integer"
+                },
+                "latency_duration": {
+                    "type": "integer"
+                },
+                "latency_ms": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "loss": {
+                    "type": "integer"
+                },
+                "mem_type": {
+                    "type": "string"
+                },
+                "mem_worker": {
+                    "type": "integer"
+                },
+                "memory_size": {
+                    "type": "integer"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "mutator_config": {
+                    "type": "string"
+                },
+                "namespace": {
+                    "type": "string"
+                },
+                "operation": {
+                    "type": "string"
+                },
+                "rate": {
+                    "type": "integer"
+                },
+                "replace_method": {
+                    "type": "string"
+                },
+                "return_type": {
+                    "type": "string"
+                },
+                "return_value_opt": {
+                    "type": "string"
+                },
+                "route": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "system": {
+                    "type": "string"
+                },
+                "system_type": {
+                    "type": "string"
+                },
+                "table": {
+                    "type": "string"
+                },
+                "target_service": {
+                    "type": "string"
+                },
+                "time_offset": {
+                    "type": "integer"
                 }
             }
         },
@@ -21333,6 +21535,23 @@ const docTemplate = `{
                 },
                 "replace_scope": {
                     "type": "string"
+                }
+            }
+        },
+        "chaos.Preview": {
+            "type": "object",
+            "properties": {
+                "display_config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "groundtruth": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "resource_summary": {
+                    "type": "object",
+                    "additionalProperties": {}
                 }
             }
         },
@@ -29058,225 +29277,6 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
-                }
-            }
-        },
-        "guidedcli.FieldOption": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "label": {
-                    "type": "string"
-                },
-                "metadata": {
-                    "type": "object",
-                    "additionalProperties": {}
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "guidedcli.FieldSpec": {
-            "type": "object",
-            "properties": {
-                "default": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "fields": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/guidedcli.FieldSpec"
-                    }
-                },
-                "key_fields": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "kind": {
-                    "type": "string"
-                },
-                "max": {
-                    "type": "integer"
-                },
-                "min": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "options": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/guidedcli.FieldOption"
-                    }
-                },
-                "required": {
-                    "type": "boolean"
-                },
-                "step": {
-                    "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
-                }
-            }
-        },
-        "guidedcli.GuidedConfig": {
-            "type": "object",
-            "properties": {
-                "app": {
-                    "type": "string"
-                },
-                "body_type": {
-                    "type": "string"
-                },
-                "buffer": {
-                    "type": "integer"
-                },
-                "chaos_type": {
-                    "type": "string"
-                },
-                "class": {
-                    "type": "string"
-                },
-                "container": {
-                    "type": "string"
-                },
-                "correlation": {
-                    "type": "integer"
-                },
-                "corrupt": {
-                    "type": "integer"
-                },
-                "cpu_count": {
-                    "type": "integer"
-                },
-                "cpu_load": {
-                    "type": "integer"
-                },
-                "cpu_worker": {
-                    "type": "integer"
-                },
-                "database": {
-                    "type": "string"
-                },
-                "delay_duration": {
-                    "type": "integer"
-                },
-                "direction": {
-                    "type": "string"
-                },
-                "domain": {
-                    "type": "string"
-                },
-                "duplicate": {
-                    "type": "integer"
-                },
-                "duration": {
-                    "type": "integer"
-                },
-                "exception_opt": {
-                    "type": "string"
-                },
-                "http_method": {
-                    "type": "string"
-                },
-                "jitter": {
-                    "type": "integer"
-                },
-                "latency": {
-                    "type": "integer"
-                },
-                "latency_duration": {
-                    "type": "integer"
-                },
-                "latency_ms": {
-                    "type": "integer"
-                },
-                "limit": {
-                    "type": "integer"
-                },
-                "loss": {
-                    "type": "integer"
-                },
-                "mem_type": {
-                    "type": "string"
-                },
-                "mem_worker": {
-                    "type": "integer"
-                },
-                "memory_size": {
-                    "type": "integer"
-                },
-                "method": {
-                    "type": "string"
-                },
-                "mutator_config": {
-                    "type": "string"
-                },
-                "namespace": {
-                    "type": "string"
-                },
-                "operation": {
-                    "type": "string"
-                },
-                "rate": {
-                    "type": "integer"
-                },
-                "replace_method": {
-                    "type": "string"
-                },
-                "return_type": {
-                    "type": "string"
-                },
-                "return_value_opt": {
-                    "type": "string"
-                },
-                "route": {
-                    "type": "string"
-                },
-                "status_code": {
-                    "type": "integer"
-                },
-                "system": {
-                    "type": "string"
-                },
-                "system_type": {
-                    "type": "string"
-                },
-                "table": {
-                    "type": "string"
-                },
-                "target_service": {
-                    "type": "string"
-                },
-                "time_offset": {
-                    "type": "integer"
-                }
-            }
-        },
-        "guidedcli.Preview": {
-            "type": "object",
-            "properties": {
-                "display_config": {
-                    "type": "object",
-                    "additionalProperties": {}
-                },
-                "groundtruth": {
-                    "type": "object",
-                    "additionalProperties": {}
-                },
-                "resource_summary": {
-                    "type": "object",
-                    "additionalProperties": {}
                 }
             }
         },
