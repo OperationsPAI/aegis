@@ -1,0 +1,1354 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-recommender
+  system: teastore
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: OrderItemSet
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderset
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderset
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: RecommenderSelector
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: recommendProducts
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: train
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.DummyRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.UseFallBackException
+      method: UseFallBackException
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getPredictedRatings
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: setPredictedRatings
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: buildDifferencesMatrices
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: calculateScoreForItem
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getDifferences
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getFrequencies
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setDifferences
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setFrequencies
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: addAllCountsOfProduct
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: getTimeStamp
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: isReady
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: train
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: RecommenderStartup
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: RetrainDaemon
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: callback
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: run
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: TrainingSynchronizer
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterForMaxtimeStamp
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterLists
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getMaxTime
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: isReady
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: retrieveDataAndRetrain
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setReady
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: toMillis
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: waitForPersistence
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: OrderItemSet
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderset
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderset
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: RecommenderSelector
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: recommendProducts
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: train
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.DummyRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.UseFallBackException
+      method: UseFallBackException
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getPredictedRatings
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: setPredictedRatings
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: buildDifferencesMatrices
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: calculateScoreForItem
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getDifferences
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getFrequencies
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setDifferences
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setFrequencies
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: addAllCountsOfProduct
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: getTimeStamp
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: isReady
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: train
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: RecommenderStartup
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: RetrainDaemon
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: callback
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: run
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: TrainingSynchronizer
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterForMaxtimeStamp
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterLists
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getMaxTime
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: isReady
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: retrieveDataAndRetrain
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setReady
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: toMillis
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: waitForPersistence
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: OrderItemSet
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderset
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderset
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: RecommenderSelector
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: recommendProducts
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: train
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.DummyRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.UseFallBackException
+      method: UseFallBackException
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getPredictedRatings
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: setPredictedRatings
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: buildDifferencesMatrices
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: calculateScoreForItem
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getDifferences
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getFrequencies
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setDifferences
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setFrequencies
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: addAllCountsOfProduct
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: getTimeStamp
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: isReady
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: train
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: RecommenderStartup
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: RetrainDaemon
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: callback
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: run
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: TrainingSynchronizer
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterForMaxtimeStamp
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterLists
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getMaxTime
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: isReady
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: retrieveDataAndRetrain
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setReady
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: toMillis
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: waitForPersistence
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: OrderItemSet
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getOrderset
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setOrderset
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.OrderItemSet
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: RecommenderSelector
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: recommendProducts
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.RecommenderSelector
+      method: train
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.DummyRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.UseFallBackException
+      method: UseFallBackException
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getPredictedRatings
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender
+      method: setPredictedRatings
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: buildDifferencesMatrices
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: calculateScoreForItem
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getDifferences
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getFrequencies
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: getUserVector
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setDifferences
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender
+      method: setFrequencies
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: addAllCountsOfProduct
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: execute
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender
+      method: executePreprocessing
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.RecommendSingleEndpoint
+      method: recommend
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: getTimeStamp
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: isReady
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.rest.TrainEndpoint
+      method: train
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: RecommenderStartup
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RecommenderStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: RetrainDaemon
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: callback
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.RetrainDaemon
+      method: run
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: TrainingSynchronizer
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterForMaxtimeStamp
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: filterLists
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getInstance
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: getMaxTime
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: isReady
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: retrieveDataAndRetrain
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setMaxTime
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: setReady
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: toMillis
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-recommender
+      class: tools.descartes.teastore.recommender.servlet.TrainingSynchronizer
+      method: waitForPersistence
+      namespace: teastore
+  replace_scope: service

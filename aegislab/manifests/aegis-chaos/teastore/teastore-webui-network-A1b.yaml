@@ -1,0 +1,40 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-webui
+  system: teastore
+spec:
+  points:
+  - capability: network_bandwidth
+    target:
+      namespace: teastore
+      source_app: teastore-webui
+      target_service: teastore-registry
+  - capability: network_corrupt
+    target:
+      namespace: teastore
+      source_app: teastore-webui
+      target_service: teastore-registry
+  - capability: network_delay
+    target:
+      namespace: teastore
+      source_app: teastore-webui
+      target_service: teastore-registry
+  - capability: network_duplicate
+    target:
+      namespace: teastore
+      source_app: teastore-webui
+      target_service: teastore-registry
+  - capability: network_loss
+    target:
+      namespace: teastore
+      source_app: teastore-webui
+      target_service: teastore-registry
+  - capability: network_partition
+    target:
+      namespace: teastore
+      source_app: teastore-webui
+      target_service: teastore-registry
+  replace_scope: service

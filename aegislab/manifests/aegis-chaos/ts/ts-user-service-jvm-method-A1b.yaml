@@ -1,0 +1,466 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-user-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.UserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: deleteUserById
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getAllUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserId
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserName
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: registerUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: testHello
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.entity.User
+      method: User
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.init.InitUser
+      method: run
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: createDefaultAuthUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUserAuth
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserId
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserName
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: saveUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: updateUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.UserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: deleteUserById
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getAllUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserId
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserName
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: registerUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: testHello
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.entity.User
+      method: User
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.init.InitUser
+      method: run
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: createDefaultAuthUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUserAuth
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserId
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserName
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: saveUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.UserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: deleteUserById
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getAllUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserId
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserName
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: registerUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: testHello
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.entity.User
+      method: User
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.init.InitUser
+      method: run
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: createDefaultAuthUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUserAuth
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserId
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserName
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: saveUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.UserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: deleteUserById
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getAllUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserId
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: getUserByUserName
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: registerUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: testHello
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.controller.UserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.entity.User
+      method: User
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.init.InitUser
+      method: run
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: createDefaultAuthUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: deleteUserAuth
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserId
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: findByUserName
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: saveUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-user-service
+      class: user.service.impl.UserServiceImpl
+      method: updateUser
+      namespace: ts
+  replace_scope: service

@@ -1,0 +1,2890 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: users
+  system: sockshop
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setAddressId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: deleteAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAllAddresses
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: registerAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testDeleteAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testGetAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testRegisterAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: last4
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: mask
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setCardId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: deleteCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getAllCards
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: registerCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testDeleteCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetAllCards
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testRegisterCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: CoherenceUserRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAllUsers
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getOrCreate
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: register
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeUser
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testAllCustomers
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testDeleteCustomer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerCards
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: deleteCustomer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getAllCustomers
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerCards
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addAttrLink
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: card
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: customer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: testRegister
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getPassword
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setAddresses
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setCards
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: fail
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: login
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: register
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testAuthentication
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testRegister
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setAddressId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: deleteAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAllAddresses
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: registerAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testDeleteAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testGetAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testRegisterAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: last4
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: mask
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setCardId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: deleteCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getAllCards
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: registerCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testDeleteCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetAllCards
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testRegisterCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: CoherenceUserRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAllUsers
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getOrCreate
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: register
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeUser
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testAllCustomers
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testDeleteCustomer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerCards
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: deleteCustomer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getAllCustomers
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerCards
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addAttrLink
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: card
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: customer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: testRegister
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getPassword
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setAddresses
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setCards
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: fail
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: login
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: register
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testAuthentication
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testRegister
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setAddressId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: deleteAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAllAddresses
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: registerAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testDeleteAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testGetAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testRegisterAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: last4
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: mask
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setCardId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: deleteCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getAllCards
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: registerCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testDeleteCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetAllCards
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testRegisterCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: CoherenceUserRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAllUsers
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getOrCreate
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: register
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeUser
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testAllCustomers
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testDeleteCustomer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerCards
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: deleteCustomer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getAllCustomers
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerCards
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addAttrLink
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: testRegister
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getPassword
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setAddresses
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setCards
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: fail
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: login
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: register
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testAuthentication
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testRegister
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setAddressId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Address
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: AddressId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: deleteAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: getAllAddresses
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: registerAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testDeleteAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testGetAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.AddressesResourceIT
+      method: testRegisterAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: last4
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: mask
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setCardId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Card
+      method: setUser
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptFromJson
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId.JsonAdapter
+      method: adaptToJson
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: CardId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardId
+      method: toString
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: deleteCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getAllCards
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: registerCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResource
+      method: status
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testDeleteCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetAllCards
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testGetCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CardsResourceIT
+      method: testRegisterCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: CoherenceUserRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getAllUsers
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getOrCreate
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: getUser
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: register
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepository
+      method: removeUser
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CoherenceUserRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testAllCustomers
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testDeleteCustomer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomerResourceIT
+      method: testGetCustomerCards
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: deleteCustomer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getAllCustomers
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerAddresses
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.CustomersResource
+      method: getCustomerCards
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: Link
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links.Link
+      method: to
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addAttrLink
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: addLink
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.Links
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.MetricsIT
+      method: testRegister
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: User
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: addCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: authenticate
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getLinks
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: getPassword
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeAddress
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: removeCard
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setAddresses
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.User
+      method: setCards
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: fail
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: login
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResource
+      method: register
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: getUserRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testAuthentication
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: users
+      class: com.oracle.coherence.examples.sockshop.helidon.users.UserResourceIT
+      method: testRegister
+      namespace: sockshop
+  replace_scope: service

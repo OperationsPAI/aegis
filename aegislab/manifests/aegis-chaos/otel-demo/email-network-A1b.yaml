@@ -1,0 +1,40 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: email
+  system: otel-demo
+spec:
+  points:
+  - capability: network_bandwidth
+    target:
+      namespace: otel-demo
+      source_app: email
+      target_service: checkout
+  - capability: network_corrupt
+    target:
+      namespace: otel-demo
+      source_app: email
+      target_service: checkout
+  - capability: network_delay
+    target:
+      namespace: otel-demo
+      source_app: email
+      target_service: checkout
+  - capability: network_duplicate
+    target:
+      namespace: otel-demo
+      source_app: email
+      target_service: checkout
+  - capability: network_loss
+    target:
+      namespace: otel-demo
+      source_app: email
+      target_service: checkout
+  - capability: network_partition
+    target:
+      namespace: otel-demo
+      source_app: email
+      target_service: checkout
+  replace_scope: service

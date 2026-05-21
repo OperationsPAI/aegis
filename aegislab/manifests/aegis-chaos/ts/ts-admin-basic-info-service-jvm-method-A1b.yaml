@@ -1,0 +1,1042 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-admin-basic-info-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.AdminBasicInfoApplication
+      method: main
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addConfig
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addContacts
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addPrice
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addStation
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addTrain
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteContacts
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: home
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyContacts
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyTrain
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addConfig
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addContact
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addPrice
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addStation
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addTrain
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteContact
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyContact
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyTrain
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.AdminBasicInfoApplication
+      method: main
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addConfig
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addContacts
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addPrice
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addStation
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addTrain
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteContacts
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: home
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyContacts
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyTrain
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addConfig
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addContact
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addPrice
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addStation
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addTrain
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteContact
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyContact
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyTrain
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.AdminBasicInfoApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addConfig
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addContacts
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addPrice
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addStation
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addTrain
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteContacts
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: home
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyContacts
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyTrain
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addConfig
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addContact
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addPrice
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addStation
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addTrain
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteContact
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyContact
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyTrain
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.AdminBasicInfoApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addConfig
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addContacts
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addPrice
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addStation
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: addTrain
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteContacts
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: home
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyContacts
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.controller.AdminBasicInfoController
+      method: modifyTrain
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addConfig
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addContact
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addPrice
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addStation
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: addTrain
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteConfig
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteContact
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deletePrice
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteStation
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: deleteTrain
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllConfigs
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllContacts
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllPrices
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllStations
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getAllTrains
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyConfig
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyContact
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyPrice
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyStation
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-basic-info-service
+      class: adminbasic.service.AdminBasicInfoServiceImpl
+      method: modifyTrain
+      namespace: ts
+  replace_scope: service

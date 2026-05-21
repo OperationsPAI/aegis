@@ -1,0 +1,66 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-user-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: user
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: user
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: user
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: user
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: user
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-user-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: user
+  replace_scope: service

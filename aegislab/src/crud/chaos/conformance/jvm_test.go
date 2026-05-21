@@ -68,7 +68,7 @@ func TestJVMConformance(t *testing.T) {
 	}
 	appOnly := map[string]any{"namespace": ns, "app": app}
 	mysqlTarget := map[string]any{
-		"namespace": ns, "app": app, "class": class, "method": method,
+		"namespace": ns, "app": app,
 		"db_name": db, "table": table, "sql_type": "all",
 	}
 

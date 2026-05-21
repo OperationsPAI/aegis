@@ -1,0 +1,922 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: shipping
+  system: sockshop
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: CoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: getShipment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: saveShipment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: getShipmentRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingRequest
+      method: ShippingRequest
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: contains
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getShipmentByOrderId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: keys
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: ship
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testGetShipmentByOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUPS
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUSPS
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: TestCoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shippingRequest
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: CoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: getShipment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: saveShipment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: getShipmentRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingRequest
+      method: ShippingRequest
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: contains
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getShipmentByOrderId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: keys
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: ship
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testGetShipmentByOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUPS
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUSPS
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: TestCoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shippingRequest
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: CoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: getShipment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: saveShipment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: getShipmentRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingRequest
+      method: ShippingRequest
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: contains
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getShipmentByOrderId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: ship
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testGetShipmentByOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUPS
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUSPS
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: TestCoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shippingRequest
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: CoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: getShipment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepository
+      method: saveShipment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: getShipmentRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CoherenceShipmentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.MetricsIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.Shipment
+      method: Shipment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingRequest
+      method: ShippingRequest
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: contains
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: getShipmentByOrderId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResource
+      method: ship
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testFedEx
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testGetShipmentByOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUPS
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.ShippingResourceIT
+      method: testUSPS
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: TestCoherenceShipmentRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestCoherenceShipmentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shipment
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: shipping
+      class: com.oracle.coherence.examples.sockshop.helidon.shipping.TestDataFactory
+      method: shippingRequest
+      namespace: sockshop
+  replace_scope: service

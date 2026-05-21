@@ -1,0 +1,5026 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-persistence
+  system: teastore
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: RegistrationDaemon
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: InitialDataGenerationDaemon
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: waitForDatabase
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: CategoryRepository
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: OrderItemRepository
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithOrder
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithProduct
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: OrderRepository
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getAllEntitiesWithUser
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: PersistenceCategory
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getProducts
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: PersistenceOrder
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress1
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress2
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddressName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardCompany
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardNumber
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderTime
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTime
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUser
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress1
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress2
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddressName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardCompany
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardNumber
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderItems
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderTime
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTime
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUser
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: PersistenceOrderItem
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrder
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProduct
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProductId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getQuantity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrder
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProduct
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProductId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setQuantity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: PersistenceProduct
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategory
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategoryId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getListPriceInCents
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategory
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategoryId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setListPriceInCents
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: PersistenceUser
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getEmail
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getOrders
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getPassword
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getRealName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getUserName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setEmail
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setPassword
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setRealName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setUserName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: ProductRepository
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getAllEntities
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getProductCount
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: UserRepository
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getUserByName
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: CacheManager
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearCache
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCache
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCacheREST
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetAllEMFs
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetLocalEMF
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMF
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMFs
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: DataGenerator
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: dropAndCreateTables
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: fourDigits
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateCategories
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateDatabaseContent
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrderItem
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrders
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateProducts
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateUsers
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: getGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isDatabaseEmpty
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isMaintenanceMode
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeExternal
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeGlobal
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeInternal
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: DatabaseManagementEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: getId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: isFinishedGenerating
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: setFinishedGenerating
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: EMFManager
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: configureEMFWithProperties
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertieForInMemoryDB
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertiesFromJavaEnv
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: getEMF
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: EMFManagerInitializer
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: createPersistencePropertiesForTesting
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: initializeEMF
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearClassCache
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: generateDataBase
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isFinshed
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isMaintenance
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: parseQuery
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: setMaintenanceMode
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllForUser
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForOrder
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForProduct
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: countForCategory
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllForCategory
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findById
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: RegistrationDaemon
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: InitialDataGenerationDaemon
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: waitForDatabase
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: CategoryRepository
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: OrderItemRepository
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithOrder
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithProduct
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: OrderRepository
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getAllEntitiesWithUser
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: PersistenceCategory
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getProducts
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: PersistenceOrder
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress1
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress2
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddressName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardCompany
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardNumber
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderTime
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTime
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUser
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress1
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress2
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddressName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardCompany
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardNumber
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderItems
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderTime
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTime
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUser
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: PersistenceOrderItem
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrder
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProduct
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProductId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getQuantity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrder
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProduct
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProductId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setQuantity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: PersistenceProduct
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategory
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategoryId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getListPriceInCents
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategory
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategoryId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setListPriceInCents
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: PersistenceUser
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getEmail
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getOrders
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getPassword
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getRealName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getUserName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setEmail
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setPassword
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setRealName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setUserName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: ProductRepository
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getAllEntities
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getProductCount
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: UserRepository
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getUserByName
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: CacheManager
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearCache
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCache
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCacheREST
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetAllEMFs
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetLocalEMF
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMF
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMFs
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: DataGenerator
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: dropAndCreateTables
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: fourDigits
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateCategories
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateDatabaseContent
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrderItem
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrders
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateProducts
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateUsers
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: getGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isDatabaseEmpty
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isMaintenanceMode
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeExternal
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeGlobal
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeInternal
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: DatabaseManagementEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: getId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: isFinishedGenerating
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: setFinishedGenerating
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: EMFManager
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: configureEMFWithProperties
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertieForInMemoryDB
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertiesFromJavaEnv
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: getEMF
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: EMFManagerInitializer
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: createPersistencePropertiesForTesting
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: initializeEMF
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearClassCache
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: generateDataBase
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isFinshed
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isMaintenance
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: parseQuery
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: setMaintenanceMode
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllForUser
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForOrder
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForProduct
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: countForCategory
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllForCategory
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findById
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: RegistrationDaemon
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: InitialDataGenerationDaemon
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: waitForDatabase
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: CategoryRepository
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: OrderItemRepository
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithOrder
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithProduct
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: OrderRepository
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getAllEntitiesWithUser
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: PersistenceCategory
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getProducts
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: PersistenceOrder
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress1
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress2
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddressName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardCompany
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardNumber
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderTime
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTime
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUser
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress1
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress2
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddressName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardCompany
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardNumber
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderItems
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderTime
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTime
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUser
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: PersistenceOrderItem
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrder
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProduct
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProductId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getQuantity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrder
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProduct
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProductId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setQuantity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: PersistenceProduct
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategory
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategoryId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getListPriceInCents
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategory
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategoryId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setListPriceInCents
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: PersistenceUser
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getEmail
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getOrders
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getPassword
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getRealName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getUserName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setEmail
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setPassword
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setRealName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setUserName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: ProductRepository
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getAllEntities
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getProductCount
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: UserRepository
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getUserByName
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: CacheManager
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearCache
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCache
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCacheREST
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetAllEMFs
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetLocalEMF
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMF
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMFs
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: DataGenerator
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: dropAndCreateTables
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: fourDigits
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateCategories
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateDatabaseContent
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrderItem
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrders
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateProducts
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateUsers
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: getGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isDatabaseEmpty
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isMaintenanceMode
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeExternal
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeGlobal
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeInternal
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: DatabaseManagementEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: isFinishedGenerating
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: setFinishedGenerating
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: EMFManager
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: configureEMFWithProperties
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertieForInMemoryDB
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertiesFromJavaEnv
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: getEMF
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: EMFManagerInitializer
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: createPersistencePropertiesForTesting
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: initializeEMF
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearClassCache
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: generateDataBase
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isFinshed
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isMaintenance
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: parseQuery
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: setMaintenanceMode
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllForUser
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForOrder
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForProduct
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: countForCategory
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllForCategory
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findById
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: RegistrationDaemon
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.RegistrationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: InitialDataGenerationDaemon
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.daemons.InitialDataGenerationDaemon
+      method: waitForDatabase
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: CategoryRepository
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.CategoryRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: OrderItemRepository
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithOrder
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getAllEntitiesWithProduct
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderItemRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: OrderRepository
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getAllEntitiesWithUser
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.OrderRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: PersistenceCategory
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: getProducts
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceCategory
+      method: setName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: PersistenceOrder
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress1
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddress2
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getAddressName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardCompany
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getCreditCardNumber
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getOrderTime
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTime
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUser
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: getUserId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress1
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddress2
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setAddressName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardCompany
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryDate
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardExpiryLocalDate
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setCreditCardNumber
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderItems
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setOrderTime
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTime
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setTotalPriceInCents
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUser
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrder
+      method: setUserId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: PersistenceOrderItem
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrder
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getOrderId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProduct
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getProductId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getQuantity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: getUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrder
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setOrderId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProduct
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setProductId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setQuantity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceOrderItem
+      method: setUnitPriceInCents
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: PersistenceProduct
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategory
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getCategoryId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getDescription
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getListPriceInCents
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: getOrderItems
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategory
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setCategoryId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setDescription
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setListPriceInCents
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceProduct
+      method: setName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: PersistenceUser
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: clearCaches
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: deleteOrders
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getEmail
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getOrders
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getPassword
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getRealName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: getUserName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setEmail
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setPassword
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setRealName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.PersistenceUser
+      method: setUserName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: ProductRepository
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getAllEntities
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: getProductCount
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.ProductRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: UserRepository
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getEntityClass
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: getUserByName
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.UserRepository
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToDatabaseColumn
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.domain.converters.LocalDateTimeAttributeConverter
+      method: convertToEntityAttribute
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: CacheManager
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearCache
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearLocalCacheOnly
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCache
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: clearRemoteCacheREST
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetAllEMFs
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetLocalEMF
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMF
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.CacheManager
+      method: resetRemoteEMFs
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: DataGenerator
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: dropAndCreateTables
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: fourDigits
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateCategories
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateDatabaseContent
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrderItem
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateOrders
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateProducts
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: generateUsers
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: getGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isDatabaseEmpty
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: isMaintenanceMode
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setGenerationFinishedFlag
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeExternal
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeGlobal
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DataGenerator
+      method: setMaintenanceModeInternal
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: DatabaseManagementEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: getId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: isFinishedGenerating
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.DatabaseManagementEntity
+      method: setFinishedGenerating
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: EMFManager
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: configureEMFWithProperties
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertieForInMemoryDB
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: createPersistencePropertiesFromJavaEnv
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManager
+      method: getEMF
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: EMFManagerInitializer
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: createPersistencePropertiesForTesting
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.repository.EMFManagerInitializer
+      method: initializeEMF
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearAllCaches
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearClassCache
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CacheManagerEndpoint
+      method: clearEMF
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.CategoryEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: generateDataBase
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isFinshed
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: isMaintenance
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: parseQuery
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.DatabaseGenerationEndpoint
+      method: setMaintenanceMode
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: listAllForUser
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForOrder
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: listAllForProduct
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.OrderItemEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: countForCategory
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: listAllForCategory
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.ProductEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: createEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: deleteEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findById
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: findEntityById
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: listAllEntities
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.rest.UserEndpoint
+      method: updateEntity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-persistence
+      class: tools.descartes.teastore.persistence.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  replace_scope: service

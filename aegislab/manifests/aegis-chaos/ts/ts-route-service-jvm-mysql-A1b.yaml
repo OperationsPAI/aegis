@@ -1,0 +1,248 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-route-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: all
+      table: '`ts`.`route_distances`'
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: all
+      table: '`ts`.`route_stations`'
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: route
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: route_distances
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: route_stations
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: route
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: route_distances
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: route_stations
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: '`ts`.`route`'
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: information_schema
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: mysql
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: performance_schema
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: route
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: route_distances
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: route_stations
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: sys
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: all
+      table: '`ts`.`route_distances`'
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: all
+      table: '`ts`.`route_stations`'
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: route
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: route_distances
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: delete
+      table: route_stations
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: route
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: route_distances
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: route_stations
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: '`ts`.`route`'
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: information_schema
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: mysql
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: performance_schema
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: route
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: route_distances
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: route_stations
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: sys
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-route-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  replace_scope: service

@@ -1,0 +1,34 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-admin-order-service
+  system: ts
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: ts-admin-order-service
+      domain_patterns:
+      - ts-order-other-service
+      namespace: ts
+  - capability: dns_error
+    target:
+      app: ts-admin-order-service
+      domain_patterns:
+      - ts-order-service
+      namespace: ts
+  - capability: dns_random
+    target:
+      app: ts-admin-order-service
+      domain_patterns:
+      - ts-order-other-service
+      namespace: ts
+  - capability: dns_random
+    target:
+      app: ts-admin-order-service
+      domain_patterns:
+      - ts-order-service
+      namespace: ts
+  replace_scope: service

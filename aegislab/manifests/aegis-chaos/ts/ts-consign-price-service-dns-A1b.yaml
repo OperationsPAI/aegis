@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-consign-price-service
+  system: ts
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: ts-consign-price-service
+      domain_patterns:
+      - mysql
+      namespace: ts
+  - capability: dns_random
+    target:
+      app: ts-consign-price-service
+      domain_patterns:
+      - mysql
+      namespace: ts
+  replace_scope: service

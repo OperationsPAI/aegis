@@ -1,0 +1,826 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-inside-payment-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.InsidePaymentApplication
+      method: main
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.async.AsyncTask
+      method: sendAsyncCallToPaymentService
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: addMoney
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: createAccount
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: drawBack
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: home
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: pay
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: payDifference
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.AccountInfo
+      method: AccountInfo
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Balance
+      method: Balance
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Money
+      method: Money
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.OutsidePaymentInfo
+      method: OutsidePaymentInfo
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Payment
+      method: Payment
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.PaymentInfo
+      method: PaymentInfo
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.init.InitData
+      method: run
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: addMoney
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: createAccount
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: drawBack
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: initPayment
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: pay
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: payDifference
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: setOrderStatus
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: CookieUtil
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: addCookie
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: getCookieByName
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: readCookieMap
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.InsidePaymentApplication
+      method: main
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.async.AsyncTask
+      method: sendAsyncCallToPaymentService
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: addMoney
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: createAccount
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: drawBack
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: home
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: pay
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: payDifference
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.AccountInfo
+      method: AccountInfo
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Balance
+      method: Balance
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Money
+      method: Money
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.OutsidePaymentInfo
+      method: OutsidePaymentInfo
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Payment
+      method: Payment
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.PaymentInfo
+      method: PaymentInfo
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.init.InitData
+      method: run
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: addMoney
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: createAccount
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: drawBack
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: initPayment
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: pay
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: payDifference
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: setOrderStatus
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: CookieUtil
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: addCookie
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: getCookieByName
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: readCookieMap
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.InsidePaymentApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.async.AsyncTask
+      method: sendAsyncCallToPaymentService
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: addMoney
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: createAccount
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: drawBack
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: home
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: pay
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: payDifference
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.AccountInfo
+      method: AccountInfo
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Balance
+      method: Balance
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Money
+      method: Money
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.OutsidePaymentInfo
+      method: OutsidePaymentInfo
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Payment
+      method: Payment
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.PaymentInfo
+      method: PaymentInfo
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.init.InitData
+      method: run
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: addMoney
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: createAccount
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: drawBack
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: initPayment
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: pay
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: payDifference
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: setOrderStatus
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: CookieUtil
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: addCookie
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: getCookieByName
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: readCookieMap
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.InsidePaymentApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.async.AsyncTask
+      method: sendAsyncCallToPaymentService
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: addMoney
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: createAccount
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: drawBack
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: home
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: pay
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: payDifference
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.controller.InsidePaymentController
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.AccountInfo
+      method: AccountInfo
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Balance
+      method: Balance
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Money
+      method: Money
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.OutsidePaymentInfo
+      method: OutsidePaymentInfo
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.Payment
+      method: Payment
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.entity.PaymentInfo
+      method: PaymentInfo
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.init.InitData
+      method: run
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: addMoney
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: createAccount
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: drawBack
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: initPayment
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: pay
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: payDifference
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAccount
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryAddMoney
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: queryPayment
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.service.InsidePaymentServiceImpl
+      method: setOrderStatus
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: CookieUtil
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: addCookie
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: getCookieByName
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-inside-payment-service
+      class: inside_payment.util.CookieUtil
+      method: readCookieMap
+      namespace: ts
+  replace_scope: service

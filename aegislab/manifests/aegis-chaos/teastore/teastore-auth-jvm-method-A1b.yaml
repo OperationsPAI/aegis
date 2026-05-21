@@ -1,0 +1,490 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-auth
+  system: teastore
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: addProductToCart
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: removeProductFromCart
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: updateQuantity
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: isLoggedIn
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: login
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: logout
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: placeOrder
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.ReadyRest
+      method: isReady
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: BCryptProvider
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: checkPassword
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ConstantKeyProvider
+      method: getKey
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.RandomSessionIdGenerator
+      method: getSessionId
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: blobToString
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getKeyProvider
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getSha512
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: secure
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: validate
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: AuthStartup
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: addProductToCart
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: removeProductFromCart
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: updateQuantity
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: isLoggedIn
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: login
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: logout
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: placeOrder
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.ReadyRest
+      method: isReady
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: BCryptProvider
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: checkPassword
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ConstantKeyProvider
+      method: getKey
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.RandomSessionIdGenerator
+      method: getSessionId
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: blobToString
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getKeyProvider
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getSha512
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: secure
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: validate
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: AuthStartup
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: addProductToCart
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: removeProductFromCart
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: updateQuantity
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: isLoggedIn
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: login
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: logout
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: placeOrder
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.ReadyRest
+      method: isReady
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: BCryptProvider
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: checkPassword
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ConstantKeyProvider
+      method: getKey
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.RandomSessionIdGenerator
+      method: getSessionId
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: blobToString
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getKeyProvider
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getSha512
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: secure
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: validate
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: AuthStartup
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: addProductToCart
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: removeProductFromCart
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthCartRest
+      method: updateQuantity
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: isLoggedIn
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: login
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: logout
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.AuthUserActionsRest
+      method: placeOrder
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.rest.ReadyRest
+      method: isReady
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: BCryptProvider
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.BCryptProvider
+      method: checkPassword
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ConstantKeyProvider
+      method: getKey
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.RandomSessionIdGenerator
+      method: getSessionId
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: blobToString
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getKeyProvider
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: getSha512
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: secure
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.security.ShaSecurityProvider
+      method: validate
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: AuthStartup
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-auth
+      class: tools.descartes.teastore.auth.startup.AuthStartup
+      method: contextInitialized
+      namespace: teastore
+  replace_scope: service

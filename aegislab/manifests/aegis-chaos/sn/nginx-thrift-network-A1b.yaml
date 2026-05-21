@@ -1,0 +1,160 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: nginx-thrift
+  system: sn
+spec:
+  points:
+  - capability: network_bandwidth
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: compose-post-service
+  - capability: network_bandwidth
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: home-timeline-service
+  - capability: network_bandwidth
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: social-graph-service
+  - capability: network_bandwidth
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-service
+  - capability: network_bandwidth
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-timeline-service
+  - capability: network_corrupt
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: compose-post-service
+  - capability: network_corrupt
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: home-timeline-service
+  - capability: network_corrupt
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: social-graph-service
+  - capability: network_corrupt
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-service
+  - capability: network_corrupt
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-timeline-service
+  - capability: network_delay
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: compose-post-service
+  - capability: network_delay
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: home-timeline-service
+  - capability: network_delay
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: social-graph-service
+  - capability: network_delay
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-service
+  - capability: network_delay
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-timeline-service
+  - capability: network_duplicate
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: compose-post-service
+  - capability: network_duplicate
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: home-timeline-service
+  - capability: network_duplicate
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: social-graph-service
+  - capability: network_duplicate
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-service
+  - capability: network_duplicate
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-timeline-service
+  - capability: network_loss
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: compose-post-service
+  - capability: network_loss
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: home-timeline-service
+  - capability: network_loss
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: social-graph-service
+  - capability: network_loss
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-service
+  - capability: network_loss
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-timeline-service
+  - capability: network_partition
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: compose-post-service
+  - capability: network_partition
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: home-timeline-service
+  - capability: network_partition
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: social-graph-service
+  - capability: network_partition
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-service
+  - capability: network_partition
+    target:
+      namespace: sn
+      source_app: nginx-thrift
+      target_service: user-timeline-service
+  replace_scope: service

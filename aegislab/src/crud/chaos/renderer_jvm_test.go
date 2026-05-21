@@ -109,8 +109,6 @@ func TestJVMMySQLExceptionRender(t *testing.T) {
 	target := map[string]any{
 		"namespace": "ts",
 		"app":       "ts-order-service",
-		"class":     "com.example.OrderRepository",
-		"method":    "findByUser",
 		"db_name":   "ts",
 		"table":     "orders",
 		"sql_type":  "select",
@@ -158,7 +156,7 @@ func TestJVMRenderersActionMapping(t *testing.T) {
 		"namespace": "ts", "app": "ts-order", "class": "C", "method": "m",
 	}
 	mysqlTarget := map[string]any{
-		"namespace": "ts", "app": "ts-order", "class": "C", "method": "m",
+		"namespace": "ts", "app": "ts-order",
 		"db_name": "ts", "table": "orders", "sql_type": "select",
 	}
 	appOnly := map[string]any{"namespace": "ts", "app": "ts-order"}
@@ -245,7 +243,7 @@ func TestJVMTargetValidation(t *testing.T) {
 		{"jvm_method_latency", map[string]any{"namespace": "ts", "app": "a", "class": "C", "method": "m"}, false},
 		{"jvm_method_latency", map[string]any{"namespace": "ts", "app": "a"}, true},
 		{"jvm_method_latency", map[string]any{"namespace": "ts", "app": "a", "class": "C"}, true},
-		{"jvm_mysql_latency", map[string]any{"namespace": "ts", "app": "a", "class": "C", "method": "m"}, false},
+		{"jvm_mysql_latency", map[string]any{"namespace": "ts", "app": "a", "db_name": "ts", "table": "orders"}, false},
 	}
 	for _, tc := range cases {
 		r, err := lookupRenderer(tc.capability)

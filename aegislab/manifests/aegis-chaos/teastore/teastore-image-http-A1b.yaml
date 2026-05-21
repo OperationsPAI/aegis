@@ -1,0 +1,206 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-image
+  system: teastore
+spec:
+  points:
+  - capability: http_request_replace_method
+    target:
+      app: teastore-image
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getProductImages
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getWebImages
+      port: 8080
+  - capability: http_request_replace_method
+    target:
+      app: teastore-image
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-image
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getProductImages
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getWebImages
+      port: 8080
+  - capability: http_request_replace_path
+    target:
+      app: teastore-image
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-image
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getProductImages
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getWebImages
+      port: 8080
+  - capability: http_response_abort
+    target:
+      app: teastore-image
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-image
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getProductImages
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getWebImages
+      port: 8080
+  - capability: http_response_delay
+    target:
+      app: teastore-image
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-image
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getProductImages
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getWebImages
+      port: 8080
+  - capability: http_response_patch_body
+    target:
+      app: teastore-image
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-image
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getProductImages
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getWebImages
+      port: 8080
+  - capability: http_response_replace_body
+    target:
+      app: teastore-image
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-image
+      method: GET
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.persistence/
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getProductImages
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-image
+      method: POST
+      namespace: teastore
+      path: /tools.descartes.teastore.image/rest/image/getWebImages
+      port: 8080
+  - capability: http_response_replace_code
+    target:
+      app: teastore-image
+      method: PUT
+      namespace: teastore
+      path: /tools.descartes.teastore.registry/rest/services/tools.descartes.teastore.image/teastore-image-0.teastore-image
+      port: 8080
+  replace_scope: service

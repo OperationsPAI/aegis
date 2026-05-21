@@ -1,0 +1,108 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-auth-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: all
+      table: '`ts`.`user_roles`'
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: auth_user
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: user_roles
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: '`ts`.`auth_user`'
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: auth_user
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  - capability: jvm_mysql_exception
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: user_roles
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: all
+      table: '`ts`.`user_roles`'
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: auth_user
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: insert
+      table: user_roles
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: '`ts`.`auth_user`'
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: auth_user
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: ts
+  - capability: jvm_mysql_latency
+    target:
+      app: ts-auth-service
+      db_name: ts
+      namespace: ts
+      sql_type: select
+      table: user_roles
+  replace_scope: service

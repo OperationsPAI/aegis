@@ -1,0 +1,160 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-travel2-service
+  system: ts
+spec:
+  points:
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: mysql
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-basic-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-route-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-seat-service
+  - capability: network_bandwidth
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-train-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: mysql
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-basic-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-route-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-seat-service
+  - capability: network_corrupt
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-train-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: mysql
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-basic-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-route-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-seat-service
+  - capability: network_delay
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-train-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: mysql
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-basic-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-route-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-seat-service
+  - capability: network_duplicate
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-train-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: mysql
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-basic-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-route-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-seat-service
+  - capability: network_loss
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-train-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: mysql
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-basic-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-route-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-seat-service
+  - capability: network_partition
+    target:
+      namespace: ts
+      source_app: ts-travel2-service
+      target_service: ts-train-service
+  replace_scope: service

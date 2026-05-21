@@ -1,0 +1,490 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: teastore-registry
+  system: teastore
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: HeartbeatInfo
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: isAlive
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: newHeartbeat
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: Registry
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getLocations
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getRegistryInstance
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: heartBeatCleanup
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: register
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: unregister
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: updateHeartbeatMap
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: getInstances
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: register
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: unregister
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: RegistryStartup
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: run
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_cpu_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: HeartbeatInfo
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: isAlive
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: newHeartbeat
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: Registry
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getLocations
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getRegistryInstance
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: heartBeatCleanup
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: register
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: unregister
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: updateHeartbeatMap
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: getInstances
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: register
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: unregister
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: RegistryStartup
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: run
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_memory_stress
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: HeartbeatInfo
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: isAlive
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: newHeartbeat
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: Registry
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getLocations
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getRegistryInstance
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: heartBeatCleanup
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: register
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: unregister
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: updateHeartbeatMap
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: getInstances
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: register
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: unregister
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: RegistryStartup
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: run
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_method_exception
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: HeartbeatInfo
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: isAlive
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.HeartbeatInfo
+      method: newHeartbeat
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: Registry
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getLocations
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: getRegistryInstance
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: heartBeatCleanup
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: register
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: unregister
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.Registry
+      method: updateHeartbeatMap
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: getInstances
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: register
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryREST
+      method: unregister
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: RegistryStartup
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextDestroyed
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: contextInitialized
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.rest.RegistryStartup
+      method: run
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: IndexServlet
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doGet
+      namespace: teastore
+  - capability: jvm_method_return
+    target:
+      app: teastore-registry
+      class: tools.descartes.teastore.registry.servlet.IndexServlet
+      method: doPost
+      namespace: teastore
+  replace_scope: service

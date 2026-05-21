@@ -1,0 +1,22 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: image-provider
+  system: otel-demo
+spec:
+  points:
+  - capability: dns_error
+    target:
+      app: image-provider
+      domain_patterns:
+      - load-generator
+      namespace: otel-demo
+  - capability: dns_random
+    target:
+      app: image-provider
+      domain_patterns:
+      - load-generator
+      namespace: otel-demo
+  replace_scope: service

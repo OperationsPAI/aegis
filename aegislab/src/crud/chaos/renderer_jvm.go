@@ -102,7 +102,7 @@ func (r jvmRenderer) ValidateTarget(target map[string]any) error {
 
 func (r jvmRenderer) needsClassMethod() bool {
 	switch r.capability {
-	case "jvm_gc":
+	case "jvm_gc", "jvm_mysql_latency", "jvm_mysql_exception":
 		return false
 	}
 	return true

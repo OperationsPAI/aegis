@@ -1,0 +1,1234 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: payment
+  system: sockshop
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: Authorization
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: getId
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: CoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: createIndexes
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: findAuthorizationsByOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: saveAuthorization
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: getPaymentRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: contains
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: get
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: keys
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentRequest
+      method: PaymentRequest
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testDeclinedAuthorization
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testFindPaymentsByOrder
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testInvalidPaymentAmount
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: TestCoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_cpu_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: paymentRequest
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: Authorization
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: getId
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: CoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: createIndexes
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: findAuthorizationsByOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: saveAuthorization
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: getPaymentRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: contains
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: get
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: keys
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentRequest
+      method: PaymentRequest
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testDeclinedAuthorization
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testFindPaymentsByOrder
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testInvalidPaymentAmount
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: TestCoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_memory_stress
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: paymentRequest
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: Authorization
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: getId
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: CoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: createIndexes
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: findAuthorizationsByOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: saveAuthorization
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: getPaymentRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: contains
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentRequest
+      method: PaymentRequest
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testDeclinedAuthorization
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testFindPaymentsByOrder
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testInvalidPaymentAmount
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: TestCoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_exception
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: paymentRequest
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Address
+      method: Address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Application
+      method: main
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: Authorization
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Authorization
+      method: getId
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Card
+      method: Card
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: CoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: createIndexes
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: findAuthorizationsByOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepository
+      method: saveAuthorization
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: getPaymentRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CoherencePaymentRepositoryIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.CorsFilter
+      method: filter
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.Customer
+      method: Customer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: DefaultPaymentService
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.DefaultPaymentService
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller.Supplier
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: JsonbMarshaller
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: parse
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.JsonbMarshaller
+      method: stream
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.MetricsIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.OpenTelemetryMdcTurboFilter
+      method: decide
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: contains
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: get
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getAll
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentGrpc
+      method: keys
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentRequest
+      method: PaymentRequest
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: authorize
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResource
+      method: getOrderAuthorizations
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: setup
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: startServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: stopServer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testDeclinedAuthorization
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testFindPaymentsByOrder
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testInvalidPaymentAmount
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.PaymentResourceIT
+      method: testSuccessfulAuthorization
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: TestCoherencePaymentRepository
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestCoherencePaymentRepository
+      method: clear
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: address
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: auth
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: card
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: customer
+      namespace: sockshop
+  - capability: jvm_method_return
+    target:
+      app: payment
+      class: com.oracle.coherence.examples.sockshop.helidon.payment.TestDataFactory
+      method: paymentRequest
+      namespace: sockshop
+  replace_scope: service

@@ -1,0 +1,274 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  chart_version: seed-genesis
+  instance: seed
+  service: ts-admin-user-service
+  system: ts
+spec:
+  points:
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.AdminUserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: addUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: home
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: addUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_cpu_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: updateUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.AdminUserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: addUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: home
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: addUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_memory_stress
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.AdminUserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: addUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: home
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: addUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_exception
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.AdminUserApplication
+      method: main
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: addUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: home
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.controller.AdminUserController
+      method: updateUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: addUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: deleteUser
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getAllUsers
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: getServiceUrl
+      namespace: ts
+  - capability: jvm_method_return
+    target:
+      app: ts-admin-user-service
+      class: adminuser.service.AdminUserServiceImpl
+      method: updateUser
+      namespace: ts
+  replace_scope: service
