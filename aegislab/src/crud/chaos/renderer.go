@@ -86,3 +86,31 @@ func registeredCapabilities() []CapabilitySupport {
 	sort.Slice(out, func(i, j int) bool { return out[i].Capability < out[j].Capability })
 	return out
 }
+
+// registeredGVRs returns the deduplicated set of GVRs that registered
+// renderers can produce CRs for. Used by the informer factory wiring to
+// decide which chaos-mesh resources to watch.
+func registeredGVRs() []schema.GroupVersionResource {
+	rendererMu.RLock()
+	defer rendererMu.RUnlock()
+	seen := make(map[schema.GroupVersionResource]struct{}, len(rendererRegistry))
+	out := make([]schema.GroupVersionResource, 0, len(rendererRegistry))
+	for _, r := range rendererRegistry {
+		g := r.GVR()
+		if _, dup := seen[g]; dup {
+			continue
+		}
+		seen[g] = struct{}{}
+		out = append(out, g)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Group != out[j].Group {
+			return out[i].Group < out[j].Group
+		}
+		if out[i].Version != out[j].Version {
+			return out[i].Version < out[j].Version
+		}
+		return out[i].Resource < out[j].Resource
+	})
+	return out
+}
