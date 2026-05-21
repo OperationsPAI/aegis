@@ -148,7 +148,7 @@ func classifyChaosDeleteErr(httpResp *http.Response, err error) error {
 
 // dispatcherDeps carries the request-scoped data the chaos-service branch
 // needs to build caller_metadata. Cheaper than threading it through every
-// chaos-experiment SDK arg.
+// chaos-service SDK arg.
 type dispatcherDeps struct {
 	taskID           string
 	traceID          string

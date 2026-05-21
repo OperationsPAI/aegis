@@ -6,10 +6,6 @@ import (
 	"errors"
 	"net/http"
 
-	// Intentional: this file lives on the aegis-chaos service side, where the
-	// chaos-experiment dependency is the actual runtime implementation of the
-	// guided walker. Aegislab business code does NOT import chaos-experiment
-	// anywhere else — do not copy this pattern outside crud/chaos/.
 	cechaos "aegis/internal/chaosengine/guidedcli"
 
 	localchaos "aegis/platform/chaos"
@@ -21,8 +17,8 @@ import (
 // guidedcli walkers reach into a live kubernetes cluster + resourcelookup cache;
 // handler tests swap them out via these package-level seams. The handler
 // converts between the local platform/chaos GuidedConfig shape (wire DTO) and
-// chaos-experiment's pkg/guidedcli.GuidedConfig (runtime input) via JSON
-// round-trip — the JSON tags match field-for-field.
+// chaosengine guidedcli.GuidedConfig (runtime input) via JSON round-trip — the
+// JSON tags match field-for-field.
 var (
 	testGuidedResolve   func(ctx context.Context, cfg localchaos.GuidedConfig) (*localchaos.GuidedResponse, error)
 	testGuidedApplyNext func(response *localchaos.GuidedResponse, rawValue string) (localchaos.GuidedConfig, error)

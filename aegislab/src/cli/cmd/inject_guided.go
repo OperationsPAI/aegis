@@ -123,17 +123,16 @@ var (
 	guidedChaosChartVersion string
 )
 
-// injectGuidedCmd is the aegislab-aware wrapper around the chaos-experiment
-// guided session model. It mirrors `chaos-exp`'s interactive stepper and, on
-// --apply, POSTs a GuidedConfig envelope to /inject. This is the only
-// supported submission path: the backend's SubmitInjectionReq accepts guided
-// configs exclusively.
+// injectGuidedCmd drives the interactive guided session and, on --apply,
+// POSTs a GuidedConfig envelope to /inject. This is the only supported
+// submission path: the backend's SubmitInjectionReq accepts guided configs
+// exclusively.
 var injectGuidedCmd = &cobra.Command{
 	Use:   "guided",
 	Short: "Step through a guided fault-injection session (AI-friendly, enum-driven)",
 	Args:  requireNoArgs,
-	Long: `Step through a guided fault-injection session backed by chaos-experiment's
-pkg/guidedcli. Each invocation returns a GuidedResponse describing the next
+	Long: `Step through a guided fault-injection session backed by the chaosengine
+guidedcli. Each invocation returns a GuidedResponse describing the next
 field to fill, with its allowed values, until the config is ready to apply.
 
 The session state is persisted to --config (default ~/.aegisctl/inject-guided.yaml)
@@ -504,7 +503,7 @@ func envBool(name string) bool {
 // non-final stage and returns a usage-coded error surfacing them to the user.
 // Returns nil when the response is safe to submit.
 //
-// Background (issue #176): chaos-experiment's finalizeOrRequest returns the
+// Background (issue #176): guidedcli's finalizeOrRequest returns the
 // caller's config un-normalized (Duration still nil, etc.) whenever its
 // per-type builder fails. If the CLI ships that config to /inject anyway,
 // the server's uniform validator rejects it with a generic

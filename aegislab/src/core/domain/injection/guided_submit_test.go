@@ -82,7 +82,7 @@ func TestSubmitInjectionReqValidateRejectsEmptyBatch(t *testing.T) {
 // guarantee: any per-spec duration (including nil from a resolver that
 // errored before normalizing) is silently pinned to
 // consts.FixedAbnormalWindowMinutes. Issue #321: rejecting nil broke
-// guided submits whenever the chaos-experiment builder errored.
+// guided submits whenever the guidedcli builder errored.
 func TestSubmitInjectionReqValidatePinsDuration(t *testing.T) {
 	cases := []struct {
 		name string

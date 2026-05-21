@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
-	chaosmeshv1alpha1 "github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,7 +42,7 @@ func InitWithConfig(config *rest.Config) error {
 	scheme := runtime.NewScheme()
 
 	// Register Chaos Mesh CRD scheme
-	if err := chaosmeshv1alpha1.AddToScheme(scheme); err != nil {
+	if err := v1alpha1.AddToScheme(scheme); err != nil {
 		return fmt.Errorf("failed to add Chaos Mesh v1alpha1 scheme: %v", err)
 	}
 
@@ -258,16 +257,16 @@ func QueryCRDByName(namespace, nameToQuery string) (time.Time, time.Time, error)
 			logrus.Infof("Found resource in GroupVersionResource: %s\n", gvr)
 
 			switch resource := objCopy.(type) {
-			case *chaosmeshv1alpha1.HTTPChaos:
+			case *v1alpha1.HTTPChaos:
 				return checkStatus(resource.Status.ChaosStatus)
 
-			case *chaosmeshv1alpha1.NetworkChaos:
+			case *v1alpha1.NetworkChaos:
 				return checkStatus(resource.Status.ChaosStatus)
 
-			case *chaosmeshv1alpha1.PodChaos:
+			case *v1alpha1.PodChaos:
 				return checkStatus(resource.Status.ChaosStatus)
 
-			case *chaosmeshv1alpha1.StressChaos:
+			case *v1alpha1.StressChaos:
 				return checkStatus(resource.Status.ChaosStatus)
 			}
 
@@ -279,7 +278,7 @@ func QueryCRDByName(namespace, nameToQuery string) (time.Time, time.Time, error)
 }
 
 // checkStatus 检查 Chaos 状态是否注入成功和恢复成功
-func checkStatus(status chaosmeshv1alpha1.ChaosStatus) (time.Time, time.Time, error) {
+func checkStatus(status v1alpha1.ChaosStatus) (time.Time, time.Time, error) {
 	var (
 		apply time.Time
 		reco  time.Time
@@ -287,10 +286,10 @@ func checkStatus(status chaosmeshv1alpha1.ChaosStatus) (time.Time, time.Time, er
 
 	for _, record := range status.Experiment.Records {
 		for _, event := range record.Events {
-			if event.Operation == chaosmeshv1alpha1.Apply && event.Type == chaosmeshv1alpha1.TypeSucceeded {
+			if event.Operation == v1alpha1.Apply && event.Type == v1alpha1.TypeSucceeded {
 				apply = event.Timestamp.Time
 			}
-			if event.Operation == chaosmeshv1alpha1.Recover && event.Type == chaosmeshv1alpha1.TypeSucceeded {
+			if event.Operation == v1alpha1.Recover && event.Type == v1alpha1.TypeSucceeded {
 				reco = event.Timestamp.Time
 			}
 		}

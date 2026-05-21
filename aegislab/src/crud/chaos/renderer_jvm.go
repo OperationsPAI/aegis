@@ -245,8 +245,7 @@ func (jvmRenderer) attachMySQLCommon(spec map[string]any, target, params map[str
 	spec["mysqlConnectorVersion"] = connector
 }
 
-// jvmDefaultException matches chaos-experiment's WithJVMDefaultException
-// — chaos-mesh treats the value as a Java throw expression.
+// jvmDefaultException is the value chaos-mesh treats as a Java throw expression.
 func jvmDefaultException() string {
 	return `java.io.IOException("BOOM")`
 }

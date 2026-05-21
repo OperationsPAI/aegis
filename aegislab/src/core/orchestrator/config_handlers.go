@@ -14,13 +14,8 @@ import (
 )
 
 // RegisterConsumerHandlers registers the configuration handlers that the
-// consumer process owns. §11 step 5c removed the etcd→chaos-experiment
-// registry sync: chaos-service has its own registry now and a live
-// `aegisctl chaos system update` no longer reflects into the in-process
-// registry — boot-time InitializeSystems is the only path until phase 2
-// finishes the chaos-experiment migration.
-//
-// Should be called during consumer initialization, after RegisterGlobalHandlers.
+// consumer process owns. Should be called during consumer initialization,
+// after RegisterGlobalHandlers.
 func RegisterConsumerHandlers(
 	controller *k8s.Controller,
 	monitor NamespaceMonitor,

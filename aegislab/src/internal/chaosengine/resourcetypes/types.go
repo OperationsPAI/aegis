@@ -59,8 +59,3 @@ type RuntimeMutatorTarget struct {
 	MethodName string                     `json:"method_name"`
 	Mutation   RuntimeMutatorMutationSpec `json:"mutation"`
 }
-
-// Legacy type aliases for backward compatibility with existing generated code
-// These will be removed after regeneration
-type ServiceEndpoint = HTTPEndpoint
-type GRPCOperation = RPCOperation

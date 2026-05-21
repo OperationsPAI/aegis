@@ -1,9 +1,8 @@
 package chaos
 
-// GuidedConfig mirrors the chaos-experiment guidedcli wire shape so aegislab
-// business code can marshal/unmarshal the same JSON without importing
-// chaos-experiment. JSON tags are load-bearing — they pin the wire contract
-// against the chaos-service /v1beta/guided/* endpoints.
+// GuidedConfig is the wire shape for the guided-injection session. JSON tags
+// are load-bearing — they pin the wire contract against the chaos-service
+// /v1beta/guided/* endpoints.
 type GuidedConfig struct {
 	System          string `json:"system,omitempty" yaml:"system,omitempty"`
 	SystemType      string `json:"system_type,omitempty" yaml:"system_type,omitempty"`

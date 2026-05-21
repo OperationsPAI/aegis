@@ -27,7 +27,7 @@ type DeletedCRD struct {
 // only set on a fatal listing failure — per-object delete failures are
 // collected in warnings.
 //
-// The chaos GVRs are sourced from chaos-experiment's CRD mapping so any new
+// The chaos GVRs are sourced from the chaosengine CRD mapping so any new
 // chaos kinds registered there are automatically covered.
 func DeleteChaosCRDsByLabel(ctx context.Context, chaosGVRs []schema.GroupVersionResource, labelKey, labelValue string) ([]DeletedCRD, []error) {
 	if labelKey == "" || labelValue == "" {

@@ -68,11 +68,10 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 	}
 
 	// Activate config listener first so Viper is populated from etcd before
-	// any consumer reads injection.system.* via the config manager. The
-	// chaos-experiment in-process registry is gone — chaos-service owns it
-	// now — so the only thing left to wire up here is the local
-	// chaos.IsSystemRegistered probe that validates pedestal short-codes
-	// against the live config manager.
+	// any consumer reads injection.system.* via the config manager. The only
+	// thing left to wire up here is the local chaos.IsSystemRegistered probe
+	// that validates pedestal short-codes against the live config manager
+	// (chaos-service owns the registry itself).
 	common.RegisterGlobalHandlers(publisher)
 	if err := activateConfigScope(consts.ConfigScopeProducer, listener); err != nil {
 		return err

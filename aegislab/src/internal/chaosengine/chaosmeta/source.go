@@ -1,5 +1,5 @@
 // Package chaosmeta is the public facade for installing a metadata source
-// into chaos-experiment's resourcelookup package.
+// into the chaosengine resourcelookup package.
 package chaosmeta
 
 import (

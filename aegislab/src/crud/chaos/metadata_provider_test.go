@@ -8,10 +8,7 @@ import (
 
 // TestChaosPointStore_QueryPoints_FiltersBySystemAndStatus seeds two
 // systems plus one superseded row and asserts the DB-backed store returns
-// only the active rows for the queried system. Together with the
-// chaos-experiment-side TestDBBacked_* suite this exercises the full
-// chaos_points → resourcelookup integration: aegislab proves the query,
-// chaos-experiment proves the row → cache transformation.
+// only the active rows for the queried system.
 func TestChaosPointStore_QueryPoints_FiltersBySystemAndStatus(t *testing.T) {
 	_, _, db := newTestManager(t)
 
@@ -53,9 +50,5 @@ func TestChaosPointStore_QueryPoints_FiltersBySystemAndStatus(t *testing.T) {
 		}
 	}
 
-	// Smoke-check RegisterChaosPointStore doesn't panic and that the
-	// installed store handles the same query — the side effect lives in
-	// chaosmeta's package-level state, validated end-to-end by
-	// chaos-experiment's TestNewSystemCache_InstallsStore.
 	RegisterChaosPointStore(db)
 }

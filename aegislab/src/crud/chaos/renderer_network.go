@@ -163,8 +163,7 @@ func (r networkRenderer) RenderCR(sysCtx SystemContext, name, namespace string, 
 
 // attachActionParams writes the TC-parameter sub-object for delay/loss/
 // duplicate/corrupt/bandwidth onto spec. partition has none. Field names
-// and shapes mirror chaos-mesh v1alpha1.NetworkChaosSpec TcParameter
-// (see chaos-experiment/chaos/network_chaos.go for the live wiring).
+// and shapes mirror chaos-mesh v1alpha1.NetworkChaosSpec TcParameter.
 func (r networkRenderer) attachActionParams(spec map[string]any, params map[string]any) error {
 	corr := pctStringOrZero(params, "correlation_pct")
 	switch r.action {
