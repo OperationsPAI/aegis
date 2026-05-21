@@ -43,12 +43,13 @@ var injectionDispatchTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 
 // chaosServiceClient is the seam tests substitute. Returning the ack-id (one
 // per inject, or one batch_id) is enough for the dispatcher — the terminal
-// webhook arrives separately and is handled by crud/hooks/chaos.
+// webhook arrives separately and is handled by crud/hooks/chaos. Cancel is
+// task_id-keyed: chaos-service maintains the index server-side, so the
+// orchestrator no longer carries a parallel in-process map.
 type chaosServiceClient interface {
 	CreateInjection(ctx context.Context, body apiclient.ChaosChaosCreateInjectionReq) (string, error)
 	CreateInjectionBatch(ctx context.Context, body apiclient.ChaosChaosCreateInjectionBatchReq) (string, error)
-	DeleteInjection(ctx context.Context, id string) error
-	DeleteInjectionBatch(ctx context.Context, id string) error
+	DeleteInjectionByTask(ctx context.Context, taskID string) error
 }
 
 // errChaosServiceNotFound signals an idempotent cleanup hit: the chaos service
@@ -122,15 +123,9 @@ func (c *sdkChaosServiceClient) CreateInjectionBatch(ctx context.Context, body a
 	return *resp.Data.Id, nil
 }
 
-func (c *sdkChaosServiceClient) DeleteInjection(ctx context.Context, id string) error {
+func (c *sdkChaosServiceClient) DeleteInjectionByTask(ctx context.Context, taskID string) error {
 	cli := c.newAPIClient()
-	_, httpResp, err := cli.ChaosAPI.ChaosDeleteInjection(ctx, id).Execute()
-	return classifyChaosDeleteErr(httpResp, err)
-}
-
-func (c *sdkChaosServiceClient) DeleteInjectionBatch(ctx context.Context, id string) error {
-	cli := c.newAPIClient()
-	_, httpResp, err := cli.ChaosAPI.ChaosDeleteInjectionBatch(ctx, id).Execute()
+	_, httpResp, err := cli.ChaosAPI.ChaosDeleteInjectionByTask(ctx, taskID).Execute()
 	return classifyChaosDeleteErr(httpResp, err)
 }
 
@@ -229,7 +224,6 @@ func dispatchViaChaosService(
 		if err != nil {
 			return nil, fmt.Errorf("dispatcher: POST /v1beta/injections: %w", err)
 		}
-		registerChaosServiceTask(deps.taskID, injectionID, false)
 		logEntry.WithFields(logrus.Fields{
 			"injection_id": injectionID,
 			"point_id":     pid,
@@ -261,7 +255,6 @@ func dispatchViaChaosService(
 	if err != nil {
 		return nil, fmt.Errorf("dispatcher: POST /v1beta/injection-batches: %w", err)
 	}
-	registerChaosServiceTask(deps.taskID, batchID, true)
 	logEntry.WithFields(logrus.Fields{
 		"batch_id": batchID,
 	}).Info("dispatcher: chaos service ack received (batch)")
@@ -330,52 +323,16 @@ func buildCallerMetadata(d dispatcherDeps, namespace string) map[string]any {
 // back to defaultChaosServiceClient.
 var testChaosServiceClient func() (chaosServiceClient, error)
 
-// chaosServiceInjectionRef tracks the chaos-service ack-id we received for a
-// task so the cancel path can route DELETE to the right endpoint. In-process
-// only — survives a single orchestrator lifetime, same locality as the legacy
-// CR-delete path which also has no cross-process state.
-type chaosServiceInjectionRef struct {
-	id      string
-	isBatch bool
-}
-
-var (
-	chaosServiceTaskRegistry      = make(map[string]chaosServiceInjectionRef)
-	chaosServiceTaskRegistryMutex sync.RWMutex
-)
-
-func registerChaosServiceTask(taskID, id string, isBatch bool) {
-	if taskID == "" || id == "" {
-		return
-	}
-	chaosServiceTaskRegistryMutex.Lock()
-	defer chaosServiceTaskRegistryMutex.Unlock()
-	chaosServiceTaskRegistry[taskID] = chaosServiceInjectionRef{id: id, isBatch: isBatch}
-}
-
-func lookupChaosServiceTask(taskID string) (chaosServiceInjectionRef, bool) {
-	chaosServiceTaskRegistryMutex.RLock()
-	defer chaosServiceTaskRegistryMutex.RUnlock()
-	ref, ok := chaosServiceTaskRegistry[taskID]
-	return ref, ok
-}
-
-func unregisterChaosServiceTask(taskID string) {
-	chaosServiceTaskRegistryMutex.Lock()
-	defer chaosServiceTaskRegistryMutex.Unlock()
-	delete(chaosServiceTaskRegistry, taskID)
-}
-
 // CancelChaosServiceInjection issues the chaos-service DELETE that matches the
-// task's prior dispatch. Returns (false, nil) when the task was not dispatched
-// via chaos-service (caller falls back to the legacy CR-delete path). A 404
-// from the chaos service is swallowed as idempotent cleanup.
+// task's prior dispatch. chaos-service resolves the (ackID, isBatch) tuple
+// server-side from the indexed `task_id` column, so the orchestrator no
+// longer carries a parallel in-process map. A 404 from the chaos service is
+// swallowed as idempotent cleanup. Always returns handled=true because
+// chaos-service is now the single canonical inject pathway.
 func CancelChaosServiceInjection(ctx context.Context, taskID string) (bool, error) {
-	ref, ok := lookupChaosServiceTask(taskID)
-	if !ok {
+	if taskID == "" {
 		return false, nil
 	}
-
 	clientFactory := defaultChaosServiceClient
 	if testChaosServiceClient != nil {
 		clientFactory = testChaosServiceClient
@@ -388,18 +345,12 @@ func CancelChaosServiceInjection(ctx context.Context, taskID string) (bool, erro
 	callCtx, cancel := context.WithTimeout(ctx, dispatcherChaosTimeout())
 	defer cancel()
 
-	if ref.isBatch {
-		err = cli.DeleteInjectionBatch(callCtx, ref.id)
-	} else {
-		err = cli.DeleteInjection(callCtx, ref.id)
-	}
+	err = cli.DeleteInjectionByTask(callCtx, taskID)
 	if errors.Is(err, errChaosServiceNotFound) {
-		unregisterChaosServiceTask(taskID)
 		return true, nil
 	}
 	if err != nil {
-		return true, fmt.Errorf("cancel chaos-service injection %s: %w", ref.id, err)
+		return true, fmt.Errorf("cancel chaos-service injection by task %s: %w", taskID, err)
 	}
-	unregisterChaosServiceTask(taskID)
 	return true, nil
 }

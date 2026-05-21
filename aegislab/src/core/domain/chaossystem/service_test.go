@@ -10,7 +10,6 @@ import (
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/model"
-	"aegis/core/orchestrator/common"
 
 	chaos "aegis/platform/chaos"
 	"github.com/spf13/viper"
@@ -35,10 +34,15 @@ func (f *fakeEtcd) Put(_ context.Context, key, value string, _ time.Duration) er
 }
 
 // newMetadataService spins up an in-memory service stripped of the etcd
-// gateway. It is sufficient for exercising the metadata upsert / list flow —
-// the etcd-backed CRUD is covered by the service_registry test in the
+// gateway. Sufficient for exercising the metadata upsert / namespace-count
+// flow; the etcd-backed CRUD is covered by service_registry_test in the
 // consumer package, which is the canonical contract for issue #75.
-func newMetadataService(t *testing.T) (*Service, *gorm.DB, *common.DBMetadataStore) {
+//
+// The previous variant also returned a DBMetadataStore (used by a sibling
+// cache-invalidation test). That store has moved into chaos-service along
+// with its cache; the cross-process invalidation hook is gone, so the
+// fixture stays minimal.
+func newMetadataService(t *testing.T) (*Service, *gorm.DB) {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -49,70 +53,11 @@ func newMetadataService(t *testing.T) (*Service, *gorm.DB, *common.DBMetadataSto
 		t.Fatalf("migrate tables: %v", err)
 	}
 
-	store := common.NewDBMetadataStore(db)
 	svc := &Service{
 		repo: NewRepository(db),
 		etcd: &fakeEtcd{data: map[string]string{}},
 	}
-	return svc, db, store
-}
-
-// TestUpsertTopologyMetadataInvalidatesCache pins the behaviour that pushing
-// service topology via UpsertMetadata surfaces in GetAllServiceNames /
-// GetNetworkPairs without a reload. Independent of the etcd-backed CRUD.
-func TestUpsertTopologyMetadataInvalidatesCache(t *testing.T) {
-	service, db, store := newMetadataService(t)
-	ctx := context.Background()
-
-	systemName := "bench-http-runtime"
-
-	// Seed a minimal anchor row so lookupByID resolves.
-	anchor := &model.DynamicConfig{
-		Key:          systemKey(systemName, fieldCount),
-		DefaultValue: "1",
-		ValueType:    0,
-	}
-	if err := db.Create(anchor).Error; err != nil {
-		t.Fatalf("seed anchor: %v", err)
-	}
-
-	// Prime the cache with an empty lookup.
-	names, err := store.GetAllServiceNames(systemName)
-	if err != nil {
-		t.Fatalf("initial GetAllServiceNames() error = %v", err)
-	}
-	if len(names) != 0 {
-		t.Fatalf("initial GetAllServiceNames() = %v, want empty", names)
-	}
-
-	err = service.UpsertMetadata(ctx, anchor.ID, &BulkUpsertSystemMetadataReq{
-		Services: []TopologyServiceReq{
-			{Name: "frontend", Namespace: systemName + "0", DependsOn: []string{"checkout"}},
-			{Name: "checkout", Namespace: systemName + "0"},
-		},
-	})
-	if err != nil {
-		// UpsertMetadata needs a system in Viper to resolve lookupByID. We
-		// bypass that by seeding the anchor row above; if the service starts
-		// requiring live Viper state this test will fail loudly.
-		t.Skipf("UpsertMetadata unavailable without Viper state: %v", err)
-	}
-
-	names, err = store.GetAllServiceNames(systemName)
-	if err != nil {
-		t.Fatalf("post-upsert GetAllServiceNames() error = %v", err)
-	}
-	if len(names) != 2 {
-		t.Fatalf("post-upsert GetAllServiceNames() len = %d, want 2", len(names))
-	}
-
-	pairs, err := store.GetNetworkPairs(systemName)
-	if err != nil {
-		t.Fatalf("GetNetworkPairs() error = %v", err)
-	}
-	if len(pairs) != 1 || pairs[0].Source != "frontend" || pairs[0].Target != "checkout" {
-		t.Fatalf("GetNetworkPairs() = %+v, want frontend->checkout", pairs)
-	}
+	return svc, db
 }
 
 // seedSystemInViper installs a chaos-system entry into the global Viper tree
@@ -133,13 +78,8 @@ func seedSystemInViper(t *testing.T, name string, isBuiltin bool) func() {
 	return func() { viper.Set("injection.system", prev) }
 }
 
-// TestUpdateSystemStatusRejectsDeleteSentinel pins that the generic update
-// endpoint refuses status=-1 (CommonDeleted). -1 is the tombstone written by
-// DeleteSystem; callers must go through DELETE so the builtin guard and the
-// local chaos.UnregisterSystem hook run. This check fires before any etcd
-// round-trip, so a nil-etcd Service is safe.
 func TestUpdateSystemStatusRejectsDeleteSentinel(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "bench-update-status-delete"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
@@ -163,15 +103,11 @@ func TestUpdateSystemStatusRejectsDeleteSentinel(t *testing.T) {
 	}
 }
 
-// TestEnsureCountForNamespaceNoBumpWhenInRange covers the idempotent path:
-// a namespace that already falls inside the system's enumerated range
-// should not trigger any etcd write.
 func TestEnsureCountForNamespaceNoBumpWhenInRange(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "bench-count-noop"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
-	// Bump count to 5 so namespaces 0..4 are already in-range.
 	viper.Set("injection.system."+systemName+".count", 5)
 
 	anchor := &model.DynamicConfig{
@@ -192,12 +128,8 @@ func TestEnsureCountForNamespaceNoBumpWhenInRange(t *testing.T) {
 	}
 }
 
-// TestEnsureCountForNamespaceRejectsMismatch covers the safety guard: a
-// namespace that doesn't match the system's NsPattern must not corrupt the
-// count of an unrelated system. See #156's risk surface — silently
-// promoting an arbitrary namespace would be worse than the original bug.
 func TestEnsureCountForNamespaceRejectsMismatch(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "bench-count-mismatch"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
@@ -220,14 +152,8 @@ func TestEnsureCountForNamespaceRejectsMismatch(t *testing.T) {
 	}
 }
 
-// TestEnsureCountForNamespaceKeepsBootstrapIndexMoving reproduces the stale
-// count bug from alloc.go pass 2: each bootstrap allocation computes the
-// candidate namespace from the current config count, then asks
-// EnsureCountForNamespace to extend the pool. The local config must update
-// immediately or every call keeps reusing the same fresh slot until the etcd
-// watcher eventually catches up.
 func TestEnsureCountForNamespaceKeepsBootstrapIndexMoving(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "sockshop"
 	cleanup := seedSystemInViper(t, systemName, false)
 	defer cleanup()
@@ -282,11 +208,8 @@ func TestEnsureCountForNamespaceKeepsBootstrapIndexMoving(t *testing.T) {
 	}
 }
 
-// TestUpdateSystemStatusRejectsBuiltin pins that builtin systems refuse
-// enable/disable through the generic update endpoint, mirroring the guard in
-// DeleteSystem.
 func TestUpdateSystemStatusRejectsBuiltin(t *testing.T) {
-	service, db, _ := newMetadataService(t)
+	service, db := newMetadataService(t)
 	const systemName = "bench-update-status-builtin"
 	cleanup := seedSystemInViper(t, systemName, true)
 	defer cleanup()

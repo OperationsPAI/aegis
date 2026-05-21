@@ -229,7 +229,7 @@ current stage's selection, and --apply to submit the finalized config.`,
 			path = home + "/.aegisctl/inject-guided.yaml"
 		}
 
-		fileCfg, err := guidedcli.LoadConfig(path)
+		fileCfg, err := loadGuidedConfigFile(path)
 		if err != nil {
 			return fmt.Errorf("load guided config: %w", err)
 		}
@@ -301,7 +301,7 @@ current stage's selection, and --apply to submit the finalized config.`,
 		setInt(&cliCfg.CPUCount, guidedCPUCount, false)
 		setInt(&cliCfg.StatusCode, guidedStatusCode, false)
 
-		merged := guidedcli.MergeConfig(fileCfg, cliCfg)
+		merged := mergeGuidedConfig(fileCfg, cliCfg)
 
 		// Issue #138: before any guidedcli.Resolve call (which performs
 		// in-cluster app discovery via list-pods), optionally bootstrap the
@@ -322,26 +322,23 @@ current stage's selection, and --apply to submit the finalized config.`,
 		// submit path.
 		merged.Apply = false
 		if guidedNext != "" {
-			current, err := guidedcli.Resolve(ctx, merged)
-			if err != nil {
-				return fmt.Errorf("resolve current guided response: %w", err)
-			}
-			merged, err = guidedcli.ApplyNextSelection(current, guidedNext)
+			next, err := guidedServiceApplyNext(ctx, merged, guidedNext)
 			if err != nil {
 				return fmt.Errorf("apply --next: %w", err)
 			}
+			merged = next
 			merged.SaveConfig = effectiveSave
 			merged.ResetConfig = guidedResetConfig
 			merged.Apply = false
 		}
 
-		response, err := guidedcli.Resolve(ctx, merged)
+		response, err := guidedServiceResolve(ctx, merged)
 		if err != nil {
 			return fmt.Errorf("resolve guided response: %w", err)
 		}
 
 		if effectiveSave {
-			if err := guidedcli.SaveConfig(path, fileCfg, response.Config); err != nil {
+			if err := saveGuidedConfigFile(path, fileCfg, response.Config); err != nil {
 				return fmt.Errorf("save guided config: %w", err)
 			}
 		}
@@ -371,7 +368,7 @@ current stage's selection, and --apply to submit the finalized config.`,
 			// themselves on the next call).
 			if effectiveSave {
 				fileCfg.GuidedSession = guidedcli.GuidedSession{}
-				if err := guidedcli.SaveConfig(path, fileCfg, guidedcli.GuidedConfig{}); err != nil {
+				if err := saveGuidedConfigFile(path, fileCfg, guidedcli.GuidedConfig{}); err != nil {
 					return fmt.Errorf("reset working session after stage: %w", err)
 				}
 			}
@@ -813,4 +810,78 @@ func bootstrapGuidedInstall(ctx context.Context, cfg guidedcli.GuidedConfig) err
 		case <-time.After(5 * time.Second):
 		}
 	}
+}
+
+// Test seams: replace with fakes in unit tests. Production wiring goes through
+// the chaos-service HTTP endpoints exposed in PR phase 2e (8215853c).
+var (
+	guidedServiceResolveHook   func(ctx context.Context, cfg guidedcli.GuidedConfig) (*guidedcli.GuidedResponse, error)
+	guidedServiceApplyNextHook func(ctx context.Context, current guidedcli.GuidedConfig, value string) (guidedcli.GuidedConfig, error)
+)
+
+func guidedServiceResolve(ctx context.Context, cfg guidedcli.GuidedConfig) (*guidedcli.GuidedResponse, error) {
+	if guidedServiceResolveHook != nil {
+		return guidedServiceResolveHook(ctx, cfg)
+	}
+	cli, callCtx, err := newChaosAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	var wire apiclient.GuidedcliGuidedConfig
+	if err := guidedJSONRoundTrip(cfg, &wire); err != nil {
+		return nil, fmt.Errorf("encode guided config: %w", err)
+	}
+	req := apiclient.NewChaosChaosGuidedResolveReq()
+	req.SetConfig(wire)
+	resp, _, err := cli.ChaosAPI.ChaosGuidedResolve(callCtx).ChaosChaosGuidedResolveReq(*req).Execute()
+	if err != nil {
+		return nil, fmt.Errorf("chaos service guided resolve: %w", err)
+	}
+	if resp == nil || resp.Data == nil {
+		return nil, fmt.Errorf("chaos service guided resolve: empty response")
+	}
+	var out guidedcli.GuidedResponse
+	if err := guidedJSONRoundTrip(resp.Data, &out); err != nil {
+		return nil, fmt.Errorf("decode guided response: %w", err)
+	}
+	return &out, nil
+}
+
+func guidedServiceApplyNext(ctx context.Context, current guidedcli.GuidedConfig, value string) (guidedcli.GuidedConfig, error) {
+	if guidedServiceApplyNextHook != nil {
+		return guidedServiceApplyNextHook(ctx, current, value)
+	}
+	cli, callCtx, err := newChaosAPIClient()
+	if err != nil {
+		return guidedcli.GuidedConfig{}, err
+	}
+	var wire apiclient.GuidedcliGuidedConfig
+	if err := guidedJSONRoundTrip(current, &wire); err != nil {
+		return guidedcli.GuidedConfig{}, fmt.Errorf("encode guided config: %w", err)
+	}
+	req := apiclient.NewChaosChaosGuidedApplyNextReq(value)
+	req.SetCurrent(wire)
+	resp, _, err := cli.ChaosAPI.ChaosGuidedApplyNext(callCtx).ChaosChaosGuidedApplyNextReq(*req).Execute()
+	if err != nil {
+		return guidedcli.GuidedConfig{}, fmt.Errorf("chaos service guided apply-next: %w", err)
+	}
+	if resp == nil || resp.Data == nil || resp.Data.Config == nil {
+		return guidedcli.GuidedConfig{}, fmt.Errorf("chaos service guided apply-next: empty response")
+	}
+	var out guidedcli.GuidedConfig
+	if err := guidedJSONRoundTrip(resp.Data.Config, &out); err != nil {
+		return guidedcli.GuidedConfig{}, fmt.Errorf("decode guided config: %w", err)
+	}
+	return out, nil
+}
+
+// guidedJSONRoundTrip copies src to dst via JSON. Both sides carry identical
+// JSON tags so this is a structural rename — verified by the backend's own
+// guidedConfigsToSpecs helper which uses the same pattern.
+func guidedJSONRoundTrip(src, dst any) error {
+	raw, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, dst)
 }
