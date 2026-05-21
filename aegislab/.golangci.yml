@@ -7,6 +7,45 @@ run:
     - duckdb_arrow
   new-from-rev: HEAD~1
 
+linters:
+  enable:
+    - forbidigo
+    - depguard
+  settings:
+    forbidigo:
+      # analyze-types makes patterns match type expressions (composite literals
+      # like &http.Client{}) in addition to call selectors.
+      analyze-types: true
+      forbid:
+        - pattern: '^http\.NewRequest(WithContext)?$'
+          msg: "Use apiclient.<Service>.<Method> from aegis/cli/apiclient/, not hand-rolled HTTP. See aegislab/CLAUDE.md 'Hard rules for new HTTP endpoints'."
+        - pattern: '^http\.Client$'
+          msg: "Use apiclient.<Service>.<Method> with the shared transport from aegis/cli/client/, not a freshly constructed http.Client. See aegislab/CLAUDE.md."
+    depguard:
+      rules:
+        chaos-experiment-import:
+          list-mode: lax
+          deny:
+            - pkg: "github.com/OperationsPAI/chaos-experiment"
+              desc: "chaos-experiment is chaos-service implementation, not business code. Only crud/chaos/handler_guided.go (and crud/chaos/metadata_provider.go for chaosmeta constants) may import it; it's the integration seam. After Phase B this rule and the import path itself both disappear."
+            - pkg: "github.com/LGU-SE-Internal/chaos-experiment"
+              desc: "chaos-experiment is chaos-service implementation, not business code. Only crud/chaos/handler_guided.go may import it. After Phase B this rule and the import path itself both disappear."
+  exclusions:
+    rules:
+      # forbidigo Rule 1: hand-rolled HTTP is forbidden under cli/cmd/ (the CLI surface).
+      # Everything outside cli/cmd/ is exempt — backend, generated apiclient, and the
+      # shared client/ transport wrappers all legitimately use net/http.
+      - path-except: "cli/cmd/"
+        linters:
+          - forbidigo
+      # depguard Rule 2: the two chaos integration-seam files may import chaos-experiment.
+      - path: "crud/chaos/handler_guided\\.go"
+        linters:
+          - depguard
+      - path: "crud/chaos/metadata_provider\\.go"
+        linters:
+          - depguard
+
 issues:
   exclude-rules:
     - path: ".*_test\\.go"
