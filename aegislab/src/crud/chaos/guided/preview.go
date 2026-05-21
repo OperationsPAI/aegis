@@ -1,4 +1,4 @@
-package guidedcli
+package guided
 
 import (
 	"aegis/platform/k8s/resourcelookup"

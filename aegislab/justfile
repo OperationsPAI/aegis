@@ -323,7 +323,7 @@ changelog:
     printf "{{green}}✅ CHANGELOG.md generated successfully{{reset}}\n"
 
 # 🧬 Regenerate aegis-chaos Capability seed list + JSON schemas
-# Source of truth: aegislab/src/internal/chaosengine/handler/handler.go ChaosTypeMap.
+# Source of truth: aegislab/src/crud/chaos/guided/ ChaosTypeMap.
 # Outputs: tools/capgen/output/{capabilities.json,capabilities.md,conformance_cases.json}
 capgen:
     #!/usr/bin/env bash

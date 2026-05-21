@@ -1,4 +1,4 @@
-package guidedcli
+package guided
 
 // HTTP Method enum
 type HTTPMethod int

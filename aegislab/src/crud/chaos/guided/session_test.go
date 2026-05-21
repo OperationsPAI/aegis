@@ -1,4 +1,4 @@
-package guidedcli
+package guided
 
 import "testing"
 
