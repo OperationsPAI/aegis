@@ -19,6 +19,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	chaos "aegis/platform/chaos"
 )
@@ -65,12 +66,12 @@ func InitializeProducer(db *gorm.DB, publisher *redis.Gateway, etcdGw *etcd.Gate
 		return fmt.Errorf("failed to reconcile system permissions: %w", err)
 	}
 
-	// Task #44: same gap as #104 but for service_accounts. A new SA row added
-	// to data.yaml after first boot must reach the DB; producerSeedRequired
-	// gates only on container count so a populated cluster never re-runs the
-	// once-only seeder.
-	if err := ReconcileServiceAccounts(db, initialData.ServiceAccounts); err != nil {
-		return fmt.Errorf("failed to reconcile service accounts: %w", err)
+	// service_accounts is a declarative table — every boot upserts by name so
+	// rows added to data.yaml after the once-only seed (gated on `containers`
+	// being empty) still land. Manual revocations are preserved because the
+	// upsert never touches `revoked_at`.
+	if err := seedServiceAccounts(db, initialData.ServiceAccounts); err != nil {
+		return fmt.Errorf("failed to seed service accounts: %w", err)
 	}
 
 	// Best-effort one-shot migration for issue #75:
@@ -168,90 +169,38 @@ func initializeProducer(db *gorm.DB, initialData *InitialData) error {
 				return fmt.Errorf("failed to initialize execution labels: %w", err)
 			}
 
-			if err := initializeServiceAccounts(tx, initialData); err != nil {
-				return fmt.Errorf("failed to initialize service accounts: %w", err)
-			}
-
 			return nil
 		})
 	})
 }
 
-func initializeServiceAccounts(tx *gorm.DB, data *InitialData) error {
-	return reconcileServiceAccountsTx(tx, data.ServiceAccounts)
-}
-
-// ReconcileServiceAccounts upserts service_accounts rows from initial-data on
-// every boot (Task #44). Companion to ReconcileSystemPermissions: closes the
-// same class of gap where a new row added to data.yaml after first boot never
-// landed in production DB because producerSeedRequired gates only on the
-// containers table being empty.
-//
-// Semantics:
-//   - INSERT rows missing from the DB.
-//   - UPDATE scopes / description on rows whose data.yaml entry differs.
-//   - PRESERVE a non-null revoked_at even if data.yaml is silent about it —
-//     manual revocations (via aegisctl / direct SQL) must stick across reseeds.
-//   - DO NOT delete rows that exist in DB but not in data.yaml (mirrors the
-//     conservatism of reconcileSystemPermissionsTx).
-func ReconcileServiceAccounts(db *gorm.DB, accounts []InitialDataServiceAccount) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		return reconcileServiceAccountsTx(tx, accounts)
-	})
-}
-
-func reconcileServiceAccountsTx(tx *gorm.DB, accounts []InitialDataServiceAccount) error {
+// seedServiceAccounts upserts service_accounts rows from initial-data on every
+// boot. The `name` column carries the unique index; `revoked_at` is omitted
+// from the conflict-update list so a manual revocation (set out-of-band via
+// aegisctl or SQL) is never silently undone by a re-seed. Rows present in DB
+// but absent from data.yaml are left alone — deletion is an operator action.
+func seedServiceAccounts(db *gorm.DB, accounts []InitialDataServiceAccount) error {
 	if len(accounts) == 0 {
 		return nil
 	}
-
-	inserted, updated := 0, 0
+	rows := make([]model.ServiceAccount, 0, len(accounts))
 	for _, sa := range accounts {
 		if sa.Name == "" {
 			return fmt.Errorf("service account entry has empty name")
 		}
-
-		var existing model.ServiceAccount
-		err := tx.Where("name = ?", sa.Name).First(&existing).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			row := model.ServiceAccount{
-				Name:        sa.Name,
-				Scopes:      sa.Scopes,
-				Description: sa.Description,
-			}
-			if err := tx.Create(&row).Error; err != nil {
-				return fmt.Errorf("failed to insert service account %s: %w", sa.Name, err)
-			}
-			inserted++
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("failed to look up service account %s: %w", sa.Name, err)
-		}
-
-		if existing.Scopes == sa.Scopes && existing.Description == sa.Description {
-			continue
-		}
-		// Update only the drifted columns; leave revoked_at untouched so a
-		// manual revocation (revoked_at IS NOT NULL) is not silently undone
-		// by a re-seed.
-		if err := tx.Model(&existing).Updates(map[string]any{
-			"scopes":      sa.Scopes,
-			"description": sa.Description,
-		}).Error; err != nil {
-			return fmt.Errorf("failed to update service account %s: %w", sa.Name, err)
-		}
-		updated++
+		rows = append(rows, model.ServiceAccount{
+			Name:        sa.Name,
+			Scopes:      sa.Scopes,
+			Description: sa.Description,
+		})
 	}
-
-	if inserted > 0 || updated > 0 {
-		logrus.WithFields(logrus.Fields{
-			"inserted": inserted,
-			"updated":  updated,
-		}).Info("reconciled service_accounts from initial-data")
-	} else {
-		logrus.Debug("service_accounts already in sync with initial-data")
+	if err := db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "name"}},
+		DoUpdates: clause.AssignmentColumns([]string{"scopes", "description"}),
+	}).Create(&rows).Error; err != nil {
+		return err
 	}
+	logrus.WithField("count", len(rows)).Debug("upserted service_accounts")
 	return nil
 }
 

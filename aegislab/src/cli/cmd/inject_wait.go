@@ -16,7 +16,7 @@ type injectWaitEvent struct {
 	// Only populated for "update" frames.
 	EventName string
 	// Payload is the decoded payload. The shape depends on EventName:
-	//   - fault.injection.started → map {"name": string, "executor_path": string}
+	//   - fault.injection.started → map {"name": string}
 	//   - datapack.build.succeed  → string
 	//   - datapack.result.collection → map (with "datapack" / "job_name" keys)
 	Payload any

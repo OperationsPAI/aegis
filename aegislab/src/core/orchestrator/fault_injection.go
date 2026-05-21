@@ -212,8 +212,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 				consts.TaskRunning,
 				fmt.Sprintf("injecting fault for task %s", task.TaskID),
 			).withEvent(consts.EventFaultInjectionStarted, dto.FaultInjectionStartedPayload{
-				Name:         name,
-				ExecutorPath: consts.ExecutorPathChaosService,
+				Name: name,
 			}).withDB(deps.DB).withRedis(deps.RedisGateway),
 		)
 		// Ownership of the namespace lock passes to the webhook receiver from
