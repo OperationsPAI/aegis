@@ -11,6 +11,69 @@ import (
 	"gorm.io/gorm"
 )
 
+// TestInitializeAdminUser_SkipsCreateWhenAdminAlreadyExists pins the SSO
+// re-boot path: an admin row with a real (non-empty) password is already in
+// the DB. ConvertToDBUser builds a Password="" model.User; if Create runs,
+// User.BeforeCreate calls crypto.HashPassword("") which rejects strings <8
+// chars and fails the boot before the dup-key path is reachable. So the
+// re-boot path MUST look the user up first, not rely on ErrAlreadyExists.
+func TestInitializeAdminUser_SkipsCreateWhenAdminAlreadyExists(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(&model.User{}, &model.Role{}, &model.UserRole{}); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	// SSO bootstrap path: real password, real row, predates the seed run.
+	preExisting := &model.User{
+		Username: AdminUsername,
+		Email:    "admin@aegis.local",
+		Password: "a-real-bcrypt-hash-from-sso-bootstrap",
+		FullName: "Admin",
+		IsActive: true,
+		Status:   consts.CommonEnabled,
+	}
+	if err := db.Omit("active_username").Create(preExisting).Error; err != nil {
+		t.Fatalf("seed pre-existing admin: %v", err)
+	}
+
+	if err := db.Omit("active_name").Create(&model.Role{Name: string(consts.RoleSuperAdmin), Status: consts.CommonEnabled}).Error; err != nil {
+		t.Fatalf("seed super_admin role: %v", err)
+	}
+
+	store := newBootstrapStore(db)
+	data := &InitialData{
+		AdminUser: InitialDataUser{
+			Username: AdminUsername,
+			Email:    "admin@aegis.local",
+			FullName: "Admin",
+			IsActive: true,
+			Status:   consts.CommonEnabled,
+		},
+	}
+
+	got, err := initializeAdminUser(store, data)
+	if err != nil {
+		t.Fatalf("initializeAdminUser on re-boot: %v", err)
+	}
+	if got.ID != preExisting.ID {
+		t.Fatalf("returned user ID: want pre-existing %d, got %d (Create ran?)", preExisting.ID, got.ID)
+	}
+	if got.Password != preExisting.Password {
+		t.Fatalf("admin password was clobbered: want %q, got %q", preExisting.Password, got.Password)
+	}
+
+	var count int64
+	if err := db.Model(&model.User{}).Where("username = ?", AdminUsername).Count(&count).Error; err != nil {
+		t.Fatalf("count admin rows: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 admin row, got %d", count)
+	}
+}
+
 func newDynamicConfigTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

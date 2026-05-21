@@ -177,17 +177,23 @@ func seedServiceAccounts(db *gorm.DB, accounts []InitialDataServiceAccount) erro
 
 func initializeAdminUser(store *bootstrapStore, data *InitialData) (*model.User, error) {
 	adminUser := data.AdminUser.ConvertToDBUser()
-	if err := store.createUser(adminUser); err != nil {
-		if !errors.Is(err, consts.ErrAlreadyExists) {
+
+	// Look up the existing admin BEFORE attempting Create. SSO bootstrap
+	// (boot/sso/initialization.go) may have already created this row with a
+	// real password. ConvertToDBUser produces Password="" which the
+	// User.BeforeCreate GORM hook rejects (HashPassword refuses <8 chars)
+	// before the INSERT runs — so gorm.ErrDuplicatedKey never surfaces and
+	// the old ErrAlreadyExists recovery branch is unreachable on re-boot.
+	existing, getErr := store.getUserByUsername(adminUser.Username)
+	switch {
+	case getErr == nil:
+		adminUser = existing
+	case errors.Is(getErr, consts.ErrNotFound):
+		if err := store.createUser(adminUser); err != nil {
 			return nil, fmt.Errorf("failed to create admin user: %w", err)
 		}
-		// SSO may have bootstrapped this admin already; fetch the existing row
-		// so we can still link the super_admin role.
-		existing, getErr := store.getUserByUsername(adminUser.Username)
-		if getErr != nil {
-			return nil, fmt.Errorf("admin user reportedly exists but lookup failed: %w", getErr)
-		}
-		adminUser = existing
+	default:
+		return nil, fmt.Errorf("admin user lookup failed: %w", getErr)
 	}
 
 	superAdminRole, err := store.getRoleByName("super_admin")
