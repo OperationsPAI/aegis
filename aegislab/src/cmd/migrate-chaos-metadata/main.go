@@ -11,12 +11,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/OperationsPAI/chaos-experiment/pkg/metadatasnapshot"
 	sigsyaml "sigs.k8s.io/yaml"
 )
+
+// chaos-mesh HTTPChaos operates on HTTP/1.x; gRPC pseudo-routes
+// (/pkg.Service/Method on HTTP/2) never match the rule. Mirrors the
+// resourcelookup filter that drops gRPC-only pairs from DNS chaos.
+var grpcRoutePattern = regexp.MustCompile(`^/[A-Za-z_][A-Za-z0-9_.]*\.[A-Za-z_][A-Za-z0-9_]*/[A-Za-z_][A-Za-z0-9_]*$`)
 
 var systems = []string{
 	"hs",
@@ -104,6 +110,9 @@ func dumpSystem(sys, outRoot string) (int, error) {
 	httpSeen := map[string]bool{}
 	for _, ep := range snap.HTTPEndpoints {
 		if ep.Method == "" || ep.Route == "" {
+			continue
+		}
+		if grpcRoutePattern.MatchString(ep.Route) {
 			continue
 		}
 		method := strings.ToUpper(strings.TrimSpace(ep.Method))
@@ -205,6 +214,16 @@ func dumpSystem(sys, outRoot string) (int, error) {
 	sysDir := filepath.Join(outRoot, sys)
 	if err := os.MkdirAll(sysDir, 0o755); err != nil {
 		return 0, fmt.Errorf("mkdir %s: %w", sysDir, err)
+	}
+
+	stale, err := filepath.Glob(filepath.Join(sysDir, "*-A1b.yaml"))
+	if err != nil {
+		return 0, fmt.Errorf("glob %s: %w", sysDir, err)
+	}
+	for _, p := range stale {
+		if err := os.Remove(p); err != nil {
+			return 0, fmt.Errorf("remove %s: %w", p, err)
+		}
 	}
 
 	services := sortedKeys(byService)

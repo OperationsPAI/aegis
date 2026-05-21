@@ -1,4 +1,6 @@
 #!/bin/bash
+# Idempotency is delegated to `aegisctl manifest import`, which UPSERTs
+# by point_id hash on the chaos-service side.
 set -e
 COUNT_OK=0
 COUNT_FAIL=0

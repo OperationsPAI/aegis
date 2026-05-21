@@ -62,10 +62,10 @@ type Snapshot struct {
 }
 
 // DumpForSystem reads all in-memory metadata for the given system code
-// (e.g. "ts", "otel-demo") and returns it as a Snapshot. SetCurrentSystem
-// is called as a side effect so per-system static providers route to the
-// right system; not safe to call concurrently with itself or with other
-// users of systemconfig.SetCurrentSystem.
+// (e.g. "ts", "otel-demo") and returns it as a Snapshot. Calls
+// systemconfig.SetCurrentSystem so per-system static providers dispatch
+// correctly; on return the global system pointer is left at the last
+// system dumped.
 func DumpForSystem(system string) (Snapshot, error) {
 	t, err := systemconfig.ParseSystemType(system)
 	if err != nil {

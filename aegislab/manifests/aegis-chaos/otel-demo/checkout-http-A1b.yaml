@@ -19,34 +19,6 @@ spec:
       app: checkout
       method: POST
       namespace: otel-demo
-      path: /oteldemo.CartService/EmptyCart
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CurrencyService/Convert
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.PaymentService/Charge
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.ProductCatalogService/GetProduct
-      port: 8080
-  - capability: http_request_replace_method
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
   - capability: http_request_replace_method
@@ -68,34 +40,6 @@ spec:
       app: checkout
       method: POST
       namespace: otel-demo
-      path: /oteldemo.CartService/EmptyCart
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CurrencyService/Convert
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.PaymentService/Charge
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.ProductCatalogService/GetProduct
-      port: 8080
-  - capability: http_request_replace_path
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
   - capability: http_request_replace_path
@@ -111,34 +55,6 @@ spec:
       method: POST
       namespace: otel-demo
       path: /get-quote
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CartService/EmptyCart
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CurrencyService/Convert
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.PaymentService/Charge
-      port: 8080
-  - capability: http_response_abort
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.ProductCatalogService/GetProduct
       port: 8080
   - capability: http_response_abort
     target:
@@ -166,34 +82,6 @@ spec:
       app: checkout
       method: POST
       namespace: otel-demo
-      path: /oteldemo.CartService/EmptyCart
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CurrencyService/Convert
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.PaymentService/Charge
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.ProductCatalogService/GetProduct
-      port: 8080
-  - capability: http_response_delay
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
   - capability: http_response_delay
@@ -209,34 +97,6 @@ spec:
       method: POST
       namespace: otel-demo
       path: /get-quote
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CartService/EmptyCart
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CurrencyService/Convert
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.PaymentService/Charge
-      port: 8080
-  - capability: http_response_patch_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.ProductCatalogService/GetProduct
       port: 8080
   - capability: http_response_patch_body
     target:
@@ -264,34 +124,6 @@ spec:
       app: checkout
       method: POST
       namespace: otel-demo
-      path: /oteldemo.CartService/EmptyCart
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CurrencyService/Convert
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.PaymentService/Charge
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.ProductCatalogService/GetProduct
-      port: 8080
-  - capability: http_response_replace_body
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
       path: /send_order_confirmation
       port: 8080
   - capability: http_response_replace_body
@@ -307,34 +139,6 @@ spec:
       method: POST
       namespace: otel-demo
       path: /get-quote
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CartService/EmptyCart
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.CurrencyService/Convert
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.PaymentService/Charge
-      port: 8080
-  - capability: http_response_replace_code
-    target:
-      app: checkout
-      method: POST
-      namespace: otel-demo
-      path: /oteldemo.ProductCatalogService/GetProduct
       port: 8080
   - capability: http_response_replace_code
     target:
