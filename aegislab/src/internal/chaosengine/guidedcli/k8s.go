@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"aegis/internal/chaosengine/resourcelookup"
+	"aegis/platform/k8s/resourcelookup"
 	"aegis/platform/systemconfig"
 )
 

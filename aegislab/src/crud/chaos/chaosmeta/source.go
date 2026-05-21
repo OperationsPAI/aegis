@@ -5,7 +5,7 @@ package chaosmeta
 import (
 	"context"
 
-	"aegis/internal/chaosengine/resourcelookup"
+	"aegis/platform/k8s/resourcelookup"
 )
 
 // ChaosPointRow mirrors resourcelookup.ChaosPointRow for callers outside

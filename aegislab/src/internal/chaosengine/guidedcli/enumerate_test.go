@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"aegis/internal/chaosengine/resourcelookup"
+	"aegis/platform/k8s/resourcelookup"
 	"aegis/platform/systemconfig"
 )
 
