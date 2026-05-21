@@ -74,6 +74,80 @@ func TestInitializeAdminUser_SkipsCreateWhenAdminAlreadyExists(t *testing.T) {
 	}
 }
 
+// TestInitializeUsers_IdempotentOnSecondBoot pins the same re-boot path for
+// the non-admin user loop fed from data.yaml#users. ConvertToDBUser returns
+// Password="" — without the lookup-first fix, BeforeCreate fails for every
+// already-existing user the second time around. This guards against the
+// data.yaml-driven blast radius (rainysteven1/2/3 in prod).
+func TestInitializeUsers_IdempotentOnSecondBoot(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(
+		&model.User{},
+		&model.Role{},
+		&model.UserRole{},
+		&model.Team{},
+		&model.Project{},
+		&model.UserScopedRole{},
+	); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	if err := db.Omit("active_name").Create(&model.Role{Name: string(consts.RoleUser), Status: consts.CommonEnabled}).Error; err != nil {
+		t.Fatalf("seed user role: %v", err)
+	}
+
+	preExisting := &model.User{
+		Username: "rainysteven1",
+		Email:    "rainysteven1@aegis.local",
+		Password: "a-real-bcrypt-hash-from-sso-bootstrap",
+		FullName: "Rainy Steven 1",
+		IsActive: true,
+		Status:   consts.CommonEnabled,
+	}
+	if err := db.Omit("active_username").Create(preExisting).Error; err != nil {
+		t.Fatalf("seed pre-existing user: %v", err)
+	}
+
+	store := newBootstrapStore(db)
+	data := &InitialData{
+		Users: []InitialDataUser{
+			{
+				Username: "rainysteven1",
+				Email:    "rainysteven1@aegis.local",
+				FullName: "Rainy Steven 1",
+				IsActive: true,
+				Status:   consts.CommonEnabled,
+			},
+		},
+	}
+
+	if err := initializeUsers(store, data); err != nil {
+		t.Fatalf("initializeUsers on re-boot (pre-existing): %v", err)
+	}
+	if err := initializeUsers(store, data); err != nil {
+		t.Fatalf("initializeUsers on third boot: %v", err)
+	}
+
+	var count int64
+	if err := db.Model(&model.User{}).Where("username = ?", "rainysteven1").Count(&count).Error; err != nil {
+		t.Fatalf("count users: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 row for rainysteven1, got %d", count)
+	}
+
+	var after model.User
+	if err := db.Where("username = ?", "rainysteven1").First(&after).Error; err != nil {
+		t.Fatalf("re-fetch: %v", err)
+	}
+	if after.Password != preExisting.Password {
+		t.Fatalf("password clobbered: want %q got %q", preExisting.Password, after.Password)
+	}
+}
+
 func newDynamicConfigTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

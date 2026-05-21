@@ -384,12 +384,20 @@ func initializeUsers(store *bootstrapStore, data *InitialData) error {
 	for _, userData := range data.Users {
 		user := userData.ConvertToDBUser()
 
-		if err := store.createUser(user); err != nil {
-			if errors.Is(err, consts.ErrAlreadyExists) {
-				logrus.Warnf("User %s already exists, skipping", user.Username)
-				continue
+		// Same race as initializeAdminUser: ConvertToDBUser yields Password=""
+		// which User.BeforeCreate rejects before INSERT, so the dup-key path
+		// never fires on re-boot. Look up by username first and reuse the
+		// existing row when present.
+		existing, getErr := store.getUserByUsername(user.Username)
+		switch {
+		case getErr == nil:
+			user = existing
+		case errors.Is(getErr, consts.ErrNotFound):
+			if err := store.createUser(user); err != nil {
+				return fmt.Errorf("failed to create user %s: %w", user.Username, err)
 			}
-			return fmt.Errorf("failed to create user %s: %w", user.Username, err)
+		default:
+			return fmt.Errorf("user %s lookup failed: %w", user.Username, getErr)
 		}
 
 		if err := store.createUserRole(&model.UserRole{
