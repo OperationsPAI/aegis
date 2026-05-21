@@ -38,8 +38,6 @@ var jvmChaosGVR = schema.GroupVersionResource{
 	Group: ChaosMeshGroup, Version: ChaosMeshVersion, Resource: jvmChaosResource,
 }
 
-// ChaosMeshGroupVersionResourceForJVMChaos exposes the JVMChaos GVR for
-// out-of-package callers (conformance harness).
 func ChaosMeshGroupVersionResourceForJVMChaos() schema.GroupVersionResource {
 	return jvmChaosGVR
 }

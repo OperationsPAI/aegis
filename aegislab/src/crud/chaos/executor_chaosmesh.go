@@ -55,15 +55,10 @@ func ChaosMeshGroupVersionResourceForDNSChaos() schema.GroupVersionResource {
 	return dnsChaosGVR
 }
 
-// ChaosMeshGroupVersionResourceForPodChaos exposes the PodChaos GVR for
-// out-of-package callers (notably the conformance harness) without
-// reflecting the unexported var.
 func ChaosMeshGroupVersionResourceForPodChaos() schema.GroupVersionResource {
 	return podChaosGVR
 }
 
-// ChaosMeshGroupVersionResourceForNetworkChaos exposes the NetworkChaos
-// GVR for out-of-package callers (conformance harness).
 func ChaosMeshGroupVersionResourceForNetworkChaos() schema.GroupVersionResource {
 	return networkChaosGVR
 }
