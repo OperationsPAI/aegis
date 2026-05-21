@@ -624,6 +624,10 @@ notify:
 # ---------------------------------------------------------------------------
 chaos:
   enabled: false
+  # Mirror of charts/chaos/values.yaml httpPort. Parent reads this for
+  # the gateway federation route in templates/configmap.yaml so the
+  # `/v1beta/chaos/*` reverse-proxy upstream stays in sync.
+  httpPort: 8086
   # Hook receiver — backend's POST /api/v1/hooks/chaos endpoint. Default
   # points at the in-cluster aegis-api Service rendered by this umbrella
   # chart. Override per-environment if aegis-chaos sits in a separate

@@ -189,6 +189,19 @@ upstream = "aegis-blob:8085"
 auth     = "jwt"
 
 [[gateway.routes]]
+# Federate aegis-chaos under /v1beta/chaos/* so operators reach it
+# through the same EIP as aegis-api. The /chaos segment is purely a
+# gateway-side namespace — chaos-service handlers register at /v1beta/*
+# upstream — so strip_prefix removes the matched "/v1beta/chaos" before
+# forwarding (external /v1beta/chaos/v1beta/systems/X → upstream
+# /v1beta/systems/X). aegis-chaos validates the bearer itself via
+# TrustedHeaderAuth — same scheme as aegis-api.
+prefix       = "/v1beta/chaos"
+upstream     = "aegis-chaos:8086"
+auth         = "jwt"
+strip_prefix = true
+
+[[gateway.routes]]
 prefix   = "/api/v2/auth/"
 upstream = "sso:8083"
 auth     = "none"
