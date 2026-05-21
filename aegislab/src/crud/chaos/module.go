@@ -53,10 +53,22 @@ func NewReconcilerDefault(db *gorm.DB, exec Executor, webhook *WebhookSender) *R
 	return NewReconciler(db, exec, webhook, 5*time.Second, logrus.StandardLogger())
 }
 
-func runReconciler(lc fx.Lifecycle, r *Reconciler) {
+func runReconciler(lc fx.Lifecycle, r *Reconciler, exec Executor) {
 	ctx, cancel := context.WithCancel(context.Background())
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
+			// Best-effort: only the chaos-mesh executor exposes WatchStatus;
+			// any other Executor (test fakes, future executors) keeps the
+			// pre-informer per-call Status path.
+			if w, ok := exec.(interface {
+				WatchStatus(context.Context) error
+			}); ok {
+				go func() {
+					if err := w.WatchStatus(ctx); err != nil {
+						logrus.WithError(err).Warn("chaos: informer watch exited")
+					}
+				}()
+			}
 			go r.Run(ctx)
 			return nil
 		},
