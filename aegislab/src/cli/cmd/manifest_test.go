@@ -38,6 +38,22 @@ func TestManifestValidate_MissingCapability_ExitsNonZeroAndMentionsField(t *test
 	}
 }
 
+func TestManifestValidate_UnknownTopLevelKey_ExitsNonZeroAndMentionsField(t *testing.T) {
+	resetManifestTestState(t)
+	flagQuiet = false
+
+	out, rc := captureManifestStderr(t, func() int {
+		return executeArgs([]string{"manifest", "validate", "testdata/manifest-invalid-unknown-key.yaml"})
+	})
+
+	if rc == 0 {
+		t.Fatalf("expected non-zero exit on unknown metadata key, got 0; stderr=%q", out)
+	}
+	if !strings.Contains(out, "owner") {
+		t.Fatalf("expected stderr to mention the unknown 'owner' key surfaced by additionalProperties:false; got: %q", out)
+	}
+}
+
 func TestManifestImport_DryRun_SendsCorrectPathBodyAndQuery(t *testing.T) {
 	resetManifestTestState(t)
 

@@ -1,0 +1,95 @@
+{{/*
+Reusable chart-bound PointManifest import for aegis-chaos consumers.
+
+Drop this template into your benchmark chart at:
+  templates/aegis-points-import-job.yaml
+
+Then put one PointManifest per service under your chart at:
+  aegis-points/<service>.yaml
+
+On `helm install` / `helm upgrade` the Job runs as a post-install hook
+(weight -5) AFTER the system-onboard Job (weight -10, see #458) and
+BEFORE the chart's own workloads come up (weight 0). By the time your
+benchmark services start, the system identity exists and chaos_points
+is populated.
+
+Required values (with sensible defaults below):
+  .Values.aegis.chaosServer        # chaos-server URL reachable from the cluster
+  .Values.aegis.systemCode         # system code; must match metadata.system in every PointManifest
+  .Values.aegis.aegisctlImage      # image ref for the aegisctl CLI
+  .Values.aegis.serviceAccount     # SA for the Job (typically shared with the onboard Job)
+  .Values.aegis.tokenSecret        # name of a Secret containing AEGIS_TOKEN (optional; for authenticated clusters)
+
+See aegislab/docs/aegis-chaos/point-manifest-spec.md §7 for chart-author setup.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-aegis-points-import
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    aegis.io/component: points-import
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        aegis.io/component: points-import
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ .Values.aegis.serviceAccount | default (printf "%s-aegis" .Release.Name) }}
+      containers:
+        - name: import-points
+          image: {{ .Values.aegis.aegisctlImage | default "opspai/aegisctl:latest" }}
+          imagePullPolicy: {{ .Values.aegis.imagePullPolicy | default "IfNotPresent" }}
+          env:
+            - name: AEGIS_SERVER
+              value: {{ required "aegis.chaosServer is required for chart-bound PointManifest import" .Values.aegis.chaosServer | quote }}
+            {{- with .Values.aegis.tokenSecret }}
+            - name: AEGIS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: token
+            {{- end }}
+          command: ["aegisctl"]
+          args:
+            - manifest
+            - import-dir
+            - /etc/aegis-points
+            - --keep-going
+          volumeMounts:
+            - name: points
+              mountPath: /etc/aegis-points
+              readOnly: true
+      volumes:
+        - name: points
+          configMap:
+            name: {{ .Release.Name }}-aegis-points
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-aegis-points
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    aegis.io/component: points-manifest
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-6"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+data:
+  {{- $files := .Files.Glob "aegis-points/*.yaml" }}
+  {{- if not $files }}
+  {{- fail "aegis-points/*.yaml: no PointManifest files found under the chart; either remove the import Job include or add manifests" }}
+  {{- end }}
+  {{- range $path, $bytes := $files }}
+  {{ base $path }}: |
+{{ $bytes | toString | indent 4 }}
+  {{- end }}
