@@ -780,7 +780,7 @@ func bootstrapGuidedInstall(ctx context.Context, cfg guidedcli.GuidedConfig) err
 		installer = defaultChartInstaller
 	}
 	output.PrintInfo(fmt.Sprintf("--install: namespace %q is empty; installing chart for system %q", cfg.Namespace, cfg.System))
-	if err := installer(ctx, cfg.System, cfg.Namespace); err != nil {
+	if err := installer(ctx, cfg.System, cfg.Namespace, nil, nil); err != nil {
 		return fmt.Errorf("--install: chart install failed for system=%s namespace=%s: %w", cfg.System, cfg.Namespace, err)
 	}
 

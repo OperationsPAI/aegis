@@ -65,6 +65,8 @@ var (
 	regressionAppLabelKey       string
 	regressionAppOverride       string
 	regressionForceResubmit     bool
+	regressionInstallSet        []string
+	regressionInstallSetString  []string
 	regressionPodListerHook     PodLister // test injection seam; nil => real k8s client
 	regressionInstallerHook     chartInstaller
 	regressionSystemsHook       SystemsFetcher // test injection seam; nil => real HTTP client
@@ -87,7 +89,7 @@ type PodLister interface {
 	CountReadyPods(ctx context.Context, namespace, labelSelector string) (total int, ready int, err error)
 }
 
-type chartInstaller func(ctx context.Context, system, namespace string) error
+type chartInstaller func(ctx context.Context, system, namespace string, setValues, setStringValues []string) error
 
 // regressionTarget captures one (namespace, app, system) preflight subject
 // derived from a regression case's submit.specs entries.
@@ -836,7 +838,7 @@ func preflightRegressionCase(ctx context.Context, rc regressionCase, lister PodL
 				continue
 			}
 			installed[key] = struct{}{}
-			if err := installer(ctx, sys, m.Namespace); err != nil {
+			if err := installer(ctx, sys, m.Namespace, regressionInstallSet, regressionInstallSetString); err != nil {
 				return fmt.Errorf("preflight: auto-install failed for system=%s namespace=%s: %w", sys, m.Namespace, err)
 			}
 		}
@@ -898,12 +900,24 @@ func preflightRegressionCase(ctx context.Context, rc regressionCase, lister PodL
 // defaultChartInstaller shells out to the current aegisctl binary via
 // os.Args[0] so this module does not depend on the pedestal chart install
 // implementation (landed in parallel).
-func defaultChartInstaller(ctx context.Context, system, namespace string) error {
+func buildChartInstallArgv(system, namespace string, setValues, setStringValues []string) []string {
+	args := []string{"pedestal", "chart", "install", system, "--namespace", namespace}
+	for _, kv := range setValues {
+		args = append(args, "--set", kv)
+	}
+	for _, kv := range setStringValues {
+		args = append(args, "--set-string", kv)
+	}
+	return args
+}
+
+func defaultChartInstaller(ctx context.Context, system, namespace string, setValues, setStringValues []string) error {
 	bin := os.Args[0]
 	if bin == "" {
 		bin = "aegisctl"
 	}
-	cmd := exec.CommandContext(ctx, bin, "pedestal", "chart", "install", system, "--namespace", namespace)
+	args := buildChartInstallArgv(system, namespace, setValues, setStringValues)
+	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -970,6 +984,8 @@ func init() {
 	regressionRunCmd.Flags().StringVar(&regressionAppLabelKey, "app-label-key", "app", "Label key used to match pods against each spec's `app` value during preflight (always falls back to app.kubernetes.io/name when unset)")
 	regressionRunCmd.Flags().StringVar(&regressionAppOverride, "app", "", "Override the FIRST spec's `app` value without editing the YAML on disk (multi-spec cases: only spec[0] is changed)")
 	regressionRunCmd.Flags().BoolVar(&regressionForceResubmit, "force", false, "Bypass the server-side dedup check even when the previous batch is still Running. \"I know what I'm doing\" cases only — normal terminal-state retries no longer require this.")
+	regressionRunCmd.Flags().StringArrayVar(&regressionInstallSet, "install-set", nil, "Forwarded to `aegisctl pedestal chart install --set k=v` when --auto-install fires. Repeatable. Use for one-off upstream-chart toggles that aren't seed-managed (e.g. bitnami global.security.allowInsecureImages=true). No effect without --auto-install.")
+	regressionRunCmd.Flags().StringArrayVar(&regressionInstallSetString, "install-set-string", nil, "Forwarded to `aegisctl pedestal chart install --set-string k=v` when --auto-install fires. Repeatable. Use when the value must be sent as a string (e.g. numeric image tags). No effect without --auto-install.")
 
 	regressionCmd.AddCommand(regressionRunCmd)
 }
