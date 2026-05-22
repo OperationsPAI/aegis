@@ -769,6 +769,15 @@ containers:
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/python
               overridable: true
+            # load-generator subchart's initContainer ALSO hardcodes
+            # `image: python` (separate from data-init-job above) — same
+            # docker.io egress block, same mirror fix.
+            - key: load-generator.initContainer.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
           status: 1
   - type: 2
     name: media
@@ -850,6 +859,14 @@ containers:
             # See sn 0.1.6 — data-init-job hardcodes docker.io/library/python.
             # Mirror at docker.io/opspai/python:3.9-slim (2026-05-22).
             - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
+            # See sn 0.1.6 — load-generator initContainer also hardcodes
+            # docker.io/library/python.
+            - key: load-generator.initContainer.image
               type: 0
               category: 1
               value_type: 0
