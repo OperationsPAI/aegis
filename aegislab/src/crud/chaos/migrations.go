@@ -57,7 +57,7 @@ func addPointSysUpdatedAtIndex(db *gorm.DB) error {
 		return nil
 	}
 	return db.Exec(
-		"CREATE INDEX idx_point_sys_updated_at ON chaos_points (system_name, updated_at) ALGORITHM=INPLACE, LOCK=NONE",
+		"ALTER TABLE chaos_points ADD INDEX idx_point_sys_updated_at (system_name, updated_at), ALGORITHM=INPLACE, LOCK=NONE",
 	).Error
 }
 
