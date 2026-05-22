@@ -1303,6 +1303,20 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
+  # Soft reclaim: idle ns gets `kubectl rollout restart` of non-DB deployments
+  # instead of helm uninstall + ns delete. SocialNetwork's helm chart bootstraps
+  # the social graph via a `data-init-job` Job (post-install,post-upgrade hook)
+  # that takes 5–10 min; mongodb/redis/memcached/mcrouter run with no PVC so
+  # `helm uninstall` silently drops their data. Soft reclaim preserves both the
+  # helm release and the DB state while still clearing any chaos-mesh residue
+  # on app pods. See ReclaimModeSoft in src/platform/config/chaos_system.go.
+  - key: injection.system.sn.reclaim_mode
+    default_value: soft
+    value_type: 0
+    scope: 2
+    category: injection.system.reclaim_mode
+    description: NamespaceReclaimer action — "soft" (rollout restart non-DB) or empty/"full" (helm uninstall + ns delete)
+    is_secret: false
   - key: injection.system.media.count
     default_value: '1'
     value_type: 2
@@ -1356,6 +1370,16 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
+  # See sn.reclaim_mode comment above — same rationale (DSB charts share the
+  # data-init-job subchart; MediaMicroservices initializes movies + users the
+  # same way SocialNetwork initializes the graph).
+  - key: injection.system.media.reclaim_mode
+    default_value: soft
+    value_type: 0
+    scope: 2
+    category: injection.system.reclaim_mode
+    description: NamespaceReclaimer action — "soft" (rollout restart non-DB) or empty/"full" (helm uninstall + ns delete)
+    is_secret: false
   - key: injection.system.teastore.count
     default_value: '1'
     value_type: 2

@@ -206,6 +206,11 @@ type fakeK8s struct {
 	chaos      map[string]map[string]int
 	deleted    []string
 	deleteErr  error
+	// softReclaimed lists namespaces that received SoftReclaimNamespace calls.
+	// The fake assumes every ns has the same "all-non-DB" set of deployments
+	// since tests don't need finer granularity than "soft path was taken".
+	softReclaimed []string
+	softReclaimErr error
 }
 
 func (f *fakeK8s) ListClusterNamespaces(ctx context.Context) ([]string, error) {
@@ -242,6 +247,16 @@ func (f *fakeK8s) DeleteNamespace(ctx context.Context, name string) error {
 		}
 	}
 	return nil
+}
+
+func (f *fakeK8s) SoftReclaimNamespace(ctx context.Context, name string) ([]string, []string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.softReclaimErr != nil {
+		return nil, nil, f.softReclaimErr
+	}
+	f.softReclaimed = append(f.softReclaimed, name)
+	return []string{"app-frontend", "app-backend"}, []string{"mongodb", "redis"}, nil
 }
 
 type fakeLocks struct {
@@ -499,4 +514,36 @@ func TestReclaimer_TickActiveChaosBlocks(t *testing.T) {
 	_, processed, err := r.tick(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 0, processed)
+}
+
+func TestReclaimer_TickSoftReclaimSkipsHelmUninstall(t *testing.T) {
+	now := mustParse(t, "2026-05-17T12:00:00Z")
+	helmF := newFakeHelm()
+	helmF.releases["sn0/sn0"] = &helm.ReleaseInfo{
+		Name: "sn0", Namespace: "sn0", Status: "deployed",
+		LastDeployed: now.Add(-30 * time.Hour),
+	}
+	k8sF := &fakeK8s{
+		namespaces: []string{"sn0"},
+		labels:     map[string]map[string]string{"sn0": {managedByAegisLabel: managedByAegisValue}},
+		chaos:      map[string]map[string]int{},
+	}
+	systems := map[string]config.ChaosSystemConfig{
+		"sn": {System: "sn", NsPattern: `^sn\d+$`, ReclaimMode: config.ReclaimModeSoft},
+	}
+	withReclaimConfig(t, map[string]any{
+		"helm.reclaim.enabled":               true,
+		"helm.reclaim.idle_ttl_hours":        6,
+		"helm.reclaim.max_deletes_per_tick":  5,
+		"helm.reclaim.require_managed_label": true,
+	})
+	r := newTestReclaimer(now, helmF, k8sF, &fakeLocks{locked: map[string]bool{}}, systems)
+	candidates, processed, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, candidates)
+	require.Equal(t, 1, processed)
+	// Helm release must NOT be uninstalled; namespace must NOT be deleted.
+	require.Empty(t, helmF.uninstalled, "soft reclaim must not call helm uninstall")
+	require.Empty(t, k8sF.deleted, "soft reclaim must not delete namespace")
+	require.Equal(t, []string{"sn0"}, k8sF.softReclaimed)
 }

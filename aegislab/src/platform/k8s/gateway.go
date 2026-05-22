@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -157,6 +159,69 @@ func (g *Gateway) EnsureNamespace(ctx context.Context, name string) (bool, error
 		return false, fmt.Errorf("create namespace %q: %w", name, err)
 	}
 	return true, nil
+}
+
+// SoftReclaimNamespace rolls non-DB Deployments in <namespace> by patching their
+// `spec.template.metadata.annotations.kubectl.kubernetes.io/restartedAt`, the
+// same mechanism `kubectl rollout restart deployment <name>` uses. Returns the
+// names of the deployments that were restarted (those skipped because their
+// name matches the DB pattern are surfaced via the second return).
+//
+// Skip pattern catches the data-bearing services across our benchmark charts:
+// mongo*, redis*, memcached*, mcrouter*, mysql*, postgres*, etcd*. These pods
+// hold the loadgen-accumulated state we want to preserve across rounds (DSB
+// default standalone mode binds no PVC; restarting them silently drops social
+// graph / users / movies and forces a 5–10 min data-init-job rerun).
+//
+// StatefulSets, DaemonSets, and Jobs are intentionally NOT touched — restart
+// semantics there differ enough that one-shot logic would be a footgun.
+func (g *Gateway) SoftReclaimNamespace(ctx context.Context, namespace string) (restarted, skipped []string, err error) {
+	client, kerr := getK8sClient()
+	if kerr != nil {
+		return nil, nil, k8sClientNotAvailableErr(kerr)
+	}
+	deployList, listErr := client.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	if listErr != nil {
+		return nil, nil, fmt.Errorf("list deployments in %q: %w", namespace, listErr)
+	}
+	restartedAt := time.Now().UTC().Format(time.RFC3339)
+	patch := fmt.Appendf(nil, `{"spec":{"template":{"metadata":{"annotations":{"kubectl.kubernetes.io/restartedAt":%q}}}}}`, restartedAt)
+	for i := range deployList.Items {
+		name := deployList.Items[i].Name
+		if isDBDeploymentName(name) {
+			skipped = append(skipped, name)
+			continue
+		}
+		if _, patchErr := client.AppsV1().Deployments(namespace).Patch(ctx, name, types.StrategicMergePatchType, patch, metav1.PatchOptions{}); patchErr != nil {
+			return restarted, skipped, fmt.Errorf("rollout restart deployment %s/%s: %w", namespace, name, patchErr)
+		}
+		restarted = append(restarted, name)
+	}
+	return restarted, skipped, nil
+}
+
+// isDBDeploymentName returns true when the deployment name looks like a
+// data-bearing component that soft-reclaim must NOT restart. Pattern matching
+// is intentionally name-based (substring) rather than label-based: DSB / sock
+// shop / hs charts do not use a consistent "role=db" label, but the convention
+// of including the engine name in the deployment name is uniform.
+func isDBDeploymentName(name string) bool {
+	for _, needle := range dbNameSubstrings {
+		if strings.Contains(name, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+var dbNameSubstrings = []string{
+	"mongo",
+	"redis",
+	"memcached",
+	"mcrouter",
+	"mysql",
+	"postgres",
+	"etcd",
 }
 
 // DeleteNamespace deletes <name> with foreground propagation so the call
