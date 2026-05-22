@@ -478,6 +478,28 @@ func TestPedestalChartInstallApplyOverrides(t *testing.T) {
 	})
 }
 
+// TestCountLeafPaths_DistinctOverrideCount covers issue #476: the
+// "merged N helm_config_values overrides" log line must count distinct
+// leaf paths in the rendered values map, not top-level groups. The ts@1.0.6
+// scenario has 11 distinct override keys collapsed under 5 top-level groups
+// (global / mysql / rabbitmq / loadgenerator / services); the prior
+// len(map) idiom reported 5 and looked like 6 rows were lost.
+func TestCountLeafPaths_DistinctOverrideCount(t *testing.T) {
+	values := map[string]any{
+		"services":      map[string]any{"tsUiDashboard": map[string]any{"type": "NodePort"}},
+		"global":        map[string]any{"security": map[string]any{"allowInsecureImages": true}, "image": map[string]any{"repository": "repo"}, "otelcollector": "x"},
+		"mysql":         map[string]any{"image": map[string]any{"repository": "repo"}, "service": map[string]any{"type": "ClusterIP"}},
+		"rabbitmq":      map[string]any{"image": map[string]any{"repository": "repo"}},
+		"loadgenerator": map[string]any{"initContainer": map[string]any{"image": "init"}, "opentelemetry": map[string]any{"endpoint": "e"}, "image": map[string]any{"repository": "repo", "tag": "tag"}},
+	}
+	if got := countLeafPaths(values); got != 11 {
+		t.Fatalf("expected 11 leaf paths (matching distinct helm_config_values keys), got %d", got)
+	}
+	if got := len(values); got == 11 {
+		t.Fatalf("regression guard: top-level len should be 5, got %d — the test data drifted", got)
+	}
+}
+
 func containsArg(args []string, want string) bool {
 	for _, a := range args {
 		if a == want {

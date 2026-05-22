@@ -285,7 +285,11 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 		if tag == "" {
 			tag = apiQueryVersion
 		}
-		output.PrintInfo(fmt.Sprintf("merged %d helm_config_values overrides for %s@%s", len(src.values), systemCode, tag))
+		// Count distinct leaf paths, not top-level keys: a chart whose 11
+		// overrides nest under 5 top-level groups (global.*, mysql.*, ...)
+		// would otherwise log "merged 5" and look like 6 rows got lost —
+		// the actual root cause of issue #476's confusion.
+		output.PrintInfo(fmt.Sprintf("merged %d helm_config_values overrides for %s@%s", countLeafPaths(src.values), systemCode, tag))
 	}
 
 	// "upgrade --install" is the upsert idiom — works whether the release
@@ -328,6 +332,23 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 	}
 	output.PrintInfo(fmt.Sprintf("installed chart %q as release %q in namespace %q", src.positional, namespace, namespace))
 	return nil
+}
+
+// countLeafPaths returns the number of scalar / array / nil leaves reachable
+// from values. Nested maps are descended into; everything else is one leaf.
+// Used to log a count that matches the user-facing "override key" notion
+// (e.g. global.image.repository + global.image.tag = 2 leaves) instead of
+// the top-level-map cardinality, which collapses sibling keys.
+func countLeafPaths(values map[string]any) int {
+	n := 0
+	for _, v := range values {
+		if sub, ok := v.(map[string]any); ok {
+			n += countLeafPaths(sub)
+			continue
+		}
+		n++
+	}
+	return n
 }
 
 // isURL returns true for http(s), oci, and file URLs that helm accepts as a

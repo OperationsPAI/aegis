@@ -6,6 +6,94 @@ import (
 	"testing"
 )
 
+// countLeaves walks a values map and counts scalar leaves. Mirrors the
+// CLI's countLeafPaths so the assertion lines up with the user-facing
+// "merged N overrides" log.
+func countLeaves(m map[string]any) int {
+	n := 0
+	for _, v := range m {
+		if sub, ok := v.(map[string]any); ok {
+			n += countLeaves(sub)
+			continue
+		}
+		n++
+	}
+	return n
+}
+
+// TestGetValuesMap_DistinctKeysFromHelmConfigValues regresses issue #476:
+// the 11 distinct config_key rows on ts@1.0.6's helm_config_values must
+// each surface as a leaf in the rendered values map, even when seed has
+// been applied twice and the resolver sees 22 rows (every key duplicated).
+// The historical bug: callers saw "merged 5 helm_config_values overrides"
+// because the log line counted top-level groups (global, mysql, …) rather
+// than distinct leaf paths.
+func TestGetValuesMap_DistinctKeysFromHelmConfigValues(t *testing.T) {
+	keys := []string{
+		"services.tsUiDashboard.type",
+		"global.security.allowInsecureImages",
+		"global.image.repository",
+		"mysql.image.repository",
+		"rabbitmq.image.repository",
+		"loadgenerator.initContainer.image",
+		"global.otelcollector",
+		"loadgenerator.opentelemetry.endpoint",
+		"loadgenerator.image.repository",
+		"loadgenerator.image.tag",
+		"mysql.service.type",
+	}
+
+	items := make([]ParameterItem, 0, len(keys)*2)
+	for i, k := range keys {
+		items = append(items, ParameterItem{Key: k, Value: i})
+	}
+	// Duplicate every row — matches the live DB state where reseed inserted
+	// each parameter_config twice (22 rows for 11 distinct keys).
+	for i, k := range keys {
+		items = append(items, ParameterItem{Key: k, Value: i})
+	}
+
+	hci := &HelmConfigItem{DynamicValues: items}
+	got := hci.GetValuesMap()
+
+	if n := countLeaves(got); n != len(keys) {
+		t.Fatalf("expected %d distinct leaf paths, got %d (values=%#v)", len(keys), n, got)
+	}
+
+	mustLeaf := func(path ...string) {
+		cur := any(got)
+		for i, p := range path {
+			m, ok := cur.(map[string]any)
+			if !ok {
+				t.Fatalf("expected map at %v[:%d], got %T", path, i, cur)
+			}
+			cur, ok = m[p]
+			if !ok {
+				t.Fatalf("missing key %q at %v[:%d]", p, path, i+1)
+			}
+		}
+		if _, isMap := cur.(map[string]any); isMap {
+			t.Fatalf("expected leaf at %v, got map", path)
+		}
+	}
+	for _, k := range keys {
+		mustLeaf(splitDotPath(k)...)
+	}
+}
+
+func splitDotPath(s string) []string {
+	out := []string{}
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '.' {
+			out = append(out, s[start:i])
+			start = i + 1
+		}
+	}
+	out = append(out, s[start:])
+	return out
+}
+
 // TestGetValuesMap_EmptyValueFile_NoPanic regresses the live byte-cluster
 // outage where a 0-byte helm-values yaml caused 79 worker panics with
 // "assignment to entry in nil map" inside GetValuesMap. The defensive guard
