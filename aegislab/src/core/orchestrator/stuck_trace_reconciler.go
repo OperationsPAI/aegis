@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -49,6 +50,16 @@ type StuckTraceReconciler struct {
 	submitTask            taskSubmitter
 	maxBatchPerTick       int
 	tickHook              func(processed int, err error)
+	// namespaceLockReleaser releases the monitor:ns:<ns> hash held by a
+	// stuck RestartPedestal task. Optional — when nil the lock release is
+	// skipped (the lock TTL eventually expires anyway). Production wires
+	// the orchestrator NamespaceMonitor here.
+	namespaceLockReleaser namespaceLockReleaser
+	// restartTokenReleaser / warmingTokenReleaser release the two
+	// rate-limit tokens held by a stuck RestartPedestal task. Optional —
+	// release is no-op on missing tokens, so calling defensively is safe.
+	restartTokenReleaser tokenReleaser
+	warmingTokenReleaser tokenReleaser
 	// runOnce guards Run from a misconfigured fx wiring that calls
 	// StartStuckTraceReconciler twice on the same instance. Instance-
 	// scoped (not package-scoped) so a fresh reconciler from a new fx
@@ -68,6 +79,19 @@ type containerEnvVarLister interface {
 	ListEnvVarsByVersionID(versionID int) ([]dto.ParameterItem, error)
 }
 
+// namespaceLockReleaser is the subset of NamespaceMonitor the
+// restart-pedestal recovery path touches. Pulled out so tests can supply a
+// fake without standing up Redis.
+type namespaceLockReleaser interface {
+	ReleaseLock(ctx context.Context, namespace string, traceID string) error
+}
+
+// tokenReleaser is the subset of TokenBucketRateLimiter the
+// restart-pedestal recovery path touches.
+type tokenReleaser interface {
+	ReleaseToken(ctx context.Context, taskID, traceID string) error
+}
+
 // NewStuckTraceReconciler builds the production reconciler. The constructor
 // is also used by the controller module's fx wiring.
 func NewStuckTraceReconciler(
@@ -75,6 +99,9 @@ func NewStuckTraceReconciler(
 	redisGateway *redis.Gateway,
 	executionOwner ExecutionOwner,
 	injectionOwner InjectionOwner,
+	monitor namespaceLockReleaser,
+	restartLimiter tokenReleaser,
+	warmingLimiter tokenReleaser,
 ) *StuckTraceReconciler {
 	return &StuckTraceReconciler{
 		db:                    db,
@@ -86,6 +113,9 @@ func NewStuckTraceReconciler(
 		stuckThresholdSeconds: stuckThresholdSecondsFromConfig,
 		submitTask:            common.SubmitTaskWithDB,
 		maxBatchPerTick:       50,
+		namespaceLockReleaser: monitor,
+		restartTokenReleaser:  restartLimiter,
+		warmingTokenReleaser:  warmingLimiter,
 	}
 }
 
@@ -219,7 +249,11 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 		Model(&model.Trace{}).
 		Where("state = ? AND last_event IN ? AND updated_at < ? AND status != ?",
 			consts.TraceRunning,
-			[]consts.EventType{consts.EventFaultInjectionStarted, consts.EventFaultInjectionCompleted},
+			[]consts.EventType{
+				consts.EventFaultInjectionStarted,
+				consts.EventFaultInjectionCompleted,
+				consts.EventRestartPedestalStarted,
+			},
 			cutoff,
 			consts.CommonDeleted,
 		).
@@ -265,6 +299,15 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 		"trace_id":   trace.ID,
 		"last_event": trace.LastEvent,
 	})
+
+	// Traces stuck at restart.pedestal.started never reached the
+	// fault-injection step — there is nothing to forward to BuildDatapack.
+	// Recovery is a clean cancel: mark the trace failed, release the
+	// namespace lock + rate-limit tokens the dead worker is still holding,
+	// let the user re-run the regression.
+	if trace.LastEvent == consts.EventRestartPedestalStarted {
+		return r.recoverStuckRestartPedestal(ctx, trace, logEntry)
+	}
 
 	// Find the FaultInjection task for this trace. Single-leaf and hybrid
 	// batches both have exactly one FaultInjection task per trace; the
@@ -518,6 +561,112 @@ func (r *StuckTraceReconciler) recoverTrace(ctx context.Context, trace *model.Tr
 	logEntry.WithField("fault_injection_task_id", fiTask.ID).
 		Info("stuck trace reconciled: BuildDatapack task submitted")
 	return true, nil
+}
+
+// recoverStuckRestartPedestal cancels a trace pinned at
+// restart.pedestal.started — the shape we see when a worker dies between
+// helm-apply and waitForPedestalWorkloadReady. The trace cannot be resumed
+// (the dead worker held both rate-limit tokens and the namespace lock in
+// memory, and we have no checkpoint of how far helm-apply got), so we
+// finalize it as cancelled and free the held resources for the next run.
+func (r *StuckTraceReconciler) recoverStuckRestartPedestal(ctx context.Context, trace *model.Trace, logEntry *logrus.Entry) (bool, error) {
+	var rpTask model.Task
+	err := r.db.WithContext(ctx).
+		Where("trace_id = ? AND type = ? AND status != ?",
+			trace.ID,
+			consts.TaskTypeRestartPedestal,
+			consts.CommonDeleted,
+		).
+		Order("created_at DESC").
+		First(&rpTask).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			logEntry.Debug("no RestartPedestal task for stuck trace, skipping")
+			return false, nil
+		}
+		return false, fmt.Errorf("lookup restart-pedestal task: %w", err)
+	}
+
+	namespace := namespaceFromRestartPayload(rpTask.Payload)
+
+	now := r.now()
+	if err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.Task{}).
+			Where("id = ? AND state IN ?", rpTask.ID, []consts.TaskState{consts.TaskPending, consts.TaskRescheduled, consts.TaskRunning}).
+			Update("state", consts.TaskCancelled).Error; err != nil {
+			return fmt.Errorf("cancel restart-pedestal task: %w", err)
+		}
+		if err := tx.Model(&model.Trace{}).
+			Where("id = ? AND state = ?", trace.ID, consts.TraceRunning).
+			Updates(map[string]any{
+				"state":      consts.TraceFailed,
+				"last_event": consts.EventTraceCancelled,
+				"end_time":   now,
+			}).Error; err != nil {
+			return fmt.Errorf("cancel trace: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return false, err
+	}
+
+	// Release the namespace lock + rate-limit tokens the dead worker was
+	// holding. All three releases are best-effort: ReleaseLock fails
+	// cleanly on a lock not owned by this trace, ReleaseToken is a no-op
+	// on a missing token. Any failure is logged but doesn't fail the
+	// recovery — the trace is already finalized, the next run can proceed
+	// even if a token leak lingers until its TTL expires.
+	if namespace != "" && r.namespaceLockReleaser != nil {
+		if err := r.namespaceLockReleaser.ReleaseLock(ctx, namespace, trace.ID); err != nil {
+			logEntry.WithError(err).WithField("namespace", namespace).
+				Warn("release namespace lock for stuck restart-pedestal trace failed (continuing)")
+		}
+	}
+	if r.restartTokenReleaser != nil {
+		if err := r.restartTokenReleaser.ReleaseToken(ctx, rpTask.ID, trace.ID); err != nil {
+			logEntry.WithError(err).Warn("release restart-pedestal token failed (continuing)")
+		}
+	}
+	if r.warmingTokenReleaser != nil {
+		if err := r.warmingTokenReleaser.ReleaseToken(ctx, rpTask.ID, trace.ID); err != nil {
+			logEntry.WithError(err).Warn("release namespace-warming token failed (continuing)")
+		}
+	}
+
+	logEntry.WithFields(logrus.Fields{
+		"restart_pedestal_task_id": rpTask.ID,
+		"namespace":                namespace,
+	}).Info("stuck restart-pedestal trace cancelled, lock + tokens released")
+	return true, nil
+}
+
+// namespaceFromRestartPayload extracts the namespace the RestartPedestal
+// task was operating against. The guided path sets RestartRequiredNamespace
+// (#156); the legacy pool-selection path sets InjectNamespace on the inner
+// inject payload after monitor.GetNamespaceToRestart picked one. Returns ""
+// if neither is populated — the recovery still proceeds, just without a
+// namespace-lock release (the lock will eventually fall out via TTL).
+func namespaceFromRestartPayload(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		return ""
+	}
+	if v, ok := payload[consts.RestartRequiredNamespace].(string); ok {
+		if s := strings.TrimSpace(v); s != "" {
+			return s
+		}
+	}
+	if inner, ok := payload[consts.RestartInjectPayload].(map[string]any); ok {
+		if v, ok := inner[consts.InjectNamespace].(string); ok {
+			if s := strings.TrimSpace(v); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
 }
 
 // submitIfNoChild atomically rechecks "does this FaultInjection task already

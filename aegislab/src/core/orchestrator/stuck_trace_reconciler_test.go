@@ -562,6 +562,184 @@ func TestReconciler_ToleratesStateUpdateError(t *testing.T) {
 	require.Len(t, captured, 1)
 }
 
+// fakeNamespaceLockReleaser captures ReleaseLock calls so tests can assert
+// the restart-pedestal recovery path released the held lock.
+type fakeNamespaceLockReleaser struct {
+	mu    sync.Mutex
+	calls []struct {
+		namespace string
+		traceID   string
+	}
+	err error
+}
+
+func (f *fakeNamespaceLockReleaser) ReleaseLock(_ context.Context, namespace, traceID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, struct {
+		namespace string
+		traceID   string
+	}{namespace, traceID})
+	return f.err
+}
+
+type fakeTokenReleaser struct {
+	mu    sync.Mutex
+	calls []struct {
+		taskID  string
+		traceID string
+	}
+}
+
+func (f *fakeTokenReleaser) ReleaseToken(_ context.Context, taskID, traceID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, struct {
+		taskID  string
+		traceID string
+	}{taskID, traceID})
+	return nil
+}
+
+func makeStuckRestartPedestalFixture(t *testing.T, db *gorm.DB, namespace string, staleness time.Duration) (traceID, taskID string) {
+	t.Helper()
+	now := time.Now()
+	stuckAt := now.Add(-staleness)
+
+	traceID = uuid.NewString()
+	require.NoError(t, db.Create(&model.Trace{
+		ID:        traceID,
+		Type:      consts.TraceTypeFullPipeline,
+		LastEvent: consts.EventRestartPedestalStarted,
+		StartTime: stuckAt.Add(-1 * time.Minute),
+		State:     consts.TraceRunning,
+		Status:    consts.CommonEnabled,
+		LeafNum:   1,
+		UpdatedAt: stuckAt,
+	}).Error)
+
+	taskID = uuid.NewString()
+	payload := map[string]any{
+		consts.RestartRequiredNamespace: namespace,
+		consts.RestartInjectPayload: map[string]any{
+			consts.InjectNamespace: namespace,
+		},
+	}
+	pj, err := json.Marshal(payload)
+	require.NoError(t, err)
+	require.NoError(t, db.Create(&model.Task{
+		ID:        taskID,
+		Type:      consts.TaskTypeRestartPedestal,
+		TraceID:   traceID,
+		Payload:   string(pj),
+		State:     consts.TaskRunning,
+		Status:    consts.CommonEnabled,
+		Level:     0,
+		Sequence:  0,
+		UpdatedAt: stuckAt,
+	}).Error)
+	return traceID, taskID
+}
+
+// TestReconciler_RecoversTraceStuckAtRestartPedestalStarted is the headline
+// test for the restart-pedestal recovery path: a worker died mid-helm-apply,
+// leaving the trace at last_event=restart.pedestal.started with both the
+// namespace lock and the rate-limit tokens held by a dead taskID. The
+// reconciler must cancel the trace, mark the RP task TaskCancelled, and
+// release the namespace lock + both token pools so the next regression run
+// against the same namespace doesn't loop on lock acquisition.
+func TestReconciler_RecoversTraceStuckAtRestartPedestalStarted(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	traceID, taskID := makeStuckRestartPedestalFixture(t, db, "ts0", 30*time.Minute)
+
+	lock := &fakeNamespaceLockReleaser{}
+	restartTok := &fakeTokenReleaser{}
+	warmingTok := &fakeTokenReleaser{}
+
+	r := newReconcilerForTest(t, db, newFakeInjectionOwner(nil), nil)
+	r.namespaceLockReleaser = lock
+	r.restartTokenReleaser = restartTok
+	r.warmingTokenReleaser = warmingTok
+
+	processed, candidates, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, candidates)
+	require.Equal(t, 1, processed)
+
+	var trace model.Trace
+	require.NoError(t, db.Where("id = ?", traceID).First(&trace).Error)
+	require.Equal(t, consts.TraceFailed, trace.State,
+		"trace must be marked TraceFailed; otherwise the namespace lock stays held forever")
+	require.Equal(t, consts.EventTraceCancelled, trace.LastEvent,
+		"trace.last_event must advance off restart.pedestal.started")
+	require.NotNil(t, trace.EndTime, "trace.end_time must be set so OTel emit + UI both see a terminal state")
+
+	var task model.Task
+	require.NoError(t, db.Where("id = ?", taskID).First(&task).Error)
+	require.Equal(t, consts.TaskCancelled, task.State,
+		"RestartPedestal task must be marked TaskCancelled; leaving it Running keeps the trace eligible for next tick")
+
+	require.Len(t, lock.calls, 1, "namespace lock must be released exactly once")
+	require.Equal(t, "ts0", lock.calls[0].namespace)
+	require.Equal(t, traceID, lock.calls[0].traceID)
+	require.Len(t, restartTok.calls, 1, "restart-pedestal token must be released defensively")
+	require.Equal(t, taskID, restartTok.calls[0].taskID)
+	require.Len(t, warmingTok.calls, 1, "namespace-warming token must be released defensively")
+}
+
+// TestReconciler_RestartPedestalRecoveryToleratesNilReleasers verifies the
+// recovery path is safe when the optional lock / token releasers are nil —
+// the DB cancellation must still happen so the trace doesn't get stuck for
+// good.
+func TestReconciler_RestartPedestalRecoveryToleratesNilReleasers(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	traceID, taskID := makeStuckRestartPedestalFixture(t, db, "ts0", 30*time.Minute)
+
+	r := newReconcilerForTest(t, db, newFakeInjectionOwner(nil), nil)
+	// All releasers left nil.
+
+	processed, _, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, processed)
+
+	var trace model.Trace
+	require.NoError(t, db.Where("id = ?", traceID).First(&trace).Error)
+	require.Equal(t, consts.TraceFailed, trace.State)
+	var task model.Task
+	require.NoError(t, db.Where("id = ?", taskID).First(&task).Error)
+	require.Equal(t, consts.TaskCancelled, task.State)
+}
+
+// TestReconciler_FaultInjectionRecoveryUnaffectedByRestartBranch is a
+// belt-and-braces regression guard: adding the restart-pedestal branch
+// must not change behavior for traces stuck at fault.injection.*. The
+// per-row branch keys solely on trace.last_event, so a fault.injection
+// trace must still hit the BuildDatapack-submit path even when restart
+// releasers are wired.
+func TestReconciler_FaultInjectionRecoveryUnaffectedByRestartBranch(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	fix := makeStuckFixture(t, db, consts.EventFaultInjectionCompleted, 1, 30*time.Minute, false)
+
+	owner := newFakeInjectionOwner([]model.FaultInjection{
+		{ID: 1, Name: fix.injectionName, TaskID: &fix.faultTaskID, PreDuration: 1},
+	})
+	var captured []*dto.UnifiedTask
+	submitter := taskSubmitter(func(_ context.Context, _ *gorm.DB, _ *redis.Gateway, t *dto.UnifiedTask) error {
+		captured = append(captured, t)
+		return nil
+	})
+	r := newReconcilerForTest(t, db, owner, submitter)
+	r.namespaceLockReleaser = &fakeNamespaceLockReleaser{}
+	r.restartTokenReleaser = &fakeTokenReleaser{}
+	r.warmingTokenReleaser = &fakeTokenReleaser{}
+
+	processed, _, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, processed)
+	require.Len(t, captured, 1, "fault-injection path must still submit BuildDatapack, regardless of restart-pedestal releasers")
+	require.Equal(t, consts.TaskTypeBuildDatapack, captured[0].Type)
+}
+
 // TestMaxGuidedDurationMinutes_PicksLargest pins the helper that controls
 // the "is this fault still running?" gate: K_inner>=2 batches with mixed
 // durations must use the longest one.
