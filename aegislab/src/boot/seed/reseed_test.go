@@ -1306,3 +1306,169 @@ func TestReseedResnapshotNoOpWhenValueFileEmpty(t *testing.T) {
 		t.Fatalf("value_file populated when initially empty: %s", got.ValueFile)
 	}
 }
+
+// TestReseedVersionBumpInheritsPriorHelmConfigValues pins issue #477: a
+// data.yaml version bump where the new versions[] entry lists only a small
+// delta of helm values must carry forward (link to the new helm_configs row)
+// every helm_config_values key from the most-recent prior version that the
+// new seed entry does NOT redefine. The seed's own deltas win when they
+// share a key, and the prior version's links are left intact.
+func TestReseedVersionBumpInheritsPriorHelmConfigValues(t *testing.T) {
+	db := newReseedTestDB(t)
+
+	mustExec(t, db, `INSERT INTO containers (id, name, type, status) VALUES (1, 'ts', 2, 1)`)
+	mustExec(t, db, `INSERT INTO container_versions (id, name, container_id, user_id, status) VALUES (10, '1.0.6', 1, 0, 1)`)
+	mustExec(t, db, `INSERT INTO helm_configs (id, chart_name, version, container_version_id, repo_url, repo_name) VALUES (20, 'trainticket', '0.2.1', 10, 'https://x', 'r')`)
+
+	// Seed 4 prior helm_config_values keys against the existing version.
+	priorVals := []struct {
+		Key string
+		Def string
+	}{
+		{"global.image.repository", "pair-cn-shanghai.cr.volces.com/opspai"},
+		{"mysql.image.repository", "pair-cn-shanghai.cr.volces.com/opspai/mysql"},
+		{"mysql.service.type", "NodePort"},
+		{"loadgenerator.image.tag", "024"},
+	}
+	for _, pv := range priorVals {
+		def := pv.Def
+		cfg := model.ParameterConfig{
+			Key:          pv.Key,
+			Type:         consts.ParameterTypeFixed,
+			Category:     consts.ParameterCategoryHelmValues,
+			ValueType:    consts.ValueDataTypeString,
+			DefaultValue: &def,
+			Overridable:  true,
+		}
+		if err := db.Create(&cfg).Error; err != nil {
+			t.Fatalf("seed prior parameter_config %s: %v", pv.Key, err)
+		}
+		if err := db.Create(&model.HelmConfigValue{HelmConfigID: 20, ParameterConfigID: cfg.ID}).Error; err != nil {
+			t.Fatalf("seed prior helm_config_value link %s: %v", pv.Key, err)
+		}
+	}
+
+	// New version 1.0.7 redefines mysql.service.type (NodePort -> ClusterIP)
+	// and introduces one brand-new key (otelCollector.image.repository).
+	// The other 3 prior keys must be inherited.
+	seed := writeSeedFile(t, `
+containers:
+  - type: 2
+    name: ts
+    is_public: true
+    status: 1
+    versions:
+      - name: 1.0.6
+        helm_config:
+          version: 0.2.1
+          chart_name: trainticket
+          repo_name: r
+          repo_url: https://x
+      - name: 1.0.7
+        helm_config:
+          version: 0.3.1
+          chart_name: trainticket
+          repo_name: r
+          repo_url: https://x
+          values:
+            - key: mysql.service.type
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: ClusterIP
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+`)
+
+	report, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+	if report.NewVersions != 1 {
+		t.Fatalf("NewVersions = %d, want 1; actions=%+v", report.NewVersions, report.Actions)
+	}
+
+	// Find the new container_versions + helm_configs row ids.
+	var newCV struct{ ID int }
+	if err := db.Raw(`SELECT id FROM container_versions WHERE container_id = 1 AND name = '1.0.7'`).Scan(&newCV).Error; err != nil || newCV.ID == 0 {
+		t.Fatalf("new container_version row missing: err=%v id=%d", err, newCV.ID)
+	}
+	var newHelm struct{ ID int }
+	if err := db.Raw(`SELECT id FROM helm_configs WHERE container_version_id = ?`, newCV.ID).Scan(&newHelm).Error; err != nil || newHelm.ID == 0 {
+		t.Fatalf("new helm_configs row missing: err=%v id=%d", err, newHelm.ID)
+	}
+
+	// New helm_configs row must have 5 linked helm_config_values:
+	// 3 inherited + 1 redefined (mysql.service.type) + 1 brand-new.
+	var newLinked []struct {
+		Key string
+		Def *string
+	}
+	if err := db.Raw(`
+		SELECT pc.config_key AS key, pc.default_value AS def
+		FROM parameter_configs pc
+		JOIN helm_config_values hcv ON hcv.parameter_config_id = pc.id
+		WHERE hcv.helm_config_id = ?
+		ORDER BY pc.config_key
+	`, newHelm.ID).Scan(&newLinked).Error; err != nil {
+		t.Fatalf("list new helm_config_values: %v", err)
+	}
+	wantKeys := map[string]string{
+		"global.image.repository":         "pair-cn-shanghai.cr.volces.com/opspai",
+		"loadgenerator.image.tag":         "024",
+		"mysql.image.repository":          "pair-cn-shanghai.cr.volces.com/opspai/mysql",
+		"mysql.service.type":              "ClusterIP", // redefined: ClusterIP wins
+		"otelCollector.image.repository":  "pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib",
+	}
+	if len(newLinked) != len(wantKeys) {
+		t.Fatalf("new helm_configs has %d linked values, want %d: %+v", len(newLinked), len(wantKeys), newLinked)
+	}
+	for _, l := range newLinked {
+		wantDef, ok := wantKeys[l.Key]
+		if !ok {
+			t.Fatalf("unexpected linked key %q on new helm_configs", l.Key)
+		}
+		if l.Def == nil || *l.Def != wantDef {
+			t.Fatalf("linked key %q default = %v, want %q", l.Key, l.Def, wantDef)
+		}
+	}
+
+	// Prior helm_configs still has its 4 original links — inheritance must
+	// not move the prior rows.
+	var priorCount int
+	db.Raw(`SELECT COUNT(*) FROM helm_config_values WHERE helm_config_id = 20`).Scan(&priorCount)
+	if priorCount != 4 {
+		t.Fatalf("prior helm_configs link count = %d, want 4", priorCount)
+	}
+
+	// Inheritance actions must be present in the report.
+	inheritedSeen := 0
+	for _, a := range report.Actions {
+		if a.Note == "inherited helm value from prior container_version on version bump" && a.Applied {
+			inheritedSeen++
+		}
+	}
+	if inheritedSeen != 3 {
+		t.Fatalf("inherited helm-value actions = %d, want 3; actions=%+v", inheritedSeen, report.Actions)
+	}
+
+	// Idempotent: rerunning the reseed is a no-op (no new container_versions,
+	// no new helm_config_values links).
+	r2, err := ReseedFromDataFile(context.Background(), db, nil, ReseedRequest{DataPath: seed})
+	if err != nil {
+		t.Fatalf("second reseed: %v", err)
+	}
+	if r2.NewVersions != 0 {
+		t.Fatalf("second reseed NewVersions = %d, want 0", r2.NewVersions)
+	}
+	for _, a := range r2.Actions {
+		if a.Applied {
+			t.Fatalf("second reseed produced applied action: %+v", a)
+		}
+	}
+}

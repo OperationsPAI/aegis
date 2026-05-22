@@ -223,6 +223,16 @@ func reseedContainerVersions(db *gorm.DB, seed *InitialDataContainer, valuesDir 
 			if err := db.Create(helm).Error; err != nil {
 				return fmt.Errorf("insert helm_config for %s@%s: %w", seed.Name, versionName, err)
 			}
+			// Carry forward helm_config_values from the most-recent prior
+			// container_version on the same container, minus any keys the
+			// new seed entry redefines. data.yaml convention is that a
+			// version bump only needs to list deltas, not the full overlay
+			// (issue #477: ts 1.0.6 → 1.0.7 dropped 8 of 11 overrides
+			// because the new seed block only carried the 3 keys that
+			// actually changed).
+			if err := inheritHelmConfigValuesFromPriorVersion(db, helm, existing, versionName, vSeed.HelmConfig, seed.Name, report); err != nil {
+				return err
+			}
 			if err := backfillHelmConfigValues(db, helm, versionName, vSeed.HelmConfig, seed.Name, dryRun, "new helm value for new version", report); err != nil {
 				return err
 			}
@@ -603,6 +613,76 @@ func backfillHelmConfigValues(db *gorm.DB, helm *model.HelmConfig, versionName s
 		have[key] = actualCfg
 	}
 
+	return nil
+}
+
+// inheritHelmConfigValuesFromPriorVersion links every helm_config_values row
+// from the most-recent prior container_version on the same container into the
+// freshly-created helm_configs row, EXCLUDING any (key, type, category) the
+// new seed entry already redefines (the seed wins). Returns nil when there is
+// no prior version, no prior helm_configs row, or nothing to carry forward.
+//
+// "Most-recent prior" is the highest container_versions.id among the rows
+// enumerated before this insert — same ordering used by helm-version
+// resolution elsewhere (newer rows always have higher autoinc ids). priors
+// MUST exclude the just-inserted row; we pass the pre-insert slice in.
+func inheritHelmConfigValuesFromPriorVersion(db *gorm.DB, newHelm *model.HelmConfig, priors []model.ContainerVersion, newVersionName string, newSeed *InitialHelmConfig, systemName string, report *ReseedReport) error {
+	if newHelm == nil || newHelm.ID == 0 || len(priors) == 0 {
+		return nil
+	}
+	var priorID int
+	for i := range priors {
+		if priors[i].ID > priorID {
+			priorID = priors[i].ID
+		}
+	}
+	if priorID == 0 {
+		return nil
+	}
+	var priorHelm model.HelmConfig
+	if err := db.Where("container_version_id = ?", priorID).First(&priorHelm).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return fmt.Errorf("lookup prior helm_config for inheritance into %s@%s: %w", systemName, newVersionName, err)
+	}
+
+	seedKeys := make(map[string]struct{}, len(newSeed.Values))
+	for _, v := range newSeed.Values {
+		cfg := v.ConvertToDBParameterConfig()
+		seedKeys[parameterConfigIdentity(cfg)] = struct{}{}
+	}
+
+	var priorValues []model.ParameterConfig
+	if err := db.Table("parameter_configs").
+		Joins("JOIN helm_config_values ON helm_config_values.parameter_config_id = parameter_configs.id").
+		Where("helm_config_values.helm_config_id = ? AND parameter_configs.category = ?", priorHelm.ID, consts.ParameterCategoryHelmValues).
+		Find(&priorValues).Error; err != nil {
+		return fmt.Errorf("list prior helm_config_values for %s@%s: %w", systemName, newVersionName, err)
+	}
+
+	for i := range priorValues {
+		pc := &priorValues[i]
+		if _, redefined := seedKeys[parameterConfigIdentity(pc)]; redefined {
+			continue
+		}
+		rel := model.HelmConfigValue{
+			HelmConfigID:      newHelm.ID,
+			ParameterConfigID: pc.ID,
+		}
+		if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&rel).Error; err != nil {
+			return fmt.Errorf("inherit helm value %s into %s@%s: %w", pc.Key, systemName, newVersionName, err)
+		}
+		report.Actions = append(report.Actions, ReseedAction{
+			Layer:    "helm_config_values",
+			System:   systemName,
+			Key:      fmt.Sprintf("%s@%s:%s", systemName, newVersionName, pc.Key),
+			OldValue: "",
+			NewValue: parameterConfigSummary(pc),
+			Note:     "inherited helm value from prior container_version on version bump",
+			Applied:  true,
+		})
+	}
 	return nil
 }
 
