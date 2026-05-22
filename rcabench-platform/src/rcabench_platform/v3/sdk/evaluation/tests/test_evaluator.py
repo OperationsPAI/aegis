@@ -15,7 +15,6 @@ from typing import Any
 
 import polars as pl
 
-from rcabench_platform.v3.sdk.evaluation.causal_graph import CausalGraph
 from rcabench_platform.v3.sdk.evaluation import (
     AgentRCAOutput,
     Evidence,
@@ -32,6 +31,7 @@ from rcabench_platform.v3.sdk.evaluation import (
     map_chaos_type,
     verify_evidence,
 )
+from rcabench_platform.v3.sdk.evaluation.causal_graph import CausalGraph
 
 # ──────────────────────────────────────────────────────────────────────
 # Fault-kind controlled vocabulary
@@ -1248,8 +1248,8 @@ def test_evaluate_judge_failure_isolates_per_evidence(tmp_path: Path) -> None:
 
 def _judge_call(content: str) -> Any:
     """Helper: run evidence_support against a stub that returns ``content``."""
-    from rcabench_platform.v3.sdk.evaluation.chain_judge import evidence_support
     from rcabench_platform.v3.sdk.evaluation.agent_output import Evidence as Ev
+    from rcabench_platform.v3.sdk.evaluation.chain_judge import evidence_support
     from rcabench_platform.v3.sdk.evaluation.sql_verify import EvidenceStatus, EvidenceVerifyResult
 
     client = type("C", (), {"chat": _StubChat(content)})()
@@ -1297,8 +1297,8 @@ def test_evidence_judge_unparseable_value_returns_none() -> None:
 def test_evidence_judge_no_response_format_param() -> None:
     """Regression: gateways like litellm 400 on response_format=json_object;
     the judge must rely on prompt-only formatting, not that flag."""
-    from rcabench_platform.v3.sdk.evaluation.chain_judge import evidence_support
     from rcabench_platform.v3.sdk.evaluation.agent_output import Evidence as Ev
+    from rcabench_platform.v3.sdk.evaluation.chain_judge import evidence_support
     from rcabench_platform.v3.sdk.evaluation.sql_verify import EvidenceStatus, EvidenceVerifyResult
 
     completions = _StubCompletions(json.dumps({"supported": True, "reasoning": "ok"}))
