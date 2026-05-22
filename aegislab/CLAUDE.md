@@ -44,11 +44,13 @@ aegislab (RCABench) is a comprehensive Root Cause Analysis (RCA) benchmarking pl
 
 ### aegisctl CLI
 
-- `just build-aegisctl` - Build the aegisctl CLI binary (output: `/tmp/aegisctl`)
-- `just build-aegisctl output=./aegisctl` - Build with custom output path
-- `cd src && go build -o /tmp/aegisctl ./cli` - Build manually (no `-tags duckdb_arrow` needed)
+The aegisctl binary that's on `$PATH` lives at `~/.local/bin/aegisctl`. After any code change you want the user to be able to use immediately (or that you want to re-test with `aegisctl …`), rebuild **that** path, not `/tmp/aegisctl`:
 
-aegisctl is the command-line client for the aegislab platform. See [`src/cli/README.md`](src/cli/README.md) for usage. The CLI schema is enforced by the `aegisctl schema diff gate` CI workflow.
+- `cd src && go build -o ~/.local/bin/aegisctl ./cli` — **default**: refreshes the on-PATH binary, no `-tags duckdb_arrow` needed.
+- `just build-aegisctl output=~/.local/bin/aegisctl` — same via the recipe.
+- `just build-aegisctl` / `cd src && go build -o /tmp/aegisctl ./cli` — output goes to `/tmp/aegisctl`; fine for a quick smoke test but **does not refresh `$PATH`** — finish the loop by rebuilding `~/.local/bin/aegisctl` before reporting the task done.
+
+Source: [`src/cli/`](src/cli/) (cobra commands under `src/cli/cmd/`, generated SDK at `src/cli/apiclient/`). User-facing docs: [`src/cli/README.md`](src/cli/README.md). The CLI schema is enforced by the `aegisctl schema diff gate` CI workflow — any flag add/remove/rename/default/help-text change needs `schema-changes-acknowledged: true` in the PR body (see [`feedback_aegis_schema_gate_token`](../.claude/projects/-home-ddq-AoyangSpace-aegis/memory/feedback_aegis_schema_gate_token.md)).
 
 ### Testing
 
@@ -383,7 +385,7 @@ just generate-go-sdk      0.0.0   # Go (src/cli/apiclient — used by aegisctl)
 3. Install / consume:
 ```bash
 cd frontend && npm install                         # TypeScript
-cd src && go build -o /tmp/aegisctl ./cli           # Go (no separate install — same module)
+cd src && go build -o ~/.local/bin/aegisctl ./cli   # Go (refresh on-PATH binary; same module, no separate install)
 ```
 
 ### SDK Files Location
