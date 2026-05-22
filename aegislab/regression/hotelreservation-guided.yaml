@@ -29,13 +29,18 @@ submit:
 validation:
   timeout_seconds: 3000
   min_events: 6
-  expected_final_event: datapack.no_anomaly
+  # HS ships dsb-wrk2 as the bundled loadgen, so PodFailure on `profile`
+  # lands inside live traffic and the detector finds real anomaly signal
+  # (verified 2026-05-22: anomaly_count=2 on the smoke run). The chain
+  # therefore terminates at `algorithm.result.collection`, not the
+  # quieter-pedestal shortcut `datapack.no_anomaly`.
+  expected_final_event: algorithm.result.collection
   required_events:
     - restart.pedestal.started
     - fault.injection.started
     - datapack.build.started
     - algorithm.run.started
-    - datapack.no_anomaly
+    - algorithm.result.collection
   required_task_chain:
     - RestartPedestal
     - FaultInjection
