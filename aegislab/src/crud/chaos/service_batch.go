@@ -153,6 +153,18 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 		return row, ErrCapabilityUnsupported
 	}
 
+	effectiveParams := mergeParams(map[string]any(point.ParamOverrides), c.Params)
+	compiler := newSchemaCompiler()
+	paramSchema, cerr := compiler.forParams(&capRow)
+	if cerr != nil {
+		row := s.persistFailedChild(ctx, batchID, c, cerr)
+		return row, cerr
+	}
+	if verr := validateInstance(paramSchema, effectiveParams, "params"); verr != nil {
+		row := s.persistFailedChild(ctx, batchID, c, verr)
+		return row, verr
+	}
+
 	sys, err := s.GetSystem(ctx, point.SystemName)
 	if err != nil {
 		row := s.persistFailedChild(ctx, batchID, c, err)

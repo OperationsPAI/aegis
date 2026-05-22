@@ -184,7 +184,8 @@ func (h *Handler) CreateInjection(c *gin.Context) {
 			errors.Is(err, ErrCapabilityNotFound):
 			code = http.StatusNotFound
 		case errors.Is(err, ErrSystemDisabled), errors.Is(err, ErrPointNotActive),
-			errors.Is(err, ErrCapabilityUnsupported), errors.Is(err, ErrIdempotencyMismatch):
+			errors.Is(err, ErrCapabilityUnsupported), errors.Is(err, ErrIdempotencyMismatch),
+			errors.Is(err, ErrSchemaValidation):
 			code = http.StatusBadRequest
 		case errors.Is(err, ErrSystemAtCapacity):
 			code = http.StatusTooManyRequests

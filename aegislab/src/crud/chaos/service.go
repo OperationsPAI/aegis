@@ -144,6 +144,16 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 		return nil, ErrCapabilityUnsupported
 	}
 
+	effectiveParams := mergeParams(map[string]any(point.ParamOverrides), in.Params)
+	sc := newSchemaCompiler()
+	paramSchema, err := sc.forParams(&capRow)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateInstance(paramSchema, effectiveParams, "params"); err != nil {
+		return nil, err
+	}
+
 	sys, err := s.GetSystem(ctx, point.SystemName)
 	if err != nil {
 		return nil, err
