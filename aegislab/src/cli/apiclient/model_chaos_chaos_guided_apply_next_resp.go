@@ -20,7 +20,7 @@ var _ MappedNullable = &ChaosChaosGuidedApplyNextResp{}
 
 // ChaosChaosGuidedApplyNextResp struct for ChaosChaosGuidedApplyNextResp
 type ChaosChaosGuidedApplyNextResp struct {
-	Config               *GuidedcliGuidedConfig `json:"config,omitempty"`
+	Config               *ChaosGuidedConfig `json:"config,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -44,9 +44,9 @@ func NewChaosChaosGuidedApplyNextRespWithDefaults() *ChaosChaosGuidedApplyNextRe
 }
 
 // GetConfig returns the Config field value if set, zero value otherwise.
-func (o *ChaosChaosGuidedApplyNextResp) GetConfig() GuidedcliGuidedConfig {
+func (o *ChaosChaosGuidedApplyNextResp) GetConfig() ChaosGuidedConfig {
 	if o == nil || IsNil(o.Config) {
-		var ret GuidedcliGuidedConfig
+		var ret ChaosGuidedConfig
 		return ret
 	}
 	return *o.Config
@@ -54,7 +54,7 @@ func (o *ChaosChaosGuidedApplyNextResp) GetConfig() GuidedcliGuidedConfig {
 
 // GetConfigOk returns a tuple with the Config field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ChaosChaosGuidedApplyNextResp) GetConfigOk() (*GuidedcliGuidedConfig, bool) {
+func (o *ChaosChaosGuidedApplyNextResp) GetConfigOk() (*ChaosGuidedConfig, bool) {
 	if o == nil || IsNil(o.Config) {
 		return nil, false
 	}
@@ -70,8 +70,8 @@ func (o *ChaosChaosGuidedApplyNextResp) HasConfig() bool {
 	return false
 }
 
-// SetConfig gets a reference to the given GuidedcliGuidedConfig and assigns it to the Config field.
-func (o *ChaosChaosGuidedApplyNextResp) SetConfig(v GuidedcliGuidedConfig) {
+// SetConfig gets a reference to the given ChaosGuidedConfig and assigns it to the Config field.
+func (o *ChaosChaosGuidedApplyNextResp) SetConfig(v ChaosGuidedConfig) {
 	o.Config = &v
 }
 

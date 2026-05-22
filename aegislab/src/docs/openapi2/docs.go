@@ -13635,6 +13635,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v2/systems/by-name/{name}/export-seed": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Serialize the live DB + etcd state for a single chaos system into a YAML snippet that round-trips through ` + "`" + `aegisctl system register --from-seed` + "`" + `. Used to commit runtime-added systems back into git.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Systems"
+                ],
+                "summary": "Export a system to data.yaml-compatible YAML",
+                "operationId": "export_chaos_system_seed",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System short code",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Seed YAML",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaossystem_ExportSeedResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "404": {
+                        "description": "System not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "admin": "true",
+                    "sdk": "true"
+                }
+            }
+        },
         "/api/v2/systems/by-name/{name}/inject-candidates": {
             "get": {
                 "security": [
@@ -13809,6 +13866,74 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Prerequisite not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    }
+                },
+                "x-api-type": {
+                    "admin": "true",
+                    "sdk": "true"
+                }
+            }
+        },
+        "/api/v2/systems/onboard": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Composite of CreateSystem + CreateContainer. DB writes (container/version/helm_config + dynamic_configs) commit in one transaction; the 7 etcd identity keys are published only after the tx succeeds. On etcd failure mid-flight the already-published keys are best-effort deleted so a partial onboard never leaves a half-registered system.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Systems"
+                ],
+                "summary": "Onboard chaos system + chart binding atomically",
+                "operationId": "onboard_chaos_system",
+                "parameters": [
+                    {
+                        "description": "Composite onboard request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chaossystem.OnboardSystemReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "System onboarded successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-chaossystem_OnboardSystemResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format or parameters",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericResponse-any"
+                        }
+                    },
+                    "409": {
+                        "description": "System or container already exists",
                         "schema": {
                             "$ref": "#/definitions/dto.GenericResponse-any"
                         }
@@ -21735,6 +21860,14 @@ const docTemplate = `{
                 }
             }
         },
+        "chaossystem.ExportSeedResp": {
+            "type": "object",
+            "properties": {
+                "yaml": {
+                    "type": "string"
+                }
+            }
+        },
         "chaossystem.InjectCandidateResp": {
             "type": "object",
             "properties": {
@@ -21818,6 +21951,32 @@ const docTemplate = `{
                         "reconciled",
                         "failed"
                     ]
+                }
+            }
+        },
+        "chaossystem.OnboardSystemReq": {
+            "type": "object",
+            "required": [
+                "container",
+                "system"
+            ],
+            "properties": {
+                "container": {
+                    "$ref": "#/definitions/container.CreateContainerReq"
+                },
+                "system": {
+                    "$ref": "#/definitions/chaossystem.CreateChaosSystemReq"
+                }
+            }
+        },
+        "chaossystem.OnboardSystemResp": {
+            "type": "object",
+            "properties": {
+                "container": {
+                    "$ref": "#/definitions/container.ContainerResp"
+                },
+                "system": {
+                    "$ref": "#/definitions/chaossystem.ChaosSystemResp"
                 }
             }
         },
@@ -24807,6 +24966,31 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GenericResponse-chaossystem_ExportSeedResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaossystem.ExportSeedResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.GenericResponse-chaossystem_InjectCandidatesResp": {
             "type": "object",
             "properties": {
@@ -24819,6 +25003,31 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/chaossystem.InjectCandidatesResp"
+                        }
+                    ]
+                },
+                "message": {
+                    "description": "Response message",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "Response generation time",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.GenericResponse-chaossystem_OnboardSystemResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Status code",
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "Generic type data",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chaossystem.OnboardSystemResp"
                         }
                     ]
                 },

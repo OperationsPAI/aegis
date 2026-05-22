@@ -15,11 +15,11 @@ import (
 	"encoding/json"
 )
 
-// checks if the GuidedcliGuidedConfig type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &GuidedcliGuidedConfig{}
+// checks if the ChaosGuidedConfig type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &ChaosGuidedConfig{}
 
-// GuidedcliGuidedConfig struct for GuidedcliGuidedConfig
-type GuidedcliGuidedConfig struct {
+// ChaosGuidedConfig struct for ChaosGuidedConfig
+type ChaosGuidedConfig struct {
 	App                  *string `json:"app,omitempty"`
 	BodyType             *string `json:"body_type,omitempty"`
 	Buffer               *int32  `json:"buffer,omitempty"`
@@ -66,27 +66,27 @@ type GuidedcliGuidedConfig struct {
 	AdditionalProperties map[string]interface{}
 }
 
-type _GuidedcliGuidedConfig GuidedcliGuidedConfig
+type _ChaosGuidedConfig ChaosGuidedConfig
 
-// NewGuidedcliGuidedConfig instantiates a new GuidedcliGuidedConfig object
+// NewChaosGuidedConfig instantiates a new ChaosGuidedConfig object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewGuidedcliGuidedConfig() *GuidedcliGuidedConfig {
-	this := GuidedcliGuidedConfig{}
+func NewChaosGuidedConfig() *ChaosGuidedConfig {
+	this := ChaosGuidedConfig{}
 	return &this
 }
 
-// NewGuidedcliGuidedConfigWithDefaults instantiates a new GuidedcliGuidedConfig object
+// NewChaosGuidedConfigWithDefaults instantiates a new ChaosGuidedConfig object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewGuidedcliGuidedConfigWithDefaults() *GuidedcliGuidedConfig {
-	this := GuidedcliGuidedConfig{}
+func NewChaosGuidedConfigWithDefaults() *ChaosGuidedConfig {
+	this := ChaosGuidedConfig{}
 	return &this
 }
 
 // GetApp returns the App field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetApp() string {
+func (o *ChaosGuidedConfig) GetApp() string {
 	if o == nil || IsNil(o.App) {
 		var ret string
 		return ret
@@ -96,7 +96,7 @@ func (o *GuidedcliGuidedConfig) GetApp() string {
 
 // GetAppOk returns a tuple with the App field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetAppOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetAppOk() (*string, bool) {
 	if o == nil || IsNil(o.App) {
 		return nil, false
 	}
@@ -104,7 +104,7 @@ func (o *GuidedcliGuidedConfig) GetAppOk() (*string, bool) {
 }
 
 // HasApp returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasApp() bool {
+func (o *ChaosGuidedConfig) HasApp() bool {
 	if o != nil && !IsNil(o.App) {
 		return true
 	}
@@ -113,12 +113,12 @@ func (o *GuidedcliGuidedConfig) HasApp() bool {
 }
 
 // SetApp gets a reference to the given string and assigns it to the App field.
-func (o *GuidedcliGuidedConfig) SetApp(v string) {
+func (o *ChaosGuidedConfig) SetApp(v string) {
 	o.App = &v
 }
 
 // GetBodyType returns the BodyType field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetBodyType() string {
+func (o *ChaosGuidedConfig) GetBodyType() string {
 	if o == nil || IsNil(o.BodyType) {
 		var ret string
 		return ret
@@ -128,7 +128,7 @@ func (o *GuidedcliGuidedConfig) GetBodyType() string {
 
 // GetBodyTypeOk returns a tuple with the BodyType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetBodyTypeOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetBodyTypeOk() (*string, bool) {
 	if o == nil || IsNil(o.BodyType) {
 		return nil, false
 	}
@@ -136,7 +136,7 @@ func (o *GuidedcliGuidedConfig) GetBodyTypeOk() (*string, bool) {
 }
 
 // HasBodyType returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasBodyType() bool {
+func (o *ChaosGuidedConfig) HasBodyType() bool {
 	if o != nil && !IsNil(o.BodyType) {
 		return true
 	}
@@ -145,12 +145,12 @@ func (o *GuidedcliGuidedConfig) HasBodyType() bool {
 }
 
 // SetBodyType gets a reference to the given string and assigns it to the BodyType field.
-func (o *GuidedcliGuidedConfig) SetBodyType(v string) {
+func (o *ChaosGuidedConfig) SetBodyType(v string) {
 	o.BodyType = &v
 }
 
 // GetBuffer returns the Buffer field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetBuffer() int32 {
+func (o *ChaosGuidedConfig) GetBuffer() int32 {
 	if o == nil || IsNil(o.Buffer) {
 		var ret int32
 		return ret
@@ -160,7 +160,7 @@ func (o *GuidedcliGuidedConfig) GetBuffer() int32 {
 
 // GetBufferOk returns a tuple with the Buffer field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetBufferOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetBufferOk() (*int32, bool) {
 	if o == nil || IsNil(o.Buffer) {
 		return nil, false
 	}
@@ -168,7 +168,7 @@ func (o *GuidedcliGuidedConfig) GetBufferOk() (*int32, bool) {
 }
 
 // HasBuffer returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasBuffer() bool {
+func (o *ChaosGuidedConfig) HasBuffer() bool {
 	if o != nil && !IsNil(o.Buffer) {
 		return true
 	}
@@ -177,12 +177,12 @@ func (o *GuidedcliGuidedConfig) HasBuffer() bool {
 }
 
 // SetBuffer gets a reference to the given int32 and assigns it to the Buffer field.
-func (o *GuidedcliGuidedConfig) SetBuffer(v int32) {
+func (o *ChaosGuidedConfig) SetBuffer(v int32) {
 	o.Buffer = &v
 }
 
 // GetChaosType returns the ChaosType field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetChaosType() string {
+func (o *ChaosGuidedConfig) GetChaosType() string {
 	if o == nil || IsNil(o.ChaosType) {
 		var ret string
 		return ret
@@ -192,7 +192,7 @@ func (o *GuidedcliGuidedConfig) GetChaosType() string {
 
 // GetChaosTypeOk returns a tuple with the ChaosType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetChaosTypeOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetChaosTypeOk() (*string, bool) {
 	if o == nil || IsNil(o.ChaosType) {
 		return nil, false
 	}
@@ -200,7 +200,7 @@ func (o *GuidedcliGuidedConfig) GetChaosTypeOk() (*string, bool) {
 }
 
 // HasChaosType returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasChaosType() bool {
+func (o *ChaosGuidedConfig) HasChaosType() bool {
 	if o != nil && !IsNil(o.ChaosType) {
 		return true
 	}
@@ -209,12 +209,12 @@ func (o *GuidedcliGuidedConfig) HasChaosType() bool {
 }
 
 // SetChaosType gets a reference to the given string and assigns it to the ChaosType field.
-func (o *GuidedcliGuidedConfig) SetChaosType(v string) {
+func (o *ChaosGuidedConfig) SetChaosType(v string) {
 	o.ChaosType = &v
 }
 
 // GetClass returns the Class field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetClass() string {
+func (o *ChaosGuidedConfig) GetClass() string {
 	if o == nil || IsNil(o.Class) {
 		var ret string
 		return ret
@@ -224,7 +224,7 @@ func (o *GuidedcliGuidedConfig) GetClass() string {
 
 // GetClassOk returns a tuple with the Class field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetClassOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetClassOk() (*string, bool) {
 	if o == nil || IsNil(o.Class) {
 		return nil, false
 	}
@@ -232,7 +232,7 @@ func (o *GuidedcliGuidedConfig) GetClassOk() (*string, bool) {
 }
 
 // HasClass returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasClass() bool {
+func (o *ChaosGuidedConfig) HasClass() bool {
 	if o != nil && !IsNil(o.Class) {
 		return true
 	}
@@ -241,12 +241,12 @@ func (o *GuidedcliGuidedConfig) HasClass() bool {
 }
 
 // SetClass gets a reference to the given string and assigns it to the Class field.
-func (o *GuidedcliGuidedConfig) SetClass(v string) {
+func (o *ChaosGuidedConfig) SetClass(v string) {
 	o.Class = &v
 }
 
 // GetContainer returns the Container field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetContainer() string {
+func (o *ChaosGuidedConfig) GetContainer() string {
 	if o == nil || IsNil(o.Container) {
 		var ret string
 		return ret
@@ -256,7 +256,7 @@ func (o *GuidedcliGuidedConfig) GetContainer() string {
 
 // GetContainerOk returns a tuple with the Container field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetContainerOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetContainerOk() (*string, bool) {
 	if o == nil || IsNil(o.Container) {
 		return nil, false
 	}
@@ -264,7 +264,7 @@ func (o *GuidedcliGuidedConfig) GetContainerOk() (*string, bool) {
 }
 
 // HasContainer returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasContainer() bool {
+func (o *ChaosGuidedConfig) HasContainer() bool {
 	if o != nil && !IsNil(o.Container) {
 		return true
 	}
@@ -273,12 +273,12 @@ func (o *GuidedcliGuidedConfig) HasContainer() bool {
 }
 
 // SetContainer gets a reference to the given string and assigns it to the Container field.
-func (o *GuidedcliGuidedConfig) SetContainer(v string) {
+func (o *ChaosGuidedConfig) SetContainer(v string) {
 	o.Container = &v
 }
 
 // GetCorrelation returns the Correlation field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetCorrelation() int32 {
+func (o *ChaosGuidedConfig) GetCorrelation() int32 {
 	if o == nil || IsNil(o.Correlation) {
 		var ret int32
 		return ret
@@ -288,7 +288,7 @@ func (o *GuidedcliGuidedConfig) GetCorrelation() int32 {
 
 // GetCorrelationOk returns a tuple with the Correlation field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetCorrelationOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetCorrelationOk() (*int32, bool) {
 	if o == nil || IsNil(o.Correlation) {
 		return nil, false
 	}
@@ -296,7 +296,7 @@ func (o *GuidedcliGuidedConfig) GetCorrelationOk() (*int32, bool) {
 }
 
 // HasCorrelation returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasCorrelation() bool {
+func (o *ChaosGuidedConfig) HasCorrelation() bool {
 	if o != nil && !IsNil(o.Correlation) {
 		return true
 	}
@@ -305,12 +305,12 @@ func (o *GuidedcliGuidedConfig) HasCorrelation() bool {
 }
 
 // SetCorrelation gets a reference to the given int32 and assigns it to the Correlation field.
-func (o *GuidedcliGuidedConfig) SetCorrelation(v int32) {
+func (o *ChaosGuidedConfig) SetCorrelation(v int32) {
 	o.Correlation = &v
 }
 
 // GetCorrupt returns the Corrupt field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetCorrupt() int32 {
+func (o *ChaosGuidedConfig) GetCorrupt() int32 {
 	if o == nil || IsNil(o.Corrupt) {
 		var ret int32
 		return ret
@@ -320,7 +320,7 @@ func (o *GuidedcliGuidedConfig) GetCorrupt() int32 {
 
 // GetCorruptOk returns a tuple with the Corrupt field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetCorruptOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetCorruptOk() (*int32, bool) {
 	if o == nil || IsNil(o.Corrupt) {
 		return nil, false
 	}
@@ -328,7 +328,7 @@ func (o *GuidedcliGuidedConfig) GetCorruptOk() (*int32, bool) {
 }
 
 // HasCorrupt returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasCorrupt() bool {
+func (o *ChaosGuidedConfig) HasCorrupt() bool {
 	if o != nil && !IsNil(o.Corrupt) {
 		return true
 	}
@@ -337,12 +337,12 @@ func (o *GuidedcliGuidedConfig) HasCorrupt() bool {
 }
 
 // SetCorrupt gets a reference to the given int32 and assigns it to the Corrupt field.
-func (o *GuidedcliGuidedConfig) SetCorrupt(v int32) {
+func (o *ChaosGuidedConfig) SetCorrupt(v int32) {
 	o.Corrupt = &v
 }
 
 // GetCpuCount returns the CpuCount field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetCpuCount() int32 {
+func (o *ChaosGuidedConfig) GetCpuCount() int32 {
 	if o == nil || IsNil(o.CpuCount) {
 		var ret int32
 		return ret
@@ -352,7 +352,7 @@ func (o *GuidedcliGuidedConfig) GetCpuCount() int32 {
 
 // GetCpuCountOk returns a tuple with the CpuCount field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetCpuCountOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetCpuCountOk() (*int32, bool) {
 	if o == nil || IsNil(o.CpuCount) {
 		return nil, false
 	}
@@ -360,7 +360,7 @@ func (o *GuidedcliGuidedConfig) GetCpuCountOk() (*int32, bool) {
 }
 
 // HasCpuCount returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasCpuCount() bool {
+func (o *ChaosGuidedConfig) HasCpuCount() bool {
 	if o != nil && !IsNil(o.CpuCount) {
 		return true
 	}
@@ -369,12 +369,12 @@ func (o *GuidedcliGuidedConfig) HasCpuCount() bool {
 }
 
 // SetCpuCount gets a reference to the given int32 and assigns it to the CpuCount field.
-func (o *GuidedcliGuidedConfig) SetCpuCount(v int32) {
+func (o *ChaosGuidedConfig) SetCpuCount(v int32) {
 	o.CpuCount = &v
 }
 
 // GetCpuLoad returns the CpuLoad field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetCpuLoad() int32 {
+func (o *ChaosGuidedConfig) GetCpuLoad() int32 {
 	if o == nil || IsNil(o.CpuLoad) {
 		var ret int32
 		return ret
@@ -384,7 +384,7 @@ func (o *GuidedcliGuidedConfig) GetCpuLoad() int32 {
 
 // GetCpuLoadOk returns a tuple with the CpuLoad field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetCpuLoadOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetCpuLoadOk() (*int32, bool) {
 	if o == nil || IsNil(o.CpuLoad) {
 		return nil, false
 	}
@@ -392,7 +392,7 @@ func (o *GuidedcliGuidedConfig) GetCpuLoadOk() (*int32, bool) {
 }
 
 // HasCpuLoad returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasCpuLoad() bool {
+func (o *ChaosGuidedConfig) HasCpuLoad() bool {
 	if o != nil && !IsNil(o.CpuLoad) {
 		return true
 	}
@@ -401,12 +401,12 @@ func (o *GuidedcliGuidedConfig) HasCpuLoad() bool {
 }
 
 // SetCpuLoad gets a reference to the given int32 and assigns it to the CpuLoad field.
-func (o *GuidedcliGuidedConfig) SetCpuLoad(v int32) {
+func (o *ChaosGuidedConfig) SetCpuLoad(v int32) {
 	o.CpuLoad = &v
 }
 
 // GetCpuWorker returns the CpuWorker field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetCpuWorker() int32 {
+func (o *ChaosGuidedConfig) GetCpuWorker() int32 {
 	if o == nil || IsNil(o.CpuWorker) {
 		var ret int32
 		return ret
@@ -416,7 +416,7 @@ func (o *GuidedcliGuidedConfig) GetCpuWorker() int32 {
 
 // GetCpuWorkerOk returns a tuple with the CpuWorker field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetCpuWorkerOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetCpuWorkerOk() (*int32, bool) {
 	if o == nil || IsNil(o.CpuWorker) {
 		return nil, false
 	}
@@ -424,7 +424,7 @@ func (o *GuidedcliGuidedConfig) GetCpuWorkerOk() (*int32, bool) {
 }
 
 // HasCpuWorker returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasCpuWorker() bool {
+func (o *ChaosGuidedConfig) HasCpuWorker() bool {
 	if o != nil && !IsNil(o.CpuWorker) {
 		return true
 	}
@@ -433,12 +433,12 @@ func (o *GuidedcliGuidedConfig) HasCpuWorker() bool {
 }
 
 // SetCpuWorker gets a reference to the given int32 and assigns it to the CpuWorker field.
-func (o *GuidedcliGuidedConfig) SetCpuWorker(v int32) {
+func (o *ChaosGuidedConfig) SetCpuWorker(v int32) {
 	o.CpuWorker = &v
 }
 
 // GetDatabase returns the Database field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetDatabase() string {
+func (o *ChaosGuidedConfig) GetDatabase() string {
 	if o == nil || IsNil(o.Database) {
 		var ret string
 		return ret
@@ -448,7 +448,7 @@ func (o *GuidedcliGuidedConfig) GetDatabase() string {
 
 // GetDatabaseOk returns a tuple with the Database field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetDatabaseOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetDatabaseOk() (*string, bool) {
 	if o == nil || IsNil(o.Database) {
 		return nil, false
 	}
@@ -456,7 +456,7 @@ func (o *GuidedcliGuidedConfig) GetDatabaseOk() (*string, bool) {
 }
 
 // HasDatabase returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasDatabase() bool {
+func (o *ChaosGuidedConfig) HasDatabase() bool {
 	if o != nil && !IsNil(o.Database) {
 		return true
 	}
@@ -465,12 +465,12 @@ func (o *GuidedcliGuidedConfig) HasDatabase() bool {
 }
 
 // SetDatabase gets a reference to the given string and assigns it to the Database field.
-func (o *GuidedcliGuidedConfig) SetDatabase(v string) {
+func (o *ChaosGuidedConfig) SetDatabase(v string) {
 	o.Database = &v
 }
 
 // GetDelayDuration returns the DelayDuration field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetDelayDuration() int32 {
+func (o *ChaosGuidedConfig) GetDelayDuration() int32 {
 	if o == nil || IsNil(o.DelayDuration) {
 		var ret int32
 		return ret
@@ -480,7 +480,7 @@ func (o *GuidedcliGuidedConfig) GetDelayDuration() int32 {
 
 // GetDelayDurationOk returns a tuple with the DelayDuration field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetDelayDurationOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetDelayDurationOk() (*int32, bool) {
 	if o == nil || IsNil(o.DelayDuration) {
 		return nil, false
 	}
@@ -488,7 +488,7 @@ func (o *GuidedcliGuidedConfig) GetDelayDurationOk() (*int32, bool) {
 }
 
 // HasDelayDuration returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasDelayDuration() bool {
+func (o *ChaosGuidedConfig) HasDelayDuration() bool {
 	if o != nil && !IsNil(o.DelayDuration) {
 		return true
 	}
@@ -497,12 +497,12 @@ func (o *GuidedcliGuidedConfig) HasDelayDuration() bool {
 }
 
 // SetDelayDuration gets a reference to the given int32 and assigns it to the DelayDuration field.
-func (o *GuidedcliGuidedConfig) SetDelayDuration(v int32) {
+func (o *ChaosGuidedConfig) SetDelayDuration(v int32) {
 	o.DelayDuration = &v
 }
 
 // GetDirection returns the Direction field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetDirection() string {
+func (o *ChaosGuidedConfig) GetDirection() string {
 	if o == nil || IsNil(o.Direction) {
 		var ret string
 		return ret
@@ -512,7 +512,7 @@ func (o *GuidedcliGuidedConfig) GetDirection() string {
 
 // GetDirectionOk returns a tuple with the Direction field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetDirectionOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetDirectionOk() (*string, bool) {
 	if o == nil || IsNil(o.Direction) {
 		return nil, false
 	}
@@ -520,7 +520,7 @@ func (o *GuidedcliGuidedConfig) GetDirectionOk() (*string, bool) {
 }
 
 // HasDirection returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasDirection() bool {
+func (o *ChaosGuidedConfig) HasDirection() bool {
 	if o != nil && !IsNil(o.Direction) {
 		return true
 	}
@@ -529,12 +529,12 @@ func (o *GuidedcliGuidedConfig) HasDirection() bool {
 }
 
 // SetDirection gets a reference to the given string and assigns it to the Direction field.
-func (o *GuidedcliGuidedConfig) SetDirection(v string) {
+func (o *ChaosGuidedConfig) SetDirection(v string) {
 	o.Direction = &v
 }
 
 // GetDomain returns the Domain field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetDomain() string {
+func (o *ChaosGuidedConfig) GetDomain() string {
 	if o == nil || IsNil(o.Domain) {
 		var ret string
 		return ret
@@ -544,7 +544,7 @@ func (o *GuidedcliGuidedConfig) GetDomain() string {
 
 // GetDomainOk returns a tuple with the Domain field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetDomainOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetDomainOk() (*string, bool) {
 	if o == nil || IsNil(o.Domain) {
 		return nil, false
 	}
@@ -552,7 +552,7 @@ func (o *GuidedcliGuidedConfig) GetDomainOk() (*string, bool) {
 }
 
 // HasDomain returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasDomain() bool {
+func (o *ChaosGuidedConfig) HasDomain() bool {
 	if o != nil && !IsNil(o.Domain) {
 		return true
 	}
@@ -561,12 +561,12 @@ func (o *GuidedcliGuidedConfig) HasDomain() bool {
 }
 
 // SetDomain gets a reference to the given string and assigns it to the Domain field.
-func (o *GuidedcliGuidedConfig) SetDomain(v string) {
+func (o *ChaosGuidedConfig) SetDomain(v string) {
 	o.Domain = &v
 }
 
 // GetDuplicate returns the Duplicate field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetDuplicate() int32 {
+func (o *ChaosGuidedConfig) GetDuplicate() int32 {
 	if o == nil || IsNil(o.Duplicate) {
 		var ret int32
 		return ret
@@ -576,7 +576,7 @@ func (o *GuidedcliGuidedConfig) GetDuplicate() int32 {
 
 // GetDuplicateOk returns a tuple with the Duplicate field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetDuplicateOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetDuplicateOk() (*int32, bool) {
 	if o == nil || IsNil(o.Duplicate) {
 		return nil, false
 	}
@@ -584,7 +584,7 @@ func (o *GuidedcliGuidedConfig) GetDuplicateOk() (*int32, bool) {
 }
 
 // HasDuplicate returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasDuplicate() bool {
+func (o *ChaosGuidedConfig) HasDuplicate() bool {
 	if o != nil && !IsNil(o.Duplicate) {
 		return true
 	}
@@ -593,12 +593,12 @@ func (o *GuidedcliGuidedConfig) HasDuplicate() bool {
 }
 
 // SetDuplicate gets a reference to the given int32 and assigns it to the Duplicate field.
-func (o *GuidedcliGuidedConfig) SetDuplicate(v int32) {
+func (o *ChaosGuidedConfig) SetDuplicate(v int32) {
 	o.Duplicate = &v
 }
 
 // GetDuration returns the Duration field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetDuration() int32 {
+func (o *ChaosGuidedConfig) GetDuration() int32 {
 	if o == nil || IsNil(o.Duration) {
 		var ret int32
 		return ret
@@ -608,7 +608,7 @@ func (o *GuidedcliGuidedConfig) GetDuration() int32 {
 
 // GetDurationOk returns a tuple with the Duration field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetDurationOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetDurationOk() (*int32, bool) {
 	if o == nil || IsNil(o.Duration) {
 		return nil, false
 	}
@@ -616,7 +616,7 @@ func (o *GuidedcliGuidedConfig) GetDurationOk() (*int32, bool) {
 }
 
 // HasDuration returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasDuration() bool {
+func (o *ChaosGuidedConfig) HasDuration() bool {
 	if o != nil && !IsNil(o.Duration) {
 		return true
 	}
@@ -625,12 +625,12 @@ func (o *GuidedcliGuidedConfig) HasDuration() bool {
 }
 
 // SetDuration gets a reference to the given int32 and assigns it to the Duration field.
-func (o *GuidedcliGuidedConfig) SetDuration(v int32) {
+func (o *ChaosGuidedConfig) SetDuration(v int32) {
 	o.Duration = &v
 }
 
 // GetExceptionOpt returns the ExceptionOpt field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetExceptionOpt() string {
+func (o *ChaosGuidedConfig) GetExceptionOpt() string {
 	if o == nil || IsNil(o.ExceptionOpt) {
 		var ret string
 		return ret
@@ -640,7 +640,7 @@ func (o *GuidedcliGuidedConfig) GetExceptionOpt() string {
 
 // GetExceptionOptOk returns a tuple with the ExceptionOpt field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetExceptionOptOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetExceptionOptOk() (*string, bool) {
 	if o == nil || IsNil(o.ExceptionOpt) {
 		return nil, false
 	}
@@ -648,7 +648,7 @@ func (o *GuidedcliGuidedConfig) GetExceptionOptOk() (*string, bool) {
 }
 
 // HasExceptionOpt returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasExceptionOpt() bool {
+func (o *ChaosGuidedConfig) HasExceptionOpt() bool {
 	if o != nil && !IsNil(o.ExceptionOpt) {
 		return true
 	}
@@ -657,12 +657,12 @@ func (o *GuidedcliGuidedConfig) HasExceptionOpt() bool {
 }
 
 // SetExceptionOpt gets a reference to the given string and assigns it to the ExceptionOpt field.
-func (o *GuidedcliGuidedConfig) SetExceptionOpt(v string) {
+func (o *ChaosGuidedConfig) SetExceptionOpt(v string) {
 	o.ExceptionOpt = &v
 }
 
 // GetHttpMethod returns the HttpMethod field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetHttpMethod() string {
+func (o *ChaosGuidedConfig) GetHttpMethod() string {
 	if o == nil || IsNil(o.HttpMethod) {
 		var ret string
 		return ret
@@ -672,7 +672,7 @@ func (o *GuidedcliGuidedConfig) GetHttpMethod() string {
 
 // GetHttpMethodOk returns a tuple with the HttpMethod field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetHttpMethodOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetHttpMethodOk() (*string, bool) {
 	if o == nil || IsNil(o.HttpMethod) {
 		return nil, false
 	}
@@ -680,7 +680,7 @@ func (o *GuidedcliGuidedConfig) GetHttpMethodOk() (*string, bool) {
 }
 
 // HasHttpMethod returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasHttpMethod() bool {
+func (o *ChaosGuidedConfig) HasHttpMethod() bool {
 	if o != nil && !IsNil(o.HttpMethod) {
 		return true
 	}
@@ -689,12 +689,12 @@ func (o *GuidedcliGuidedConfig) HasHttpMethod() bool {
 }
 
 // SetHttpMethod gets a reference to the given string and assigns it to the HttpMethod field.
-func (o *GuidedcliGuidedConfig) SetHttpMethod(v string) {
+func (o *ChaosGuidedConfig) SetHttpMethod(v string) {
 	o.HttpMethod = &v
 }
 
 // GetJitter returns the Jitter field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetJitter() int32 {
+func (o *ChaosGuidedConfig) GetJitter() int32 {
 	if o == nil || IsNil(o.Jitter) {
 		var ret int32
 		return ret
@@ -704,7 +704,7 @@ func (o *GuidedcliGuidedConfig) GetJitter() int32 {
 
 // GetJitterOk returns a tuple with the Jitter field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetJitterOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetJitterOk() (*int32, bool) {
 	if o == nil || IsNil(o.Jitter) {
 		return nil, false
 	}
@@ -712,7 +712,7 @@ func (o *GuidedcliGuidedConfig) GetJitterOk() (*int32, bool) {
 }
 
 // HasJitter returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasJitter() bool {
+func (o *ChaosGuidedConfig) HasJitter() bool {
 	if o != nil && !IsNil(o.Jitter) {
 		return true
 	}
@@ -721,12 +721,12 @@ func (o *GuidedcliGuidedConfig) HasJitter() bool {
 }
 
 // SetJitter gets a reference to the given int32 and assigns it to the Jitter field.
-func (o *GuidedcliGuidedConfig) SetJitter(v int32) {
+func (o *ChaosGuidedConfig) SetJitter(v int32) {
 	o.Jitter = &v
 }
 
 // GetLatency returns the Latency field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetLatency() int32 {
+func (o *ChaosGuidedConfig) GetLatency() int32 {
 	if o == nil || IsNil(o.Latency) {
 		var ret int32
 		return ret
@@ -736,7 +736,7 @@ func (o *GuidedcliGuidedConfig) GetLatency() int32 {
 
 // GetLatencyOk returns a tuple with the Latency field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetLatencyOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetLatencyOk() (*int32, bool) {
 	if o == nil || IsNil(o.Latency) {
 		return nil, false
 	}
@@ -744,7 +744,7 @@ func (o *GuidedcliGuidedConfig) GetLatencyOk() (*int32, bool) {
 }
 
 // HasLatency returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasLatency() bool {
+func (o *ChaosGuidedConfig) HasLatency() bool {
 	if o != nil && !IsNil(o.Latency) {
 		return true
 	}
@@ -753,12 +753,12 @@ func (o *GuidedcliGuidedConfig) HasLatency() bool {
 }
 
 // SetLatency gets a reference to the given int32 and assigns it to the Latency field.
-func (o *GuidedcliGuidedConfig) SetLatency(v int32) {
+func (o *ChaosGuidedConfig) SetLatency(v int32) {
 	o.Latency = &v
 }
 
 // GetLatencyDuration returns the LatencyDuration field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetLatencyDuration() int32 {
+func (o *ChaosGuidedConfig) GetLatencyDuration() int32 {
 	if o == nil || IsNil(o.LatencyDuration) {
 		var ret int32
 		return ret
@@ -768,7 +768,7 @@ func (o *GuidedcliGuidedConfig) GetLatencyDuration() int32 {
 
 // GetLatencyDurationOk returns a tuple with the LatencyDuration field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetLatencyDurationOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetLatencyDurationOk() (*int32, bool) {
 	if o == nil || IsNil(o.LatencyDuration) {
 		return nil, false
 	}
@@ -776,7 +776,7 @@ func (o *GuidedcliGuidedConfig) GetLatencyDurationOk() (*int32, bool) {
 }
 
 // HasLatencyDuration returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasLatencyDuration() bool {
+func (o *ChaosGuidedConfig) HasLatencyDuration() bool {
 	if o != nil && !IsNil(o.LatencyDuration) {
 		return true
 	}
@@ -785,12 +785,12 @@ func (o *GuidedcliGuidedConfig) HasLatencyDuration() bool {
 }
 
 // SetLatencyDuration gets a reference to the given int32 and assigns it to the LatencyDuration field.
-func (o *GuidedcliGuidedConfig) SetLatencyDuration(v int32) {
+func (o *ChaosGuidedConfig) SetLatencyDuration(v int32) {
 	o.LatencyDuration = &v
 }
 
 // GetLatencyMs returns the LatencyMs field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetLatencyMs() int32 {
+func (o *ChaosGuidedConfig) GetLatencyMs() int32 {
 	if o == nil || IsNil(o.LatencyMs) {
 		var ret int32
 		return ret
@@ -800,7 +800,7 @@ func (o *GuidedcliGuidedConfig) GetLatencyMs() int32 {
 
 // GetLatencyMsOk returns a tuple with the LatencyMs field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetLatencyMsOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetLatencyMsOk() (*int32, bool) {
 	if o == nil || IsNil(o.LatencyMs) {
 		return nil, false
 	}
@@ -808,7 +808,7 @@ func (o *GuidedcliGuidedConfig) GetLatencyMsOk() (*int32, bool) {
 }
 
 // HasLatencyMs returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasLatencyMs() bool {
+func (o *ChaosGuidedConfig) HasLatencyMs() bool {
 	if o != nil && !IsNil(o.LatencyMs) {
 		return true
 	}
@@ -817,12 +817,12 @@ func (o *GuidedcliGuidedConfig) HasLatencyMs() bool {
 }
 
 // SetLatencyMs gets a reference to the given int32 and assigns it to the LatencyMs field.
-func (o *GuidedcliGuidedConfig) SetLatencyMs(v int32) {
+func (o *ChaosGuidedConfig) SetLatencyMs(v int32) {
 	o.LatencyMs = &v
 }
 
 // GetLimit returns the Limit field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetLimit() int32 {
+func (o *ChaosGuidedConfig) GetLimit() int32 {
 	if o == nil || IsNil(o.Limit) {
 		var ret int32
 		return ret
@@ -832,7 +832,7 @@ func (o *GuidedcliGuidedConfig) GetLimit() int32 {
 
 // GetLimitOk returns a tuple with the Limit field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetLimitOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetLimitOk() (*int32, bool) {
 	if o == nil || IsNil(o.Limit) {
 		return nil, false
 	}
@@ -840,7 +840,7 @@ func (o *GuidedcliGuidedConfig) GetLimitOk() (*int32, bool) {
 }
 
 // HasLimit returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasLimit() bool {
+func (o *ChaosGuidedConfig) HasLimit() bool {
 	if o != nil && !IsNil(o.Limit) {
 		return true
 	}
@@ -849,12 +849,12 @@ func (o *GuidedcliGuidedConfig) HasLimit() bool {
 }
 
 // SetLimit gets a reference to the given int32 and assigns it to the Limit field.
-func (o *GuidedcliGuidedConfig) SetLimit(v int32) {
+func (o *ChaosGuidedConfig) SetLimit(v int32) {
 	o.Limit = &v
 }
 
 // GetLoss returns the Loss field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetLoss() int32 {
+func (o *ChaosGuidedConfig) GetLoss() int32 {
 	if o == nil || IsNil(o.Loss) {
 		var ret int32
 		return ret
@@ -864,7 +864,7 @@ func (o *GuidedcliGuidedConfig) GetLoss() int32 {
 
 // GetLossOk returns a tuple with the Loss field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetLossOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetLossOk() (*int32, bool) {
 	if o == nil || IsNil(o.Loss) {
 		return nil, false
 	}
@@ -872,7 +872,7 @@ func (o *GuidedcliGuidedConfig) GetLossOk() (*int32, bool) {
 }
 
 // HasLoss returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasLoss() bool {
+func (o *ChaosGuidedConfig) HasLoss() bool {
 	if o != nil && !IsNil(o.Loss) {
 		return true
 	}
@@ -881,12 +881,12 @@ func (o *GuidedcliGuidedConfig) HasLoss() bool {
 }
 
 // SetLoss gets a reference to the given int32 and assigns it to the Loss field.
-func (o *GuidedcliGuidedConfig) SetLoss(v int32) {
+func (o *ChaosGuidedConfig) SetLoss(v int32) {
 	o.Loss = &v
 }
 
 // GetMemType returns the MemType field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetMemType() string {
+func (o *ChaosGuidedConfig) GetMemType() string {
 	if o == nil || IsNil(o.MemType) {
 		var ret string
 		return ret
@@ -896,7 +896,7 @@ func (o *GuidedcliGuidedConfig) GetMemType() string {
 
 // GetMemTypeOk returns a tuple with the MemType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetMemTypeOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetMemTypeOk() (*string, bool) {
 	if o == nil || IsNil(o.MemType) {
 		return nil, false
 	}
@@ -904,7 +904,7 @@ func (o *GuidedcliGuidedConfig) GetMemTypeOk() (*string, bool) {
 }
 
 // HasMemType returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasMemType() bool {
+func (o *ChaosGuidedConfig) HasMemType() bool {
 	if o != nil && !IsNil(o.MemType) {
 		return true
 	}
@@ -913,12 +913,12 @@ func (o *GuidedcliGuidedConfig) HasMemType() bool {
 }
 
 // SetMemType gets a reference to the given string and assigns it to the MemType field.
-func (o *GuidedcliGuidedConfig) SetMemType(v string) {
+func (o *ChaosGuidedConfig) SetMemType(v string) {
 	o.MemType = &v
 }
 
 // GetMemWorker returns the MemWorker field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetMemWorker() int32 {
+func (o *ChaosGuidedConfig) GetMemWorker() int32 {
 	if o == nil || IsNil(o.MemWorker) {
 		var ret int32
 		return ret
@@ -928,7 +928,7 @@ func (o *GuidedcliGuidedConfig) GetMemWorker() int32 {
 
 // GetMemWorkerOk returns a tuple with the MemWorker field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetMemWorkerOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetMemWorkerOk() (*int32, bool) {
 	if o == nil || IsNil(o.MemWorker) {
 		return nil, false
 	}
@@ -936,7 +936,7 @@ func (o *GuidedcliGuidedConfig) GetMemWorkerOk() (*int32, bool) {
 }
 
 // HasMemWorker returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasMemWorker() bool {
+func (o *ChaosGuidedConfig) HasMemWorker() bool {
 	if o != nil && !IsNil(o.MemWorker) {
 		return true
 	}
@@ -945,12 +945,12 @@ func (o *GuidedcliGuidedConfig) HasMemWorker() bool {
 }
 
 // SetMemWorker gets a reference to the given int32 and assigns it to the MemWorker field.
-func (o *GuidedcliGuidedConfig) SetMemWorker(v int32) {
+func (o *ChaosGuidedConfig) SetMemWorker(v int32) {
 	o.MemWorker = &v
 }
 
 // GetMemorySize returns the MemorySize field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetMemorySize() int32 {
+func (o *ChaosGuidedConfig) GetMemorySize() int32 {
 	if o == nil || IsNil(o.MemorySize) {
 		var ret int32
 		return ret
@@ -960,7 +960,7 @@ func (o *GuidedcliGuidedConfig) GetMemorySize() int32 {
 
 // GetMemorySizeOk returns a tuple with the MemorySize field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetMemorySizeOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetMemorySizeOk() (*int32, bool) {
 	if o == nil || IsNil(o.MemorySize) {
 		return nil, false
 	}
@@ -968,7 +968,7 @@ func (o *GuidedcliGuidedConfig) GetMemorySizeOk() (*int32, bool) {
 }
 
 // HasMemorySize returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasMemorySize() bool {
+func (o *ChaosGuidedConfig) HasMemorySize() bool {
 	if o != nil && !IsNil(o.MemorySize) {
 		return true
 	}
@@ -977,12 +977,12 @@ func (o *GuidedcliGuidedConfig) HasMemorySize() bool {
 }
 
 // SetMemorySize gets a reference to the given int32 and assigns it to the MemorySize field.
-func (o *GuidedcliGuidedConfig) SetMemorySize(v int32) {
+func (o *ChaosGuidedConfig) SetMemorySize(v int32) {
 	o.MemorySize = &v
 }
 
 // GetMethod returns the Method field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetMethod() string {
+func (o *ChaosGuidedConfig) GetMethod() string {
 	if o == nil || IsNil(o.Method) {
 		var ret string
 		return ret
@@ -992,7 +992,7 @@ func (o *GuidedcliGuidedConfig) GetMethod() string {
 
 // GetMethodOk returns a tuple with the Method field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetMethodOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetMethodOk() (*string, bool) {
 	if o == nil || IsNil(o.Method) {
 		return nil, false
 	}
@@ -1000,7 +1000,7 @@ func (o *GuidedcliGuidedConfig) GetMethodOk() (*string, bool) {
 }
 
 // HasMethod returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasMethod() bool {
+func (o *ChaosGuidedConfig) HasMethod() bool {
 	if o != nil && !IsNil(o.Method) {
 		return true
 	}
@@ -1009,12 +1009,12 @@ func (o *GuidedcliGuidedConfig) HasMethod() bool {
 }
 
 // SetMethod gets a reference to the given string and assigns it to the Method field.
-func (o *GuidedcliGuidedConfig) SetMethod(v string) {
+func (o *ChaosGuidedConfig) SetMethod(v string) {
 	o.Method = &v
 }
 
 // GetMutatorConfig returns the MutatorConfig field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetMutatorConfig() string {
+func (o *ChaosGuidedConfig) GetMutatorConfig() string {
 	if o == nil || IsNil(o.MutatorConfig) {
 		var ret string
 		return ret
@@ -1024,7 +1024,7 @@ func (o *GuidedcliGuidedConfig) GetMutatorConfig() string {
 
 // GetMutatorConfigOk returns a tuple with the MutatorConfig field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetMutatorConfigOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetMutatorConfigOk() (*string, bool) {
 	if o == nil || IsNil(o.MutatorConfig) {
 		return nil, false
 	}
@@ -1032,7 +1032,7 @@ func (o *GuidedcliGuidedConfig) GetMutatorConfigOk() (*string, bool) {
 }
 
 // HasMutatorConfig returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasMutatorConfig() bool {
+func (o *ChaosGuidedConfig) HasMutatorConfig() bool {
 	if o != nil && !IsNil(o.MutatorConfig) {
 		return true
 	}
@@ -1041,12 +1041,12 @@ func (o *GuidedcliGuidedConfig) HasMutatorConfig() bool {
 }
 
 // SetMutatorConfig gets a reference to the given string and assigns it to the MutatorConfig field.
-func (o *GuidedcliGuidedConfig) SetMutatorConfig(v string) {
+func (o *ChaosGuidedConfig) SetMutatorConfig(v string) {
 	o.MutatorConfig = &v
 }
 
 // GetNamespace returns the Namespace field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetNamespace() string {
+func (o *ChaosGuidedConfig) GetNamespace() string {
 	if o == nil || IsNil(o.Namespace) {
 		var ret string
 		return ret
@@ -1056,7 +1056,7 @@ func (o *GuidedcliGuidedConfig) GetNamespace() string {
 
 // GetNamespaceOk returns a tuple with the Namespace field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetNamespaceOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetNamespaceOk() (*string, bool) {
 	if o == nil || IsNil(o.Namespace) {
 		return nil, false
 	}
@@ -1064,7 +1064,7 @@ func (o *GuidedcliGuidedConfig) GetNamespaceOk() (*string, bool) {
 }
 
 // HasNamespace returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasNamespace() bool {
+func (o *ChaosGuidedConfig) HasNamespace() bool {
 	if o != nil && !IsNil(o.Namespace) {
 		return true
 	}
@@ -1073,12 +1073,12 @@ func (o *GuidedcliGuidedConfig) HasNamespace() bool {
 }
 
 // SetNamespace gets a reference to the given string and assigns it to the Namespace field.
-func (o *GuidedcliGuidedConfig) SetNamespace(v string) {
+func (o *ChaosGuidedConfig) SetNamespace(v string) {
 	o.Namespace = &v
 }
 
 // GetOperation returns the Operation field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetOperation() string {
+func (o *ChaosGuidedConfig) GetOperation() string {
 	if o == nil || IsNil(o.Operation) {
 		var ret string
 		return ret
@@ -1088,7 +1088,7 @@ func (o *GuidedcliGuidedConfig) GetOperation() string {
 
 // GetOperationOk returns a tuple with the Operation field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetOperationOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetOperationOk() (*string, bool) {
 	if o == nil || IsNil(o.Operation) {
 		return nil, false
 	}
@@ -1096,7 +1096,7 @@ func (o *GuidedcliGuidedConfig) GetOperationOk() (*string, bool) {
 }
 
 // HasOperation returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasOperation() bool {
+func (o *ChaosGuidedConfig) HasOperation() bool {
 	if o != nil && !IsNil(o.Operation) {
 		return true
 	}
@@ -1105,12 +1105,12 @@ func (o *GuidedcliGuidedConfig) HasOperation() bool {
 }
 
 // SetOperation gets a reference to the given string and assigns it to the Operation field.
-func (o *GuidedcliGuidedConfig) SetOperation(v string) {
+func (o *ChaosGuidedConfig) SetOperation(v string) {
 	o.Operation = &v
 }
 
 // GetRate returns the Rate field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetRate() int32 {
+func (o *ChaosGuidedConfig) GetRate() int32 {
 	if o == nil || IsNil(o.Rate) {
 		var ret int32
 		return ret
@@ -1120,7 +1120,7 @@ func (o *GuidedcliGuidedConfig) GetRate() int32 {
 
 // GetRateOk returns a tuple with the Rate field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetRateOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetRateOk() (*int32, bool) {
 	if o == nil || IsNil(o.Rate) {
 		return nil, false
 	}
@@ -1128,7 +1128,7 @@ func (o *GuidedcliGuidedConfig) GetRateOk() (*int32, bool) {
 }
 
 // HasRate returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasRate() bool {
+func (o *ChaosGuidedConfig) HasRate() bool {
 	if o != nil && !IsNil(o.Rate) {
 		return true
 	}
@@ -1137,12 +1137,12 @@ func (o *GuidedcliGuidedConfig) HasRate() bool {
 }
 
 // SetRate gets a reference to the given int32 and assigns it to the Rate field.
-func (o *GuidedcliGuidedConfig) SetRate(v int32) {
+func (o *ChaosGuidedConfig) SetRate(v int32) {
 	o.Rate = &v
 }
 
 // GetReplaceMethod returns the ReplaceMethod field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetReplaceMethod() string {
+func (o *ChaosGuidedConfig) GetReplaceMethod() string {
 	if o == nil || IsNil(o.ReplaceMethod) {
 		var ret string
 		return ret
@@ -1152,7 +1152,7 @@ func (o *GuidedcliGuidedConfig) GetReplaceMethod() string {
 
 // GetReplaceMethodOk returns a tuple with the ReplaceMethod field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetReplaceMethodOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetReplaceMethodOk() (*string, bool) {
 	if o == nil || IsNil(o.ReplaceMethod) {
 		return nil, false
 	}
@@ -1160,7 +1160,7 @@ func (o *GuidedcliGuidedConfig) GetReplaceMethodOk() (*string, bool) {
 }
 
 // HasReplaceMethod returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasReplaceMethod() bool {
+func (o *ChaosGuidedConfig) HasReplaceMethod() bool {
 	if o != nil && !IsNil(o.ReplaceMethod) {
 		return true
 	}
@@ -1169,12 +1169,12 @@ func (o *GuidedcliGuidedConfig) HasReplaceMethod() bool {
 }
 
 // SetReplaceMethod gets a reference to the given string and assigns it to the ReplaceMethod field.
-func (o *GuidedcliGuidedConfig) SetReplaceMethod(v string) {
+func (o *ChaosGuidedConfig) SetReplaceMethod(v string) {
 	o.ReplaceMethod = &v
 }
 
 // GetReturnType returns the ReturnType field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetReturnType() string {
+func (o *ChaosGuidedConfig) GetReturnType() string {
 	if o == nil || IsNil(o.ReturnType) {
 		var ret string
 		return ret
@@ -1184,7 +1184,7 @@ func (o *GuidedcliGuidedConfig) GetReturnType() string {
 
 // GetReturnTypeOk returns a tuple with the ReturnType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetReturnTypeOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetReturnTypeOk() (*string, bool) {
 	if o == nil || IsNil(o.ReturnType) {
 		return nil, false
 	}
@@ -1192,7 +1192,7 @@ func (o *GuidedcliGuidedConfig) GetReturnTypeOk() (*string, bool) {
 }
 
 // HasReturnType returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasReturnType() bool {
+func (o *ChaosGuidedConfig) HasReturnType() bool {
 	if o != nil && !IsNil(o.ReturnType) {
 		return true
 	}
@@ -1201,12 +1201,12 @@ func (o *GuidedcliGuidedConfig) HasReturnType() bool {
 }
 
 // SetReturnType gets a reference to the given string and assigns it to the ReturnType field.
-func (o *GuidedcliGuidedConfig) SetReturnType(v string) {
+func (o *ChaosGuidedConfig) SetReturnType(v string) {
 	o.ReturnType = &v
 }
 
 // GetReturnValueOpt returns the ReturnValueOpt field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetReturnValueOpt() string {
+func (o *ChaosGuidedConfig) GetReturnValueOpt() string {
 	if o == nil || IsNil(o.ReturnValueOpt) {
 		var ret string
 		return ret
@@ -1216,7 +1216,7 @@ func (o *GuidedcliGuidedConfig) GetReturnValueOpt() string {
 
 // GetReturnValueOptOk returns a tuple with the ReturnValueOpt field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetReturnValueOptOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetReturnValueOptOk() (*string, bool) {
 	if o == nil || IsNil(o.ReturnValueOpt) {
 		return nil, false
 	}
@@ -1224,7 +1224,7 @@ func (o *GuidedcliGuidedConfig) GetReturnValueOptOk() (*string, bool) {
 }
 
 // HasReturnValueOpt returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasReturnValueOpt() bool {
+func (o *ChaosGuidedConfig) HasReturnValueOpt() bool {
 	if o != nil && !IsNil(o.ReturnValueOpt) {
 		return true
 	}
@@ -1233,12 +1233,12 @@ func (o *GuidedcliGuidedConfig) HasReturnValueOpt() bool {
 }
 
 // SetReturnValueOpt gets a reference to the given string and assigns it to the ReturnValueOpt field.
-func (o *GuidedcliGuidedConfig) SetReturnValueOpt(v string) {
+func (o *ChaosGuidedConfig) SetReturnValueOpt(v string) {
 	o.ReturnValueOpt = &v
 }
 
 // GetRoute returns the Route field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetRoute() string {
+func (o *ChaosGuidedConfig) GetRoute() string {
 	if o == nil || IsNil(o.Route) {
 		var ret string
 		return ret
@@ -1248,7 +1248,7 @@ func (o *GuidedcliGuidedConfig) GetRoute() string {
 
 // GetRouteOk returns a tuple with the Route field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetRouteOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetRouteOk() (*string, bool) {
 	if o == nil || IsNil(o.Route) {
 		return nil, false
 	}
@@ -1256,7 +1256,7 @@ func (o *GuidedcliGuidedConfig) GetRouteOk() (*string, bool) {
 }
 
 // HasRoute returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasRoute() bool {
+func (o *ChaosGuidedConfig) HasRoute() bool {
 	if o != nil && !IsNil(o.Route) {
 		return true
 	}
@@ -1265,12 +1265,12 @@ func (o *GuidedcliGuidedConfig) HasRoute() bool {
 }
 
 // SetRoute gets a reference to the given string and assigns it to the Route field.
-func (o *GuidedcliGuidedConfig) SetRoute(v string) {
+func (o *ChaosGuidedConfig) SetRoute(v string) {
 	o.Route = &v
 }
 
 // GetStatusCode returns the StatusCode field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetStatusCode() int32 {
+func (o *ChaosGuidedConfig) GetStatusCode() int32 {
 	if o == nil || IsNil(o.StatusCode) {
 		var ret int32
 		return ret
@@ -1280,7 +1280,7 @@ func (o *GuidedcliGuidedConfig) GetStatusCode() int32 {
 
 // GetStatusCodeOk returns a tuple with the StatusCode field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetStatusCodeOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetStatusCodeOk() (*int32, bool) {
 	if o == nil || IsNil(o.StatusCode) {
 		return nil, false
 	}
@@ -1288,7 +1288,7 @@ func (o *GuidedcliGuidedConfig) GetStatusCodeOk() (*int32, bool) {
 }
 
 // HasStatusCode returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasStatusCode() bool {
+func (o *ChaosGuidedConfig) HasStatusCode() bool {
 	if o != nil && !IsNil(o.StatusCode) {
 		return true
 	}
@@ -1297,12 +1297,12 @@ func (o *GuidedcliGuidedConfig) HasStatusCode() bool {
 }
 
 // SetStatusCode gets a reference to the given int32 and assigns it to the StatusCode field.
-func (o *GuidedcliGuidedConfig) SetStatusCode(v int32) {
+func (o *ChaosGuidedConfig) SetStatusCode(v int32) {
 	o.StatusCode = &v
 }
 
 // GetSystem returns the System field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetSystem() string {
+func (o *ChaosGuidedConfig) GetSystem() string {
 	if o == nil || IsNil(o.System) {
 		var ret string
 		return ret
@@ -1312,7 +1312,7 @@ func (o *GuidedcliGuidedConfig) GetSystem() string {
 
 // GetSystemOk returns a tuple with the System field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetSystemOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetSystemOk() (*string, bool) {
 	if o == nil || IsNil(o.System) {
 		return nil, false
 	}
@@ -1320,7 +1320,7 @@ func (o *GuidedcliGuidedConfig) GetSystemOk() (*string, bool) {
 }
 
 // HasSystem returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasSystem() bool {
+func (o *ChaosGuidedConfig) HasSystem() bool {
 	if o != nil && !IsNil(o.System) {
 		return true
 	}
@@ -1329,12 +1329,12 @@ func (o *GuidedcliGuidedConfig) HasSystem() bool {
 }
 
 // SetSystem gets a reference to the given string and assigns it to the System field.
-func (o *GuidedcliGuidedConfig) SetSystem(v string) {
+func (o *ChaosGuidedConfig) SetSystem(v string) {
 	o.System = &v
 }
 
 // GetSystemType returns the SystemType field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetSystemType() string {
+func (o *ChaosGuidedConfig) GetSystemType() string {
 	if o == nil || IsNil(o.SystemType) {
 		var ret string
 		return ret
@@ -1344,7 +1344,7 @@ func (o *GuidedcliGuidedConfig) GetSystemType() string {
 
 // GetSystemTypeOk returns a tuple with the SystemType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetSystemTypeOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetSystemTypeOk() (*string, bool) {
 	if o == nil || IsNil(o.SystemType) {
 		return nil, false
 	}
@@ -1352,7 +1352,7 @@ func (o *GuidedcliGuidedConfig) GetSystemTypeOk() (*string, bool) {
 }
 
 // HasSystemType returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasSystemType() bool {
+func (o *ChaosGuidedConfig) HasSystemType() bool {
 	if o != nil && !IsNil(o.SystemType) {
 		return true
 	}
@@ -1361,12 +1361,12 @@ func (o *GuidedcliGuidedConfig) HasSystemType() bool {
 }
 
 // SetSystemType gets a reference to the given string and assigns it to the SystemType field.
-func (o *GuidedcliGuidedConfig) SetSystemType(v string) {
+func (o *ChaosGuidedConfig) SetSystemType(v string) {
 	o.SystemType = &v
 }
 
 // GetTable returns the Table field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetTable() string {
+func (o *ChaosGuidedConfig) GetTable() string {
 	if o == nil || IsNil(o.Table) {
 		var ret string
 		return ret
@@ -1376,7 +1376,7 @@ func (o *GuidedcliGuidedConfig) GetTable() string {
 
 // GetTableOk returns a tuple with the Table field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetTableOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetTableOk() (*string, bool) {
 	if o == nil || IsNil(o.Table) {
 		return nil, false
 	}
@@ -1384,7 +1384,7 @@ func (o *GuidedcliGuidedConfig) GetTableOk() (*string, bool) {
 }
 
 // HasTable returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasTable() bool {
+func (o *ChaosGuidedConfig) HasTable() bool {
 	if o != nil && !IsNil(o.Table) {
 		return true
 	}
@@ -1393,12 +1393,12 @@ func (o *GuidedcliGuidedConfig) HasTable() bool {
 }
 
 // SetTable gets a reference to the given string and assigns it to the Table field.
-func (o *GuidedcliGuidedConfig) SetTable(v string) {
+func (o *ChaosGuidedConfig) SetTable(v string) {
 	o.Table = &v
 }
 
 // GetTargetService returns the TargetService field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetTargetService() string {
+func (o *ChaosGuidedConfig) GetTargetService() string {
 	if o == nil || IsNil(o.TargetService) {
 		var ret string
 		return ret
@@ -1408,7 +1408,7 @@ func (o *GuidedcliGuidedConfig) GetTargetService() string {
 
 // GetTargetServiceOk returns a tuple with the TargetService field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetTargetServiceOk() (*string, bool) {
+func (o *ChaosGuidedConfig) GetTargetServiceOk() (*string, bool) {
 	if o == nil || IsNil(o.TargetService) {
 		return nil, false
 	}
@@ -1416,7 +1416,7 @@ func (o *GuidedcliGuidedConfig) GetTargetServiceOk() (*string, bool) {
 }
 
 // HasTargetService returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasTargetService() bool {
+func (o *ChaosGuidedConfig) HasTargetService() bool {
 	if o != nil && !IsNil(o.TargetService) {
 		return true
 	}
@@ -1425,12 +1425,12 @@ func (o *GuidedcliGuidedConfig) HasTargetService() bool {
 }
 
 // SetTargetService gets a reference to the given string and assigns it to the TargetService field.
-func (o *GuidedcliGuidedConfig) SetTargetService(v string) {
+func (o *ChaosGuidedConfig) SetTargetService(v string) {
 	o.TargetService = &v
 }
 
 // GetTimeOffset returns the TimeOffset field value if set, zero value otherwise.
-func (o *GuidedcliGuidedConfig) GetTimeOffset() int32 {
+func (o *ChaosGuidedConfig) GetTimeOffset() int32 {
 	if o == nil || IsNil(o.TimeOffset) {
 		var ret int32
 		return ret
@@ -1440,7 +1440,7 @@ func (o *GuidedcliGuidedConfig) GetTimeOffset() int32 {
 
 // GetTimeOffsetOk returns a tuple with the TimeOffset field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliGuidedConfig) GetTimeOffsetOk() (*int32, bool) {
+func (o *ChaosGuidedConfig) GetTimeOffsetOk() (*int32, bool) {
 	if o == nil || IsNil(o.TimeOffset) {
 		return nil, false
 	}
@@ -1448,7 +1448,7 @@ func (o *GuidedcliGuidedConfig) GetTimeOffsetOk() (*int32, bool) {
 }
 
 // HasTimeOffset returns a boolean if a field has been set.
-func (o *GuidedcliGuidedConfig) HasTimeOffset() bool {
+func (o *ChaosGuidedConfig) HasTimeOffset() bool {
 	if o != nil && !IsNil(o.TimeOffset) {
 		return true
 	}
@@ -1457,11 +1457,11 @@ func (o *GuidedcliGuidedConfig) HasTimeOffset() bool {
 }
 
 // SetTimeOffset gets a reference to the given int32 and assigns it to the TimeOffset field.
-func (o *GuidedcliGuidedConfig) SetTimeOffset(v int32) {
+func (o *ChaosGuidedConfig) SetTimeOffset(v int32) {
 	o.TimeOffset = &v
 }
 
-func (o GuidedcliGuidedConfig) MarshalJSON() ([]byte, error) {
+func (o ChaosGuidedConfig) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -1469,7 +1469,7 @@ func (o GuidedcliGuidedConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o GuidedcliGuidedConfig) ToMap() (map[string]interface{}, error) {
+func (o ChaosGuidedConfig) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.App) {
 		toSerialize["app"] = o.App
@@ -1608,16 +1608,16 @@ func (o GuidedcliGuidedConfig) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *GuidedcliGuidedConfig) UnmarshalJSON(data []byte) (err error) {
-	varGuidedcliGuidedConfig := _GuidedcliGuidedConfig{}
+func (o *ChaosGuidedConfig) UnmarshalJSON(data []byte) (err error) {
+	varChaosGuidedConfig := _ChaosGuidedConfig{}
 
-	err = json.Unmarshal(data, &varGuidedcliGuidedConfig)
+	err = json.Unmarshal(data, &varChaosGuidedConfig)
 
 	if err != nil {
 		return err
 	}
 
-	*o = GuidedcliGuidedConfig(varGuidedcliGuidedConfig)
+	*o = ChaosGuidedConfig(varChaosGuidedConfig)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -1671,38 +1671,38 @@ func (o *GuidedcliGuidedConfig) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-type NullableGuidedcliGuidedConfig struct {
-	value *GuidedcliGuidedConfig
+type NullableChaosGuidedConfig struct {
+	value *ChaosGuidedConfig
 	isSet bool
 }
 
-func (v NullableGuidedcliGuidedConfig) Get() *GuidedcliGuidedConfig {
+func (v NullableChaosGuidedConfig) Get() *ChaosGuidedConfig {
 	return v.value
 }
 
-func (v *NullableGuidedcliGuidedConfig) Set(val *GuidedcliGuidedConfig) {
+func (v *NullableChaosGuidedConfig) Set(val *ChaosGuidedConfig) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableGuidedcliGuidedConfig) IsSet() bool {
+func (v NullableChaosGuidedConfig) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableGuidedcliGuidedConfig) Unset() {
+func (v *NullableChaosGuidedConfig) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableGuidedcliGuidedConfig(val *GuidedcliGuidedConfig) *NullableGuidedcliGuidedConfig {
-	return &NullableGuidedcliGuidedConfig{value: val, isSet: true}
+func NewNullableChaosGuidedConfig(val *ChaosGuidedConfig) *NullableChaosGuidedConfig {
+	return &NullableChaosGuidedConfig{value: val, isSet: true}
 }
 
-func (v NullableGuidedcliGuidedConfig) MarshalJSON() ([]byte, error) {
+func (v NullableChaosGuidedConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableGuidedcliGuidedConfig) UnmarshalJSON(src []byte) error {
+func (v *NullableChaosGuidedConfig) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

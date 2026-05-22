@@ -133,6 +133,66 @@ func (h *Handler) CreateSystem(c *gin.Context) {
 	dto.JSONResponse(c, http.StatusCreated, "System created successfully", resp)
 }
 
+// OnboardSystemHandler atomically registers a new chaos system identity
+// (the 7 injection.system.<code>.* etcd keys) AND its container/chart
+// binding in one call. Replaces the two-step CreateSystem + CreateContainer
+// dance that left half-registered systems on partial failure.
+//
+//	@Summary		Onboard chaos system + chart binding atomically
+//	@Description	Composite of CreateSystem + CreateContainer. DB writes (container/version/helm_config + dynamic_configs) commit in one transaction; the 7 etcd identity keys are published only after the tx succeeds. On etcd failure mid-flight the already-published keys are best-effort deleted so a partial onboard never leaves a half-registered system.
+//	@Tags			Systems
+//	@ID				onboard_chaos_system
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		OnboardSystemReq						true	"Composite onboard request"
+//	@Success		201		{object}	dto.GenericResponse[OnboardSystemResp]	"System onboarded successfully"
+//	@Failure		400		{object}	dto.GenericResponse[any]				"Invalid request format or parameters"
+//	@Failure		401		{object}	dto.GenericResponse[any]				"Authentication required"
+//	@Failure		409		{object}	dto.GenericResponse[any]				"System or container already exists"
+//	@Failure		500		{object}	dto.GenericResponse[any]				"Internal server error"
+//	@Router			/api/v2/systems/onboard [post]
+//	@x-api-type		{"admin":"true","sdk":"true"}
+func (h *Handler) OnboardSystem(c *gin.Context) {
+	var req OnboardSystemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.ErrorResponse(c, http.StatusBadRequest, "Invalid request format: "+err.Error())
+		return
+	}
+	resp, err := h.service.OnboardSystem(c.Request.Context(), &req)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.JSONResponse(c, http.StatusCreated, "System onboarded successfully", resp)
+}
+
+// ExportSeedHandler dumps the on-disk seed YAML snippet for a single
+// onboarded system so a runtime-added system can be checked back into git
+// for reproducible cold-start. Output is the same shape as a
+// data/initial_data/<env>/data.yaml fragment.
+//
+//	@Summary		Export a system to data.yaml-compatible YAML
+//	@Description	Serialize the live DB + etcd state for a single chaos system into a YAML snippet that round-trips through `aegisctl system register --from-seed`. Used to commit runtime-added systems back into git.
+//	@Tags			Systems
+//	@ID				export_chaos_system_seed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			name	path		string								true	"System short code"
+//	@Success		200		{object}	dto.GenericResponse[ExportSeedResp]	"Seed YAML"
+//	@Failure		400		{object}	dto.GenericResponse[any]			"Invalid request"
+//	@Failure		404		{object}	dto.GenericResponse[any]			"System not found"
+//	@Failure		500		{object}	dto.GenericResponse[any]			"Internal server error"
+//	@Router			/api/v2/systems/by-name/{name}/export-seed [get]
+//	@x-api-type		{"admin":"true","sdk":"true"}
+func (h *Handler) ExportSeed(c *gin.Context) {
+	name := c.Param("name")
+	resp, err := h.service.ExportSeed(c.Request.Context(), name)
+	if httpx.HandleServiceError(c, err) {
+		return
+	}
+	dto.SuccessResponse(c, resp)
+}
+
 // UpdateChaosSystemHandler handles updating a chaos system
 //
 //	@Summary		Update chaos system

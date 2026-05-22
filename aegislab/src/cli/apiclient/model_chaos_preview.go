@@ -15,38 +15,38 @@ import (
 	"encoding/json"
 )
 
-// checks if the GuidedcliPreview type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &GuidedcliPreview{}
+// checks if the ChaosPreview type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &ChaosPreview{}
 
-// GuidedcliPreview struct for GuidedcliPreview
-type GuidedcliPreview struct {
+// ChaosPreview struct for ChaosPreview
+type ChaosPreview struct {
 	DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`
 	Groundtruth          map[string]interface{} `json:"groundtruth,omitempty"`
 	ResourceSummary      map[string]interface{} `json:"resource_summary,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
-type _GuidedcliPreview GuidedcliPreview
+type _ChaosPreview ChaosPreview
 
-// NewGuidedcliPreview instantiates a new GuidedcliPreview object
+// NewChaosPreview instantiates a new ChaosPreview object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewGuidedcliPreview() *GuidedcliPreview {
-	this := GuidedcliPreview{}
+func NewChaosPreview() *ChaosPreview {
+	this := ChaosPreview{}
 	return &this
 }
 
-// NewGuidedcliPreviewWithDefaults instantiates a new GuidedcliPreview object
+// NewChaosPreviewWithDefaults instantiates a new ChaosPreview object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewGuidedcliPreviewWithDefaults() *GuidedcliPreview {
-	this := GuidedcliPreview{}
+func NewChaosPreviewWithDefaults() *ChaosPreview {
+	this := ChaosPreview{}
 	return &this
 }
 
 // GetDisplayConfig returns the DisplayConfig field value if set, zero value otherwise.
-func (o *GuidedcliPreview) GetDisplayConfig() map[string]interface{} {
+func (o *ChaosPreview) GetDisplayConfig() map[string]interface{} {
 	if o == nil || IsNil(o.DisplayConfig) {
 		var ret map[string]interface{}
 		return ret
@@ -56,7 +56,7 @@ func (o *GuidedcliPreview) GetDisplayConfig() map[string]interface{} {
 
 // GetDisplayConfigOk returns a tuple with the DisplayConfig field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliPreview) GetDisplayConfigOk() (map[string]interface{}, bool) {
+func (o *ChaosPreview) GetDisplayConfigOk() (map[string]interface{}, bool) {
 	if o == nil || IsNil(o.DisplayConfig) {
 		return map[string]interface{}{}, false
 	}
@@ -64,7 +64,7 @@ func (o *GuidedcliPreview) GetDisplayConfigOk() (map[string]interface{}, bool) {
 }
 
 // HasDisplayConfig returns a boolean if a field has been set.
-func (o *GuidedcliPreview) HasDisplayConfig() bool {
+func (o *ChaosPreview) HasDisplayConfig() bool {
 	if o != nil && !IsNil(o.DisplayConfig) {
 		return true
 	}
@@ -73,12 +73,12 @@ func (o *GuidedcliPreview) HasDisplayConfig() bool {
 }
 
 // SetDisplayConfig gets a reference to the given map[string]interface{} and assigns it to the DisplayConfig field.
-func (o *GuidedcliPreview) SetDisplayConfig(v map[string]interface{}) {
+func (o *ChaosPreview) SetDisplayConfig(v map[string]interface{}) {
 	o.DisplayConfig = v
 }
 
 // GetGroundtruth returns the Groundtruth field value if set, zero value otherwise.
-func (o *GuidedcliPreview) GetGroundtruth() map[string]interface{} {
+func (o *ChaosPreview) GetGroundtruth() map[string]interface{} {
 	if o == nil || IsNil(o.Groundtruth) {
 		var ret map[string]interface{}
 		return ret
@@ -88,7 +88,7 @@ func (o *GuidedcliPreview) GetGroundtruth() map[string]interface{} {
 
 // GetGroundtruthOk returns a tuple with the Groundtruth field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliPreview) GetGroundtruthOk() (map[string]interface{}, bool) {
+func (o *ChaosPreview) GetGroundtruthOk() (map[string]interface{}, bool) {
 	if o == nil || IsNil(o.Groundtruth) {
 		return map[string]interface{}{}, false
 	}
@@ -96,7 +96,7 @@ func (o *GuidedcliPreview) GetGroundtruthOk() (map[string]interface{}, bool) {
 }
 
 // HasGroundtruth returns a boolean if a field has been set.
-func (o *GuidedcliPreview) HasGroundtruth() bool {
+func (o *ChaosPreview) HasGroundtruth() bool {
 	if o != nil && !IsNil(o.Groundtruth) {
 		return true
 	}
@@ -105,12 +105,12 @@ func (o *GuidedcliPreview) HasGroundtruth() bool {
 }
 
 // SetGroundtruth gets a reference to the given map[string]interface{} and assigns it to the Groundtruth field.
-func (o *GuidedcliPreview) SetGroundtruth(v map[string]interface{}) {
+func (o *ChaosPreview) SetGroundtruth(v map[string]interface{}) {
 	o.Groundtruth = v
 }
 
 // GetResourceSummary returns the ResourceSummary field value if set, zero value otherwise.
-func (o *GuidedcliPreview) GetResourceSummary() map[string]interface{} {
+func (o *ChaosPreview) GetResourceSummary() map[string]interface{} {
 	if o == nil || IsNil(o.ResourceSummary) {
 		var ret map[string]interface{}
 		return ret
@@ -120,7 +120,7 @@ func (o *GuidedcliPreview) GetResourceSummary() map[string]interface{} {
 
 // GetResourceSummaryOk returns a tuple with the ResourceSummary field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliPreview) GetResourceSummaryOk() (map[string]interface{}, bool) {
+func (o *ChaosPreview) GetResourceSummaryOk() (map[string]interface{}, bool) {
 	if o == nil || IsNil(o.ResourceSummary) {
 		return map[string]interface{}{}, false
 	}
@@ -128,7 +128,7 @@ func (o *GuidedcliPreview) GetResourceSummaryOk() (map[string]interface{}, bool)
 }
 
 // HasResourceSummary returns a boolean if a field has been set.
-func (o *GuidedcliPreview) HasResourceSummary() bool {
+func (o *ChaosPreview) HasResourceSummary() bool {
 	if o != nil && !IsNil(o.ResourceSummary) {
 		return true
 	}
@@ -137,11 +137,11 @@ func (o *GuidedcliPreview) HasResourceSummary() bool {
 }
 
 // SetResourceSummary gets a reference to the given map[string]interface{} and assigns it to the ResourceSummary field.
-func (o *GuidedcliPreview) SetResourceSummary(v map[string]interface{}) {
+func (o *ChaosPreview) SetResourceSummary(v map[string]interface{}) {
 	o.ResourceSummary = v
 }
 
-func (o GuidedcliPreview) MarshalJSON() ([]byte, error) {
+func (o ChaosPreview) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -149,7 +149,7 @@ func (o GuidedcliPreview) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o GuidedcliPreview) ToMap() (map[string]interface{}, error) {
+func (o ChaosPreview) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.DisplayConfig) {
 		toSerialize["display_config"] = o.DisplayConfig
@@ -168,16 +168,16 @@ func (o GuidedcliPreview) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *GuidedcliPreview) UnmarshalJSON(data []byte) (err error) {
-	varGuidedcliPreview := _GuidedcliPreview{}
+func (o *ChaosPreview) UnmarshalJSON(data []byte) (err error) {
+	varChaosPreview := _ChaosPreview{}
 
-	err = json.Unmarshal(data, &varGuidedcliPreview)
+	err = json.Unmarshal(data, &varChaosPreview)
 
 	if err != nil {
 		return err
 	}
 
-	*o = GuidedcliPreview(varGuidedcliPreview)
+	*o = ChaosPreview(varChaosPreview)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -191,38 +191,38 @@ func (o *GuidedcliPreview) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-type NullableGuidedcliPreview struct {
-	value *GuidedcliPreview
+type NullableChaosPreview struct {
+	value *ChaosPreview
 	isSet bool
 }
 
-func (v NullableGuidedcliPreview) Get() *GuidedcliPreview {
+func (v NullableChaosPreview) Get() *ChaosPreview {
 	return v.value
 }
 
-func (v *NullableGuidedcliPreview) Set(val *GuidedcliPreview) {
+func (v *NullableChaosPreview) Set(val *ChaosPreview) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableGuidedcliPreview) IsSet() bool {
+func (v NullableChaosPreview) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableGuidedcliPreview) Unset() {
+func (v *NullableChaosPreview) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableGuidedcliPreview(val *GuidedcliPreview) *NullableGuidedcliPreview {
-	return &NullableGuidedcliPreview{value: val, isSet: true}
+func NewNullableChaosPreview(val *ChaosPreview) *NullableChaosPreview {
+	return &NullableChaosPreview{value: val, isSet: true}
 }
 
-func (v NullableGuidedcliPreview) MarshalJSON() ([]byte, error) {
+func (v NullableChaosPreview) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableGuidedcliPreview) UnmarshalJSON(src []byte) error {
+func (v *NullableChaosPreview) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

@@ -46,9 +46,11 @@ func TestRoutesRegistersEverythingExactlyOnce(t *testing.T) {
 		{"GET", "/api/v2/systems/:id/metadata"}:                0,
 		{"GET", "/api/v2/systems/by-name/:name/chart"}:         0,
 		{"GET", "/api/v2/systems/by-name/:name/prerequisites"}: 0,
+		{"GET", "/api/v2/systems/by-name/:name/export-seed"}:   0,
 
 		// Writes (system_configure gated)
 		{"POST", "/api/v2/systems"}:                                      0,
+		{"POST", "/api/v2/systems/onboard"}:                              0,
 		{"PUT", "/api/v2/systems/:id"}:                                   0,
 		{"POST", "/api/v2/systems/:id/metadata"}:                         0,
 		{"POST", "/api/v2/systems/reseed"}:                               0,

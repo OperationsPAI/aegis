@@ -20,9 +20,9 @@ var _ MappedNullable = &ChaosChaosSystemCandidatesResp{}
 
 // ChaosChaosSystemCandidatesResp struct for ChaosChaosSystemCandidatesResp
 type ChaosChaosSystemCandidatesResp struct {
-	Candidates           []GuidedcliGuidedConfig `json:"candidates,omitempty"`
-	Namespace            *string                 `json:"namespace,omitempty"`
-	System               *string                 `json:"system,omitempty"`
+	Candidates           []ChaosGuidedConfig `json:"candidates,omitempty"`
+	Namespace            *string             `json:"namespace,omitempty"`
+	System               *string             `json:"system,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -46,9 +46,9 @@ func NewChaosChaosSystemCandidatesRespWithDefaults() *ChaosChaosSystemCandidates
 }
 
 // GetCandidates returns the Candidates field value if set, zero value otherwise.
-func (o *ChaosChaosSystemCandidatesResp) GetCandidates() []GuidedcliGuidedConfig {
+func (o *ChaosChaosSystemCandidatesResp) GetCandidates() []ChaosGuidedConfig {
 	if o == nil || IsNil(o.Candidates) {
-		var ret []GuidedcliGuidedConfig
+		var ret []ChaosGuidedConfig
 		return ret
 	}
 	return o.Candidates
@@ -56,7 +56,7 @@ func (o *ChaosChaosSystemCandidatesResp) GetCandidates() []GuidedcliGuidedConfig
 
 // GetCandidatesOk returns a tuple with the Candidates field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ChaosChaosSystemCandidatesResp) GetCandidatesOk() ([]GuidedcliGuidedConfig, bool) {
+func (o *ChaosChaosSystemCandidatesResp) GetCandidatesOk() ([]ChaosGuidedConfig, bool) {
 	if o == nil || IsNil(o.Candidates) {
 		return nil, false
 	}
@@ -72,8 +72,8 @@ func (o *ChaosChaosSystemCandidatesResp) HasCandidates() bool {
 	return false
 }
 
-// SetCandidates gets a reference to the given []GuidedcliGuidedConfig and assigns it to the Candidates field.
-func (o *ChaosChaosSystemCandidatesResp) SetCandidates(v []GuidedcliGuidedConfig) {
+// SetCandidates gets a reference to the given []ChaosGuidedConfig and assigns it to the Candidates field.
+func (o *ChaosChaosSystemCandidatesResp) SetCandidates(v []ChaosGuidedConfig) {
 	o.Candidates = v
 }
 
