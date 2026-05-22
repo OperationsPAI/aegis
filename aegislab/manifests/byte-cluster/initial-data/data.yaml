@@ -491,6 +491,66 @@ containers:
               default_value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring.svc.cluster.local:4317
               overridable: true
           status: 1
+      # Bumped 1.1.3 → 1.1.4 to pick up sockshop chart 1.2.1 (1.1.1 dropped
+      # from lgu-se-internal/coherence-helidon-sockshop-sample index; aegis
+      # backend was silently resolving to 1.2.1 when bootstrapping). Chart
+      # 1.2.x adds same-ns OTel sidecar (`otelCollector.enabled=true`); we
+      # KEEP using the cross-ns deployment-sockshop-collector via the
+      # `otel-instr-sockshop` Instrumentation CR (Java auto-instrument needs
+      # cluster-wide Operator anyway), so disable the bundled sidecar to
+      # avoid two collectors per namespace.
+      - name: 1.1.4
+        github_link: LGU-SE-Internal/coherence-helidon-sockshop-sample
+        status: 1
+        helm_config:
+          version: 1.2.1
+          chart_name: sockshop
+          repo_name: sockshop-lgu
+          repo_url: https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample
+          values:
+            - key: global.imageRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.imageTag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              overridable: true
+            - key: frontend.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              overridable: true
+            - key: loadgen.image.tag
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: 20260423-3ecac5f
+              overridable: true
+            - key: otel.instrumentation
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: monitoring/otel-instr-sockshop
+              overridable: true
+            - key: otel.collectorEndpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: http://opentelemetry-kube-stack-deployment-sockshop-collector.monitoring.svc.cluster.local:4317
+              overridable: true
+            - key: otelCollector.enabled
+              type: 0
+              category: 1
+              value_type: 1
+              default_value: "false"
+              overridable: true
+          status: 1
     # issue #115: sockshop's coherence-helidon variant requires the
     # Coherence operator installed cluster-wide before the chart can be
     # rendered. `aegisctl system reconcile-prereqs --name sockshop` installs
@@ -650,6 +710,54 @@ containers:
               default_value: opentelemetry-kube-stack-deployment-sn-collector.monitoring.svc.cluster.local:4318
               overridable: true
           status: 1
+      # Bumped 0.1.5 → 0.1.6 to pick up social-network chart 0.2.1 (lgu-dsb
+      # repo only retains 0.2.1; 0.1.4 was already gone from the index when
+      # aegis tried to bootstrap fresh sn namespaces, matching the hs 0.1.6
+      # rationale). Chart 0.2.x:
+      #   1. ships its own per-namespace OTel collector sidecar Deployment
+      #      (templates/otel-collector-*.yaml) — point global.otel.endpoint
+      #      at `otel-collector:4318` same-ns, mirroring hs 0.1.6.
+      #   2. promotes data init from a post-install Pod hook into a proper
+      #      `data-init-job` subchart Job with hooks `post-install,post-upgrade`
+      #      and `before-hook-creation` delete policy — `helm upgrade` re-runs
+      #      init, enabling lightweight reset without uninstall+install.
+      - name: 0.1.6
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.1
+          chart_name: social-network
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 2
+              value_type: 0
+              default_value: 20260427-9397c2e
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            # Pin sidecar collector image to volces mirror (chart default
+            # is docker.io/opspai/... which still forces a docker.io HEAD
+            # request from byte-cluster kubelet). Mirrors hs 0.1.6.
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+          status: 1
   - type: 2
     name: media
     is_public: true
@@ -689,6 +797,43 @@ containers:
               category: 1
               value_type: 0
               default_value: opentelemetry-kube-stack-deployment-media-collector.monitoring.svc.cluster.local:4318
+              overridable: true
+          status: 1
+      # Bumped 0.1.5 → 0.1.6 to pick up media-microservices chart 0.2.1.
+      # Same rationale as sn 0.1.6 — chart 0.2.x adds same-ns OTel sidecar +
+      # `data-init-job` Job with post-install,post-upgrade hooks.
+      - name: 0.1.6
+        github_link: LGU-SE-Internal/DeathStarBench
+        status: 1
+        helm_config:
+          version: 0.2.1
+          chart_name: media-microservices
+          repo_name: lgu-dsb
+          repo_url: https://lgu-se-internal.github.io/DeathStarBench
+          values:
+            - key: global.dockerRegistry
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
+              overridable: true
+            - key: global.defaultImageVersion
+              type: 0
+              category: 3
+              value_type: 0
+              default_value: 20260427-9397c2e
+              overridable: true
+            - key: global.otel.endpoint
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: otel-collector:4318
+              overridable: true
+            - key: otelCollector.image.repository
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
           status: 1
   - type: 2
