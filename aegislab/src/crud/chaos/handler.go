@@ -16,6 +16,22 @@ type Handler struct {
 
 func NewHandler(m *Manager) *Handler { return &Handler{Mgr: m} }
 
+// schemaValidationBody is the response payload when ErrSchemaValidation
+// fires: leaf-level field paths the caller can attribute directly,
+// instead of re-parsing a flattened message string.
+type schemaValidationBody struct {
+	Errors []SchemaLeaf `json:"errors"`
+}
+
+func writeSchemaOrPlainError(c *gin.Context, err error, code int) {
+	var sve *SchemaValidationError
+	if errors.As(err, &sve) {
+		dto.JSONResponse(c, code, "schema validation failed", schemaValidationBody{Errors: sve.Leaves})
+		return
+	}
+	dto.ErrorResponse(c, code, err.Error())
+}
+
 type upsertSystemReq struct {
 	NsPattern               string `json:"ns_pattern"                            binding:"required"`
 	AppLabelKey             string `json:"app_label_key"                         binding:"required"`
@@ -127,7 +143,7 @@ func (h *Handler) ImportPoints(c *gin.Context) {
 	}
 	res, err := h.Mgr.ImportPoints(c.Request.Context(), sysName, m, dryRun)
 	if err != nil {
-		dto.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		writeSchemaOrPlainError(c, err, http.StatusBadRequest)
 		return
 	}
 	dto.SuccessResponse(c, res)
@@ -190,7 +206,7 @@ func (h *Handler) CreateInjection(c *gin.Context) {
 		case errors.Is(err, ErrSystemAtCapacity):
 			code = http.StatusTooManyRequests
 		}
-		dto.ErrorResponse(c, code, err.Error())
+		writeSchemaOrPlainError(c, err, code)
 		return
 	}
 	dto.JSONResponse(c, http.StatusAccepted, "Injection accepted", inj)

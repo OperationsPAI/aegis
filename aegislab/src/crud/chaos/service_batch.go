@@ -68,6 +68,7 @@ func (s *Manager) CreateInjectionBatch(ctx context.Context, in CreateBatchInput)
 	}
 
 	childRows := make([]Injection, 0, len(in.Children))
+	compiler := newSchemaCompiler()
 	for _, c := range in.Children {
 		if c.IdempotencyKey == "" {
 			return nil, fmt.Errorf("chaos: child idempotency_key is required")
@@ -75,7 +76,7 @@ func (s *Manager) CreateInjectionBatch(ctx context.Context, in CreateBatchInput)
 		if c.Namespace == "" {
 			return nil, fmt.Errorf("chaos: child namespace is required")
 		}
-		row, applyErr := s.createBatchChild(ctx, batch.ID, c)
+		row, applyErr := s.createBatchChild(ctx, batch.ID, c, compiler)
 		if row != nil {
 			childRows = append(childRows, *row)
 		}
@@ -109,7 +110,7 @@ func (s *Manager) CreateInjectionBatch(ctx context.Context, in CreateBatchInput)
 // createBatchChild mirrors CreateInjection but stamps batch_id and never
 // returns an error to the caller — failed children are persisted as
 // status=failed and the batch as a whole accepts mixed outcomes.
-func (s *Manager) createBatchChild(ctx context.Context, batchID string, c CreateBatchChild) (*Injection, error) {
+func (s *Manager) createBatchChild(ctx context.Context, batchID string, c CreateBatchChild, compiler *schemaCompiler) (*Injection, error) {
 	var existing Injection
 	err := s.DB.WithContext(ctx).Where("idempotency_key = ?", c.IdempotencyKey).Take(&existing).Error
 	if err == nil {
@@ -153,8 +154,7 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 		return row, ErrCapabilityUnsupported
 	}
 
-	effectiveParams := mergeParams(map[string]any(point.ParamOverrides), c.Params)
-	compiler := newSchemaCompiler()
+	effectiveParams := mergeParams(c.Params, map[string]any(point.ParamOverrides))
 	paramSchema, cerr := compiler.forParams(&capRow)
 	if cerr != nil {
 		row := s.persistFailedChild(ctx, batchID, c, cerr)
@@ -187,17 +187,13 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 		return row, err
 	}
 
-	params := c.Params
-	if params == nil {
-		params = map[string]any{}
-	}
 	now := time.Now().UTC()
 	bid := batchID
 	row := Injection{
 		ID:             ulid.Make().String(),
 		BatchID:        &bid,
 		PointID:        point.ID,
-		Params:         JSONMap(params),
+		Params:         JSONMap(effectiveParams),
 		IdempotencyKey: c.IdempotencyKey,
 		ExecutorName:   s.Executor.Name(),
 		ExecutorHandle: handle,
@@ -211,7 +207,7 @@ func (s *Manager) createBatchChild(ctx context.Context, batchID string, c Create
 	}
 
 	applyAt := time.Now().UTC()
-	if applyErr := s.Executor.Apply(ctx, sysCtx, capRow.Name, handle, target, c.Params); applyErr != nil {
+	if applyErr := s.Executor.Apply(ctx, sysCtx, capRow.Name, handle, target, effectiveParams); applyErr != nil {
 		fin := applyAt
 		updates := map[string]any{
 			"status":      StatusFailed,

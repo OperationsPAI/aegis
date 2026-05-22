@@ -22,6 +22,7 @@ type fakeExecutor struct {
 	destroyCount atomic.Int64
 	applyErr     error
 	destroyErr   error
+	lastParams   map[string]any
 }
 
 func (e *fakeExecutor) Name() string { return "fake" }
@@ -38,6 +39,7 @@ func (e *fakeExecutor) DeriveHandle(capability, key, requestNamespace string, ta
 }
 func (e *fakeExecutor) Apply(ctx context.Context, sysCtx SystemContext, capability, handle string, target, params map[string]any) error {
 	e.applyCount.Add(1)
+	e.lastParams = params
 	return e.applyErr
 }
 func (e *fakeExecutor) Status(ctx context.Context, handle string) (ExecState, map[string]any, error) {
