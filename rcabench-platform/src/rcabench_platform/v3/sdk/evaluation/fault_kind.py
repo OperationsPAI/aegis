@@ -65,7 +65,7 @@ class FaultKind(str, Enum):
     UNKNOWN = "unknown"
 
     @classmethod
-    def _missing_(cls, value: object) -> "FaultKind | None":
+    def _missing_(cls, value: object) -> FaultKind | None:
         """Accept legacy string values from earlier SDK versions."""
         if isinstance(value, str):
             new = _LEGACY_ALIASES.get(value)

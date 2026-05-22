@@ -161,6 +161,18 @@ def query_metrics_histogram(save_path: Path, namespace: str, start_time: str, en
 
 @timeit()
 def query_logs(save_path: Path, namespace: str, start_time: str, end_time: str):
+    # Ground-truth leak guard: the deploy-mode collector enables the
+    # k8sobjects receiver (presets.kubernetesEvents=true) and pipes K8s
+    # Events through the same logs table with service.namespace stamped
+    # from the involved object's namespace. For benchmark namespaces that
+    # means chaos-mesh-emitted Events for the chaos CR (kind PodChaos /
+    # NetworkChaos / HTTPChaos, apiVersion chaos-mesh.org/v1alpha1, reason
+    # Started/Applied/Recovered/TimeUp) plus correlated Pod Killing/BackOff
+    # events land in the abnormal-window slice — a direct cleartext leak
+    # of fault type and timing. The collector side now pins event logs to
+    # service.namespace='__k8s_events__', but old data and any collector
+    # that hasn't picked up the config will still carry them, so filter
+    # here too on the receiver-set log attribute.
     query = f"""
     SELECT
         Timestamp,
@@ -178,6 +190,7 @@ def query_logs(save_path: Path, namespace: str, start_time: str, end_time: str):
     WHERE
         ol.ResourceAttributes['service.namespace'] = '{namespace}'
         AND ol.Timestamp BETWEEN '{start_time}' AND '{end_time}'
+        AND ol.LogAttributes['event.domain'] != 'k8s'
     """
 
     with get_clickhouse_client() as client:

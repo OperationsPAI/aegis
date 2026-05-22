@@ -548,6 +548,25 @@ collectors:
             - context: resource
               statements:
                 - set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
+        # k8sobjects receiver (enabled via presets.kubernetesEvents) emits each
+        # Kubernetes Event as a log record with event.domain="k8s" and
+        # k8s.namespace.name = the involved object's namespace. The transform
+        # above then copies that into service.namespace, which makes the Event
+        # masquerade as an application log of the benchmark namespace.
+        # rcabench-platform/cli/prepare_inputs.py:query_logs slices logs by
+        # `service.namespace = '<ns>'`, so chaos-mesh-emitted Events (kind=
+        # PodChaos/NetworkChaos/HTTPChaos/..., apiVersion chaos-mesh.org/v1alpha1,
+        # reason in {Started,Applied,Recovered,TimeUp,...}) plus correlated
+        # Pod Killing/BackOff events land directly in the abnormal-window log
+        # slice that RCA algorithms consume — a hard ground-truth leak.
+        # Pin Event log records to a sentinel service.namespace so they stay
+        # queryable for cluster ops but never collide with per-namespace
+        # benchmark log slices.
+        transform/strip_k8s_event_service_namespace:
+          log_statements:
+            - context: log
+              statements:
+                - set(resource.attributes["service.namespace"], "__k8s_events__") where attributes["event.domain"] == "k8s"
       connectors:
         spanmetrics: {}
       receivers:
@@ -569,7 +588,7 @@ collectors:
         pipelines:
           logs:
             exporters: [clickhouse]
-            processors: [memory_limiter, k8sattributes, transform/service_namespace, batch]
+            processors: [memory_limiter, k8sattributes, transform/service_namespace, transform/strip_k8s_event_service_namespace, batch]
             receivers: [otlp]
           metrics:
             exporters: [clickhouse]
