@@ -137,7 +137,18 @@ field to fill, with its allowed values, until the config is ready to apply.
 
 The session state is persisted to --config (default ~/.aegisctl/inject-guided.yaml)
 so you can resume. Use --reset-config to start over, --next VALUE to apply the
-current stage's selection, and --apply to submit the finalized config.`,
+current stage's selection, and --apply to submit the finalized config.
+
+This is the orchestrated path: --apply POSTs a SubmitInjectionReq envelope to
+aegis-api, which schedules a RestartPedestal task that drives the full
+FaultInjection → BuildDatapack → RunAlgorithm → CollectResult chain. The
+backend resolves the point via the resourcelookup cache (see
+OperationsPAI/aegis#459 for the freshness caveat — newly-imported points may
+briefly appear unresolvable here while the cache catches up).
+
+For verification-only fault firing on a newly-imported PointManifest — no
+datapack, no algorithm, always fresh catalog state — use
+'aegisctl chaos inject submit' instead.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		if ctx == nil {

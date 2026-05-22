@@ -294,6 +294,33 @@ activate campaigns.
 
 ## 5. HTTP API
 
+### 5.1 Two CLI inject paths — direct vs orchestrated
+
+`aegisctl chaos inject submit` and `aegisctl inject guided --apply` /
+`aegisctl regression run` look like siblings but do **different things**.
+Both are legitimate; the split is by use case, not by deprecation status.
+
+|  | `aegisctl chaos inject submit` (direct) | `aegisctl inject guided --apply` / `regression run` (orchestrated) |
+|---|---|---|
+| Backend route | aegis-chaos `POST /v1beta/injections` | aegis-api `POST /api/v2/projects/<id>/injections/inject` |
+| Input shape | `--point-id` (caller must know the chaos_points row id) | service / capability / target / params; the resolver looks the point up internally |
+| Validation path | Direct DB lookup by `point_id` against `chaos_points`; capability/param schema enforced server-side at submit | Guided resolver walks the catalog through the resourcelookup cache, then submits a resolved `GuidedConfig` envelope |
+| resourcelookup cache freshness | **Not used** — bypasses the cache entirely, always sees the freshest catalog state | **Used** — subject to the staleness caveat tracked in [OperationsPAI/aegis#459](https://github.com/OperationsPAI/aegis/issues/459) until that lands |
+| Task chain | Just applies the chaos-mesh CR via the routed Executor; injection lifecycle is the whole thing | RestartPedestal → FaultInjection → BuildDatapack → RunAlgorithm → CollectResult (CRD-callback workflow) |
+| Webhook semantics | Fires `/api/v1/hooks/chaos` carrying `caller_metadata` from the request body; rarely populated for ad-hoc runs (a sparse body yields a no-op downstream) | Orchestrator auto-injects `task_id` / `trace_id` into `caller_metadata`; the full chain executes off the webhook |
+| Dedup behavior | Idempotency key required (`--idempotency-key`); duplicate POSTs return the existing injection row, never re-invoking `Executor.Apply` (I2 / I7) | Backend-side hybrid-dedup on `(point_id, params, abnormal window)`; suppressed submits surface a dedupe-suppressed sentinel |
+| Intended use case | **Verification** — confirm a newly-imported PointManifest actually applies on chaos-mesh and reaches the target service. Also the unaffected escape hatch while #459 is open. | **Real experiments** — end-to-end fault + observation + RCA cycle against a project. |
+
+Direct submit is intentionally kept as a user-facing verification tool;
+it is not deprecated and not internal-only. Renaming it (e.g. to
+`chaos inject verify`) was rejected because the same endpoint is used
+for chaos-service contract testing and the rename would churn external
+scripts / helm chart hooks that already call it. The help text on each
+command communicates the split; this matrix is the canonical reference.
+
+After #459 lands, both paths see new points immediately; direct inject
+remains the no-task-chain verification path.
+
 API versioning: `/v1beta` for the first ~2 months while shape is in motion;
 freeze to `/v1` once the first real campaign uses it.
 
