@@ -825,7 +825,7 @@ func guidedServiceResolve(ctx context.Context, cfg guidedcli.GuidedConfig) (*gui
 	if err != nil {
 		return nil, err
 	}
-	var wire apiclient.GuidedcliGuidedConfig
+	var wire apiclient.ChaosGuidedConfig
 	if err := guidedJSONRoundTrip(cfg, &wire); err != nil {
 		return nil, fmt.Errorf("encode guided config: %w", err)
 	}
@@ -853,7 +853,7 @@ func guidedServiceApplyNext(ctx context.Context, current guidedcli.GuidedConfig,
 	if err != nil {
 		return guidedcli.GuidedConfig{}, err
 	}
-	var wire apiclient.GuidedcliGuidedConfig
+	var wire apiclient.ChaosGuidedConfig
 	if err := guidedJSONRoundTrip(current, &wire); err != nil {
 		return guidedcli.GuidedConfig{}, fmt.Errorf("encode guided config: %w", err)
 	}

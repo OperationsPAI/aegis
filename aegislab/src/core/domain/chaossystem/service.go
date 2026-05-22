@@ -3,6 +3,7 @@ package chaossystem
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -16,10 +17,13 @@ import (
 	etcd "aegis/platform/etcd"
 	"aegis/platform/model"
 	"aegis/core/orchestrator/common"
+	containerapi "aegis/core/domain/container"
 	"aegis/boot/seed"
 
 	chaos "aegis/platform/chaos"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+	"gorm.io/gorm"
 )
 
 // enumerateCandidatesFn is the indirection used by ListInjectCandidates so
@@ -79,6 +83,7 @@ type Service struct {
 type chaosSystemEtcd interface {
 	Get(ctx context.Context, key string) (string, error)
 	Put(ctx context.Context, key, value string, ttl time.Duration) error
+	Delete(ctx context.Context, key string) error
 }
 
 func NewService(repo *Repository, etcdGw *etcd.Gateway) *Service {
@@ -243,6 +248,311 @@ func (s *Service) CreateSystem(ctx context.Context, req *CreateChaosSystemReq) (
 		return nil, err
 	}
 	return NewChaosSystemResp(view), nil
+}
+
+// OnboardSystem is the atomic composite of CreateSystem + CreateContainer +
+// chart binding. The DB writes (container + container_version + helm_config
+// + dynamic_config) commit in a single transaction; the 7 etcd identity
+// keys are published only after the tx succeeds. On etcd failure mid-flight
+// the already-published keys are best-effort deleted so a partial onboard
+// never leaves a half-registered system that pedestal chart install would
+// reject.
+func (s *Service) OnboardSystem(ctx context.Context, req *OnboardSystemReq) (*OnboardSystemResp, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request body required: %w", consts.ErrBadRequest)
+	}
+
+	sysReq := req.System
+	sysReq.Name = strings.TrimSpace(sysReq.Name)
+	if sysReq.Name == "" {
+		return nil, fmt.Errorf("system.name is required: %w", consts.ErrBadRequest)
+	}
+	if _, err := regexp.Compile(sysReq.NsPattern); err != nil {
+		return nil, fmt.Errorf("invalid system.ns_pattern regex: %w: %w", err, consts.ErrBadRequest)
+	}
+	if _, err := regexp.Compile(sysReq.ExtractPattern); err != nil {
+		return nil, fmt.Errorf("invalid system.extract_pattern regex: %w: %w", err, consts.ErrBadRequest)
+	}
+	if err := req.Container.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid container payload: %w: %w", err, consts.ErrBadRequest)
+	}
+
+	// Conflict on system identity (the anchor dynamic_config row). Container
+	// name conflicts surface from createContainerCore as ErrAlreadyExists.
+	existing, err := s.repo.GetConfigByKey(systemKey(sysReq.Name, fieldCount))
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, fmt.Errorf("system %s already exists: %w", sysReq.Name, consts.ErrAlreadyExists)
+	}
+
+	appLabelKey := normalizeAppLabelKey(sysReq.AppLabelKey)
+	defaults := map[systemField]string{
+		fieldCount:          strconv.Itoa(sysReq.Count),
+		fieldNsPattern:      sysReq.NsPattern,
+		fieldExtractPattern: sysReq.ExtractPattern,
+		fieldDisplayName:    sysReq.DisplayName,
+		fieldAppLabelKey:    appLabelKey,
+		fieldIsBuiltin:      strconv.FormatBool(sysReq.IsBuiltin),
+		fieldStatus:         strconv.Itoa(int(consts.CommonEnabled)),
+	}
+	descriptions := map[systemField]string{
+		fieldCount:          fmt.Sprintf("Number of system %s to create", sysReq.DisplayName),
+		fieldNsPattern:      fmt.Sprintf("Namespace pattern for system %s instances", sysReq.DisplayName),
+		fieldExtractPattern: fmt.Sprintf("Extraction pattern for namespace prefix and number from %s instances", sysReq.DisplayName),
+		fieldDisplayName:    fmt.Sprintf("Human-readable display name for system %s", sysReq.Name),
+		fieldAppLabelKey:    fmt.Sprintf("Kubernetes pod label key used to select %s workloads", sysReq.DisplayName),
+		fieldIsBuiltin:      fmt.Sprintf("Whether %s is a builtin benchmark system", sysReq.DisplayName),
+		fieldStatus:         fmt.Sprintf("Status of system %s (1=enabled, 0=disabled, -1=deleted)", sysReq.DisplayName),
+	}
+	if sysReq.Description != "" {
+		descriptions[fieldCount] = sysReq.Description
+	}
+
+	userID := userIDFromCtx(ctx)
+	containerModel := req.Container.ConvertToContainer()
+	configIDs := make([]int, 0, len(allSystemFields()))
+
+	err = s.repo.DB().Transaction(func(tx *gorm.DB) error {
+		txRepo := NewRepository(tx)
+		for _, field := range allSystemFields() {
+			cfg := &model.DynamicConfig{
+				Key:          systemKey(sysReq.Name, field),
+				DefaultValue: defaults[field],
+				ValueType:    valueTypeForField(field),
+				Scope:        consts.ConfigScopeGlobal,
+				Category:     "injection.system." + string(field),
+				Description:  descriptions[field],
+			}
+			if err := txRepo.CreateConfig(cfg); err != nil {
+				// Two concurrent onboards for the same code both pass the
+				// pre-tx existence probe; the loser hits the unique index on
+				// dynamic_configs.config_key inside the tx. Map to 409 so
+				// the handler does not return 500.
+				if errors.Is(err, gorm.ErrDuplicatedKey) {
+					return fmt.Errorf("system %s already exists: %w", sysReq.Name, consts.ErrAlreadyExists)
+				}
+				return err
+			}
+			configIDs = append(configIDs, cfg.ID)
+		}
+		if _, err := containerapi.NewRepository(tx).CreateContainerCore(containerModel, userID); err != nil {
+			if errors.Is(err, consts.ErrAlreadyExists) {
+				return fmt.Errorf("container %s already exists: %w", containerModel.Name, consts.ErrAlreadyExists)
+			}
+			return fmt.Errorf("create container: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Publish identity to etcd. On failure mid-flight we compensate by
+	// deleting the already-published etcd keys AND the committed DB rows
+	// (dynamic_configs hard-delete, container soft-delete). Without the DB
+	// rollback the pre-tx existence probe at the top of OnboardSystem would
+	// surface a 409 on a retry, leaving the orphan unrecoverable through the
+	// supported API.
+	published := make([]string, 0, len(allSystemFields()))
+	for _, field := range allSystemFields() {
+		key := systemKey(sysReq.Name, field)
+		if err := s.publishKey(ctx, key, defaults[field]); err != nil {
+			s.bestEffortDeletePublished(ctx, published)
+			s.compensateOnboardDB(configIDs, containerModel.ID)
+			return nil, fmt.Errorf("publish %s to etcd: %w", field, err)
+		}
+		published = append(published, key)
+	}
+
+	view, err := s.lookupByName(sysReq.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &OnboardSystemResp{
+		System:    *NewChaosSystemResp(view),
+		Container: *containerapi.NewContainerResp(containerModel),
+	}, nil
+}
+
+func (s *Service) bestEffortDeletePublished(ctx context.Context, keys []string) {
+	for _, k := range keys {
+		etcdKey := consts.ConfigEtcdGlobalPrefix + k
+		if err := s.etcd.Delete(ctx, etcdKey); err != nil {
+			logrus.WithFields(logrus.Fields{"key": etcdKey, "err": err}).
+				Warn("onboard rollback: failed to delete etcd key")
+		}
+	}
+}
+
+// compensateOnboardDB reverses the committed DB writes when etcd publish
+// fails after the tx commits. dynamic_configs has no soft-delete column so
+// rows are hard-deleted by primary key; the container goes through the
+// same status=CommonDeleted path as DeleteContainer so the active_name
+// virtual column unblocks a re-onboard with the same code.
+func (s *Service) compensateOnboardDB(configIDs []int, containerID int) {
+	db := s.repo.DB()
+	if len(configIDs) > 0 {
+		if err := db.Where("id IN ?", configIDs).Delete(&model.DynamicConfig{}).Error; err != nil {
+			logrus.WithFields(logrus.Fields{"ids": configIDs, "err": err}).
+				Warn("onboard rollback: failed to delete dynamic_configs rows")
+		}
+	}
+	if containerID > 0 {
+		res := db.Model(&model.Container{}).
+			Where("id = ? AND status != ?", containerID, consts.CommonDeleted).
+			Update("status", consts.CommonDeleted)
+		if res.Error != nil {
+			logrus.WithFields(logrus.Fields{"id": containerID, "err": res.Error}).
+				Warn("onboard rollback: failed to soft-delete container")
+		}
+	}
+}
+
+// ExportSeed returns a data.yaml-compatible YAML snippet for the given
+// system, suitable for `>> data/initial_data/<env>/data.yaml`. The output
+// embeds both halves — the 7 dynamic_configs rows and a matching
+// containers entry (with the pedestal chart binding) — so a runtime
+// onboard can be checked back into git for reproducible cold-start.
+//
+// Format must round-trip through `aegisctl system register --from-seed`
+// for the system-identity half; the containers half is consumed by the
+// boot seed loader at cluster bring-up.
+func (s *Service) ExportSeed(_ context.Context, name string) (*ExportSeedResp, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("system name is required: %w", consts.ErrBadRequest)
+	}
+	view, err := s.lookupByName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	configs, err := s.repo.ListSystemConfigs()
+	if err != nil {
+		return nil, err
+	}
+	prefix := systemKeyPrefix(name)
+	rows := make([]seedDynamicConfigYAML, 0, len(allSystemFields()))
+	for _, cfg := range configs {
+		if !strings.HasPrefix(cfg.Key, prefix) {
+			continue
+		}
+		field := strings.TrimPrefix(cfg.Key, prefix)
+		if _, ok := expectedExportedFields[field]; !ok {
+			continue
+		}
+		rows = append(rows, seedDynamicConfigYAML{
+			Key:          cfg.Key,
+			DefaultValue: cfg.DefaultValue,
+			ValueType:    int(cfg.ValueType),
+			Scope:        int(cfg.Scope),
+			Category:     cfg.Category,
+			Description:  cfg.Description,
+			IsSecret:     false,
+		})
+	}
+
+	// Containers half: prefer to emit the pedestal chart binding when one is
+	// bound to this system. Soft-skip when the system has no pedestal —
+	// export-seed still produces the dynamic_configs half so identity-only
+	// systems round-trip cleanly.
+	containers := []seedContainerYAML{}
+	helm, version, err := s.repo.GetPedestalHelmConfigByName(view.Cfg.System, "")
+	if err == nil && helm != nil && version != nil {
+		containers = append(containers, seedContainerYAML{
+			Type:     int(consts.ContainerTypePedestal),
+			Name:     view.Cfg.System,
+			IsPublic: true,
+			Status:   int(consts.CommonEnabled),
+			Versions: []seedContainerVersionYAML{{
+				Name:       version.Name,
+				GithubLink: version.GithubLink,
+				Status:     int(consts.CommonEnabled),
+				HelmConfig: &seedHelmConfigYAML{
+					Version:   helm.Version,
+					ChartName: helm.ChartName,
+					RepoName:  helm.RepoName,
+					RepoURL:   helm.RepoURL,
+					Status:    int(consts.CommonEnabled),
+				},
+			}},
+		})
+	}
+
+	doc := seedExportDoc{
+		Containers:     containers,
+		DynamicConfigs: rows,
+	}
+	buf, err := yaml.Marshal(&doc)
+	if err != nil {
+		return nil, fmt.Errorf("encode seed yaml: %w", err)
+	}
+	return &ExportSeedResp{YAML: string(buf)}, nil
+}
+
+// expectedExportedFields mirrors aegisctl's `system register --from-seed`
+// schema: the 7 identity fields. Other prefixed rows are skipped so the
+// snippet is byte-identical to a hand-curated data.yaml block.
+var expectedExportedFields = map[string]struct{}{
+	string(fieldCount):          {},
+	string(fieldNsPattern):      {},
+	string(fieldExtractPattern): {},
+	string(fieldDisplayName):    {},
+	string(fieldAppLabelKey):    {},
+	string(fieldIsBuiltin):      {},
+	string(fieldStatus):         {},
+}
+
+type seedExportDoc struct {
+	Containers     []seedContainerYAML     `yaml:"containers,omitempty"`
+	DynamicConfigs []seedDynamicConfigYAML `yaml:"dynamic_configs"`
+}
+
+type seedDynamicConfigYAML struct {
+	Key          string `yaml:"key"`
+	DefaultValue string `yaml:"default_value"`
+	ValueType    int    `yaml:"value_type"`
+	Scope        int    `yaml:"scope"`
+	Category     string `yaml:"category"`
+	Description  string `yaml:"description"`
+	IsSecret     bool   `yaml:"is_secret"`
+}
+
+type seedContainerYAML struct {
+	Type     int                        `yaml:"type"`
+	Name     string                     `yaml:"name"`
+	IsPublic bool                       `yaml:"is_public"`
+	Status   int                        `yaml:"status"`
+	Versions []seedContainerVersionYAML `yaml:"versions"`
+}
+
+type seedContainerVersionYAML struct {
+	Name       string              `yaml:"name"`
+	GithubLink string              `yaml:"github_link,omitempty"`
+	Status     int                 `yaml:"status"`
+	HelmConfig *seedHelmConfigYAML `yaml:"helm_config,omitempty"`
+}
+
+type seedHelmConfigYAML struct {
+	Version   string `yaml:"version"`
+	ChartName string `yaml:"chart_name"`
+	RepoName  string `yaml:"repo_name"`
+	RepoURL   string `yaml:"repo_url"`
+	Status    int    `yaml:"status"`
+}
+
+// userIDFromCtx pulls the authenticated user ID for ownership stamping on
+// the container row. Falls back to 0 (system) when the request is from a
+// non-user context (e.g. boot-time tests).
+func userIDFromCtx(ctx context.Context) int {
+	if v := ctx.Value(consts.CtxKeyUserID); v != nil {
+		if id, ok := v.(int); ok {
+			return id
+		}
+	}
+	return 0
 }
 
 // GetSystemChart returns the chart source bound to the system's pedestal

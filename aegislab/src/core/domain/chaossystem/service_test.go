@@ -33,6 +33,11 @@ func (f *fakeEtcd) Put(_ context.Context, key, value string, _ time.Duration) er
 	return nil
 }
 
+func (f *fakeEtcd) Delete(_ context.Context, key string) error {
+	delete(f.data, key)
+	return nil
+}
+
 // newMetadataService spins up an in-memory service stripped of the etcd
 // gateway. Sufficient for exercising the metadata upsert / namespace-count
 // flow; the etcd-backed CRUD is covered by service_registry_test in the

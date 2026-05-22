@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	containerapi "aegis/core/domain/container"
 	"aegis/platform/config"
 	"aegis/platform/dto"
 	"aegis/platform/model"
@@ -21,6 +22,31 @@ type CreateChaosSystemReq struct {
 	Count          int    `json:"count" binding:"required,min=1"`
 	Description    string `json:"description"`
 	IsBuiltin      bool   `json:"is_builtin"`
+}
+
+// OnboardSystemReq is the composite request body for POST
+// /api/v2/systems/onboard. It bundles the chaos-system identity (the 7
+// injection.system.<code>.* etcd keys) with the container + chart binding
+// that pedestal chart install needs, so a benchmark chart's post-install
+// Job can self-register in one HTTP call instead of orchestrating
+// CreateSystem + CreateContainer separately.
+type OnboardSystemReq struct {
+	System    CreateChaosSystemReq                  `json:"system" binding:"required"`
+	Container containerapi.CreateContainerReq       `json:"container" binding:"required"`
+}
+
+// OnboardSystemResp returns both halves of the atomic onboard write so
+// callers don't need to round-trip a second GET.
+type OnboardSystemResp struct {
+	System    ChaosSystemResp                    `json:"system"`
+	Container containerapi.ContainerResp         `json:"container"`
+}
+
+// ExportSeedResp returns a data.yaml-compatible YAML snippet for a single
+// onboarded system. The CLI streams the YAML to stdout for shell
+// composition (`>> data/initial_data/<env>/data.yaml`).
+type ExportSeedResp struct {
+	YAML string `json:"yaml"`
 }
 
 // UpdateChaosSystemReq represents the request to update a chaos system.

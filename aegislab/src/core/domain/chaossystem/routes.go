@@ -37,11 +37,15 @@ func Routes(handler *Handler) framework.RouteRegistrar {
 				systemConfigure := systems.Group("", middleware.RequireSystemConfigure)
 				{
 					systemConfigure.POST("", handler.CreateSystem)
+					systemConfigure.POST("/onboard", handler.OnboardSystem)
 					systemConfigure.PUT("/:id", handler.UpdateSystem)
 					systemConfigure.POST("/:id/metadata", handler.UpsertMetadata)
 					systemConfigure.POST("/reseed", handler.ReseedSystems)
 					systemConfigure.POST("/by-name/:name/prerequisites/:id/mark", handler.MarkPrerequisite)
 				}
+
+				systems.GET("/by-name/:name/export-seed",
+					middleware.RequireSystemRead, handler.ExportSeed)
 
 				systems.DELETE("/:id", middleware.RequirePermission(consts.PermSystemManage), handler.DeleteSystem)
 			}

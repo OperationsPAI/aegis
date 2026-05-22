@@ -1353,6 +1353,11 @@ definitions:
     - name
     - ns_pattern
     type: object
+  chaossystem.ExportSeedResp:
+    properties:
+      yaml:
+        type: string
+    type: object
   chaossystem.InjectCandidateResp:
     properties:
       app:
@@ -1409,6 +1414,23 @@ definitions:
         type: string
     required:
     - status
+    type: object
+  chaossystem.OnboardSystemReq:
+    properties:
+      container:
+        $ref: '#/definitions/container.CreateContainerReq'
+      system:
+        $ref: '#/definitions/chaossystem.CreateChaosSystemReq'
+    required:
+    - container
+    - system
+    type: object
+  chaossystem.OnboardSystemResp:
+    properties:
+      container:
+        $ref: '#/definitions/container.ContainerResp'
+      system:
+        $ref: '#/definitions/chaossystem.ChaosSystemResp'
     type: object
   chaossystem.ReseedSystemReq:
     properties:
@@ -3483,6 +3505,22 @@ definitions:
         description: Response generation time
         type: integer
     type: object
+  dto.GenericResponse-chaossystem_ExportSeedResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaossystem.ExportSeedResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
   dto.GenericResponse-chaossystem_InjectCandidatesResp:
     properties:
       code:
@@ -3491,6 +3529,22 @@ definitions:
       data:
         allOf:
         - $ref: '#/definitions/chaossystem.InjectCandidatesResp'
+        description: Generic type data
+      message:
+        description: Response message
+        type: string
+      timestamp:
+        description: Response generation time
+        type: integer
+    type: object
+  dto.GenericResponse-chaossystem_OnboardSystemResp:
+    properties:
+      code:
+        description: Status code
+        type: integer
+      data:
+        allOf:
+        - $ref: '#/definitions/chaossystem.OnboardSystemResp'
         description: Generic type data
       message:
         description: Response message
@@ -18567,6 +18621,45 @@ paths:
       x-api-type:
         admin: "true"
         sdk: "true"
+  /api/v2/systems/by-name/{name}/export-seed:
+    get:
+      description: Serialize the live DB + etcd state for a single chaos system into
+        a YAML snippet that round-trips through `aegisctl system register --from-seed`.
+        Used to commit runtime-added systems back into git.
+      operationId: export_chaos_system_seed
+      parameters:
+      - description: System short code
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Seed YAML
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaossystem_ExportSeedResp'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "404":
+          description: System not found
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Export a system to data.yaml-compatible YAML
+      tags:
+      - Systems
+      x-api-type:
+        admin: "true"
+        sdk: "true"
   /api/v2/systems/by-name/{name}/inject-candidates:
     get:
       description: Bulk enumeration of every (app, chaos_type, target) tuple reachable
@@ -18697,6 +18790,54 @@ paths:
       security:
       - BearerAuth: []
       summary: Mark a prerequisite status
+      tags:
+      - Systems
+      x-api-type:
+        admin: "true"
+        sdk: "true"
+  /api/v2/systems/onboard:
+    post:
+      consumes:
+      - application/json
+      description: Composite of CreateSystem + CreateContainer. DB writes (container/version/helm_config
+        + dynamic_configs) commit in one transaction; the 7 etcd identity keys are
+        published only after the tx succeeds. On etcd failure mid-flight the already-published
+        keys are best-effort deleted so a partial onboard never leaves a half-registered
+        system.
+      operationId: onboard_chaos_system
+      parameters:
+      - description: Composite onboard request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chaossystem.OnboardSystemReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: System onboarded successfully
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-chaossystem_OnboardSystemResp'
+        "400":
+          description: Invalid request format or parameters
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "409":
+          description: System or container already exists
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.GenericResponse-any'
+      security:
+      - BearerAuth: []
+      summary: Onboard chaos system + chart binding atomically
       tags:
       - Systems
       x-api-type:

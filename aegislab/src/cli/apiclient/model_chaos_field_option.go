@@ -15,11 +15,11 @@ import (
 	"encoding/json"
 )
 
-// checks if the GuidedcliFieldOption type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &GuidedcliFieldOption{}
+// checks if the ChaosFieldOption type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &ChaosFieldOption{}
 
-// GuidedcliFieldOption struct for GuidedcliFieldOption
-type GuidedcliFieldOption struct {
+// ChaosFieldOption struct for ChaosFieldOption
+type ChaosFieldOption struct {
 	Description          *string                `json:"description,omitempty"`
 	Label                *string                `json:"label,omitempty"`
 	Metadata             map[string]interface{} `json:"metadata,omitempty"`
@@ -27,27 +27,27 @@ type GuidedcliFieldOption struct {
 	AdditionalProperties map[string]interface{}
 }
 
-type _GuidedcliFieldOption GuidedcliFieldOption
+type _ChaosFieldOption ChaosFieldOption
 
-// NewGuidedcliFieldOption instantiates a new GuidedcliFieldOption object
+// NewChaosFieldOption instantiates a new ChaosFieldOption object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewGuidedcliFieldOption() *GuidedcliFieldOption {
-	this := GuidedcliFieldOption{}
+func NewChaosFieldOption() *ChaosFieldOption {
+	this := ChaosFieldOption{}
 	return &this
 }
 
-// NewGuidedcliFieldOptionWithDefaults instantiates a new GuidedcliFieldOption object
+// NewChaosFieldOptionWithDefaults instantiates a new ChaosFieldOption object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewGuidedcliFieldOptionWithDefaults() *GuidedcliFieldOption {
-	this := GuidedcliFieldOption{}
+func NewChaosFieldOptionWithDefaults() *ChaosFieldOption {
+	this := ChaosFieldOption{}
 	return &this
 }
 
 // GetDescription returns the Description field value if set, zero value otherwise.
-func (o *GuidedcliFieldOption) GetDescription() string {
+func (o *ChaosFieldOption) GetDescription() string {
 	if o == nil || IsNil(o.Description) {
 		var ret string
 		return ret
@@ -57,7 +57,7 @@ func (o *GuidedcliFieldOption) GetDescription() string {
 
 // GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldOption) GetDescriptionOk() (*string, bool) {
+func (o *ChaosFieldOption) GetDescriptionOk() (*string, bool) {
 	if o == nil || IsNil(o.Description) {
 		return nil, false
 	}
@@ -65,7 +65,7 @@ func (o *GuidedcliFieldOption) GetDescriptionOk() (*string, bool) {
 }
 
 // HasDescription returns a boolean if a field has been set.
-func (o *GuidedcliFieldOption) HasDescription() bool {
+func (o *ChaosFieldOption) HasDescription() bool {
 	if o != nil && !IsNil(o.Description) {
 		return true
 	}
@@ -74,12 +74,12 @@ func (o *GuidedcliFieldOption) HasDescription() bool {
 }
 
 // SetDescription gets a reference to the given string and assigns it to the Description field.
-func (o *GuidedcliFieldOption) SetDescription(v string) {
+func (o *ChaosFieldOption) SetDescription(v string) {
 	o.Description = &v
 }
 
 // GetLabel returns the Label field value if set, zero value otherwise.
-func (o *GuidedcliFieldOption) GetLabel() string {
+func (o *ChaosFieldOption) GetLabel() string {
 	if o == nil || IsNil(o.Label) {
 		var ret string
 		return ret
@@ -89,7 +89,7 @@ func (o *GuidedcliFieldOption) GetLabel() string {
 
 // GetLabelOk returns a tuple with the Label field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldOption) GetLabelOk() (*string, bool) {
+func (o *ChaosFieldOption) GetLabelOk() (*string, bool) {
 	if o == nil || IsNil(o.Label) {
 		return nil, false
 	}
@@ -97,7 +97,7 @@ func (o *GuidedcliFieldOption) GetLabelOk() (*string, bool) {
 }
 
 // HasLabel returns a boolean if a field has been set.
-func (o *GuidedcliFieldOption) HasLabel() bool {
+func (o *ChaosFieldOption) HasLabel() bool {
 	if o != nil && !IsNil(o.Label) {
 		return true
 	}
@@ -106,12 +106,12 @@ func (o *GuidedcliFieldOption) HasLabel() bool {
 }
 
 // SetLabel gets a reference to the given string and assigns it to the Label field.
-func (o *GuidedcliFieldOption) SetLabel(v string) {
+func (o *ChaosFieldOption) SetLabel(v string) {
 	o.Label = &v
 }
 
 // GetMetadata returns the Metadata field value if set, zero value otherwise.
-func (o *GuidedcliFieldOption) GetMetadata() map[string]interface{} {
+func (o *ChaosFieldOption) GetMetadata() map[string]interface{} {
 	if o == nil || IsNil(o.Metadata) {
 		var ret map[string]interface{}
 		return ret
@@ -121,7 +121,7 @@ func (o *GuidedcliFieldOption) GetMetadata() map[string]interface{} {
 
 // GetMetadataOk returns a tuple with the Metadata field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldOption) GetMetadataOk() (map[string]interface{}, bool) {
+func (o *ChaosFieldOption) GetMetadataOk() (map[string]interface{}, bool) {
 	if o == nil || IsNil(o.Metadata) {
 		return map[string]interface{}{}, false
 	}
@@ -129,7 +129,7 @@ func (o *GuidedcliFieldOption) GetMetadataOk() (map[string]interface{}, bool) {
 }
 
 // HasMetadata returns a boolean if a field has been set.
-func (o *GuidedcliFieldOption) HasMetadata() bool {
+func (o *ChaosFieldOption) HasMetadata() bool {
 	if o != nil && !IsNil(o.Metadata) {
 		return true
 	}
@@ -138,12 +138,12 @@ func (o *GuidedcliFieldOption) HasMetadata() bool {
 }
 
 // SetMetadata gets a reference to the given map[string]interface{} and assigns it to the Metadata field.
-func (o *GuidedcliFieldOption) SetMetadata(v map[string]interface{}) {
+func (o *ChaosFieldOption) SetMetadata(v map[string]interface{}) {
 	o.Metadata = v
 }
 
 // GetValue returns the Value field value if set, zero value otherwise.
-func (o *GuidedcliFieldOption) GetValue() string {
+func (o *ChaosFieldOption) GetValue() string {
 	if o == nil || IsNil(o.Value) {
 		var ret string
 		return ret
@@ -153,7 +153,7 @@ func (o *GuidedcliFieldOption) GetValue() string {
 
 // GetValueOk returns a tuple with the Value field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldOption) GetValueOk() (*string, bool) {
+func (o *ChaosFieldOption) GetValueOk() (*string, bool) {
 	if o == nil || IsNil(o.Value) {
 		return nil, false
 	}
@@ -161,7 +161,7 @@ func (o *GuidedcliFieldOption) GetValueOk() (*string, bool) {
 }
 
 // HasValue returns a boolean if a field has been set.
-func (o *GuidedcliFieldOption) HasValue() bool {
+func (o *ChaosFieldOption) HasValue() bool {
 	if o != nil && !IsNil(o.Value) {
 		return true
 	}
@@ -170,11 +170,11 @@ func (o *GuidedcliFieldOption) HasValue() bool {
 }
 
 // SetValue gets a reference to the given string and assigns it to the Value field.
-func (o *GuidedcliFieldOption) SetValue(v string) {
+func (o *ChaosFieldOption) SetValue(v string) {
 	o.Value = &v
 }
 
-func (o GuidedcliFieldOption) MarshalJSON() ([]byte, error) {
+func (o ChaosFieldOption) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -182,7 +182,7 @@ func (o GuidedcliFieldOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o GuidedcliFieldOption) ToMap() (map[string]interface{}, error) {
+func (o ChaosFieldOption) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Description) {
 		toSerialize["description"] = o.Description
@@ -204,16 +204,16 @@ func (o GuidedcliFieldOption) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *GuidedcliFieldOption) UnmarshalJSON(data []byte) (err error) {
-	varGuidedcliFieldOption := _GuidedcliFieldOption{}
+func (o *ChaosFieldOption) UnmarshalJSON(data []byte) (err error) {
+	varChaosFieldOption := _ChaosFieldOption{}
 
-	err = json.Unmarshal(data, &varGuidedcliFieldOption)
+	err = json.Unmarshal(data, &varChaosFieldOption)
 
 	if err != nil {
 		return err
 	}
 
-	*o = GuidedcliFieldOption(varGuidedcliFieldOption)
+	*o = ChaosFieldOption(varChaosFieldOption)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -228,38 +228,38 @@ func (o *GuidedcliFieldOption) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-type NullableGuidedcliFieldOption struct {
-	value *GuidedcliFieldOption
+type NullableChaosFieldOption struct {
+	value *ChaosFieldOption
 	isSet bool
 }
 
-func (v NullableGuidedcliFieldOption) Get() *GuidedcliFieldOption {
+func (v NullableChaosFieldOption) Get() *ChaosFieldOption {
 	return v.value
 }
 
-func (v *NullableGuidedcliFieldOption) Set(val *GuidedcliFieldOption) {
+func (v *NullableChaosFieldOption) Set(val *ChaosFieldOption) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableGuidedcliFieldOption) IsSet() bool {
+func (v NullableChaosFieldOption) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableGuidedcliFieldOption) Unset() {
+func (v *NullableChaosFieldOption) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableGuidedcliFieldOption(val *GuidedcliFieldOption) *NullableGuidedcliFieldOption {
-	return &NullableGuidedcliFieldOption{value: val, isSet: true}
+func NewNullableChaosFieldOption(val *ChaosFieldOption) *NullableChaosFieldOption {
+	return &NullableChaosFieldOption{value: val, isSet: true}
 }
 
-func (v NullableGuidedcliFieldOption) MarshalJSON() ([]byte, error) {
+func (v NullableChaosFieldOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableGuidedcliFieldOption) UnmarshalJSON(src []byte) error {
+func (v *NullableChaosFieldOption) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

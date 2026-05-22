@@ -21,8 +21,8 @@ var _ MappedNullable = &ChaosChaosGuidedApplyNextReq{}
 
 // ChaosChaosGuidedApplyNextReq struct for ChaosChaosGuidedApplyNextReq
 type ChaosChaosGuidedApplyNextReq struct {
-	Current              *GuidedcliGuidedConfig `json:"current,omitempty"`
-	Value                string                 `json:"value"`
+	Current              *ChaosGuidedConfig `json:"current,omitempty"`
+	Value                string             `json:"value"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -47,9 +47,9 @@ func NewChaosChaosGuidedApplyNextReqWithDefaults() *ChaosChaosGuidedApplyNextReq
 }
 
 // GetCurrent returns the Current field value if set, zero value otherwise.
-func (o *ChaosChaosGuidedApplyNextReq) GetCurrent() GuidedcliGuidedConfig {
+func (o *ChaosChaosGuidedApplyNextReq) GetCurrent() ChaosGuidedConfig {
 	if o == nil || IsNil(o.Current) {
-		var ret GuidedcliGuidedConfig
+		var ret ChaosGuidedConfig
 		return ret
 	}
 	return *o.Current
@@ -57,7 +57,7 @@ func (o *ChaosChaosGuidedApplyNextReq) GetCurrent() GuidedcliGuidedConfig {
 
 // GetCurrentOk returns a tuple with the Current field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ChaosChaosGuidedApplyNextReq) GetCurrentOk() (*GuidedcliGuidedConfig, bool) {
+func (o *ChaosChaosGuidedApplyNextReq) GetCurrentOk() (*ChaosGuidedConfig, bool) {
 	if o == nil || IsNil(o.Current) {
 		return nil, false
 	}
@@ -73,8 +73,8 @@ func (o *ChaosChaosGuidedApplyNextReq) HasCurrent() bool {
 	return false
 }
 
-// SetCurrent gets a reference to the given GuidedcliGuidedConfig and assigns it to the Current field.
-func (o *ChaosChaosGuidedApplyNextReq) SetCurrent(v GuidedcliGuidedConfig) {
+// SetCurrent gets a reference to the given ChaosGuidedConfig and assigns it to the Current field.
+func (o *ChaosChaosGuidedApplyNextReq) SetCurrent(v ChaosGuidedConfig) {
 	o.Current = &v
 }
 

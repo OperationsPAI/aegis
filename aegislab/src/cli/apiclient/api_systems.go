@@ -52,6 +52,21 @@ type SystemsAPI interface {
 	DeleteChaosSystemExecute(r ApiDeleteChaosSystemRequest) (*DtoGenericResponseAny, *http.Response, error)
 
 	/*
+		ExportChaosSystemSeed Export a system to data.yaml-compatible YAML
+
+		Serialize the live DB + etcd state for a single chaos system into a YAML snippet that round-trips through `aegisctl system register --from-seed`. Used to commit runtime-added systems back into git.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param name System short code
+		@return ApiExportChaosSystemSeedRequest
+	*/
+	ExportChaosSystemSeed(ctx context.Context, name string) ApiExportChaosSystemSeedRequest
+
+	// ExportChaosSystemSeedExecute executes the request
+	//  @return DtoGenericResponseChaossystemExportSeedResp
+	ExportChaosSystemSeedExecute(r ApiExportChaosSystemSeedRequest) (*DtoGenericResponseChaossystemExportSeedResp, *http.Response, error)
+
+	/*
 		GetChaosSystem Get chaos system by ID
 
 		Get detailed information about a specific chaos system
@@ -155,6 +170,20 @@ type SystemsAPI interface {
 	// MarkSystemPrerequisiteExecute executes the request
 	//  @return DtoGenericResponseChaossystemSystemPrerequisiteResp
 	MarkSystemPrerequisiteExecute(r ApiMarkSystemPrerequisiteRequest) (*DtoGenericResponseChaossystemSystemPrerequisiteResp, *http.Response, error)
+
+	/*
+		OnboardChaosSystem Onboard chaos system + chart binding atomically
+
+		Composite of CreateSystem + CreateContainer. DB writes (container/version/helm_config + dynamic_configs) commit in one transaction; the 7 etcd identity keys are published only after the tx succeeds. On etcd failure mid-flight the already-published keys are best-effort deleted so a partial onboard never leaves a half-registered system.
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@return ApiOnboardChaosSystemRequest
+	*/
+	OnboardChaosSystem(ctx context.Context) ApiOnboardChaosSystemRequest
+
+	// OnboardChaosSystemExecute executes the request
+	//  @return DtoGenericResponseChaossystemOnboardSystemResp
+	OnboardChaosSystemExecute(r ApiOnboardChaosSystemRequest) (*DtoGenericResponseChaossystemOnboardSystemResp, *http.Response, error)
 
 	/*
 		ReseedChaosSystems Reseed systems from data.yaml
@@ -418,6 +447,156 @@ func (a *SystemsAPIService) DeleteChaosSystemExecute(r ApiDeleteChaosSystemReque
 
 	localVarPath := localBasePath + "/api/v2/systems/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiExportChaosSystemSeedRequest struct {
+	ctx        context.Context
+	ApiService SystemsAPI
+	name       string
+}
+
+func (r ApiExportChaosSystemSeedRequest) Execute() (*DtoGenericResponseChaossystemExportSeedResp, *http.Response, error) {
+	return r.ApiService.ExportChaosSystemSeedExecute(r)
+}
+
+/*
+ExportChaosSystemSeed Export a system to data.yaml-compatible YAML
+
+Serialize the live DB + etcd state for a single chaos system into a YAML snippet that round-trips through `aegisctl system register --from-seed`. Used to commit runtime-added systems back into git.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param name System short code
+	@return ApiExportChaosSystemSeedRequest
+*/
+func (a *SystemsAPIService) ExportChaosSystemSeed(ctx context.Context, name string) ApiExportChaosSystemSeedRequest {
+	return ApiExportChaosSystemSeedRequest{
+		ApiService: a,
+		ctx:        ctx,
+		name:       name,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseChaossystemExportSeedResp
+func (a *SystemsAPIService) ExportChaosSystemSeedExecute(r ApiExportChaosSystemSeedRequest) (*DtoGenericResponseChaossystemExportSeedResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseChaossystemExportSeedResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SystemsAPIService.ExportChaosSystemSeed")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/systems/by-name/{name}/export-seed"
+	localVarPath = strings.Replace(localVarPath, "{"+"name"+"}", url.PathEscape(parameterValueToString(r.name, "name")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -1584,6 +1763,175 @@ func (a *SystemsAPIService) MarkSystemPrerequisiteExecute(r ApiMarkSystemPrerequ
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiOnboardChaosSystemRequest struct {
+	ctx                         context.Context
+	ApiService                  SystemsAPI
+	chaossystemOnboardSystemReq *ChaossystemOnboardSystemReq
+}
+
+// Composite onboard request
+func (r ApiOnboardChaosSystemRequest) ChaossystemOnboardSystemReq(chaossystemOnboardSystemReq ChaossystemOnboardSystemReq) ApiOnboardChaosSystemRequest {
+	r.chaossystemOnboardSystemReq = &chaossystemOnboardSystemReq
+	return r
+}
+
+func (r ApiOnboardChaosSystemRequest) Execute() (*DtoGenericResponseChaossystemOnboardSystemResp, *http.Response, error) {
+	return r.ApiService.OnboardChaosSystemExecute(r)
+}
+
+/*
+OnboardChaosSystem Onboard chaos system + chart binding atomically
+
+Composite of CreateSystem + CreateContainer. DB writes (container/version/helm_config + dynamic_configs) commit in one transaction; the 7 etcd identity keys are published only after the tx succeeds. On etcd failure mid-flight the already-published keys are best-effort deleted so a partial onboard never leaves a half-registered system.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiOnboardChaosSystemRequest
+*/
+func (a *SystemsAPIService) OnboardChaosSystem(ctx context.Context) ApiOnboardChaosSystemRequest {
+	return ApiOnboardChaosSystemRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+//
+//	@return DtoGenericResponseChaossystemOnboardSystemResp
+func (a *SystemsAPIService) OnboardChaosSystemExecute(r ApiOnboardChaosSystemRequest) (*DtoGenericResponseChaossystemOnboardSystemResp, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *DtoGenericResponseChaossystemOnboardSystemResp
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SystemsAPIService.OnboardChaosSystem")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v2/systems/onboard"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.chaossystemOnboardSystemReq == nil {
+		return localVarReturnValue, nil, reportError("chaossystemOnboardSystemReq is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.chaossystemOnboardSystemReq
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v DtoGenericResponseAny
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
 			var v DtoGenericResponseAny
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {

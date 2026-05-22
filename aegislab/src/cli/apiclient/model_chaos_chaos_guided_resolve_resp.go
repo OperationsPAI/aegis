@@ -22,12 +22,12 @@ var _ MappedNullable = &ChaosChaosGuidedResolveResp{}
 type ChaosChaosGuidedResolveResp struct {
 	ApplyPayload         map[string]interface{} `json:"apply_payload,omitempty"`
 	CanApply             *bool                  `json:"can_apply,omitempty"`
-	Config               *GuidedcliGuidedConfig `json:"config,omitempty"`
+	Config               *ChaosGuidedConfig     `json:"config,omitempty"`
 	Errors               []string               `json:"errors,omitempty"`
 	Meta                 map[string]interface{} `json:"meta,omitempty"`
 	Mode                 *string                `json:"mode,omitempty"`
-	Next                 []GuidedcliFieldSpec   `json:"next,omitempty"`
-	Preview              *GuidedcliPreview      `json:"preview,omitempty"`
+	Next                 []ChaosFieldSpec       `json:"next,omitempty"`
+	Preview              *ChaosPreview          `json:"preview,omitempty"`
 	Resolved             map[string]interface{} `json:"resolved,omitempty"`
 	Resources            map[string]interface{} `json:"resources,omitempty"`
 	Result               map[string]interface{} `json:"result,omitempty"`
@@ -120,9 +120,9 @@ func (o *ChaosChaosGuidedResolveResp) SetCanApply(v bool) {
 }
 
 // GetConfig returns the Config field value if set, zero value otherwise.
-func (o *ChaosChaosGuidedResolveResp) GetConfig() GuidedcliGuidedConfig {
+func (o *ChaosChaosGuidedResolveResp) GetConfig() ChaosGuidedConfig {
 	if o == nil || IsNil(o.Config) {
-		var ret GuidedcliGuidedConfig
+		var ret ChaosGuidedConfig
 		return ret
 	}
 	return *o.Config
@@ -130,7 +130,7 @@ func (o *ChaosChaosGuidedResolveResp) GetConfig() GuidedcliGuidedConfig {
 
 // GetConfigOk returns a tuple with the Config field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ChaosChaosGuidedResolveResp) GetConfigOk() (*GuidedcliGuidedConfig, bool) {
+func (o *ChaosChaosGuidedResolveResp) GetConfigOk() (*ChaosGuidedConfig, bool) {
 	if o == nil || IsNil(o.Config) {
 		return nil, false
 	}
@@ -146,8 +146,8 @@ func (o *ChaosChaosGuidedResolveResp) HasConfig() bool {
 	return false
 }
 
-// SetConfig gets a reference to the given GuidedcliGuidedConfig and assigns it to the Config field.
-func (o *ChaosChaosGuidedResolveResp) SetConfig(v GuidedcliGuidedConfig) {
+// SetConfig gets a reference to the given ChaosGuidedConfig and assigns it to the Config field.
+func (o *ChaosChaosGuidedResolveResp) SetConfig(v ChaosGuidedConfig) {
 	o.Config = &v
 }
 
@@ -248,9 +248,9 @@ func (o *ChaosChaosGuidedResolveResp) SetMode(v string) {
 }
 
 // GetNext returns the Next field value if set, zero value otherwise.
-func (o *ChaosChaosGuidedResolveResp) GetNext() []GuidedcliFieldSpec {
+func (o *ChaosChaosGuidedResolveResp) GetNext() []ChaosFieldSpec {
 	if o == nil || IsNil(o.Next) {
-		var ret []GuidedcliFieldSpec
+		var ret []ChaosFieldSpec
 		return ret
 	}
 	return o.Next
@@ -258,7 +258,7 @@ func (o *ChaosChaosGuidedResolveResp) GetNext() []GuidedcliFieldSpec {
 
 // GetNextOk returns a tuple with the Next field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ChaosChaosGuidedResolveResp) GetNextOk() ([]GuidedcliFieldSpec, bool) {
+func (o *ChaosChaosGuidedResolveResp) GetNextOk() ([]ChaosFieldSpec, bool) {
 	if o == nil || IsNil(o.Next) {
 		return nil, false
 	}
@@ -274,15 +274,15 @@ func (o *ChaosChaosGuidedResolveResp) HasNext() bool {
 	return false
 }
 
-// SetNext gets a reference to the given []GuidedcliFieldSpec and assigns it to the Next field.
-func (o *ChaosChaosGuidedResolveResp) SetNext(v []GuidedcliFieldSpec) {
+// SetNext gets a reference to the given []ChaosFieldSpec and assigns it to the Next field.
+func (o *ChaosChaosGuidedResolveResp) SetNext(v []ChaosFieldSpec) {
 	o.Next = v
 }
 
 // GetPreview returns the Preview field value if set, zero value otherwise.
-func (o *ChaosChaosGuidedResolveResp) GetPreview() GuidedcliPreview {
+func (o *ChaosChaosGuidedResolveResp) GetPreview() ChaosPreview {
 	if o == nil || IsNil(o.Preview) {
-		var ret GuidedcliPreview
+		var ret ChaosPreview
 		return ret
 	}
 	return *o.Preview
@@ -290,7 +290,7 @@ func (o *ChaosChaosGuidedResolveResp) GetPreview() GuidedcliPreview {
 
 // GetPreviewOk returns a tuple with the Preview field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ChaosChaosGuidedResolveResp) GetPreviewOk() (*GuidedcliPreview, bool) {
+func (o *ChaosChaosGuidedResolveResp) GetPreviewOk() (*ChaosPreview, bool) {
 	if o == nil || IsNil(o.Preview) {
 		return nil, false
 	}
@@ -306,8 +306,8 @@ func (o *ChaosChaosGuidedResolveResp) HasPreview() bool {
 	return false
 }
 
-// SetPreview gets a reference to the given GuidedcliPreview and assigns it to the Preview field.
-func (o *ChaosChaosGuidedResolveResp) SetPreview(v GuidedcliPreview) {
+// SetPreview gets a reference to the given ChaosPreview and assigns it to the Preview field.
+func (o *ChaosChaosGuidedResolveResp) SetPreview(v ChaosPreview) {
 	o.Preview = &v
 }
 

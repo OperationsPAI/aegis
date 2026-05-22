@@ -15,47 +15,47 @@ import (
 	"encoding/json"
 )
 
-// checks if the GuidedcliFieldSpec type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &GuidedcliFieldSpec{}
+// checks if the ChaosFieldSpec type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &ChaosFieldSpec{}
 
-// GuidedcliFieldSpec struct for GuidedcliFieldSpec
-type GuidedcliFieldSpec struct {
-	Default              *int32                 `json:"default,omitempty"`
-	Description          *string                `json:"description,omitempty"`
-	Fields               []GuidedcliFieldSpec   `json:"fields,omitempty"`
-	KeyFields            []string               `json:"key_fields,omitempty"`
-	Kind                 *string                `json:"kind,omitempty"`
-	Max                  *int32                 `json:"max,omitempty"`
-	Min                  *int32                 `json:"min,omitempty"`
-	Name                 *string                `json:"name,omitempty"`
-	Options              []GuidedcliFieldOption `json:"options,omitempty"`
-	Required             *bool                  `json:"required,omitempty"`
-	Step                 *int32                 `json:"step,omitempty"`
-	Unit                 *string                `json:"unit,omitempty"`
+// ChaosFieldSpec struct for ChaosFieldSpec
+type ChaosFieldSpec struct {
+	Default              *int32             `json:"default,omitempty"`
+	Description          *string            `json:"description,omitempty"`
+	Fields               []ChaosFieldSpec   `json:"fields,omitempty"`
+	KeyFields            []string           `json:"key_fields,omitempty"`
+	Kind                 *string            `json:"kind,omitempty"`
+	Max                  *int32             `json:"max,omitempty"`
+	Min                  *int32             `json:"min,omitempty"`
+	Name                 *string            `json:"name,omitempty"`
+	Options              []ChaosFieldOption `json:"options,omitempty"`
+	Required             *bool              `json:"required,omitempty"`
+	Step                 *int32             `json:"step,omitempty"`
+	Unit                 *string            `json:"unit,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
-type _GuidedcliFieldSpec GuidedcliFieldSpec
+type _ChaosFieldSpec ChaosFieldSpec
 
-// NewGuidedcliFieldSpec instantiates a new GuidedcliFieldSpec object
+// NewChaosFieldSpec instantiates a new ChaosFieldSpec object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewGuidedcliFieldSpec() *GuidedcliFieldSpec {
-	this := GuidedcliFieldSpec{}
+func NewChaosFieldSpec() *ChaosFieldSpec {
+	this := ChaosFieldSpec{}
 	return &this
 }
 
-// NewGuidedcliFieldSpecWithDefaults instantiates a new GuidedcliFieldSpec object
+// NewChaosFieldSpecWithDefaults instantiates a new ChaosFieldSpec object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewGuidedcliFieldSpecWithDefaults() *GuidedcliFieldSpec {
-	this := GuidedcliFieldSpec{}
+func NewChaosFieldSpecWithDefaults() *ChaosFieldSpec {
+	this := ChaosFieldSpec{}
 	return &this
 }
 
 // GetDefault returns the Default field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetDefault() int32 {
+func (o *ChaosFieldSpec) GetDefault() int32 {
 	if o == nil || IsNil(o.Default) {
 		var ret int32
 		return ret
@@ -65,7 +65,7 @@ func (o *GuidedcliFieldSpec) GetDefault() int32 {
 
 // GetDefaultOk returns a tuple with the Default field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetDefaultOk() (*int32, bool) {
+func (o *ChaosFieldSpec) GetDefaultOk() (*int32, bool) {
 	if o == nil || IsNil(o.Default) {
 		return nil, false
 	}
@@ -73,7 +73,7 @@ func (o *GuidedcliFieldSpec) GetDefaultOk() (*int32, bool) {
 }
 
 // HasDefault returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasDefault() bool {
+func (o *ChaosFieldSpec) HasDefault() bool {
 	if o != nil && !IsNil(o.Default) {
 		return true
 	}
@@ -82,12 +82,12 @@ func (o *GuidedcliFieldSpec) HasDefault() bool {
 }
 
 // SetDefault gets a reference to the given int32 and assigns it to the Default field.
-func (o *GuidedcliFieldSpec) SetDefault(v int32) {
+func (o *ChaosFieldSpec) SetDefault(v int32) {
 	o.Default = &v
 }
 
 // GetDescription returns the Description field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetDescription() string {
+func (o *ChaosFieldSpec) GetDescription() string {
 	if o == nil || IsNil(o.Description) {
 		var ret string
 		return ret
@@ -97,7 +97,7 @@ func (o *GuidedcliFieldSpec) GetDescription() string {
 
 // GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetDescriptionOk() (*string, bool) {
+func (o *ChaosFieldSpec) GetDescriptionOk() (*string, bool) {
 	if o == nil || IsNil(o.Description) {
 		return nil, false
 	}
@@ -105,7 +105,7 @@ func (o *GuidedcliFieldSpec) GetDescriptionOk() (*string, bool) {
 }
 
 // HasDescription returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasDescription() bool {
+func (o *ChaosFieldSpec) HasDescription() bool {
 	if o != nil && !IsNil(o.Description) {
 		return true
 	}
@@ -114,14 +114,14 @@ func (o *GuidedcliFieldSpec) HasDescription() bool {
 }
 
 // SetDescription gets a reference to the given string and assigns it to the Description field.
-func (o *GuidedcliFieldSpec) SetDescription(v string) {
+func (o *ChaosFieldSpec) SetDescription(v string) {
 	o.Description = &v
 }
 
 // GetFields returns the Fields field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetFields() []GuidedcliFieldSpec {
+func (o *ChaosFieldSpec) GetFields() []ChaosFieldSpec {
 	if o == nil || IsNil(o.Fields) {
-		var ret []GuidedcliFieldSpec
+		var ret []ChaosFieldSpec
 		return ret
 	}
 	return o.Fields
@@ -129,7 +129,7 @@ func (o *GuidedcliFieldSpec) GetFields() []GuidedcliFieldSpec {
 
 // GetFieldsOk returns a tuple with the Fields field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetFieldsOk() ([]GuidedcliFieldSpec, bool) {
+func (o *ChaosFieldSpec) GetFieldsOk() ([]ChaosFieldSpec, bool) {
 	if o == nil || IsNil(o.Fields) {
 		return nil, false
 	}
@@ -137,7 +137,7 @@ func (o *GuidedcliFieldSpec) GetFieldsOk() ([]GuidedcliFieldSpec, bool) {
 }
 
 // HasFields returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasFields() bool {
+func (o *ChaosFieldSpec) HasFields() bool {
 	if o != nil && !IsNil(o.Fields) {
 		return true
 	}
@@ -145,13 +145,13 @@ func (o *GuidedcliFieldSpec) HasFields() bool {
 	return false
 }
 
-// SetFields gets a reference to the given []GuidedcliFieldSpec and assigns it to the Fields field.
-func (o *GuidedcliFieldSpec) SetFields(v []GuidedcliFieldSpec) {
+// SetFields gets a reference to the given []ChaosFieldSpec and assigns it to the Fields field.
+func (o *ChaosFieldSpec) SetFields(v []ChaosFieldSpec) {
 	o.Fields = v
 }
 
 // GetKeyFields returns the KeyFields field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetKeyFields() []string {
+func (o *ChaosFieldSpec) GetKeyFields() []string {
 	if o == nil || IsNil(o.KeyFields) {
 		var ret []string
 		return ret
@@ -161,7 +161,7 @@ func (o *GuidedcliFieldSpec) GetKeyFields() []string {
 
 // GetKeyFieldsOk returns a tuple with the KeyFields field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetKeyFieldsOk() ([]string, bool) {
+func (o *ChaosFieldSpec) GetKeyFieldsOk() ([]string, bool) {
 	if o == nil || IsNil(o.KeyFields) {
 		return nil, false
 	}
@@ -169,7 +169,7 @@ func (o *GuidedcliFieldSpec) GetKeyFieldsOk() ([]string, bool) {
 }
 
 // HasKeyFields returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasKeyFields() bool {
+func (o *ChaosFieldSpec) HasKeyFields() bool {
 	if o != nil && !IsNil(o.KeyFields) {
 		return true
 	}
@@ -178,12 +178,12 @@ func (o *GuidedcliFieldSpec) HasKeyFields() bool {
 }
 
 // SetKeyFields gets a reference to the given []string and assigns it to the KeyFields field.
-func (o *GuidedcliFieldSpec) SetKeyFields(v []string) {
+func (o *ChaosFieldSpec) SetKeyFields(v []string) {
 	o.KeyFields = v
 }
 
 // GetKind returns the Kind field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetKind() string {
+func (o *ChaosFieldSpec) GetKind() string {
 	if o == nil || IsNil(o.Kind) {
 		var ret string
 		return ret
@@ -193,7 +193,7 @@ func (o *GuidedcliFieldSpec) GetKind() string {
 
 // GetKindOk returns a tuple with the Kind field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetKindOk() (*string, bool) {
+func (o *ChaosFieldSpec) GetKindOk() (*string, bool) {
 	if o == nil || IsNil(o.Kind) {
 		return nil, false
 	}
@@ -201,7 +201,7 @@ func (o *GuidedcliFieldSpec) GetKindOk() (*string, bool) {
 }
 
 // HasKind returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasKind() bool {
+func (o *ChaosFieldSpec) HasKind() bool {
 	if o != nil && !IsNil(o.Kind) {
 		return true
 	}
@@ -210,12 +210,12 @@ func (o *GuidedcliFieldSpec) HasKind() bool {
 }
 
 // SetKind gets a reference to the given string and assigns it to the Kind field.
-func (o *GuidedcliFieldSpec) SetKind(v string) {
+func (o *ChaosFieldSpec) SetKind(v string) {
 	o.Kind = &v
 }
 
 // GetMax returns the Max field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetMax() int32 {
+func (o *ChaosFieldSpec) GetMax() int32 {
 	if o == nil || IsNil(o.Max) {
 		var ret int32
 		return ret
@@ -225,7 +225,7 @@ func (o *GuidedcliFieldSpec) GetMax() int32 {
 
 // GetMaxOk returns a tuple with the Max field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetMaxOk() (*int32, bool) {
+func (o *ChaosFieldSpec) GetMaxOk() (*int32, bool) {
 	if o == nil || IsNil(o.Max) {
 		return nil, false
 	}
@@ -233,7 +233,7 @@ func (o *GuidedcliFieldSpec) GetMaxOk() (*int32, bool) {
 }
 
 // HasMax returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasMax() bool {
+func (o *ChaosFieldSpec) HasMax() bool {
 	if o != nil && !IsNil(o.Max) {
 		return true
 	}
@@ -242,12 +242,12 @@ func (o *GuidedcliFieldSpec) HasMax() bool {
 }
 
 // SetMax gets a reference to the given int32 and assigns it to the Max field.
-func (o *GuidedcliFieldSpec) SetMax(v int32) {
+func (o *ChaosFieldSpec) SetMax(v int32) {
 	o.Max = &v
 }
 
 // GetMin returns the Min field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetMin() int32 {
+func (o *ChaosFieldSpec) GetMin() int32 {
 	if o == nil || IsNil(o.Min) {
 		var ret int32
 		return ret
@@ -257,7 +257,7 @@ func (o *GuidedcliFieldSpec) GetMin() int32 {
 
 // GetMinOk returns a tuple with the Min field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetMinOk() (*int32, bool) {
+func (o *ChaosFieldSpec) GetMinOk() (*int32, bool) {
 	if o == nil || IsNil(o.Min) {
 		return nil, false
 	}
@@ -265,7 +265,7 @@ func (o *GuidedcliFieldSpec) GetMinOk() (*int32, bool) {
 }
 
 // HasMin returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasMin() bool {
+func (o *ChaosFieldSpec) HasMin() bool {
 	if o != nil && !IsNil(o.Min) {
 		return true
 	}
@@ -274,12 +274,12 @@ func (o *GuidedcliFieldSpec) HasMin() bool {
 }
 
 // SetMin gets a reference to the given int32 and assigns it to the Min field.
-func (o *GuidedcliFieldSpec) SetMin(v int32) {
+func (o *ChaosFieldSpec) SetMin(v int32) {
 	o.Min = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetName() string {
+func (o *ChaosFieldSpec) GetName() string {
 	if o == nil || IsNil(o.Name) {
 		var ret string
 		return ret
@@ -289,7 +289,7 @@ func (o *GuidedcliFieldSpec) GetName() string {
 
 // GetNameOk returns a tuple with the Name field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetNameOk() (*string, bool) {
+func (o *ChaosFieldSpec) GetNameOk() (*string, bool) {
 	if o == nil || IsNil(o.Name) {
 		return nil, false
 	}
@@ -297,7 +297,7 @@ func (o *GuidedcliFieldSpec) GetNameOk() (*string, bool) {
 }
 
 // HasName returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasName() bool {
+func (o *ChaosFieldSpec) HasName() bool {
 	if o != nil && !IsNil(o.Name) {
 		return true
 	}
@@ -306,14 +306,14 @@ func (o *GuidedcliFieldSpec) HasName() bool {
 }
 
 // SetName gets a reference to the given string and assigns it to the Name field.
-func (o *GuidedcliFieldSpec) SetName(v string) {
+func (o *ChaosFieldSpec) SetName(v string) {
 	o.Name = &v
 }
 
 // GetOptions returns the Options field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetOptions() []GuidedcliFieldOption {
+func (o *ChaosFieldSpec) GetOptions() []ChaosFieldOption {
 	if o == nil || IsNil(o.Options) {
-		var ret []GuidedcliFieldOption
+		var ret []ChaosFieldOption
 		return ret
 	}
 	return o.Options
@@ -321,7 +321,7 @@ func (o *GuidedcliFieldSpec) GetOptions() []GuidedcliFieldOption {
 
 // GetOptionsOk returns a tuple with the Options field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetOptionsOk() ([]GuidedcliFieldOption, bool) {
+func (o *ChaosFieldSpec) GetOptionsOk() ([]ChaosFieldOption, bool) {
 	if o == nil || IsNil(o.Options) {
 		return nil, false
 	}
@@ -329,7 +329,7 @@ func (o *GuidedcliFieldSpec) GetOptionsOk() ([]GuidedcliFieldOption, bool) {
 }
 
 // HasOptions returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasOptions() bool {
+func (o *ChaosFieldSpec) HasOptions() bool {
 	if o != nil && !IsNil(o.Options) {
 		return true
 	}
@@ -337,13 +337,13 @@ func (o *GuidedcliFieldSpec) HasOptions() bool {
 	return false
 }
 
-// SetOptions gets a reference to the given []GuidedcliFieldOption and assigns it to the Options field.
-func (o *GuidedcliFieldSpec) SetOptions(v []GuidedcliFieldOption) {
+// SetOptions gets a reference to the given []ChaosFieldOption and assigns it to the Options field.
+func (o *ChaosFieldSpec) SetOptions(v []ChaosFieldOption) {
 	o.Options = v
 }
 
 // GetRequired returns the Required field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetRequired() bool {
+func (o *ChaosFieldSpec) GetRequired() bool {
 	if o == nil || IsNil(o.Required) {
 		var ret bool
 		return ret
@@ -353,7 +353,7 @@ func (o *GuidedcliFieldSpec) GetRequired() bool {
 
 // GetRequiredOk returns a tuple with the Required field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetRequiredOk() (*bool, bool) {
+func (o *ChaosFieldSpec) GetRequiredOk() (*bool, bool) {
 	if o == nil || IsNil(o.Required) {
 		return nil, false
 	}
@@ -361,7 +361,7 @@ func (o *GuidedcliFieldSpec) GetRequiredOk() (*bool, bool) {
 }
 
 // HasRequired returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasRequired() bool {
+func (o *ChaosFieldSpec) HasRequired() bool {
 	if o != nil && !IsNil(o.Required) {
 		return true
 	}
@@ -370,12 +370,12 @@ func (o *GuidedcliFieldSpec) HasRequired() bool {
 }
 
 // SetRequired gets a reference to the given bool and assigns it to the Required field.
-func (o *GuidedcliFieldSpec) SetRequired(v bool) {
+func (o *ChaosFieldSpec) SetRequired(v bool) {
 	o.Required = &v
 }
 
 // GetStep returns the Step field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetStep() int32 {
+func (o *ChaosFieldSpec) GetStep() int32 {
 	if o == nil || IsNil(o.Step) {
 		var ret int32
 		return ret
@@ -385,7 +385,7 @@ func (o *GuidedcliFieldSpec) GetStep() int32 {
 
 // GetStepOk returns a tuple with the Step field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetStepOk() (*int32, bool) {
+func (o *ChaosFieldSpec) GetStepOk() (*int32, bool) {
 	if o == nil || IsNil(o.Step) {
 		return nil, false
 	}
@@ -393,7 +393,7 @@ func (o *GuidedcliFieldSpec) GetStepOk() (*int32, bool) {
 }
 
 // HasStep returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasStep() bool {
+func (o *ChaosFieldSpec) HasStep() bool {
 	if o != nil && !IsNil(o.Step) {
 		return true
 	}
@@ -402,12 +402,12 @@ func (o *GuidedcliFieldSpec) HasStep() bool {
 }
 
 // SetStep gets a reference to the given int32 and assigns it to the Step field.
-func (o *GuidedcliFieldSpec) SetStep(v int32) {
+func (o *ChaosFieldSpec) SetStep(v int32) {
 	o.Step = &v
 }
 
 // GetUnit returns the Unit field value if set, zero value otherwise.
-func (o *GuidedcliFieldSpec) GetUnit() string {
+func (o *ChaosFieldSpec) GetUnit() string {
 	if o == nil || IsNil(o.Unit) {
 		var ret string
 		return ret
@@ -417,7 +417,7 @@ func (o *GuidedcliFieldSpec) GetUnit() string {
 
 // GetUnitOk returns a tuple with the Unit field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GuidedcliFieldSpec) GetUnitOk() (*string, bool) {
+func (o *ChaosFieldSpec) GetUnitOk() (*string, bool) {
 	if o == nil || IsNil(o.Unit) {
 		return nil, false
 	}
@@ -425,7 +425,7 @@ func (o *GuidedcliFieldSpec) GetUnitOk() (*string, bool) {
 }
 
 // HasUnit returns a boolean if a field has been set.
-func (o *GuidedcliFieldSpec) HasUnit() bool {
+func (o *ChaosFieldSpec) HasUnit() bool {
 	if o != nil && !IsNil(o.Unit) {
 		return true
 	}
@@ -434,11 +434,11 @@ func (o *GuidedcliFieldSpec) HasUnit() bool {
 }
 
 // SetUnit gets a reference to the given string and assigns it to the Unit field.
-func (o *GuidedcliFieldSpec) SetUnit(v string) {
+func (o *ChaosFieldSpec) SetUnit(v string) {
 	o.Unit = &v
 }
 
-func (o GuidedcliFieldSpec) MarshalJSON() ([]byte, error) {
+func (o ChaosFieldSpec) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -446,7 +446,7 @@ func (o GuidedcliFieldSpec) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o GuidedcliFieldSpec) ToMap() (map[string]interface{}, error) {
+func (o ChaosFieldSpec) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Default) {
 		toSerialize["default"] = o.Default
@@ -492,16 +492,16 @@ func (o GuidedcliFieldSpec) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *GuidedcliFieldSpec) UnmarshalJSON(data []byte) (err error) {
-	varGuidedcliFieldSpec := _GuidedcliFieldSpec{}
+func (o *ChaosFieldSpec) UnmarshalJSON(data []byte) (err error) {
+	varChaosFieldSpec := _ChaosFieldSpec{}
 
-	err = json.Unmarshal(data, &varGuidedcliFieldSpec)
+	err = json.Unmarshal(data, &varChaosFieldSpec)
 
 	if err != nil {
 		return err
 	}
 
-	*o = GuidedcliFieldSpec(varGuidedcliFieldSpec)
+	*o = ChaosFieldSpec(varChaosFieldSpec)
 
 	additionalProperties := make(map[string]interface{})
 
@@ -524,38 +524,38 @@ func (o *GuidedcliFieldSpec) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-type NullableGuidedcliFieldSpec struct {
-	value *GuidedcliFieldSpec
+type NullableChaosFieldSpec struct {
+	value *ChaosFieldSpec
 	isSet bool
 }
 
-func (v NullableGuidedcliFieldSpec) Get() *GuidedcliFieldSpec {
+func (v NullableChaosFieldSpec) Get() *ChaosFieldSpec {
 	return v.value
 }
 
-func (v *NullableGuidedcliFieldSpec) Set(val *GuidedcliFieldSpec) {
+func (v *NullableChaosFieldSpec) Set(val *ChaosFieldSpec) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableGuidedcliFieldSpec) IsSet() bool {
+func (v NullableChaosFieldSpec) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableGuidedcliFieldSpec) Unset() {
+func (v *NullableChaosFieldSpec) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableGuidedcliFieldSpec(val *GuidedcliFieldSpec) *NullableGuidedcliFieldSpec {
-	return &NullableGuidedcliFieldSpec{value: val, isSet: true}
+func NewNullableChaosFieldSpec(val *ChaosFieldSpec) *NullableChaosFieldSpec {
+	return &NullableChaosFieldSpec{value: val, isSet: true}
 }
 
-func (v NullableGuidedcliFieldSpec) MarshalJSON() ([]byte, error) {
+func (v NullableChaosFieldSpec) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableGuidedcliFieldSpec) UnmarshalJSON(src []byte) error {
+func (v *NullableChaosFieldSpec) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

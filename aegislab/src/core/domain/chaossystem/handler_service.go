@@ -13,6 +13,8 @@ type HandlerService interface {
 	GetSystem(context.Context, int) (*ChaosSystemResp, error)
 	GetSystemChart(ctx context.Context, name, version string) (*SystemChartResp, error)
 	CreateSystem(context.Context, *CreateChaosSystemReq) (*ChaosSystemResp, error)
+	OnboardSystem(context.Context, *OnboardSystemReq) (*OnboardSystemResp, error)
+	ExportSeed(context.Context, string) (*ExportSeedResp, error)
 	UpdateSystem(context.Context, int, *UpdateChaosSystemReq) (*ChaosSystemResp, error)
 	DeleteSystem(context.Context, int) error
 	UpsertMetadata(context.Context, int, *BulkUpsertSystemMetadataReq) error

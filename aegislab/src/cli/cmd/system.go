@@ -584,6 +584,172 @@ func deleteSystemByID(c *client.Client, id int) error {
 	return c.Delete(consts.APIPathSystem(id), &resp)
 }
 
+// --- system create (atomic onboard) ---
+
+var (
+	systemCreateName             string
+	systemCreateDisplayName      string
+	systemCreateNsPattern        string
+	systemCreateExtractPattern   string
+	systemCreateAppLabelKey      string
+	systemCreateCount            int
+	systemCreateDescription      string
+	systemCreateIsBuiltin        bool
+	systemCreateContainerName    string
+	systemCreateContainerVersion string
+	systemCreateImageRef         string
+	systemCreateChartName        string
+	systemCreateChartVersion     string
+	systemCreateChartRepoName    string
+	systemCreateChartRepoURL     string
+)
+
+var systemCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Atomically onboard a benchmark system (identity + chart binding)",
+	Long: `Single-call composite of CreateSystem + CreateContainer that the
+chart-managed post-install Job uses to self-register. The backend writes
+the dynamic_config rows, the container/version/helm_config rows, and the
+7 etcd identity keys in one shot — partial failure leaves no orphans.
+
+Required flags: --name, --display-name, --ns-pattern, --extract-pattern,
+--image-ref, --chart-name, --chart-version, --chart-repo-name,
+--chart-repo-url. Use 'aegisctl system register --from-seed' for the
+cold-bootstrap path (data.yaml-driven).`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(systemCreateName)
+		if name == "" {
+			return usageErrorf("--name is required")
+		}
+		if strings.TrimSpace(systemCreateDisplayName) == "" {
+			return usageErrorf("--display-name is required")
+		}
+		if strings.TrimSpace(systemCreateNsPattern) == "" {
+			return usageErrorf("--ns-pattern is required")
+		}
+		if strings.TrimSpace(systemCreateExtractPattern) == "" {
+			return usageErrorf("--extract-pattern is required")
+		}
+		if strings.TrimSpace(systemCreateImageRef) == "" {
+			return usageErrorf("--image-ref is required")
+		}
+		if strings.TrimSpace(systemCreateChartName) == "" {
+			return usageErrorf("--chart-name is required")
+		}
+		if strings.TrimSpace(systemCreateChartVersion) == "" {
+			return usageErrorf("--chart-version is required")
+		}
+		if strings.TrimSpace(systemCreateChartRepoName) == "" {
+			return usageErrorf("--chart-repo-name is required")
+		}
+		if strings.TrimSpace(systemCreateChartRepoURL) == "" {
+			return usageErrorf("--chart-repo-url is required")
+		}
+
+		containerName := strings.TrimSpace(systemCreateContainerName)
+		if containerName == "" {
+			containerName = name
+		}
+
+		cli, ctx := newAPIClient()
+
+		sysPart := apiclient.ChaossystemCreateChaosSystemReq{
+			Name:           name,
+			DisplayName:    systemCreateDisplayName,
+			NsPattern:      systemCreateNsPattern,
+			ExtractPattern: systemCreateExtractPattern,
+			Count:          int32(systemCreateCount),
+		}
+		sysPart.SetAppLabelKey(systemCreateAppLabelKey)
+		if systemCreateDescription != "" {
+			sysPart.SetDescription(systemCreateDescription)
+		}
+		sysPart.SetIsBuiltin(systemCreateIsBuiltin)
+
+		containerPart := apiclient.ContainerCreateContainerReq{
+			Name: containerName,
+		}
+		containerPart.SetType(apiclient.CONSTSCONTAINERTYPE_ContainerTypePedestal)
+		containerPart.SetIsPublic(true)
+
+		versionPart := apiclient.ContainerCreateContainerVersionReq{
+			Name:     systemCreateContainerVersion,
+			ImageRef: systemCreateImageRef,
+		}
+		helmPart := apiclient.ContainerCreateHelmConfigReq{
+			Version:   systemCreateChartVersion,
+			ChartName: systemCreateChartName,
+			RepoName:  systemCreateChartRepoName,
+			RepoUrl:   systemCreateChartRepoURL,
+		}
+		versionPart.SetHelmConfig(helmPart)
+		containerPart.SetVersion(versionPart)
+
+		req := apiclient.ChaossystemOnboardSystemReq{
+			System:    sysPart,
+			Container: containerPart,
+		}
+		resp, _, err := cli.SystemsAPI.OnboardChaosSystem(ctx).ChaossystemOnboardSystemReq(req).Execute()
+		if err != nil {
+			return fmt.Errorf("onboard system %q: %w", name, err)
+		}
+		data := resp.GetData()
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(data)
+			return nil
+		}
+		sys := data.GetSystem()
+		cnt := data.GetContainer()
+		output.PrintInfo(fmt.Sprintf("Onboarded system %q (id %d) + container %q (id %d) atomically.",
+			sys.GetName(), sys.GetId(), cnt.GetName(), cnt.GetId()))
+		return nil
+	},
+}
+
+// --- system export-seed ---
+
+var systemExportSeedName string
+
+var systemExportSeedCmd = &cobra.Command{
+	Use:   "export-seed",
+	Short: "Dump a system's live DB+etcd state as a data.yaml-compatible YAML snippet",
+	Long: `Serialize the live state of one chaos system back into a YAML snippet
+that round-trips through 'aegisctl system register --from-seed'. Output
+goes to stdout for shell composition:
+
+  aegisctl system export-seed --name mysys >> data/initial_data/prod/data.yaml
+  git add data/initial_data/prod/data.yaml && git commit -m "seed: snapshot mysys"
+
+NOTE: runtime-added systems are lost on a fresh cluster rebuild unless
+their seed is committed back. Either run this command after each
+'aegisctl system create', or enforce chart-managed sourcing (the helm
+post-install Job re-registers on every install).`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAPIContext(true); err != nil {
+			return err
+		}
+		name := strings.TrimSpace(systemExportSeedName)
+		if name == "" {
+			return usageErrorf("--name is required")
+		}
+		cli, ctx := newAPIClient()
+		resp, _, err := cli.SystemsAPI.ExportChaosSystemSeed(ctx, name).Execute()
+		if err != nil {
+			return fmt.Errorf("export-seed %q: %w", name, err)
+		}
+		data := resp.GetData()
+		if output.OutputFormat(flagOutput) == output.FormatJSON {
+			output.PrintJSON(data)
+			return nil
+		}
+		fmt.Print(data.GetYaml())
+		return nil
+	},
+}
+
 // --- init ---
 
 func init() {
@@ -604,6 +770,26 @@ func init() {
 	systemCmd.AddCommand(systemUnregisterCmd)
 	systemCmd.AddCommand(systemEnableCmd)
 	systemCmd.AddCommand(systemDisableCmd)
+
+	systemCreateCmd.Flags().StringVar(&systemCreateName, "name", "", "System short code (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateDisplayName, "display-name", "", "Human-readable display name (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateNsPattern, "ns-pattern", "", "Namespace regex pattern (required, e.g. ^mysys\\d+$)")
+	systemCreateCmd.Flags().StringVar(&systemCreateExtractPattern, "extract-pattern", "", "Extraction regex (required, e.g. ^(mysys)(\\d+)$)")
+	systemCreateCmd.Flags().StringVar(&systemCreateAppLabelKey, "app-label-key", "app", "Kubernetes pod label key used to select workloads (matches server default; existing benchmark seeds use \"app\")")
+	systemCreateCmd.Flags().IntVar(&systemCreateCount, "count", 1, "Initial pool count")
+	systemCreateCmd.Flags().StringVar(&systemCreateDescription, "description", "", "Description")
+	systemCreateCmd.Flags().BoolVar(&systemCreateIsBuiltin, "is-builtin", false, "Mark as builtin benchmark system")
+	systemCreateCmd.Flags().StringVar(&systemCreateContainerName, "container-name", "", "Container row name (defaults to --name)")
+	systemCreateCmd.Flags().StringVar(&systemCreateContainerVersion, "container-version", "0.1.0", "Container version (semver)")
+	systemCreateCmd.Flags().StringVar(&systemCreateImageRef, "image-ref", "", "Container image reference (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartName, "chart-name", "", "Helm chart name (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartVersion, "chart-version", "", "Helm chart version (required, semver)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartRepoName, "chart-repo-name", "", "Helm chart repo short name (required)")
+	systemCreateCmd.Flags().StringVar(&systemCreateChartRepoURL, "chart-repo-url", "", "Helm chart repo URL (required, e.g. https://my-charts.example.com)")
+	systemCmd.AddCommand(systemCreateCmd)
+
+	systemExportSeedCmd.Flags().StringVar(&systemExportSeedName, "name", "", "Short code of the system to export (required)")
+	systemCmd.AddCommand(systemExportSeedCmd)
 
 	systemReseedCmd.Flags().StringVar(&systemReseedName, "name", "", "Short code of a single system to reseed (empty = all systems)")
 	systemReseedCmd.Flags().StringVar(&systemReseedEnv, "env", "", "Environment: 'prod' or 'staging' (server resolves relative to initialization.data_path)")
