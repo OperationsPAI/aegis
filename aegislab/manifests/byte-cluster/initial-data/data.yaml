@@ -757,6 +757,18 @@ containers:
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
               overridable: true
+            # data-init-job subchart hardcodes `image: python` (defaults to
+            # docker.io/library/python:3.9-slim). byte-cluster nodes can NOT
+            # egress docker.io → init job ImagePullBackOff blocks helm install.
+            # Mirrored 2026-05-22: `docker buildx imagetools create --tag
+            # docker.io/opspai/python:3.9-slim docker.io/library/python:3.9-slim`
+            # → volces auto-mirrors opspai/python at the path below.
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
+              overridable: true
           status: 1
   - type: 2
     name: media
@@ -834,6 +846,14 @@ containers:
               category: 1
               value_type: 0
               default_value: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+              overridable: true
+            # See sn 0.1.6 — data-init-job hardcodes docker.io/library/python.
+            # Mirror at docker.io/opspai/python:3.9-slim (2026-05-22).
+            - key: data-init-job.container.image
+              type: 0
+              category: 1
+              value_type: 0
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/python
               overridable: true
           status: 1
   - type: 2
