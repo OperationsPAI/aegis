@@ -15,6 +15,9 @@ sudo -E ./cli/dataset_transform/make_rcabench.py build-template
 
 # run normal conversion (templates are processed per-datapack during conversion)
 sudo -E ./cli/dataset_transform/make_rcabench.py run
+
+# convert the FSE datapacks already standardized under /mnt/jfs/fse
+uv run --extra sdk --extra internal cli/dataset_transform/make_fse.py run
 ```
 
 ## Log Template Processing with Drain3
@@ -53,6 +56,7 @@ The system supports automatic log template extraction using Drain3 for log anoma
 Each log entry will be enhanced with:
 - `attr.template_id` (UInt16): Unique identifier for the template
 - `attr.log_template` (String): The extracted log template with variables replaced by placeholders
+- `attr.log_variables` (List[String]): Ordered variable values extracted from the original log message
 
 ### Commands
 

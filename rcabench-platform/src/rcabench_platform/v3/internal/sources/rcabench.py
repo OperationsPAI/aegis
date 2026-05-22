@@ -1,5 +1,8 @@
 from collections.abc import Callable
 from pathlib import Path
+import re
+import shutil
+import tempfile
 from typing import Any
 
 import pandas as pd
@@ -291,74 +294,20 @@ class Converter:
         lf = lf.sort("time")
         df = lf.collect()
 
-        # Extract templates
-        unique_messages = df.select("message").unique()
+        import os
 
-        if unique_messages.height > 0:
-            logger.info(f"Processing {unique_messages.height} unique log messages for template extraction")
+        input_path = os.getenv("INPUT_PATH")
+        template_base = Path(input_path).parent / "drain_template" if input_path else src.parent.parent / "drain_template"
 
-            import os
+        config_path = template_base / "drain_ts.ini"
+        persistence_path = template_base / "drain_ts.bin"
+        logger.info(f"Using template paths: config={config_path}, persistence={persistence_path}")
 
-            input_path = os.getenv("INPUT_PATH")
-            template_base = (
-                Path(input_path).parent / "drain_template" if input_path else src.parent.parent / "drain_template"
-            )
-
-            config_path = template_base / "drain_ts.ini"
-            persistence_path = template_base / "drain_ts.bin"
-
-            if not config_path.exists():
-                logger.warning(f"drain_template config missing at {config_path}; skipping log template extraction")
-                return df.with_columns(
-                    [
-                        pl.lit(None, dtype=pl.UInt16).alias("attr.template_id"),
-                        pl.lit(None, dtype=pl.String).alias("attr.log_template"),
-                    ]
-                )
-
-            logger.info(f"Using template paths: config={config_path}, persistence={persistence_path}")
-
-            template_miner = create_template_miner(config_path, persistence_path)
-
-            message_mappings = []
-            for message in unique_messages["message"].to_list():
-                if message:
-                    result = template_miner.add_log_message(message)
-                    template_id = result["cluster_id"]
-                    cluster = template_miner.drain.id_to_cluster.get(template_id)
-                    log_template = cluster.get_template() if isinstance(cluster, LogCluster) else ""
-
-                    message_mappings.append(
-                        {
-                            "message": message,
-                            "template_id": template_id,
-                            "log_template": log_template,
-                        }
-                    )
-
-            del template_miner
-
-            template_mapping_df = pl.DataFrame(
-                message_mappings,
-                schema={
-                    "message": pl.String,
-                    "template_id": pl.UInt16,
-                    "log_template": pl.String,
-                },
-            )
-
-            df = (
-                df.join(template_mapping_df, on="message", how="left")
-                .with_columns(
-                    [
-                        pl.col("template_id").alias("attr.template_id"),
-                        pl.col("log_template").alias("attr.log_template"),
-                    ]
-                )
-                .drop(["template_id", "log_template"])
-            )
-
-            del template_mapping_df, unique_messages
+        df = attach_log_template_columns(
+            df,
+            config_path=config_path,
+            persistence_path=persistence_path,
+        )
 
         return df
 
@@ -451,6 +400,97 @@ def create_template_miner(config_path: Path, persistence_path: Path) -> Template
     miner_config = TemplateMinerConfig()
     miner_config.load(str(config_path))
     return TemplateMiner(persistence, config=miner_config)
+
+
+def _null_log_template_columns() -> list[pl.Expr]:
+    return [
+        pl.lit(None, dtype=pl.UInt16).alias("attr.template_id"),
+        pl.lit(None, dtype=pl.String).alias("attr.log_template"),
+        pl.lit(None, dtype=pl.List(pl.String)).alias("attr.log_variables"),
+    ]
+
+
+def _sanitize_extra_delimiters(template_miner: TemplateMiner) -> None:
+    template_miner.config.drain_extra_delimiters = [
+        re.escape(delimiter) for delimiter in template_miner.config.drain_extra_delimiters
+    ]
+
+
+def _normalize_log_message_for_parameter_extraction(template_miner: TemplateMiner, message: str) -> str:
+    normalized = message
+    for delimiter in template_miner.config.drain_extra_delimiters:
+        normalized = re.sub(delimiter, " ", normalized)
+    return normalized.strip()
+
+
+def attach_log_template_columns(
+    df: pl.DataFrame,
+    *,
+    config_path: Path,
+    persistence_path: Path,
+) -> pl.DataFrame:
+    unique_messages = df.select("message").unique()
+    if unique_messages.height == 0:
+        return df
+
+    logger.info(f"Processing {unique_messages.height} unique log messages for template extraction")
+
+    if not config_path.exists():
+        logger.warning(f"drain_template config missing at {config_path}; skipping log template extraction")
+        return df.with_columns(_null_log_template_columns())
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        local_persistence_path = Path(tempdir) / persistence_path.name
+        if persistence_path.exists():
+            shutil.copyfile(persistence_path, local_persistence_path)
+
+        template_miner = create_template_miner(config_path, local_persistence_path)
+        _sanitize_extra_delimiters(template_miner)
+
+        message_mappings = []
+        for message in unique_messages["message"].to_list():
+            if not message:
+                continue
+
+            result = template_miner.add_log_message(message)
+            template_id = result["cluster_id"]
+            cluster = template_miner.drain.id_to_cluster.get(template_id)
+            log_template = cluster.get_template() if isinstance(cluster, LogCluster) else ""
+            normalized_message = _normalize_log_message_for_parameter_extraction(template_miner, message)
+            log_variables = template_miner.get_parameter_list(log_template, normalized_message) if log_template else []
+
+            message_mappings.append(
+                {
+                    "message": message,
+                    "template_id": template_id,
+                    "log_template": log_template,
+                    "log_variables": [str(v) for v in (log_variables or [])],
+                }
+            )
+
+        del template_miner
+
+    template_mapping_df = pl.DataFrame(
+        message_mappings,
+        schema={
+            "message": pl.String,
+            "template_id": pl.UInt16,
+            "log_template": pl.String,
+            "log_variables": pl.List(pl.String),
+        },
+    )
+
+    return (
+        df.join(template_mapping_df, on="message", how="left")
+        .with_columns(
+            [
+                pl.col("template_id").alias("attr.template_id"),
+                pl.col("log_template").alias("attr.log_template"),
+                pl.col("log_variables").alias("attr.log_variables"),
+            ]
+        )
+        .drop(["template_id", "log_template", "log_variables"])
+    )
 
 
 def extract_unique_log_messages(src_root: Path, datapacks: list[str]) -> pl.DataFrame:
