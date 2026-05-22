@@ -1,0 +1,12 @@
+apiVersion: aegis-chaos/v1beta
+kind: PointManifest
+metadata:
+  system: ts
+  service: frontend
+  chart_version: v3.2.0
+  owner: alice
+spec:
+  replace_scope: service
+  points:
+    - capability: pod_kill
+      target: {}

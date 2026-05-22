@@ -338,6 +338,43 @@ manifestgen:
     set -euo pipefail
     cd tools/manifestgen && go run .
 
+# 🧪 Lint every PointManifest under aegislab/manifests/aegis-chaos/ against
+# the bundled aegisctl JSON Schema. L1 gate from
+# docs/aegis-chaos/point-manifest-spec.md §9. Fails on the first invalid file.
+lint-manifests:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    aegisctl_bin="${AEGISCTL_BIN:-/tmp/aegisctl}"
+    if [ ! -x "$aegisctl_bin" ]; then
+        printf "{{blue}}Building aegisctl → %s{{reset}}\n" "$aegisctl_bin"
+        (cd src && go build -o "$aegisctl_bin" ./cli)
+    fi
+    root="{{root}}/manifests/aegis-chaos"
+    if [ ! -d "$root" ]; then
+        printf "{{yellow}}No PointManifests under %s; skipping.{{reset}}\n" "$root"
+        exit 0
+    fi
+    files=$(find "$root" -type f \( -name '*.yaml' -o -name '*.yml' \) | sort)
+    if [ -z "$files" ]; then
+        printf "{{yellow}}No PointManifest YAMLs found under %s; skipping.{{reset}}\n" "$root"
+        exit 0
+    fi
+    count=0
+    failed=0
+    while IFS= read -r f; do
+        count=$((count + 1))
+        if ! "$aegisctl_bin" manifest validate "$f" >/dev/null 2>&1; then
+            printf "{{red}}FAIL{{reset}} %s\n" "$f"
+            "$aegisctl_bin" manifest validate "$f" || true
+            failed=$((failed + 1))
+        fi
+    done <<< "$files"
+    if [ "$failed" -gt 0 ]; then
+        printf "{{red}}%d/%d PointManifest(s) failed schema lint{{reset}}\n" "$failed" "$count"
+        exit 1
+    fi
+    printf "{{green}}✅ %d PointManifest(s) pass schema lint{{reset}}\n" "$count"
+
 # 👁️ Preview unreleased changes
 changelog-preview:
     #!/usr/bin/env bash
