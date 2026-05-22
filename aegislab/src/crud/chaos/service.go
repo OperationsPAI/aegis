@@ -144,6 +144,16 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 		return nil, ErrCapabilityUnsupported
 	}
 
+	effectiveParams := mergeParams(in.Params, map[string]any(point.ParamOverrides))
+	sc := newSchemaCompiler()
+	paramSchema, err := sc.forParams(&capRow)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateInstance(paramSchema, effectiveParams, "params"); err != nil {
+		return nil, err
+	}
+
 	sys, err := s.GetSystem(ctx, point.SystemName)
 	if err != nil {
 		return nil, err
@@ -165,16 +175,12 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 		return nil, err
 	}
 
-	params := in.Params
-	if params == nil {
-		params = JSONMap{}
-	}
 	now := time.Now().UTC()
 	id := ulid.Make().String()
 	row := Injection{
 		ID:             id,
 		PointID:        point.ID,
-		Params:         params,
+		Params:         JSONMap(effectiveParams),
 		IdempotencyKey: in.IdempotencyKey,
 		ExecutorName:   s.Executor.Name(),
 		ExecutorHandle: handle,
@@ -188,7 +194,7 @@ func (s *Manager) CreateInjection(ctx context.Context, in CreateInjectionInput) 
 	}
 
 	applyAt := time.Now().UTC()
-	if applyErr := s.Executor.Apply(ctx, sysCtx, capRow.Name, handle, target, in.Params); applyErr != nil {
+	if applyErr := s.Executor.Apply(ctx, sysCtx, capRow.Name, handle, target, effectiveParams); applyErr != nil {
 		fin := applyAt
 		updates := map[string]any{
 			"status":      StatusFailed,

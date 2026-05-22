@@ -83,7 +83,7 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 		return nil, err
 	}
 
-	caps, err := s.loadCapabilityNames(tx)
+	caps, err := s.loadCapabilities(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -91,10 +91,28 @@ func (s *Manager) ImportPoints(ctx context.Context, systemName string, m PointMa
 	out := &ImportResult{DryRun: dryRun}
 	newIDs := make(map[string]struct{}, len(m.Spec.Points))
 
+	sc := newSchemaCompiler()
 	rows := make([]Point, 0, len(m.Spec.Points))
-	for _, p := range m.Spec.Points {
-		if _, ok := caps[p.Capability]; !ok {
+	for i, p := range m.Spec.Points {
+		capRow, ok := caps[p.Capability]
+		if !ok {
 			return nil, fmt.Errorf("chaos: unknown capability %q", p.Capability)
+		}
+		targetSchema, err := sc.forTarget(capRow)
+		if err != nil {
+			return nil, err
+		}
+		if err := validateInstance(targetSchema, p.Target, fmt.Sprintf("points[%d].target", i)); err != nil {
+			return nil, err
+		}
+		if len(p.ParamOverrides) > 0 {
+			subset, err := sc.forParamsSubset(capRow)
+			if err != nil {
+				return nil, err
+			}
+			if err := validateInstance(subset, p.ParamOverrides, fmt.Sprintf("points[%d].param_overrides", i)); err != nil {
+				return nil, err
+			}
 		}
 		ident := PointIdentity{
 			System: systemName, Service: m.Metadata.Service,
@@ -263,14 +281,14 @@ func (s *Manager) upsertService(tx *gorm.DB, m PointManifest) (int64, error) {
 	return row.ID, nil
 }
 
-func (s *Manager) loadCapabilityNames(tx *gorm.DB) (map[string]struct{}, error) {
+func (s *Manager) loadCapabilities(tx *gorm.DB) (map[string]*Capability, error) {
 	var rows []Capability
 	if err := tx.Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	out := make(map[string]struct{}, len(rows))
-	for _, r := range rows {
-		out[r.Name] = struct{}{}
+	out := make(map[string]*Capability, len(rows))
+	for i := range rows {
+		out[rows[i].Name] = &rows[i]
 	}
 	return out, nil
 }
