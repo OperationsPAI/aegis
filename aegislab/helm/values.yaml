@@ -113,11 +113,19 @@ edgeProxy:
   # aegis-api upgrades don't churn the LB.
   enabled: true
   tls:
-    # Flip on to make Caddy terminate TLS with an internally-issued
-    # self-signed cert (`tls internal`). Required when the SPA is loaded
+    # Flip on to make Caddy terminate TLS. Required when the SPA is loaded
     # over a non-localhost origin and needs `crypto.subtle.*` for PKCE.
     # Off by default — kind / in-cluster talk plain HTTP.
     enabled: false
+    # When set, Caddy serves `tls.crt` + `tls.key` from this Secret
+    # (mounted at /etc/caddy/tls) instead of Caddy's `tls internal`
+    # auto-CA. Use this when clients need a stable, trustable CA — the
+    # auto-CA's root lives only in the pod and rotates if the pod is
+    # recreated, which breaks Mac Keychain trust and browser password
+    # save. See manifests/byte-cluster/tls-local/README.md for the
+    # byte-cluster workflow (regen CA, kubectl create secret, install
+    # CA on Mac).
+    secretName: ""
   replicaCount: 1
   service:
     type: ClusterIP

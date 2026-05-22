@@ -25,3 +25,8 @@ _tmp*/
 # Loop campaign artifacts — cache subdirs (cloned source repos for analysis) are large + reproducible
 experiments/*/cache/
 experiments/*/.cache/
+
+# Locally-generated dev TLS material (CA + leaf private keys). Never commit.
+aegislab/manifests/byte-cluster/tls-local/*.key
+aegislab/manifests/byte-cluster/tls-local/*.crt
+aegislab/manifests/byte-cluster/tls-local/*.srl

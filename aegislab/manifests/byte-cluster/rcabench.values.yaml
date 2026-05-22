@@ -188,10 +188,14 @@ edgeProxy:
   enabled: true
   replicaCount: 1
   tls:
-    # Self-signed (Caddy internal CA). Browser will warn on first visit;
-    # users accept once. PKCE requires Secure Context, so the SPA loaded
-    # from this LB origin needs HTTPS even without a real cert chain.
     enabled: true
+    # CA + leaf live under `manifests/byte-cluster/tls-local/` (gitignored
+    # private key material). See that dir's README.md for the workflow:
+    # regen with regen.sh, kubectl create secret, install ca.crt on Mac
+    # Keychain to silence the "Not Secure" warning + unblock browser
+    # password save. When the secret is absent Caddy falls back to its
+    # `tls internal` auto-CA (browser warning, no trust).
+    secretName: aegis-edge-tls
   service:
     # Public-facing entrypoint for byte-cluster. Volcengine VKE
     # provisions a CLB from its EIP pool on first apply; the EIP is

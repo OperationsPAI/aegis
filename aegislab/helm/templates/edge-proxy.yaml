@@ -43,6 +43,11 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/caddy
+            {{- if .Values.edgeProxy.tls.secretName }}
+            - name: tls
+              mountPath: /etc/caddy/tls
+              readOnly: true
+            {{- end }}
           {{- with .Values.edgeProxy.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -51,6 +56,11 @@ spec:
         - name: config
           configMap:
             name: {{ .Release.Name }}-edge-proxy-config
+        {{- if .Values.edgeProxy.tls.secretName }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.edgeProxy.tls.secretName }}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

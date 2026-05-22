@@ -1,0 +1,19 @@
+[req]
+distinguished_name = req_distinguished_name
+prompt = no
+
+[req_distinguished_name]
+CN = aegis-byte-cluster
+
+[v3_req]
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+IP.1 = 118.196.98.178
+IP.2 = 23.189.248.55
+IP.3 = 127.0.0.1
+DNS.1 = localhost
+DNS.2 = aegis.local
