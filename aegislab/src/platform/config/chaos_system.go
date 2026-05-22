@@ -20,6 +20,17 @@ const (
 	// kind cluster, short enough to fail loudly on a genuinely broken
 	// install.
 	DefaultReadinessTimeoutSeconds = 900
+
+	// ReclaimModeSoft makes NamespaceReclaimer perform a `kubectl rollout
+	// restart` of non-DB deployments instead of `helm uninstall + namespace
+	// delete`. Opt-in per system via `injection.system.<sys>.reclaim_mode=soft`.
+	// Use this when the chart bootstraps non-trivial seed data (DSB sn / media
+	// load social-graph / movies via a `data-init-job` Job; mongodb / redis are
+	// ephemeral with no PVC) that would cost 5–10 min to rebuild on every
+	// reclaim. Soft mode clears any chaos-mesh residue on app pods while
+	// preserving DB state and the helm release. Empty / any other value =
+	// "full" (existing behavior).
+	ReclaimModeSoft = "soft"
 )
 
 // ChaosSystemConfig is the aggregate of every injection.system.<name>.* key in
@@ -43,6 +54,18 @@ type ChaosSystemConfig struct {
 	// `injection.system.<sys>.readiness_timeout_seconds`. Zero / unset falls
 	// back to DefaultReadinessTimeoutSeconds (900 = 15 min).
 	ReadinessTimeoutSeconds int `mapstructure:"readiness_timeout_seconds"`
+	// ReclaimMode selects the NamespaceReclaimer action when this system's
+	// namespace becomes reclaim-eligible. "soft" → rollout restart of non-DB
+	// deployments (preserves helm release + DB state). Empty / anything else
+	// → existing helm uninstall + ns delete. See ReclaimModeSoft for the
+	// rationale (DSB charts that bootstrap seed data are expensive to rebuild).
+	ReclaimMode string `mapstructure:"reclaim_mode"`
+}
+
+// IsSoftReclaim reports whether this system opted into soft reclaim. Centralized
+// so callers don't need to know about the magic "soft" string.
+func (s *ChaosSystemConfig) IsSoftReclaim() bool {
+	return s.ReclaimMode == ReclaimModeSoft
 }
 
 // ReadinessTimeout returns the workload-readiness probe timeout for this

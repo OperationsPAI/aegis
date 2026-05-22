@@ -113,6 +113,7 @@ type k8sNamespaceManager interface {
 	GetNamespaceLabels(ctx context.Context, name string) (map[string]string, error)
 	ListNamespaceChaosResources(ctx context.Context, namespace string) (map[string]int, []error)
 	DeleteNamespace(ctx context.Context, name string) error
+	SoftReclaimNamespace(ctx context.Context, namespace string) (restarted, skipped []string, err error)
 }
 
 type nsLockProbe interface {
@@ -360,6 +361,26 @@ func (r *NamespaceReclaimer) reclaimOne(ctx context.Context, c ReclaimCandidate,
 		"last_deployed": c.LastDeployed.Format(time.RFC3339),
 		"reason":        d.Reason,
 	})
+
+	// Per-system opt-in to soft reclaim. Default (empty / missing config) keeps
+	// the historical full-reclaim behavior so this change is no-op for every
+	// system that hasn't been explicitly migrated. See ReclaimModeSoft for the
+	// rationale and the seed entries adding "soft" for sn / media.
+	if sys, ok := r.systems.GetAll()[c.SystemName]; ok && sys.IsSoftReclaim() {
+		logEntry.Info("namespace reclaim: soft mode — rollout restart of non-DB deployments")
+		restarted, skipped, err := r.k8s.SoftReclaimNamespace(ctx, c.Namespace)
+		if err != nil {
+			return fmt.Errorf("soft reclaim %s: %w", c.Namespace, err)
+		}
+		logEntry.WithFields(logrus.Fields{
+			"restarted_count": len(restarted),
+			"skipped_count":   len(skipped),
+			"restarted":       restarted,
+			"skipped":         skipped,
+		}).Info("namespace reclaim: soft complete")
+		return nil
+	}
+
 	logEntry.Info("namespace reclaim: dropping helm release + namespace")
 
 	uctx, ucancel := context.WithTimeout(ctx, uninstallTO)
