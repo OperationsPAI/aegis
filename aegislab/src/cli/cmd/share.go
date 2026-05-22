@@ -37,7 +37,6 @@ goes through the unauthenticated /s/<code> endpoint.`,
 var (
 	shareUploadTTL      string
 	shareUploadMaxViews int
-	shareUploadLegacy   bool
 	shareUploadNoSHA256 bool
 )
 
@@ -46,7 +45,7 @@ var shareUploadCmd = &cobra.Command{
 	Short: "Upload a file and produce a public /s/<code> link",
 	Long: `Upload a file and produce a public /s/<code> link.
 
-By default uses the three-step presigned-PUT flow:
+Uses the three-step presigned-PUT flow:
 
   1. POST /api/v2/share/init                — reserve a short code + presigned PUT URL
   2. PUT  <presigned_url>                   — stream the file body directly to object storage (no aegislab hop)
@@ -54,10 +53,7 @@ By default uses the three-step presigned-PUT flow:
 
 This bypasses the aegislab and edge-proxy buffers, restoring full bandwidth
 for users on slow / lossy international links. SHA-256 is computed on the
-client during the PUT and forwarded to commit for integrity verification.
-
-Pass --legacy to fall back to the multipart POST /api/v2/share/upload
-endpoint (the SDK-generated path) for debugging / very small files.`,
+client during the PUT and forwarded to commit for integrity verification.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := args[0]
@@ -78,39 +74,8 @@ endpoint (the SDK-generated path) for debugging / very small files.`,
 			ttlSecs = secs
 		}
 
-		if shareUploadLegacy {
-			return shareUploadLegacyMultipart(path, ttlSecs, shareUploadMaxViews)
-		}
 		return shareUploadPresigned(path, st.Size(), ttlSecs, shareUploadMaxViews, !shareUploadNoSHA256)
 	},
-}
-
-// shareUploadLegacyMultipart drives the deprecated SDK path
-// (multipart POST through aegislab). Kept behind --legacy for debugging.
-func shareUploadLegacyMultipart(path string, ttlSecs int64, maxViews int) error {
-	f, err := os.Open(path) //nolint:gosec // caller-supplied path is intentional.
-	if err != nil {
-		return fmt.Errorf("open %q: %w", path, err)
-	}
-	defer func() { _ = f.Close() }()
-
-	cli, ctx := newAPIClient()
-	req := cli.ShareAPI.ShareUpload(ctx).File(f)
-	if ttlSecs > 0 {
-		req = req.TtlSeconds(int32(ttlSecs))
-	}
-	if maxViews > 0 {
-		req = req.MaxViews(int32(maxViews))
-	}
-	resp, _, err := req.Execute()
-	if err != nil {
-		return fmt.Errorf("share upload: %w", err)
-	}
-	data := resp.Data
-	if data == nil {
-		return fmt.Errorf("share upload: empty response")
-	}
-	return printShareUploadResult(data.GetShortCode(), data.GetShareUrl(), int64(data.GetSize()), data.GetExpiresAt())
 }
 
 // shareInitResponse mirrors initUploadResp on the server side. Hand-rolled
@@ -519,7 +484,6 @@ func joinURL(base, rel string) string {
 func init() {
 	shareUploadCmd.Flags().StringVar(&shareUploadTTL, "ttl", "", "Link lifetime: seconds, e.g. 3600, 30m, 24h, 7d (server default if unset)")
 	shareUploadCmd.Flags().IntVar(&shareUploadMaxViews, "max-views", 0, "Cap on download count (server default if 0)")
-	shareUploadCmd.Flags().BoolVar(&shareUploadLegacy, "legacy", false, "Fall back to the deprecated multipart POST /api/v2/share/upload (no presigned PUT)")
 	shareUploadCmd.Flags().BoolVar(&shareUploadNoSHA256, "no-sha256", false, "Skip streaming sha256 computation during PUT (faster, no integrity hint)")
 
 	shareListCmd.Flags().IntVar(&shareListPage, "page", 1, "Page number")
