@@ -1,69 +1,91 @@
-# aegis-points: chart-bound PointManifest import snippet
+# aegis-points: Helm library chart for chart-bound PointManifest import
 
-Reusable Helm template snippet for benchmark charts that want to ship
-PointManifests alongside their workloads. Pairs with ADR-0009 and
+`type: library` Helm chart that consumer benchmark charts declare as a
+dependency to wire up chart-bound PointManifest delivery to aegis-chaos.
+Pairs with ADR-0009 and
 [point-manifest-spec.md §7](../../docs/aegis-chaos/point-manifest-spec.md#7-chart-bound-integration-the-canonical-delivery-path).
 
-This is **not** a standalone Helm chart — it's a template snippet you copy
-into your benchmark chart.
+A library chart emits no resources of its own; it exposes named templates
+that consumer charts render via `{{ include }}`.
 
-## What you get
+## What `aegis-points.job` emits
 
-One post-install Job + one ConfigMap that:
+When `.Values.aegis.points.enabled` is `true` AND the consumer chart has
+at least one file matching `aegis-points/*.yaml`, the include emits:
 
-1. Reads every `aegis-points/*.yaml` file under your chart (each is a
-   PointManifest YAML, one service per file per the authoring contract).
-2. Mounts them as a ConfigMap.
-3. Runs `aegisctl manifest import-dir` against the configured aegis-chaos
-   endpoint with `--keep-going`.
+1. A `ConfigMap` with every `aegis-points/*.yaml` mounted as a key
+   (hook weight `-6`).
+2. A `Job` that runs `aegisctl manifest import-dir /etc/aegis-points`
+   on `post-install` / `post-upgrade` (hook weight `-5`, `backoffLimit: 0`).
 
-Hook weight is **-5**, slotted between the system-onboard Job (`-10`,
-ships separately via #458) and your chart's workloads (`0`). So when
-your services start, the system identity exists in etcd and chaos_points
-is populated.
+Slots between the system-onboard Job (`-10`, ships separately via #458)
+and the consumer chart's workloads (`0`).
 
-## Wiring it into your chart
+If `.Values.aegis.points.enabled` is unset/false **or** there are no
+`aegis-points/*.yaml` files, the include emits nothing. Opt-in by
+construction — a chart can ship the include before authoring any
+manifests.
 
-1. Copy `templates/aegis-points-import-job.yaml` into your chart's
-   `templates/` directory.
-2. Put one manifest per `(system, service, instance)` under
-   `<your-chart>/aegis-points/<service>.yaml`. See
-   [`aegislab/manifests/aegis-chaos/teastore/`](../../manifests/aegis-chaos/teastore/)
-   for working examples.
-3. Add the required values to your chart's `values.yaml`:
+## Three-line consumer setup
+
+1. Declare the dependency in your chart's `Chart.yaml`:
+
+   ```yaml
+   dependencies:
+     - name: aegis-points
+       version: 0.1.0
+       repository: file://../../aegislab/helm/aegis-points
+   ```
+
+2. Render the include from a new template file in your chart
+   (e.g. `templates/aegis-points.yaml`):
+
+   ```yaml
+   {{ include "aegis-points.job" . }}
+   ```
+
+3. Put one PointManifest per service under your chart at
+   `aegis-points/<service>.yaml` and add the required values:
 
    ```yaml
    aegis:
-     chaosServer: http://aegis-chaos.aegis.svc:8082  # cluster-internal URL
-     systemCode: my-system                            # must match metadata.system in every PointManifest
+     chaosServer: http://aegis-chaos.aegis.svc:8082
+     points:
+       enabled: true
+       keepGoing: false        # default false — fail closed on any per-file error
      aegisctlImage: opspai/aegisctl:v0.5.0
-     serviceAccount: my-release-aegis                 # often reused from the onboard Job
-     tokenSecret: my-aegis-token                      # optional; key "token"
+     serviceAccount: ""        # optional; defaults to "<Release.Name>-aegis"
+     tokenSecret: ""           # optional; Secret name with key "token"
      imagePullPolicy: IfNotPresent
    ```
 
-4. Lint your manifests locally before pushing:
+See [`aegislab/manifests/aegis-chaos/teastore/`](../../manifests/aegis-chaos/teastore/)
+for working PointManifest examples — `teastore-recommender.yaml` exercises
+`pod_failure`, `cpu_stress`, `http_request_abort`, `jvm_method_latency`,
+and `memory_stress` together.
 
-   ```bash
-   for f in aegis-points/*.yaml; do
-     aegisctl manifest validate "$f" || exit 1
-   done
-   ```
+## Pre-flight checks
 
-5. (Optional but recommended) Dry-run against a staging aegis-chaos
-   before committing:
+Lint manifests locally:
 
-   ```bash
-   aegisctl manifest import-dir aegis-points/ \
-     --server https://staging.aegis.example.com --dry-run
-   ```
+```bash
+for f in aegis-points/*.yaml; do
+  aegisctl manifest validate "$f" || exit 1
+done
+```
 
-## What the spec doc covers (read it first)
+Dry-run against a staging aegis-chaos before committing:
 
-- The PointManifest envelope and `additionalProperties:false` posture.
-- `replace_scope` semantics and the one-service-per-file convention.
-- `target` per-capability shape (live capabilities endpoint).
-- `param_overrides` layering and author lockdown.
-- `chart_version` semantics (helm `Chart.Version`, not image SHA).
-- Hook-weight ordering with #458's onboard Job.
-- The two CI gates (L1 schema lint, L2 strict-mode regression).
+```bash
+aegisctl manifest import-dir aegis-points/ \
+  --server https://staging.aegis.example.com --dry-run
+```
+
+## Why `keepGoing: false` by default
+
+The onboard Job has already succeeded by the time this Job runs, so the
+system identity exists. Failing-closed on a per-file error keeps
+`chaos_points` in a coherent state — a half-imported catalog is harder
+to debug than a loud install failure. Set `keepGoing: true` only when
+you're knowingly bulk-importing across known-bad files and intend to
+clean up afterwards.

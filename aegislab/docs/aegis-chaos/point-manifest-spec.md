@@ -148,19 +148,29 @@ authors don't hardcode it.
 
 ## 7. Chart-bound integration (the canonical delivery path)
 
-Chart authors include the reusable Job template shipped at
-[`aegislab/helm/templates/aegis-points-import-job.yaml`](../../helm/templates/aegis-points-import-job.yaml).
-It runs as a helm `post-install,post-upgrade` hook and POSTs every
-`aegis-points/*.yaml` under the chart to
-`/v1beta/systems/{sys}/points/import`.
+Chart authors wire up chart-bound PointManifest delivery by declaring the
+`aegis-points` Helm **library chart** as a dependency. The library chart
+lives in-tree at [`aegislab/helm/aegis-points/`](../../helm/aegis-points/)
+and exposes a single named template, `aegis-points.job`, defined in
+[`aegislab/helm/aegis-points/templates/_aegis-points.tpl`](../../helm/aegis-points/templates/_aegis-points.tpl).
+
+When the include is rendered with `.Values.aegis.points.enabled: true`
+AND the consumer chart ships at least one `aegis-points/*.yaml`, the
+template emits a `post-install,post-upgrade` Job + ConfigMap that POSTs
+every manifest to `/v1beta/systems/{sys}/points/import`. Both conditions
+together — the value flag and the presence of manifest files — keep the
+include opt-in. A chart can declare the dependency and add the
+`{{ include }}` line before authoring its first manifest with no
+behavioural change.
 
 Hook weight ordering pairs with the system-onboard Job from #458:
 
-| Weight | Hook                                           | Purpose                                       |
-|--------|------------------------------------------------|-----------------------------------------------|
-| `-10`  | aegis-onboard-job (#458)                       | Register the system identity + chart binding |
-| `-5`   | aegis-points-import-job (this doc, ADR-0009)   | Fill in chaos_points for the system           |
-| `0`    | chart workloads                                | Benchmark services start                      |
+| Weight | Hook                                            | Purpose                                       |
+|--------|-------------------------------------------------|-----------------------------------------------|
+| `-10`  | aegis-onboard-job (#458)                        | Register the system identity + chart binding  |
+| `-6`   | aegis-points ConfigMap (this doc, ADR-0009)     | Mount manifests for the import Job to read    |
+| `-5`   | aegis-points-import Job (this doc, ADR-0009)    | Fill in chaos_points for the system           |
+| `0`    | consumer chart workloads                        | Benchmark services start                      |
 
 By the time workloads come up, the system row exists in etcd, the chart
 binding exists in MySQL, and `chaos_points` has every point this chart
@@ -168,14 +178,45 @@ ships. No manual `aegisctl manifest import` step.
 
 ### Chart author setup (three lines)
 
-1. Put one `aegis-points/<service>.yaml` per service under the chart
-   directory.
-2. `{{ include "aegis.pointsImportJob" . }}` somewhere in the chart's
-   `templates/` (or copy the snippet from
-   `aegislab/helm/templates/aegis-points-import-job.yaml`).
-3. Make sure the chart's `values.yaml` exposes `aegisctl.tag` and
-   `chaos.endpoint` (see the template's `Values.` references for the
-   full list).
+1. Declare the library chart dependency in your chart's `Chart.yaml`:
+
+   ```yaml
+   dependencies:
+     - name: aegis-points
+       version: 0.1.0
+       repository: file://../../aegislab/helm/aegis-points
+   ```
+
+   (Run `helm dependency update` after.)
+
+2. Add a tiny template file in your chart (e.g.
+   `templates/aegis-points.yaml`) containing only:
+
+   ```yaml
+   {{ include "aegis-points.job" . }}
+   ```
+
+3. Put one PointManifest per service under `aegis-points/<service>.yaml`
+   inside your chart, and set the required values in `values.yaml`:
+
+   ```yaml
+   aegis:
+     chaosServer: http://aegis-chaos.aegis.svc:8082
+     points:
+       enabled: true
+       keepGoing: false        # default — fail closed on any per-file error
+     aegisctlImage: opspai/aegisctl:v0.5.0
+     # Optional:
+     serviceAccount: ""        # defaults to "<Release.Name>-aegis"
+     tokenSecret: ""           # Secret name with key "token"
+     imagePullPolicy: IfNotPresent
+   ```
+
+By default the Job uses `backoffLimit: 0` and runs `aegisctl manifest
+import-dir` without `--keep-going`, so a malformed manifest fails the
+hook loudly instead of leaving `chaos_points` in a mixed state. Set
+`keepGoing: true` only when you're knowingly bulk-importing across
+known-bad files and intend to clean up afterwards.
 
 ## 8. Validation — two surfaces
 
@@ -216,6 +257,24 @@ errors (e.g. `target.namespace` missing on `pod_failure`). The CLI's
 `--fetch-schema` flag pulls the same per-capability schemas via
 `GET /v1beta/manifest-schema.json` so offline can match online if the
 capability set drifts ahead of the bundled aegisctl release.
+
+### L1-vs-L2 coverage gap for `target` / `param_overrides`
+
+The bundled envelope schema does **not** set `additionalProperties:false`
+on `target` or `param_overrides`. Those object positions have no static
+per-capability `properties` to enumerate at envelope level — applying
+`additionalProperties:false` with an empty `properties` set would reject
+every real point (target needs `namespace`, `app`, etc. for most
+capabilities). The server-side strict mode in
+`schema_validate.go:cloneStrictObjects` injects
+`additionalProperties:false` after expanding the per-capability schema,
+so unknown keys are still rejected at import time — but they ship green
+through `aegisctl manifest validate` (L1).
+
+For parity with L2 strict mode, run `aegisctl manifest validate
+--fetch-schema` (online, pulls the live per-capability schemas) or
+`aegisctl manifest import --dry-run`. A follow-up may wire `--fetch-schema`
+into L1 CI so the lint matches server-side rejection exactly.
 
 ## 9. CI gates
 
