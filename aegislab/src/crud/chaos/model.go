@@ -88,7 +88,7 @@ func (Capability) TableName() string { return "chaos_capabilities" }
 
 type Point struct {
 	ID             string    `gorm:"primaryKey;size:16"                                                json:"id"`
-	SystemName     string    `gorm:"size:64;not null;index:idx_point_sys_status,priority:1"            json:"system_name"`
+	SystemName     string    `gorm:"size:64;not null;index:idx_point_sys_status,priority:1;index:idx_point_sys_updated_at,priority:1" json:"system_name"`
 	ServiceID      *int64    `gorm:"index:idx_point_svc_status,priority:1"                             json:"service_id,omitempty"`
 	CapabilityName string    `gorm:"size:64;not null"                                                  json:"capability_name"`
 	Target         JSONMap   `gorm:"type:json;not null"                                                json:"target"`
@@ -96,7 +96,7 @@ type Point struct {
 	Source         string    `gorm:"size:32;not null"                                                  json:"source"`
 	Status         string    `gorm:"size:16;not null;default:'active';index:idx_point_sys_status,priority:2;index:idx_point_svc_status,priority:2" json:"status"`
 	CreatedAt      time.Time `gorm:"autoCreateTime"                                                    json:"created_at"`
-	UpdatedAt      time.Time `gorm:"autoUpdateTime"                                                    json:"updated_at"`
+	UpdatedAt      time.Time `gorm:"autoUpdateTime;index:idx_point_sys_updated_at,priority:2"          json:"updated_at"`
 }
 
 func (Point) TableName() string { return "chaos_points" }

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -28,6 +29,13 @@ type ChaosPointStore interface {
 	// QueryPoints returns every active chaos_point for the given system.
 	// Implementations should filter on status='active'.
 	QueryPoints(ctx context.Context, system string) ([]ChaosPointRow, error)
+	// LatestUpdate returns MAX(updated_at) across all chaos_points rows for
+	// the given system, regardless of status. A zero time means no rows exist
+	// for this system yet. The probe drives cross-process cache invalidation:
+	// any import / supersede / tombstone bumps updated_at, so a strictly newer
+	// value than the cached high-water mark forces the next GetAllX to
+	// re-fetch instead of returning stale per-process data.
+	LatestUpdate(ctx context.Context, system string) (time.Time, error)
 }
 
 var (

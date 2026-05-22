@@ -52,3 +52,64 @@ func TestChaosPointStore_QueryPoints_FiltersBySystemAndStatus(t *testing.T) {
 
 	RegisterChaosPointStore(db)
 }
+
+// TestChaosPointStore_LatestUpdate_TracksAllStatusTransitions proves the
+// MAX(updated_at) probe driving cross-process cache invalidation surfaces
+// imports, supersedes, and per-system isolation. The empty case is required
+// by the issue's "first-miss" edge case enumeration.
+func TestChaosPointStore_LatestUpdate_TracksAllStatusTransitions(t *testing.T) {
+	_, _, db := newTestManager(t)
+	store := NewChaosPointStore(db)
+	ctx := context.Background()
+
+	// Empty system → zero time, no error.
+	got, err := store.LatestUpdate(ctx, "ts")
+	if err != nil {
+		t.Fatalf("LatestUpdate (empty): %v", err)
+	}
+	if !got.IsZero() {
+		t.Errorf("empty system: want zero time, got %v", got)
+	}
+
+	t0 := time.Now().UTC().Truncate(time.Second)
+	if err := db.Create(&Point{
+		ID: "ts0000000000aaaa", SystemName: "ts", CapabilityName: "http_response_abort",
+		Target:    JSONMap{"app": "ts-user", "method": "GET", "path": "/u", "port": float64(8080)},
+		Source:    "test",
+		Status:    PointActive,
+		CreatedAt: t0, UpdatedAt: t0,
+	}).Error; err != nil {
+		t.Fatalf("seed ts0000000000aaaa: %v", err)
+	}
+
+	got, err = store.LatestUpdate(ctx, "ts")
+	if err != nil {
+		t.Fatalf("LatestUpdate (one row): %v", err)
+	}
+	if !got.Equal(t0) {
+		t.Errorf("want MAX=%v, got %v", t0, got)
+	}
+
+	// Per-system isolation: probing another system must not see ts's rows.
+	got, err = store.LatestUpdate(ctx, "otel-demo")
+	if err != nil {
+		t.Fatalf("LatestUpdate (other system): %v", err)
+	}
+	if !got.IsZero() {
+		t.Errorf("cross-system bleed: want zero, got %v", got)
+	}
+
+	// Supersede flips status — autoUpdateTime bumps updated_at, probe catches it.
+	t1 := t0.Add(time.Minute)
+	if err := db.Model(&Point{}).Where("id = ?", "ts0000000000aaaa").
+		Updates(map[string]any{"status": PointSuperseded, "updated_at": t1}).Error; err != nil {
+		t.Fatalf("supersede: %v", err)
+	}
+	got, err = store.LatestUpdate(ctx, "ts")
+	if err != nil {
+		t.Fatalf("LatestUpdate (after supersede): %v", err)
+	}
+	if !got.Equal(t1) {
+		t.Errorf("supersede should advance MAX to %v, got %v", t1, got)
+	}
+}

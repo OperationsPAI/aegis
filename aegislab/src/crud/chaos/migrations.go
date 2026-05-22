@@ -26,8 +26,39 @@ func Migrations() framework.MigrationRegistrar {
 			&InjectionBatch{},
 			&Injection{},
 		},
-		PreMigrate: nil,
+		PreMigrate: addPointSysUpdatedAtIndex,
 	}
+}
+
+// addPointSysUpdatedAtIndex installs the composite index that backs the
+// MAX(updated_at) probe driving resourcelookup's cross-process cache
+// invalidation (#459). Running this in PreMigrate with explicit
+// ALGORITHM=INPLACE, LOCK=NONE keeps the upgrade non-blocking on production
+// — gorm's AutoMigrate would otherwise issue CREATE INDEX without those
+// qualifiers and stall writers while the index builds. Idempotent: skips
+// when the table is absent (greenfield) or the index already exists.
+// SQLite (test) skips entirely; AutoMigrate's tag-derived DDL handles it.
+func addPointSysUpdatedAtIndex(db *gorm.DB) error {
+	if db.Name() != "mysql" {
+		return nil
+	}
+	mig := db.Migrator()
+	if !mig.HasTable("chaos_points") {
+		return nil
+	}
+	var existing int
+	if err := db.Raw(`SELECT COUNT(*) FROM information_schema.statistics
+		WHERE table_schema = DATABASE()
+		  AND table_name = 'chaos_points'
+		  AND index_name = 'idx_point_sys_updated_at'`).Scan(&existing).Error; err != nil {
+		return err
+	}
+	if existing > 0 {
+		return nil
+	}
+	return db.Exec(
+		"CREATE INDEX idx_point_sys_updated_at ON chaos_points (system_name, updated_at) ALGORITHM=INPLACE, LOCK=NONE",
+	).Error
 }
 
 // SeedCapabilities inserts the step-1 Capability set. Conservative shape:

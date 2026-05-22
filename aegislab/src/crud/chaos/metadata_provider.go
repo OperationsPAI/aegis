@@ -2,31 +2,14 @@ package chaos
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gorm.io/gorm"
 
 	"aegis/crud/chaos/chaosmeta"
-)
-
-// chaos_points DB-read instrumentation. Histogram buckets cover the 1ms-1s
-// log range; the byte-cluster `ts` system returns ~thousands of rows per
-// SELECT and lands well under 100ms when MySQL is healthy. The rows
-// histogram is sized to spot data drift (sudden drop after a bad supersede).
-var (
-	chaosPointsSelectSeconds = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "aegis_chaos_points_select_seconds",
-		Help:    "MySQL roundtrip latency for chaos_points SELECT by system.",
-		Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0},
-	}, []string{"system"})
-
-	chaosPointsRowsReturned = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "aegis_chaos_points_rows_returned",
-		Help:    "Row count returned by chaos_points SELECT by system.",
-		Buckets: []float64{1, 10, 100, 500, 1000, 5000, 10000},
-	}, []string{"system"})
 )
 
 type chaosPointStore struct {
@@ -38,16 +21,12 @@ func NewChaosPointStore(db *gorm.DB) chaosmeta.ChaosPointStore {
 }
 
 func (s *chaosPointStore) QueryPoints(ctx context.Context, system string) ([]chaosmeta.ChaosPointRow, error) {
-	timer := prometheus.NewTimer(chaosPointsSelectSeconds.WithLabelValues(system))
 	var rows []Point
-	err := s.db.WithContext(ctx).
+	if err := s.db.WithContext(ctx).
 		Where("system_name = ? AND status = ?", system, PointActive).
-		Find(&rows).Error
-	timer.ObserveDuration()
-	if err != nil {
+		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("chaosPointStore: query chaos_points for system %q: %w", system, err)
 	}
-	chaosPointsRowsReturned.WithLabelValues(system).Observe(float64(len(rows)))
 	out := make([]chaosmeta.ChaosPointRow, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, chaosmeta.ChaosPointRow{
@@ -57,6 +36,71 @@ func (s *chaosPointStore) QueryPoints(ctx context.Context, system string) ([]cha
 		})
 	}
 	return out, nil
+}
+
+// LatestUpdate returns MAX(updated_at) across every status. Only soft-delete
+// via the `status` column bumps updated_at — a hard `DELETE` would not move
+// MAX and the probe would miss it, retaining the removed row in-cache. Soft
+// delete is the chaos_points contract; raw DELETE is not a supported
+// operator workflow.
+//
+// The scan target is `any` rather than `sql.NullTime` because the SQLite
+// driver used in tests (gorm.io/driver/sqlite → mattn/go-sqlite3) returns
+// aggregated DATETIME as []byte, not time.Time, and NullTime rejects that.
+// MySQL returns time.Time natively. nullableTime handles both.
+func (s *chaosPointStore) LatestUpdate(ctx context.Context, system string) (time.Time, error) {
+	row := s.db.WithContext(ctx).
+		Model(&Point{}).
+		Where("system_name = ?", system).
+		Select("MAX(updated_at)").
+		Row()
+	var ts nullableTime
+	if err := row.Scan(&ts); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return time.Time{}, nil
+		}
+		return time.Time{}, fmt.Errorf("chaosPointStore: probe MAX(updated_at) for system %q: %w", system, err)
+	}
+	if !ts.Valid {
+		return time.Time{}, nil
+	}
+	return ts.Time.UTC(), nil
+}
+
+// nullableTime accepts either a time.Time (MySQL driver) or a textual
+// timestamp (mattn SQLite driver returns []byte for DATETIME aggregates).
+type nullableTime struct {
+	Time  time.Time
+	Valid bool
+}
+
+func (n *nullableTime) Scan(src any) error {
+	switch v := src.(type) {
+	case nil:
+		return nil
+	case time.Time:
+		n.Time, n.Valid = v, true
+		return nil
+	case []byte:
+		return n.parseString(string(v))
+	case string:
+		return n.parseString(v)
+	}
+	return fmt.Errorf("nullableTime: unsupported scan source %T", src)
+}
+
+func (n *nullableTime) parseString(s string) error {
+	if s == "" {
+		return nil
+	}
+	// SQLite's stock DATETIME serialisation; one format is enough since
+	// MySQL hits the time.Time branch above.
+	t, err := time.Parse("2006-01-02 15:04:05.999999999-07:00", s)
+	if err != nil {
+		return fmt.Errorf("nullableTime: parse %q: %w", s, err)
+	}
+	n.Time, n.Valid = t, true
+	return nil
 }
 
 func RegisterChaosPointStore(db *gorm.DB) {
