@@ -1,8 +1,8 @@
 # aegis-chaos: Pluggable Fault-Injection Service for Aegislab
 
-Status: draft / discussion
-Owner: TBD
-Last updated: 2026-05-19
+Status: implemented — service is the sole dispatch path since §11 step 5c.
+Operational follow-ups: see [`aegis-chaos/step5b-residual-debt.md`](./aegis-chaos/step5b-residual-debt.md).
+Last updated: 2026-05-19 (design); shipped 2026-05-20 on byte-cluster.
 
 ## 1. Background & Motivation
 
