@@ -76,6 +76,42 @@ image from current main and `kubectl set image` on the chaos
 Deployment.** Once the new binary is in, SA path takes over and the
 webhook stops aging out.
 
+**Verification quick path after importing a new PointManifest.**
+
+The point catalog is one thing; "the chaos-mesh CR actually fires and lands
+on the right pods" is another. Verify the second separately from any
+datapack/algorithm run:
+
+1. Confirm the point is in the catalog:
+
+   ```bash
+   aegisctl chaos points list --system <code> --service <svc> --chaos-server <url>
+   ```
+
+2. Direct-inject to verify chaos-mesh actually applies the CR:
+
+   ```bash
+   aegisctl chaos inject submit \
+     --point-id <id> --namespace <ns> \
+     --params '{...}' --idempotency-key "$(uuidgen)" \
+     --chaos-server <url>
+   ```
+
+   This is the **verification-only path** (see `aegislab/docs/aegis-chaos-design.md`
+   §5.1 path comparison). It lights up chaos-mesh, you can watch the target
+   pods react, the injection lifecycle terminates, and you confirm the point
+   is wired correctly. It does NOT run the datapack/algorithm chain, and it
+   bypasses the resourcelookup cache entirely — so it's the unaffected
+   escape hatch while OperationsPAI/aegis#459 (cache freshness for guided)
+   is open.
+
+3. For full experiments (datapack + algorithm + collect):
+
+   ```bash
+   aegisctl inject guided --apply ...     # interactive/scripted run
+   aegisctl regression run <case-name>    # repo-tracked smoke case
+   ```
+
 **Inspecting what's bound right now.**
 
 ```bash

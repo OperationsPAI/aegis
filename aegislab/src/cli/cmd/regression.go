@@ -104,7 +104,14 @@ var regressionCmd = &cobra.Command{
 
 Regression cases live as YAML files under the repo's regression directory.
 Each case carries both the submit payload and the validation contract so the
-canonical smoke path is additive, reviewable, and versioned in git.`,
+canonical smoke path is additive, reviewable, and versioned in git.
+
+Submission goes through the same orchestrated aegis-api path as
+'aegisctl inject guided --apply' (RestartPedestal → FaultInjection →
+BuildDatapack → RunAlgorithm → CollectResult), so the resourcelookup cache
+freshness caveat in OperationsPAI/aegis#459 applies here too. For
+verification-only fault firing without the datapack/algorithm chain, use
+'aegisctl chaos inject submit'.`,
 }
 
 var regressionRunCmd = &cobra.Command{

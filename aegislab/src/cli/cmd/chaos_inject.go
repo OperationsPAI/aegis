@@ -29,9 +29,23 @@ var chaosInjectCmd = &cobra.Command{
 
 var chaosInjectSubmitCmd = &cobra.Command{
 	Use:   "submit",
-	Short: "Submit a chaos injection (POST /v1beta/injections)",
-	Args:  requireNoArgs,
-	RunE:  runChaosInjectSubmit,
+	Short: "Direct verification-only chaos injection (POST /v1beta/injections) — does NOT trigger datapack/algorithm pipeline",
+	Long: `Submit a chaos injection directly to aegis-chaos.
+
+⚠️ This is a low-level verification path. It applies the chaos-mesh CR
+   directly via aegis-chaos and DOES NOT trigger the BuildDatapack /
+   RunAlgorithm / CollectResult task chain.
+
+   Use this to verify a newly-imported PointManifest actually applies
+   to chaos-mesh and reaches its target services. It looks up the point
+   by --point-id directly in the chaos_points table, so it always sees
+   the freshest catalog state and is unaffected by the resourcelookup
+   cache freshness caveat tracked in OperationsPAI/aegis#459.
+
+   For real experiments (with datapack collection and algorithm
+   execution), use 'aegisctl inject guided' or 'aegisctl regression run'.`,
+	Args: requireNoArgs,
+	RunE: runChaosInjectSubmit,
 }
 
 var chaosInjectGetCmd = &cobra.Command{
