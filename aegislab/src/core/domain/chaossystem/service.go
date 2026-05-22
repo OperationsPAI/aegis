@@ -3,6 +3,7 @@ package chaossystem
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -311,6 +312,7 @@ func (s *Service) OnboardSystem(ctx context.Context, req *OnboardSystemReq) (*On
 
 	userID := userIDFromCtx(ctx)
 	containerModel := req.Container.ConvertToContainer()
+	configIDs := make([]int, 0, len(allSystemFields()))
 
 	err = s.repo.DB().Transaction(func(tx *gorm.DB) error {
 		txRepo := NewRepository(tx)
@@ -324,10 +326,21 @@ func (s *Service) OnboardSystem(ctx context.Context, req *OnboardSystemReq) (*On
 				Description:  descriptions[field],
 			}
 			if err := txRepo.CreateConfig(cfg); err != nil {
+				// Two concurrent onboards for the same code both pass the
+				// pre-tx existence probe; the loser hits the unique index on
+				// dynamic_configs.config_key inside the tx. Map to 409 so
+				// the handler does not return 500.
+				if errors.Is(err, gorm.ErrDuplicatedKey) {
+					return fmt.Errorf("system %s already exists: %w", sysReq.Name, consts.ErrAlreadyExists)
+				}
 				return err
 			}
+			configIDs = append(configIDs, cfg.ID)
 		}
 		if _, err := containerapi.NewRepository(tx).CreateContainerCore(containerModel, userID); err != nil {
+			if errors.Is(err, consts.ErrAlreadyExists) {
+				return fmt.Errorf("container %s already exists: %w", containerModel.Name, consts.ErrAlreadyExists)
+			}
 			return fmt.Errorf("create container: %w", err)
 		}
 		return nil
@@ -336,17 +349,18 @@ func (s *Service) OnboardSystem(ctx context.Context, req *OnboardSystemReq) (*On
 		return nil, err
 	}
 
-	// Publish identity to etcd. On any failure roll back: delete the
-	// already-published keys and surface the error. The DB rows for both the
-	// system and the container persist — operators can re-issue the onboard
-	// request once etcd recovers (the CreateSystem path the OnboardSystem
-	// supersedes had the same residual-DB-state risk, so we don't add a
-	// container-row cleanup beyond what the existing single-call API does).
+	// Publish identity to etcd. On failure mid-flight we compensate by
+	// deleting the already-published etcd keys AND the committed DB rows
+	// (dynamic_configs hard-delete, container soft-delete). Without the DB
+	// rollback the pre-tx existence probe at the top of OnboardSystem would
+	// surface a 409 on a retry, leaving the orphan unrecoverable through the
+	// supported API.
 	published := make([]string, 0, len(allSystemFields()))
 	for _, field := range allSystemFields() {
 		key := systemKey(sysReq.Name, field)
 		if err := s.publishKey(ctx, key, defaults[field]); err != nil {
 			s.bestEffortDeletePublished(ctx, published)
+			s.compensateOnboardDB(configIDs, containerModel.ID)
 			return nil, fmt.Errorf("publish %s to etcd: %w", field, err)
 		}
 		published = append(published, key)
@@ -368,6 +382,30 @@ func (s *Service) bestEffortDeletePublished(ctx context.Context, keys []string) 
 		if err := s.etcd.Delete(ctx, etcdKey); err != nil {
 			logrus.WithFields(logrus.Fields{"key": etcdKey, "err": err}).
 				Warn("onboard rollback: failed to delete etcd key")
+		}
+	}
+}
+
+// compensateOnboardDB reverses the committed DB writes when etcd publish
+// fails after the tx commits. dynamic_configs has no soft-delete column so
+// rows are hard-deleted by primary key; the container goes through the
+// same status=CommonDeleted path as DeleteContainer so the active_name
+// virtual column unblocks a re-onboard with the same code.
+func (s *Service) compensateOnboardDB(configIDs []int, containerID int) {
+	db := s.repo.DB()
+	if len(configIDs) > 0 {
+		if err := db.Where("id IN ?", configIDs).Delete(&model.DynamicConfig{}).Error; err != nil {
+			logrus.WithFields(logrus.Fields{"ids": configIDs, "err": err}).
+				Warn("onboard rollback: failed to delete dynamic_configs rows")
+		}
+	}
+	if containerID > 0 {
+		res := db.Model(&model.Container{}).
+			Where("id = ? AND status != ?", containerID, consts.CommonDeleted).
+			Update("status", consts.CommonDeleted)
+		if res.Error != nil {
+			logrus.WithFields(logrus.Fields{"id": containerID, "err": res.Error}).
+				Warn("onboard rollback: failed to soft-delete container")
 		}
 	}
 }

@@ -775,7 +775,7 @@ func init() {
 	systemCreateCmd.Flags().StringVar(&systemCreateDisplayName, "display-name", "", "Human-readable display name (required)")
 	systemCreateCmd.Flags().StringVar(&systemCreateNsPattern, "ns-pattern", "", "Namespace regex pattern (required, e.g. ^mysys\\d+$)")
 	systemCreateCmd.Flags().StringVar(&systemCreateExtractPattern, "extract-pattern", "", "Extraction regex (required, e.g. ^(mysys)(\\d+)$)")
-	systemCreateCmd.Flags().StringVar(&systemCreateAppLabelKey, "app-label-key", "app.kubernetes.io/name", "Kubernetes pod label key used to select workloads")
+	systemCreateCmd.Flags().StringVar(&systemCreateAppLabelKey, "app-label-key", "app", "Kubernetes pod label key used to select workloads (matches server default; existing benchmark seeds use \"app\")")
 	systemCreateCmd.Flags().IntVar(&systemCreateCount, "count", 1, "Initial pool count")
 	systemCreateCmd.Flags().StringVar(&systemCreateDescription, "description", "", "Description")
 	systemCreateCmd.Flags().BoolVar(&systemCreateIsBuiltin, "is-builtin", false, "Mark as builtin benchmark system")
