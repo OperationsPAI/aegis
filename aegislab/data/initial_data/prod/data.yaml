@@ -13,7 +13,7 @@ containers:
     status: 1
     versions:
       - name: 1.0.0
-        image_ref: pair-diag-cn-guangzhou.cr.volces.com/pair/rca-algo-random:latest
+        image_ref: docker.io/opspai/rca-algo-random:latest
         command: bash /entrypoint.sh
   - type: 0
     name: traceback
