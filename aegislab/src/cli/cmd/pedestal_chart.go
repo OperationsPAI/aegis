@@ -180,6 +180,8 @@ var (
 	pedestalChartInstallWait               bool
 	pedestalChartInstallApplyOverrides     bool
 	pedestalChartInstallFromPedestalVerArg string
+	pedestalChartInstallHelmSet            []string
+	pedestalChartInstallHelmSetString      []string
 )
 
 var pedestalChartInstallCmd = &cobra.Command{
@@ -211,13 +213,20 @@ to helm as the only -f source, matching historical behaviour. Pass
 helm_config_values DB rows on top of value_file (matching what the
 RestartPedestal pipeline does internally). Pin a specific pedestal
 container_version with --from-pedestal-version <ver>; otherwise the
-backend's latest active row wins.`,
+backend's latest active row wins.
+
+Use --set / --set-string (repeatable) for ad-hoc upstream-chart toggles
+that aren't seed-managed — e.g.
+"--set global.security.allowInsecureImages=true" for charts that pull
+bitnami subcharts. These are passed straight to helm AFTER the values
+file, so they win over both value_file and helm_config_values.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runPedestalChartInstall(args[0], pedestalChartInstallNamespace,
 			pedestalChartInstallTgz, pedestalChartInstallRepo, pedestalChartInstallChart,
 			pedestalChartInstallVersion, pedestalChartInstallWait,
-			pedestalChartInstallApplyOverrides, pedestalChartInstallFromPedestalVerArg)
+			pedestalChartInstallApplyOverrides, pedestalChartInstallFromPedestalVerArg,
+			pedestalChartInstallHelmSet, pedestalChartInstallHelmSetString)
 	},
 }
 
@@ -235,7 +244,7 @@ type chartSource struct {
 	pedestalTag    string
 }
 
-func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool, applyOverrides bool, fromPedestalVersion string) error {
+func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, version string, wait bool, applyOverrides bool, fromPedestalVersion string, helmSet, helmSetString []string) error {
 	if strings.TrimSpace(systemCode) == "" {
 		return usageErrorf("system short-code is required")
 	}
@@ -298,6 +307,12 @@ func runPedestalChartInstall(systemCode, namespace, tgz, repo, chartName, versio
 	}
 	if src.version != "" {
 		helmArgs = append(helmArgs, "--version", src.version)
+	}
+	for _, kv := range helmSet {
+		helmArgs = append(helmArgs, "--set", kv)
+	}
+	for _, kv := range helmSetString {
+		helmArgs = append(helmArgs, "--set-string", kv)
 	}
 	if wait {
 		helmArgs = append(helmArgs, "--wait")
@@ -636,6 +651,8 @@ func init() {
 	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallWait, "wait", false, "Pass --wait to helm install")
 	pedestalChartInstallCmd.Flags().BoolVar(&pedestalChartInstallApplyOverrides, "apply-overrides", false, "Merge helm_config_values rows for the matched pedestal version into the values file before helm install (matches RestartPedestal behaviour). Default: false (current behaviour preserved).")
 	pedestalChartInstallCmd.Flags().StringVar(&pedestalChartInstallFromPedestalVerArg, "from-pedestal-version", "", "Pin which container_versions.name the backend should resolve helm_config_values for (default: latest status=1 row for this system).")
+	pedestalChartInstallCmd.Flags().StringArrayVar(&pedestalChartInstallHelmSet, "set", nil, "Ad-hoc helm --set k=v; repeatable. Applied AFTER --apply-overrides / value file so it wins. Use for upstream-chart toggles that aren't seed-managed (e.g. bitnami global.security.allowInsecureImages=true).")
+	pedestalChartInstallCmd.Flags().StringArrayVar(&pedestalChartInstallHelmSetString, "set-string", nil, "Ad-hoc helm --set-string k=v; repeatable. Use when the value must be sent as a string (e.g. numeric tags like image.tag=20260520).")
 
 	pedestalChartCmd.AddCommand(pedestalChartPushCmd)
 	pedestalChartCmd.AddCommand(pedestalChartInstallCmd)

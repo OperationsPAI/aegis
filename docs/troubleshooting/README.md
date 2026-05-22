@@ -10,7 +10,7 @@ Start with [`../../aegislab/docs/aegisctl-cli-spec.md`](../../aegislab/docs/aegi
 |------|---------|
 | [`datapack-schema.md`](./datapack-schema.md) | The 12 parquets + 3 JSON files a datapack is *required* to contain, plus column-level notes (TZ, namespaces, etc.) |
 | [`app-label-key.md`](./app-label-key.md) | Per-system `AppLabelKey` design — why `otel-demo` uses `app.kubernetes.io/name` while `ts` uses `app` |
-| [`benchmark-integration-playbook.md`](./benchmark-integration-playbook.md) | Consolidated playbook for onboarding a new benchmark (sockshop/hs/sn/mm/tea lessons): 5-layer model, step-by-step template, per-system diff table, reusable Jaeger→OTLP bridge + dsb-wrk2 infra, recurring gotchas |
+| [`benchmark-integration-playbook.md`](./benchmark-integration-playbook.md) | Consolidated playbook for onboarding a new benchmark (sockshop/hs/sn/mm/tea lessons): **microservice ↔ fault-injection-points binding (section 0)**, 5-layer model, step-by-step template, per-system diff table, reusable Jaeger→OTLP bridge + dsb-wrk2 infra, recurring gotchas |
 
 Operational runbooks scoped to a single sub-repo live alongside their code:
 

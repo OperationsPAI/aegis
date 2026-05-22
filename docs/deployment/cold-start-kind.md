@@ -234,8 +234,8 @@ Two flags you'll almost always need on kind:
   drifted from what the seed actually has. Check with
   `aegisctl container version list-versions <name>`; if it mismatches,
   copy the YAML to a temp dir, edit, and point `--cases-dir` at it. (As
-  of 2026-05-12: `otel-demo-guided.yaml` pins `0.1.4` while the seed in
-  `data/initial_data/prod/data.yaml` only has `0.1.1`.)
+  of 2026-05-22: `otel-demo-guided.yaml` pins `0.1.10` while the seed in
+  `data/initial_data/prod/data.yaml` only has `0.1.6`.)
 
 ```bash
 # Run one case end-to-end (validated 2026-05-12 on kind-aegis-local):
@@ -309,25 +309,20 @@ kubectl exec -n exp rcabench-redis-0 -- redis-cli del monitor:ns:otel-demo0
 
 ---
 
-## Known rough edges (as of 2026-04-22)
+## Known rough edges (open / workarounds only — resolved items dropped 2026-05-22)
 
-Ordered roughly by how likely they block a first-timer. Full details with
-backend log signatures are in
-`~/.claude/projects/-home-ddq-AoyangSpace-aegis/memory/project_cold_start_gaps_2026_04_22.md`.
+Ordered by how likely they block a first-timer. Items marked **resolved**
+in earlier revisions of this table (#9, #19, #22, #23, #25) have been
+removed; the runbook itself reflects the fix.
 
 | # | Layer | Workaround used here | Status |
 |---|---|---|---|
-| 9 | kind image | Fixed: defaults to `opspai/rcabench:latest` | **resolved** |
 | 17 | seed race | `DROP DATABASE` + double `rollout restart` (step 6b) | open (#124) |
-| 22 | kube-stack chart | Leave `scrape_configs_file` unset; use chart default | resolved |
-| 23 | redis lock | Fixed: fault-injection path now releases on every error exit | **resolved** |
-| 25 | compat svc | Manual `otel-collector` Service in `otel` ns (step 5b) | resolved |
 | 8 | helm atomic | Drop `--atomic`, raise `--timeout` to 15m | workaround |
 | 11 | pod ordering | Tolerate 1–3 CrashLoops while mysql provisions | workaround |
 | 12 | admin creds | `admin / admin123` (from `data/initial_data/prod/data.yaml`) | as-designed |
 | 15 | guided cache | Always pass `--reset-config` on first inject | workaround |
 | 18 | bitnami chart | Needed for `ts` pedestal only; not used in this runbook | as-designed |
-| 19 | `task list --state Running` | Fixed: backend accepts both names ("Running") and ints ("2") | **resolved** |
 | 26 | inject guided time flags | `--duration` / `--interval` / `--pre-duration` removed from CLI but still required by the backend; use the regression runner (or hand-edit a regression YAML) instead of `inject guided --apply` | open |
 | 27 | regression preflight label | Charts label pods with `app.kubernetes.io/name`; pass `--app-label-key app.kubernetes.io/name` or preflight always fails | workaround |
-| 28 | regression yaml version drift | `otel-demo-guided.yaml` pins pedestal `0.1.4` but seed has `0.1.1`; copy + override `--cases-dir` until seed/yaml are aligned | open |
+| 28 | regression yaml version drift | `otel-demo-guided.yaml` pins pedestal `0.1.10` but seed `data/initial_data/prod/data.yaml` only has `0.1.6` (verified 2026-05-22); copy + override `--cases-dir` until seed/yaml are aligned | open |

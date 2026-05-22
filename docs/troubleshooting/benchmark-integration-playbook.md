@@ -11,6 +11,86 @@ recurring pitfalls, the reusable infra, and per-system deltas.
 
 ---
 
+## 0. The binding you must establish: microservice ↔ fault injection points
+
+Onboarding a benchmark is **two registrations**, not one. Both are
+keyed by the same short system code (`ts`, `hs`, `tea`, …) and the
+inject pipeline silently no-ops if either is missing.
+
+| What you register | What it answers | Where it lives | Symptom when absent |
+|---|---|---|---|
+| **System identity** — namespace pattern, app-label-key, display name, pedestal chart pointer | "Does aegis know this microservice exists, and how do I find its pods?" | etcd `/rcabench/config/global/injection.system.<code>.*` (7 keys) + DB `containers` / `container_versions` / `helm_configs` | `system_type` rejected at submit; `Chaos system config manager loaded 0 systems`; preflight `namespace X has no pods matching app=Y` |
+| **Fault injection points** — the concrete injectable surface (HTTP endpoints, network pairs, DNS endpoints, DB operations, JVM class+method targets, runtime mutator targets) the system *exposes* | "What can I actually inject into?" | DB `chaos_points` table (queried via `platform/k8s/resourcelookup.GetSystemCache(<code>)`) | Guided inject preview returns empty lookups; `lookupHTTPEndpoint` / `lookupNetworkPair` etc. fall back to whatever the user typed; campaign generators have no menu to pick from |
+
+The two are bound by **short system code**. Drift between them — e.g.
+points imported under `media` but the system registered as `mm` — makes
+the points invisible. Pick the code once, use it everywhere.
+
+**Authoring fault injection points.** Points are described by a
+**PointManifest** YAML (see ADR-0008/0009/0010, schema at
+`aegislab/src/cli/cmd/manifest_schema.json`, sample at
+`aegislab/src/cli/cmd/testdata/manifest-valid.yaml`).
+
+- **Production delivery is chart-bound** (ADR-0009). Every benchmark
+  chart ships a `post-install` / `post-upgrade` Job that POSTs its
+  PointManifest to `aegis-chaos /v1beta/systems/<code>/points/import`
+  and a `post-delete` Job that retires the service version. Job
+  failure = chart install failure, so a broken manifest cannot
+  silently ship a stale catalog. Templated against `Chart.Version`,
+  so chart version ↔ point manifest version stays bound.
+- **Manual import** for dev/debug (no chart, or chart Job failed):
+  `aegisctl manifest import <file>` (top-level, not under `chaos`) validates against the
+  bundled schema then POSTs to the same endpoint.
+- **Offline validation** on every chart PR that touches a manifest:
+  `aegisctl manifest validate <file>` runs the JSON Schema
+  check without contacting the cluster.
+
+> All three commands require `--chaos-server <url>` (or env
+> `AEGIS_CHAOS_SERVER`) because they hit aegis-chaos, not aegis-api.
+> Inside a helm post-install hook this is
+> `http://{{ include "chaos.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.httpPort }}`.
+> From a laptop, port-forward the in-cluster Service:
+> `kubectl -n exp port-forward svc/rcabench-chaos 8086:8086`.
+
+**Validated end-to-end 2026-05-22** on byte-cluster: imported a
+`pod_failure` point on `hs/geo` (point id `988f70a26864863b`), submitted
+`aegisctl chaos inject submit --point-id ... --namespace hs0`,
+chaos-mesh applied the PodChaos at `t+0s`, `geo` pod entered
+`RunContainerError`, recovered at `t+30s`, injection terminal=`succeeded`,
+`AllRecovered=True` in the diagnostics.
+
+**Webhook → BuildDatapack caveat (byte-cluster deployment drift,
+not a code bug).** The chaos→aegis-backend webhook returned
+401 `token has invalid claims: token is expired` in this run, so
+`BuildDatapack` never fired. Diagnosis: the deployed chaos image
+`byte-20260520-step5b-r5full` predates commit
+`79335448 feat(auth): wire SA tokens end-to-end on chaos webhook hop`
+(verified by `strings /app/aegis-chaos | grep CHAOS_SA_TOKEN` →
+no match; only `CHAOS_WEBHOOK_BEARER` is present). Even though the
+Helm chart now wires `CHAOS_SA_TOKEN` from Secret `rcabench-chaos-sa`
+(a year-valid `rcabench-sa`-issued SA JWT with scope
+`chaos.webhook.write`), the running binary doesn't read that env;
+it falls back to the deprecated `CHAOS_WEBHOOK_BEARER` static admin
+SSO JWT, which expires routinely. **Fix: rebuild + push the chaos
+image from current main and `kubectl set image` on the chaos
+Deployment.** Once the new binary is in, SA path takes over and the
+webhook stops aging out.
+
+**Inspecting what's bound right now.**
+
+```bash
+aegisctl chaos points list --system <code> --chaos-server <url>     # what's active (server-side)
+aegisctl chaos points export <out-dir> --system <code> --chaos-server <url>   # dump back to YAML
+aegisctl manifest list-points --system <code> --chaos-server <url>   # alternative, paginated
+```
+
+If `points list` is empty but the system is otherwise registered, the
+PointManifest was never imported (or the post-install Job failed) —
+the system exists but has no injectable surface yet.
+
+
+---
+
 ## 1. Overview — the 5-layer mental model
 
 Every benchmark integration touches the same five layers. If the pipeline
@@ -20,8 +100,8 @@ are near-unique per layer.
 | # | Layer | What it holds | Owner | Failure symptom if skipped |
 |---|-------|---------------|-------|----------------------------|
 | 1 | Compiled registry (`chaos-experiment/internal/systemconfig`) | Short system code (`ts`, `ob`, `hs`, `sn`, `mm`, `ss`, `tea`), `NsPattern` prefix | Go constant | n/a for runtime-registered systems |
-| 2 | etcd dynamic_configs (`/rcabench/config/global/injection.system.<code>.*`) | 7 per-system injection defaults | `etcdctl put` | `Removed runtime-only system registration: X` after backend restart |
-| 3 | DB fixtures (`containers`, `container_versions`, `helm_configs`, `dynamic_configs`) | Pedestal row, chart pointer, defaults | MySQL INSERTs | Submit rejects `system_type`, or `record not found` in listener |
+| 2 | etcd dynamic_configs (`/rcabench/config/global/injection.system.<code>.*`) | 7 per-system **identity** keys (count, ns_pattern, extract_pattern, display_name, app_label_key, is_builtin, status) — see section 0 | `etcdctl put` | `Removed runtime-only system registration: X` after backend restart |
+| 3 | DB fixtures (`containers`, `container_versions`, `helm_configs`, `dynamic_configs`, **`chaos_points`**) | Pedestal row, chart pointer, defaults — **plus the system's PointManifest entries** (section 0) | MySQL INSERTs or `aegisctl chaos manifest import` | Submit rejects `system_type`, or `record not found` in listener; empty `chaos_points` ⇒ guided inject menus are empty |
 | 4 | Helm chart (wrapper in `benchmark-charts/charts/<name>-aegis/`) | Upstream chart + aegis-specific overrides; pushed OCI or local tgz | `helm package` + push or `kubectl cp` | Pods never start; `available apps: …` empty |
 | 5 | Telemetry pipeline (OTLP → ClickHouse `otel.otel_traces`) | Spans for the abnormal window | OTel SDK or jaeger-bridge | `abnormal_traces.parquet has no data rows` |
 
@@ -49,15 +129,24 @@ pedestal + 7 `injection.system.<code>.*` entries to
 **Runtime wiring (3 commands):**
 
 ```bash
-# 1. Seed etcd + dynamic_configs atomically from data.yaml.
+# 1. Seed etcd + dynamic_configs atomically from data.yaml (system identity).
 aegisctl system register --from-seed aegislab/data/initial_data/prod/data.yaml --name <code>
 
 # 2. Publish the chart (skip if published remotely; step 3 will fetch).
 aegisctl pedestal chart push --name <code> --tgz ./<code>-aegis-<ver>.tgz
 
 # 3. Preflight + submit. --auto-install runs chart install if ns is empty.
+#    The chart's post-install Job imports the PointManifest (ADR-0009).
 aegisctl regression run <code>-guided --auto-install
 ```
+
+Verify the binding before injecting: `aegisctl chaos points list
+--system <code>` must return a non-empty set. An empty list means the
+chart's post-install Job didn't run (or failed) — guided inject will
+have no menu to offer. Re-run the chart with
+`aegisctl pedestal chart install <code>` and check Job logs, or import
+the manifest manually with `aegisctl manifest import <file>` (top-level, not under `chaos`) to
+unblock local work.
 
 ### What each step does
 
@@ -205,6 +294,16 @@ future RPC-only-instrumented stack.
 5. **Backend image may predate #17 ca-certificates fix** — remote OCI
    helm install fails with `x509: certificate signed by unknown
    authority`. Fallback: local tgz via `chart push`.
+5b. **Bitnami-subchart toggles need ad-hoc helm overrides.** Charts
+    that depend on `bitnami/*` subcharts (e.g. `trainticket` →
+    `rabbitmq`) abort unless
+    `global.security.allowInsecureImages=true`. As of 2026-05-22
+    `aegisctl pedestal chart install` supports
+    `--set k=v` / `--set-string k=v` (repeatable; applied AFTER
+    --apply-overrides / value file, so they win); use them for
+    upstream-chart toggles that aren't seed-managed. Validated by
+    bringing up `ts0` on byte-cluster:
+    `aegisctl pedestal chart install ts --apply-overrides --set global.security.allowInsecureImages=true`.
 6. **Cluster prerequisites are manual** — `coherence-operator` for
    sockshop, `otel-kube-stack` for trace ingestion. No per-system
    `prerequisites:` reconciler yet.
