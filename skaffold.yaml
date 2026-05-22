@@ -50,6 +50,11 @@ profiles:
           docker:
             dockerfile: docker/detector/Dockerfile
             network: host
+        - image: opspai/rca-algo-random
+          context: rcabench-platform
+          docker:
+            dockerfile: docker/algo-random/Dockerfile
+            network: host
         - image: opspai/rcabench
           context: .
           docker:
@@ -117,6 +122,11 @@ profiles:
           context: rcabench-platform
           docker:
             dockerfile: docker/detector/Dockerfile
+            network: host
+        - image: 10.10.10.240/library/rca-algo-random
+          context: rcabench-platform
+          docker:
+            dockerfile: docker/algo-random/Dockerfile
             network: host
         - image: 10.10.10.240/library/rcabench
           context: aegislab
@@ -215,6 +225,11 @@ profiles:
           context: rcabench-platform
           docker:
             dockerfile: docker/detector/Dockerfile
+            network: host
+        - image: docker.io/opspai/rca-algo-random
+          context: rcabench-platform
+          docker:
+            dockerfile: docker/algo-random/Dockerfile
             network: host
         - image: docker.io/opspai/rcabench
           context: .
