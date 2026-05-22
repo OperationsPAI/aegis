@@ -32,6 +32,8 @@ type Params struct {
 	Monitor              consumer.NamespaceMonitor
 	AlgoLimiter          *consumer.TokenBucketRateLimiter `name:"algo_limiter"`
 	BuildDatapackLimiter *consumer.TokenBucketRateLimiter `name:"build_datapack_limiter"`
+	RestartLimiter       *consumer.TokenBucketRateLimiter `name:"restart_limiter"`
+	WarmingLimiter       *consumer.TokenBucketRateLimiter `name:"warming_limiter"`
 	BatchManager         *consumer.FaultBatchManager
 	ExecutionOwner       consumer.ExecutionOwner
 	InjectionOwner       consumer.InjectionOwner
@@ -80,6 +82,9 @@ func (r *Lifecycle) start(ctx context.Context, cancel context.CancelFunc) error 
 			r.params.RedisGateway,
 			r.params.ExecutionOwner,
 			r.params.InjectionOwner,
+			r.params.Monitor,
+			r.params.RestartLimiter,
+			r.params.WarmingLimiter,
 		),
 	)
 	consumer.StartNamespaceReclaimer(
