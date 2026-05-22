@@ -20,3 +20,8 @@ loadgenerator:
     tag: "023"
   initContainer:
     image: pair-diag-cn-guangzhou.cr.volces.com/pair/netshoot:v0.14
+
+otelCollector:
+  image:
+    repository: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
+    tag: "0.142.0"
