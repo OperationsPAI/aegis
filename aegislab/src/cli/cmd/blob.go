@@ -78,7 +78,10 @@ func httpPutFromReader(rawURL string, body io.Reader, contentType string, conten
 		req.ContentLength = contentLength
 	}
 	// Presigned URLs MUST NOT carry Authorization (the signature is the auth).
-	httpClient := &http.Client{Transport: client.DefaultTransport()}
+	// Use the resolved TLS options (flag/env/context) so internal CAs and
+	// --insecure-skip-tls-verify apply to the direct PUT to object storage,
+	// not just the aegislab API hop.
+	httpClient := &http.Client{Transport: client.TransportFor(resolveTLSOptions())}
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("PUT %s: %w", rawURL, err)

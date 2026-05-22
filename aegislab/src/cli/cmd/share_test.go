@@ -17,24 +17,11 @@ func TestShareUploadHelpMentionsPresignFlow(t *testing.T) {
 		"presigned-PUT",
 		"share/init",
 		"share/<code>/commit",
-		"--legacy",
 		"sha256",
 	} {
 		if !strings.Contains(res.stdout, want) {
 			t.Fatalf("share upload --help missing %q\nstdout=%s", want, res.stdout)
 		}
-	}
-}
-
-// TestShareUploadLegacyFlagParses confirms cobra accepts --legacy on the
-// upload command; the runtime path still errors out (no server set), but
-// the flag must be recognised by the parser.
-func TestShareUploadLegacyFlagParses(t *testing.T) {
-	res := runCLI(t, "share", "upload", "/nonexistent/path", "--legacy")
-	// stat will fail before any network call — but the failure must be
-	// the stat one, not "unknown flag --legacy".
-	if strings.Contains(res.stderr, "unknown flag") {
-		t.Fatalf("--legacy not registered: %s", res.stderr)
 	}
 }
 

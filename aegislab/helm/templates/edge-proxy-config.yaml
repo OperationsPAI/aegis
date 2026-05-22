@@ -91,14 +91,17 @@ data:
         # Presigned-URL passthrough for rustfs (in-cluster S3 backend).
         # aegis-blob signs URLs against this edge host (see each
         # `blob.buckets.*.public_endpoint`), so the browser PUTs/GETs
-        # land here. Preserve the original Host header — SigV4 includes
-        # it in the signature, and the upstream rustfs validates it.
+        # land here. Preserve the original Host header verbatim — SigV4
+        # canonicalises the host including the port, so we MUST forward
+        # `host:port` (use `{http.request.hostport}`, not `{host}` which
+        # drops the port and yields SignatureDoesNotMatch on non-443
+        # public endpoints like `118.196.98.178:8082`).
         @rustfs {
             path /aegis-*
         }
         handle @rustfs {
             reverse_proxy {{ .Release.Name }}-rustfs:9000 {
-                header_up Host {host}
+                header_up Host {http.request.hostport}
             }
         }
         {{- if .Values.devAnchors.enabled }}
