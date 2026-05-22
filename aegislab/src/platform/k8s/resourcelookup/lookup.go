@@ -11,9 +11,11 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/sirupsen/logrus"
 
 	"aegis/platform/k8s/chaosclient"
 	"aegis/platform/systemconfig"
@@ -26,6 +28,15 @@ import (
 var chaosPointsCacheTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "aegis_chaos_points_cache_total",
 	Help: "chaos_points per-system snapshot cache lookups by result (hit|miss).",
+}, []string{"system", "result"})
+
+// chaosPointsInvalidateTotal counts probe-driven cross-process invalidations:
+// `stale` = MAX(updated_at) advanced past the cached high-water mark and the
+// per-system snapshot + derived slices were dropped; `fresh` = cached value
+// still wins; `probe_error` = the probe itself failed (we keep serving stale).
+var chaosPointsInvalidateTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "aegis_chaos_points_invalidate_total",
+	Help: "chaos_points cross-process invalidation probes by outcome (stale|fresh|probe_error).",
 }, []string{"system", "result"})
 
 // GetAllAppLabels returns app labels for the current system.
@@ -108,19 +119,23 @@ type systemCache struct {
 	containerInfo         map[string][]ContainerInfo
 	dbOperations          []AppDatabasePair
 
-	dbSnapshotMu   sync.Mutex
-	dbSnapshotRows []ChaosPointRow
-	dbSnapshotErr  error
-	dbSnapshotOK   bool
+	dbSnapshotMu        sync.Mutex
+	dbSnapshotRows      []ChaosPointRow
+	dbSnapshotErr       error
+	dbSnapshotOK        bool
+	lastSeenUpdatedAt   time.Time
+	lastSeenUpdatedAtOK bool
 }
 
 func GetSystemCache(system systemconfig.SystemType) *systemCache {
 	return getCacheManager().getSystemCache(system)
 }
 
+// chaosPointSnapshot returns the per-system chaos_points snapshot. Callers
+// must hold s.dbSnapshotMu. The probe against ChaosPointStore.LatestUpdate is
+// run by probeAndInvalidate before this method is called, so by the time we
+// arrive here s.dbSnapshotOK already reflects the freshest known state.
 func (s *systemCache) chaosPointSnapshot(ctx context.Context, store ChaosPointStore) ([]ChaosPointRow, error) {
-	s.dbSnapshotMu.Lock()
-	defer s.dbSnapshotMu.Unlock()
 	system := string(s.system)
 	if s.dbSnapshotOK {
 		chaosPointsCacheTotal.WithLabelValues(system, "hit").Inc()
@@ -130,6 +145,64 @@ func (s *systemCache) chaosPointSnapshot(ctx context.Context, store ChaosPointSt
 	s.dbSnapshotRows, s.dbSnapshotErr = store.QueryPoints(ctx, system)
 	s.dbSnapshotOK = true
 	return s.dbSnapshotRows, s.dbSnapshotErr
+}
+
+// probeAndInvalidate consults ChaosPointStore.LatestUpdate(system) and, if the
+// returned timestamp is strictly newer than the cached high-water mark, drops
+// the per-system snapshot + every derived slice so the next chaosPointSnapshot
+// call re-queries chaos_points. This is the cross-process invalidation hook:
+// the chaos-service writer commits a new point's row to MySQL, and any
+// aegis-api replica that probes after the commit sees the bumped MAX and
+// rebuilds — no webhook or watch needed. Callers must hold s.dbSnapshotMu.
+//
+// First-miss (no cached value yet) refreshes lastSeenUpdatedAt to the
+// observed MAX without invalidating, so the very first GetAllX after process
+// boot still hits one warm-up rather than two. An empty result set (no rows
+// for this system yet) is recorded as the zero time, so the very first import
+// for that system surfaces on the next probe.
+//
+// On probe error we log + keep serving the cached snapshot. The probe is a
+// liveness optimisation, not a correctness gate; falling back to stale data
+// during a transient MySQL blip is strictly better than blocking the guided
+// pipeline.
+func (s *systemCache) probeAndInvalidate(ctx context.Context, store ChaosPointStore) {
+	system := string(s.system)
+	latest, err := store.LatestUpdate(ctx, system)
+	if err != nil {
+		chaosPointsInvalidateTotal.WithLabelValues(system, "probe_error").Inc()
+		logrus.Warnf("resourcelookup: LatestUpdate probe for system %q failed, serving cached snapshot: %v", system, err)
+		return
+	}
+	if !s.lastSeenUpdatedAtOK {
+		s.lastSeenUpdatedAt = latest
+		s.lastSeenUpdatedAtOK = true
+		chaosPointsInvalidateTotal.WithLabelValues(system, "fresh").Inc()
+		return
+	}
+	if latest.After(s.lastSeenUpdatedAt) {
+		s.lastSeenUpdatedAt = latest
+		s.dropChaosPointDerivedLocked()
+		chaosPointsInvalidateTotal.WithLabelValues(system, "stale").Inc()
+		return
+	}
+	chaosPointsInvalidateTotal.WithLabelValues(system, "fresh").Inc()
+}
+
+// dropChaosPointDerivedLocked clears the per-system snapshot and every
+// chaos_points-derived slice. The k8s-derived appLabels / containerInfo
+// caches are intentionally left untouched — their staleness has different
+// semantics (informer / watch territory) and is out of scope here.
+// Callers must hold s.dbSnapshotMu.
+func (s *systemCache) dropChaosPointDerivedLocked() {
+	s.dbSnapshotRows = nil
+	s.dbSnapshotErr = nil
+	s.dbSnapshotOK = false
+	s.appEndpoints = []AppEndpointPair{}
+	s.networkPairs = []AppNetworkPair{}
+	s.dnsEndpoints = []AppDNSPair{}
+	s.dbOperations = []AppDatabasePair{}
+	s.appMethods = []AppMethodPair{}
+	s.runtimeMutatorTargets = []AppRuntimeMutatorTarget{}
 }
 
 // requireStore returns the installed ChaosPointStore or an error explaining
@@ -220,14 +293,18 @@ func (s *systemCache) GetAllAppLabels(ctx context.Context, namespace string, key
 
 // GetAllJVMMethods returns all app+method pairs sourced from chaos_points.
 func (s *systemCache) GetAllJVMMethods() ([]AppMethodPair, error) {
-	if len(s.appMethods) > 0 {
-		return s.appMethods, nil
-	}
 	store, err := requireStore()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.chaosPointSnapshot(context.Background(), store)
+	ctx := context.Background()
+	s.dbSnapshotMu.Lock()
+	defer s.dbSnapshotMu.Unlock()
+	s.probeAndInvalidate(ctx, store)
+	if len(s.appMethods) > 0 {
+		return s.appMethods, nil
+	}
+	rows, err := s.chaosPointSnapshot(ctx, store)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +316,20 @@ func (s *systemCache) GetAllJVMMethods() ([]AppMethodPair, error) {
 // sourced from the MetadataStore. Without per-system providers registered
 // (e.g. when only the chaos_points store is wired) this returns an empty list.
 func (s *systemCache) GetAllJVMRuntimeMutatorTargets() ([]AppRuntimeMutatorTarget, error) {
-	if len(s.runtimeMutatorTargets) > 0 {
+	// Runtime mutator targets are reachable through the chaos_points pathway
+	// today (jvm_runtime_* capabilities) even though the actual fetch goes
+	// through systemconfig.GetMetadataStore. Probe + share the same
+	// high-water mark so a freshly-imported runtime mutator point is not
+	// hidden behind a stale per-process cache.
+	if store := getChaosPointStore(); store != nil {
+		s.dbSnapshotMu.Lock()
+		s.probeAndInvalidate(context.Background(), store)
+		cached := s.runtimeMutatorTargets
+		s.dbSnapshotMu.Unlock()
+		if len(cached) > 0 {
+			return cached, nil
+		}
+	} else if len(s.runtimeMutatorTargets) > 0 {
 		return s.runtimeMutatorTargets, nil
 	}
 
@@ -285,20 +375,26 @@ func (s *systemCache) GetAllJVMRuntimeMutatorTargets() ([]AppRuntimeMutatorTarge
 		return result[i].MutationTo < result[j].MutationTo
 	})
 
+	s.dbSnapshotMu.Lock()
 	s.runtimeMutatorTargets = result
+	s.dbSnapshotMu.Unlock()
 	return result, nil
 }
 
 // GetAllHTTPEndpoints returns all app+endpoint pairs sourced from chaos_points.
 func (s *systemCache) GetAllHTTPEndpoints() ([]AppEndpointPair, error) {
-	if len(s.appEndpoints) > 0 {
-		return s.appEndpoints, nil
-	}
 	store, err := requireStore()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.chaosPointSnapshot(context.Background(), store)
+	ctx := context.Background()
+	s.dbSnapshotMu.Lock()
+	defer s.dbSnapshotMu.Unlock()
+	s.probeAndInvalidate(ctx, store)
+	if len(s.appEndpoints) > 0 {
+		return s.appEndpoints, nil
+	}
+	rows, err := s.chaosPointSnapshot(ctx, store)
 	if err != nil {
 		return nil, err
 	}
@@ -308,14 +404,18 @@ func (s *systemCache) GetAllHTTPEndpoints() ([]AppEndpointPair, error) {
 
 // GetAllNetworkPairs returns all network pairs sourced from chaos_points.
 func (s *systemCache) GetAllNetworkPairs() ([]AppNetworkPair, error) {
-	if len(s.networkPairs) > 0 {
-		return s.networkPairs, nil
-	}
 	store, err := requireStore()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.chaosPointSnapshot(context.Background(), store)
+	ctx := context.Background()
+	s.dbSnapshotMu.Lock()
+	defer s.dbSnapshotMu.Unlock()
+	s.probeAndInvalidate(ctx, store)
+	if len(s.networkPairs) > 0 {
+		return s.networkPairs, nil
+	}
+	rows, err := s.chaosPointSnapshot(ctx, store)
 	if err != nil {
 		return nil, err
 	}
@@ -325,14 +425,18 @@ func (s *systemCache) GetAllNetworkPairs() ([]AppNetworkPair, error) {
 
 // GetAllDNSEndpoints returns all app+domain pairs sourced from chaos_points.
 func (s *systemCache) GetAllDNSEndpoints() ([]AppDNSPair, error) {
-	if len(s.dnsEndpoints) > 0 {
-		return s.dnsEndpoints, nil
-	}
 	store, err := requireStore()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.chaosPointSnapshot(context.Background(), store)
+	ctx := context.Background()
+	s.dbSnapshotMu.Lock()
+	defer s.dbSnapshotMu.Unlock()
+	s.probeAndInvalidate(ctx, store)
+	if len(s.dnsEndpoints) > 0 {
+		return s.dnsEndpoints, nil
+	}
+	rows, err := s.chaosPointSnapshot(ctx, store)
 	if err != nil {
 		return nil, err
 	}
@@ -343,14 +447,18 @@ func (s *systemCache) GetAllDNSEndpoints() ([]AppDNSPair, error) {
 // GetAllDatabaseOperations returns all app+database+table+operation pairs
 // sourced from chaos_points. Only MySQL operations are emitted by the dump tool.
 func (s *systemCache) GetAllDatabaseOperations() ([]AppDatabasePair, error) {
-	if len(s.dbOperations) > 0 {
-		return s.dbOperations, nil
-	}
 	store, err := requireStore()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.chaosPointSnapshot(context.Background(), store)
+	ctx := context.Background()
+	s.dbSnapshotMu.Lock()
+	defer s.dbSnapshotMu.Unlock()
+	s.probeAndInvalidate(ctx, store)
+	if len(s.dbOperations) > 0 {
+		return s.dbOperations, nil
+	}
+	rows, err := s.chaosPointSnapshot(ctx, store)
 	if err != nil {
 		return nil, err
 	}
@@ -487,5 +595,7 @@ func (s *systemCache) InvalidateCache() {
 	s.dbSnapshotRows = nil
 	s.dbSnapshotErr = nil
 	s.dbSnapshotOK = false
+	s.lastSeenUpdatedAt = time.Time{}
+	s.lastSeenUpdatedAtOK = false
 	s.dbSnapshotMu.Unlock()
 }

@@ -2,7 +2,10 @@ package chaos
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -57,6 +60,41 @@ func (s *chaosPointStore) QueryPoints(ctx context.Context, system string) ([]cha
 		})
 	}
 	return out, nil
+}
+
+// timestampFormats covers MySQL's DATETIME (without TZ) and SQLite's stock
+// DATETIME serialisation; production runs on MySQL but tests cover SQLite.
+var timestampFormats = []string{
+	time.RFC3339Nano,
+	time.RFC3339,
+	"2006-01-02 15:04:05.999999999 -0700 MST",
+	"2006-01-02 15:04:05.999999999-07:00",
+	"2006-01-02 15:04:05.999999999",
+	"2006-01-02 15:04:05",
+}
+
+func (s *chaosPointStore) LatestUpdate(ctx context.Context, system string) (time.Time, error) {
+	row := s.db.WithContext(ctx).
+		Model(&Point{}).
+		Where("system_name = ?", system).
+		Select("MAX(updated_at)").
+		Row()
+	var raw sql.NullString
+	if err := row.Scan(&raw); err != nil {
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, gorm.ErrRecordNotFound) {
+			return time.Time{}, nil
+		}
+		return time.Time{}, fmt.Errorf("chaosPointStore: probe MAX(updated_at) for system %q: %w", system, err)
+	}
+	if !raw.Valid || raw.String == "" {
+		return time.Time{}, nil
+	}
+	for _, layout := range timestampFormats {
+		if t, err := time.Parse(layout, raw.String); err == nil {
+			return t.UTC(), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("chaosPointStore: unparseable MAX(updated_at) %q for system %q", raw.String, system)
 }
 
 func RegisterChaosPointStore(db *gorm.DB) {

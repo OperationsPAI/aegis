@@ -3,8 +3,10 @@ package resourcelookup
 import (
 	"context"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
@@ -14,15 +16,48 @@ import (
 // stubStore returns canned chaos_points rows; mirrors the shape aegislab
 // produces from PointManifest imports without dragging gorm into this
 // package's test compile path. queryCount lets shared-snapshot tests
-// assert the warm-up does one DB hit per (system, cache).
+// assert the warm-up does one DB hit per (system, cache); latestPerSystem +
+// latestErr drive the LatestUpdate probe so invalidation tests can swing
+// the high-water mark without touching MySQL.
 type stubStore struct {
-	rows       map[string][]ChaosPointRow
-	queryCount int64
+	mu                sync.Mutex
+	rows              map[string][]ChaosPointRow
+	latestPerSystem   map[string]time.Time
+	latestErr         error
+	queryCount        int64
+	latestUpdateCount int64
 }
 
 func (s *stubStore) QueryPoints(_ context.Context, system string) ([]ChaosPointRow, error) {
 	atomic.AddInt64(&s.queryCount, 1)
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.rows[system], nil
+}
+
+func (s *stubStore) LatestUpdate(_ context.Context, system string) (time.Time, error) {
+	atomic.AddInt64(&s.latestUpdateCount, 1)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.latestErr != nil {
+		return time.Time{}, s.latestErr
+	}
+	return s.latestPerSystem[system], nil
+}
+
+func (s *stubStore) setLatest(system string, t time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.latestPerSystem == nil {
+		s.latestPerSystem = map[string]time.Time{}
+	}
+	s.latestPerSystem[system] = t
+}
+
+func (s *stubStore) setRows(system string, rows []ChaosPointRow) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.rows[system] = rows
 }
 
 func newStubStore() *stubStore {
@@ -295,5 +330,221 @@ func TestDBBacked_CacheMetric_HitMiss(t *testing.T) {
 	}
 	if got := testutil.ToFloat64(miss) - missBefore; got != 2 {
 		t.Errorf("post-reset: want 2 cumulative misses, got %v", got)
+	}
+}
+
+// TestDBBacked_CrossProcessInvalidation exercises the LatestUpdate probe that
+// drives cross-process cache invalidation (issue #459). Sub-cases cover every
+// edge case the spec calls out: first-miss bootstrap, fresh probe (no-op),
+// import-bumped probe (invalidate + re-extract), tombstone via supersede,
+// empty-system first import, and probe error (serve stale).
+func TestDBBacked_CrossProcessInvalidation(t *testing.T) {
+	t0 := time.Unix(1700000000, 0)
+
+	tests := []struct {
+		name          string
+		setup         func(t *testing.T, store *stubStore)
+		mutate        func(t *testing.T, store *stubStore)
+		wantBefore    int
+		wantAfter     int
+		wantQueries   int64 // QueryPoints calls expected across both reads
+		wantInvalKind string
+	}{
+		{
+			name: "fresh_probe_no_invalidation",
+			setup: func(_ *testing.T, store *stubStore) {
+				store.setLatest("ts", t0)
+			},
+			mutate: func(_ *testing.T, store *stubStore) {
+				store.setLatest("ts", t0) // unchanged
+			},
+			wantBefore:    2,
+			wantAfter:     2,
+			wantQueries:   1,
+			wantInvalKind: "fresh",
+		},
+		{
+			name: "new_import_advances_high_water_mark",
+			setup: func(_ *testing.T, store *stubStore) {
+				store.setLatest("ts", t0)
+			},
+			mutate: func(_ *testing.T, store *stubStore) {
+				// Operator imports a new HTTP point: row count grows, MAX(updated_at) bumps.
+				rows := append([]ChaosPointRow{}, store.rows["ts"]...)
+				rows = append(rows, ChaosPointRow{
+					SystemName: "ts", CapabilityName: "http_response_abort",
+					Target: map[string]any{
+						"app": "ts-new-service", "method": "GET", "path": "/api/new", "port": float64(8080),
+					},
+				})
+				store.setRows("ts", rows)
+				store.setLatest("ts", t0.Add(time.Minute))
+			},
+			wantBefore:    2,
+			wantAfter:     3,
+			wantQueries:   2,
+			wantInvalKind: "stale",
+		},
+		{
+			name: "supersede_bumps_updated_at_without_row_growth",
+			setup: func(_ *testing.T, store *stubStore) {
+				store.setLatest("ts", t0)
+			},
+			mutate: func(_ *testing.T, store *stubStore) {
+				// Supersede doesn't change row count visible to QueryPoints (which
+				// filters status='active'); it only flips updated_at on the row
+				// that turned 'superseded'. The probe still catches it.
+				store.setLatest("ts", t0.Add(time.Minute))
+			},
+			wantBefore:    2,
+			wantAfter:     2,
+			wantQueries:   2, // probe forced a re-query even though rows are identical
+			wantInvalKind: "stale",
+		},
+		{
+			name: "tombstone_via_delete_bumps_max",
+			setup: func(_ *testing.T, store *stubStore) {
+				store.setLatest("ts", t0)
+			},
+			mutate: func(_ *testing.T, store *stubStore) {
+				// Delete strips one HTTP row.
+				kept := make([]ChaosPointRow, 0, len(store.rows["ts"]))
+				for _, r := range store.rows["ts"] {
+					if r.CapabilityName == "http_request_replace_path" {
+						continue // drop the ts-order-service endpoint
+					}
+					kept = append(kept, r)
+				}
+				store.setRows("ts", kept)
+				store.setLatest("ts", t0.Add(time.Minute))
+			},
+			wantBefore:    2,
+			wantAfter:     1,
+			wantQueries:   2,
+			wantInvalKind: "stale",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newStubStore()
+			tc.setup(t, store)
+			withChaosStore(t, store)
+
+			cache := GetSystemCache(systemconfig.SystemType("ts"))
+			before, err := cache.GetAllHTTPEndpoints()
+			if err != nil {
+				t.Fatalf("first GetAllHTTPEndpoints: %v", err)
+			}
+			if len(before) != tc.wantBefore {
+				t.Fatalf("before: want %d endpoints, got %d: %#v", tc.wantBefore, len(before), before)
+			}
+
+			invalBefore := testutil.ToFloat64(chaosPointsInvalidateTotal.WithLabelValues("ts", tc.wantInvalKind))
+			tc.mutate(t, store)
+
+			after, err := cache.GetAllHTTPEndpoints()
+			if err != nil {
+				t.Fatalf("second GetAllHTTPEndpoints: %v", err)
+			}
+			if len(after) != tc.wantAfter {
+				t.Fatalf("after: want %d endpoints, got %d: %#v", tc.wantAfter, len(after), after)
+			}
+
+			if n := atomic.LoadInt64(&store.queryCount); n != tc.wantQueries {
+				t.Errorf("want %d QueryPoints calls, got %d", tc.wantQueries, n)
+			}
+			if got := testutil.ToFloat64(chaosPointsInvalidateTotal.WithLabelValues("ts", tc.wantInvalKind)) - invalBefore; got < 1 {
+				t.Errorf("want at least 1 invalidation outcome=%q recorded by second read, got delta=%v", tc.wantInvalKind, got)
+			}
+		})
+	}
+}
+
+// TestDBBacked_FirstMissBootstrap proves the very first GetAllX call after
+// process boot still does exactly one QueryPoints — the probe seeds the
+// high-water mark instead of racing the warm-up into a second SELECT.
+func TestDBBacked_FirstMissBootstrap(t *testing.T) {
+	store := newStubStore()
+	store.setLatest("ts", time.Unix(1700000000, 0))
+	withChaosStore(t, store)
+
+	if _, err := GetSystemCache(systemconfig.SystemType("ts")).GetAllHTTPEndpoints(); err != nil {
+		t.Fatalf("GetAllHTTPEndpoints: %v", err)
+	}
+	if n := atomic.LoadInt64(&store.queryCount); n != 1 {
+		t.Errorf("first miss should issue exactly 1 QueryPoints, got %d", n)
+	}
+	if n := atomic.LoadInt64(&store.latestUpdateCount); n != 1 {
+		t.Errorf("first miss should issue exactly 1 LatestUpdate probe, got %d", n)
+	}
+}
+
+// TestDBBacked_EmptySystem_FirstImportInvalidates exercises the edge case
+// where a system starts with zero rows: LatestUpdate returns the zero time,
+// the cache stores an empty derived slice, and the very first import for
+// that system bumps the high-water mark from epoch to a real timestamp,
+// invalidating the empty cache.
+func TestDBBacked_EmptySystem_FirstImportInvalidates(t *testing.T) {
+	store := &stubStore{rows: map[string][]ChaosPointRow{}, latestPerSystem: map[string]time.Time{}}
+	withChaosStore(t, store)
+
+	sysType := systemconfig.SystemType("greenfield")
+	t.Cleanup(func() { ResetSystemCache(sysType) })
+
+	cache := GetSystemCache(sysType)
+	got, err := cache.GetAllHTTPEndpoints()
+	if err != nil {
+		t.Fatalf("GetAllHTTPEndpoints (empty system): %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("want 0 endpoints for empty system, got %d", len(got))
+	}
+
+	// First import lands.
+	store.setRows("greenfield", []ChaosPointRow{
+		{SystemName: "greenfield", CapabilityName: "http_response_abort", Target: map[string]any{
+			"app": "g-svc", "method": "GET", "path": "/health", "port": float64(8080),
+		}},
+	})
+	store.setLatest("greenfield", time.Unix(1700000000, 0))
+
+	got, err = cache.GetAllHTTPEndpoints()
+	if err != nil {
+		t.Fatalf("GetAllHTTPEndpoints (post-import): %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("first import should be visible without restart, got %d endpoints", len(got))
+	}
+}
+
+// TestDBBacked_ProbeError_ServesStale proves a transient probe failure does
+// not break the guided pipeline — we keep returning the cached snapshot and
+// classify the outcome as probe_error in the metric.
+func TestDBBacked_ProbeError_ServesStale(t *testing.T) {
+	store := newStubStore()
+	store.setLatest("ts", time.Unix(1700000000, 0))
+	withChaosStore(t, store)
+
+	cache := GetSystemCache(systemconfig.SystemType("ts"))
+	first, err := cache.GetAllHTTPEndpoints()
+	if err != nil {
+		t.Fatalf("first GetAllHTTPEndpoints: %v", err)
+	}
+
+	probeErrBefore := testutil.ToFloat64(chaosPointsInvalidateTotal.WithLabelValues("ts", "probe_error"))
+	store.mu.Lock()
+	store.latestErr = context.DeadlineExceeded
+	store.mu.Unlock()
+
+	second, err := cache.GetAllHTTPEndpoints()
+	if err != nil {
+		t.Fatalf("GetAllHTTPEndpoints during probe outage: %v", err)
+	}
+	if len(second) != len(first) {
+		t.Errorf("probe error must not change cached payload: before=%d after=%d", len(first), len(second))
+	}
+	if got := testutil.ToFloat64(chaosPointsInvalidateTotal.WithLabelValues("ts", "probe_error")) - probeErrBefore; got < 1 {
+		t.Errorf("want probe_error counter to advance, got delta=%v", got)
 	}
 }

@@ -4,6 +4,7 @@ package chaosmeta
 
 import (
 	"context"
+	"time"
 
 	"aegis/platform/k8s/resourcelookup"
 )
@@ -16,6 +17,7 @@ type ChaosPointRow = resourcelookup.ChaosPointRow
 // system. SetChaosPointStore wires an implementation in process-wide.
 type ChaosPointStore interface {
 	QueryPoints(ctx context.Context, system string) ([]ChaosPointRow, error)
+	LatestUpdate(ctx context.Context, system string) (time.Time, error)
 }
 
 // SetChaosPointStore installs a process-wide store. Passing nil restores
@@ -32,4 +34,8 @@ type storeAdapter struct{ s ChaosPointStore }
 
 func (a storeAdapter) QueryPoints(ctx context.Context, system string) ([]resourcelookup.ChaosPointRow, error) {
 	return a.s.QueryPoints(ctx, system)
+}
+
+func (a storeAdapter) LatestUpdate(ctx context.Context, system string) (time.Time, error) {
+	return a.s.LatestUpdate(ctx, system)
 }
