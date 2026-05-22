@@ -281,7 +281,7 @@ func TestRegressionPreflight_AutoInstallInvokesInstaller(t *testing.T) {
 		"mm0|app=compose-post-service": 0,
 	}}
 	var installed []string
-	installer := func(_ context.Context, system, namespace string) error {
+	installer := func(_ context.Context, system, namespace string, _, _ []string) error {
 		installed = append(installed, system+"/"+namespace)
 		// Simulate the chart coming up Ready so wait-for-ready terminates.
 		lister.byNSApp["mm0|app=user-service"] = 1
@@ -297,6 +297,64 @@ func TestRegressionPreflight_AutoInstallInvokesInstaller(t *testing.T) {
 	}
 	if len(installed) != 1 || installed[0] != "mm/mm0" {
 		t.Fatalf("unexpected installs: %v", installed)
+	}
+}
+
+func TestRegressionPreflight_AutoInstallForwardsSetFlags(t *testing.T) {
+	rc := makePreflightCase()
+	lister := &fakePodLister{byNSApp: map[string]int{
+		"mm0|app=user-service":         0,
+		"mm0|app=compose-post-service": 0,
+	}}
+	var gotSet, gotSetString []string
+	installer := func(_ context.Context, _, _ string, set, setString []string) error {
+		gotSet = set
+		gotSetString = setString
+		lister.byNSApp["mm0|app=user-service"] = 1
+		lister.byNSApp["mm0|app=compose-post-service"] = 1
+		return nil
+	}
+	oldAuto := regressionAutoInstall
+	oldSet := regressionInstallSet
+	oldSetString := regressionInstallSetString
+	regressionAutoInstall = true
+	regressionInstallSet = []string{"global.security.allowInsecureImages=true", "foo=bar"}
+	regressionInstallSetString = []string{"image.tag=20260520"}
+	defer func() {
+		regressionAutoInstall = oldAuto
+		regressionInstallSet = oldSet
+		regressionInstallSetString = oldSetString
+	}()
+
+	if err := preflightRegressionCase(context.Background(), rc, lister, installer); err != nil {
+		t.Fatalf("expected auto-install success, got %v", err)
+	}
+	if len(gotSet) != 2 || gotSet[0] != "global.security.allowInsecureImages=true" || gotSet[1] != "foo=bar" {
+		t.Fatalf("unexpected --set forward: %v", gotSet)
+	}
+	if len(gotSetString) != 1 || gotSetString[0] != "image.tag=20260520" {
+		t.Fatalf("unexpected --set-string forward: %v", gotSetString)
+	}
+}
+
+func TestDefaultChartInstaller_ArgvContainsSetFlags(t *testing.T) {
+	argv := buildChartInstallArgv("mm", "mm0",
+		[]string{"global.security.allowInsecureImages=true", "foo=bar"},
+		[]string{"image.tag=20260520"},
+	)
+	want := []string{
+		"pedestal", "chart", "install", "mm", "--namespace", "mm0",
+		"--set", "global.security.allowInsecureImages=true",
+		"--set", "foo=bar",
+		"--set-string", "image.tag=20260520",
+	}
+	if len(argv) != len(want) {
+		t.Fatalf("argv len mismatch: got %v want %v", argv, want)
+	}
+	for i := range want {
+		if argv[i] != want[i] {
+			t.Fatalf("argv[%d] = %q, want %q (full: %v)", i, argv[i], want[i], argv)
+		}
 	}
 }
 

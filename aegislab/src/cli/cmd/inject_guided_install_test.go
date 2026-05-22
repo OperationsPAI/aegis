@@ -50,7 +50,7 @@ func TestBootstrapGuidedInstallNoopWhenPodsExist(t *testing.T) {
 
 	guidedPodListerHook = &fakeGuidedPodLister{initialPods: 3}
 	installerCalled := false
-	guidedInstallerHook = func(_ context.Context, _, _ string) error {
+	guidedInstallerHook = func(_ context.Context, _, _ string, _, _ []string) error {
 		installerCalled = true
 		return nil
 	}
@@ -82,7 +82,7 @@ func TestBootstrapGuidedInstallInstallsWhenEmptyAndWaitsForReady(t *testing.T) {
 		},
 	}
 	var installerSystem, installerNamespace string
-	guidedInstallerHook = func(_ context.Context, system, namespace string) error {
+	guidedInstallerHook = func(_ context.Context, system, namespace string, _, _ []string) error {
 		installerSystem = system
 		installerNamespace = namespace
 		return nil
@@ -106,7 +106,7 @@ func TestBootstrapGuidedInstallPropagatesInstallerError(t *testing.T) {
 	}()
 
 	guidedPodListerHook = &fakeGuidedPodLister{initialPods: 0}
-	guidedInstallerHook = func(_ context.Context, _, _ string) error {
+	guidedInstallerHook = func(_ context.Context, _, _ string, _, _ []string) error {
 		return errors.New("helm exploded")
 	}
 
