@@ -280,6 +280,15 @@ func parseInjectionPayload(payload map[string]any) (*injectionPayload, error) {
 		chaosInstance = "seed"
 	}
 	chartVersion, _ := payload[consts.InjectChartVersion].(string)
+	// Seeded catalog rows hash with chart_version="seed-genesis" (see
+	// manifests/aegis-chaos/<sys>/*.yaml). The RestartPedestal path sets this
+	// explicitly, but the --skip-restart-pedestal path bypasses that block,
+	// leaving chartVersion="" → GuidedChaosPointID derives a different point_id
+	// than the catalog → POST /v1beta/injections 404s. Default to seed-genesis
+	// here so every path (RP, skip-RP, direct) addresses the seeded points.
+	if chartVersion == "" {
+		chartVersion = "seed-genesis"
+	}
 
 	return &injectionPayload{
 		benchmark:     benchmark,

@@ -46,6 +46,20 @@ func TestParseInjectionPayloadAcceptsGuidedConfigs(t *testing.T) {
 	require.Equal(t, 11, payload.pedestalID)
 }
 
+func TestParseInjectionPayloadDefaultsChartVersionToSeedGenesis(t *testing.T) {
+	// --skip-restart-pedestal bypasses the RP block that sets chart_version;
+	// without a default the dispatcher derives a point_id with chart_version=""
+	// and 404s against the seed-genesis-hashed catalog rows.
+	payload := sampleInjectionPayload()
+	delete(payload, consts.InjectChartVersion)
+	delete(payload, consts.InjectChaosInstance)
+
+	parsed, err := parseInjectionPayload(payload)
+	require.NoError(t, err)
+	require.Equal(t, "seed-genesis", parsed.chartVersion)
+	require.Equal(t, "seed", parsed.chaosInstance)
+}
+
 func TestParseInjectionPayloadRejectsLegacyNodes(t *testing.T) {
 	payload := sampleInjectionPayload()
 	delete(payload, consts.InjectGuidedConfigs)
