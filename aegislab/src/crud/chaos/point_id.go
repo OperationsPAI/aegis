@@ -29,7 +29,7 @@ type CrossServicePointIdentity struct {
 }
 
 func ServiceBoundPointID(p PointIdentity) (string, error) {
-	tj, err := canonicalJSON(p.Target)
+	tj, err := canonicalTargetJSON(p.Target)
 	if err != nil {
 		return "", err
 	}
@@ -40,12 +40,29 @@ func ServiceBoundPointID(p PointIdentity) (string, error) {
 }
 
 func CrossServicePointID(p CrossServicePointIdentity) (string, error) {
-	tj, err := canonicalJSON(p.Target)
+	tj, err := canonicalTargetJSON(p.Target)
 	if err != nil {
 		return "", err
 	}
 	h := sha256.Sum256([]byte(p.System + "/" + p.Capability + "/" + tj))
 	return hex.EncodeToString(h[:])[:16], nil
+}
+
+// canonicalTargetJSON canonicalises a Point's target for hashing with the
+// namespace key removed. namespace is a runtime binding (the concrete
+// per-instance allocator namespace the CR is applied into), not part of a
+// Point's abstract identity — a catalog Point must match an injection
+// resolving in any of its system's namespaces. import and inject MUST share
+// this single path; any divergence reintroduces point_id mismatches.
+func canonicalTargetJSON(target map[string]any) (string, error) {
+	stripped := make(map[string]any, len(target))
+	for k, v := range target {
+		if k == "namespace" {
+			continue
+		}
+		stripped[k] = v
+	}
+	return canonicalJSON(stripped)
 }
 
 // canonicalJSON serialises a map with object keys sorted lexicographically

@@ -76,3 +76,65 @@ func TestCrossServicePointID_OmitsService(t *testing.T) {
 		t.Fatalf("expected 16-char id, got %d", len(a))
 	}
 }
+
+// Core regression for the #460/#470 vs #166 incompatibility: a Point imported
+// with the catalog's logical namespace must produce the SAME id as an inject
+// resolving in a concrete per-instance allocator namespace. namespace is a
+// runtime binding and must NOT participate in identity.
+func TestServiceBoundPointID_NamespaceExcludedFromIdentity(t *testing.T) {
+	imported, err := ServiceBoundPointID(PointIdentity{
+		System: "sn", Service: "post-storage-service", Instance: "seed",
+		ChartVersion: "seed-genesis", Capability: "pod_failure",
+		Target: map[string]any{"namespace": "sn", "app": "post-storage-service"},
+	})
+	if err != nil {
+		t.Fatalf("imported: %v", err)
+	}
+	injected, err := ServiceBoundPointID(PointIdentity{
+		System: "sn", Service: "post-storage-service", Instance: "seed",
+		ChartVersion: "seed-genesis", Capability: "pod_failure",
+		Target: map[string]any{"namespace": "sn1", "app": "post-storage-service"},
+	})
+	if err != nil {
+		t.Fatalf("injected: %v", err)
+	}
+	if imported != injected {
+		t.Fatalf("namespace must not affect id: imported %q vs injected %q", imported, injected)
+	}
+
+	// non-namespace target keys must still drive identity.
+	other, _ := ServiceBoundPointID(PointIdentity{
+		System: "sn", Service: "post-storage-service", Instance: "seed",
+		ChartVersion: "seed-genesis", Capability: "pod_failure",
+		Target: map[string]any{"namespace": "sn1", "app": "user-service"},
+	})
+	if other == injected {
+		t.Fatalf("non-namespace target change must yield a different id")
+	}
+}
+
+func TestCrossServicePointID_NamespaceExcludedFromIdentity(t *testing.T) {
+	imported, _ := CrossServicePointID(CrossServicePointIdentity{
+		System: "sn", Capability: "network_partition",
+		Target: map[string]any{"namespace": "sn", "source_app": "frontend", "target_service": "cart"},
+	})
+	injected, _ := CrossServicePointID(CrossServicePointIdentity{
+		System: "sn", Capability: "network_partition",
+		Target: map[string]any{"namespace": "sn3", "source_app": "frontend", "target_service": "cart"},
+	})
+	if imported != injected {
+		t.Fatalf("namespace must not affect cross-service id: %q vs %q", imported, injected)
+	}
+}
+
+// canonicalTargetJSON must not mutate the caller's map (import.go stores the
+// same map it hashes).
+func TestCanonicalTargetJSON_DoesNotMutateCaller(t *testing.T) {
+	target := map[string]any{"namespace": "sn1", "app": "frontend"}
+	if _, err := canonicalTargetJSON(target); err != nil {
+		t.Fatalf("canonicalTargetJSON: %v", err)
+	}
+	if _, ok := target["namespace"]; !ok {
+		t.Fatalf("caller's target.namespace was mutated away")
+	}
+}
