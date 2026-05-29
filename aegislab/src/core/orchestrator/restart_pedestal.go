@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"aegis/core/orchestrator/common"
 	"aegis/platform/config"
 	"aegis/platform/consts"
 	"aegis/platform/dto"
@@ -8,7 +9,6 @@ import (
 	k8s "aegis/platform/k8s"
 	redis "aegis/platform/redis"
 	"aegis/platform/tracing"
-	"aegis/core/orchestrator/common"
 	"aegis/platform/utils"
 	"context"
 	"errors"
@@ -72,15 +72,98 @@ func restartWorkloadReadyTimeout() time.Duration {
 }
 
 // restartPostReadySoakDuration is the warmup window between workload-Ready
-// and the start of the normal-data window. Config key
-// `orchestrator.pedestal.warmup_seconds` (falls back to
-// consts.DefaultFixedPedestalWarmupSeconds).
-func restartPostReadySoakDuration() time.Duration {
+// and the start of the normal-data window. The per-system override
+// (`injection.system.<sys>.warmup_seconds`, exposed as cfg.Warmup()) wins when
+// set; otherwise it falls back to the global `orchestrator.pedestal.warmup_seconds`
+// and finally to consts.DefaultFixedPedestalWarmupSeconds. This duration is
+// the floor — even when the traffic-presence gate confirms spans earlier, the
+// inject time is never pulled in before readyAt + this soak.
+func restartPostReadySoakDuration(cfg config.ChaosSystemConfig) time.Duration {
+	if d := cfg.Warmup(); d > 0 {
+		return d
+	}
 	secs := config.GetInt("orchestrator.pedestal.warmup_seconds")
 	if secs <= 0 {
 		secs = consts.DefaultFixedPedestalWarmupSeconds
 	}
 	return time.Duration(secs) * time.Second
+}
+
+// trafficGateParams resolves the traffic-presence gate knobs from dynamic
+// config, falling back to the consts defaults. Read on each call so a runtime
+// etcd push applies without a rebuild (same pattern as the freshness probe).
+func trafficGateParams() (minSpans uint64, poll, timeout time.Duration) {
+	min := config.GetInt(consts.PedestalTrafficGateMinSpansKey)
+	if min <= 0 {
+		min = consts.DefaultPedestalTrafficGateMinSpans
+	}
+	p := config.GetInt(consts.PedestalTrafficGatePollKey)
+	if p <= 0 {
+		p = consts.DefaultPedestalTrafficGatePollSeconds
+	}
+	t := config.GetInt(consts.PedestalTrafficGateTimeoutKey)
+	if t <= 0 {
+		t = consts.DefaultPedestalTrafficGateTimeoutSeconds
+	}
+	return uint64(min), time.Duration(p) * time.Second, time.Duration(t) * time.Second
+}
+
+// waitForTrafficPresence polls ClickHouse for spans emitted by the target
+// namespace and returns once at least minSpans have arrived in the trailing
+// poll window. Returns true when traffic was confirmed; false (without error)
+// when the bounded timeout was exhausted or the probe is unavailable — the
+// caller then degrades to the fixed warmup timer rather than hard-failing.
+//
+// This is the correctness fix for cold-start DSB bootstraps (sn/media/hs):
+// pods go Ready in seconds but the chart's data-init-job + load-generator take
+// minutes to emit the first spans, so injecting at the fixed 1-min warmup
+// produced an empty abnormal window and a no-spans BuildDatapack.
+func waitForTrafficPresence(ctx context.Context, probe trafficProbe, namespace string, logEntry *logrus.Entry) bool {
+	if probe == nil {
+		logEntry.Warn("traffic-presence gate skipped: no ClickHouse probe wired; falling back to fixed warmup timer")
+		return false
+	}
+
+	minSpans, poll, timeout := trafficGateParams()
+	deadline := time.Now().Add(timeout)
+	attempt := 0
+	for {
+		attempt++
+		n, err := probe.RecentSpanCount(ctx, namespace, poll)
+		if err != nil {
+			// CH unreachable / misconfigured: don't block the restart on a
+			// probe we can't run. Degrade to the warmup timer (the per-system
+			// floor still applies). Logged at WARN so ops can see the gate was
+			// bypassed.
+			logEntry.WithError(err).WithField("namespace", namespace).
+				Warn("traffic-presence gate: ClickHouse probe failed; falling back to fixed warmup timer")
+			return false
+		}
+		logEntry.WithFields(logrus.Fields{
+			"attempt":    attempt,
+			"namespace":  namespace,
+			"span_count": n,
+			"min_spans":  minSpans,
+		}).Info("traffic-presence gate probe")
+		if n >= minSpans {
+			return true
+		}
+		if time.Now().After(deadline) {
+			logEntry.WithFields(logrus.Fields{
+				"namespace":  namespace,
+				"waited":     timeout.String(),
+				"span_count": n,
+				"min_spans":  minSpans,
+			}).Warn("traffic-presence gate timed out; falling back to fixed warmup timer")
+			return false
+		}
+		select {
+		case <-ctx.Done():
+			logEntry.WithField("namespace", namespace).Warn("traffic-presence gate cancelled; falling back to fixed warmup timer")
+			return false
+		case <-time.After(poll):
+		}
+	}
 }
 
 // pedestalRestartTimeout returns the workload-readiness timeout for a
@@ -143,7 +226,10 @@ func extractPreDuration(injectPayload map[string]any) time.Duration {
 //
 // Followed by the post-ready soak, used to ensure the inject window doesn't
 // fire mid-warmup.
-func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, namespace string, readinessTimeout time.Duration) (time.Time, error) {
+func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, probe trafficProbe, cfg config.ChaosSystemConfig, namespace string, readinessTimeout time.Duration, logEntry *logrus.Entry) (time.Time, error) {
+	if logEntry == nil {
+		logEntry = logrus.NewEntry(logrus.StandardLogger())
+	}
 	if gateway == nil {
 		logrus.Warnf("k8s gateway is nil; skipping workload-ready wait for namespace %q", namespace)
 		return time.Now(), nil
@@ -161,27 +247,59 @@ func waitForPedestalWorkloadReady(ctx context.Context, gateway *k8s.Gateway, nam
 		return time.Time{}, err
 	}
 
-	soak := restartPostReadySoakDuration()
+	readyAt := time.Now()
+	soak := restartPostReadySoakDuration(cfg)
+
+	// Traffic-presence gate: prefer confirmed span flow over a blind timer.
+	// When the gate confirms traffic, the warmup floor (soak, measured from
+	// pod-Ready) still applies so we never inject before the per-system
+	// warmup_seconds elapses. When the gate times out or CH is unavailable we
+	// degrade silently to the fixed soak — the gate is a correctness
+	// optimization, not a new failure mode.
+	trafficConfirmed := waitForTrafficPresence(ctx, probe, namespace, logEntry)
+
+	floorReachedAt := readyAt.Add(soak)
+	if trafficConfirmed {
+		// Spans are flowing. Respect the warmup floor but don't soak further.
+		if remaining := time.Until(floorReachedAt); remaining > 0 {
+			if err := sleepCtx(ctx, remaining); err != nil {
+				return time.Time{}, err
+			}
+		}
+		return time.Now(), nil
+	}
+
 	if soak <= 0 {
 		return time.Now(), nil
 	}
 
-	var readyAt time.Time
+	var warmedAt time.Time
 	err := tracing.WithSpanNamed(ctx, "helm.post_ready_soak", func(c context.Context) error {
-		timer := time.NewTimer(soak)
-		defer timer.Stop()
-		select {
-		case <-c.Done():
-			return c.Err()
-		case <-timer.C:
-			readyAt = time.Now()
-			return nil
+		if remaining := time.Until(floorReachedAt); remaining > 0 {
+			if serr := sleepCtx(c, remaining); serr != nil {
+				return serr
+			}
 		}
+		warmedAt = time.Now()
+		return nil
 	})
 	if err != nil {
 		return time.Time{}, err
 	}
-	return readyAt, nil
+	return warmedAt, nil
+}
+
+// sleepCtx blocks for d, returning early with the context error if ctx is
+// cancelled first.
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func adjustInjectTimeAfterWarmup(injectTime, warmupReadyAt time.Time, injectPayload map[string]any) time.Time {
@@ -531,10 +649,15 @@ func executeRestartPedestal(ctx context.Context, task *dto.UnifiedTask, deps Run
 		tokens.warming = true
 		logEntry.Infof("acquired warming token for ns %s", namespace)
 
+		// deps.FreshnessProbe is the shared clickHouseFreshnessProbe (wired in
+		// worker/module.go); it also satisfies trafficProbe. The assertion is
+		// nil-safe — a nil or non-trafficProbe value yields a nil probe and
+		// the gate degrades to the fixed warmup timer.
+		trafficGateProbe, _ := deps.FreshnessProbe.(trafficProbe)
 		var warmupReadyAt time.Time
 		err = tracing.WithSpanNamed(childCtx, "helm.wait_ready", func(c context.Context) error {
 			var werr error
-			warmupReadyAt, werr = waitForPedestalWorkloadReady(c, deps.K8sGateway, namespace, pedestalRestartTimeout())
+			warmupReadyAt, werr = waitForPedestalWorkloadReady(c, deps.K8sGateway, trafficGateProbe, cfg, namespace, pedestalRestartTimeout(), logEntry)
 			return werr
 		})
 		if err != nil {

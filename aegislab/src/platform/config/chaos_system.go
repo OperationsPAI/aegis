@@ -54,6 +54,18 @@ type ChaosSystemConfig struct {
 	// `injection.system.<sys>.readiness_timeout_seconds`. Zero / unset falls
 	// back to DefaultReadinessTimeoutSeconds (900 = 15 min).
 	ReadinessTimeoutSeconds int `mapstructure:"readiness_timeout_seconds"`
+	// WarmupSeconds is the post-Ready soak this system needs before its
+	// workload emits enough traffic to inject against. It acts both as a floor
+	// (RestartPedestal never injects earlier than this even when the
+	// traffic-presence gate confirms spans sooner) and as the fallback bound
+	// when ClickHouse is unreachable and the gate cannot run. DSB systems
+	// (SocialNetwork, MediaMicroservices, HotelReservation) chain a
+	// data-init-job + load-generator ramp that takes several minutes; the
+	// global default (consts.DefaultFixedPedestalWarmupSeconds = 1 min) is far
+	// too short for them. Per-system override via etcd key
+	// `injection.system.<sys>.warmup_seconds`. Zero / unset falls back to the
+	// global `orchestrator.pedestal.warmup_seconds` (resolved by the caller).
+	WarmupSeconds int `mapstructure:"warmup_seconds"`
 	// ReclaimMode selects the NamespaceReclaimer action when this system's
 	// namespace becomes reclaim-eligible. "soft" → rollout restart of non-DB
 	// deployments (preserves helm release + DB state). Empty / anything else
@@ -77,6 +89,17 @@ func (s *ChaosSystemConfig) ReadinessTimeout() time.Duration {
 		secs = DefaultReadinessTimeoutSeconds
 	}
 	return time.Duration(secs) * time.Second
+}
+
+// Warmup returns the per-system post-Ready warmup duration, or zero when the
+// system has no override. A zero result tells the caller to fall back to the
+// global `orchestrator.pedestal.warmup_seconds` default. Kept as a duration
+// (not a raw int) so call sites don't repeat the seconds conversion.
+func (s *ChaosSystemConfig) Warmup() time.Duration {
+	if s.WarmupSeconds <= 0 {
+		return 0
+	}
+	return time.Duration(s.WarmupSeconds) * time.Second
 }
 
 // chaosSystemConfigManager is now a stateless façade over Viper — every call
