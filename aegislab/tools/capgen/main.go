@@ -134,6 +134,27 @@ func jvmMethodTarget(extra map[string]any) map[string]any {
 	return obj(props, required...)
 }
 
+// jvmRuntimeMutatorTarget describes a runtime-mutator target. Each point is
+// one concrete mutation of one method: the mutation identity
+// (mutation_type_name + from/to/strategy) lives in the target so distinct
+// mutations are distinct catalog points. mutation_type is the numeric kind
+// code carried alongside the name.
+func jvmRuntimeMutatorTarget() map[string]any {
+	props := map[string]any{
+		"namespace":          str(1),
+		"app":                str(1),
+		"class":              str(1),
+		"method":             str(1),
+		"mutation_type_name": str(1),
+		"mutation_type":      map[string]any{"type": "integer"},
+		"mutation_from":      map[string]any{"type": "string"},
+		"mutation_to":        map[string]any{"type": "string"},
+		"mutation_strategy":  map[string]any{"type": "string"},
+		"description":        map[string]any{"type": "string"},
+	}
+	return obj(props, "namespace", "app", "class", "method", "mutation_type_name")
+}
+
 // jvmMysqlTarget describes JVM MySQL chaos targets. The Connector/J
 // interceptor matches by SQL operation, not by Java class+method, so the
 // target carries db_name/table/sql_type instead of class/method.
@@ -847,14 +868,9 @@ func capabilities() []capability {
 			CRDKind:   "JVMChaos",
 			Status:    "experimental",
 			OneLine:   "mutate JVM method body (constant/operator/string rewrite)",
-			TargetSchema: jvmMethodTarget(map[string]any{
-				"mutation_type": map[string]any{"type": "string", "enum": []any{"constant", "operator", "string"}},
-			}),
+			TargetSchema: jvmRuntimeMutatorTarget(),
 			ParamSchema: obj(map[string]any{
-				"duration_s":        durationS(),
-				"mutation_from":     map[string]any{"type": "string"},
-				"mutation_to":       map[string]any{"type": "string"},
-				"mutation_strategy": map[string]any{"type": "string"},
+				"duration_s": durationS(),
 			}),
 			ObservableContract: map[string]any{
 				"name":     "jvm_runtime_mutator",

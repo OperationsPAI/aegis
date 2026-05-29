@@ -1562,16 +1562,27 @@
           "minLength": 1,
           "type": "string"
         },
+        "description": {
+          "type": "string"
+        },
         "method": {
           "minLength": 1,
           "type": "string"
         },
+        "mutation_from": {
+          "type": "string"
+        },
+        "mutation_strategy": {
+          "type": "string"
+        },
+        "mutation_to": {
+          "type": "string"
+        },
         "mutation_type": {
-          "enum": [
-            "constant",
-            "operator",
-            "string"
-          ],
+          "type": "integer"
+        },
+        "mutation_type_name": {
+          "minLength": 1,
           "type": "string"
         },
         "namespace": {
@@ -1583,7 +1594,8 @@
         "namespace",
         "app",
         "class",
-        "method"
+        "method",
+        "mutation_type_name"
       ],
       "type": "object"
     },
@@ -1596,15 +1608,6 @@
           "maximum": 3600,
           "minimum": 1,
           "type": "integer"
-        },
-        "mutation_from": {
-          "type": "string"
-        },
-        "mutation_strategy": {
-          "type": "string"
-        },
-        "mutation_to": {
-          "type": "string"
         }
       },
       "required": [],

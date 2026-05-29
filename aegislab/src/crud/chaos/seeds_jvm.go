@@ -4,9 +4,19 @@ import "time"
 
 // SeedsJVM is the §11 step-2 Capability set for the JVM family.
 // Schemas + observable_contract are lifted from
-// `tools/capgen/output/capabilities.json`. `jvm_runtime_mutator` is
-// omitted: it does not map to a chaos-mesh JVMChaos action.
+// `tools/capgen/output/capabilities.json`. `jvm_runtime_mutator` is a
+// RuntimeMutatorChaos capability (OperationsPAI fork), rendered by
+// renderer_runtimemutator — not a JVMChaos action — but it is seeded here
+// so the catalog admits jvm_runtime_mutator points on import.
 var SeedsJVM = []Capability{
+	{
+		Name:               "jvm_runtime_mutator",
+		TargetSchema:       jvmRuntimeMutatorTargetSchema(),
+		ParamSchema:        jvmRuntimeMutatorParamSchema(),
+		ObservableContract: jvmRuntimeMutatorObservableContract(),
+		Status:             CapExperimental,
+		CreatedAt:          time.Now().UTC(),
+	},
 	{
 		Name:               "jvm_cpu_stress",
 		TargetSchema:       jvmMethodTargetSchema(),
@@ -118,6 +128,49 @@ func jvmMySQLTargetSchema() JSONMap {
 				"default": "all",
 			},
 		},
+	}
+}
+
+// jvmRuntimeMutatorTargetSchema mirrors tools/capgen jvmRuntimeMutatorTarget:
+// the mutation identity (type_name + from/to/strategy) lives in the target
+// so distinct mutations are distinct catalog points.
+func jvmRuntimeMutatorTargetSchema() JSONMap {
+	return JSONMap{
+		"$schema":              "https://json-schema.org/draft/2020-12/schema",
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             []any{"namespace", "app", "class", "method", "mutation_type_name"},
+		"properties": map[string]any{
+			"namespace":          map[string]any{"type": "string", "minLength": 1},
+			"app":                map[string]any{"type": "string", "minLength": 1},
+			"class":              map[string]any{"type": "string", "minLength": 1},
+			"method":             map[string]any{"type": "string", "minLength": 1},
+			"mutation_type_name": map[string]any{"type": "string", "minLength": 1},
+			"mutation_type":      map[string]any{"type": "integer"},
+			"mutation_from":      map[string]any{"type": "string"},
+			"mutation_to":        map[string]any{"type": "string"},
+			"mutation_strategy":  map[string]any{"type": "string"},
+			"description":        map[string]any{"type": "string"},
+		},
+	}
+}
+
+func jvmRuntimeMutatorParamSchema() JSONMap {
+	return JSONMap{
+		"$schema":              "https://json-schema.org/draft/2020-12/schema",
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             []any{},
+		"properties": map[string]any{
+			"duration_s": durationParam(),
+		},
+	}
+}
+
+func jvmRuntimeMutatorObservableContract() JSONMap {
+	return JSONMap{
+		"name":     "jvm_runtime_mutator",
+		"contract": "TODO: mutator effect is app-semantic (changed constant, flipped operator, swapped string); no generic trace assertion holds.",
 	}
 }
 

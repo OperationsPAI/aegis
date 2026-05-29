@@ -127,6 +127,8 @@ var (
 	jvmMethodCaps = []string{"jvm_method_return", "jvm_method_exception", "jvm_cpu_stress", "jvm_memory_stress"}
 	jvmMysqlCaps  = []string{"jvm_mysql_latency", "jvm_mysql_exception"}
 
+	mutationTypeNames = map[int]string{0: "constant", 1: "operator", 2: "string"}
+
 	validMySQLTypes = map[string]bool{"select": true, "insert": true, "update": true, "delete": true, "replace": true, "all": true}
 )
 
@@ -160,6 +162,21 @@ type grpcOp struct {
 	ServerAddress string
 }
 
+type mutationSpec struct {
+	Type        int
+	TypeName    string
+	From        string
+	To          string
+	Strategy    string
+	Description string
+}
+
+type mutatorEntry struct {
+	Class     string
+	Method    string
+	Mutations []mutationSpec
+}
+
 type systemData struct {
 	sysKey    string
 	namespace string
@@ -169,6 +186,8 @@ type systemData struct {
 	methods map[string][]classMethod
 	// service → mysql database operations
 	dbOps map[string][]dbOp
+	// service → runtime-mutator method entries
+	mutators map[string][]mutatorEntry
 	// client-side gRPC operations across all services (DNS gRPC-only filter)
 	grpcClientOps []grpcOp
 	// union of every service name observed anywhere in this system
@@ -199,12 +218,13 @@ type stats struct {
 	pointsBySystem   map[string]int
 	skippedSystems   []string
 
-	httpReqBySystem   map[string]int
-	httpA1bBySystem   map[string]int
-	dnsBySystem       map[string]int
-	networkBySystem   map[string]int
-	jvmMethodBySystem map[string]int
-	jvmMysqlBySystem  map[string]int
+	httpReqBySystem    map[string]int
+	httpA1bBySystem    map[string]int
+	dnsBySystem        map[string]int
+	networkBySystem    map[string]int
+	jvmMethodBySystem  map[string]int
+	jvmMysqlBySystem   map[string]int
+	jvmMutatorBySystem map[string]int
 }
 
 func main() {
@@ -221,14 +241,15 @@ func main() {
 
 func run(chaosRoot, outRoot, chartVersion string) error {
 	st := stats{
-		servicesBySystem:  map[string]int{},
-		pointsBySystem:    map[string]int{},
-		httpReqBySystem:   map[string]int{},
-		httpA1bBySystem:   map[string]int{},
-		dnsBySystem:       map[string]int{},
-		networkBySystem:   map[string]int{},
-		jvmMethodBySystem: map[string]int{},
-		jvmMysqlBySystem:  map[string]int{},
+		servicesBySystem:   map[string]int{},
+		pointsBySystem:     map[string]int{},
+		httpReqBySystem:    map[string]int{},
+		httpA1bBySystem:    map[string]int{},
+		dnsBySystem:        map[string]int{},
+		networkBySystem:    map[string]int{},
+		jvmMethodBySystem:  map[string]int{},
+		jvmMysqlBySystem:   map[string]int{},
+		jvmMutatorBySystem: map[string]int{},
 	}
 
 	if err := os.MkdirAll(outRoot, 0o755); err != nil {
@@ -271,13 +292,14 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 			}
 
 			categories := map[string][]point{
-				"http":       buildHTTPA1bPoints(svc, data),
-				"dns":        buildDNSPoints(svc, data),
-				"network":    buildNetworkPoints(svc, data),
-				"jvm-method": buildJVMMethodPoints(svc, data),
-				"jvm-mysql":  buildJVMMysqlPoints(svc, data),
+				"http":                buildHTTPA1bPoints(svc, data),
+				"dns":                 buildDNSPoints(svc, data),
+				"network":             buildNetworkPoints(svc, data),
+				"jvm-method":          buildJVMMethodPoints(svc, data),
+				"jvm-mysql":           buildJVMMysqlPoints(svc, data),
+				"jvm-runtime-mutator": buildRuntimeMutatorPoints(svc, data),
 			}
-			for _, cat := range []string{"dns", "http", "jvm-method", "jvm-mysql", "network"} {
+			for _, cat := range []string{"dns", "http", "jvm-method", "jvm-mysql", "jvm-runtime-mutator", "network"} {
 				pts := categories[cat]
 				if len(pts) == 0 {
 					continue
@@ -300,6 +322,8 @@ func run(chaosRoot, outRoot, chartVersion string) error {
 					st.jvmMethodBySystem[sysKey] += len(pts)
 				case "jvm-mysql":
 					st.jvmMysqlBySystem[sysKey] += len(pts)
+				case "jvm-runtime-mutator":
+					st.jvmMutatorBySystem[sysKey] += len(pts)
 				}
 			}
 		}
@@ -522,6 +546,60 @@ func buildJVMMysqlPoints(service string, d *systemData) []point {
 	return pts
 }
 
+// buildRuntimeMutatorPoints emits one jvm_runtime_mutator point per
+// (app, class, method, distinct mutation). The mutation fingerprint mirrors
+// guided/resolver.go runtimeMutatorKey: constant mutations are identified by
+// from:to, operator/string mutations by type_name:strategy.
+func buildRuntimeMutatorPoints(service string, d *systemData) []point {
+	app := appLabel(d.sysKey, service)
+	var pts []point
+	for _, me := range d.mutators[service] {
+		seen := map[string]struct{}{}
+		for _, m := range me.Mutations {
+			typeName := m.TypeName
+			if typeName == "" {
+				typeName = mutationTypeNames[m.Type]
+			}
+			if typeName == "" {
+				continue
+			}
+			var fp string
+			if typeName == "constant" {
+				fp = "constant:" + m.From + ":" + m.To
+			} else {
+				fp = typeName + ":" + m.Strategy
+			}
+			key := me.Class + "|" + me.Method + "|" + fp
+			if _, dup := seen[key]; dup {
+				continue
+			}
+			seen[key] = struct{}{}
+			target := map[string]any{
+				"namespace":          d.namespace,
+				"app":                app,
+				"class":              me.Class,
+				"method":             me.Method,
+				"mutation_type":      m.Type,
+				"mutation_type_name": typeName,
+			}
+			if m.From != "" {
+				target["mutation_from"] = m.From
+			}
+			if m.To != "" {
+				target["mutation_to"] = m.To
+			}
+			if m.Strategy != "" {
+				target["mutation_strategy"] = m.Strategy
+			}
+			if m.Description != "" {
+				target["description"] = m.Description
+			}
+			pts = append(pts, point{Capability: "jvm_runtime_mutator", Target: target})
+		}
+	}
+	return pts
+}
+
 // grpcOnlyPairs returns the set of "source->target" pairs that communicate
 // only via gRPC (have a client gRPC op but no HTTP route). DNS chaos is
 // skipped for these.
@@ -636,10 +714,10 @@ func printSummary(w *os.File, st stats) {
 		if st.servicesBySystem[k] == 0 {
 			continue
 		}
-		fmt.Fprintf(w, "system=%-10s services=%-4d points=%-6d (httpReq=%d httpA1b=%d dns=%d net=%d jvmM=%d jvmSQL=%d)\n",
+		fmt.Fprintf(w, "system=%-10s services=%-4d points=%-6d (httpReq=%d httpA1b=%d dns=%d net=%d jvmM=%d jvmSQL=%d mut=%d)\n",
 			systemDisplay[k], st.servicesBySystem[k], st.pointsBySystem[k],
 			st.httpReqBySystem[k], st.httpA1bBySystem[k], st.dnsBySystem[k],
-			st.networkBySystem[k], st.jvmMethodBySystem[k], st.jvmMysqlBySystem[k])
+			st.networkBySystem[k], st.jvmMethodBySystem[k], st.jvmMysqlBySystem[k], st.jvmMutatorBySystem[k])
 		totalServices += st.servicesBySystem[k]
 		totalPoints += st.pointsBySystem[k]
 	}
@@ -668,6 +746,7 @@ func loadSystem(chaosRoot, sysKey string) (*systemData, error) {
 		endpoints:       map[string][]httpEndpoint{},
 		methods:         map[string][]classMethod{},
 		dbOps:           map[string][]dbOp{},
+		mutators:        map[string][]mutatorEntry{},
 		services:        map[string]struct{}{},
 		presentFamilies: map[string]bool{},
 	}
@@ -699,6 +778,11 @@ func loadSystem(chaosRoot, sysKey string) (*systemData, error) {
 	if err := loadJavaClassMethods(filepath.Join(root, "javaclassmethods", "javaclassmethods.go"), d); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, ErrVarNotFound) {
 			return nil, fmt.Errorf("javaclassmethods: %w", err)
+		}
+	}
+	if err := loadMutatorConfig(filepath.Join(root, "mutatorconfig", "mutatorconfig.go"), d); err != nil {
+		if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, ErrVarNotFound) {
+			return nil, fmt.Errorf("mutatorconfig: %w", err)
 		}
 	}
 
@@ -948,6 +1032,72 @@ func loadJavaClassMethods(path string, d *systemData) error {
 	return nil
 }
 
+func loadMutatorConfig(path string, d *systemData) error {
+	cl, err := parseMapLiteral(path, "ServiceMutatorConfig")
+	if err != nil {
+		return err
+	}
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		svc, ok := stringLit(kv.Key)
+		if !ok {
+			continue
+		}
+		d.services[svc] = struct{}{}
+		entries, ok := kv.Value.(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		for _, entry := range entries.Elts {
+			rec, ok := entry.(*ast.CompositeLit)
+			if !ok {
+				continue
+			}
+			me := mutatorEntry{
+				Class:  structFields(rec)["ClassName"],
+				Method: structFields(rec)["MethodName"],
+			}
+			if me.Class == "" || me.Method == "" {
+				continue
+			}
+			for _, f := range rec.Elts {
+				fkv, ok := f.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				id, ok := fkv.Key.(*ast.Ident)
+				if !ok || id.Name != "Mutations" {
+					continue
+				}
+				specs, ok := fkv.Value.(*ast.CompositeLit)
+				if !ok {
+					continue
+				}
+				for _, s := range specs.Elts {
+					srec, ok := s.(*ast.CompositeLit)
+					if !ok {
+						continue
+					}
+					fields := structFields(srec)
+					me.Mutations = append(me.Mutations, mutationSpec{
+						Type:        intField(srec, "Type"),
+						TypeName:    fields["TypeName"],
+						From:        fields["From"],
+						To:          fields["To"],
+						Strategy:    fields["Strategy"],
+						Description: fields["Description"],
+					})
+				}
+			}
+			d.mutators[svc] = append(d.mutators[svc], me)
+		}
+	}
+	return nil
+}
+
 func structFields(cl *ast.CompositeLit) map[string]string {
 	out := map[string]string{}
 	for _, elt := range cl.Elts {
@@ -976,6 +1126,29 @@ func stringLit(e ast.Expr) (string, bool) {
 		return "", false
 	}
 	return s, true
+}
+
+func intField(cl *ast.CompositeLit, name string) int {
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		id, ok := kv.Key.(*ast.Ident)
+		if !ok || id.Name != name {
+			continue
+		}
+		bl, ok := kv.Value.(*ast.BasicLit)
+		if !ok || bl.Kind != token.INT {
+			return 0
+		}
+		n, err := strconv.Atoi(bl.Value)
+		if err != nil {
+			return 0
+		}
+		return n
+	}
+	return 0
 }
 
 // ---------- Manifest write ----------

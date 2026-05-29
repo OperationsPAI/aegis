@@ -49,9 +49,17 @@ other 7 systems the two coincide.
 | `network`    | `network_{delay,loss,duplicate,corrupt,bandwidth,partition}`                                          | `{namespace, source_app, target_service}`     | serviceendpoints + grpc ServerAddress (forward, self-loops dropped) |
 | `jvm-method` | `jvm_method_{return,exception}`, `jvm_{cpu_stress,memory_stress}`                                      | `{namespace, app, class, method}`             | javaclassmethods             |
 | `jvm-mysql`  | `jvm_mysql_{latency,exception}`                                                                       | `{namespace, app, db_name, table, sql_type}`  | databaseoperations (mysql only) |
+| `jvm-runtime-mutator` | `jvm_runtime_mutator`                                                                       | `{namespace, app, class, method, mutation_type_name, mutation_type, mutation_from?, mutation_to?, mutation_strategy?, description?}` | mutatorconfig (ob/oteldemo/sockshop/teastore/ts) |
 
 ## Derivation notes
 
+- **jvm-runtime-mutator** emits one point per (app, class, method, distinct
+  mutation). The mutation fingerprint mirrors guided/resolver.go
+  runtimeMutatorKey: constant mutations are keyed by from:to, operator/string
+  by type_name:strategy. The point is rendered into the OperationsPAI-fork
+  RuntimeMutatorChaos CRD by crud/chaos/renderer_runtimemutator.go, and
+  resourcelookup serves these targets from chaos_points like every other
+  family.
 - **network** pairs are derived forward-only from each service's own
   endpoint `ServerAddress` values (self-loops dropped). Both HTTP
   serviceendpoints and gRPC operations contribute targets.

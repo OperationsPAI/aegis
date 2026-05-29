@@ -176,10 +176,9 @@ func (s *systemCache) probeAndInvalidate(ctx context.Context, store ChaosPointSt
 }
 
 // dropChaosPointDerivedLocked clears the per-system snapshot and every
-// chaos_points-derived slice. k8s-derived appLabels / containerInfo and the
-// MetadataStore-fed runtimeMutatorTargets are not chaos_points-backed today
-// (no production caller wires SetMetadataStore / RegisterRuntimeMutatorProvider),
-// so the probe deliberately does not touch them. Callers must hold s.dbSnapshotMu.
+// chaos_points-derived slice. k8s-derived appLabels / containerInfo are not
+// chaos_points-backed, so the probe deliberately does not touch them.
+// Callers must hold s.dbSnapshotMu.
 func (s *systemCache) dropChaosPointDerivedLocked() {
 	s.dbSnapshotRows = nil
 	s.dbSnapshotErr = nil
@@ -189,6 +188,7 @@ func (s *systemCache) dropChaosPointDerivedLocked() {
 	s.dnsEndpoints = []AppDNSPair{}
 	s.dbOperations = []AppDatabasePair{}
 	s.appMethods = []AppMethodPair{}
+	s.runtimeMutatorTargets = []AppRuntimeMutatorTarget{}
 }
 
 // chaosPointDerived is the shared probe-then-extract path used by every
@@ -311,61 +311,9 @@ func (s *systemCache) GetAllJVMMethods() ([]AppMethodPair, error) {
 }
 
 // GetAllJVMRuntimeMutatorTargets returns all valid runtime mutator targets
-// sourced from the MetadataStore. Not chaos_points-backed in production
-// today (no caller wires SetMetadataStore / RegisterRuntimeMutatorProvider),
-// so the chaos_points MAX(updated_at) probe deliberately does not invalidate
-// this slice — bumping chaos_points would not refresh the data. When a
-// per-system provider eventually lands, revisit invalidation semantics
-// alongside it.
+// sourced from chaos_points (jvm_runtime_mutator capability).
 func (s *systemCache) GetAllJVMRuntimeMutatorTargets() ([]AppRuntimeMutatorTarget, error) {
-	if len(s.runtimeMutatorTargets) > 0 {
-		return s.runtimeMutatorTargets, nil
-	}
-
-	data, err := systemconfig.GetMetadataStore().GetRuntimeMutatorTargets(string(s.system))
-	if err != nil {
-		return nil, err
-	}
-	result := make([]AppRuntimeMutatorTarget, 0, len(data))
-
-	for _, injection := range data {
-		result = append(result, AppRuntimeMutatorTarget{
-			AppName:          injection.AppName,
-			ClassName:        injection.ClassName,
-			MethodName:       injection.MethodName,
-			MutationType:     injection.MutationType,
-			MutationTypeName: injection.MutationTypeName,
-			MutationFrom:     injection.MutationFrom,
-			MutationTo:       injection.MutationTo,
-			MutationStrategy: injection.MutationStrategy,
-			Description:      injection.Description,
-		})
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].AppName != result[j].AppName {
-			return result[i].AppName < result[j].AppName
-		}
-		if result[i].ClassName != result[j].ClassName {
-			return result[i].ClassName < result[j].ClassName
-		}
-		if result[i].MethodName != result[j].MethodName {
-			return result[i].MethodName < result[j].MethodName
-		}
-		if result[i].MutationType != result[j].MutationType {
-			return result[i].MutationType < result[j].MutationType
-		}
-		if result[i].MutationStrategy != result[j].MutationStrategy {
-			return result[i].MutationStrategy < result[j].MutationStrategy
-		}
-		if result[i].MutationFrom != result[j].MutationFrom {
-			return result[i].MutationFrom < result[j].MutationFrom
-		}
-		return result[i].MutationTo < result[j].MutationTo
-	})
-
-	s.runtimeMutatorTargets = result
-	return result, nil
+	return chaosPointDerived(s, &s.runtimeMutatorTargets, extractRuntimeMutatorTargets)
 }
 
 // GetAllHTTPEndpoints returns all app+endpoint pairs sourced from chaos_points.
