@@ -1169,8 +1169,11 @@ per-system overlay files `ts.yaml` / `otel-demo.yaml`) and the live DB
 (`helm_config_values` rows linked to a `helm_configs` row, plus the
 `value_file` snapshot). These drift: a chart install reads the DB, but
 PRs edit the repo, and nothing forced the two to agree. The concrete
-incident was ts@1.0.6 pointing the chart at a registry where the images
-did not exist (issue #478).
+incident was ts@1.0.6, where the repo overlay still pointed at a stale
+registry (`pair-diag-cn-guangzhou.cr.volces.com/pair`) after the images
+had been migrated to the volces shanghai mirror
+(`pair-cn-shanghai.cr.volces.com/opspai`) that the live DB already
+carried — the repo, not the DB, was wrong (issue #478).
 
 ### Decision
 

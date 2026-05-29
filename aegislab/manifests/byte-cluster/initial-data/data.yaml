@@ -51,27 +51,22 @@ containers:
     is_public: true
     status: 1
     versions:
-      # RECONCILED (issue #478): the 1.0.6 helm_config.values image refs
-      # below were corrected from the volces shanghai mirror
-      # (`pair-cn-shanghai.cr.volces.com/opspai/*`) back to the private
-      # guangzhou registry (`pair-diag-cn-guangzhou.cr.volces.com/pair/*`).
-      # The ts-* service images only exist in the guangzhou `pair`
-      # registry; they were never published to the shanghai opspai mirror,
-      # so the shanghai refs ImagePullBackOff'd. global.image.tag (v1.2.9)
-      # was also missing from the DB and is now pinned. The historical
-      # bump notes below (1.0.4/1.0.5) describe the now-superseded shanghai
-      # mirroring attempt and are kept for provenance.
+      # SOURCE OF TRUTH (issue #478): the live DB helm_config_values are
+      # canonical at runtime (see aegis-chaos-design.md §15). The ts-*
+      # service images were migrated to the volces shanghai mirror
+      # (`pair-cn-shanghai.cr.volces.com/opspai/*`, recorded by #483/#484),
+      # which is what the DB carries and what install must use. #478's
+      # premise that the images only live in the guangzhou `pair` registry
+      # was already stale when filed.
       #
-      # This is a data.yaml (genesis) correction only. The DB is canonical
-      # at runtime, so a live cluster must be reconciled explicitly — run
-      # `aegisctl system reseed --name ts --apply` to propagate the
-      # corrected defaults, then verify with
-      # `aegisctl system diff-seed --name ts --from-seed <this dir>`
-      # (exits 0 when DB matches git). NB: reseed's history-preservation
-      # contract preserves a manually-overridden parameter_configs row, so
-      # if the live ts@1.0.6 helm_config_values were hand-edited, fix the
-      # row in the DB to match (the diff-seed output names every drifting
-      # key). See aegis-chaos-design.md §15.
+      # The 1.0.6 helm_config.values below intentionally hold the opspai
+      # shanghai refs to match the DB. If the repo ever drifts from the DB
+      # again, regenerate this block from the canonical DB rather than
+      # hand-editing:
+      #   aegisctl system export-seed --name ts   # emits helm_config.values
+      # and verify with:
+      #   aegisctl system diff-seed --name ts --from-seed <this dir>
+      # (exits 0 when repo matches the live DB).
       #
       # Bumped 1.0.2 → 1.0.4 to consolidate three out-of-band defaults that
       # ts ns previously got via per-namespace `helm upgrade --set` but which
@@ -150,58 +145,43 @@ containers:
               value_type: 2
               default_value: "true"
               overridable: true
-            # Repository + tag for ts-* service images and the chart's
+            # Repository for ts-* service images and the chart's
             # `init-otel-agent` (autoinstrumentation-java) initContainer.
-            # The ts-* service images (ts-admin-basic-info-service etc.)
-            # ONLY exist in the private guangzhou `pair` registry — they
-            # were never published to the volces shanghai opspai mirror, so
-            # a shanghai repo here ImagePullBackOff's with `...not found`
-            # (issue #478). global.image.tag was missing from the DB
-            # entirely, leaving the chart to fall back to its default tag;
-            # pin it to the published v1.2.9.
+            # Chart default `docker.io/opspai` is unreachable from byte-
+            # cluster nodes; the volces shanghai mirror is.
             - key: global.image.repository
               type: 0
               category: 1
               value_type: 0
-              default_value: pair-diag-cn-guangzhou.cr.volces.com/pair
+              default_value: pair-cn-shanghai.cr.volces.com/opspai
               overridable: true
-            - key: global.image.tag
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: v1.2.9
-              overridable: true
-            # mysql subchart: mirrored alongside the ts images in the
-            # guangzhou `pair` registry.
+            # mysql + rabbitmq subcharts: chart defaults reach docker.io
+            # directly. Mirror both to opspai (manually pulled + pushed
+            # 2026-05-01: docker.io/library/mysql:5.7 and docker.io/
+            # bitnamilegacy/rabbitmq:4.0.7-debian-12-r0).
             - key: mysql.image.repository
               type: 0
               category: 1
               value_type: 0
-              default_value: pair-diag-cn-guangzhou.cr.volces.com/pair/mysql
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/mysql
               overridable: true
-            # rabbitmq subchart: the chart splits registry + repository.
-            # Final rendered image is `<registry>/<repository>:<tag>`. Pin
-            # both so it resolves to the guangzhou `pair` mirror.
-            - key: rabbitmq.image.registry
-              type: 0
-              category: 1
-              value_type: 0
-              default_value: pair-diag-cn-guangzhou.cr.volces.com
-              overridable: true
+            # Keep this as a repository suffix because the chart also carries
+            # `rabbitmq.image.registry`. The final rendered image should be
+            # `pair-cn-shanghai.cr.volces.com/opspai/rabbitmq:<tag>`.
             - key: rabbitmq.image.repository
               type: 0
               category: 1
               value_type: 0
-              default_value: pair/rabbitmq
+              default_value: opspai/rabbitmq
               overridable: true
             # loadgen `wait-for-services` init container — chart hardcodes
-            # docker.io/nicolaka/netshoot:v0.14 in values.yaml:394. Mirrored
-            # to the guangzhou `pair` registry alongside the loadgen image.
+            # docker.io/nicolaka/netshoot:v0.14 in values.yaml:394. Mirror
+            # pushed to opspai/netshoot:v0.14 on 2026-05-01.
             - key: loadgenerator.initContainer.image
               type: 0
               category: 1
               value_type: 0
-              default_value: pair-diag-cn-guangzhou.cr.volces.com/pair/netshoot:v0.14
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/netshoot:v0.14
               overridable: true
             # Per-system collector (#303): all ts workloads (Java services
             # + Go loadgen + caddy ui-dashboard) export to the dedicated
@@ -225,16 +205,13 @@ containers:
               type: 0
               category: 1
               value_type: 0
-              default_value: pair-diag-cn-guangzhou.cr.volces.com/pair/loadgenerator
+              default_value: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
               overridable: true
-            # loadgenerator image is published as :023 in the guangzhou
-            # `pair` registry; the DB previously carried :024, which only
-            # ever existed on the shanghai opspai mirror (issue #478).
             - key: loadgenerator.image.tag
               type: 0
               category: 1
               value_type: 0
-              default_value: "023"
+              default_value: "024"
               overridable: true
             # Pin mysql Service to ClusterIP. trainticket@0.2.0 chart default
             # is `NodePort` with no `nodePort` value, so kubernetes auto-assigns

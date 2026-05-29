@@ -1,25 +1,32 @@
+# Genesis value_file snapshot for the ts pedestal (issue #478). The live DB
+# helm_config_values are canonical at runtime (see aegis-chaos-design.md §15);
+# these overlay refs are aligned to the same volces shanghai mirror the DB
+# carries (`pair-cn-shanghai.cr.volces.com/opspai/*`, per #483/#484) so a
+# fresh-cluster reseed reproduces the live state. loadgenerator.image.tag is
+# overridden to 024 by data.yaml helm_config.values at install, so it wins
+# over any value here.
 global:
   image:
-    repository: pair-diag-cn-guangzhou.cr.volces.com/pair
+    repository: pair-cn-shanghai.cr.volces.com/opspai
     tag: "v1.2.9"
   security:
     allowInsecureImages: true
 
 mysql:
   image:
-    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/mysql
+    repository: pair-cn-shanghai.cr.volces.com/opspai/mysql
 
 rabbitmq:
   image:
-    registry: pair-diag-cn-guangzhou.cr.volces.com
-    repository: pair/rabbitmq
+    registry: pair-cn-shanghai.cr.volces.com
+    repository: opspai/rabbitmq
 
 loadgenerator:
   image:
-    repository: pair-diag-cn-guangzhou.cr.volces.com/pair/loadgenerator
-    tag: "023"
+    repository: pair-cn-shanghai.cr.volces.com/opspai/loadgenerator
+    tag: "024"
   initContainer:
-    image: pair-diag-cn-guangzhou.cr.volces.com/pair/netshoot:v0.14
+    image: pair-cn-shanghai.cr.volces.com/opspai/netshoot:v0.14
 
 otelCollector:
   image:
