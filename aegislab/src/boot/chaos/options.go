@@ -3,16 +3,22 @@
 package chaos
 
 import (
+	"context"
 	"strings"
 
 	app "aegis/boot"
 	httpapi "aegis/boot/wiring/http"
 	ssoclient "aegis/clients/sso"
+	"aegis/core/orchestrator/common"
 	chaos "aegis/crud/chaos"
+	"aegis/platform/consts"
+	"aegis/platform/etcd"
 	"aegis/platform/router"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
 
 func Options(confPath, port string) fx.Option {
@@ -20,6 +26,9 @@ func Options(confPath, port string) fx.Option {
 		app.BaseOptions(confPath),
 		app.ObserveOptions(),
 		app.DataOptions(),
+		// etcd.Gateway is required by the global config-scope listener below;
+		// DataOptions only wires db/redis, so pull in CoordinationOptions too.
+		app.CoordinationOptions(),
 
 		app.WithRemoteVerifier(),
 		ssoclient.Module,
@@ -36,7 +45,29 @@ func Options(confPath, port string) fx.Option {
 		httpapi.Module,
 
 		fx.Decorate(decorateEngineWithHealthz),
+
+		// The guided resolver (crud/chaos/guided) reads system registrations
+		// (ns_pattern / app_label_key) through systemconfig → Viper key
+		// `injection.system.*`. Those values live in the Global config scope
+		// and are only mirrored into Viper by ConfigUpdateListener; without
+		// this the chaos service sees zero systems and every guided submit
+		// fails with "system does not match any registered namespace pattern".
+		// The api-gateway / runtime-worker get this via their seed boot; the
+		// standalone chaos service did not until now.
+		fx.Invoke(activateGlobalConfigScope),
 	)
+}
+
+func activateGlobalConfigScope(lc fx.Lifecycle, db *gorm.DB, etcdGw *etcd.Gateway) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			listener := common.NewConfigUpdateListener(context.Background(), db, etcdGw)
+			if err := listener.EnsureScope(consts.ConfigScopeGlobal); err != nil {
+				logrus.WithError(err).Warn("aegis-chaos: failed to activate global config scope; guided resolver will see no systems")
+			}
+			return nil
+		},
+	})
 }
 
 func decorateEngineWithHealthz(engine *gin.Engine) *gin.Engine {
