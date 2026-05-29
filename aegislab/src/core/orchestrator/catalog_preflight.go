@@ -59,7 +59,14 @@ type pointsListerFunc func(ctx context.Context, system, service, capability stri
 // service indexes chaos_points by Point.SystemName, which is populated from
 // the seed manifests' metadata.system field — passing a namespace-suffixed
 // value here will silently fall through to WARN-fallback every call.
-func runCatalogPreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, _ *gorm.DB, logEntry *logrus.Entry, lister pointsListerFunc) {
+// runCatalogPreflight returns, per config (index-aligned), the catalog-resolved
+// point_id, or "" when it could not be resolved (no URL, miss, error, or no
+// capability mapping). The dispatcher uses a non-empty resolved id to address
+// the Point directly instead of recomputing the content hash — eliminating the
+// cross-process hash-agreement (system/namespace/chart_version) that caused the
+// opaque 404 class. An empty entry tells the dispatcher to fall back to
+// in-process hash derivation (kind / in-process mode).
+func runCatalogPreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, _ *gorm.DB, logEntry *logrus.Entry, lister pointsListerFunc) []string {
 	url := config.GetChaosServiceURL()
 	if url == "" {
 		// Missing URL = no chaos service to call. Each config still counts
@@ -68,15 +75,16 @@ func runCatalogPreflight(ctx context.Context, logicalSystem string, configs []gu
 		for range configs {
 			catalogReadSourceTotal.WithLabelValues(catalogSourceInProc).Inc()
 		}
-		return
+		return make([]string, len(configs))
 	}
 	if lister == nil {
 		lister = newSDKPointsLister(url, logEntry)
 	}
-	runChaosServicePreflight(ctx, logicalSystem, configs, logEntry, lister)
+	return runChaosServicePreflight(ctx, logicalSystem, configs, logEntry, lister)
 }
 
-func runChaosServicePreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, logEntry *logrus.Entry, lister pointsListerFunc) {
+func runChaosServicePreflight(ctx context.Context, logicalSystem string, configs []guidedcli.GuidedConfig, logEntry *logrus.Entry, lister pointsListerFunc) []string {
+	resolved := make([]string, len(configs))
 	for i, cfg := range configs {
 		capability, ok := chaoscrud.ChaosTypeToCapability[strings.TrimSpace(cfg.ChaosType)]
 		if !ok {
@@ -110,6 +118,7 @@ func runChaosServicePreflight(ctx context.Context, logicalSystem string, configs
 				"capability": capability,
 			}).Warn("point not found in chaos service catalog; using in-process resolution")
 		default:
+			resolved[i] = pointID
 			catalogReadSourceTotal.WithLabelValues(catalogSourceChaos).Inc()
 			logEntry.WithFields(logrus.Fields{
 				"index":      i,
@@ -120,6 +129,7 @@ func runChaosServicePreflight(ctx context.Context, logicalSystem string, configs
 			}).Info("catalog source: chaos_service")
 		}
 	}
+	return resolved
 }
 
 // newSDKPointsLister returns a pointsListerFunc backed by the generated

@@ -163,9 +163,31 @@ type dispatcherDeps struct {
 	benchmarkCommand string
 	// instance + chartVersion address per-instance Point catalog rows.
 	// Seed manifests carry instance=seed / chart_version=seed-genesis;
-	// these are what the chaos service hashes into the Point ID.
+	// these are what the chaos service hashes into the Point ID. They are
+	// only used as the fallback when the catalog preflight did not resolve a
+	// point_id (in-process / kind mode); see resolvedPointIDs.
 	instance     string
 	chartVersion string
+	// resolvedPointIDs is index-aligned to the guided configs: the point_id
+	// the catalog preflight already resolved by natural key
+	// (system, service, capability). When non-empty for a config the
+	// dispatcher addresses the Point by this id directly instead of
+	// recomputing the content hash — the preflight already round-tripped, so
+	// recomputing only reintroduces cross-process hash-divergence (the
+	// system/namespace/chart_version 404 class). Empty entry → fall back to
+	// GuidedChaosPointID (in-process mode / catalog miss).
+	resolvedPointIDs []string
+}
+
+// pointIDForConfig returns the catalog-resolved point_id for config index i
+// when the preflight found one, else the locally derived hash. Centralised so
+// the single and batch paths stay in lockstep.
+func (d dispatcherDeps) pointIDForConfig(i int, cfg guidedcli.GuidedConfig) (string, error) {
+	if i >= 0 && i < len(d.resolvedPointIDs) && d.resolvedPointIDs[i] != "" {
+		return d.resolvedPointIDs[i], nil
+	}
+	pid, _, _, err := chaoscrud.GuidedChaosPointID(cfg, d.instance, d.chartVersion)
+	return pid, err
 }
 
 // dispatchBatchCreate POSTs the guided configs to aegis-chaos and blocks on
@@ -218,7 +240,7 @@ func dispatchViaChaosService(
 	meta["engine_config"] = string(engineConfigBytes)
 
 	if len(configs) == 1 {
-		pid, _, _, err := chaoscrud.GuidedChaosPointID(configs[0], deps.instance, deps.chartVersion)
+		pid, err := deps.pointIDForConfig(0, configs[0])
 		if err != nil {
 			return nil, fmt.Errorf("dispatcher: derive point_id: %w", err)
 		}
@@ -244,7 +266,7 @@ func dispatchViaChaosService(
 	batchKey := deps.traceID + ":batch:" + uuid.NewString()
 	children := make([]apiclient.ChaosChaosCreateBatchChildReq, 0, len(configs))
 	for i, cfg := range configs {
-		pid, _, _, err := chaoscrud.GuidedChaosPointID(cfg, deps.instance, deps.chartVersion)
+		pid, err := deps.pointIDForConfig(i, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("dispatcher: spec[%d]: derive point_id: %w", i, err)
 		}

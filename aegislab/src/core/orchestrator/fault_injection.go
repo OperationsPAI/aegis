@@ -137,7 +137,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 		// which is the concrete pool-allocated ns the CR is applied into.
 		// The catalog is keyed by the logical name; do not substitute the
 		// concrete ns here or every preflight will fall through to WARN.
-		runCatalogPreflight(childCtx, payload.system, payload.guidedConfigs, deps.DB, logEntry, nil)
+		resolvedPointIDs := runCatalogPreflight(childCtx, payload.system, payload.guidedConfigs, deps.DB, logEntry, nil)
 
 		// Default: release the lock on exit. Ownership transfers to the
 		// CRD-success/CRD-failed path only after both BatchCreate and
@@ -179,6 +179,7 @@ func executeFaultInjection(ctx context.Context, task *dto.UnifiedTask, deps Runt
 			benchmarkCommand: payload.benchmark.Command,
 			instance:         payload.chaosInstance,
 			chartVersion:     payload.chartVersion,
+			resolvedPointIDs: resolvedPointIDs,
 		}
 		var names []string
 		err = tracing.WithSpanNamed(childCtx, "chaos.batch_create", func(c context.Context) error {

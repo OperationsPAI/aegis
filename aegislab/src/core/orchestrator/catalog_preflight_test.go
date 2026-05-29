@@ -275,3 +275,35 @@ func TestCatalogPreflight_SDKLister_HTTPTest(t *testing.T) {
 		t.Fatalf("expected service=ts-order-service in query, got %s", paths[0])
 	}
 }
+
+// TestPointIDForConfig_PrefersResolvedOverHash locks the root-cause fix: when
+// the catalog preflight resolved a point_id by natural key, the dispatcher
+// addresses the Point by that id and does NOT recompute the content hash
+// (which reintroduced the system/namespace/chart_version 404 class). An empty
+// resolved entry falls back to the locally derived hash (in-process mode).
+func TestPointIDForConfig_PrefersResolvedOverHash(t *testing.T) {
+	cfg := guidedcli.GuidedConfig{System: "sn", App: "social-graph-service", ChaosType: "PodKill"}
+	const resolved = "RESOLVEDSENTINEL"  // not a real 16-hex hash → proves verbatim reuse, never a recompute
+
+	deps := dispatcherDeps{instance: "seed", chartVersion: "seed-genesis", resolvedPointIDs: []string{resolved}}
+	got, err := deps.pointIDForConfig(0, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != resolved {
+		t.Fatalf("must use preflight-resolved id; got %q want %q", got, resolved)
+	}
+
+	depsEmpty := dispatcherDeps{instance: "seed", chartVersion: "seed-genesis", resolvedPointIDs: []string{""}}
+	fallback, err := depsEmpty.pointIDForConfig(0, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fallback == "" || fallback == resolved {
+		t.Fatalf("empty resolved must derive a real hash, not echo the sentinel; got %q", fallback)
+	}
+
+	if _, err := (dispatcherDeps{instance: "seed", chartVersion: "seed-genesis"}).pointIDForConfig(0, cfg); err != nil {
+		t.Fatalf("nil resolvedPointIDs must fall back without error: %v", err)
+	}
+}
