@@ -135,7 +135,10 @@ func normalizeSystemSelection(cfg *GuidedConfig) error {
 			return fmt.Errorf("system %q does not match any registered namespace pattern or system name", cfg.System)
 		}
 		cfg.SystemType = system.String()
-		if cfg.Namespace == "" {
+		// With --auto the namespace is server-allocated at apply, so leave it
+		// empty here instead of pinning the literal system name — a bogus
+		// namespace only triggers a doomed live-pod lookup at resolve time.
+		if cfg.Namespace == "" && !cfg.Auto {
 			cfg.Namespace = cfg.System
 		}
 		return nil

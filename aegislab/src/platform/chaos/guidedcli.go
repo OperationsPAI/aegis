@@ -47,9 +47,19 @@ type GuidedConfig struct {
 	BodyType        string `json:"body_type,omitempty" yaml:"body_type,omitempty"`
 	ReplaceMethod   string `json:"replace_method,omitempty" yaml:"replace_method,omitempty"`
 	StatusCode      *int   `json:"status_code,omitempty" yaml:"status_code,omitempty"`
-	SaveConfig      bool   `json:"-" yaml:"-"`
-	ResetConfig     bool   `json:"-" yaml:"-"`
-	Apply           bool   `json:"-" yaml:"-"`
+
+	// Auto / AllowBootstrap mirror the submit-time --auto / --allow-bootstrap
+	// flags (#166), carried into resolve so the resolver can skip live pod
+	// discovery for zero-instance systems: the namespace is server-allocated
+	// (and possibly bootstrapped) at apply, so there are no pods to enumerate
+	// at resolve time. Per-invocation only, never persisted to the saved
+	// session (yaml:"-").
+	Auto           bool `json:"auto,omitempty" yaml:"-"`
+	AllowBootstrap bool `json:"allow_bootstrap,omitempty" yaml:"-"`
+
+	SaveConfig  bool `json:"-" yaml:"-"`
+	ResetConfig bool `json:"-" yaml:"-"`
+	Apply       bool `json:"-" yaml:"-"`
 }
 
 // GuidedResponse mirrors the chaos-service /v1beta/guided/resolve response.

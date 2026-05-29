@@ -288,6 +288,8 @@ func overlayGuidedConfig(dst *chaos.GuidedConfig, src chaos.GuidedConfig) {
 	if src.StatusCode != nil {
 		dst.StatusCode = src.StatusCode
 	}
+	dst.Auto = src.Auto
+	dst.AllowBootstrap = src.AllowBootstrap
 	dst.SaveConfig = src.SaveConfig
 	dst.ResetConfig = src.ResetConfig
 }

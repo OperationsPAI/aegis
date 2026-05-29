@@ -20,7 +20,10 @@ var _ MappedNullable = &InjectionGuidedSpec{}
 
 // InjectionGuidedSpec struct for InjectionGuidedSpec
 type InjectionGuidedSpec struct {
-	App                  *string `json:"app,omitempty"`
+	AllowBootstrap *bool   `json:"allow_bootstrap,omitempty"`
+	App            *string `json:"app,omitempty"`
+	// Auto / AllowBootstrap mirror the submit-time --auto / --allow-bootstrap flags (#166), carried into resolve so the resolver can skip live pod discovery for zero-instance systems: the namespace is server-allocated (and possibly bootstrapped) at apply, so there are no pods to enumerate at resolve time. Per-invocation only, never persisted to the saved session (yaml:\"-\").
+	Auto                 *bool   `json:"auto,omitempty"`
 	BodyType             *string `json:"body_type,omitempty"`
 	Buffer               *int32  `json:"buffer,omitempty"`
 	ChaosType            *string `json:"chaos_type,omitempty"`
@@ -85,6 +88,38 @@ func NewInjectionGuidedSpecWithDefaults() *InjectionGuidedSpec {
 	return &this
 }
 
+// GetAllowBootstrap returns the AllowBootstrap field value if set, zero value otherwise.
+func (o *InjectionGuidedSpec) GetAllowBootstrap() bool {
+	if o == nil || IsNil(o.AllowBootstrap) {
+		var ret bool
+		return ret
+	}
+	return *o.AllowBootstrap
+}
+
+// GetAllowBootstrapOk returns a tuple with the AllowBootstrap field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InjectionGuidedSpec) GetAllowBootstrapOk() (*bool, bool) {
+	if o == nil || IsNil(o.AllowBootstrap) {
+		return nil, false
+	}
+	return o.AllowBootstrap, true
+}
+
+// HasAllowBootstrap returns a boolean if a field has been set.
+func (o *InjectionGuidedSpec) HasAllowBootstrap() bool {
+	if o != nil && !IsNil(o.AllowBootstrap) {
+		return true
+	}
+
+	return false
+}
+
+// SetAllowBootstrap gets a reference to the given bool and assigns it to the AllowBootstrap field.
+func (o *InjectionGuidedSpec) SetAllowBootstrap(v bool) {
+	o.AllowBootstrap = &v
+}
+
 // GetApp returns the App field value if set, zero value otherwise.
 func (o *InjectionGuidedSpec) GetApp() string {
 	if o == nil || IsNil(o.App) {
@@ -115,6 +150,38 @@ func (o *InjectionGuidedSpec) HasApp() bool {
 // SetApp gets a reference to the given string and assigns it to the App field.
 func (o *InjectionGuidedSpec) SetApp(v string) {
 	o.App = &v
+}
+
+// GetAuto returns the Auto field value if set, zero value otherwise.
+func (o *InjectionGuidedSpec) GetAuto() bool {
+	if o == nil || IsNil(o.Auto) {
+		var ret bool
+		return ret
+	}
+	return *o.Auto
+}
+
+// GetAutoOk returns a tuple with the Auto field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InjectionGuidedSpec) GetAutoOk() (*bool, bool) {
+	if o == nil || IsNil(o.Auto) {
+		return nil, false
+	}
+	return o.Auto, true
+}
+
+// HasAuto returns a boolean if a field has been set.
+func (o *InjectionGuidedSpec) HasAuto() bool {
+	if o != nil && !IsNil(o.Auto) {
+		return true
+	}
+
+	return false
+}
+
+// SetAuto gets a reference to the given bool and assigns it to the Auto field.
+func (o *InjectionGuidedSpec) SetAuto(v bool) {
+	o.Auto = &v
 }
 
 // GetBodyType returns the BodyType field value if set, zero value otherwise.
@@ -1471,8 +1538,14 @@ func (o InjectionGuidedSpec) MarshalJSON() ([]byte, error) {
 
 func (o InjectionGuidedSpec) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.AllowBootstrap) {
+		toSerialize["allow_bootstrap"] = o.AllowBootstrap
+	}
 	if !IsNil(o.App) {
 		toSerialize["app"] = o.App
+	}
+	if !IsNil(o.Auto) {
+		toSerialize["auto"] = o.Auto
 	}
 	if !IsNil(o.BodyType) {
 		toSerialize["body_type"] = o.BodyType
@@ -1622,7 +1695,9 @@ func (o *InjectionGuidedSpec) UnmarshalJSON(data []byte) (err error) {
 	additionalProperties := make(map[string]interface{})
 
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
+		delete(additionalProperties, "allow_bootstrap")
 		delete(additionalProperties, "app")
+		delete(additionalProperties, "auto")
 		delete(additionalProperties, "body_type")
 		delete(additionalProperties, "buffer")
 		delete(additionalProperties, "chaos_type")
