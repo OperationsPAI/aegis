@@ -1,122 +1,122 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-train-food-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-train-food-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: all
-      table: '`ts`.`train_food_list`'
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: delete
-      table: train_food_list
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: insert
-      table: train_food
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: insert
-      table: train_food_list
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: '`ts`.`train_food`'
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: train_food
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: train_food_list
-  - capability: jvm_mysql_exception
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: ts
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: all
-      table: '`ts`.`train_food_list`'
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: delete
-      table: train_food_list
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: insert
-      table: train_food
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: insert
-      table: train_food_list
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: '`ts`.`train_food`'
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: train_food
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: train_food_list
-  - capability: jvm_mysql_latency
-    target:
-      app: ts-train-food-service
-      db_name: ts
-      namespace: ts
-      sql_type: select
-      table: ts
-  replace_scope: service
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "all"
+        table: "`ts`.`train_food_list`"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "delete"
+        table: "train_food_list"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "train_food"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "train_food_list"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "`ts`.`train_food`"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food_list"
+    - capability: "jvm_mysql_exception"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "ts"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "all"
+        table: "`ts`.`train_food_list`"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "delete"
+        table: "train_food_list"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "train_food"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "insert"
+        table: "train_food_list"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "`ts`.`train_food`"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "train_food_list"
+    - capability: "jvm_mysql_latency"
+      target:
+        app: "ts-train-food-service"
+        db_name: "ts"
+        namespace: "ts"
+        sql_type: "select"
+        table: "ts"

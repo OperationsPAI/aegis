@@ -1,70 +1,70 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-admin-travel-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-admin-travel-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: dns_error
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-route-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-station-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-train-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-travel-service
-      namespace: ts
-  - capability: dns_error
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-travel2-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-route-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-station-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-train-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-travel-service
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-admin-travel-service
-      domain_patterns:
-      - ts-travel2-service
-      namespace: ts
-  replace_scope: service
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-station-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "dns_error"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel2-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-route-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-station-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-train-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel-service"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-admin-travel-service"
+        domain_patterns:
+          - "ts-travel2-service"
+        namespace: "ts"

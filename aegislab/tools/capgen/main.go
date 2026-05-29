@@ -134,6 +134,23 @@ func jvmMethodTarget(extra map[string]any) map[string]any {
 	return obj(props, required...)
 }
 
+// jvmMysqlTarget describes JVM MySQL chaos targets. The Connector/J
+// interceptor matches by SQL operation, not by Java class+method, so the
+// target carries db_name/table/sql_type instead of class/method.
+func jvmMysqlTarget(extra map[string]any) map[string]any {
+	props := map[string]any{
+		"namespace": str(1),
+		"app":       str(1),
+		"db_name":   str(1),
+		"table":     str(1),
+	}
+	required := []string{"namespace", "app", "db_name", "table"}
+	for k, v := range extra {
+		props[k] = v
+	}
+	return obj(props, required...)
+}
+
 func capabilities() []capability {
 	return []capability{
 		// ---------- PodChaos ----------
@@ -780,10 +797,8 @@ func capabilities() []capability {
 			CRDKind:   "JVMChaos",
 			Status:    "experimental",
 			OneLine:   "delay MySQL queries from JVM (Connector/J interceptor)",
-			TargetSchema: jvmMethodTarget(map[string]any{
-				"db_name":   str(1),
-				"table":     str(1),
-				"sql_type":  map[string]any{"type": "string", "enum": []any{"all", "select", "insert", "update", "delete", "replace"}, "default": "all"},
+			TargetSchema: jvmMysqlTarget(map[string]any{
+				"sql_type": map[string]any{"type": "string", "enum": []any{"all", "select", "insert", "update", "delete", "replace"}, "default": "all"},
 			}),
 			ParamSchema: obj(map[string]any{
 				"duration_s":      durationS(),
@@ -808,9 +823,7 @@ func capabilities() []capability {
 			CRDKind:   "JVMChaos",
 			Status:    "experimental",
 			OneLine:   "throw SQLException from MySQL queries (Connector/J interceptor)",
-			TargetSchema: jvmMethodTarget(map[string]any{
-				"db_name":  str(1),
-				"table":    str(1),
+			TargetSchema: jvmMysqlTarget(map[string]any{
 				"sql_type": map[string]any{"type": "string", "enum": []any{"all", "select", "insert", "update", "delete", "replace"}, "default": "all"},
 			}),
 			ParamSchema: obj(map[string]any{

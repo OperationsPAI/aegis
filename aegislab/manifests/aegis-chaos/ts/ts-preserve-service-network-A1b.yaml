@@ -1,280 +1,280 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-preserve-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-preserve-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-assurance-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-basic-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-contacts-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-food-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-order-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-seat-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-security-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-travel-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-user-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-assurance-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-basic-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-contacts-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-food-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-order-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-seat-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-security-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-travel-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-user-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-assurance-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-basic-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-contacts-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-food-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-order-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-seat-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-security-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-travel-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-user-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-assurance-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-basic-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-contacts-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-food-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-order-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-seat-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-security-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-travel-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-user-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-assurance-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-basic-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-contacts-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-food-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-order-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-seat-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-security-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-travel-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-user-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-assurance-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-basic-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-contacts-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-food-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-order-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-seat-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-security-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-travel-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-preserve-service
-      target_service: ts-user-service
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-assurance-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-basic-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-contacts-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-food-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-order-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-seat-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-security-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-user-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-assurance-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-basic-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-contacts-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-food-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-order-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-seat-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-security-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-user-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-assurance-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-basic-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-contacts-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-food-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-order-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-seat-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-security-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-travel-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-user-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-assurance-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-basic-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-contacts-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-food-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-order-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-seat-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-security-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-user-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-assurance-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-basic-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-contacts-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-food-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-order-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-seat-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-security-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-user-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-assurance-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-basic-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-contacts-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-food-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-order-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-seat-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-security-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-preserve-service"
+        target_service: "ts-user-service"

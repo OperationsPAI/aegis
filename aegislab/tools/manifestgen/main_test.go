@@ -14,7 +14,7 @@ import (
 const (
 	manifestSchemaPath = "../../src/cli/cmd/manifest_schema.json"
 	capabilitiesPath   = "../capgen/output/capabilities.json"
-	chaosRoot          = "../../../chaos-experiment/internal"
+	chaosRoot          = "./data"
 )
 
 // generateOnce produces all manifests into a tmp dir once per test process.

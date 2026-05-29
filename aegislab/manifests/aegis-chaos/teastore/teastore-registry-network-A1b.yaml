@@ -1,40 +1,40 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: registry
-  system: teastore
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "registry"
+  system: "teastore"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: teastore
-      source_app: registry
-      target_service: webui
-  - capability: network_corrupt
-    target:
-      namespace: teastore
-      source_app: registry
-      target_service: webui
-  - capability: network_delay
-    target:
-      namespace: teastore
-      source_app: registry
-      target_service: webui
-  - capability: network_duplicate
-    target:
-      namespace: teastore
-      source_app: registry
-      target_service: webui
-  - capability: network_loss
-    target:
-      namespace: teastore
-      source_app: registry
-      target_service: webui
-  - capability: network_partition
-    target:
-      namespace: teastore
-      source_app: registry
-      target_service: webui
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "teastore"
+        source_app: "registry"
+        target_service: "webui"
+    - capability: "network_corrupt"
+      target:
+        namespace: "teastore"
+        source_app: "registry"
+        target_service: "webui"
+    - capability: "network_delay"
+      target:
+        namespace: "teastore"
+        source_app: "registry"
+        target_service: "webui"
+    - capability: "network_duplicate"
+      target:
+        namespace: "teastore"
+        source_app: "registry"
+        target_service: "webui"
+    - capability: "network_loss"
+      target:
+        namespace: "teastore"
+        source_app: "registry"
+        target_service: "webui"
+    - capability: "network_partition"
+      target:
+        namespace: "teastore"
+        source_app: "registry"
+        target_service: "webui"

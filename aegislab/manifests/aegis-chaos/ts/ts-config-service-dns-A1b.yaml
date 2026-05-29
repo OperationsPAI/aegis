@@ -1,22 +1,22 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-config-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-config-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: dns_error
-    target:
-      app: ts-config-service
-      domain_patterns:
-      - mysql
-      namespace: ts
-  - capability: dns_random
-    target:
-      app: ts-config-service
-      domain_patterns:
-      - mysql
-      namespace: ts
-  replace_scope: service
+    - capability: "dns_error"
+      target:
+        app: "ts-config-service"
+        domain_patterns:
+          - "mysql"
+        namespace: "ts"
+    - capability: "dns_random"
+      target:
+        app: "ts-config-service"
+        domain_patterns:
+          - "mysql"
+        namespace: "ts"

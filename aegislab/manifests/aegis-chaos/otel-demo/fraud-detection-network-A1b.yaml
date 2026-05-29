@@ -1,40 +1,40 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: fraud-detection
-  system: otel-demo
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "fraud-detection"
+  system: "otel-demo"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: otel-demo
-      source_app: fraud-detection
-      target_service: flagd
-  - capability: network_corrupt
-    target:
-      namespace: otel-demo
-      source_app: fraud-detection
-      target_service: flagd
-  - capability: network_delay
-    target:
-      namespace: otel-demo
-      source_app: fraud-detection
-      target_service: flagd
-  - capability: network_duplicate
-    target:
-      namespace: otel-demo
-      source_app: fraud-detection
-      target_service: flagd
-  - capability: network_loss
-    target:
-      namespace: otel-demo
-      source_app: fraud-detection
-      target_service: flagd
-  - capability: network_partition
-    target:
-      namespace: otel-demo
-      source_app: fraud-detection
-      target_service: flagd
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        target_service: "flagd"
+    - capability: "network_corrupt"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        target_service: "flagd"
+    - capability: "network_delay"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        target_service: "flagd"
+    - capability: "network_duplicate"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        target_service: "flagd"
+    - capability: "network_loss"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        target_service: "flagd"
+    - capability: "network_partition"
+      target:
+        namespace: "otel-demo"
+        source_app: "fraud-detection"
+        target_service: "flagd"

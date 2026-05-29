@@ -1,760 +1,760 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-ui-dashboard
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-ui-dashboard"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-basic-info-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-order-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-route-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-travel-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-user-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-assurance-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-auth-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-cancel-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-consign-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-contacts-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-execute-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-food-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-inside-payment-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-other-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-preserve-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rabbitmq
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rebook-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-route-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-train-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-plan-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel2-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-user-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-verification-code-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-basic-info-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-order-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-route-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-travel-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-user-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-assurance-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-auth-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-cancel-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-consign-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-contacts-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-execute-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-food-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-inside-payment-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-other-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-preserve-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rabbitmq
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rebook-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-route-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-train-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-plan-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel2-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-user-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-verification-code-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-basic-info-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-order-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-route-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-travel-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-user-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-assurance-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-auth-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-cancel-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-consign-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-contacts-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-execute-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-food-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-inside-payment-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-other-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-preserve-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rabbitmq
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rebook-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-route-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-train-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-plan-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel2-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-user-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-verification-code-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-basic-info-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-order-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-route-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-travel-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-user-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-assurance-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-auth-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-cancel-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-consign-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-contacts-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-execute-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-food-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-inside-payment-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-other-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-preserve-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rabbitmq
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rebook-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-route-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-train-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-plan-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel2-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-user-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-verification-code-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-basic-info-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-order-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-route-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-travel-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-user-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-assurance-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-auth-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-cancel-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-consign-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-contacts-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-execute-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-food-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-inside-payment-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-other-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-preserve-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rabbitmq
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rebook-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-route-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-train-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-plan-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel2-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-user-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-verification-code-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-basic-info-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-order-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-route-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-travel-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-admin-user-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-assurance-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-auth-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-cancel-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-consign-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-contacts-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-execute-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-food-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-inside-payment-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-other-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-order-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-preserve-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rabbitmq
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-rebook-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-route-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-train-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-plan-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-travel2-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-user-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-ui-dashboard
-      target_service: ts-verification-code-service
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-order-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-route-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-user-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-assurance-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-auth-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-cancel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-consign-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-contacts-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-execute-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-food-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-other-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-preserve-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rabbitmq"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rebook-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-route-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-train-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel2-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-user-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-verification-code-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-order-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-route-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-user-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-assurance-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-auth-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-cancel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-consign-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-contacts-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-execute-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-food-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-other-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-preserve-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rabbitmq"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rebook-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-route-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-train-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel2-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-user-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-verification-code-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-order-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-route-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-user-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-assurance-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-auth-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-cancel-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-consign-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-contacts-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-execute-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-food-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-other-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-preserve-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rabbitmq"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rebook-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-route-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-train-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel2-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-user-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-verification-code-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-order-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-route-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-user-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-assurance-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-auth-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-cancel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-consign-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-contacts-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-execute-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-food-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-other-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-preserve-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rabbitmq"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rebook-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-route-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-train-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel2-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-user-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-verification-code-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-order-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-route-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-user-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-assurance-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-auth-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-cancel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-consign-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-contacts-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-execute-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-food-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-other-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-preserve-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rabbitmq"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rebook-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-route-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-train-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel2-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-user-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-verification-code-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-basic-info-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-order-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-route-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-admin-user-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-assurance-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-auth-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-cancel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-consign-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-contacts-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-execute-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-food-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-inside-payment-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-other-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-order-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-preserve-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rabbitmq"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-rebook-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-route-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-train-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-plan-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-travel2-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-user-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-ui-dashboard"
+        target_service: "ts-verification-code-service"

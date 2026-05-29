@@ -1,71 +1,92 @@
 # manifestgen — notes for operators
 
-Reads `chaos-experiment/internal/<sys>/{serviceendpoints,grpcoperations,databaseoperations,javaclassmethods}`
-and writes one Point Manifest YAML per `(system, service)` under
-`aegislab/manifests/aegis-chaos/<system>/<service>.yaml`.
+Reads the vendored chaos-experiment data under
+`tools/manifestgen/data/<sys>/{serviceendpoints,grpcoperations,databaseoperations,javaclassmethods}`
+(parsed as text via go/parser AST — never imported) and writes Point
+Manifest YAML under `aegislab/manifests/aegis-chaos/<system>/`.
 
-Regenerate with `just manifestgen`. Output is deterministic — re-runs
-produce byte-identical files (sorted points, sorted target keys,
+Two manifest families per `(system, service)`:
+
+- `<service>.yaml` — the workload-agnostic base.
+- `<service>-<category>-A1b.yaml` — derived chaos for `http`, `dns`,
+  `network`, `jvm-method`, `jvm-mysql`.
+
+The data is vendored (copied) into `data/` so the tool is self-contained;
+the external `chaos-experiment` module need not be present. Regenerate with
+`just manifestgen` (default `-chaos-root=./data`). Output is deterministic —
+re-runs produce byte-identical files (sorted points, sorted target keys,
 constant `chart_version=seed-genesis`).
 
-## What's emitted (per service)
+## What's emitted
 
-| Capability            | Target shape                                      | Source                  | Per-service count |
-|-----------------------|---------------------------------------------------|-------------------------|-------------------|
-| `pod_kill`            | `{namespace, app}`                                | (every service)         | 1                 |
-| `pod_failure`         | `{namespace, app}`                                | (every service)         | 1                 |
-| `container_kill`      | `{namespace, app, container=service}` *           | (every service)         | 1                 |
-| `cpu_stress`          | `{namespace, app, container=service}` *           | (every service)         | 1                 |
-| `memory_stress`       | `{namespace, app, container=service}` *           | (every service)         | 1                 |
-| `time_skew`           | `{namespace, app, container=service}` *           | (every service)         | 1                 |
-| `http_request_delay`  | `{namespace, app, port, method, path}`            | serviceendpoints + grpc | N per endpoint    |
-| `http_request_abort`  | `{namespace, app, port, method, path}`            | serviceendpoints + grpc | N per endpoint    |
-| `jvm_method_latency`  | `{namespace, app, class, method}`                 | javaclassmethods        | N per class.method|
+### Base — `<service>.yaml`
 
-\* `container=service` is a deliberate policy default — see `main.go`
-`buildPoints` WHY comment. The 8 benchmark charts all follow the k8s
-convention `deployment.name == pod.label.app == container[0].name`. If
-a benchmark deviates, the rendered chaos-mesh CR will no-op at runtime
-against a non-existent container — that's the correct loud failure
-mode; we don't silently fudge at manifest time.
+| Capability            | Target shape                                      | Source                  |
+|-----------------------|---------------------------------------------------|-------------------------|
+| `pod_kill`            | `{namespace, app}`                                | every service           |
+| `pod_failure`         | `{namespace, app}`                                | every service           |
+| `container_kill`      | `{namespace, app, container}` *                   | every service           |
+| `cpu_stress`          | `{namespace, app, container}` *                   | every service           |
+| `memory_stress`       | `{namespace, app, container}` *                   | every service           |
+| `time_skew`           | `{namespace, app, container}` *                   | every service           |
+| `http_request_delay`  | `{namespace, app, port, method, path}`            | serviceendpoints + grpc |
+| `http_request_abort`  | `{namespace, app, port, method, path}`            | serviceendpoints + grpc |
+| `jvm_method_latency`  | `{namespace, app, class, method}`                 | javaclassmethods        |
 
-gRPC operations are folded into the HTTP family with `method=POST` and
-`path=/RPCService/RPCMethod`. HTTP entries lacking any of
-`RequestMethod`, `Route`, or a valid integer `ServerPort` are dropped
-silently — emitting them would fail the seeded `target_schema`
-(`port` is required to be an integer 1..65535, `method` an enum, `path`
-non-empty).
+\* `container` is the chaos-experiment service-data key (the deployment
+name). `app` is the pod app-label. For teastore the trace data keys carry a
+`teastore-` deployment prefix the pods don't (pods are labelled `webui`,
+`auth`, …), so `app`/`source_app`/`target_service`/`metadata.service` use the
+stripped form while `container` and the filename keep the full key. For the
+other 7 systems the two coincide.
 
-## What's intentionally skipped
+### A1b categories — `<service>-<category>-A1b.yaml`
 
-| Capability             | Reason for skip                                                          |
-|------------------------|--------------------------------------------------------------------------|
-| `network_delay`        | Seed target_schema requires `{source_app, target_service}`; chaos-experiment data carries no curated peer. Would need to walk `networkdependencies` and pick a destination — that's a separate policy call. |
-| `network_loss`         | Same as `network_delay`.                                                 |
-| `network_partition`    | Same as `network_delay`.                                                 |
-| `network_duplicate`    | Same as `network_delay` (also not in the workload-agnostic baseline).    |
-| `network_corrupt`      | Same as `network_delay`.                                                 |
-| `network_bandwidth`    | Same as `network_delay`.                                                 |
-| `dns_error`            | Seed target_schema requires `domain_patterns` (array, minItems=1); per-service domain data is not in chaos-experiment. |
-| `dns_random`           | Same as `dns_error`.                                                     |
-| `jvm_mysql_latency`    | Seed target_schema requires `class` + `method` in addition to `db_name/table/sql_type`; `databaseoperations` data has no Java class/method. |
-| `jvm_mysql_exception`  | Same as `jvm_mysql_latency`.                                             |
-| `jvm_method_exception` | Symmetric with `jvm_method_latency` but adds no new coverage at seed time; can be reintroduced if needed. (Schema would validate — explicit policy choice to keep the seed concise per §11 step 3.) |
-| `jvm_method_return`    | Same rationale as `jvm_method_exception`.                                |
-| `jvm_gc`, `jvm_cpu_stress`, `jvm_memory_stress` | Same rationale: seed kept concise; cluster-level cpu_stress / memory_stress already cover the JVM container. |
-| `http_response_*`, `http_request_replace_*` | Same rationale: seed keeps request_delay + request_abort as the canonical pair; the other 7 HTTPChaos capabilities are reachable via ad-hoc `:import replace_scope=none`. |
+| Category     | Capabilities                                                                                          | Target shape                                  | Source                       |
+|--------------|-------------------------------------------------------------------------------------------------------|-----------------------------------------------|------------------------------|
+| `http`       | `http_response_{abort,delay,replace_code,patch_body,replace_body}`, `http_request_{replace_method,replace_path}` | `{namespace, app, port, method, path}` | serviceendpoints (gRPC routes excluded) |
+| `dns`        | `dns_error`, `dns_random`                                                                             | `{namespace, app, domain_patterns:[domain]}`  | serviceendpoints ServerAddress (gRPC-only pairs excluded) |
+| `network`    | `network_{delay,loss,duplicate,corrupt,bandwidth,partition}`                                          | `{namespace, source_app, target_service}`     | serviceendpoints + grpc ServerAddress (forward, self-loops dropped) |
+| `jvm-method` | `jvm_method_{return,exception}`, `jvm_{cpu_stress,memory_stress}`                                      | `{namespace, app, class, method}`             | javaclassmethods             |
+| `jvm-mysql`  | `jvm_mysql_{latency,exception}`                                                                       | `{namespace, app, db_name, table, sql_type}`  | databaseoperations (mysql only) |
 
-If the gap on a skipped capability is real (network, dns, jvm_mysql),
-fix it in `chaos-experiment` data first — don't widen manifestgen to
-fabricate target fields.
+## Derivation notes
+
+- **network** pairs are derived forward-only from each service's own
+  endpoint `ServerAddress` values (self-loops dropped). Both HTTP
+  serviceendpoints and gRPC operations contribute targets.
+- **dns** domains are the `ServerAddress` of HTTP (non-gRPC-folded)
+  endpoints, minus pairs that communicate only via gRPC (DNS chaos can't
+  match those). The domain keeps the full target service name.
+- **http A1b** excludes gRPC pseudo-routes (`/pkg.Service/Method`) and
+  gRPC-folded operations — chaos-mesh HTTPChaos is HTTP/1.x only. The base
+  `http_request_*` pair is still emitted for those so request-level chaos
+  stays reachable.
+- **jvm-mysql** `sql_type` is the lowercased operation; unrecognized values
+  fall back to `all`. The target is keyed on the SQL operation
+  (db_name/table/sql_type), not a Java class+method — the Connector/J
+  interceptor matches statements. The `jvm_mysql_*` `target_schema` in
+  `tools/capgen` was corrected to require `[namespace, app, db_name, table]`.
+
+## HTTP path normalization
+
+Before dedup, high-cardinality path segments are folded to `/*`:
+
+- UUIDs (`/8-4-4-4-12` hex) → `/*`
+- bare numeric segments (`/123`) → `/*`
+
+This collapses per-request endpoints (e.g. `ts-user-service`'s ~900 UUID
+delete paths) into a single `/api/v1/users/*` point, fixing the chaos-point
+explosion (#500). The dedup key is `port|method|path`, so normalized
+duplicates merge automatically.
 
 ## Test layers
 
 - `TestAllManifestsValidate` — each generated YAML validates against the
-  bundled `aegislab/src/cli/cmd/manifest_schema.json` (same schema
-  `aegisctl manifest validate` uses).
-- `TestTargetSchemasMatch` — each `(capability, target)` pair conforms
-  to that capability's `target_schema` from
+  bundled `aegislab/src/cli/cmd/manifest_schema.json`.
+- `TestTargetSchemasMatch` — each `(capability, target)` pair conforms to
+  that capability's `target_schema` from
   `aegislab/tools/capgen/output/capabilities.json`.
 
-Run with `go test ./tools/manifestgen/...`.
+Run with `go test ./...` from this directory (this is a standalone module;
+the vendored `data/` packages compile but carry no tests).

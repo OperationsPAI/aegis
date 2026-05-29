@@ -1,394 +1,394 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-consign-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-consign-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.ConsignApplication
-      method: main
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByAccountId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByConsignee
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByOrderId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: home
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: insertConsign
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: updateConsign
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.entity.GetPriceDomain
-      method: GetPriceDomain
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.entity.InsertConsignRecordResult
-      method: InsertConsignRecordResult
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: insertConsignRecord
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByAccountId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByConsignee
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByOrderId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: updateConsignRecord
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.ConsignApplication
-      method: main
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByAccountId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByConsignee
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByOrderId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: home
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: insertConsign
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: updateConsign
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.entity.GetPriceDomain
-      method: GetPriceDomain
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.entity.InsertConsignRecordResult
-      method: InsertConsignRecordResult
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: insertConsignRecord
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByAccountId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByConsignee
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByOrderId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: updateConsignRecord
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.ConsignApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByAccountId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByConsignee
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByOrderId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: home
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: insertConsign
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: updateConsign
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.entity.GetPriceDomain
-      method: GetPriceDomain
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.entity.InsertConsignRecordResult
-      method: InsertConsignRecordResult
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: insertConsignRecord
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByAccountId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByConsignee
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByOrderId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: updateConsignRecord
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.ConsignApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByAccountId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByConsignee
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: findByOrderId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: home
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: insertConsign
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.controller.ConsignController
-      method: updateConsign
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.entity.GetPriceDomain
-      method: GetPriceDomain
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.entity.InsertConsignRecordResult
-      method: InsertConsignRecordResult
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: insertConsignRecord
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByAccountId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByConsignee
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: queryByOrderId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-consign-service
-      class: consign.service.ConsignServiceImpl
-      method: updateConsignRecord
-      namespace: ts
-  replace_scope: service
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.ConsignApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByAccountId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByConsignee"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByOrderId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "insertConsign"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "updateConsign"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.GetPriceDomain"
+        method: "GetPriceDomain"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.InsertConsignRecordResult"
+        method: "InsertConsignRecordResult"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "insertConsignRecord"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByAccountId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByConsignee"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByOrderId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "updateConsignRecord"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.ConsignApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByAccountId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByConsignee"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByOrderId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "insertConsign"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "updateConsign"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.GetPriceDomain"
+        method: "GetPriceDomain"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.InsertConsignRecordResult"
+        method: "InsertConsignRecordResult"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "insertConsignRecord"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByAccountId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByConsignee"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByOrderId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "updateConsignRecord"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.ConsignApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByAccountId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByConsignee"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByOrderId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "insertConsign"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "updateConsign"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.GetPriceDomain"
+        method: "GetPriceDomain"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.InsertConsignRecordResult"
+        method: "InsertConsignRecordResult"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "insertConsignRecord"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByAccountId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByConsignee"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByOrderId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "updateConsignRecord"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.ConsignApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByAccountId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByConsignee"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "findByOrderId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "insertConsign"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.controller.ConsignController"
+        method: "updateConsign"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.GetPriceDomain"
+        method: "GetPriceDomain"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.entity.InsertConsignRecordResult"
+        method: "InsertConsignRecordResult"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "insertConsignRecord"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByAccountId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByConsignee"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "queryByOrderId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-consign-service"
+        class: "consign.service.ConsignServiceImpl"
+        method: "updateConsignRecord"
+        namespace: "ts"

@@ -1,634 +1,634 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-notification-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-notification-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.NotificationApplication
-      method: main
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getHost
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPassword
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPort
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getUsername
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setHost
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPassword
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPort
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setUsername
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.Queues
-      method: emailQueue
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: home
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_cancel_success
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_changed_success
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_create_success
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: preserve_success
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send_mail
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.entity.Mail
-      method: Mail
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.entity.NotifyInfo
-      method: NotifyInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitReceive
-      method: process
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitSend
-      method: send
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.MailService
-      method: sendEmail
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCancelSuccess
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderChangedSuccess
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCreateSuccess
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: preserveSuccess
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.NotificationApplication
-      method: main
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getHost
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPassword
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPort
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getUsername
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setHost
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPassword
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPort
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setUsername
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.config.Queues
-      method: emailQueue
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: home
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_cancel_success
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_changed_success
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_create_success
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: preserve_success
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send_mail
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.entity.Mail
-      method: Mail
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.entity.NotifyInfo
-      method: NotifyInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitReceive
-      method: process
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitSend
-      method: send
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.MailService
-      method: sendEmail
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCancelSuccess
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderChangedSuccess
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCreateSuccess
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: preserveSuccess
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.NotificationApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getHost
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPassword
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPort
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getUsername
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setHost
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPassword
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPort
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setUsername
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.config.Queues
-      method: emailQueue
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: home
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_cancel_success
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_changed_success
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_create_success
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: preserve_success
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send_mail
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.entity.Mail
-      method: Mail
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.entity.NotifyInfo
-      method: NotifyInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitReceive
-      method: process
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitSend
-      method: send
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.service.MailService
-      method: sendEmail
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCancelSuccess
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderChangedSuccess
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCreateSuccess
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: preserveSuccess
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.NotificationApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getHost
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPassword
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getPort
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: getUsername
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setHost
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPassword
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setPort
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.EmailProperties
-      method: setUsername
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.config.Queues
-      method: emailQueue
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: home
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_cancel_success
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_changed_success
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: order_create_success
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: preserve_success
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.controller.NotificationController
-      method: test_send_mail
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.entity.Mail
-      method: Mail
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.entity.NotifyInfo
-      method: NotifyInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitReceive
-      method: process
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.mq.RabbitSend
-      method: send
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.service.MailService
-      method: sendEmail
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCancelSuccess
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderChangedSuccess
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: orderCreateSuccess
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-notification-service
-      class: notification.service.NotificationServiceImpl
-      method: preserveSuccess
-      namespace: ts
-  replace_scope: service
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.NotificationApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getHost"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPassword"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPort"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getUsername"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setHost"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPassword"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPort"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setUsername"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.Queues"
+        method: "emailQueue"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_cancel_success"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_changed_success"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_create_success"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "preserve_success"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send_mail"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.Mail"
+        method: "Mail"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.NotifyInfo"
+        method: "NotifyInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitReceive"
+        method: "process"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitSend"
+        method: "send"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.MailService"
+        method: "sendEmail"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCancelSuccess"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderChangedSuccess"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCreateSuccess"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "preserveSuccess"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.NotificationApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getHost"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPassword"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPort"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getUsername"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setHost"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPassword"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPort"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setUsername"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.Queues"
+        method: "emailQueue"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_cancel_success"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_changed_success"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_create_success"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "preserve_success"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send_mail"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.Mail"
+        method: "Mail"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.NotifyInfo"
+        method: "NotifyInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitReceive"
+        method: "process"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitSend"
+        method: "send"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.MailService"
+        method: "sendEmail"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCancelSuccess"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderChangedSuccess"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCreateSuccess"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "preserveSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.NotificationApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getHost"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPassword"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPort"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getUsername"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setHost"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPassword"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPort"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setUsername"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.Queues"
+        method: "emailQueue"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_cancel_success"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_changed_success"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_create_success"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "preserve_success"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send_mail"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.Mail"
+        method: "Mail"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.NotifyInfo"
+        method: "NotifyInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitReceive"
+        method: "process"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitSend"
+        method: "send"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.MailService"
+        method: "sendEmail"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCancelSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderChangedSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCreateSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "preserveSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.NotificationApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getHost"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPassword"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getPort"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "getUsername"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setHost"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPassword"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setPort"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.EmailProperties"
+        method: "setUsername"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.config.Queues"
+        method: "emailQueue"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_cancel_success"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_changed_success"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "order_create_success"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "preserve_success"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.controller.NotificationController"
+        method: "test_send_mail"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.Mail"
+        method: "Mail"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.entity.NotifyInfo"
+        method: "NotifyInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitReceive"
+        method: "process"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.mq.RabbitSend"
+        method: "send"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.MailService"
+        method: "sendEmail"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCancelSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderChangedSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "orderCreateSuccess"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-notification-service"
+        class: "notification.service.NotificationServiceImpl"
+        method: "preserveSuccess"
+        namespace: "ts"

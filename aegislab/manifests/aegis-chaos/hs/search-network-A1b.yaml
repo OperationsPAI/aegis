@@ -1,70 +1,70 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: search
-  system: hs
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "search"
+  system: "hs"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: hs
-      source_app: search
-      target_service: geo
-  - capability: network_bandwidth
-    target:
-      namespace: hs
-      source_app: search
-      target_service: rate
-  - capability: network_corrupt
-    target:
-      namespace: hs
-      source_app: search
-      target_service: geo
-  - capability: network_corrupt
-    target:
-      namespace: hs
-      source_app: search
-      target_service: rate
-  - capability: network_delay
-    target:
-      namespace: hs
-      source_app: search
-      target_service: geo
-  - capability: network_delay
-    target:
-      namespace: hs
-      source_app: search
-      target_service: rate
-  - capability: network_duplicate
-    target:
-      namespace: hs
-      source_app: search
-      target_service: geo
-  - capability: network_duplicate
-    target:
-      namespace: hs
-      source_app: search
-      target_service: rate
-  - capability: network_loss
-    target:
-      namespace: hs
-      source_app: search
-      target_service: geo
-  - capability: network_loss
-    target:
-      namespace: hs
-      source_app: search
-      target_service: rate
-  - capability: network_partition
-    target:
-      namespace: hs
-      source_app: search
-      target_service: geo
-  - capability: network_partition
-    target:
-      namespace: hs
-      source_app: search
-      target_service: rate
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "geo"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "rate"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "geo"
+    - capability: "network_corrupt"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "rate"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "geo"
+    - capability: "network_delay"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "rate"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "geo"
+    - capability: "network_duplicate"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "rate"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "geo"
+    - capability: "network_loss"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "rate"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "geo"
+    - capability: "network_partition"
+      target:
+        namespace: "hs"
+        source_app: "search"
+        target_service: "rate"

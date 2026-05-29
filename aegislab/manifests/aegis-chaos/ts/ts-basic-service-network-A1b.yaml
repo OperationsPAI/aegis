@@ -1,130 +1,130 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-basic-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-basic-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-price-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-route-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-station-service
-  - capability: network_bandwidth
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-train-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-price-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-route-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-station-service
-  - capability: network_corrupt
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-train-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-price-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-route-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-station-service
-  - capability: network_delay
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-train-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-price-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-route-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-station-service
-  - capability: network_duplicate
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-train-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-price-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-route-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-station-service
-  - capability: network_loss
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-train-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-price-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-route-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-station-service
-  - capability: network_partition
-    target:
-      namespace: ts
-      source_app: ts-basic-service
-      target_service: ts-train-service
-  replace_scope: service
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-price-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-route-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-station-service"
+    - capability: "network_bandwidth"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-train-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-price-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-route-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-station-service"
+    - capability: "network_corrupt"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-train-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-price-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-route-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-station-service"
+    - capability: "network_delay"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-train-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-price-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-route-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-station-service"
+    - capability: "network_duplicate"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-train-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-price-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-route-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-station-service"
+    - capability: "network_loss"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-train-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-price-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-route-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-station-service"
+    - capability: "network_partition"
+      target:
+        namespace: "ts"
+        source_app: "ts-basic-service"
+        target_service: "ts-train-service"

@@ -1,250 +1,250 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-verification-code-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-verification-code-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.VerifyCodeApplication
-      method: main
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: imageCode
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getImageCode
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getRandColor
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: CookieUtil
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: addCookie
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: getCookieByName
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: readCookieMap
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.VerifyCodeApplication
-      method: main
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: imageCode
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getImageCode
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getRandColor
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: CookieUtil
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: addCookie
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: getCookieByName
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: readCookieMap
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.VerifyCodeApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: imageCode
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getImageCode
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getRandColor
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: CookieUtil
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: addCookie
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: getCookieByName
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: readCookieMap
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.VerifyCodeApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: imageCode
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.controller.VerifyCodeController
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getImageCode
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: getRandColor
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.service.impl.VerifyCodeServiceImpl
-      method: verifyCode
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: CookieUtil
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: addCookie
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: getCookieByName
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-verification-code-service
-      class: verifycode.util.CookieUtil
-      method: readCookieMap
-      namespace: ts
-  replace_scope: service
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.VerifyCodeApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "imageCode"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getImageCode"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getRandColor"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "CookieUtil"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "addCookie"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "getCookieByName"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "readCookieMap"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.VerifyCodeApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "imageCode"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getImageCode"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getRandColor"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "CookieUtil"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "addCookie"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "getCookieByName"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "readCookieMap"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.VerifyCodeApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "imageCode"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getImageCode"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getRandColor"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "CookieUtil"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "addCookie"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "getCookieByName"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "readCookieMap"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.VerifyCodeApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "imageCode"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.controller.VerifyCodeController"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getImageCode"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "getRandColor"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.service.impl.VerifyCodeServiceImpl"
+        method: "verifyCode"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "CookieUtil"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "addCookie"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "getCookieByName"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-verification-code-service"
+        class: "verifycode.util.CookieUtil"
+        method: "readCookieMap"
+        namespace: "ts"

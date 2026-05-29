@@ -30,14 +30,7 @@ spec:
         app: "ts-execute-service"
         method: "GET"
         namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/2"
-        port: 8080
-    - capability: "http_request_abort"
-      target:
-        app: "ts-execute-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/6"
+        path: "/api/v1/orderOtherService/orderOther/status/*/*"
         port: 8080
     - capability: "http_request_abort"
       target:
@@ -58,14 +51,7 @@ spec:
         app: "ts-execute-service"
         method: "GET"
         namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/2"
-        port: 8080
-    - capability: "http_request_delay"
-      target:
-        app: "ts-execute-service"
-        method: "GET"
-        namespace: "ts"
-        path: "/api/v1/orderOtherService/orderOther/status/*/6"
+        path: "/api/v1/orderOtherService/orderOther/status/*/*"
         port: 8080
     - capability: "http_request_delay"
       target:

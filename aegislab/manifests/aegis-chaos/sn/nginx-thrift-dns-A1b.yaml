@@ -1,70 +1,70 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: nginx-thrift
-  system: sn
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "nginx-thrift"
+  system: "sn"
 spec:
+  replace_scope: "service"
   points:
-  - capability: dns_error
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - compose-post-service
-      namespace: sn
-  - capability: dns_error
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - home-timeline-service
-      namespace: sn
-  - capability: dns_error
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - social-graph-service
-      namespace: sn
-  - capability: dns_error
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - user-service
-      namespace: sn
-  - capability: dns_error
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - user-timeline-service
-      namespace: sn
-  - capability: dns_random
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - compose-post-service
-      namespace: sn
-  - capability: dns_random
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - home-timeline-service
-      namespace: sn
-  - capability: dns_random
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - social-graph-service
-      namespace: sn
-  - capability: dns_random
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - user-service
-      namespace: sn
-  - capability: dns_random
-    target:
-      app: nginx-thrift
-      domain_patterns:
-      - user-timeline-service
-      namespace: sn
-  replace_scope: service
+    - capability: "dns_error"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "compose-post-service"
+        namespace: "sn"
+    - capability: "dns_error"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "home-timeline-service"
+        namespace: "sn"
+    - capability: "dns_error"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "social-graph-service"
+        namespace: "sn"
+    - capability: "dns_error"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "user-service"
+        namespace: "sn"
+    - capability: "dns_error"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "user-timeline-service"
+        namespace: "sn"
+    - capability: "dns_random"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "compose-post-service"
+        namespace: "sn"
+    - capability: "dns_random"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "home-timeline-service"
+        namespace: "sn"
+    - capability: "dns_random"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "social-graph-service"
+        namespace: "sn"
+    - capability: "dns_random"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "user-service"
+        namespace: "sn"
+    - capability: "dns_random"
+      target:
+        app: "nginx-thrift"
+        domain_patterns:
+          - "user-timeline-service"
+        namespace: "sn"

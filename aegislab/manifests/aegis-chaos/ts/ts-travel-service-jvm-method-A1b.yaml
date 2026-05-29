@@ -1,1090 +1,1018 @@
 apiVersion: aegis-chaos/v1beta
 kind: PointManifest
 metadata:
-  chart_version: seed-genesis
-  instance: seed
-  service: ts-travel-service
-  system: ts
+  chart_version: "seed-genesis"
+  instance: "seed"
+  service: "ts-travel-service"
+  system: "ts"
 spec:
+  replace_scope: "service"
   points:
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.TravelApplication
-      method: main
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: createTrip
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: deleteTrip
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripsByRouteId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: home
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryAll
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfoInparallel
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: retrieve
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: updateTrip
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.AdminTrip
-      method: AdminTrip
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Travel
-      method: Travel
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: MyCallable
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: call
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: afterToday
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: delete
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRestTicketNumber
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTickets
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTicketsByBatch
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByName
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripByRoute
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: query
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryAll
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryByBatch
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryInParallel
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: retrieve
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: setResponse
-      namespace: ts
-  - capability: jvm_cpu_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: update
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.TravelApplication
-      method: main
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: createTrip
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: deleteTrip
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripsByRouteId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: home
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryAll
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfoInparallel
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: retrieve
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: updateTrip
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.AdminTrip
-      method: AdminTrip
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Travel
-      method: Travel
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: MyCallable
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: call
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: afterToday
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: delete
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRestTicketNumber
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTickets
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTicketsByBatch
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByName
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripByRoute
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: query
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryAll
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryByBatch
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryInParallel
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: retrieve
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: setResponse
-      namespace: ts
-  - capability: jvm_memory_stress
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: update
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.TravelApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: createTrip
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: deleteTrip
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripsByRouteId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: home
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryAll
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfoInparallel
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: retrieve
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: updateTrip
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.entity.AdminTrip
-      method: AdminTrip
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.entity.Travel
-      method: Travel
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: MyCallable
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: call
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: afterToday
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: delete
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRestTicketNumber
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTickets
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTicketsByBatch
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByName
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripByRoute
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: query
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryAll
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryByBatch
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryInParallel
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: retrieve
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: setResponse
-      namespace: ts
-  - capability: jvm_method_exception
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: update
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.TravelApplication
-      method: main
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: createTrip
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: deleteTrip
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: getTripsByRouteId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: home
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryAll
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: queryInfoInparallel
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: retrieve
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.controller.TravelController
-      method: updateTrip
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.entity.AdminTrip
-      method: AdminTrip
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.entity.Travel
-      method: Travel
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.entity.Trip
-      method: Trip
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.entity.TripAllDetail
-      method: TripAllDetail
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.init.InitData
-      method: run
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: MyCallable
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl.MyCallable
-      method: call
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: adminQueryAll
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: afterToday
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: create
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: delete
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRestTicketNumber
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByRouteId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getRouteByTripId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getServiceUrl
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTickets
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTicketsByBatch
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByName
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTrainTypeByTripId
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripAllDetailInfo
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: getTripByRoute
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: query
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryAll
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryByBatch
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: queryInParallel
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: retrieve
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: setResponse
-      namespace: ts
-  - capability: jvm_method_return
-    target:
-      app: ts-travel-service
-      class: travel.service.TravelServiceImpl
-      method: update
-      namespace: ts
-  replace_scope: service
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.TravelApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "createTrip"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "deleteTrip"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripsByRouteId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfoInparallel"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "updateTrip"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.AdminTrip"
+        method: "AdminTrip"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Travel"
+        method: "Travel"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Trip"
+        method: "Trip"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.TripAllDetail"
+        method: "TripAllDetail"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "MyCallable"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "call"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "afterToday"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "delete"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRestTicketNumber"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTickets"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTicketsByBatch"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripByRoute"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "query"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryByBatch"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryInParallel"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "setResponse"
+        namespace: "ts"
+    - capability: "jvm_cpu_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "update"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.TravelApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "createTrip"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "deleteTrip"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripsByRouteId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfoInparallel"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "updateTrip"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.AdminTrip"
+        method: "AdminTrip"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Travel"
+        method: "Travel"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Trip"
+        method: "Trip"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.TripAllDetail"
+        method: "TripAllDetail"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "MyCallable"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "call"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "afterToday"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "delete"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRestTicketNumber"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTickets"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTicketsByBatch"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripByRoute"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "query"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryByBatch"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryInParallel"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "setResponse"
+        namespace: "ts"
+    - capability: "jvm_memory_stress"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "update"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.TravelApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "createTrip"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "deleteTrip"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripsByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfoInparallel"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "updateTrip"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.AdminTrip"
+        method: "AdminTrip"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Travel"
+        method: "Travel"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Trip"
+        method: "Trip"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.TripAllDetail"
+        method: "TripAllDetail"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "MyCallable"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "call"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "afterToday"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "delete"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRestTicketNumber"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTickets"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTicketsByBatch"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripByRoute"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "query"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryByBatch"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryInParallel"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "setResponse"
+        namespace: "ts"
+    - capability: "jvm_method_exception"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "update"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.TravelApplication"
+        method: "main"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "createTrip"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "deleteTrip"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "getTripsByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "home"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "queryInfoInparallel"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.controller.TravelController"
+        method: "updateTrip"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.AdminTrip"
+        method: "AdminTrip"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Travel"
+        method: "Travel"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.Trip"
+        method: "Trip"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.entity.TripAllDetail"
+        method: "TripAllDetail"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.init.InitData"
+        method: "run"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "MyCallable"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl.MyCallable"
+        method: "call"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "adminQueryAll"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "afterToday"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "create"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "delete"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRestTicketNumber"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByRouteId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getRouteByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getServiceUrl"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTickets"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTicketsByBatch"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByName"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTrainTypeByTripId"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripAllDetailInfo"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "getTripByRoute"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "query"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryAll"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryByBatch"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "queryInParallel"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "retrieve"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "setResponse"
+        namespace: "ts"
+    - capability: "jvm_method_return"
+      target:
+        app: "ts-travel-service"
+        class: "travel.service.TravelServiceImpl"
+        method: "update"
+        namespace: "ts"

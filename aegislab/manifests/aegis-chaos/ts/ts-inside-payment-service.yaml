@@ -30,7 +30,7 @@ spec:
         app: "ts-inside-payment-service"
         method: "GET"
         namespace: "ts"
-        path: "/api/v1/orderservice/order/status/*/1"
+        path: "/api/v1/orderservice/order/status/*/*"
         port: 8080
     - capability: "http_request_abort"
       target:
@@ -51,7 +51,7 @@ spec:
         app: "ts-inside-payment-service"
         method: "GET"
         namespace: "ts"
-        path: "/api/v1/orderservice/order/status/*/1"
+        path: "/api/v1/orderservice/order/status/*/*"
         port: 8080
     - capability: "http_request_delay"
       target:
