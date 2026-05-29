@@ -1409,14 +1409,14 @@ dynamic_configs:
     min_value: 1
     max_value: 20
   - key: injection.system.media.ns_pattern
-    default_value: ^mm\d+$
+    default_value: ^media\d+$
     value_type: 0
     scope: 2
     category: injection.system.ns_pattern
     description: Namespace pattern for system MediaMicroservices instances
     is_secret: false
   - key: injection.system.media.extract_pattern
-    default_value: ^(mm)(\d+)$
+    default_value: ^(media)(\d+)$
     value_type: 0
     scope: 2
     category: injection.system.extract_pattern
@@ -1484,14 +1484,14 @@ dynamic_configs:
     min_value: 1
     max_value: 20
   - key: injection.system.teastore.ns_pattern
-    default_value: ^tea\d+$
+    default_value: ^teastore\d+$
     value_type: 0
     scope: 2
     category: injection.system.ns_pattern
     description: Namespace pattern for system TeaStore instances
     is_secret: false
   - key: injection.system.teastore.extract_pattern
-    default_value: ^(tea)(\d+)$
+    default_value: ^(teastore)(\d+)$
     value_type: 0
     scope: 2
     category: injection.system.extract_pattern

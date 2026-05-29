@@ -117,6 +117,31 @@ func TestParseBatchGuidedSpecs(t *testing.T) {
 	require.Equal(t, cfg.ChaosType, item.guidedConfigs[0].ChaosType)
 }
 
+func TestParseBatchGuidedSpecsSystemTypeDerivation(t *testing.T) {
+	base := sampleGuidedConfig()
+
+	t.Run("namespace-form code matches multi-letter pedestal", func(t *testing.T) {
+		cfg := base
+		cfg.System = "teastore0"
+		_, _, err := parseBatchGuidedSpecs(context.Background(), "teastore", 0, []guidedcli.GuidedConfig{cfg})
+		require.NoError(t, err)
+	})
+
+	t.Run("prefix not equal to pedestal name is rejected", func(t *testing.T) {
+		cfg := base
+		cfg.System = "tea0"
+		_, _, err := parseBatchGuidedSpecs(context.Background(), "teastore", 0, []guidedcli.GuidedConfig{cfg})
+		require.ErrorContains(t, err, "mismatched system type tea for pedestal teastore")
+	})
+
+	t.Run("empty system skips the check", func(t *testing.T) {
+		cfg := base
+		cfg.System = ""
+		_, _, err := parseBatchGuidedSpecs(context.Background(), "teastore", 0, []guidedcli.GuidedConfig{cfg})
+		require.NoError(t, err)
+	})
+}
+
 func TestParseBatchGuidedSpecsWarnsOnDuplicateServices(t *testing.T) {
 	cfg := sampleGuidedConfig()
 

@@ -23,7 +23,7 @@ submit:
   specs:
     - - system: media
         system_type: media
-        namespace: mm0
+        namespace: media0
         app: user-service
         chaos_type: PodKill
 validation:

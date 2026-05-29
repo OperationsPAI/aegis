@@ -93,8 +93,8 @@ var systemNsPatterns = map[string]string{
 	"hs":        `^hs\d+$`,
 	"ts":        `^ts\d+$`,
 	"sn":        `^sn\d+$`,
-	"mm":        `^mm\d+$`,
-	"tea":       `^tea\d+$`,
+	"media":     `^media\d+$`,
+	"teastore":  `^teastore\d+$`,
 	"sockshop":  `^sockshop\d+$`,
 	"otel-demo": `^otel-demo\d+$`,
 }
