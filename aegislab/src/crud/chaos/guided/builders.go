@@ -547,6 +547,20 @@ func buildJVMRuntimeMutator(ctx context.Context, cfg GuidedConfig, systemType sy
 }
 
 func resolveAppLevel(ctx context.Context, cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {
+	systemIdx, err := systemTypeIndex(systemType.String())
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	// Zero-instance bootstrap: the namespace is server-allocated at apply, so
+	// there are no live pods to enumerate the app from. The real injection is
+	// addressed by app name at dispatch time (GuidedChaosPointID) and pod
+	// existence is enforced post-bootstrap, so resolve-time app-index lookup is
+	// redundant here. The returned appIdx is unused by the name-based dispatch.
+	if bootstrapBypassAppDiscovery(cfg) {
+		return 0, systemIdx, normalizedDuration(cfg), nil
+	}
+
 	apps, err := safeAppLabels(ctx, cfg.Namespace, systemType)
 	if err != nil {
 		return 0, 0, 0, err
@@ -555,11 +569,15 @@ func resolveAppLevel(ctx context.Context, cfg GuidedConfig, systemType systemcon
 	if appIdx < 0 {
 		return 0, 0, 0, fmt.Errorf("app %q not found in namespace %q; available apps: %s", cfg.App, cfg.Namespace, formatAppList(apps))
 	}
-	systemIdx, err := systemTypeIndex(systemType.String())
-	if err != nil {
-		return 0, 0, 0, err
-	}
 	return appIdx, systemIdx, normalizedDuration(cfg), nil
+}
+
+// bootstrapBypassAppDiscovery reports whether live pod discovery should be
+// skipped: the caller provided an explicit app and asked the server to
+// allocate (--auto) and/or bootstrap (--allow-bootstrap) the namespace, so no
+// pods exist yet at resolve time.
+func bootstrapBypassAppDiscovery(cfg GuidedConfig) bool {
+	return cfg.App != "" && (cfg.Auto || cfg.AllowBootstrap)
 }
 
 func resolveContainerLevel(cfg GuidedConfig, systemType systemconfig.SystemType) (int, int, int, error) {

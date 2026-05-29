@@ -1,6 +1,45 @@
 package guided
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
+
+// Zero-instance + bootstrap: a registered system with no live namespace must
+// still resolve to ready_to_apply when the app is provided and --auto /
+// --allow-bootstrap are set. Without the bypass this hit live pod discovery
+// against the un-allocated namespace and failed with "no labels found for key
+// app in namespace <ns>" (the #166 chicken-and-egg). The namespace is left
+// empty so the server allocates it at apply.
+func TestResolveBootstrapSkipsLivePodDiscovery(t *testing.T) {
+	cfg := GuidedConfig{
+		System:         "sn",
+		App:            "user-service",
+		ChaosType:      "PodKill",
+		Auto:           true,
+		AllowBootstrap: true,
+	}
+
+	resp, err := Resolve(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("Resolve returned error: %v", err)
+	}
+	if resp.Stage != "ready_to_apply" || !resp.CanApply {
+		t.Fatalf("expected ready_to_apply/can_apply, got stage=%q can_apply=%v errors=%v", resp.Stage, resp.CanApply, resp.Errors)
+	}
+	if len(resp.Errors) != 0 {
+		t.Fatalf("expected no resolver errors, got %v", resp.Errors)
+	}
+	if resp.Config.Namespace != "" {
+		t.Fatalf("expected namespace to stay empty for server-side allocation, got %q", resp.Config.Namespace)
+	}
+	if resp.Config.App != "user-service" {
+		t.Fatalf("expected app to be preserved, got %q", resp.Config.App)
+	}
+	if resp.ApplyPayload == nil {
+		t.Fatal("expected a non-nil apply payload")
+	}
+}
 
 func TestMergeConfigClearsDownstreamWhenAppChanges(t *testing.T) {
 	fileCfg := &ConfigFile{

@@ -21442,8 +21442,15 @@ const docTemplate = `{
         "chaos.GuidedConfig": {
             "type": "object",
             "properties": {
+                "allow_bootstrap": {
+                    "type": "boolean"
+                },
                 "app": {
                     "type": "string"
+                },
+                "auto": {
+                    "description": "Auto / AllowBootstrap mirror the submit-time --auto / --allow-bootstrap\nflags (#166), carried into resolve so the resolver can skip live pod\ndiscovery for zero-instance systems: the namespace is server-allocated\n(and possibly bootstrapped) at apply, so there are no pods to enumerate\nat resolve time. Per-invocation only, never persisted to the saved\nsession (yaml:\"-\").",
+                    "type": "boolean"
                 },
                 "body_type": {
                     "type": "string"
@@ -29795,8 +29802,15 @@ const docTemplate = `{
         "injection.GuidedSpec": {
             "type": "object",
             "properties": {
+                "allow_bootstrap": {
+                    "type": "boolean"
+                },
                 "app": {
                     "type": "string"
+                },
+                "auto": {
+                    "description": "Auto / AllowBootstrap mirror the submit-time --auto / --allow-bootstrap\nflags (#166), carried into resolve so the resolver can skip live pod\ndiscovery for zero-instance systems: the namespace is server-allocated\n(and possibly bootstrapped) at apply, so there are no pods to enumerate\nat resolve time. Per-invocation only, never persisted to the saved\nsession (yaml:\"-\").",
+                    "type": "boolean"
                 },
                 "body_type": {
                     "type": "string"

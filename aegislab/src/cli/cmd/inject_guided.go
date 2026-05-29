@@ -272,8 +272,10 @@ datapack, no algorithm, always fresh catalog state — use
 			MemType:        guidedMemType,
 			BodyType:       guidedBodyType,
 			ReplaceMethod:  guidedReplaceMethod,
-			SaveConfig:  effectiveSave,
-			ResetConfig: guidedResetConfig,
+			Auto:           guidedAutoAllocate,
+			AllowBootstrap: guidedAllowBootstrap,
+			SaveConfig:     effectiveSave,
+			ResetConfig:    guidedResetConfig,
 		}
 
 		setInt := func(dst **int, v int, allowZero bool) {
