@@ -3,19 +3,19 @@ kind: PointManifest
 metadata:
   chart_version: seed-genesis
   instance: seed
-  service: teastore-registry
+  service: registry
   system: teastore
 spec:
   points:
   - capability: dns_error
     target:
-      app: teastore-registry
+      app: registry
       domain_patterns:
       - teastore-webui
       namespace: teastore
   - capability: dns_random
     target:
-      app: teastore-registry
+      app: registry
       domain_patterns:
       - teastore-webui
       namespace: teastore

@@ -109,6 +109,15 @@ server-side regardless of how the seed was authored (see
 `schema_validate.go:cloneStrictObjects`) — so the cost of getting
 `target.namespace` wrong is a 400, not a silent no-op at chaos-mesh apply.
 
+`target.namespace` is **excluded from the point_id hash** (ADR-0011). It is a
+runtime binding — the concrete per-instance allocator namespace (`sn0`, `sn1`,
+…) is supplied separately at inject time and is what the executor uses for CR
+placement and pod selection. A manifest may set `target.namespace` to the
+logical system name (informational, and currently required by the per-capability
+target schema), but the hash ignores its value, so one catalog Point matches
+injections in **any** of that system's namespaces. Authoring it wrong still
+fails schema validation, but its value never forks the Point's identity.
+
 ## 5. `param_overrides` layering
 
 Effective runtime params come from three layers; each layer must satisfy

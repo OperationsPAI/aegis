@@ -39,6 +39,18 @@ same place:
   )[:16]
   ```
   Cross-service Points still omit service/instance/chart_version.
+- `canonical_json(target)` **excludes the `namespace` key**. namespace is a
+  runtime binding — the concrete per-instance allocator namespace (`sn0`,
+  `sn1`, …) the CR is applied into, supplied separately at inject time — not
+  part of a Point's abstract identity. Including it broke every strict-catalog
+  inject under the multi-namespace allocator (#166): the catalog Point hashed
+  with the logical system namespace (`sn`) while the inject hashed with the
+  allocated one (`sn1`), so the point_ids never matched and `POST
+  /v1beta/injections` returned `ErrPointNotFound`. With namespace excluded, a
+  single catalog Point matches injections in any of its system's namespaces.
+  The stored `target` may keep `namespace` for information; only the hash
+  drops it. Both import and inject compute the id through one shared
+  namespace-stripping path so they can never diverge.
 - Point Manifest envelope adds `metadata.instance` (default
   `default` for single-instance charts).
 - A periodic reconciler inside aegis-chaos walks `services` rows in

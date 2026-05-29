@@ -23,8 +23,9 @@ var CrossServiceCapabilities = map[string]struct{}{
 // capability from a finalized GuidedConfig. Per-capability shapes match
 // tools/capgen/output/capabilities.json target_schema.required.
 //
-// target.namespace is the LOGICAL system name (catalog identifier), NOT the
-// concrete kubernetes namespace. The concrete ns travels separately in the
+// target.namespace is informational only: it is excluded from the point_id
+// hash (see canonicalTargetJSON) because namespace is a runtime binding, not
+// part of a Point's identity. The concrete ns travels separately in the
 // request body and is what the executor uses for CR placement.
 func GuidedToChaosTarget(capability string, cfg guidedcli.GuidedConfig) (map[string]any, error) {
 	app := strings.TrimSpace(cfg.App)
