@@ -650,7 +650,7 @@ func makeStuckRestartPedestalFixture(t *testing.T, db *gorm.DB, namespace string
 // against the same namespace doesn't loop on lock acquisition.
 func TestReconciler_RecoversTraceStuckAtRestartPedestalStarted(t *testing.T) {
 	db := newReconcilerTestDB(t)
-	traceID, taskID := makeStuckRestartPedestalFixture(t, db, "ts0", 30*time.Minute)
+	traceID, taskID := makeStuckRestartPedestalFixture(t, db, "ts0", 45*time.Minute)
 
 	lock := &fakeNamespaceLockReleaser{}
 	restartTok := &fakeTokenReleaser{}
@@ -687,13 +687,32 @@ func TestReconciler_RecoversTraceStuckAtRestartPedestalStarted(t *testing.T) {
 	require.Len(t, warmingTok.calls, 1, "namespace-warming token must be released defensively")
 }
 
+// TestReconciler_RestartPedestalNotReapedBeforeLongThreshold locks the
+// DSB-cold-start fix: a trace parked at restart.pedestal.started must NOT be
+// reaped at the generic stuck threshold (600 s). A cold DSB bootstrap
+// legitimately holds this state through readiness_timeout + warmup + the
+// traffic-presence gate without advancing updated_at; reaping it early kills
+// in-progress installs. 20 min is past the generic 600 s but below the
+// restart-pedestal 2400 s threshold → must survive.
+func TestReconciler_RestartPedestalNotReapedBeforeLongThreshold(t *testing.T) {
+	db := newReconcilerTestDB(t)
+	makeStuckRestartPedestalFixture(t, db, "ts0", 20*time.Minute)
+
+	r := newReconcilerForTest(t, db, newFakeInjectionOwner(nil), nil)
+	processed, candidates, err := r.tick(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 0, candidates,
+		"restart.pedestal.started at 20m (< 40m RP threshold) must not be a stuck candidate")
+	require.Equal(t, 0, processed)
+}
+
 // TestReconciler_RestartPedestalRecoveryToleratesNilReleasers verifies the
 // recovery path is safe when the optional lock / token releasers are nil —
 // the DB cancellation must still happen so the trace doesn't get stuck for
 // good.
 func TestReconciler_RestartPedestalRecoveryToleratesNilReleasers(t *testing.T) {
 	db := newReconcilerTestDB(t)
-	traceID, taskID := makeStuckRestartPedestalFixture(t, db, "ts0", 30*time.Minute)
+	traceID, taskID := makeStuckRestartPedestalFixture(t, db, "ts0", 45*time.Minute)
 
 	r := newReconcilerForTest(t, db, newFakeInjectionOwner(nil), nil)
 	// All releasers left nil.

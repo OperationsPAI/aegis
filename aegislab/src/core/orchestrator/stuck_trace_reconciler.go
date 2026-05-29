@@ -232,6 +232,16 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 	}
 	cutoff := r.now().Add(-time.Duration(stuckSecs) * time.Second)
 
+	// restart.pedestal.started gets a longer threshold: a cold DSB bootstrap
+	// legitimately parks here for readiness_timeout + warmup + traffic-gate
+	// (tens of minutes) before the inject fires, without advancing updated_at.
+	// Reaping it at the generic 600 s threshold kills in-progress bootstraps.
+	rpSecs := restartPedestalStuckThresholdSeconds()
+	if rpSecs < stuckSecs {
+		rpSecs = stuckSecs
+	}
+	rpCutoff := r.now().Add(-time.Duration(rpSecs) * time.Second)
+
 	// Anti-join out traces that already have a non-deleted BuildDatapack
 	// task. Without this filter the candidate set is starved on busy
 	// clusters: any trace whose last_event was never advanced past
@@ -247,15 +257,18 @@ func (r *StuckTraceReconciler) tick(ctx context.Context) (int, int, error) {
 	var traces []model.Trace
 	err := r.db.WithContext(ctx).
 		Model(&model.Trace{}).
-		Where("state = ? AND last_event IN ? AND updated_at < ? AND status != ?",
+		Where("state = ? AND status != ? AND ("+
+			"(last_event IN ? AND updated_at < ?) OR "+
+			"(last_event = ? AND updated_at < ?))",
 			consts.TraceRunning,
+			consts.CommonDeleted,
 			[]consts.EventType{
 				consts.EventFaultInjectionStarted,
 				consts.EventFaultInjectionCompleted,
-				consts.EventRestartPedestalStarted,
 			},
 			cutoff,
-			consts.CommonDeleted,
+			consts.EventRestartPedestalStarted,
+			rpCutoff,
 		).
 		Where("NOT EXISTS (?)",
 			r.db.Model(&model.Task{}).
@@ -754,6 +767,17 @@ func stuckThresholdSecondsFromConfig() int {
 	v := config.GetInt(consts.StuckTraceReconcileStuckThresholdKey)
 	if v <= 0 {
 		return consts.DefaultStuckTraceReconcileStuckSecs
+	}
+	return v
+}
+
+// restartPedestalStuckThresholdSeconds is the (longer) stuck threshold for
+// traces parked at restart.pedestal.started. Read on every tick so an etcd
+// push applies without a rebuild.
+func restartPedestalStuckThresholdSeconds() int {
+	v := config.GetInt(consts.StuckTraceReconcileRestartPedestalThresholdKey)
+	if v <= 0 {
+		return consts.DefaultStuckTraceReconcileRestartPedestalSecs
 	}
 	return v
 }
