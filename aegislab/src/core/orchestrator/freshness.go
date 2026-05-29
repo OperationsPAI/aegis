@@ -16,8 +16,8 @@ import (
 
 	"aegis/platform/config"
 	"aegis/platform/consts"
-	"aegis/platform/dto"
 	db "aegis/platform/db"
+	"aegis/platform/dto"
 )
 
 // FreshnessProbe is the minimum surface waitForCHFreshness needs to read
@@ -69,8 +69,8 @@ func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namesp
 	defer func() { _ = conn.Close() }()
 
 	var (
-		row chrow.Row
-		ts  time.Time
+		row  chrow.Row
+		ts   time.Time
 		stmt string
 	)
 	// Why the Timestamp >= now() - INTERVAL 1 HOUR + max_partitions_to_read=2:
@@ -109,6 +109,60 @@ func (p *clickHouseFreshnessProbe) MaxTraceTimestamp(ctx context.Context, namesp
 		return time.Time{}, false, nil
 	}
 	return ts, true, nil
+}
+
+// trafficProbe is the seam the RestartPedestal traffic-presence gate needs:
+// "how many spans has this namespace emitted in the recent window". Kept
+// separate from FreshnessProbe so the BuildDatapack test fakes don't have to
+// grow a method they never exercise. The production clickHouseFreshnessProbe
+// satisfies both interfaces; the gate type-asserts deps.FreshnessProbe to
+// trafficProbe at the call site.
+type trafficProbe interface {
+	RecentSpanCount(ctx context.Context, namespace string, window time.Duration) (uint64, error)
+}
+
+// RecentSpanCount returns the number of spans this namespace has emitted into
+// otel.otel_traces within the trailing window. Used by the RestartPedestal
+// traffic-presence gate to confirm the freshly-bootstrapped workload is
+// actually generating traffic before computing the inject start time. Reuses
+// the same short-lived HTTP connection + service.namespace predicate as
+// MaxTraceTimestamp; the COUNT is bounded to the trailing window so it stays a
+// recent-granule scan rather than a full-partition aggregate.
+func (p *clickHouseFreshnessProbe) RecentSpanCount(ctx context.Context, namespace string, window time.Duration) (uint64, error) {
+	ctx, span := otel.Tracer("aegis/observability").Start(ctx, "observability/clickhouse/RecentSpanCount")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("db.system", "clickhouse"),
+		attribute.String("db.namespace", namespace),
+	)
+
+	if p.cfg == nil || p.cfg.Host == "" {
+		return 0, fmt.Errorf("clickhouse host not configured")
+	}
+	if window <= 0 {
+		window = time.Minute
+	}
+	conn, err := chdriver.Open(freshnessProbeOptions(p.cfg))
+	if err != nil {
+		return 0, fmt.Errorf("clickhouse open: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	windowSecs := int64(window / time.Second)
+	if windowSecs <= 0 {
+		windowSecs = 60
+	}
+	stmt := "SELECT count() FROM otel.otel_traces " +
+		"WHERE ResourceAttributes['service.namespace'] = ? " +
+		"AND Timestamp >= now() - INTERVAL ? SECOND " +
+		"SETTINGS max_partitions_to_read = 2"
+	span.SetAttributes(attribute.String("db.statement", truncateStmt(stmt, 500)))
+
+	var n uint64
+	if err := conn.QueryRow(ctx, stmt, namespace, windowSecs).Scan(&n); err != nil {
+		return 0, fmt.Errorf("clickhouse query count(): %w", err)
+	}
+	return n, nil
 }
 
 // freshnessProbeOptions builds the clickhouse-go/v2 driver options used by

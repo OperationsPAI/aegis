@@ -471,10 +471,26 @@ const (
 	// service.namespace, or the bounded retry budget is exhausted. The
 	// two keys are read on every probe via config.GetInt so a runtime
 	// `aegisctl etcd put` applies without a backend rebuild.
-	MaxTokensKeyBuildDatapackFreshnessWatermark    = "rate_limiting.build_datapack_freshness_watermark_seconds"
-	MaxTokensKeyBuildDatapackFreshnessMaxWait      = "rate_limiting.build_datapack_freshness_max_wait_seconds"
-	DefaultBuildDatapackFreshnessWatermarkSeconds  = 30
-	DefaultBuildDatapackFreshnessMaxWaitSeconds    = 300
+	MaxTokensKeyBuildDatapackFreshnessWatermark   = "rate_limiting.build_datapack_freshness_watermark_seconds"
+	MaxTokensKeyBuildDatapackFreshnessMaxWait     = "rate_limiting.build_datapack_freshness_max_wait_seconds"
+	DefaultBuildDatapackFreshnessWatermarkSeconds = 30
+	DefaultBuildDatapackFreshnessMaxWaitSeconds   = 300
+
+	// RestartPedestal traffic-presence readiness gate. After the pedestal
+	// workload reports Ready, the executor polls otel.otel_traces for spans
+	// from the target namespace and only treats the namespace as warmed once
+	// traffic is confirmed flowing. Closes the cold-start race where DSB
+	// charts go pod-Ready in seconds but their data-init-job + load-generator
+	// take minutes to emit the first spans — injecting at the fixed 1-min
+	// warmup produced an empty abnormal window and a no-spans BuildDatapack.
+	// All three keys are read via config.GetInt so a runtime etcd push applies
+	// without a backend rebuild.
+	PedestalTrafficGateMinSpansKey           = "orchestrator.pedestal.traffic_gate_min_spans"
+	PedestalTrafficGatePollKey               = "orchestrator.pedestal.traffic_gate_poll_seconds"
+	PedestalTrafficGateTimeoutKey            = "orchestrator.pedestal.traffic_gate_timeout_seconds"
+	DefaultPedestalTrafficGateMinSpans       = 50
+	DefaultPedestalTrafficGatePollSeconds    = 15
+	DefaultPedestalTrafficGateTimeoutSeconds = 600
 
 	// Algorithm execution rate limiting
 	AlgoExecutionTokenBucket   = "token_bucket:algo_execution"

@@ -1304,6 +1304,21 @@ dynamic_configs:
     is_secret: false
     min_value: -1
     max_value: 1
+  # Post-Ready warmup floor for RestartPedestal. HotelReservation goes
+  # pod-Ready fast but the load-generator ramps over a few minutes; the global
+  # 1-min default injects before traffic flows → empty abnormal window →
+  # no-spans BuildDatapack. The traffic-presence gate confirms spans before
+  # injecting; this floor bounds the wait when ClickHouse is unreachable and
+  # guards against the gate passing on a too-small early burst.
+  - key: injection.system.hs.warmup_seconds
+    default_value: '300'
+    value_type: 2
+    scope: 2
+    category: injection.system.warmup_seconds
+    description: Post-Ready warmup floor (seconds) for HotelReservation before fault injection
+    is_secret: false
+    min_value: 0
+    max_value: 1800
   - key: injection.system.sn.count
     default_value: '1'
     value_type: 2
@@ -1371,6 +1386,19 @@ dynamic_configs:
     category: injection.system.reclaim_mode
     description: NamespaceReclaimer action — "soft" (rollout restart non-DB) or empty/"full" (helm uninstall + ns delete)
     is_secret: false
+  # SocialNetwork's data-init-job seeds the social graph (init_social_graph)
+  # before the load-generator produces real traffic; that takes several
+  # minutes, so the global 1-min warmup default injected into a span-empty
+  # window. See hs.warmup_seconds for the gate/floor rationale.
+  - key: injection.system.sn.warmup_seconds
+    default_value: '420'
+    value_type: 2
+    scope: 2
+    category: injection.system.warmup_seconds
+    description: Post-Ready warmup floor (seconds) for SocialNetwork before fault injection
+    is_secret: false
+    min_value: 0
+    max_value: 1800
   - key: injection.system.media.count
     default_value: '1'
     value_type: 2
@@ -1434,6 +1462,18 @@ dynamic_configs:
     category: injection.system.reclaim_mode
     description: NamespaceReclaimer action — "soft" (rollout restart non-DB) or empty/"full" (helm uninstall + ns delete)
     is_secret: false
+  # MediaMicroservices seeds movies + users via the same data-init-job subchart
+  # as SocialNetwork; same multi-minute ramp before traffic flows. See
+  # hs.warmup_seconds for the gate/floor rationale.
+  - key: injection.system.media.warmup_seconds
+    default_value: '420'
+    value_type: 2
+    scope: 2
+    category: injection.system.warmup_seconds
+    description: Post-Ready warmup floor (seconds) for MediaMicroservices before fault injection
+    is_secret: false
+    min_value: 0
+    max_value: 1800
   - key: injection.system.teastore.count
     default_value: '1'
     value_type: 2
