@@ -11,8 +11,8 @@ mysql:
 
 rabbitmq:
   image:
-    registry: pair-cn-shanghai.cr.volces.com
-    repository: opspai/rabbitmq
+    registry: pair-diag-cn-guangzhou.cr.volces.com
+    repository: pair/rabbitmq
 
 loadgenerator:
   image:
