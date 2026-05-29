@@ -15,8 +15,12 @@ at least one file matching `aegis-points/*.yaml`, the include emits:
 
 1. A `ConfigMap` with every `aegis-points/*.yaml` mounted as a key
    (hook weight `-6`).
-2. A `Job` that runs `aegisctl manifest import-dir /etc/aegis-points`
-   on `post-install` / `post-upgrade` (hook weight `-5`, `backoffLimit: 0`).
+2. A `Job` that runs `aegisctl manifest import-dir /etc/aegis-points
+   --chart-version {{ .Chart.Version }}` on `post-install` / `post-upgrade`
+   (hook weight `-5`, `backoffLimit: 0`). The `--chart-version` override
+   binds every imported point to the consumer chart's actual version, so a
+   chart upgrade supersedes the prior version's points instead of upserting
+   over a stale literal (point-manifest-spec §6).
 
 Slots between the system-onboard Job (`-10`, ships separately via #458)
 and the consumer chart's workloads (`0`).
@@ -45,7 +49,9 @@ manifests.
    ```
 
 3. Put one PointManifest per service under your chart at
-   `aegis-points/<service>.yaml` and add the required values:
+   `aegis-points/<service>.yaml` (the `metadata.chart_version` in each file
+   is a placeholder — the Job overrides it with `{{ .Chart.Version }}`) and
+   add the required values:
 
    ```yaml
    aegis:

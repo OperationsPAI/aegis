@@ -143,8 +143,14 @@ Bumping `chart_version` is how the catalog rotates — each install of a
 new chart version writes a fresh PointManifest row binding to that
 version. Historical rows survive for reproducibility (ADR-0008).
 
-In chart-bound delivery (§7), helm fills this in via templating —
-authors don't hardcode it.
+In chart-bound delivery (§7), the import overrides whatever `chart_version`
+is baked into the manifest file with the consumer chart's actual
+`.Chart.Version`: the library Job runs `aegisctl manifest import-dir
+--chart-version {{ .Chart.Version }}`. So authors can leave a placeholder
+(e.g. `seed-genesis`) in the file — the version that lands in `chaos_points`
+is the chart's, which is what the supersede logic keys on. Standalone
+`aegisctl manifest import` without `--chart-version` uses the file value
+verbatim.
 
 ## 7. Chart-bound integration (the canonical delivery path)
 
@@ -197,7 +203,10 @@ ships. No manual `aegisctl manifest import` step.
    ```
 
 3. Put one PointManifest per service under `aegis-points/<service>.yaml`
-   inside your chart, and set the required values in `values.yaml`:
+   inside your chart, and set the required values in `values.yaml`. The
+   `metadata.chart_version` in each file is a placeholder — the library Job
+   overrides it with `{{ .Chart.Version }}` at import time (§6), so a single
+   literal like `seed-genesis` is fine across all files:
 
    ```yaml
    aegis:
