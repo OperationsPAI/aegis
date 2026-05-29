@@ -413,6 +413,59 @@ func TestSingletonCreatesShadowFaultInjection(t *testing.T) {
 	}
 }
 
+// TestOneShotChaosExtendsAbnormalWindow pins the one-shot timing fix: a
+// PodKill-shaped webhook whose CR finished ~3s after start must have the
+// downstream BuildDatapack's abnormal-window end pushed out to
+// start+FixedAbnormalWindowSeconds, so the CH freshness probe waits for the
+// post-fault observation window instead of firing on the collapsed window.
+func TestOneShotChaosExtendsAbnormalWindow(t *testing.T) {
+	_, rec, r := setupRig(t)
+	start := time.Now().Add(-3 * time.Second).UTC()
+	finished := start.Add(3 * time.Second) // CR completes near-instantly
+	body := SingletonWebhook{
+		InjectionID:    "inj-oneshot",
+		IdempotencyKey: "k-oneshot",
+		Status:         statusSucceeded,
+		StartedAt:      start,
+		FinishedAt:     finished,
+		CallerMetadata: sampleMeta(),
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if rec.count() != 1 {
+		t.Fatalf("want 1 submit got %d", rec.count())
+	}
+	dp := rec.tasks[0].task.Payload[consts.BuildDatapack].(dto.InjectionItem)
+	want := start.Add(consts.FixedAbnormalWindowSeconds * time.Second)
+	if !dp.EndTime.Equal(want) {
+		t.Fatalf("one-shot EndTime: want %v (start+window) got %v", want, dp.EndTime)
+	}
+}
+
+// TestDurationChaosWindowUnchanged proves the fix is a no-op for
+// duration-based chaos: the CR ran the full FixedAbnormalWindow, so
+// finishedAt already sits at the planned end and EndTime must not move.
+func TestDurationChaosWindowUnchanged(t *testing.T) {
+	_, rec, r := setupRig(t)
+	start := time.Now().Add(-2 * consts.FixedAbnormalWindowSeconds * time.Second).UTC()
+	finished := start.Add((consts.FixedAbnormalWindowSeconds + 5) * time.Second)
+	body := SingletonWebhook{
+		InjectionID:    "inj-duration",
+		IdempotencyKey: "k-duration",
+		Status:         statusSucceeded,
+		StartedAt:      start,
+		FinishedAt:     finished,
+		CallerMetadata: sampleMeta(),
+	}
+	postJSON(t, r, "/api/v1/hooks/chaos", body, nil)
+	if rec.count() != 1 {
+		t.Fatalf("want 1 submit got %d", rec.count())
+	}
+	dp := rec.tasks[0].task.Payload[consts.BuildDatapack].(dto.InjectionItem)
+	if !dp.EndTime.Equal(finished) {
+		t.Fatalf("duration EndTime: want unchanged %v got %v", finished, dp.EndTime)
+	}
+}
+
 func TestW3CTraceparentBecomesParent(t *testing.T) {
 	_, rec, r := setupRig(t)
 	traceID := "11111111111111111111111111111111"

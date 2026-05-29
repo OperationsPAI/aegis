@@ -173,6 +173,16 @@ func (h *Handler) fireOnce(parentCtx context.Context, id, kind, terminal string,
 	if !finishedAt.IsZero() {
 		dp.EndTime = finishedAt
 	}
+	// One-shot chaos (PodKill, PodFailure with grace 0) completes the CR
+	// almost instantly, so finishedAt collapses to ~startedAt and the
+	// abnormal window never accumulates post-fault traffic — BuildDatapack's
+	// CH freshness probe (build_datapack.go) is satisfied immediately and
+	// prepare_inputs.py reads a near-empty abnormal_traces window. Duration
+	// chaos (NetworkDelay etc.) runs the CR for the full FixedAbnormalWindow,
+	// so finishedAt already sits at the planned end. Clamp EndTime up to the
+	// planned abnormal-window end so both paths defer the build until the
+	// post-fault observation window has elapsed.
+	dp.EndTime = clampAbnormalWindowEnd(dp.StartTime, dp.EndTime)
 
 	// chaos webhook path (id is the chaos-service ULID) needs a shadow
 	// fault_injections row so audit + BuildDatapack's FI-by-ID lookup work.
@@ -340,7 +350,7 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 		row.StartTime = &t
 	}
 	if !finishedAt.IsZero() {
-		t := finishedAt
+		t := clampAbnormalWindowEnd(startedAt, finishedAt)
 		row.EndTime = &t
 	}
 
@@ -374,6 +384,23 @@ func (h *Handler) getOrCreateShadowFaultInjection(ctx context.Context, chaosInje
 func (h *Handler) recordGate(ctx context.Context, id, kind, terminal string) error {
 	_, err := h.claimGate(ctx, id, kind, terminal)
 	return err
+}
+
+// clampAbnormalWindowEnd returns the later of the observed end and the
+// planned abnormal-window end (start + FixedAbnormalWindowSeconds). The
+// planned window is the protocol invariant every chaos spec is pinned to
+// (GuidedToChaosParams sets duration_s = FixedAbnormalWindowSeconds);
+// duration-based chaos already finishes there, so its end is unchanged.
+// A zero start (legacy CRD path that omits timestamps) is left untouched.
+func clampAbnormalWindowEnd(start, end time.Time) time.Time {
+	if start.IsZero() {
+		return end
+	}
+	planned := start.Add(consts.FixedAbnormalWindowSeconds * time.Second)
+	if planned.After(end) {
+		return planned
+	}
+	return end
 }
 
 func isTerminalSingleton(s string) bool {
